@@ -17,6 +17,6 @@ public class LabelEditorService {
     private LabelDAO labelDAO;
 
     public Label getByName(String name){
-        return labelDAO.getByName(name);
+        return labelDAO.findByName(name);
     }
 }

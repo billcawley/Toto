@@ -3,6 +3,7 @@ package com.azquo.toto.dao;
 import com.azquo.toto.entity.StandardEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -26,6 +27,8 @@ public abstract class StandardDAO {
 
     @Autowired
     protected NamedParameterJdbcTemplate jdbcTemplate;
+
+    public static final int SELECTLIMIT = 10000;
 
     public final class StandardEntityByIdRowMapper implements RowMapper<StandardEntity> {
 
@@ -118,8 +121,15 @@ public abstract class StandardDAO {
     }
 
     public List<StandardEntity> findListWithWhereSQLAndParameters(final StandardEntity entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
+        return findListWithWhereSQLAndParameters(entity, whereCondition, namedParams, lookupById, 0, SELECTLIMIT);
+    }
+
+    public List<StandardEntity> findListWithWhereSQLAndParameters(final StandardEntity entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById, final int from, final int limit) throws DataAccessException {
+        if (limit > SELECTLIMIT){
+            throw new InvalidDataAccessApiUsageException("Error, limit in SQL select greater than : " + SELECTLIMIT);
+        }
         if (lookupById){
-            final String SQL_SELECT = "Select `" + entity.getTableName() + "`." + StandardEntity.ID + " from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "");
+            final String SQL_SELECT = "Select `" + entity.getTableName() + "`." + StandardEntity.ID + " from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
             StandardEntityByIdRowMapper mapById = new StandardEntityByIdRowMapper(entity);
             return jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
         } else {
@@ -130,7 +140,7 @@ public abstract class StandardDAO {
 
     public StandardEntity findOneWithWhereSQLAndParameters(final StandardEntity entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
         if (lookupById){
-            final String SQL_SELECT = "Select `" + entity.getTableName() + "`." + StandardEntity.ID + " from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "");
+            final String SQL_SELECT = "Select `" + entity.getTableName() + "`." + StandardEntity.ID + " from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
             StandardEntityByIdRowMapper mapById = new StandardEntityByIdRowMapper(entity);
             final List<StandardEntity> results = jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
             if (results.size() == 0) {
@@ -138,7 +148,7 @@ public abstract class StandardDAO {
             }
             return results.get(0);
         } else {
-            final String SQL_SELECT_ALL = "Select `" + entity.getTableName() + "`.* from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "");
+            final String SQL_SELECT_ALL = "Select `" + entity.getTableName() + "`.* from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
             final List<StandardEntity> results = jdbcTemplate.query(SQL_SELECT_ALL, namedParams, entity.getRowMapper());
             if (results.size() == 0) {
                 return null;

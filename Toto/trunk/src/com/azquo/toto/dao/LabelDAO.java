@@ -19,10 +19,10 @@ public class LabelDAO extends StandardDAO {
         return findListWithWhereSQLAndParameters(new Merchant(),whereCondition,namedParams,true);
     }*/
 
-    public Label getByName(final String name) throws DataAccessException {
+    public Label findByName(final String name) throws DataAccessException {
         final String whereCondition = " where name = :name";
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue("name", name);
-        return (Label)findOneWithWhereSQLAndParameters(new Label(),whereCondition,namedParams,true);
+        return (Label)findOneWithWhereSQLAndParameters(new Label(),whereCondition,namedParams,false);
     }
 }
