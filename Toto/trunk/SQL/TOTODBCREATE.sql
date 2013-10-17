@@ -3,18 +3,12 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Oct 17, 2013 at 05:04 PM
+-- Generation Time: Oct 17, 2013 at 06:29 PM
 -- Server version: 5.5.33
 -- PHP Version: 5.3.17
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
-
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
 
 --
 -- Database: `toto`
@@ -43,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `label` (
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=14 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=43 ;
 
 -- --------------------------------------------------------
 
@@ -60,13 +54,25 @@ CREATE TABLE IF NOT EXISTS `label_attribute` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `set`
+-- Table structure for table `label_set_definition`
 --
 
-CREATE TABLE IF NOT EXISTS `set` (
-  `set_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `member` int(11) NOT NULL,
-  PRIMARY KEY (`set_name`)
+CREATE TABLE IF NOT EXISTS `label_set_definition` (
+  `parent_id` int(11) NOT NULL,
+  `child_id` int(11) NOT NULL,
+  PRIMARY KEY (`parent_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `label_set_lookup`
+--
+
+CREATE TABLE IF NOT EXISTS `label_set_lookup` (
+  `label_id` int(11) NOT NULL,
+  `levels_below` smallint(6) NOT NULL,
+  `related_label_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
@@ -99,7 +105,3 @@ CREATE TABLE IF NOT EXISTS `value_label` (
   `value_id` int(11) NOT NULL,
   `label_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
