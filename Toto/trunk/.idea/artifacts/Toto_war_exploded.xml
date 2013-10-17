@@ -1,0 +1,18 @@
+<component name="ArtifactManager">
+  <artifact type="exploded-war" name="Toto:war exploded">
+    <output-path>$PROJECT_DIR$/out/artifacts/ROOT</output-path>
+    <root id="root">
+      <element id="javaee-facet-resources" facet="Toto/web/Web" />
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="classes">
+          <element id="module-output" name="Toto" />
+        </element>
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="com.jpattern:jporm-jdbctemplate:5.3.0" />
+          <element id="library" level="project" name="org.jetbrains.teamcity.webapp:spring-webmvc:7.1.0" />
+          <element id="library" level="project" name="org.jetbrains.teamcity.webapp:spring:7.1.0" />
+        </element>
+      </element>
+    </root>
+  </artifact>
+</component>

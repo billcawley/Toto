@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!--
+        Controllers are setup using annotations
+        See   http://blog.springsource.org/2007/11/14/annotated-web-mvc-controllers-in-spring-25/
+        for details of controller annotations
+        -->
+    <mvc:annotation-driven />
+    <context:component-scan base-package="com.azquo.toto.web.controller" >
+    </context:component-scan>
+
+    <!-- Feefo beans - need to be in their own xml file at some point -->
+    <!--    <bean name="feedbackService" class="com.feefo.phaseone.service.FeedbackServiceImpl"/>
+        <bean name="feedbackRequestValidator" class="com.feefo.phaseone.controller.validators.FeedbackRequestValidator">
+            <property name="rowLimit" value="50000"></property>
+        </bean>-->
+</beans>

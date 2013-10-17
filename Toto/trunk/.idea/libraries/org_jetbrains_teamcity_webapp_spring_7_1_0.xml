@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="org.jetbrains.teamcity.webapp:spring:7.1.0" type="repository">
+    <properties maven-id="org.jetbrains.teamcity.webapp:spring:7.1.0" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/spring-7.1.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
