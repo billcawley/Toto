@@ -1,4 +1,4 @@
-package com.azquo.toto.web.controller;
+package com.azquo.toto.controller;
 
 /**
  * Created with IntelliJ IDEA.
@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
-@RequestMapping("/test")
-public class TestController {
+@RequestMapping("/LabelEditor")
+public class LabelEditorController {
 
 //    private static final Logger logger = Logger.getLogger(TestController.class);
 
