@@ -1,18 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
        xmlns:context="http://www.springframework.org/schema/context"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/mvc
+       http://www.springframework.org/schema/mvc/spring-mvc.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd">
 
     <!--
         Controllers are setup using annotations
         See   http://blog.springsource.org/2007/11/14/annotated-web-mvc-controllers-in-spring-25/
         for details of controller annotations
         -->
-    <mvc:annotation-driven />
-    <context:component-scan base-package="com.azquo.toto.controller" >
+    <mvc:annotation-driven/>
+    <context:component-scan base-package="com.azquo.toto.controller">
     </context:component-scan>
 
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
+        <!--<property name="url" value="jdbc:mysql://localhost:3306/toto?jdbcCompliantTruncation=false&amp;useUnicode=true&amp;characterEncoding=UTF-8"/>-->
+        <property name="url"
+                  value="jdbc:mysql://localhost:3306/toto?jdbcCompliantTruncation=false&amp;useUnicode=true&amp;characterEncoding=UTF-8"/>
+        <property name="username" value="toto"/>
+        <property name="password" value="ark"/>
+    </bean>
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
+        <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
+    </bean>
+    <bean name="labelDao" class="com.azquo.toto.dao.LabelDAO"/>
+    <bean name="labelEditorService" class="com.azquo.toto.service.LabelEditorService"/>
+    <!--<bean name="labelDAO" class="com.feefo.phaseone.service.FeedbackServiceImpl"/>-->
     <!-- Feefo beans - need to be in their own xml file at some point -->
     <!--    <bean name="feedbackService" class="com.feefo.phaseone.service.FeedbackServiceImpl"/>
         <bean name="feedbackRequestValidator" class="com.feefo.phaseone.controller.validators.FeedbackRequestValidator">

@@ -1,6 +1,7 @@
 package com.azquo.toto.dao;
 
 import com.azquo.toto.entity.StandardEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -23,11 +24,8 @@ import java.util.Map;
  */
 public abstract class StandardDAO {
 
+    @Autowired
     protected NamedParameterJdbcTemplate jdbcTemplate;
-
-    public final void setJdbcTemplate(final NamedParameterJdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
 
     public final class StandardEntityByIdRowMapper implements RowMapper<StandardEntity> {
 
