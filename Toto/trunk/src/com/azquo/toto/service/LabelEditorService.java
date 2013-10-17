@@ -16,7 +16,7 @@ public class LabelEditorService {
     @Autowired
     private LabelDAO labelDAO;
 
-    public Label getByName(String name){
+    public Label findByName(String name){
         return labelDAO.findByName(name);
     }
 }

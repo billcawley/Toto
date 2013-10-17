@@ -35,7 +35,12 @@ public class StandardDAOTest {
 
     @Test
     public void testUpdateById() throws Exception {
-
+        Label l = new Label();
+        l.setName("eddtest");
+        labelDao.store(l);
+        l.setName("thing");
+        labelDao.updateById(l);
+        labelDao.removeById(l);
     }
 
     @Test
@@ -55,9 +60,9 @@ public class StandardDAOTest {
     public void testStore() throws Exception {
         Label l = new Label();
         l.setName("eddtest");
-        labelDao.insert(l);
+        labelDao.store(l);
         l.setName("thing");
-        labelDao.insert(l);
+        labelDao.store(l);
         labelDao.removeById(l);
     }
 
