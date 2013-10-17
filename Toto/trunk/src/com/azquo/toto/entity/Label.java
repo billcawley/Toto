@@ -12,7 +12,8 @@ import java.util.Map;
  * User: cawley
  * Date: 16/10/13
  * Time: 19:17
- * To change this template use File | Settings | File Templates.
+ * A fundamental Toto object, labels only have names but they can have parent and child relationships with multiple
+ * other labels. Sets of labels.
  */
 public class Label extends StandardEntity {
 
@@ -78,9 +79,7 @@ public class Label extends StandardEntity {
 
         Label label = (Label) o;
 
-        if (!name.equals(label.name)) return false;
-
-        return true;
+        return name.equals(label.name);
     }
 
     @Override

@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * User: cawley
  * Date: 17/10/13
  * Time: 14:18
- * To change this template use File | Settings | File Templates.
+ * I've been convinced that a service layer is probably a good idea, with the DAO/Database it can form the model.
  */
 public class LabelEditorService {
 

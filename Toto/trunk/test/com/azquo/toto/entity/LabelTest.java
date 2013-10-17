@@ -9,7 +9,7 @@ import org.junit.Test;
  * User: cawley
  * Date: 17/10/13
  * Time: 18:35
- * To change this template use File | Settings | File Templates.
+ *
  */
 public class LabelTest {
 

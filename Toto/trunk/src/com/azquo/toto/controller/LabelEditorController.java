@@ -15,8 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.servlet.http.HttpSession;
-
 @Controller
 @RequestMapping("/LabelEditor")
 public class LabelEditorController {
@@ -30,7 +28,7 @@ public class LabelEditorController {
     @ResponseBody
     public String handleRequest(){
 
-        return "blah de blah";
+        return "trying to find eddtest " + labelEditorService.findByName("eddtest");
     }
 
 }
