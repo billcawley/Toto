@@ -32,11 +32,12 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" scope="PROVIDED" name="Tomcat 7.0" level="application_server_libraries" />
-    <orderEntry type="library" name="com.jpattern:jporm-jdbctemplate:5.3.0" level="project" />
-    <orderEntry type="library" name="org.jetbrains.teamcity.webapp:spring-webmvc:7.1.0" level="project" />
     <orderEntry type="library" name="mysql:mysql-connector-java:5.1.26" level="project" />
     <orderEntry type="library" name="junit:junit:4.9" level="project" />
+    <orderEntry type="library" name="org.jetbrains.teamcity.webapp:spring-webmvc:7.1.0" level="project" />
     <orderEntry type="library" name="org.springframework:spring-test:3.2.4.RELEASE" level="project" />
+    <orderEntry type="library" name="org.springframework:spring-jdbc:3.2.4.RELEASE" level="project" />
+    <orderEntry type="library" name="org.springframework:spring-context:3.2.4.RELEASE" level="project" />
   </component>
 </module>
 
