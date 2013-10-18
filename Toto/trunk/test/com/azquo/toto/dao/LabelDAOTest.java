@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -23,12 +24,21 @@ public class LabelDAOTest {
     @Autowired
     private LabelDAO labelDao;
 
-    @Before
-    public void setUp() throws Exception {
+
+    public void clearEddtestLabels(){
         Label l = labelDao.findByName("eddtest");
         if (l != null){
             labelDao.removeById(l);
         }
+        Label l2 = labelDao.findByName("eddtest2");
+        if (l2 != null){
+            labelDao.removeById(l2);
+        }
+    }
+
+    @Before
+    public void setUp() throws Exception {
+        clearEddtestLabels();
     }
 
 
@@ -41,4 +51,76 @@ public class LabelDAOTest {
         labelDao.removeById(l);
         Assert.assertTrue(labelDao.findByName(l.getName()) == null);
     }
+
+    @Test
+    public void testMaxPosition() throws Exception {
+        Label l1 = new Label();
+        l1.setName("eddtest");
+        labelDao.store(l1);
+        Label l2 = new Label();
+        l2.setName("eddtest2");
+        labelDao.store(l2);
+        System.out.println("max position when there's no children : " + labelDao.getMaxChildPosition(l1));
+        labelDao.linkParentAndChild(l1, l2, 2);
+        labelDao.linkParentAndChild(l1, l2, 4);
+        System.out.println("max position when there's children : " + labelDao.getMaxChildPosition(l1));
+        // need too sys out println to confirm the link here
+        labelDao.unlinkParentAndChild(l1, l2);
+        clearEddtestLabels();
+    }
+
+    @Test
+    public void testLinking() throws Exception {
+        Label l1 = new Label();
+        l1.setName("eddtest");
+        labelDao.store(l1);
+        Label l2 = new Label();
+        l2.setName("eddtest2");
+        labelDao.store(l2);
+        labelDao.linkParentAndChild(l1,l2,0);
+        labelDao.linkParentAndChild(l1,l2,0);
+        // need too sys out println to confirm the link here
+        labelDao.unlinkParentAndChild(l1, l2);
+        clearEddtestLabels();
+    }
+
+    @Test
+    public void testStore() throws Exception {
+        // make label 1 and 2
+        Label l1 = new Label();
+        l1.setName("eddtest");
+        labelDao.store(l1);
+        Label l2 = new Label();
+        l2.setName("eddtest2");
+        labelDao.store(l2);
+
+
+
+        // now try tyo make a new one with an existing label
+        l2 = new Label();
+        l2.setName("eddtest");
+        // this should throw an exception
+        try{
+            labelDao.store(l2);
+            Assert.fail("the DAO should have thrown an exception by now");
+        } catch (DataAccessException dae){
+            System.out.println(dae.getMessage());
+        }
+
+
+        // now try to update an existing one with another existing label
+        l2 = labelDao.findByName("eddtest2");
+        l2.setName("eddtest");
+        // this should throw an exception but this time by an update
+        try{
+            labelDao.store(l2);
+            Assert.fail("the DAO should have thrown an exception by now");
+        } catch (DataAccessException dae){
+            System.out.println(dae.getMessage());
+        }
+
+
+        clearEddtestLabels();
+    }
+
 }

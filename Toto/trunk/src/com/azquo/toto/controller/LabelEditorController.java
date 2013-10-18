@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
@@ -26,9 +27,13 @@ public class LabelEditorController {
 
     @RequestMapping(method = RequestMethod.GET)
     @ResponseBody
-    public String handleRequest(){
+    public String handleRequest(@RequestParam(value = "command", defaultValue = "") String command){
 
-        return "trying to find eddtest " + labelEditorService.findByName("eddtest");
+        if (command.length() == 0){
+            return "no command passed";
+        }
+        return "command passed";
     }
+
 
 }

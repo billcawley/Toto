@@ -1,9 +1,3 @@
--- phpMyAdmin SQL Dump
--- version 4.0.8
--- http://www.phpmyadmin.net
---
--- Host: localhost
--- Generation Time: Oct 17, 2013 at 06:29 PM
 -- Server version: 5.5.33
 -- PHP Version: 5.3.17
 
@@ -35,9 +29,10 @@ CREATE TABLE IF NOT EXISTS `attribute` (
 CREATE TABLE IF NOT EXISTS `label` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `label_set_lookup_needs_rebuilding` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=43 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=69 ;
 
 -- --------------------------------------------------------
 
@@ -60,7 +55,8 @@ CREATE TABLE IF NOT EXISTS `label_attribute` (
 CREATE TABLE IF NOT EXISTS `label_set_definition` (
   `parent_id` int(11) NOT NULL,
   `child_id` int(11) NOT NULL,
-  PRIMARY KEY (`parent_id`)
+  `position` smallint(5) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`parent_id`,`child_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
