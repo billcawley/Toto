@@ -20,10 +20,10 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {"file:web/WEB-INF/totospringdispatcher-servlet.xml"})
-public class LabelEditorServiceTest {
+public class LabelServiceTest {
 
     @Autowired
-    LabelEditorService labelEditorService;
+    LabelService labelService;
     @Autowired
     LabelDAO labelDao;
 
@@ -48,8 +48,8 @@ public class LabelEditorServiceTest {
         Label l = new Label();
         l.setName("eddtest");
         labelDao.insert(l);
-        Assert.assertTrue(labelEditorService.findByName(l.getName()) != null);
+        Assert.assertTrue(labelService.findByName(l.getName()) != null);
         labelDao.removeById(l);
-        Assert.assertTrue(labelEditorService.findByName(l.getName()) == null);
+        Assert.assertTrue(labelService.findByName(l.getName()) == null);
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -27,6 +28,9 @@ public class LabelDAO extends StandardDAO {
     // I think I'm going to specific store for Label due to unique name constraints
     // simply ignore stores where the id and label exist otherwise throw exception for existing label whether updating or adding
     public void store(final Label label) throws DataAccessException {
+        if (label.getName().contains(";")){
+            throw new InvalidDataAccessApiUsageException("Error, label name cannot contain ; :  " + label.getName());
+        }
         Label existing = findByName(label.getName());
         if (existing == null){ // no name exists, can store new label or update one
             super.store(label);
@@ -45,6 +49,14 @@ public class LabelDAO extends StandardDAO {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(Label.NAME, name);
         return (Label)findOneWithWhereSQLAndParameters(new Label(),whereCondition,namedParams,false);
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Label> findChildren(final Label label) throws DataAccessException {
+        final String whereCondition = ", `" + LABELSETDEFINITION + "` where `" + label.getTableName() + "`." + label.ID + " = `" + LABELSETDEFINITION + "`.`" + CHILDID + "` AND `" + LABELSETDEFINITION + "`.`" + PARENTID + "` = :" + PARENTID;
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(PARENTID, label.getId());
+        return (List<Label>)findListWithWhereSQLAndParameters(new Label(),whereCondition,namedParams,false);
     }
 
     public int getMaxChildPosition(final Label l) throws DataAccessException {
@@ -77,4 +89,5 @@ public class LabelDAO extends StandardDAO {
         jdbcTemplate.update(updateSql, namedParams);
         // need to set that the look up tables need to be rebuilt appropriately
     }
+
 }

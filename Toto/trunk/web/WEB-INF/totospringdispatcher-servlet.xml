@@ -31,7 +31,7 @@
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
     <bean name="labelDao" class="com.azquo.toto.dao.LabelDAO"/>
-    <bean name="labelEditorService" class="com.azquo.toto.service.LabelEditorService"/>
+    <bean name="labelEditorService" class="com.azquo.toto.service.LabelService"/>
     <!--<bean name="labelDAO" class="com.feefo.phaseone.service.FeedbackServiceImpl"/>-->
     <!-- Feefo beans - need to be in their own xml file at some point -->
     <!--    <bean name="feedbackService" class="com.feefo.phaseone.service.FeedbackServiceImpl"/>

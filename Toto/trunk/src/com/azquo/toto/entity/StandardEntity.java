@@ -33,6 +33,6 @@ public abstract class StandardEntity {
 
     public abstract Map<String, Object> getColumnNameValueMap();
 
-    public abstract RowMapper<StandardEntity> getRowMapper();
+    public abstract RowMapper<? extends StandardEntity> getRowMapper();
 
 }

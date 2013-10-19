@@ -105,7 +105,7 @@ public abstract class StandardDAO {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue("id", entity.getId());
         final String FIND_BY_ID = "Select * from `" + entity.getTableName() + "` where " + StandardEntity.ID + " = :" + StandardEntity.ID;
-        final List<StandardEntity> results = jdbcTemplate.query(FIND_BY_ID, namedParams, entity.getRowMapper());
+        final List<? extends StandardEntity> results = jdbcTemplate.query(FIND_BY_ID, namedParams, entity.getRowMapper());
 
         if (results.size() == 0) {
             //logger.warning("No customer found for id " + id + " in table " + table);
@@ -116,15 +116,21 @@ public abstract class StandardDAO {
 
     // Assume not by id, adding wouldn't be difficult
 
-    public List<StandardEntity> findAll(final StandardEntity entity) throws DataAccessException {
+    public List<? extends StandardEntity> findAll(final StandardEntity entity) throws DataAccessException {
         return findListWithWhereSQLAndParameters(entity, null,null,false);
     }
 
-    public List<StandardEntity> findListWithWhereSQLAndParameters(final StandardEntity entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
+    public List<? extends StandardEntity> findListWithWhereSQLAndParameters(final StandardEntity entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
         return findListWithWhereSQLAndParameters(entity, whereCondition, namedParams, lookupById, 0, SELECTLIMIT);
     }
 
-    public List<StandardEntity> findListWithWhereSQLAndParameters(final StandardEntity entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById, final int from, final int limit) throws DataAccessException {
+    /*
+    OK this function represents a casting problem, that is to say that DAO classes will call it but want to return List<TheirClassName> and the compiler will say it can't check the casting
+    which it can't. There was thought of making a few functions at the bottom of each DAO for this but in the end I decided that such list functions should just use these functions and @SuppressWarnings("unchecked")
+    I could change this later
+     */
+
+    public List<? extends StandardEntity> findListWithWhereSQLAndParameters(final StandardEntity entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById, final int from, final int limit) throws DataAccessException {
         if (limit > SELECTLIMIT){
             throw new InvalidDataAccessApiUsageException("Error, limit in SQL select greater than : " + SELECTLIMIT);
         }
@@ -149,7 +155,7 @@ public abstract class StandardDAO {
             return results.get(0);
         } else {
             final String SQL_SELECT_ALL = "Select `" + entity.getTableName() + "`.* from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
-            final List<StandardEntity> results = jdbcTemplate.query(SQL_SELECT_ALL, namedParams, entity.getRowMapper());
+            final List<? extends StandardEntity> results = jdbcTemplate.query(SQL_SELECT_ALL, namedParams, entity.getRowMapper());
             if (results.size() == 0) {
                 return null;
             }
