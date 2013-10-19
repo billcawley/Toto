@@ -37,13 +37,18 @@ public class LabelService {
     }
 
     public List<Label> findChildrenAtLevel(final Label label, final int level) throws Exception {
+        // level -1 means get me the lowest
+        // notable that with current logic asking for a level with no data returns no data not the nearest it can get. Would be simple to change this
         int currentLevel = 1;
         List<Label> foundAtCurrentLevel = labelDAO.findChildren(label);
-        while (currentLevel < level && !foundAtCurrentLevel.isEmpty()) {
+        while ((currentLevel < level || level == -1) && !foundAtCurrentLevel.isEmpty()) {
             // we can't loop over foundAtCurrentLevel and modify it at the same time, this asks for trouble
             List<Label> nextLevelList = new ArrayList<Label>();
             for (Label l : foundAtCurrentLevel) {
                 nextLevelList.addAll(labelDAO.findChildren(l));
+            }
+            if (nextLevelList.isEmpty() && level == -1){ // wanted the lowest, we've hit a level with none so don't go further
+                break;
             }
             foundAtCurrentLevel = nextLevelList;
             currentLevel++;

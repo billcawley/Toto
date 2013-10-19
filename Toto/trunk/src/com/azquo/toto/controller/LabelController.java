@@ -29,6 +29,8 @@ public class LabelController {
     public static final String CREATE = "create";
     public static final String LEVEL = "level";
 
+    public static final String LOWEST = "lowest";
+
     @Autowired
     private LabelService labelService;
 
@@ -36,29 +38,31 @@ public class LabelController {
 
     @RequestMapping(method = RequestMethod.GET)
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "command", required = false) String command) throws Exception {
+    public String handleRequest(@RequestParam(value = "instructions", required = false) String instructions) throws Exception {
 
-        if (command == null){
+        if (instructions == null){
             return "no command passed";
         }
-        command = command.trim();
+        instructions = instructions.trim();
         // typically a command will start with a label name
 
-        if(command.indexOf(';') > 0){
-            final String labelName = command.substring(0, command.indexOf(';')).trim();
-            // now we have it strip off the label, what do we want to do with it?
-            command = command.substring(command.indexOf(';') + 1).trim();
-            if (command.toLowerCase().startsWith(ELEMENTS)){ // make it case insensitive
-                command = command.substring(ELEMENTS.length()).trim();
-                if (command.toLowerCase().contains(CREATE)){
+        if(instructions.indexOf(';') > 0){
+            final String labelName = instructions.substring(0, instructions.indexOf(';')).trim();
+            // now we have it strip off the label, use getInstructioon to see what we want to do with the label
+            instructions = instructions.substring(instructions.indexOf(';') + 1).trim();
+
+            String elements = getInstruction(instructions, ELEMENTS);
+            String create = getInstruction(instructions, CREATE);
+            String level = getInstruction(instructions, LEVEL);
+            if (elements != null){
+                if (create != null){
                     final Label label = labelService.findOrCreateLabel(labelName);
-                    command = command.substring(0, command.toLowerCase().indexOf(CREATE)).trim();
                     // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
-                    if(command.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
+                    if(elements.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
                         // EXAMPLE : 2013;elements {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
-                        if (command.contains("}")){
-                            command = command.substring(1, command.indexOf("}"));
-                            final StringTokenizer st = new StringTokenizer(command, ",");
+                        if (elements.contains("}")){
+                            elements = elements.substring(1, elements.indexOf("}"));
+                            final StringTokenizer st = new StringTokenizer(elements, ",");
                             final List<String> namesToAdd = new ArrayList<String>();
                             while (st.hasMoreTokens()){
                                 String name = st.nextToken();
@@ -82,18 +86,19 @@ public class LabelController {
                           2013;elements;level 2
                           with level
                           */
-                        int level = 1;
-                        if (command.toLowerCase().contains(LEVEL)){
-                            try{
-                                int levelStart = command.toLowerCase().indexOf(LEVEL) + LEVEL.length();
-                                if (command.indexOf(";", levelStart) != -1){
-                                    level = Integer.parseInt(command.substring(levelStart, command.indexOf(";", levelStart)).trim());
-                                } else {
-                                    level = Integer.parseInt(command.substring(levelStart).trim());
+                        int levelInt = 1;
+                        if (level != null){
+                            if (level.equalsIgnoreCase(LOWEST)){
+                                System.out.println("lowest");
+                                levelInt = -1;
+                            } else {
+                                try{
+                                    levelInt = Integer.parseInt(level);
+                                } catch (NumberFormatException nfe){
+                                    return "problem parsing level : " + level;
                                 }
-                            } catch (NumberFormatException nfe){
-                                return "I can't seem to parse the level";
                             }
+
                         }
                         boolean sorted = false;
                         int from = 0;
@@ -101,7 +106,9 @@ public class LabelController {
                         String fromString = null;
                         String toString = null;
                         // will collect parameters, for the moment just do vanilla
-                        List<Label> labels = labelService.findChildrenAtLevel(label, level);
+                        List<Label> labels = labelService.findChildrenAtLevel(label, levelInt);
+
+                        // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
                         StringBuilder sb = new StringBuilder();
                         boolean first = true;
                         for (Label l : labels){
@@ -120,6 +127,18 @@ public class LabelController {
         }
 
         return "No action taken";
+    }
+
+    private String getInstruction(String command, String instructionName){
+        if (command.toLowerCase().contains(instructionName.toLowerCase())){
+            int commandStart = command.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length();
+            if (command.indexOf(";", commandStart) != -1){
+                return command.substring(commandStart, command.indexOf(";", commandStart)).trim();
+            } else {
+                return command.substring(commandStart).trim();
+            }
+        }
+        return null;
     }
 
 

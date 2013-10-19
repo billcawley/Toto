@@ -42,7 +42,7 @@ public class LabelDAO extends StandardDAO {
         }
     }
 
-    // TODO : make delete clear up label set definition and flags for label set lookup
+    // TODO : make delete clear up label set definition ("compress" positions also) and flags for label set lookup
 
     public Label findByName(final String name) throws DataAccessException {
         final String whereCondition = " where `" + Label.NAME + "` = :" + Label.NAME;
