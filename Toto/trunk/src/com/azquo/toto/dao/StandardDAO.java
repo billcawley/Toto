@@ -30,17 +30,17 @@ public abstract class StandardDAO {
 
     public static final int SELECTLIMIT = 10000;
 
-    public final class StandardEntityByIdRowMapper implements RowMapper<StandardEntity> {
+    public final class StandardEntityByIdRowMapper<T extends StandardEntity> implements RowMapper<T> {
 
-        private StandardEntity standardEntity;
+        private T standardEntity;
 
-        public StandardEntityByIdRowMapper(final StandardEntity standardEntity){
+        public StandardEntityByIdRowMapper(final T standardEntity){
             this.standardEntity = standardEntity;
         }
         @Override
-        public StandardEntity mapRow(final ResultSet rs, final int row) throws SQLException {
+        public T mapRow(final ResultSet rs, final int row) throws SQLException {
             standardEntity.setId(rs.getInt(StandardEntity.ID));
-            return findById(standardEntity);
+            return (T)findById(standardEntity);
         }
     }
 
@@ -101,11 +101,11 @@ public abstract class StandardDAO {
         jdbcTemplate.update(SQL_DELETE, namedParams);
     }
 
-    public StandardEntity findById(final StandardEntity entity) throws DataAccessException {
+    public <T extends StandardEntity> T findById(final T entity) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue("id", entity.getId());
         final String FIND_BY_ID = "Select * from `" + entity.getTableName() + "` where " + StandardEntity.ID + " = :" + StandardEntity.ID;
-        final List<? extends StandardEntity> results = jdbcTemplate.query(FIND_BY_ID, namedParams, entity.getRowMapper());
+        final List<T> results = jdbcTemplate.query(FIND_BY_ID, namedParams, (RowMapper<T>)entity.getRowMapper());
 
         if (results.size() == 0) {
             //logger.warning("No customer found for id " + id + " in table " + table);
@@ -126,24 +126,23 @@ public abstract class StandardDAO {
 
     /*
     OK this function represents a casting problem, that is to say that DAO classes will call it but want to return List<TheirClassName> and the compiler will say it can't check the casting
-    which it can't. There was thought of making a few functions at the bottom of each DAO for this but in the end I decided that such list functions should just use these functions and @SuppressWarnings("unchecked")
-    I could change this later
-     */
+    which it can't. There was thought of making a few functions at the bottom of each DAO for this but in the end I decided that such list functions should just use these functions and @SuppressWarnings("uncheck
+    I could change this latered")
 
-    //public <T>  java.util.List<T> queryForList(java.lang.String sql, org.springframework.jdbc.core.namedparam.SqlParameterSource paramSource, java.lang.Class<T> elementType
 
-    public <T extends StandardEntity> List<T> findListWithWhereSQLAndParameters(final T entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById, final int from, final int limit) throws DataAccessException {
+    //public <T>  java.util.List<T> queryForList(java.lang.String sql, org.springframework.jdbc.core.namedparam.SqlParameterSource paramSource, java.lang.Class<T> elementType   */
 
+    public <T extends StandardEntity>  java.util.List<T> findListWithWhereSQLAndParameters( T entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById, final int from, final int limit) throws DataAccessException {
         if (limit > SELECTLIMIT){
             throw new InvalidDataAccessApiUsageException("Error, limit in SQL select greater than : " + SELECTLIMIT);
         }
         if (lookupById){
             final String SQL_SELECT = "Select `" + entity.getTableName() + "`." + StandardEntity.ID + " from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
             StandardEntityByIdRowMapper mapById = new StandardEntityByIdRowMapper(entity);
-            return (List<T>) jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
+            return jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
         } else {
             final String SQL_SELECT_ALL = "Select `" + entity.getTableName() + "`.* from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "");
-            return (List<T>) jdbcTemplate.query(SQL_SELECT_ALL, namedParams, entity.getRowMapper());
+            return jdbcTemplate.query(SQL_SELECT_ALL, namedParams, (RowMapper<T>)entity.getRowMapper());
         }
     }
 
@@ -151,7 +150,7 @@ public abstract class StandardDAO {
         if (lookupById){
             final String SQL_SELECT = "Select `" + entity.getTableName() + "`." + StandardEntity.ID + " from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
             StandardEntityByIdRowMapper mapById = new StandardEntityByIdRowMapper(entity);
-            final List<StandardEntity> results = jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
+            final List<? extends StandardEntity> results = jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
             if (results.size() == 0) {
                 return null;
             }
