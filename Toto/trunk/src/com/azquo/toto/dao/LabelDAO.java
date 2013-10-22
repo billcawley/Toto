@@ -97,8 +97,6 @@ public class LabelDAO extends StandardDAO<Label> {
         }
     }*/
 
-    // TODO : order by position
-
     public Label findByName(final String name) throws DataAccessException {
         final String whereCondition = " where `" + NAME + "` = :" + NAME;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();

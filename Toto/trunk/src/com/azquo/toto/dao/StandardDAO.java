@@ -20,7 +20,7 @@ import java.util.Map;
  * Date: 17/10/13
  * Time: 09:18
  * Most data tables in the database have common features such as an id and a simple place that they're stored which means we can,
- * by implementing certain functions in the entity objects, make some functions generic. Update, insert, delete find by ID.
+ * factor things off here
  * Unlike Feefo I don't know if there's much of a case for Cacheing.
  *
  * Note : for building SQL I'm veering away from stringbuilder as IntelliJ complains about it and string concantation etc is heavily optimised by the compiler

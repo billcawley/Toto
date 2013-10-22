@@ -5,7 +5,8 @@ package com.azquo.toto.controller;
  * User: cawley
  * Date: 17/10/13
  * Time: 11:41
- * We're going to try for spring annotation based controllers
+ * We're going to try for spring annotation based controllers. Might look into some rest specific spring stuff later.
+ * For the moment it parses instructions for manipulating the label set and calls the label service if the instructions seem correctly formed.
  */
 
 import com.azquo.toto.entity.Label;

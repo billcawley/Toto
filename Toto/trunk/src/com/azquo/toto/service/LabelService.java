@@ -13,6 +13,8 @@ import java.util.List;
  * Date: 17/10/13
  * Time: 14:18
  * I've been convinced that a service layer is probably a good idea, with the DAO/Database it can form the model.
+ *
+ * THis does the grunt work for label manipulation, might not need to be that quick.
  */
 public class LabelService {
 
