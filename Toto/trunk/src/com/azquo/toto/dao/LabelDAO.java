@@ -42,8 +42,17 @@ public class LabelDAO extends StandardDAO {
     }
 
     // TODO : make delete clear up label set definition ("compress" positions also) and flags for label set lookup
+    // ok this will unlink everywhere then delete . . . or not?
 
     public void remove(final Label label) throws DataAccessException {
+        List<Label> parents = findParents(label, SetDefinitionTable.label_set_definition);
+        for (Label parent : parents){
+            unlinkParentAndChild(parent, label, SetDefinitionTable.label_set_definition);
+        }
+        List<Label> children = findChildren(label, false, SetDefinitionTable.label_set_definition);
+        for (Label parent : parents){
+            unlinkParentAndChild(parent, label, SetDefinitionTable.label_set_definition);
+        }
         // SQL to drop the links but may do it by unlinking
         /*MapSqlParameterSource namedParams = new MapSqlParameterSource(); // clear it
         String updateSql = "DELETE from `" + LABELSETDEFINITION + "` where `" + LABELSETDEFINITION + "`.`" + PARENTID + "` = :" + PARENTID + " OR " + LABELSETDEFINITION + "`.`" + CHILDID + "` = :" + CHILDID + "";
@@ -59,7 +68,7 @@ public class LabelDAO extends StandardDAO {
         final String whereCondition = " where `" + Label.NAME + "` = :" + Label.NAME;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(Label.NAME, name);
-        return (Label) findOneWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
+        return findOneWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
     }
 
 /*    public List<Label> findChildren(final Label label) throws DataAccessException {
@@ -71,15 +80,13 @@ public class LabelDAO extends StandardDAO {
     }*/
 
     // should this be public? I want the service to have direct access as the code will be normalised better . . .
-    @SuppressWarnings("unchecked")
     public List<Label> findChildren(final Label label, final boolean sorted, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final String whereCondition = ", `" + setDefinitionTable + "` where `" + label.getTableName() + "`." + label.ID + " = `" + setDefinitionTable + "`.`" + CHILDID + "` AND `" + setDefinitionTable + "`.`" + PARENTID + "` = :" + PARENTID + (sorted ? " order by `" + Label.NAME + "`" : " order by `" + POSITION + "`");
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, label.getId());
-        return (List<Label>) findListWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
+        return findListWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
     }
 
-    @SuppressWarnings("unchecked")
     public List<Label> findChildren(final Label label, int from, int to, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, label.getId());
@@ -90,20 +97,15 @@ public class LabelDAO extends StandardDAO {
             namedParams.addValue("to", to);
         }
         final String whereCondition = ", `" + setDefinitionTable + "` where `" + label.getTableName() + "`." + label.ID + " = `" + setDefinitionTable + "`.`" + CHILDID + "` AND `" + setDefinitionTable + "`.`" + PARENTID + "` = :" + PARENTID + (from != -1 ? " AND `" + setDefinitionTable + "`.`" + POSITION + "` >= :from" : "") + (to != -1 ? " AND `" + setDefinitionTable + "`.`" + POSITION + "` <= :to" : "") + " order by `" + POSITION + "`";
-        return (List<Label>) findListWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
+        return findListWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
     }
 
-    @SuppressWarnings("unchecked")
     public List<Label> findParents(final Label label, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final String whereCondition = ", `" + setDefinitionTable + "` where `" + label.getTableName() + "`." + label.ID + " = `" + setDefinitionTable + "`.`" + PARENTID + "` AND `" + setDefinitionTable + "`.`" + CHILDID + "` = :" + CHILDID;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(CHILDID, label.getId());
-        return (List<Label>) findListWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
+        return findListWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
     }
-
-    /*public int getMaxChildPosition(final Label l) throws DataAccessException {
-        return getMaxChildPosition(l, LABELSETDEFINITION);
-    }*/
 
     public int getMaxChildPosition(final Label l, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -112,10 +114,6 @@ public class LabelDAO extends StandardDAO {
         Integer integer = jdbcTemplate.queryForObject(FIND_MAX_POSITION, namedParams, Integer.class);
         return (integer == null ? 0 : integer.intValue()); // no records means we return 0 as the max position
     }
-
-    /*public int getChildPosition(final Label parent, final Label child) throws DataAccessException {
-        return getChildPosition(parent, child, LABELSETDEFINITION);
-    }*/
 
     public int getChildPosition(final Label parent, final Label child, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -129,11 +127,6 @@ public class LabelDAO extends StandardDAO {
             return -1; // we'll call -1 not existing
         }
     }
-
-/*    public boolean linkParentAndChild(final Label parent, final Label child, int position) throws DataAccessException {
-        return linkParentAndChild(parent, child, position, LABELSETDEFINITION);
-    }*/
-
 
     public boolean linkParentAndChild(final Label parent, final Label child, int position, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         // init the parameters at the beginning, we can reuse them for all possible queries I think . . . .nice
@@ -172,6 +165,7 @@ public class LabelDAO extends StandardDAO {
             final String SHIFT_POSITION = "UPDATE `" + setDefinitionTable + "` set `" + POSITION + "` = :" + POSITION + " where `" + PARENTID + "` = :" + PARENTID + " AND `" + CHILDID + "` = :" + CHILDID;
             jdbcTemplate.update(SHIFT_POSITION, namedParams);
         } else { // insert a new one, shift positions up if necessary and sort out the lookup flags . . . .
+            // TODO : check for circular references!
             if (position < (existingMaxPosition + 1)) {// not right at the top, some positions need to be moved up
                 final String SHIFT_POSITIONS = "UPDATE `" + setDefinitionTable + "` set `" + POSITION + "` = (`" + POSITION + "` + 1) where `" + PARENTID + "` = :" + PARENTID + " AND `" + POSITION + "`>= :" + POSITION;
                 jdbcTemplate.update(SHIFT_POSITIONS, namedParams);
@@ -179,7 +173,6 @@ public class LabelDAO extends StandardDAO {
             // now make the link
             String updateSql = "INSERT INTO `" + setDefinitionTable + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES (:" + PARENTID + ",:" + CHILDID + ",:" + POSITION + ")";
             jdbcTemplate.update(updateSql, namedParams);
-
             // TODO : lookup flags
         }
         return true;

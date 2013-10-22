@@ -15,7 +15,7 @@ import java.util.Map;
  *
  */
 
-public abstract class StandardEntity {
+public abstract class StandardEntity<T extends StandardEntity>{
 
     public static final String ID = "id";
 
@@ -33,6 +33,6 @@ public abstract class StandardEntity {
 
     public abstract Map<String, Object> getColumnNameValueMap();
 
-    public abstract RowMapper<? extends StandardEntity> getRowMapper();
+    public abstract RowMapper<T> getRowMapper();
 
 }

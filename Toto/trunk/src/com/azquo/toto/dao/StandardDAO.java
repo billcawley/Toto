@@ -30,7 +30,7 @@ public abstract class StandardDAO {
 
     public static final int SELECTLIMIT = 10000;
 
-    public final class StandardEntityByIdRowMapper<T extends StandardEntity> implements RowMapper<T> {
+    public final class StandardEntityByIdRowMapper<T extends StandardEntity<T>> implements RowMapper<T> {
 
         private T standardEntity;
 
@@ -44,7 +44,7 @@ public abstract class StandardDAO {
         }
     }
 
-    public void updateById(final StandardEntity entity) throws DataAccessException {
+    public <T extends StandardEntity<T>> void updateById(final T entity) throws DataAccessException {
 //        final NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplateFactory.getJDBCTemplateForEntity(entity);
         final StringBuilder updateSql = new StringBuilder();
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -62,11 +62,11 @@ public abstract class StandardDAO {
         jdbcTemplate.update(updateSql.toString(), namedParams);
     }
 
-    public void insert(final StandardEntity entity) throws DataAccessException {
+    public <T extends StandardEntity<T>> void insert(final T entity) throws DataAccessException {
         insert(entity, false);
     }
 
-    public void insert(final StandardEntity entity, boolean forceId) throws DataAccessException {
+    public <T extends StandardEntity<T>> void insert(final T entity, boolean forceId) throws DataAccessException {
         final StringBuilder columnsCommaList = new StringBuilder();
         final StringBuilder valuesCommaList = new StringBuilder();
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -86,7 +86,7 @@ public abstract class StandardDAO {
         entity.setId(keyHolder.getKey().intValue());
     }
 
-    public void store(final StandardEntity entity) throws DataAccessException {
+    public <T extends StandardEntity<T>> void store(final T entity) throws DataAccessException {
         if (entity.getId() > 0){
             updateById(entity);
         } else {
@@ -94,18 +94,18 @@ public abstract class StandardDAO {
         }
     }
 
-    public void removeById(final StandardEntity entity) throws DataAccessException {
+    public <T extends StandardEntity> void removeById(final T entity) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue("id", entity.getId());
         final String SQL_DELETE = "DELETE  from `" + entity.getTableName() + "` where " + StandardEntity.ID + " = :" + StandardEntity.ID;
         jdbcTemplate.update(SQL_DELETE, namedParams);
     }
 
-    public <T extends StandardEntity> T findById(final T entity) throws DataAccessException {
+    public <T extends StandardEntity<T>> T findById(final T entity) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue("id", entity.getId());
         final String FIND_BY_ID = "Select * from `" + entity.getTableName() + "` where " + StandardEntity.ID + " = :" + StandardEntity.ID;
-        final List<T> results = jdbcTemplate.query(FIND_BY_ID, namedParams, (RowMapper<T>)entity.getRowMapper());
+        final List<T> results = jdbcTemplate.query(FIND_BY_ID, namedParams, entity.getRowMapper());
 
         if (results.size() == 0) {
             //logger.warning("No customer found for id " + id + " in table " + table);
@@ -116,11 +116,11 @@ public abstract class StandardDAO {
 
     // Assume not by id, adding wouldn't be difficult
 
-    public List<? extends StandardEntity> findAll(final StandardEntity entity) throws DataAccessException {
+    public <T extends StandardEntity<T>> List<T> findAll(final T entity) throws DataAccessException {
         return findListWithWhereSQLAndParameters(entity, null,null,false);
     }
 
-    public List<? extends StandardEntity> findListWithWhereSQLAndParameters(final StandardEntity entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
+    public <T extends StandardEntity<T>> List<T> findListWithWhereSQLAndParameters(final T entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
         return findListWithWhereSQLAndParameters(entity, whereCondition, namedParams, lookupById, 0, SELECTLIMIT);
     }
 
@@ -132,32 +132,32 @@ public abstract class StandardDAO {
 
     //public <T>  java.util.List<T> queryForList(java.lang.String sql, org.springframework.jdbc.core.namedparam.SqlParameterSource paramSource, java.lang.Class<T> elementType   */
 
-    public <T extends StandardEntity>  java.util.List<T> findListWithWhereSQLAndParameters( T entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById, final int from, final int limit) throws DataAccessException {
+    public <T extends StandardEntity<T>>  java.util.List<T> findListWithWhereSQLAndParameters( T entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById, final int from, final int limit) throws DataAccessException {
         if (limit > SELECTLIMIT){
             throw new InvalidDataAccessApiUsageException("Error, limit in SQL select greater than : " + SELECTLIMIT);
         }
         if (lookupById){
             final String SQL_SELECT = "Select `" + entity.getTableName() + "`." + StandardEntity.ID + " from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
-            StandardEntityByIdRowMapper mapById = new StandardEntityByIdRowMapper(entity);
-            return jdbcTemplate.query(SQL_SELECT, namedParams, (RowMapper<T>)mapById);
+            StandardEntityByIdRowMapper<T> mapById = new StandardEntityByIdRowMapper<T>(entity);
+            return jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
         } else {
             final String SQL_SELECT_ALL = "Select `" + entity.getTableName() + "`.* from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "");
             return jdbcTemplate.query(SQL_SELECT_ALL, namedParams, (RowMapper<T>)entity.getRowMapper());
         }
     }
 
-    public StandardEntity findOneWithWhereSQLAndParameters(final StandardEntity entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
+    public <T extends StandardEntity<T>> T findOneWithWhereSQLAndParameters(final T entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
         if (lookupById){
             final String SQL_SELECT = "Select `" + entity.getTableName() + "`." + StandardEntity.ID + " from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
-            StandardEntityByIdRowMapper mapById = new StandardEntityByIdRowMapper(entity);
-            final List<? extends StandardEntity> results = jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
+            StandardEntityByIdRowMapper<T> mapById = new StandardEntityByIdRowMapper<T>(entity);
+            final List<T> results = jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
             if (results.size() == 0) {
                 return null;
             }
             return results.get(0);
         } else {
             final String SQL_SELECT_ALL = "Select `" + entity.getTableName() + "`.* from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
-            final List<? extends StandardEntity> results = jdbcTemplate.query(SQL_SELECT_ALL, namedParams, entity.getRowMapper());
+            final List<T> results = jdbcTemplate.query(SQL_SELECT_ALL, namedParams, entity.getRowMapper());
             if (results.size() == 0) {
                 return null;
             }

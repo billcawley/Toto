@@ -34,6 +34,7 @@ public class LabelController {
     public static final String TO = "to";
     public static final String SORTED = "sorted";
     public static final String AFTER = "after";
+    public static final String RENAMEAS = "rename as";
 
     public static final String LOWEST = "lowest";
 
@@ -65,6 +66,7 @@ public class LabelController {
             String toString = getInstruction(instructions, TO);
             String afterString = getInstruction(instructions, AFTER);
             String remove = getInstruction(instructions, REMOVE);
+            String renameas = getInstruction(instructions, RENAMEAS);
             if (elements != null){
                 if (create != null){
                     final Label label = labelService.findOrCreateLabel(labelName);
@@ -221,6 +223,9 @@ public class LabelController {
                     }
                 }
 
+            } else if (renameas != null){ // not specific to peers or elements
+                labelService.renameLabel(labelName, renameas);
+                return "rename " + labelName + " to " + renameas;
             }
         }
 

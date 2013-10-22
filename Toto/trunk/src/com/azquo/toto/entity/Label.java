@@ -16,7 +16,7 @@ import java.util.Map;
  * other labels. Sets of labels.
  *
  */
-public class Label extends StandardEntity {
+public class Label extends StandardEntity<Label> {
 
     // convention is to put the column names in as strings
 
@@ -57,7 +57,7 @@ public class Label extends StandardEntity {
         return toReturn;
     }
 
-    public static final class LabelRowMapper implements RowMapper<StandardEntity> {
+    public static final class LabelRowMapper implements RowMapper<Label> {
         @Override
         public Label mapRow(final ResultSet rs, final int row) throws SQLException {
             final Label label = new Label();
@@ -69,7 +69,7 @@ public class Label extends StandardEntity {
     }
 
     @Override
-    public RowMapper<StandardEntity> getRowMapper() {
+    public RowMapper<Label> getRowMapper() {
         return new LabelRowMapper();
     }
 

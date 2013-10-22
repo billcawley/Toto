@@ -65,7 +65,7 @@ public class LabelService {
     }
 
     public List<Label> findChildrenFromTo(final Label label, final int from, final int to) throws Exception {
-        return labelDAO.findChildren(label, from, to,LabelDAO.SetDefinitionTable.label_set_definition);
+        return labelDAO.findChildren(label, from, to, LabelDAO.SetDefinitionTable.label_set_definition);
     }
 
     public List<Label> findChildrenFromTo(final Label label, final String from, final String to) throws Exception {
@@ -163,4 +163,11 @@ public class LabelService {
         }
     }
 
+    public void renameLabel(String labelName, String renameAs) {
+        Label existing = labelDAO.findByName(labelName);
+        if (existing != null) {
+            existing.setName(renameAs);
+            labelDAO.store(existing);
+        }
+    }
 }
