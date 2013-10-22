@@ -41,6 +41,13 @@ public class LabelDAOTest {
         clearEddtestLabels();
     }
 
+    @Test
+    public void testColumnNameValueMap() throws Exception {
+        Label l = new Label();
+        l.setName("eddtest");
+        Assert.assertTrue(labelDao.getColumnNameValueMap(l).keySet().size() == 3);
+    }
+
 
     @Test
     public void testFindByName() throws Exception {
