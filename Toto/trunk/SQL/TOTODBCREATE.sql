@@ -1,3 +1,9 @@
+- phpMyAdmin SQL Dump
+-- version 4.0.8
+-- http://www.phpmyadmin.net
+--
+-- Host: localhost
+-- Generation Time: Oct 22, 2013 at 08:16 AM
 -- Server version: 5.5.33
 -- PHP Version: 5.3.17
 
@@ -32,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `label` (
   `label_set_lookup_needs_rebuilding` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=69 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=45 ;
 
 -- --------------------------------------------------------
 
@@ -69,6 +75,19 @@ CREATE TABLE IF NOT EXISTS `label_set_lookup` (
   `label_id` int(11) NOT NULL,
   `levels_below` smallint(6) NOT NULL,
   `related_label_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `peer_set_definition`
+--
+
+CREATE TABLE IF NOT EXISTS `peer_set_definition` (
+  `parent_id` int(11) NOT NULL,
+  `child_id` int(11) NOT NULL,
+  `position` smallint(5) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`parent_id`,`child_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
