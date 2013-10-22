@@ -130,17 +130,20 @@ public abstract class StandardDAO {
     I could change this later
      */
 
-    public List<? extends StandardEntity> findListWithWhereSQLAndParameters(final StandardEntity entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById, final int from, final int limit) throws DataAccessException {
+    //public <T>  java.util.List<T> queryForList(java.lang.String sql, org.springframework.jdbc.core.namedparam.SqlParameterSource paramSource, java.lang.Class<T> elementType
+
+    public <T extends StandardEntity> List<T> findListWithWhereSQLAndParameters(final T entity, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById, final int from, final int limit) throws DataAccessException {
+
         if (limit > SELECTLIMIT){
             throw new InvalidDataAccessApiUsageException("Error, limit in SQL select greater than : " + SELECTLIMIT);
         }
         if (lookupById){
             final String SQL_SELECT = "Select `" + entity.getTableName() + "`." + StandardEntity.ID + " from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
             StandardEntityByIdRowMapper mapById = new StandardEntityByIdRowMapper(entity);
-            return jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
+            return (List<T>) jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
         } else {
             final String SQL_SELECT_ALL = "Select `" + entity.getTableName() + "`.* from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "");
-            return jdbcTemplate.query(SQL_SELECT_ALL, namedParams, entity.getRowMapper());
+            return (List<T>) jdbcTemplate.query(SQL_SELECT_ALL, namedParams, entity.getRowMapper());
         }
     }
 
