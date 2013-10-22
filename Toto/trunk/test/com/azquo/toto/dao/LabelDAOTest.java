@@ -60,12 +60,12 @@ public class LabelDAOTest {
         Label l2 = new Label();
         l2.setName("eddtest2");
         labelDao.store(l2);
-        System.out.println("max position when there's no children : " + labelDao.getMaxChildPosition(l1));
-        labelDao.linkParentAndChild(l1, l2, 2);
-        labelDao.linkParentAndChild(l1, l2, 4);
-        System.out.println("max position when there's children : " + labelDao.getMaxChildPosition(l1));
+        System.out.println("max position when there's no children : " + labelDao.getMaxChildPosition(l1, LabelDAO.SetDefinitionTable.label_set_definition));
+        labelDao.linkParentAndChild(l1, l2, 2, LabelDAO.SetDefinitionTable.label_set_definition);
+        labelDao.linkParentAndChild(l1, l2, 4, LabelDAO.SetDefinitionTable.label_set_definition);
+        System.out.println("max position when there's children : " + labelDao.getMaxChildPosition(l1, LabelDAO.SetDefinitionTable.label_set_definition));
         // need too sys out println to confirm the link here
-        labelDao.unlinkParentAndChild(l1, l2);
+        labelDao.unlinkParentAndChild(l1, l2, LabelDAO.SetDefinitionTable.label_set_definition);
         clearEddtestLabels();
     }
 
@@ -77,10 +77,10 @@ public class LabelDAOTest {
         Label l2 = new Label();
         l2.setName("eddtest2");
         labelDao.store(l2);
-        labelDao.linkParentAndChild(l1,l2,0);
-        labelDao.linkParentAndChild(l1,l2,0);
+        labelDao.linkParentAndChild(l1,l2,0, LabelDAO.SetDefinitionTable.label_set_definition);
+        labelDao.linkParentAndChild(l1,l2,0, LabelDAO.SetDefinitionTable.label_set_definition);
         // need too sys out println to confirm the link here
-        labelDao.unlinkParentAndChild(l1, l2);
+        labelDao.unlinkParentAndChild(l1, l2, LabelDAO.SetDefinitionTable.label_set_definition);
         clearEddtestLabels();
     }
 

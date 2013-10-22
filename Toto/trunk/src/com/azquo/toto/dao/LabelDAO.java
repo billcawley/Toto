@@ -18,8 +18,8 @@ public class LabelDAO extends StandardDAO {
 
     // associated table names, currently think here is a good place to put them. Where they're used.
 
-    public static final String LABELSETDEFINITION = "label_set_definition";
-    public static final String PEERSETDEFINITION = "peer_set_definition";
+    public enum SetDefinitionTable {label_set_definition, peer_set_definition};
+
     public static final String PARENTID = "parent_id";
     public static final String CHILDID = "child_id";
     public static final String POSITION = "position";
@@ -62,17 +62,17 @@ public class LabelDAO extends StandardDAO {
         return (Label) findOneWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
     }
 
-    public List<Label> findChildren(final Label label) throws DataAccessException {
+/*    public List<Label> findChildren(final Label label) throws DataAccessException {
         return findChildren(label, false, LABELSETDEFINITION);
-    }
+    }*/
 
-    public List<Label> findChildren(final Label label, final boolean sorted) throws DataAccessException {
+/*    public List<Label> findChildren(final Label label, final boolean sorted) throws DataAccessException {
         return findChildren(label, sorted, LABELSETDEFINITION);
-    }
+    }*/
 
     // should this be public? I want the service to have direct access as the code will be normalised better . . .
     @SuppressWarnings("unchecked")
-    public List<Label> findChildren(final Label label, final boolean sorted, final String setDefinitionTable) throws DataAccessException {
+    public List<Label> findChildren(final Label label, final boolean sorted, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final String whereCondition = ", `" + setDefinitionTable + "` where `" + label.getTableName() + "`." + label.ID + " = `" + setDefinitionTable + "`.`" + CHILDID + "` AND `" + setDefinitionTable + "`.`" + PARENTID + "` = :" + PARENTID + (sorted ? " order by `" + Label.NAME + "`" : " order by `" + POSITION + "`");
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, label.getId());
@@ -80,7 +80,7 @@ public class LabelDAO extends StandardDAO {
     }
 
     @SuppressWarnings("unchecked")
-    public List<Label> findChildren(final Label label, int from, int to) throws DataAccessException {
+    public List<Label> findChildren(final Label label, int from, int to, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, label.getId());
         if (from != -1) {
@@ -89,23 +89,23 @@ public class LabelDAO extends StandardDAO {
         if (to != -1) {
             namedParams.addValue("to", to);
         }
-        final String whereCondition = ", `" + LABELSETDEFINITION + "` where `" + label.getTableName() + "`." + label.ID + " = `" + LABELSETDEFINITION + "`.`" + CHILDID + "` AND `" + LABELSETDEFINITION + "`.`" + PARENTID + "` = :" + PARENTID + (from != -1 ? " AND `" + LABELSETDEFINITION + "`.`" + POSITION + "` >= :from" : "") + (to != -1 ? " AND `" + LABELSETDEFINITION + "`.`" + POSITION + "` <= :to" : "") + " order by `" + POSITION + "`";
+        final String whereCondition = ", `" + setDefinitionTable + "` where `" + label.getTableName() + "`." + label.ID + " = `" + setDefinitionTable + "`.`" + CHILDID + "` AND `" + setDefinitionTable + "`.`" + PARENTID + "` = :" + PARENTID + (from != -1 ? " AND `" + setDefinitionTable + "`.`" + POSITION + "` >= :from" : "") + (to != -1 ? " AND `" + setDefinitionTable + "`.`" + POSITION + "` <= :to" : "") + " order by `" + POSITION + "`";
         return (List<Label>) findListWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
     }
 
     @SuppressWarnings("unchecked")
-    public List<Label> findParents(final Label label) throws DataAccessException {
-        final String whereCondition = ", `" + LABELSETDEFINITION + "` where `" + label.getTableName() + "`." + label.ID + " = `" + LABELSETDEFINITION + "`.`" + PARENTID + "` AND `" + LABELSETDEFINITION + "`.`" + CHILDID + "` = :" + CHILDID;
+    public List<Label> findParents(final Label label, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
+        final String whereCondition = ", `" + setDefinitionTable + "` where `" + label.getTableName() + "`." + label.ID + " = `" + setDefinitionTable + "`.`" + PARENTID + "` AND `" + setDefinitionTable + "`.`" + CHILDID + "` = :" + CHILDID;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(CHILDID, label.getId());
         return (List<Label>) findListWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
     }
 
-    public int getMaxChildPosition(final Label l) throws DataAccessException {
+    /*public int getMaxChildPosition(final Label l) throws DataAccessException {
         return getMaxChildPosition(l, LABELSETDEFINITION);
-    }
+    }*/
 
-    public int getMaxChildPosition(final Label l, final String setDefinitionTable) throws DataAccessException {
+    public int getMaxChildPosition(final Label l, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, l.getId());
         final String FIND_MAX_POSITION = "Select max(" + POSITION + ") from `" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID;
@@ -113,11 +113,15 @@ public class LabelDAO extends StandardDAO {
         return (integer == null ? 0 : integer.intValue()); // no records means we return 0 as the max position
     }
 
-    public int getChildPosition(final Label parent, final Label child) throws DataAccessException {
+    /*public int getChildPosition(final Label parent, final Label child) throws DataAccessException {
+        return getChildPosition(parent, child, LABELSETDEFINITION);
+    }*/
+
+    public int getChildPosition(final Label parent, final Label child, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, parent.getId());
         namedParams.addValue(CHILDID, child.getId());
-        final String FIND_EXISTING_LINK_POSITION = "Select `" + POSITION + "` from `" + LABELSETDEFINITION + "` where `" + PARENTID + "` = :" + PARENTID + " AND `" + CHILDID + "` = :" + CHILDID;
+        final String FIND_EXISTING_LINK_POSITION = "Select `" + POSITION + "` from `" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID + " AND `" + CHILDID + "` = :" + CHILDID;
         List<Integer> existingPositionResult = jdbcTemplate.queryForList(FIND_EXISTING_LINK_POSITION, namedParams, Integer.class);
         if (!existingPositionResult.isEmpty()) {
             return existingPositionResult.get(0);// the compiler allows this?? Cool :)
@@ -126,14 +130,14 @@ public class LabelDAO extends StandardDAO {
         }
     }
 
-    public boolean linkParentAndChild(final Label parent, final Label child, int position) throws DataAccessException {
+/*    public boolean linkParentAndChild(final Label parent, final Label child, int position) throws DataAccessException {
         return linkParentAndChild(parent, child, position, LABELSETDEFINITION);
-    }
+    }*/
 
 
-    public boolean linkParentAndChild(final Label parent, final Label child, int position, final String setDefinitionTable) throws DataAccessException {
+    public boolean linkParentAndChild(final Label parent, final Label child, int position, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         // init the parameters at the beginning, we can reuse them for all possible queries I think . . . .nice
-        int existingMaxPosition = getMaxChildPosition(parent);
+        int existingMaxPosition = getMaxChildPosition(parent, setDefinitionTable);
         if (position > (existingMaxPosition + 1)) { // if the position is greater than one above the top the chop it down
             position = existingMaxPosition + 1;
         }
@@ -143,7 +147,7 @@ public class LabelDAO extends StandardDAO {
         namedParams.addValue(POSITION, position);
         //int numberDeleted = unlinkParentAndChild(parent,child);
         // Check if the link exists and if so at what position, The DB should NOT allow duplicate links!
-        int existingPosition = getChildPosition(parent, child);
+        int existingPosition = getChildPosition(parent, child, setDefinitionTable);
         if (existingPosition != -1) {
             if (existingPosition == position) { // the link already exists and in that position, return
                 return false;
@@ -181,17 +185,17 @@ public class LabelDAO extends StandardDAO {
         return true;
     }
 
-    public int unlinkParentAndChild(final Label parent, final Label child) throws DataAccessException {
-        int existingPosition = getChildPosition(parent, child);
+    public int unlinkParentAndChild(final Label parent, final Label child, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
+        int existingPosition = getChildPosition(parent, child, setDefinitionTable);
         if (existingPosition != -1) { // we have something to do!
             // drop the positions above the one we're deleting down . . .
             MapSqlParameterSource namedParams = new MapSqlParameterSource();
             namedParams.addValue(PARENTID, parent.getId());
             namedParams.addValue(CHILDID, child.getId());
             namedParams.addValue(POSITION, existingPosition);
-            final String SHIFT_POSITIONS = "UPDATE `" + LABELSETDEFINITION + "` set `" + POSITION + "` = (`" + POSITION + "` - 1) where `" + PARENTID + "` = :" + PARENTID + " AND `" + POSITION + "` > :" + POSITION;
+            final String SHIFT_POSITIONS = "UPDATE `" + setDefinitionTable + "` set `" + POSITION + "` = (`" + POSITION + "` - 1) where `" + PARENTID + "` = :" + PARENTID + " AND `" + POSITION + "` > :" + POSITION;
             jdbcTemplate.update(SHIFT_POSITIONS, namedParams);
-            String updateSql = "DELETE from `" + LABELSETDEFINITION + "` where `" + PARENTID + "` = :" + PARENTID + " and `" + CHILDID + "` = :" + CHILDID + "";
+            String updateSql = "DELETE from `" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID + " and `" + CHILDID + "` = :" + CHILDID + "";
             return jdbcTemplate.update(updateSql, namedParams);
             // TODO : need to set that the look up tables need to be rebuilt appropriately
         }

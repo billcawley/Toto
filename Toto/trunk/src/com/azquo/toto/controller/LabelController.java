@@ -202,13 +202,13 @@ public class LabelController {
                             after = Integer.parseInt(afterString);
                         } catch (NumberFormatException nfe){
                         }
-                        labelService.createMember(label, elements, afterString, after);
+                        labelService.createPeer(label, elements, afterString, after);
                         return elements + " added to " + label.getName();
                     }
                 } else if (remove != null){ // delete
                     final Label label = labelService.findByName(labelName);
                     if (label != null){
-                        labelService.removeMember(label, elements);
+                        labelService.removePeer(label, elements);
                         return elements + " deleted";
                     }
                 } else {// they want to read data

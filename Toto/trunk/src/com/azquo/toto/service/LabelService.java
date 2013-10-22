@@ -40,12 +40,12 @@ public class LabelService {
         // level -1 means get me the lowest
         // notable that with current logic asking for a level with no data returns no data not the nearest it can get. Would be simple to change this
         int currentLevel = 1;
-        List<Label> foundAtCurrentLevel = labelDAO.findChildren(label);
+        List<Label> foundAtCurrentLevel = labelDAO.findChildren(label, false, LabelDAO.SetDefinitionTable.label_set_definition);
         while ((currentLevel < level || level == -1) && !foundAtCurrentLevel.isEmpty()) {
             // we can't loop over foundAtCurrentLevel and modify it at the same time, this asks for trouble
             List<Label> nextLevelList = new ArrayList<Label>();
             for (Label l : foundAtCurrentLevel) {
-                nextLevelList.addAll(labelDAO.findChildren(l));
+                nextLevelList.addAll(labelDAO.findChildren(l, false, LabelDAO.SetDefinitionTable.label_set_definition));
             }
             if (nextLevelList.isEmpty() && level == -1) { // wanted the lowest, we've hit a level with none so don't go further
                 break;
@@ -57,22 +57,22 @@ public class LabelService {
     }
 
     public List<Label> findPeers(final Label label) throws Exception {
-        return labelDAO.findChildren(label, true, LabelDAO.PEERSETDEFINITION);
+        return labelDAO.findChildren(label, true, LabelDAO.SetDefinitionTable.peer_set_definition);
     }
 
     public List<Label> findChildrenSorted(final Label label) throws Exception {
-        return labelDAO.findChildren(label, true);
+        return labelDAO.findChildren(label, true,LabelDAO.SetDefinitionTable.label_set_definition);
     }
 
     public List<Label> findChildrenFromTo(final Label label, final int from, final int to) throws Exception {
-        return labelDAO.findChildren(label, from, to);
+        return labelDAO.findChildren(label, from, to,LabelDAO.SetDefinitionTable.label_set_definition);
     }
 
     public List<Label> findChildrenFromTo(final Label label, final String from, final String to) throws Exception {
         System.out.println("from " + from);
         System.out.println("to " + to);
         // doing this in java, not sure SQL can do it
-        List<Label> all = labelDAO.findChildren(label);
+        List<Label> all = labelDAO.findChildren(label, false,LabelDAO.SetDefinitionTable.label_set_definition);
         List<Label> toReturn = new ArrayList<Label>();
         boolean okByFrom = false;
         if (from == null) {
@@ -94,14 +94,14 @@ public class LabelService {
     }
 
     public void createPeers(final Label parentLabel, final List<String> childNames) throws Exception {
-        createMembers(parentLabel, childNames, LabelDAO.PEERSETDEFINITION);
+        createMembers(parentLabel, childNames, LabelDAO.SetDefinitionTable.peer_set_definition);
     }
 
     public void createMembers(final Label parentLabel, final List<String> childNames) throws Exception {
-        createMembers(parentLabel, childNames, LabelDAO.LABELSETDEFINITION);
+        createMembers(parentLabel, childNames, LabelDAO.SetDefinitionTable.label_set_definition);
     }
 
-    private void createMembers(final Label parentLabel, final List<String> childNames, String setDefinitionTable) throws Exception {
+    private void createMembers(final Label parentLabel, final List<String> childNames, LabelDAO.SetDefinitionTable setDefinitionTable) throws Exception {
         int position = labelDAO.getMaxChildPosition(parentLabel, setDefinitionTable);
         // by default we look for existing and create if we can't find them
         for (String childName : childNames) {
@@ -117,14 +117,22 @@ public class LabelService {
         }
     }
 
+    public void createPeer(final Label parentLabel, final String peerName, final String afterString, final int after) throws Exception {
+        createMember(parentLabel, peerName, afterString, after, LabelDAO.SetDefinitionTable.peer_set_definition);
+    }
+
     public void createMember(final Label parentLabel, final String childName, final String afterString, final int after) throws Exception {
-        int position = labelDAO.getMaxChildPosition(parentLabel) + 1; // default to the end
+        createMember(parentLabel, childName, afterString, after, LabelDAO.SetDefinitionTable.label_set_definition);
+    }
+
+        public void createMember(final Label parentLabel, final String childName, final String afterString, final int after, LabelDAO.SetDefinitionTable setDefinitionTable) throws Exception {
+        int position = labelDAO.getMaxChildPosition(parentLabel, setDefinitionTable) + 1; // default to the end
         if (after != -1) { // int used before string should both be passed
             position = after + 1; // the actual insert point is the next ono since it's after that position :)
         } else if (afterString != null) {
             Label child = labelDAO.findByName(afterString);
             if (child != null) {
-                int childPosition = labelDAO.getChildPosition(parentLabel, child);
+                int childPosition = labelDAO.getChildPosition(parentLabel, child, setDefinitionTable);
                 if (childPosition != -1) {
                     position = childPosition + 1;
                 }
@@ -133,18 +141,25 @@ public class LabelService {
         // we look for existing and create if we can't find it
         Label existingChild = labelDAO.findByName(childName);
         if (existingChild != null) {
-            labelDAO.linkParentAndChild(parentLabel, existingChild, position);
+            labelDAO.linkParentAndChild(parentLabel, existingChild, position, setDefinitionTable);
         } else {
             Label newChild = new Label(childName);
             labelDAO.store(newChild);
-            labelDAO.linkParentAndChild(parentLabel, newChild, position);
+            labelDAO.linkParentAndChild(parentLabel, newChild, position, setDefinitionTable);
+        }
+    }
+
+    public void removePeer(final Label parentLabel, final String childName) throws Exception {
+        Label existingChild = labelDAO.findByName(childName);
+        if (existingChild != null) {
+            labelDAO.unlinkParentAndChild(parentLabel, existingChild, LabelDAO.SetDefinitionTable.peer_set_definition);
         }
     }
 
     public void removeMember(final Label parentLabel, final String childName) throws Exception {
         Label existingChild = labelDAO.findByName(childName);
         if (existingChild != null) {
-            labelDAO.unlinkParentAndChild(parentLabel, existingChild);
+            labelDAO.unlinkParentAndChild(parentLabel, existingChild, LabelDAO.SetDefinitionTable.label_set_definition);
         }
     }
 
