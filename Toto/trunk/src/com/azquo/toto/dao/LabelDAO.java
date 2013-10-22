@@ -14,7 +14,7 @@ import java.util.List;
  * Time: 19:19
  * DAO for Labels, since labels will be part of set structures sql in here could get hairy
  */
-public class LabelDAO extends StandardDAO {
+public class LabelDAO extends StandardDAO<Label> {
 
     // associated table names, currently think here is a good place to put them. Where they're used.
 
