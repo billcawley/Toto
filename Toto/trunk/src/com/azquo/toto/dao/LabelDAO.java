@@ -3,9 +3,14 @@ package com.azquo.toto.dao;
 import com.azquo.toto.entity.Label;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created with IntelliJ IDEA.
@@ -16,6 +21,18 @@ import java.util.List;
  */
 public class LabelDAO extends StandardDAO<Label> {
 
+    // the default table name for this data.
+    @Override
+    public String getTableName() {
+        return "label";
+    }
+
+    // column names (except ID)
+
+    public static final String NAME = "name";
+    public static final String LABELSETLOOKUPNEEDSREBUILDING = "label_set_lookup_needs_rebuilding";
+
+
     // associated table names, currently think here is a good place to put them. Where they're used.
 
     public enum SetDefinitionTable {label_set_definition, peer_set_definition};
@@ -24,6 +41,31 @@ public class LabelDAO extends StandardDAO<Label> {
     public static final String CHILDID = "child_id";
     public static final String POSITION = "position";
 
+
+    @Override
+    public Map<String, Object> getColumnNameValueMap(Label label){
+        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        toReturn.put(ID, label.getId());
+        toReturn.put(NAME, label.getName());
+        toReturn.put(LABELSETLOOKUPNEEDSREBUILDING, label.getLabelSetLookupNeedsRebuilding());
+        return toReturn;
+    }
+
+    public static final class LabelRowMapper implements RowMapper<Label> {
+        @Override
+        public Label mapRow(final ResultSet rs, final int row) throws SQLException {
+            final Label label = new Label();
+            label.setId(rs.getInt(ID));
+            label.setName(rs.getString(NAME));
+            label.setLabelSetLookupNeedsRebuilding(rs.getBoolean(LABELSETLOOKUPNEEDSREBUILDING));
+            return label;
+        }
+    }
+
+    @Override
+    public RowMapper<Label> getRowMapper() {
+        return new LabelRowMapper();
+    }
     // I think I'm going to specific store for Label due to unique name constraints
     // simply ignore stores where the id and label exist otherwise throw exception for existing label whether updating or adding
     public void store(final Label label) throws DataAccessException {
@@ -65,10 +107,10 @@ public class LabelDAO extends StandardDAO<Label> {
     // TODO : order by position
 
     public Label findByName(final String name) throws DataAccessException {
-        final String whereCondition = " where `" + Label.NAME + "` = :" + Label.NAME;
+        final String whereCondition = " where `" + NAME + "` = :" + NAME;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(Label.NAME, name);
-        return findOneWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
+        namedParams.addValue(NAME, name);
+        return findOneWithWhereSQLAndParameters(whereCondition, namedParams, false);
     }
 
 /*    public List<Label> findChildren(final Label label) throws DataAccessException {
@@ -81,10 +123,10 @@ public class LabelDAO extends StandardDAO<Label> {
 
     // should this be public? I want the service to have direct access as the code will be normalised better . . .
     public List<Label> findChildren(final Label label, final boolean sorted, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
-        final String whereCondition = ", `" + setDefinitionTable + "` where `" + label.getTableName() + "`." + label.ID + " = `" + setDefinitionTable + "`.`" + CHILDID + "` AND `" + setDefinitionTable + "`.`" + PARENTID + "` = :" + PARENTID + (sorted ? " order by `" + Label.NAME + "`" : " order by `" + POSITION + "`");
+        final String whereCondition = ", `" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + CHILDID + "` AND `" + setDefinitionTable + "`.`" + PARENTID + "` = :" + PARENTID + (sorted ? " order by `" + NAME + "`" : " order by `" + POSITION + "`");
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, label.getId());
-        return findListWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
+        return findListWithWhereSQLAndParameters(whereCondition, namedParams, false);
     }
 
     public List<Label> findChildren(final Label label, int from, int to, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
@@ -96,15 +138,15 @@ public class LabelDAO extends StandardDAO<Label> {
         if (to != -1) {
             namedParams.addValue("to", to);
         }
-        final String whereCondition = ", `" + setDefinitionTable + "` where `" + label.getTableName() + "`." + label.ID + " = `" + setDefinitionTable + "`.`" + CHILDID + "` AND `" + setDefinitionTable + "`.`" + PARENTID + "` = :" + PARENTID + (from != -1 ? " AND `" + setDefinitionTable + "`.`" + POSITION + "` >= :from" : "") + (to != -1 ? " AND `" + setDefinitionTable + "`.`" + POSITION + "` <= :to" : "") + " order by `" + POSITION + "`";
-        return findListWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
+        final String whereCondition = ", `" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + CHILDID + "` AND `" + setDefinitionTable + "`.`" + PARENTID + "` = :" + PARENTID + (from != -1 ? " AND `" + setDefinitionTable + "`.`" + POSITION + "` >= :from" : "") + (to != -1 ? " AND `" + setDefinitionTable + "`.`" + POSITION + "` <= :to" : "") + " order by `" + POSITION + "`";
+        return findListWithWhereSQLAndParameters(whereCondition, namedParams, false);
     }
 
     public List<Label> findParents(final Label label, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
-        final String whereCondition = ", `" + setDefinitionTable + "` where `" + label.getTableName() + "`." + label.ID + " = `" + setDefinitionTable + "`.`" + PARENTID + "` AND `" + setDefinitionTable + "`.`" + CHILDID + "` = :" + CHILDID;
+        final String whereCondition = ", `" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + PARENTID + "` AND `" + setDefinitionTable + "`.`" + CHILDID + "` = :" + CHILDID;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(CHILDID, label.getId());
-        return findListWithWhereSQLAndParameters(new Label(), whereCondition, namedParams, false);
+        return findListWithWhereSQLAndParameters(whereCondition, namedParams, false);
     }
 
     public int getMaxChildPosition(final Label l, final SetDefinitionTable setDefinitionTable) throws DataAccessException {

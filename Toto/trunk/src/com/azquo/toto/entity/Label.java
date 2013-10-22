@@ -16,12 +16,7 @@ import java.util.Map;
  * other labels. Sets of labels.
  *
  */
-public class Label extends StandardEntity<Label> {
-
-    // convention is to put the column names in as strings
-
-    public static final String NAME = "name";
-    public static final String LABELSETLOOKUPNEEDSREBUILDING = "label_set_lookup_needs_rebuilding";
+public class Label extends StandardEntity {
 
     // leaving here as a reminder to consider proper logging
 
@@ -42,36 +37,6 @@ public class Label extends StandardEntity<Label> {
         labelSetLookupNeedsRebuilding = true;
     }
     // clone may be required here is we cache
-
-    @Override
-    public String getTableName() {
-        return "label";
-    }
-
-    @Override
-    public Map<String, Object> getColumnNameValueMap(){
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
-        toReturn.put(ID, getId());
-        toReturn.put(NAME, getName());
-        toReturn.put(LABELSETLOOKUPNEEDSREBUILDING, getLabelSetLookupNeedsRebuilding());
-        return toReturn;
-    }
-
-    public static final class LabelRowMapper implements RowMapper<Label> {
-        @Override
-        public Label mapRow(final ResultSet rs, final int row) throws SQLException {
-            final Label label = new Label();
-            label.setId(rs.getInt(ID));
-            label.setName(rs.getString(NAME));
-            label.setLabelSetLookupNeedsRebuilding(rs.getBoolean(LABELSETLOOKUPNEEDSREBUILDING));
-            return label;
-        }
-    }
-
-    @Override
-    public RowMapper<Label> getRowMapper() {
-        return new LabelRowMapper();
-    }
 
     public String getName() {
         return name;
@@ -109,6 +74,7 @@ public class Label extends StandardEntity<Label> {
     @Override
     public String toString() {
         return "Label{" +
+                "id='" + id + '\'' +
                 "name='" + name + '\'' +
                 ", labelSetLookupNeedsRebuilding=" + labelSetLookupNeedsRebuilding +
                 '}';

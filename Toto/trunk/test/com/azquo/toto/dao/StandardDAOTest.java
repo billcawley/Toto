@@ -71,7 +71,7 @@ public class StandardDAOTest {
         Label l = new Label();
         l.setName("eddtest");
         labelDao.insert(l);
-        Assert.assertTrue(labelDao.findById(l) != null);
+        Assert.assertTrue(labelDao.findById(l.getId()) != null);
         labelDao.removeById(l);
     }
 
@@ -80,7 +80,7 @@ public class StandardDAOTest {
         Label l = new Label();
         l.setName("eddtest");
         labelDao.insert(l);
-        Assert.assertTrue(labelDao.findAll(l).size() > 0);
+        Assert.assertTrue(labelDao.findAll().size() > 0);
         labelDao.removeById(l);
     }
 
