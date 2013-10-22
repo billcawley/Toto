@@ -40,7 +40,7 @@ public abstract class StandardDAO {
         @Override
         public T mapRow(final ResultSet rs, final int row) throws SQLException {
             standardEntity.setId(rs.getInt(StandardEntity.ID));
-            return (T)findById(standardEntity);
+            return findById(standardEntity);
         }
     }
 
@@ -139,7 +139,7 @@ public abstract class StandardDAO {
         if (lookupById){
             final String SQL_SELECT = "Select `" + entity.getTableName() + "`." + StandardEntity.ID + " from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
             StandardEntityByIdRowMapper mapById = new StandardEntityByIdRowMapper(entity);
-            return jdbcTemplate.query(SQL_SELECT, namedParams, mapById);
+            return jdbcTemplate.query(SQL_SELECT, namedParams, (RowMapper<T>)mapById);
         } else {
             final String SQL_SELECT_ALL = "Select `" + entity.getTableName() + "`.* from `" + entity.getTableName() + "`" + (whereCondition != null ? whereCondition : "");
             return jdbcTemplate.query(SQL_SELECT_ALL, namedParams, (RowMapper<T>)entity.getRowMapper());
