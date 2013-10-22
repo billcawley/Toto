@@ -22,6 +22,8 @@ import java.util.Map;
  * Most data tables in the database have common features such as an id and a simple place that they're stored which means we can,
  * by implementing certain functions in the entity objects, make some functions generic. Update, insert, delete find by ID.
  * Unlike Feefo I don't know if there's much of a case for Cacheing.
+ *
+ * Note : for building SQL I'm veering away from stringbuilder as IntelliJ complains about it and string concantation etc is heavily optimised by the compiler
  */
 public abstract class StandardDAO<EntityType extends StandardEntity> {
 
@@ -51,20 +53,19 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
 
     public void updateById(final EntityType entity, String tableName) throws DataAccessException {
 //        final NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplateFactory.getJDBCTemplateForEntity(entity);
-        final StringBuilder updateSql = new StringBuilder();
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        updateSql.append("UPDATE `" + tableName + "` set ");
+        String updateSql = "UPDATE `" + tableName + "` set ";
         Map<String, Object> columnNameValueMap = getColumnNameValueMap(entity);
         for (String columnName : columnNameValueMap.keySet()) {
             if (!columnName.equals(ID)) {
-                updateSql.append("`" + columnName + "` = :" + columnName + ", ");
+                updateSql += "`" + columnName + "` = :" + columnName + ", ";
                 namedParams.addValue(columnName, columnNameValueMap.get(columnName));
             }
         }
-        updateSql.delete(updateSql.length() - 2, updateSql.length()); //trim the last ", "
-        updateSql.append(" where " + ID + " = :" + ID);
+        updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
+        updateSql += " where " + ID + " = :" + ID;
         namedParams.addValue("id", entity.getId());
-        jdbcTemplate.update(updateSql.toString(), namedParams);
+        jdbcTemplate.update(updateSql, namedParams);
     }
 
     public void insert(final EntityType entity) throws DataAccessException {
@@ -78,19 +79,19 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
     }*/
 
     public void insert(final EntityType entity, boolean forceId, String tableName) throws DataAccessException {
-        final StringBuilder columnsCommaList = new StringBuilder();
-        final StringBuilder valuesCommaList = new StringBuilder();
+        String columnsCommaList = "";
+        String valuesCommaList = "";
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         Map<String, Object> columnNameValueMap = getColumnNameValueMap(entity);
         for (String columnName : columnNameValueMap.keySet()) {
             if (forceId || !columnName.equals(ID)) { // don't set id on insert unless we're forcing the id on an insert. Necessary for moving existing data.
-                columnsCommaList.append("`" + columnName + "`").append(", "); // build the comma separated list for use in the sql
-                valuesCommaList.append(":").append(columnName).append(", "); // build the comma separated list for use in the sql
+                columnsCommaList += "`" + columnName + "`" + ", "; // build the comma separated list for use in the sql
+                valuesCommaList += ":" + columnName + ", "; // build the comma separated list for use in the sql
                 namedParams.addValue(columnName, columnNameValueMap.get(columnName));
             }
         }
-        columnsCommaList.delete(columnsCommaList.length() - 2, columnsCommaList.length()); //trim the last ", "
-        valuesCommaList.delete(valuesCommaList.length() - 2, valuesCommaList.length()); //trim the last ", "
+        columnsCommaList = columnsCommaList.substring(0, columnsCommaList.length() - 2); //trim the last ", "
+        valuesCommaList = valuesCommaList.substring(0, valuesCommaList.length() - 2); //trim the last ", "
         final String insertSql = "INSERT INTO `" + tableName + "` (" + columnsCommaList + ") VALUES (" + valuesCommaList + ")";
         final GeneratedKeyHolder keyHolder = new GeneratedKeyHolder(); // to get the id back
         jdbcTemplate.update(insertSql, namedParams, keyHolder, new String[]{ID});

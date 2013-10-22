@@ -1,9 +1,5 @@
 package com.azquo.toto.entity;
 
-import org.springframework.jdbc.core.RowMapper;
-
-import java.util.Map;
-
 /**
  * Created with IntelliJ IDEA.
  * User: cawley

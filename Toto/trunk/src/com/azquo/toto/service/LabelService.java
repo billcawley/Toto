@@ -3,7 +3,6 @@ package com.azquo.toto.service;
 import com.azquo.toto.dao.LabelDAO;
 import com.azquo.toto.entity.Label;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -94,7 +94,7 @@ public class LabelController {
                         int after = -1;
                         try{
                             after = Integer.parseInt(afterString);
-                        } catch (NumberFormatException nfe){
+                        } catch (NumberFormatException ignored){
                         }
                         labelService.createMember(label, elements, afterString, after);
                         return elements + " added to " + label.getName();
@@ -130,7 +130,6 @@ public class LabelController {
                             }
 
                         }
-                        boolean sorted = false;
                         int from = -1;
                         int to = -1;
                         if (fromString != null){
@@ -202,7 +201,7 @@ public class LabelController {
                         int after = -1;
                         try{
                             after = Integer.parseInt(afterString);
-                        } catch (NumberFormatException nfe){
+                        } catch (NumberFormatException ignored){
                         }
                         labelService.createPeer(label, elements, afterString, after);
                         return elements + " added to " + label.getName();

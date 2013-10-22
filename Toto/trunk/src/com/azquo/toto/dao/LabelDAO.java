@@ -35,7 +35,7 @@ public class LabelDAO extends StandardDAO<Label> {
 
     // associated table names, currently think here is a good place to put them. Where they're used.
 
-    public enum SetDefinitionTable {label_set_definition, peer_set_definition};
+    public enum SetDefinitionTable {label_set_definition, peer_set_definition}
 
     public static final String PARENTID = "parent_id";
     public static final String CHILDID = "child_id";
@@ -86,7 +86,7 @@ public class LabelDAO extends StandardDAO<Label> {
     // TODO : make delete clear up label set definition ("compress" positions also) and flags for label set lookup
     // ok this will unlink everywhere then delete . . . or not?
 
-    public void remove(final Label label) throws DataAccessException {
+/*    public void remove(final Label label) throws DataAccessException {
         List<Label> parents = findParents(label, SetDefinitionTable.label_set_definition);
         for (Label parent : parents){
             unlinkParentAndChild(parent, label, SetDefinitionTable.label_set_definition);
@@ -95,14 +95,7 @@ public class LabelDAO extends StandardDAO<Label> {
         for (Label parent : parents){
             unlinkParentAndChild(parent, label, SetDefinitionTable.label_set_definition);
         }
-        // SQL to drop the links but may do it by unlinking
-        /*MapSqlParameterSource namedParams = new MapSqlParameterSource(); // clear it
-        String updateSql = "DELETE from `" + LABELSETDEFINITION + "` where `" + LABELSETDEFINITION + "`.`" + PARENTID + "` = :" + PARENTID + " OR " + LABELSETDEFINITION + "`.`" + CHILDID + "` = :" + CHILDID + "";
-        namedParams.addValue(PARENTID, label.getId());
-        namedParams.addValue(CHILDID, label.getId());
-        jdbcTemplate.update(updateSql, namedParams);
-        super.removeById(label);*/
-    }
+    }*/
 
     // TODO : order by position
 
@@ -142,19 +135,19 @@ public class LabelDAO extends StandardDAO<Label> {
         return findListWithWhereSQLAndParameters(whereCondition, namedParams, false);
     }
 
-    public List<Label> findParents(final Label label, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
+/*    public List<Label> findParents(final Label label, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final String whereCondition = ", `" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + PARENTID + "` AND `" + setDefinitionTable + "`.`" + CHILDID + "` = :" + CHILDID;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(CHILDID, label.getId());
         return findListWithWhereSQLAndParameters(whereCondition, namedParams, false);
-    }
+    }*/
 
     public int getMaxChildPosition(final Label l, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, l.getId());
         final String FIND_MAX_POSITION = "Select max(" + POSITION + ") from `" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID;
         Integer integer = jdbcTemplate.queryForObject(FIND_MAX_POSITION, namedParams, Integer.class);
-        return (integer == null ? 0 : integer.intValue()); // no records means we return 0 as the max position
+        return (integer == null ? 0 : integer); // no records means we return 0 as the max position
     }
 
     public int getChildPosition(final Label parent, final Label child, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
