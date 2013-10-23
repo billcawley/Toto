@@ -13,7 +13,7 @@ public class Label extends StandardEntity {
 
     // leaving here as a reminder to consider proper logging
 
-    //private static final Logger logger = Logger.getLogger(Merchant.class.getName());
+    //private static final Logger logger = Logger.getLogger(Label.class.getName());
 
     private String name;
     private boolean labelSetLookupNeedsRebuilding;

@@ -24,15 +24,16 @@ public class LabelDAOTest {
     @Autowired
     private LabelDAO labelDao;
 
+    String databaseName = "tototest";
 
     public void clearEddtestLabels(){
-        Label l = labelDao.findByName("eddtest");
+        Label l = labelDao.findByName(databaseName,"eddtest");
         if (l != null){
-            labelDao.removeById(l);
+            labelDao.removeById(databaseName,l);
         }
-        Label l2 = labelDao.findByName("eddtest2");
+        Label l2 = labelDao.findByName(databaseName,"eddtest2");
         if (l2 != null){
-            labelDao.removeById(l2);
+            labelDao.removeById(databaseName,l2);
         }
     }
 
@@ -53,26 +54,26 @@ public class LabelDAOTest {
     public void testFindByName() throws Exception {
         Label l = new Label();
         l.setName("eddtest");
-        labelDao.insert(l);
-        Assert.assertTrue(labelDao.findByName(l.getName()) != null);
-        labelDao.removeById(l);
-        Assert.assertTrue(labelDao.findByName(l.getName()) == null);
+        labelDao.insert(databaseName,l);
+        Assert.assertTrue(labelDao.findByName(databaseName,l.getName()) != null);
+        labelDao.removeById(databaseName,l);
+        Assert.assertTrue(labelDao.findByName(databaseName,l.getName()) == null);
     }
 
     @Test
     public void testMaxPosition() throws Exception {
         Label l1 = new Label();
         l1.setName("eddtest");
-        labelDao.store(l1);
+        labelDao.store(databaseName,l1);
         Label l2 = new Label();
         l2.setName("eddtest2");
-        labelDao.store(l2);
-        System.out.println("max position when there's no children : " + labelDao.getMaxChildPosition(l1, LabelDAO.SetDefinitionTable.label_set_definition));
-        labelDao.linkParentAndChild(l1, l2, 2, LabelDAO.SetDefinitionTable.label_set_definition);
-        labelDao.linkParentAndChild(l1, l2, 4, LabelDAO.SetDefinitionTable.label_set_definition);
-        System.out.println("max position when there's children : " + labelDao.getMaxChildPosition(l1, LabelDAO.SetDefinitionTable.label_set_definition));
+        labelDao.store(databaseName,l2);
+        System.out.println("max position when there's no children : " + labelDao.getMaxChildPosition(databaseName, LabelDAO.SetDefinitionTable.label_set_definition,l1));
+        labelDao.linkParentAndChild(databaseName, LabelDAO.SetDefinitionTable.label_set_definition,l1, l2, 2);
+        labelDao.linkParentAndChild(databaseName, LabelDAO.SetDefinitionTable.label_set_definition,l1, l2, 4);
+        System.out.println("max position when there's children : " + labelDao.getMaxChildPosition(databaseName, LabelDAO.SetDefinitionTable.label_set_definition,l1));
         // need too sys out println to confirm the link here
-        labelDao.unlinkParentAndChild(l1, l2, LabelDAO.SetDefinitionTable.label_set_definition);
+        labelDao.unlinkParentAndChild(databaseName, LabelDAO.SetDefinitionTable.label_set_definition,l1, l2);
         clearEddtestLabels();
     }
 
@@ -80,14 +81,14 @@ public class LabelDAOTest {
     public void testLinking() throws Exception {
         Label l1 = new Label();
         l1.setName("eddtest");
-        labelDao.store(l1);
+        labelDao.store(databaseName,l1);
         Label l2 = new Label();
         l2.setName("eddtest2");
-        labelDao.store(l2);
-        labelDao.linkParentAndChild(l1,l2,0, LabelDAO.SetDefinitionTable.label_set_definition);
-        labelDao.linkParentAndChild(l1,l2,0, LabelDAO.SetDefinitionTable.label_set_definition);
+        labelDao.store(databaseName,l2);
+        labelDao.linkParentAndChild(databaseName, LabelDAO.SetDefinitionTable.label_set_definition,l1,l2,0);
+        labelDao.linkParentAndChild(databaseName, LabelDAO.SetDefinitionTable.label_set_definition,l1,l2,0);
         // need too sys out println to confirm the link here
-        labelDao.unlinkParentAndChild(l1, l2, LabelDAO.SetDefinitionTable.label_set_definition);
+        labelDao.unlinkParentAndChild(databaseName, LabelDAO.SetDefinitionTable.label_set_definition,l1, l2);
         clearEddtestLabels();
     }
 
@@ -96,10 +97,10 @@ public class LabelDAOTest {
         // make label 1 and 2
         Label l1 = new Label();
         l1.setName("eddtest");
-        labelDao.store(l1);
+        labelDao.store(databaseName,l1);
         Label l2 = new Label();
         l2.setName("eddtest2");
-        labelDao.store(l2);
+        labelDao.store(databaseName,l2);
 
 
 
@@ -108,7 +109,7 @@ public class LabelDAOTest {
         l2.setName("eddtest");
         // this should throw an exception
         try{
-            labelDao.store(l2);
+            labelDao.store(databaseName,l2);
             Assert.fail("the DAO should have thrown an exception by now");
         } catch (DataAccessException dae){
             System.out.println(dae.getMessage());
@@ -116,11 +117,11 @@ public class LabelDAOTest {
 
 
         // now try to update an existing one with another existing label
-        l2 = labelDao.findByName("eddtest2");
+        l2 = labelDao.findByName(databaseName,"eddtest2");
         l2.setName("eddtest");
         // this should throw an exception but this time by an update
         try{
-            labelDao.store(l2);
+            labelDao.store(databaseName,l2);
             Assert.fail("the DAO should have thrown an exception by now");
         } catch (DataAccessException dae){
             System.out.println(dae.getMessage());

@@ -25,11 +25,14 @@ public class StandardDAOTest {
     @Autowired
     private LabelDAO labelDao;
 
+    String databaseName = "tototest";
+
+
     @Before
     public void setUp() throws Exception {
-        Label l = labelDao.findByName("eddtest");
+        Label l = labelDao.findByName(databaseName, "eddtest");
         if (l != null){
-            labelDao.removeById(l);
+            labelDao.removeById(databaseName,l);
         }
     }
 
@@ -37,51 +40,47 @@ public class StandardDAOTest {
     public void testUpdateById() throws Exception {
         Label l = new Label();
         l.setName("eddtest");
-        labelDao.store(l);
+        labelDao.store(databaseName,l);
         l.setName("thing");
-        labelDao.updateById(l);
-        labelDao.removeById(l);
+        labelDao.updateById(databaseName,l);
+        labelDao.removeById(databaseName,l);
     }
 
     @Test
     public void testInsert() throws Exception {
         Label l = new Label();
         l.setName("eddtest");
-        labelDao.insert(l);
-        labelDao.removeById(l);
+        labelDao.insert(databaseName,l);
+        labelDao.removeById(databaseName,l);
     }
 
-/*    @Test
-    public void testInsert() throws Exception {
-
-    }*/
 
     @Test
     public void testStore() throws Exception {
         Label l = new Label();
         l.setName("eddtest");
-        labelDao.store(l);
+        labelDao.store(databaseName,l);
         l.setName("thing");
-        labelDao.store(l);
-        labelDao.removeById(l);
+        labelDao.store(databaseName,l);
+        labelDao.removeById(databaseName,l);
     }
 
     @Test
     public void testFindById() throws Exception {
         Label l = new Label();
         l.setName("eddtest");
-        labelDao.insert(l);
-        Assert.assertTrue(labelDao.findById(l.getId()) != null);
-        labelDao.removeById(l);
+        labelDao.insert(databaseName,l);
+        Assert.assertTrue(labelDao.findById(databaseName,l.getId()) != null);
+        labelDao.removeById(databaseName,l);
     }
 
     @Test
     public void testFindAll() throws Exception {
         Label l = new Label();
         l.setName("eddtest");
-        labelDao.insert(l);
-        Assert.assertTrue(labelDao.findAll().size() > 0);
-        labelDao.removeById(l);
+        labelDao.insert(databaseName,l);
+        Assert.assertTrue(labelDao.findAll(databaseName).size() > 0);
+        labelDao.removeById(databaseName,l);
     }
 
     // deleted find list test as find all does that.
@@ -92,8 +91,8 @@ public class StandardDAOTest {
     public void testFindOneWithWhereSQLAndParameters() throws Exception {
         Label l = new Label();
         l.setName("eddtest");
-        labelDao.insert(l);
-        l = labelDao.findByName(l.getName());
-        labelDao.removeById(l);
+        labelDao.insert(databaseName,l);
+        l = labelDao.findByName(databaseName,l.getName());
+        labelDao.removeById(databaseName,l);
     }
 }
