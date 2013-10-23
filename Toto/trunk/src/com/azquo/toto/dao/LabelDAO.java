@@ -2,7 +2,6 @@ package com.azquo.toto.dao;
 
 import com.azquo.toto.entity.Label;
 import org.springframework.dao.DataAccessException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -70,7 +69,7 @@ public class LabelDAO extends StandardDAO<Label> {
     }
     // I think I'm going to specific store for Label due to unique name constraints
     // simply ignore stores where the id and label exist otherwise throw exception for existing label whether updating or adding
-    public void store(final Label label, String databaseName) throws DataAccessException {
+    /*public void store(final Label label, String databaseName) throws DataAccessException {
         if (label.getName().contains(";")) {
             throw new InvalidDataAccessApiUsageException("Error, label name cannot contain ; :  " + label.getName());
         }
@@ -83,7 +82,7 @@ public class LabelDAO extends StandardDAO<Label> {
             }
             // otherwise storing a name ID combo that's in the Db already, do nothing!
         }
-    }
+    }*/
 
     // TODO : make delete clear up label set definition ("compress" positions also) and flags for label set lookup
     // ok this will unlink everywhere then delete . . . or not?

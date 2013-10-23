@@ -25,24 +25,26 @@ import java.util.List;
 @ContextConfiguration(locations = {"file:web/WEB-INF/totospringdispatcher-servlet.xml"})
 public class LabelServiceTest {
 
+    String databaseName = "tototest"; // hard code here for the moment
     @Autowired
     LabelService labelService;
     @Autowired
     LabelDAO labelDao;
-/*
+
     @Before
     public void setUp() throws Exception {
-        Label l = labelDao.findByName("eddtest");
+        Label l = labelDao.findByName(databaseName, "eddtest");
         if (l != null){
-            labelDao.removeById(l);
+            labelDao.removeById(databaseName,l);
         }
+        labelService.setDatabaseName("tototest");
     }
 
     @After
     public void tearDown() throws Exception {
-        Label l = labelDao.findByName("eddtest");
+        Label l = labelDao.findByName(databaseName,"eddtest");
         if (l != null){
-            labelDao.removeById(l);
+            labelDao.removeById(databaseName,l);
         }
     }
 
@@ -50,23 +52,23 @@ public class LabelServiceTest {
     public void testGetByName() throws Exception {
         Label l = new Label();
         l.setName("eddtest");
-        labelDao.insert(l);
+        labelDao.insert(databaseName,l);
         Assert.assertTrue(labelService.findByName(l.getName()) != null);
-        labelDao.removeById(l);
+        labelDao.removeById(databaseName,l);
         Assert.assertTrue(labelService.findByName(l.getName()) == null);
     }
 
     @Test
     public void testFindOrCreate() throws Exception {
+        labelService.findOrCreateLabel("eddtest");
         Label l = labelService.findOrCreateLabel("eddtest");
-        l = labelService.findOrCreateLabel("eddtest");
-        labelDao.removeById(l);
+        labelDao.removeById(databaseName,l);
     }
 
     @Test
     public void testFindChildrenAtLevel() throws Exception {
         labelService.findChildrenAtLevel(labelService.findOrCreateLabel("eddtest"), 2);
-        labelDao.removeById(labelService.findOrCreateLabel("eddtest"));
+        labelDao.removeById(databaseName,labelService.findOrCreateLabel("eddtest"));
     }
 
     @Test
@@ -78,9 +80,9 @@ public class LabelServiceTest {
         labelService.createMembers(l, tocreate);
         labelService.removeMember(l, "test1");
         labelService.removeMember(l, "test2");
-        labelDao.removeById(labelDao.findByName("test1"));
-        labelDao.removeById(labelDao.findByName("test2"));
-        labelDao.removeById(l);
+        labelDao.removeById(databaseName,labelDao.findByName(databaseName,"test1"));
+        labelDao.removeById(databaseName,labelDao.findByName(databaseName,"test2"));
+        labelDao.removeById(databaseName,l);
     }
 
     @Test
@@ -88,8 +90,8 @@ public class LabelServiceTest {
         Label l = labelService.findOrCreateLabel("eddtest");
         labelService.createMember(l, "test1", null,1);
         labelService.removeMember(l, "test1");
-        labelDao.removeById(labelDao.findByName("test1"));
-        labelDao.removeById(l);
+        labelDao.removeById(databaseName,labelDao.findByName(databaseName,"test1"));
+        labelDao.removeById(databaseName,l);
     }
 
     @Test
@@ -97,8 +99,8 @@ public class LabelServiceTest {
         labelService.findOrCreateLabel("eddtest");
         labelService.renameLabel("eddtest", "eddtest1");
         Assert.assertTrue(labelService.findByName("eddtest1") != null);
-        labelDao.removeById(labelService.findByName("eddtest1"));
+        labelDao.removeById(databaseName, labelService.findByName("eddtest1"));
     }
-*/
+
     //rename
 }

@@ -18,7 +18,11 @@ import java.util.List;
  */
 public class LabelService {
 
-    String databaseName = "toto1"; // hardcode here for the moment
+    String databaseName = "toto1"; // hard code here for the moment
+
+    public void setDatabaseName(String databaseName) {
+        this.databaseName = databaseName;
+    }
 
     @Autowired
     private LabelDAO labelDAO;
