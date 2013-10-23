@@ -36,6 +36,7 @@ public class ValueDAO extends StandardDAO<Value> {
     public static final String VARCHAR = "varchar";
     public static final String TEXT = "text";
     public static final String TIMESTAMP = "timestamp";
+    public static final String DELETED = "deleted";
 
     // related table and column names
 
@@ -54,6 +55,7 @@ public class ValueDAO extends StandardDAO<Value> {
         toReturn.put(VARCHAR, value.getVarChar());
         toReturn.put(TEXT, value.getText());
         toReturn.put(TIMESTAMP, value.getTimeStamp());
+        toReturn.put(DELETED, value.getDeleted());
         return toReturn;
     }
 
@@ -69,6 +71,7 @@ public class ValueDAO extends StandardDAO<Value> {
             value.setVarChar(rs.getString(VARCHAR));
             value.setText(rs.getString(TEXT));
             value.setTimeStamp(rs.getDate(TIMESTAMP));
+            value.setDeleted(rs.getBoolean(DELETED));
             return value;
         }
     }
@@ -77,27 +80,85 @@ public class ValueDAO extends StandardDAO<Value> {
     public RowMapper<Value> getRowMapper() {
         return new ValueRowMapper();
     }
-/*
-    public boolean linkValueToLabel(final Value value, final Label label) throws DataAccessException {
-        if (valueLabelLinkExists(value,label)){
+
+    public boolean linkValueToLabel(final String databaseName, final Value value, final Label label) throws DataAccessException {
+        if (valueLabelLinkExists(databaseName, value,label)){
             return true;
         } else {
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
             namedParams.addValue(VALUEID, value.getId());
             namedParams.addValue(LABELID, label.getId());
-            String updateSql = "INSERT INTO `" + VALU + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES (:" + PARENTID + ",:" + CHILDID + ",:" + POSITION + ")";
+            String updateSql = "INSERT INTO `" + databaseName + "`.``" + VALUELABEL + "` (`" + VALUEID + "`,`" + LABELID + "`) VALUES (:" + VALUEID + ",:" + LABELID+ ")";
             jdbcTemplate.update(updateSql, namedParams);
             return true;
         }
     }
 
-    public boolean valueLabelLinkExists(final Value value, final Label label){
+    public boolean unlinkValueFromLabel(final String databaseName, final Value value, final Label label) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(VALUEID, value.getId());
         namedParams.addValue(LABELID, label.getId());
-        final String FIND_EXISTING_LINK = "Select count(*) from `" + VALUELABEL + "` where `" + VALUEID + "` = :" + VALUEID + " AND `" + LABELID + "` = :" + LABELID;
+        String updateSql = "Delete from `" + databaseName + "`.``" + VALUELABEL + "` where `" + VALUEID + "` = :" + VALUEID + " and `" + LABELID + "`:" + LABELID;
+        jdbcTemplate.update(updateSql, namedParams);
+        return true;
+    }
+
+    public boolean unlinkValueFromAnyLabel(final String databaseName, final Value value) throws DataAccessException {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(VALUEID, value.getId());
+        String updateSql = "Delete from `" + databaseName + "`.``" + VALUELABEL + "` where `" + VALUEID + "` = :" + VALUEID;
+        jdbcTemplate.update(updateSql, namedParams);
+        return true;
+    }
+
+    public boolean valueLabelLinkExists(final String databaseName, final Value value, final Label label){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(VALUEID, value.getId());
+        namedParams.addValue(LABELID, label.getId());
+        final String FIND_EXISTING_LINK = "Select count(*) from `" + databaseName + "`.`" + VALUELABEL + "` where `" + VALUEID + "` = :" + VALUEID + " AND `" + LABELID + "` = :" + LABELID;
         return jdbcTemplate.queryForObject(FIND_EXISTING_LINK, namedParams, Integer.class) != 0;
     }
-*/
+
+    public void setDeleted(String databaseName, Value value){
+        value.setDeleted(true);
+        store(databaseName, value);
+    }
+
+    // for the moment this is a direct low level function, it doesn't pay attention to label structure
+
+    public List<Value> findForLabels(final String databaseName, final List<Label> labels){
+        if (labels.isEmpty()){
+            return null;
+        }
+        // ok, this will be interesting, going to find the label with the smallest values list
+        /* not going too use this for the mo, trying something different
+        int minFound = -1;
+        Label labelToUseForInitialSelect = null;
+        for (Label label : labels){
+            final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+            namedParams.addValue(LABELID, label.getId());
+            final String FIND_NUMBER_WITH_LABEL = "Select count(*) from `" + databaseName + "`.`" + VALUELABEL + "` where `" + LABELID + "` = :" + LABELID;
+            int found = jdbcTemplate.queryForObject(FIND_NUMBER_WITH_LABEL, namedParams, Integer.class);
+            if (minFound == -1 || found < minFound){
+                minFound = found;
+                labelToUseForInitialSelect = label;
+            }
+            if (found == 0){ // a label has no data at all, no point in continuing
+                return null;
+            }
+        }*/
+
+        // handing to MySQL to see what it thinks of it . . .
+
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        String whereCondition = ", `" + databaseName + "`.`" + VALUELABEL + "` where `" + getTableName() + "`." + ID + " = `" + VALUELABEL + "`.`" + VALUEID + "` AND `" + getTableName() + "`." + DELETED + " = :" + DELETED + "`";
+        namedParams.addValue(DELETED, 0);
+        int count = 1;
+        for (Label label : labels){
+            whereCondition += " and `" + VALUELABEL + "`.`" + LABELID + "` = :" + LABELID + count;
+            namedParams.addValue(LABELID + count, label.getId());
+        }
+        return findListWithWhereSQLAndParameters(databaseName, whereCondition, namedParams, false);
+    }
 
 }

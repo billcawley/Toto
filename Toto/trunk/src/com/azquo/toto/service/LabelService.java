@@ -63,6 +63,25 @@ public class LabelService {
         return foundAtCurrentLevel;
     }
 
+    // maybe should pe private, useful for set member checking and creating the lookup lists
+
+    public List<Label> findAllParents(final Label label) throws Exception {
+        List<Label> allParents = new ArrayList<Label>();
+        List<Label> foundAtCurrentLevel = labelDAO.findParents(databaseName, label, LabelDAO.SetDefinitionTable.label_set_definition);
+        while (!foundAtCurrentLevel.isEmpty()) {
+            allParents.addAll(foundAtCurrentLevel);
+            List<Label> nextLevelList = new ArrayList<Label>();
+            for (Label l : foundAtCurrentLevel) {
+                nextLevelList.addAll(labelDAO.findParents(databaseName, label, LabelDAO.SetDefinitionTable.label_set_definition));
+            }
+            if (nextLevelList.isEmpty()) { // wanted the lowest, we've hit a level with none so don't go further
+                break;
+            }
+            foundAtCurrentLevel = nextLevelList;
+        }
+        return allParents;
+    }
+
     public List<Label> findPeers(final Label label) throws Exception {
         return labelDAO.findChildren(databaseName,LabelDAO.SetDefinitionTable.peer_set_definition,label, true);
     }
@@ -175,6 +194,83 @@ public class LabelService {
         if (existing != null) {
             existing.setName(renameAs);
             labelDAO.store(databaseName, existing);
+        }
+    }
+
+    public String isAValidLabelSet(List<String> labelNames) throws Exception {
+
+        String error = "";
+        String warning = "";
+
+        ArrayList<Label> hasPeers = new ArrayList<Label>();
+        ArrayList<Label> labels = new ArrayList<Label>();
+
+        for (String labelName : labelNames){
+            Label label = findByName(labelName);
+            if (label == null){
+                error += "  I can't find the label : " + labelName;
+            } else {
+                if (!findPeers(label).isEmpty()){ // this label is the one that defines what labels the data will require
+                    hasPeers.add(label);
+                }
+                labels.add(label);
+            }
+        }
+        if (hasPeers.isEmpty()){
+            error += "  none of the labels passed have peers, I don't know what labels are required for this value";
+        } else if(hasPeers.size() > 1){
+            error += "  more than one label passed has peers ";
+            for (Label has : hasPeers){
+                error += has.getName() + ", ";
+            }
+            error += "I don't know what labels are required for this value";
+        } else { // ono set of peers, ok :)
+            // match peers exactly, but any child labels are ok, ignore extra labels, warn about this
+            List<Label> requiredPeers = findPeers(hasPeers.get(0));
+
+            for (Label requiredPeer : requiredPeers){
+                boolean found = false;
+                // do a first direct pass
+                for (Label label : labels){
+                    if (label.getName().equalsIgnoreCase(requiredPeer.getName())){ // we found it
+                        labels.remove(label); // it's been found and matched a peer,skip to the next one and remove the label from labels to check
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found){ // couldn't find this peer, need to look up through parents of each label for the peer
+                    for (Label label : labels){
+                        List<Label> allParents = findAllParents(label);
+                        for (Label parent : allParents){
+                            if (parent.getName().equalsIgnoreCase(requiredPeer.getName())){ // we found it
+                                labels.remove(label); // one of its parents matched so this peer is matched, skip to the next one and remove the label from labels to check
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found){
+                            break;
+                        }
+                    }
+                }
+
+                if (!found){
+                    error += "  I can't find a required peer : " + requiredPeer.getName() + " among the labels";
+                }
+            }
+
+            if (labels.size() > 0){ // means they were not used by the required peers, issue a warning
+                for (Label label : labels){
+                    warning += "  additional label not required by peers " + label.getName();
+                }
+            }
+        }
+
+        if (error.length() > 0){
+            return error;
+        } else {
+            return "true " + (warning.length() > 0 ? warning : "");
         }
     }
 }

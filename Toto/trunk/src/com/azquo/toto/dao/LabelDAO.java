@@ -134,12 +134,12 @@ public class LabelDAO extends StandardDAO<Label> {
         return findListWithWhereSQLAndParameters(databaseName, whereCondition, namedParams, false);
     }
 
-/*    public List<Label> findParents(final Label label, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
-        final String whereCondition = ", `" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + PARENTID + "` AND `" + setDefinitionTable + "`.`" + CHILDID + "` = :" + CHILDID;
+    public List<Label> findParents(String databaseName, final Label label, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
+        final String whereCondition = ", `" + databaseName + "`.`" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + PARENTID + "` AND `" + setDefinitionTable + "`.`" + CHILDID + "` = :" + CHILDID;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(CHILDID, label.getId());
-        return findListWithWhereSQLAndParameters(whereCondition, namedParams, false);
-    }*/
+        return findListWithWhereSQLAndParameters(databaseName, whereCondition, namedParams, false);
+    }
 
     public int getMaxChildPosition(final String databaseName, final SetDefinitionTable setDefinitionTable, final Label l) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -161,6 +161,8 @@ public class LabelDAO extends StandardDAO<Label> {
             return -1; // we'll call -1 not existing
         }
     }
+
+    // TODO : stop a label being linked to itself - probably covered by the circular check when I put it in
 
     public boolean linkParentAndChild(final String databaseName, final SetDefinitionTable setDefinitionTable, final Label parent, final Label child, int position) throws DataAccessException {
         // init the parameters at the beginning, we can reuse them for all possible queries I think . . . .nice

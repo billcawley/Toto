@@ -24,6 +24,7 @@ public class Value extends StandardEntity{
     private String varChar;
     private String text;
     private Date timeStamp;
+    private boolean deleted;
 
     public Value() {
         id = 0;
@@ -34,6 +35,8 @@ public class Value extends StandardEntity{
         varChar = null;
         text = null;
         timeStamp = null;
+        deleted = false;
+
     }
 
     public Date getTimeChanged() {
@@ -100,6 +103,14 @@ public class Value extends StandardEntity{
         this.timeStamp = timeStamp;
     }
 
+    public boolean getDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -115,6 +126,7 @@ public class Value extends StandardEntity{
         if (timeStamp != null ? !timeStamp.equals(value.timeStamp) : value.timeStamp != null) return false;
         if (type != value.type) return false;
         if (varChar != null ? !varChar.equals(value.varChar) : value.varChar != null) return false;
+        if (deleted != value.deleted) return false;
 
         return true;
     }
@@ -132,6 +144,7 @@ public class Value extends StandardEntity{
         result = 31 * result + (varChar != null ? varChar.hashCode() : 0);
         result = 31 * result + (text != null ? text.hashCode() : 0);
         result = 31 * result + (timeStamp != null ? timeStamp.hashCode() : 0);
+        // add deleted . . do we care?
         return result;
     }
 
@@ -147,6 +160,7 @@ public class Value extends StandardEntity{
                 ", varChar='" + varChar + '\'' +
                 ", text='" + text + '\'' +
                 ", timeStamp=" + timeStamp +
+                ", deleted=" + deleted+
                 '}';
     }
 }
