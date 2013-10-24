@@ -141,6 +141,13 @@ public class LabelDAO extends StandardDAO<Label> {
         return findListWithWhereSQLAndParameters(databaseName, whereCondition, namedParams, false);
     }
 
+    public List<Label> findTopLevelLabels(String databaseName, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
+        final String whereCondition = " where `" + getTableName() + "`." + ID + " NOT IN (SELECT `" + databaseName + "`.`" + setDefinitionTable + "`.`" + CHILDID + "` from `" + databaseName + "`.`" + setDefinitionTable + "`)";
+        // no parameters but follow the pattern
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        return findListWithWhereSQLAndParameters(databaseName, whereCondition, namedParams, false);
+    }
+
     public int getMaxChildPosition(final String databaseName, final SetDefinitionTable setDefinitionTable, final Label l) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, l.getId());

@@ -62,7 +62,7 @@ public class LabelServiceTest {
     public void testFindOrCreate() throws Exception {
         labelService.findOrCreateLabel("eddtest");
         Label l = labelService.findOrCreateLabel("eddtest");
-        labelDao.removeById(databaseName,l);
+        labelDao.removeById(databaseName, l);
     }
 
     @Test
@@ -81,14 +81,14 @@ public class LabelServiceTest {
         labelService.removeMember(l, "test1");
         labelService.removeMember(l, "test2");
         labelDao.removeById(databaseName,labelDao.findByName(databaseName,"test1"));
-        labelDao.removeById(databaseName,labelDao.findByName(databaseName,"test2"));
+        labelDao.removeById(databaseName, labelDao.findByName(databaseName, "test2"));
         labelDao.removeById(databaseName,l);
     }
 
     @Test
     public void testCreateMember() throws Exception {
         Label l = labelService.findOrCreateLabel("eddtest");
-        labelService.createMember(l, "test1", null,1);
+        labelService.createMember(l, "test1", null, 1);
         labelService.removeMember(l, "test1");
         labelDao.removeById(databaseName,labelDao.findByName(databaseName,"test1"));
         labelDao.removeById(databaseName,l);
@@ -100,6 +100,16 @@ public class LabelServiceTest {
         labelService.renameLabel("eddtest", "eddtest1");
         Assert.assertTrue(labelService.findByName("eddtest1") != null);
         labelDao.removeById(databaseName, labelService.findByName("eddtest1"));
+    }
+
+    @Test
+    public void logFullLabelHierarchy() throws Exception {
+        // force db to toto for this
+        List<Label> topLabels = labelDao.findTopLevelLabels("toto", LabelDAO.SetDefinitionTable.label_set_definition);
+        labelService.setDatabaseName("toto");
+        for (Label topLabel : topLabels){
+            labelService.logLabelHierarchy(topLabel, 0);
+        }
     }
 
     //rename

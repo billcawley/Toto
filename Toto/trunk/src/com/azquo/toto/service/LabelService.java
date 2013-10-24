@@ -15,7 +15,7 @@ import java.util.Map;
  * Date: 17/10/13
  * Time: 14:18
  * I've been convinced that a service layer is probably a good idea, with the DAO/Database it can form the model.
- *
+ * <p/>
  * THis does the grunt work for label manipulation, might not need to be that quick.
  */
 public class LabelService {
@@ -49,12 +49,12 @@ public class LabelService {
         // level -1 means get me the lowest
         // notable that with current logic asking for a level with no data returns no data not the nearest it can get. Would be simple to change this
         int currentLevel = 1;
-        List<Label> foundAtCurrentLevel = labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition,label, false);
+        List<Label> foundAtCurrentLevel = labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label, false);
         while ((currentLevel < level || level == -1) && !foundAtCurrentLevel.isEmpty()) {
             // we can't loop over foundAtCurrentLevel and modify it at the same time, this asks for trouble
             List<Label> nextLevelList = new ArrayList<Label>();
             for (Label l : foundAtCurrentLevel) {
-                nextLevelList.addAll(labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition,l, false));
+                nextLevelList.addAll(labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, l, false));
             }
             if (nextLevelList.isEmpty() && level == -1) { // wanted the lowest, we've hit a level with none so don't go further
                 break;
@@ -85,15 +85,15 @@ public class LabelService {
     }
 
     public List<Label> findPeers(final Label label) throws Exception {
-        return labelDAO.findChildren(databaseName,LabelDAO.SetDefinitionTable.peer_set_definition,label, true);
+        return labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.peer_set_definition, label, true);
     }
 
     public List<Label> findChildrenSorted(final Label label) throws Exception {
-        return labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition,label, true);
+        return labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label, true);
     }
 
     public List<Label> findChildrenFromTo(final Label label, final int from, final int to) throws Exception {
-        return labelDAO.findChildren(databaseName,LabelDAO.SetDefinitionTable.label_set_definition, label, from, to);
+        return labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label, from, to);
     }
 
     public List<Label> findChildrenFromTo(final Label label, final String from, final String to) throws Exception {
@@ -130,17 +130,19 @@ public class LabelService {
     }
 
     private void createMembers(final Label parentLabel, final List<String> childNames, LabelDAO.SetDefinitionTable setDefinitionTable) throws Exception {
-        int position = labelDAO.getMaxChildPosition(databaseName,setDefinitionTable, parentLabel);
+        int position = labelDAO.getMaxChildPosition(databaseName, setDefinitionTable, parentLabel);
         // by default we look for existing and create if we can't find them
         for (String childName : childNames) {
-            position += 1;
-            Label existingChild = labelDAO.findByName(databaseName, childName);
-            if (existingChild != null) {
-                labelDAO.linkParentAndChild(databaseName,setDefinitionTable, parentLabel, existingChild, position);
-            } else {
-                Label newChild = new Label(childName);
-                labelDAO.store(databaseName,newChild);
-                labelDAO.linkParentAndChild(databaseName,setDefinitionTable,parentLabel, newChild, position);
+            if (childName.trim().length() > 0) {
+                position += 1;
+                Label existingChild = labelDAO.findByName(databaseName, childName);
+                if (existingChild != null) {
+                    labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, existingChild, position);
+                } else {
+                    Label newChild = new Label(childName);
+                    labelDAO.store(databaseName, newChild);
+                    labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, newChild, position);
+                }
             }
         }
     }
@@ -157,41 +159,43 @@ public class LabelService {
         createMember(parentLabel, childName, afterString, after, LabelDAO.SetDefinitionTable.label_set_definition);
     }
 
-        public void createMember(final Label parentLabel, final String childName, final String afterString, final int after, LabelDAO.SetDefinitionTable setDefinitionTable) throws Exception {
-        int position = labelDAO.getMaxChildPosition(databaseName,setDefinitionTable,parentLabel) + 1; // default to the end
-        if (after != -1) { // int used before string should both be passed
-            position = after + 1; // the actual insert point is the next ono since it's after that position :)
-        } else if (afterString != null) {
-            Label child = labelDAO.findByName(databaseName,afterString);
-            if (child != null) {
-                int childPosition = labelDAO.getChildPosition(databaseName,setDefinitionTable,parentLabel, child);
-                if (childPosition != -1) {
-                    position = childPosition + 1;
+    public void createMember(final Label parentLabel, final String childName, final String afterString, final int after, LabelDAO.SetDefinitionTable setDefinitionTable) throws Exception {
+        if (childName.trim().length() > 0) {
+            int position = labelDAO.getMaxChildPosition(databaseName, setDefinitionTable, parentLabel) + 1; // default to the end
+            if (after != -1) { // int used before string should both be passed
+                position = after + 1; // the actual insert point is the next ono since it's after that position :)
+            } else if (afterString != null) {
+                Label child = labelDAO.findByName(databaseName, afterString);
+                if (child != null) {
+                    int childPosition = labelDAO.getChildPosition(databaseName, setDefinitionTable, parentLabel, child);
+                    if (childPosition != -1) {
+                        position = childPosition + 1;
+                    }
                 }
             }
-        }
-        // we look for existing and create if we can't find it
-        Label existingChild = labelDAO.findByName(databaseName,childName);
-        if (existingChild != null) {
-            labelDAO.linkParentAndChild(databaseName,setDefinitionTable,parentLabel, existingChild, position);
-        } else {
-            Label newChild = new Label(childName);
-            labelDAO.store(databaseName,newChild);
-            labelDAO.linkParentAndChild(databaseName,setDefinitionTable,parentLabel, newChild, position);
+            // we look for existing and create if we can't find it
+            Label existingChild = labelDAO.findByName(databaseName, childName);
+            if (existingChild != null) {
+                labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, existingChild, position);
+            } else {
+                Label newChild = new Label(childName);
+                labelDAO.store(databaseName, newChild);
+                labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, newChild, position);
+            }
         }
     }
 
     public void removePeer(final Label parentLabel, final String childName) throws Exception {
-        Label existingChild = labelDAO.findByName(databaseName,childName);
+        Label existingChild = labelDAO.findByName(databaseName, childName);
         if (existingChild != null) {
-            labelDAO.unlinkParentAndChild(databaseName,LabelDAO.SetDefinitionTable.peer_set_definition, parentLabel, existingChild);
+            labelDAO.unlinkParentAndChild(databaseName, LabelDAO.SetDefinitionTable.peer_set_definition, parentLabel, existingChild);
         }
     }
 
     public void removeMember(final Label parentLabel, final String childName) throws Exception {
         Label existingChild = labelDAO.findByName(databaseName, childName);
         if (existingChild != null) {
-            labelDAO.unlinkParentAndChild(databaseName,LabelDAO.SetDefinitionTable.label_set_definition, parentLabel, existingChild);
+            labelDAO.unlinkParentAndChild(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, parentLabel, existingChild);
         }
     }
 
@@ -218,13 +222,13 @@ public class LabelService {
         ArrayList<Label> hasPeers = new ArrayList<Label>();
         ArrayList<Label> labelsToCheck = new ArrayList<Label>();
 
-        for (String labelName : labelNames){
+        for (String labelName : labelNames) {
             Label label = findByName(labelName);
-            if (label == null){
+            if (label == null) {
                 error += "  I can't find the label : " + labelName;
             } else {
                 //TODO - need too look up the chain for ones with peers for each label
-                if (!findPeers(label).isEmpty()){ // this label is the one that defines what labels the data will require
+                if (!findPeers(label).isEmpty()) { // this label is the one that defines what labels the data will require
                     hasPeers.add(label);
                 }
                 labelsToCheck.add(label);
@@ -232,11 +236,11 @@ public class LabelService {
         }
 
 
-        if (hasPeers.isEmpty()){
+        if (hasPeers.isEmpty()) {
             error += "  none of the labels passed have peers, I don't know what labels are required for this value";
-        } else if(hasPeers.size() > 1){
+        } else if (hasPeers.size() > 1) {
             error += "  more than one label passed has peers ";
-            for (Label has : hasPeers){
+            for (Label has : hasPeers) {
                 error += has.getName() + ", ";
             }
             error += "I don't know what labels are required for this value";
@@ -244,11 +248,11 @@ public class LabelService {
             // match peers exactly, but any child labels are ok, ignore extra labels, warn about this
             List<Label> requiredPeers = findPeers(hasPeers.get(0));
 
-            for (Label requiredPeer : requiredPeers){
+            for (Label requiredPeer : requiredPeers) {
                 boolean found = false;
                 // do a first direct pass
-                for (Label labelToCheck : labelsToCheck){
-                    if (labelToCheck.getName().equalsIgnoreCase(requiredPeer.getName())){ // we found it
+                for (Label labelToCheck : labelsToCheck) {
+                    if (labelToCheck.getName().equalsIgnoreCase(requiredPeer.getName())) { // we found it
                         labelsToCheck.remove(labelToCheck); // it's been found and matched a peer,skip to the next one and remove the label from labels to check
                         validLabelList.add(labelToCheck);
                         found = true;
@@ -256,41 +260,55 @@ public class LabelService {
                     }
                 }
 
-                if (!found){ // couldn't find this peer, need to look up through parents of each label for the peer
-                    for (Label labelToCheck : labelsToCheck){
+                if (!found) { // couldn't find this peer, need to look up through parents of each label for the peer
+                    for (Label labelToCheck : labelsToCheck) {
                         List<Label> allParents = findAllParents(labelToCheck);
-                        for (Label parent : allParents){
-                            if (parent.getName().equalsIgnoreCase(requiredPeer.getName())){ // we found it
+                        for (Label parent : allParents) {
+                            if (parent.getName().equalsIgnoreCase(requiredPeer.getName())) { // we found it
                                 labelsToCheck.remove(labelToCheck); // one of its parents matched so this peer is matched, skip to the next one and remove the label from labels to check
                                 validLabelList.add(labelToCheck);
                                 found = true;
                                 break;
                             }
                         }
-                        if (found){
+                        if (found) {
                             break;
                         }
                     }
                 }
 
-                if (!found){
+                if (!found) {
                     error += "  I can't find a required peer : " + requiredPeer.getName() + " among the labels";
                 }
             }
 
-            if (labelsToCheck.size() > 0){ // means they were not used by the required peers, issue a warning
-                for (Label labelToCheck : labelsToCheck){
+            if (labelsToCheck.size() > 0) { // means they were not used by the required peers, issue a warning
+                for (Label labelToCheck : labelsToCheck) {
                     warning += "  additional label not required by peers " + labelToCheck.getName();
                 }
             }
         }
 
-        if (error.length() > 0){
+        if (error.length() > 0) {
             toReturn.put(ERROR, error);
         }
-        if (warning.length() > 0){
+        if (warning.length() > 0) {
             toReturn.put(WARNING, error);
         }
         return toReturn;
+    }
+
+    public void logLabelHierarchy(Label label, int level) {
+        for (int i = 1; i <= level; i++) {
+            System.out.print("- ");
+        }
+        System.out.println(label.getName());
+        List<Label> children = labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label, false);
+        if (!children.isEmpty()) {
+            level++;
+            for (Label child : children) {
+                logLabelHierarchy(child, level);
+            }
+        }
     }
 }

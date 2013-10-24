@@ -29,8 +29,7 @@ import java.util.*;
 
 public class ValueServiceTest {
 
-//    String databaseName = "tototest"; // hard code here for the moment
-    String databaseName = "toto"; // temporarily as we want real data in there . . .
+    String databaseName = "tototest"; // hard code here for the moment
     @Autowired
     ValueService valueService;
     @Autowired
@@ -56,6 +55,8 @@ public class ValueServiceTest {
 
     @Test
     public void testCsvImport() throws Exception {
+        // for initial attempts at running it
+        valueService.setDatabaseName("toto");
         // going to write coode here foor CSV import that will be factored off into a function later
         String nameWithPeers = "Measure";
         CsvReader csvReader = new CsvReader(new InputStreamReader(new FileInputStream("/home/cawley/Downloads/totosample.csv"), "8859_1"), ',');
