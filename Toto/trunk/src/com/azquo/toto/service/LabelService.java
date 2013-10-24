@@ -5,7 +5,9 @@ import com.azquo.toto.entity.Label;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created with IntelliJ IDEA.
@@ -197,13 +199,20 @@ public class LabelService {
         }
     }
 
-    public String isAValidLabelSet(List<String> labelNames) throws Exception {
+    // these should probably live somewhere more global
+    public static final String ERROR = "ERROR";
+    public static final String WARNING = "WARNING";
+
+    public Map<String, String> isAValidLabelSet(List<String> labelNames, List<Label> validLabelList) throws Exception {
+
+
+        Map<String, String> toReturn = new HashMap<String, String>();
 
         String error = "";
         String warning = "";
 
         ArrayList<Label> hasPeers = new ArrayList<Label>();
-        ArrayList<Label> labels = new ArrayList<Label>();
+        ArrayList<Label> labelsToCheck = new ArrayList<Label>();
 
         for (String labelName : labelNames){
             Label label = findByName(labelName);
@@ -213,9 +222,11 @@ public class LabelService {
                 if (!findPeers(label).isEmpty()){ // this label is the one that defines what labels the data will require
                     hasPeers.add(label);
                 }
-                labels.add(label);
+                labelsToCheck.add(label);
             }
         }
+
+
         if (hasPeers.isEmpty()){
             error += "  none of the labels passed have peers, I don't know what labels are required for this value";
         } else if(hasPeers.size() > 1){
@@ -231,20 +242,22 @@ public class LabelService {
             for (Label requiredPeer : requiredPeers){
                 boolean found = false;
                 // do a first direct pass
-                for (Label label : labels){
-                    if (label.getName().equalsIgnoreCase(requiredPeer.getName())){ // we found it
-                        labels.remove(label); // it's been found and matched a peer,skip to the next one and remove the label from labels to check
+                for (Label labelToCheck : labelsToCheck){
+                    if (labelToCheck.getName().equalsIgnoreCase(requiredPeer.getName())){ // we found it
+                        labelsToCheck.remove(labelToCheck); // it's been found and matched a peer,skip to the next one and remove the label from labels to check
+                        validLabelList.add(labelToCheck);
                         found = true;
                         break;
                     }
                 }
 
                 if (!found){ // couldn't find this peer, need to look up through parents of each label for the peer
-                    for (Label label : labels){
-                        List<Label> allParents = findAllParents(label);
+                    for (Label labelToCheck : labelsToCheck){
+                        List<Label> allParents = findAllParents(labelToCheck);
                         for (Label parent : allParents){
                             if (parent.getName().equalsIgnoreCase(requiredPeer.getName())){ // we found it
-                                labels.remove(label); // one of its parents matched so this peer is matched, skip to the next one and remove the label from labels to check
+                                labelsToCheck.remove(labelToCheck); // one of its parents matched so this peer is matched, skip to the next one and remove the label from labels to check
+                                validLabelList.add(labelToCheck);
                                 found = true;
                                 break;
                             }
@@ -260,17 +273,19 @@ public class LabelService {
                 }
             }
 
-            if (labels.size() > 0){ // means they were not used by the required peers, issue a warning
-                for (Label label : labels){
-                    warning += "  additional label not required by peers " + label.getName();
+            if (labelsToCheck.size() > 0){ // means they were not used by the required peers, issue a warning
+                for (Label labelToCheck : labelsToCheck){
+                    warning += "  additional label not required by peers " + labelToCheck.getName();
                 }
             }
         }
 
         if (error.length() > 0){
-            return error;
-        } else {
-            return "true " + (warning.length() > 0 ? warning : "");
+            toReturn.put(ERROR, error);
         }
+        if (warning.length() > 0){
+            toReturn.put(WARNING, error);
+        }
+        return toReturn;
     }
 }

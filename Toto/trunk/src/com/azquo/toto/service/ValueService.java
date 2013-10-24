@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created with IntelliJ IDEA.
@@ -17,10 +18,6 @@ import java.util.List;
  */
 public class ValueService {
     String databaseName = "toto1"; // hard code here for the moment
-
-    public void setDatabaseName(String databaseName) {
-        this.databaseName = databaseName;
-    }
 
     @Autowired
     private ValueDAO valueDAO;
@@ -34,21 +31,17 @@ public class ValueService {
 
     public String storeValueWithLabels(final Value value, final List<String> labelNames) throws Exception {
         String toReturn = "";
-        String labelCheckResult = labelService.isAValidLabelSet(labelNames);
-        // here's a question : if there are superfluous labels do we still store them??
-        if (labelCheckResult.startsWith("true")){
-            toReturn += labelCheckResult;
-        } else {
-            return  labelCheckResult;
+        List<Label> validLabels = new ArrayList<Label>();
+        Map<String, String> labelCheckResult = labelService.isAValidLabelSet(labelNames, validLabels);
+        String error = labelCheckResult.get(LabelService.ERROR);
+        String warning = labelCheckResult.get(LabelService.ERROR);
+        if (error != null){
+            return  error;
+        } else if(warning != null){
+            toReturn += warning;
         }
 
-        // the labels should be viable, we need an array for this function. This could perhaps be optimised later.
-        List<Label> labels = new ArrayList<Label>();
-        for (String labelName : labelNames){
-            labels.add(labelService.findByName(labelName));
-        }
-
-        List<Value> existingValues = valueDAO.findForLabels(databaseName, labels);
+        List<Value> existingValues = valueDAO.findForLabels(databaseName, validLabels);
 
         for (Value existingValue : existingValues){
             valueDAO.setDeleted(databaseName,existingValue);
@@ -61,7 +54,7 @@ public class ValueService {
         valueDAO.store(databaseName, value);
         toReturn += "  stored";
         // and link to labels
-        for (Label label : labels){
+        for (Label label : validLabels){
             valueDAO.linkValueToLabel(databaseName, value, label);
             toReturn += "  linked to " + label.getName();
         }

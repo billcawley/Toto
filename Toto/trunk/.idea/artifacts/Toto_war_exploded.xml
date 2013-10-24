@@ -13,6 +13,7 @@
           <element id="library" level="project" name="org.jetbrains.teamcity.webapp:spring-webmvc:7.1.0" />
           <element id="library" level="project" name="org.springframework:spring-jdbc:3.2.4.RELEASE" />
           <element id="library" level="project" name="org.springframework:spring-context:3.2.4.RELEASE" />
+          <element id="library" level="project" name="net.sourceforge.javacsv:javacsv:2.0" />
         </element>
       </element>
     </root>

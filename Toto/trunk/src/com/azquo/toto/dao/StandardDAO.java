@@ -27,8 +27,6 @@ import java.util.Map;
  */
 public abstract class StandardDAO<EntityType extends StandardEntity> {
 
-    // TODO : consider different databases for each customer not different table sets and how difficult this would be
-
     @Autowired
     protected NamedParameterJdbcTemplate jdbcTemplate;
 
