@@ -15,9 +15,8 @@ public class Value extends StandardEntity{
 
     //private static final Logger logger = Logger.getLogger(Value.class.getName());
     // this is stored in the DB as an int from .ordinal() so WATCH OUT changing orders here
-    public enum Type {INT, DOUBLE, VARCHAR, TEXT, TIMESTAMP};
+    public enum Type {INT, DOUBLE, VARCHAR, TEXT, TIMESTAMP}
 
-    private Date timeChanged;
     private int provenanceId;
     private Type type;
     private int intValue;
@@ -106,31 +105,10 @@ public class Value extends StandardEntity{
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        Value value = (Value) o;
-
-        if (provenanceId != value.provenanceId) return false;
-        if (Double.compare(value.doubleValue, doubleValue) != 0) return false;
-        if (intValue != value.intValue) return false;
-        if (text != null ? !text.equals(value.text) : value.text != null) return false;
-        if (timeChanged != null ? !timeChanged.equals(value.timeChanged) : value.timeChanged != null) return false;
-        if (timeStamp != null ? !timeStamp.equals(value.timeStamp) : value.timeStamp != null) return false;
-        if (type != value.type) return false;
-        if (varChar != null ? !varChar.equals(value.varChar) : value.varChar != null) return false;
-        if (deleted != value.deleted) return false;
-
-        return true;
-    }
-
-    @Override
     public int hashCode() {
         int result;
         long temp;
-        result = timeChanged != null ? timeChanged.hashCode() : 0;
-        result = 31 * result + provenanceId;
+        result = provenanceId;
         result = 31 * result + (type != null ? type.hashCode() : 0);
         result = 31 * result + intValue;
         temp = Double.doubleToLongBits(doubleValue);
@@ -146,7 +124,6 @@ public class Value extends StandardEntity{
     public String toString() {
         return "Value{" +
                 "id=" + id +
-                ", timeChanged=" + timeChanged +
                 ", changeId=" + provenanceId +
                 ", type=" + type +
                 ", intValue=" + intValue +

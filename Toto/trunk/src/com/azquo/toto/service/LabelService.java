@@ -65,25 +65,6 @@ public class LabelService {
         return foundAtCurrentLevel;
     }
 
-    // maybe should pe private, useful for set member checking and creating the lookup lists
-
-    public List<Label> findAllParents(final Label label) throws Exception {
-        List<Label> allParents = new ArrayList<Label>();
-        List<Label> foundAtCurrentLevel = labelDAO.findParents(databaseName, label, LabelDAO.SetDefinitionTable.label_set_definition);
-        while (!foundAtCurrentLevel.isEmpty()) {
-            allParents.addAll(foundAtCurrentLevel);
-            List<Label> nextLevelList = new ArrayList<Label>();
-            for (Label l : foundAtCurrentLevel) {
-                nextLevelList.addAll(labelDAO.findParents(databaseName, label, LabelDAO.SetDefinitionTable.label_set_definition));
-            }
-            if (nextLevelList.isEmpty()) { // wanted the lowest, we've hit a level with none so don't go further
-                break;
-            }
-            foundAtCurrentLevel = nextLevelList;
-        }
-        return allParents;
-    }
-
     public List<Label> findPeers(final Label label) throws Exception {
         return labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.peer_set_definition, label, true);
     }
@@ -262,7 +243,7 @@ public class LabelService {
 
                 if (!found) { // couldn't find this peer, need to look up through parents of each label for the peer
                     for (Label labelToCheck : labelsToCheck) {
-                        List<Label> allParents = findAllParents(labelToCheck);
+                        List<Label> allParents = labelDAO.findAllParents(databaseName,labelToCheck);
                         for (Label parent : allParents) {
                             if (parent.getName().equalsIgnoreCase(requiredPeer.getName())) { // we found it
                                 labelsToCheck.remove(labelToCheck); // one of its parents matched so this peer is matched, skip to the next one and remove the label from labels to check
@@ -303,7 +284,7 @@ public class LabelService {
             System.out.print("- ");
         }
         System.out.println(label.getName());
-        List<Label> children = labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label, false);
+        List<Label> children = labelDAO.findChildren(databaseName, label);
         if (!children.isEmpty()) {
             level++;
             for (Label child : children) {

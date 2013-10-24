@@ -14,7 +14,6 @@ import com.azquo.toto.service.LabelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -44,7 +43,7 @@ public class LabelController {
 
 //    private static final Logger logger = Logger.getLogger(TestController.class);
 
-    @RequestMapping(method = RequestMethod.GET)
+    @RequestMapping
     @ResponseBody
     public String handleRequest(@RequestParam(value = "instructions", required = false) String instructions) throws Exception {
 

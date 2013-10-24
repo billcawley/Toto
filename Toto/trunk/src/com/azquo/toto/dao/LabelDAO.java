@@ -2,11 +2,13 @@ package com.azquo.toto.dao;
 
 import com.azquo.toto.entity.Label;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +37,6 @@ public class LabelDAO extends StandardDAO<Label> {
     // associated table names, currently think here is a good place to put them. Where they're used.
 
     public enum SetDefinitionTable {label_set_definition, peer_set_definition}
-
-    // TODO : support for prefixes or overrides on label_set_definition, peer_set_definition
 
     public static final String PARENTID = "parent_id";
     public static final String CHILDID = "child_id";
@@ -67,36 +67,41 @@ public class LabelDAO extends StandardDAO<Label> {
     public RowMapper<Label> getRowMapper() {
         return new LabelRowMapper();
     }
+
     // I think I'm going to specific store for Label due to unique name constraints
     // simply ignore stores where the id and label exist otherwise throw exception for existing label whether updating or adding
-    /*public void store(final Label label, String databaseName) throws DataAccessException {
+    public void store(String databaseName, final Label label) throws DataAccessException {
         if (label.getName().contains(";")) {
             throw new InvalidDataAccessApiUsageException("Error, label name cannot contain ; :  " + label.getName());
         }
         Label existing = findByName(databaseName, label.getName());
-        if (existing == null) { // no name exists, can store new label or update one
+        if (existing == null) { // no name exists, can store new label or update another to this name
             super.store(databaseName, label);
         } else { // it does exist
-            if (existing.getId() != label.getId()) {
+            if (existing.getId() != label.getId()) { // either a new one or some other updated against an existing name, no good
                 throw new InvalidDataAccessApiUsageException("Error, the label " + label.getName() + " already exists");
+            } else { //updating one with teh same ID and name the only thing that could change is the flag
+                if (existing.getLabelSetLookupNeedsRebuilding() != label.getLabelSetLookupNeedsRebuilding()){
+                    super.store(databaseName, label);
+                }
             }
             // otherwise storing a name ID combo that's in the Db already, do nothing!
         }
-    }*/
+    }
 
-    // TODO : make delete clear up label set definition ("compress" positions also) and flags for label set lookup
-    // ok this will unlink everywhere then delete . . . or not?
+    // TODO : flags for label set lookup
 
-/*    public void remove(final Label label) throws DataAccessException {
-        List<Label> parents = findParents(label, SetDefinitionTable.label_set_definition);
+    public void remove(String databaseName, final Label label) throws DataAccessException {
+        // ok this will unlink everywhere, should we actually delete then or not??
+        List<Label> parents = findParents(databaseName, SetDefinitionTable.label_set_definition, label);
         for (Label parent : parents){
-            unlinkParentAndChild(parent, label, SetDefinitionTable.label_set_definition);
+            unlinkParentAndChild(databaseName,SetDefinitionTable.label_set_definition, parent, label);
         }
-        List<Label> children = findChildren(label, false, SetDefinitionTable.label_set_definition);
-        for (Label parent : parents){
-            unlinkParentAndChild(parent, label, SetDefinitionTable.label_set_definition);
+        List<Label> children = findChildren(databaseName, SetDefinitionTable.label_set_definition, label, false);
+        for (Label child : children){
+            unlinkParentAndChild(databaseName, SetDefinitionTable.label_set_definition, label, child);
         }
-    }*/
+    }
 
     public Label findByName(String databaseName, final String name) throws DataAccessException {
         final String whereCondition = " where `" + NAME + "` = :" + NAME;
@@ -105,13 +110,13 @@ public class LabelDAO extends StandardDAO<Label> {
         return findOneWithWhereSQLAndParameters(databaseName, whereCondition, namedParams, false);
     }
 
-/*    public List<Label> findChildren(final Label label) throws DataAccessException {
-        return findChildren(label, false, LABELSETDEFINITION);
-    }*/
+    public List<Label> findChildren(String databaseName, final Label label) throws DataAccessException {
+        return findChildren(databaseName,SetDefinitionTable.label_set_definition, label, false);
+    }
 
-/*    public List<Label> findChildren(final Label label, final boolean sorted) throws DataAccessException {
-        return findChildren(label, sorted, LABELSETDEFINITION);
-    }*/
+    public List<Label> findChildren(String databaseName, final Label label, final boolean sorted) throws DataAccessException {
+        return findChildren(databaseName,SetDefinitionTable.label_set_definition, label, sorted);
+    }
 
     // should this be public? I want the service to have direct access as the code will be normalised better . . .
     public List<Label> findChildren(String databaseName, final SetDefinitionTable setDefinitionTable, final Label label, final boolean sorted) throws DataAccessException {
@@ -134,12 +139,31 @@ public class LabelDAO extends StandardDAO<Label> {
         return findListWithWhereSQLAndParameters(databaseName, whereCondition, namedParams, false);
     }
 
-    public List<Label> findParents(String databaseName, final Label label, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
+    public List<Label> findParents(String databaseName, final SetDefinitionTable setDefinitionTable, final Label label) throws DataAccessException {
         final String whereCondition = ", `" + databaseName + "`.`" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + PARENTID + "` AND `" + setDefinitionTable + "`.`" + CHILDID + "` = :" + CHILDID;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(CHILDID, label.getId());
         return findListWithWhereSQLAndParameters(databaseName, whereCondition, namedParams, false);
     }
+
+    public List<Label> findAllParents(String databaseName, final Label label) throws DataAccessException {
+        List<Label> allParents = new ArrayList<Label>();
+        List<Label> foundAtCurrentLevel = findParents(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label);
+        while (!foundAtCurrentLevel.isEmpty()) {
+            allParents.addAll(foundAtCurrentLevel);
+            List<Label> nextLevelList = new ArrayList<Label>();
+            for (Label l : foundAtCurrentLevel) {
+                nextLevelList.addAll(findParents(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, l));
+            }
+            if (nextLevelList.isEmpty()) { // noo more parents to find
+                break;
+            }
+            foundAtCurrentLevel = nextLevelList;
+        }
+        return allParents;
+    }
+
+
 
     public List<Label> findTopLevelLabels(String databaseName, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final String whereCondition = " where `" + getTableName() + "`." + ID + " NOT IN (SELECT `" + databaseName + "`.`" + setDefinitionTable + "`.`" + CHILDID + "` from `" + databaseName + "`.`" + setDefinitionTable + "`)";
@@ -169,9 +193,16 @@ public class LabelDAO extends StandardDAO<Label> {
         }
     }
 
-    // TODO : stop a label being linked to itself - probably covered by the circular check when I put it in
-
     public boolean linkParentAndChild(final String databaseName, final SetDefinitionTable setDefinitionTable, final Label parent, final Label child, int position) throws DataAccessException {
+        if (child.getId() == parent.getId()){
+            throw new InvalidDataAccessApiUsageException("cannot link label to itself!" + parent.getName());
+        }
+        List<Label> parentsToCheckForCircularReferences = findAllParents(databaseName, parent);
+        for (Label higherParent : parentsToCheckForCircularReferences){
+            if (higherParent.getId() == child.getId()){
+                throw new InvalidDataAccessApiUsageException("cannot create circular reference, " + child.getName() + " is above " + parent.getName());
+            }
+        }
         // init the parameters at the beginning, we can reuse them for all possible queries I think . . . .nice
         int existingMaxPosition = getMaxChildPosition(databaseName, setDefinitionTable, parent);
         if (position > (existingMaxPosition + 1)) { // if the position is greater than one above the top the chop it down
@@ -208,7 +239,6 @@ public class LabelDAO extends StandardDAO<Label> {
             final String SHIFT_POSITION = "UPDATE `" + databaseName + "`.`" + setDefinitionTable + "` set `" + POSITION + "` = :" + POSITION + " where `" + PARENTID + "` = :" + PARENTID + " AND `" + CHILDID + "` = :" + CHILDID;
             jdbcTemplate.update(SHIFT_POSITION, namedParams);
         } else { // insert a new one, shift positions up if necessary and sort out the lookup flags . . . .
-            // TODO : check for circular references!
             if (position < (existingMaxPosition + 1)) {// not right at the top, some positions need to be moved up
                 final String SHIFT_POSITIONS = "UPDATE `" + databaseName + "`.`" + setDefinitionTable + "` set `" + POSITION + "` = (`" + POSITION + "` + 1) where `" + PARENTID + "` = :" + PARENTID + " AND `" + POSITION + "`>= :" + POSITION;
                 jdbcTemplate.update(SHIFT_POSITIONS, namedParams);
