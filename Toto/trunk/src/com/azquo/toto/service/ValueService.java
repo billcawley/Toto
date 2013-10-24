@@ -17,13 +17,20 @@ import java.util.Map;
  * Value service which will heavily use the ValueDAO. Depending on usage may need to be split up later.
  */
 public class ValueService {
-    String databaseName = "toto1"; // hard code here for the moment
+    String databaseName = "toto"; // hard code here for the moment
+
+    public void setDatabaseName(String databaseName) {
+        this.databaseName = databaseName;
+    }
+
 
     @Autowired
     private ValueDAO valueDAO;
 
     @Autowired
     private LabelService labelService;
+
+    public static String VALUE = "VALUE";
 
     public Value findByLabels(final ArrayList labels) {
         return new Value();

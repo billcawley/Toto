@@ -20,7 +20,7 @@ import java.util.Map;
  */
 public class LabelService {
 
-    String databaseName = "toto1"; // hard code here for the moment
+    String databaseName = "toto"; // hard code here for the moment
 
     public void setDatabaseName(String databaseName) {
         this.databaseName = databaseName;
@@ -145,6 +145,10 @@ public class LabelService {
         }
     }
 
+    public void createPeer(final Label parentLabel, final String peerName) throws Exception {
+        createMember(parentLabel, peerName, null, -1, LabelDAO.SetDefinitionTable.peer_set_definition);
+    }
+
     public void createPeer(final Label parentLabel, final String peerName, final String afterString, final int after) throws Exception {
         createMember(parentLabel, peerName, afterString, after, LabelDAO.SetDefinitionTable.peer_set_definition);
     }
@@ -219,6 +223,7 @@ public class LabelService {
             if (label == null){
                 error += "  I can't find the label : " + labelName;
             } else {
+                //TODO - need too look up the chain for ones with peers for each label
                 if (!findPeers(label).isEmpty()){ // this label is the one that defines what labels the data will require
                     hasPeers.add(label);
                 }

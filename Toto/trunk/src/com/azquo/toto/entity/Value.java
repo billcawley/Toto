@@ -14,10 +14,11 @@ public class Value extends StandardEntity{
     // leaving here as a reminder to consider proper logging
 
     //private static final Logger logger = Logger.getLogger(Value.class.getName());
-    private enum Type {INT, DOUBLE, VARCHAR, TEXT, TIMESTAMP};
+    // this is stored in the DB as an int from .ordinal() so WATCH OUT changing orders here
+    public enum Type {INT, DOUBLE, VARCHAR, TEXT, TIMESTAMP};
 
     private Date timeChanged;
-    private int changeId;
+    private int provenanceId;
     private Type type;
     private int intValue;
     private double doubleValue;
@@ -26,9 +27,10 @@ public class Value extends StandardEntity{
     private Date timeStamp;
     private boolean deleted;
 
+
     public Value() {
         id = 0;
-        changeId = 0;
+        provenanceId = 0;
         type = null;
         intValue = 0;
         doubleValue = 0;
@@ -39,20 +41,12 @@ public class Value extends StandardEntity{
 
     }
 
-    public Date getTimeChanged() {
-        return timeChanged;
+    public int getProvenanceId() {
+        return provenanceId;
     }
 
-    public void setTimeChanged(Date timeChanged) {
-        this.timeChanged = timeChanged;
-    }
-
-    public int getChangeId() {
-        return changeId;
-    }
-
-    public void setChangeId(int changeId) {
-        this.changeId = changeId;
+    public void setProvenanceId(int provenanceId) {
+        this.provenanceId = provenanceId;
     }
 
     public Type getType() {
@@ -118,7 +112,7 @@ public class Value extends StandardEntity{
 
         Value value = (Value) o;
 
-        if (changeId != value.changeId) return false;
+        if (provenanceId != value.provenanceId) return false;
         if (Double.compare(value.doubleValue, doubleValue) != 0) return false;
         if (intValue != value.intValue) return false;
         if (text != null ? !text.equals(value.text) : value.text != null) return false;
@@ -136,7 +130,7 @@ public class Value extends StandardEntity{
         int result;
         long temp;
         result = timeChanged != null ? timeChanged.hashCode() : 0;
-        result = 31 * result + changeId;
+        result = 31 * result + provenanceId;
         result = 31 * result + (type != null ? type.hashCode() : 0);
         result = 31 * result + intValue;
         temp = Double.doubleToLongBits(doubleValue);
@@ -153,7 +147,7 @@ public class Value extends StandardEntity{
         return "Value{" +
                 "id=" + id +
                 ", timeChanged=" + timeChanged +
-                ", changeId=" + changeId +
+                ", changeId=" + provenanceId +
                 ", type=" + type +
                 ", intValue=" + intValue +
                 ", doubleValue=" + doubleValue +

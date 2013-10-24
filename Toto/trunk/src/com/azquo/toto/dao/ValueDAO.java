@@ -29,8 +29,8 @@ public class ValueDAO extends StandardDAO<Value> {
 
     // column names (except ID)
 
-    public static final String TIMECHANGED = "time_changed";
-    public static final String CHANGEID = "change_id";
+    public static final String PROVENANCEID = "proovenance_id";
+    public static final String TYPE = "type";
     public static final String INT = "int";
     public static final String DOUBLE = "double";
     public static final String VARCHAR = "varchar";
@@ -48,8 +48,8 @@ public class ValueDAO extends StandardDAO<Value> {
     public Map<String, Object> getColumnNameValueMap(Value value){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, value.getId());
-        toReturn.put(TIMECHANGED, value.getTimeChanged());
-        toReturn.put(CHANGEID, value.getChangeId());
+        toReturn.put(PROVENANCEID, value.getProvenanceId());
+        toReturn.put(TYPE, value.getType().ordinal());
         toReturn.put(INT, value.getIntValue());
         toReturn.put(DOUBLE, value.getDoubleValue());
         toReturn.put(VARCHAR, value.getVarChar());
@@ -64,8 +64,8 @@ public class ValueDAO extends StandardDAO<Value> {
         public Value mapRow(final ResultSet rs, final int row) throws SQLException {
             final Value value = new Value();
             value.setId(rs.getInt(ID));
-            value.setTimeChanged(rs.getDate(TIMECHANGED));
-            value.setChangeId(rs.getInt(CHANGEID));
+            value.setProvenanceId(rs.getInt(PROVENANCEID));
+            value.setType(Value.Type.values()[rs.getInt(TYPE)]) ;
             value.setIntValue(rs.getInt(INT));
             value.setDoubleValue(rs.getInt(DOUBLE));
             value.setVarChar(rs.getString(VARCHAR));
