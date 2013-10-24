@@ -3,13 +3,12 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Oct 23, 2013 at 09:33 AM
+-- Generation Time: Oct 24, 2013 at 04:36 PM
 -- Server version: 5.5.33
 -- PHP Version: 5.3.17
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
-
 
 --
 -- Database: `toto`
@@ -39,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `label` (
   `label_set_lookup_needs_rebuilding` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=71 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=3 ;
 
 -- --------------------------------------------------------
 
@@ -94,6 +93,21 @@ CREATE TABLE IF NOT EXISTS `peer_set_definition` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `provenance`
+--
+
+CREATE TABLE IF NOT EXISTS `provenance` (
+  `id` int(11) NOT NULL,
+  `user` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `method` varchar(40) COLLATE utf8_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `value`
 --
 
@@ -119,4 +133,3 @@ CREATE TABLE IF NOT EXISTS `value_label` (
   `value_id` int(11) NOT NULL,
   `label_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-

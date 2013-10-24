@@ -127,6 +127,7 @@ public class LabelService {
             }
         }
     }
+    // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent labels with peer lists
 
     public void createPeer(final Label parentLabel, final String peerName) throws Exception {
         createMember(parentLabel, peerName, null, -1, LabelDAO.SetDefinitionTable.peer_set_definition);
@@ -200,19 +201,33 @@ public class LabelService {
         String error = "";
         String warning = "";
 
-        ArrayList<Label> hasPeers = new ArrayList<Label>();
+        ArrayList<Label> hasPeers = new ArrayList<Label>(); // the labels (oor their parents) in this list which have peer requirements, should only be one
         ArrayList<Label> labelsToCheck = new ArrayList<Label>();
 
         for (String labelName : labelNames) {
             Label label = findByName(labelName);
             if (label == null) {
                 error += "  I can't find the label : " + labelName;
-            } else {
-                //TODO - need too look up the chain for ones with peers for each label
+            } else { // the label exists . . .
+                boolean thisLabelHasPeers = false;
                 if (!findPeers(label).isEmpty()) { // this label is the one that defines what labels the data will require
                     hasPeers.add(label);
+                    thisLabelHasPeers = true;
+                } else { // try looking up the chain and find the first with peers
+                    List<Label> parents = labelDAO.findAllParents(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label);
+                    for (Label parent : parents){
+                        if (!findPeers(parent).isEmpty()) { // this label is the one that defines what labels the data will require
+                            hasPeers.add(parent); // put the parent not the actual label in as it will be used to determine the criteria for this value
+                            thisLabelHasPeers = true;
+                            break;
+                        }
+                    }
                 }
-                labelsToCheck.add(label);
+                // it wasn't a label with peers hence it's on the list of labels to match up to the peer list of the label that DOES have peers :)
+                // not adding the label with peers to labelsToCheck is more efficient and it stops the label with peers from showing up as being superfluous to the peer list if that makes sense
+                if (!thisLabelHasPeers){
+                    labelsToCheck.add(label);
+                }
             }
         }
 
@@ -225,16 +240,16 @@ public class LabelService {
                 error += has.getName() + ", ";
             }
             error += "I don't know what labels are required for this value";
-        } else { // ono set of peers, ok :)
-            // match peers exactly, but any child labels are ok, ignore extra labels, warn about this
+        } else { // one set of peers, ok :)
+            // match peersm child labels are ok, ignore extra labels, warn about this
             List<Label> requiredPeers = findPeers(hasPeers.get(0));
-
+            validLabelList.add(hasPeers.get(0)); // the rest will be added below but we need to add this here as the peer defining label is not on the list of peers
             for (Label requiredPeer : requiredPeers) {
                 boolean found = false;
                 // do a first direct pass
                 for (Label labelToCheck : labelsToCheck) {
                     if (labelToCheck.getName().equalsIgnoreCase(requiredPeer.getName())) { // we found it
-                        labelsToCheck.remove(labelToCheck); // it's been found and matched a peer,skip to the next one and remove the label from labels to check
+                        labelsToCheck.remove(labelToCheck); // skip to the next one and remove the label from labels to check and add it to the validated list to return
                         validLabelList.add(labelToCheck);
                         found = true;
                         break;
@@ -243,7 +258,7 @@ public class LabelService {
 
                 if (!found) { // couldn't find this peer, need to look up through parents of each label for the peer
                     for (Label labelToCheck : labelsToCheck) {
-                        List<Label> allParents = labelDAO.findAllParents(databaseName,labelToCheck);
+                        List<Label> allParents = labelDAO.findAllParents(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, labelToCheck);
                         for (Label parent : allParents) {
                             if (parent.getName().equalsIgnoreCase(requiredPeer.getName())) { // we found it
                                 labelsToCheck.remove(labelToCheck); // one of its parents matched so this peer is matched, skip to the next one and remove the label from labels to check
@@ -284,7 +299,7 @@ public class LabelService {
             System.out.print("- ");
         }
         System.out.println(label.getName());
-        List<Label> children = labelDAO.findChildren(databaseName, label);
+        List<Label> children = labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label, false);
         if (!children.isEmpty()) {
             level++;
             for (Label child : children) {
