@@ -195,12 +195,9 @@ public class LabelDAO extends StandardDAO<Label> {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, l.getId());
         final String FIND_MAX_POSITION = "Select max(" + POSITION + ") from `" + databaseName + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID;
-        List<Integer> maxPositionResult = jdbcTemplate.queryForList(FIND_MAX_POSITION, namedParams, Integer.class);
-        if (!maxPositionResult.isEmpty()) {
-            return maxPositionResult.get(0);// the compiler allows this?? Cool :)
-        } else {
-            return 0; // none = a max of 0 we'll say for the moment
-        }
+        // turns out looking for a null integer is actually the thing in this case as mysql returns null not no rows. I think :P
+        Integer integer = jdbcTemplate.queryForObject(FIND_MAX_POSITION, namedParams, Integer.class);
+        return (integer == null ? 0 : integer); // no records means we return 0 as the max position
     }
 
     public int getChildPosition(final String databaseName, final SetDefinitionTable setDefinitionTable, final Label parent, final Label child) throws DataAccessException {

@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Oct 24, 2013 at 04:36 PM
+-- Generation Time: Oct 24, 2013 at 06:04 PM
 -- Server version: 5.5.33
 -- PHP Version: 5.3.17
 
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `label` (
   `label_set_lookup_needs_rebuilding` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=111 ;
 
 -- --------------------------------------------------------
 
@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS `value` (
   `varchar` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `text` text COLLATE utf8_unicode_ci,
   `timestamp` timestamp NULL DEFAULT NULL,
+  `deleted` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 

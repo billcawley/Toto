@@ -39,7 +39,8 @@ public class ValueService {
     public String storeValueWithLabels(final Value value, final List<String> labelNames) throws Exception {
         String toReturn = "";
         List<Label> validLabels = new ArrayList<Label>();
-        Map<String, String> labelCheckResult = labelService.isAValidLabelSet(labelNames, validLabels);
+        long track = System.currentTimeMillis();
+        Map<String, String> labelCheckResult = labelService.isAValidLabelSet1(labelNames, validLabels);
         String error = labelCheckResult.get(LabelService.ERROR);
         String warning = labelCheckResult.get(LabelService.ERROR);
         if (error != null){
@@ -47,8 +48,9 @@ public class ValueService {
         } else if(warning != null){
             toReturn += warning;
         }
-
-        List<Value> existingValues = valueDAO.findForLabels(databaseName, validLabels);
+        System.out.println("track 1 : " + (System.currentTimeMillis() - track) + "  ---   ");
+        track = System.currentTimeMillis();
+        List<Value> existingValues = valueDAO.findForLabels2(databaseName, validLabels);
 
         for (Value existingValue : existingValues){
             valueDAO.setDeleted(databaseName,existingValue);
@@ -56,15 +58,14 @@ public class ValueService {
             // provenance table : person, time, method, name
             toReturn += "  deleting old value entered on put old timestamp here, need provenance table";
         }
-
         // now add the value??
         valueDAO.store(databaseName, value);
+        System.out.println("track 2 : " + (System.currentTimeMillis() - track) + "  ---   ");
+        track = System.currentTimeMillis();
         toReturn += "  stored";
         // and link to labels
-        for (Label label : validLabels){
-            valueDAO.linkValueToLabel(databaseName, value, label);
-            toReturn += "  linked to " + label.getName();
-        }
+        valueDAO.linkValueToLabels(databaseName, value, validLabels);
+        System.out.println("track 3 : " + (System.currentTimeMillis() - track) + "  ---   ");
 
         return toReturn;
     }

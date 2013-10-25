@@ -16,6 +16,7 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.util.*;
+import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
@@ -107,8 +108,26 @@ public class ValueServiceTest {
             Map<String, String> childLabels = setMap.get(parentLabelName);
             labelService.createMembers(parentLabel, new ArrayList<String>(childLabels.keySet()));
         }
+        csvReader.close();
+        // now put the data in  . . .watch out!
+        // open the file again.
+        csvReader = new CsvReader(new InputStreamReader(new FileInputStream("/home/cawley/Downloads/totosample.csv"), "8859_1"), ',');
+        csvReader.readHeaders();
+        headers = csvReader.getHeaders();
 
-        // now put the data in but let's just try this first???
+        while (csvReader.readRecord()){
+            List<String> labels = new ArrayList<String>();
+            Value value = new Value();
+            value.setType(Value.Type.VARCHAR);
+            for (String header : headers){
+                if (header.equalsIgnoreCase(ValueService.VALUE)){
+                    value.setVarChar(csvReader.get(header));
+                } else {
+                    labels.add(csvReader.get(header));
+                }
+            }
+            System.out.println(valueService.storeValueWithLabels(value, labels));
+        }
 
 
     }

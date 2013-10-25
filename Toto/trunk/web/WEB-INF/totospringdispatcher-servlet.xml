@@ -34,6 +34,9 @@
     <bean name="labelService" class="com.azquo.toto.service.LabelService"/>
     <bean name="valueDao" class="com.azquo.toto.dao.ValueDAO"/>
     <bean name="valueService" class="com.azquo.toto.service.ValueService"/>
+    <bean name="provenanceDAO" class="com.azquo.toto.dao.ProvenanceDAO"/>
+
+    <bean name="totoMemoryDB" class="com.azquo.toto.memorydb.TotoMemoryDB"/>
     <!--<bean name="labelDAO" class="com.feefo.phaseone.service.FeedbackServiceImpl"/>-->
     <!-- Feefo beans - need to be in their own xml file at some point -->
     <!--    <bean name="feedbackService" class="com.feefo.phaseone.service.FeedbackServiceImpl"/>

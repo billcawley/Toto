@@ -22,6 +22,11 @@ public class LabelService {
 
     String databaseName = "toto"; // hard code here for the moment
 
+    // this isn't thread safe or anything like that!
+
+    Map<String, List<Label>> labelListCache = new HashMap<String, List<Label>>();
+    Map<String, Label> labelCache = new HashMap<String, Label>();
+
     public void setDatabaseName(String databaseName) {
         this.databaseName = databaseName;
     }
@@ -195,6 +200,7 @@ public class LabelService {
 
     public Map<String, String> isAValidLabelSet(List<String> labelNames, List<Label> validLabelList) throws Exception {
 
+        long track = System.currentTimeMillis();
 
         Map<String, String> toReturn = new HashMap<String, String>();
 
@@ -215,7 +221,7 @@ public class LabelService {
                     thisLabelHasPeers = true;
                 } else { // try looking up the chain and find the first with peers
                     List<Label> parents = labelDAO.findAllParents(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label);
-                    for (Label parent : parents){
+                    for (Label parent : parents) {
                         if (!findPeers(parent).isEmpty()) { // this label is the one that defines what labels the data will require
                             hasPeers.add(parent); // put the parent not the actual label in as it will be used to determine the criteria for this value
                             thisLabelHasPeers = true;
@@ -225,12 +231,15 @@ public class LabelService {
                 }
                 // it wasn't a label with peers hence it's on the list of labels to match up to the peer list of the label that DOES have peers :)
                 // not adding the label with peers to labelsToCheck is more efficient and it stops the label with peers from showing up as being superfluous to the peer list if that makes sense
-                if (!thisLabelHasPeers){
+                if (!thisLabelHasPeers) {
                     labelsToCheck.add(label);
                 }
             }
         }
 
+
+        System.out.println("track 1-1 : " + (System.currentTimeMillis() - track) + "  ---   ");
+        track = System.currentTimeMillis();
 
         if (hasPeers.isEmpty()) {
             error += "  none of the labels passed have peers, I don't know what labels are required for this value";
@@ -291,6 +300,8 @@ public class LabelService {
         if (warning.length() > 0) {
             toReturn.put(WARNING, error);
         }
+        //System.out.println("track 1-2 : " + (System.currentTimeMillis() - track) + "  ---   ");
+        track = System.currentTimeMillis();
         return toReturn;
     }
 
@@ -307,4 +318,137 @@ public class LabelService {
             }
         }
     }
+
+    public Map<String, String> isAValidLabelSet1(List<String> labelNames, List<Label> validLabelList) throws Exception {
+
+        System.out.println("fast funciton?");
+        long track = System.currentTimeMillis();
+
+        Map<String, String> toReturn = new HashMap<String, String>();
+
+        String error = "";
+        String warning = "";
+
+        ArrayList<Label> hasPeers = new ArrayList<Label>(); // the labels (oor their parents) in this list which have peer requirements, should only be one
+        ArrayList<Label> labelsToCheck = new ArrayList<Label>();
+
+        for (String labelName : labelNames) {
+            Label label = labelCache.get(labelName);
+            if (label == null){
+                label = findByName(labelName);
+                labelCache.put(labelName, label);
+            }
+            if (label == null) {
+                error += "  I can't find the label : " + labelName;
+            } else { // the label exists . . .
+                boolean thisLabelHasPeers = false;
+
+                if (labelListCache.get(labelName + "PEERS") != null) {
+                    if (!labelListCache.get(labelName + "PEERS").isEmpty()) {
+                        hasPeers.add(label);
+                        thisLabelHasPeers = true;
+                    }
+                } else {
+                    if (!findPeers(label).isEmpty()) { // this label is the one that defines what labels the data will require
+                        hasPeers.add(label);
+                        thisLabelHasPeers = true;
+                        labelListCache.put(labelName + "PEERS", findPeers(label));
+                    } else { // try looking up the chain and find the first with peers
+                        List<Label> parents = labelDAO.findAllParents(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label);
+                        for (Label parent : parents) {
+                            if (!findPeers(parent).isEmpty()) { // this label is the one that defines what labels the data will require
+                                hasPeers.add(parent); // put the parent not the actual label in as it will be used to determine the criteria for this value
+                                thisLabelHasPeers = true;
+                                labelListCache.put(labelName + "PEERS", findPeers(parent));
+                                break;
+                            }
+                        }
+                        if (!thisLabelHasPeers) {
+                            labelListCache.put(labelName + "PEERS", new ArrayList());
+                        }
+                    }
+                }
+
+                // it wasn't a label with peers hence it's on the list of labels to match up to the peer list of the label that DOES have peers :)
+                // not adding the label with peers to labelsToCheck is more efficient and it stops the label with peers from showing up as being superfluous to the peer list if that makes sense
+                if (!thisLabelHasPeers) {
+                    labelsToCheck.add(label);
+                } else {
+                    validLabelList.add(label); // the rest will be added below but we need to add this here as the peer defining label is not on the list of peers
+                }
+            }
+        }
+
+
+        //System.out.println("track 1-1 : " + (System.currentTimeMillis() - track) + "  ---   ");
+        track = System.currentTimeMillis();
+
+        if (hasPeers.isEmpty()) {
+            error += "  none of the labels passed have peers, I don't know what labels are required for this value";
+        } else if (hasPeers.size() > 1) {
+            error += "  more than one label passed has peers ";
+            for (Label has : hasPeers) {
+                error += has.getName() + ", ";
+            }
+            error += "I don't know what labels are required for this value";
+        } else { // one set of peers, ok :)
+            // match peersm child labels are ok, ignore extra labels, warn about this
+            List<Label> requiredPeers = labelListCache.get(validLabelList.get(0).getName() + "PEERS");
+            for (Label requiredPeer : requiredPeers) {
+                boolean found = false;
+                // do a first direct pass
+                for (Label labelToCheck : labelsToCheck) {
+                    if (labelToCheck.getName().equalsIgnoreCase(requiredPeer.getName())) { // we found it
+                        labelsToCheck.remove(labelToCheck); // skip to the next one and remove the label from labels to check and add it to the validated list to return
+                        validLabelList.add(labelToCheck);
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) { // couldn't find this peer, need to look up through parents of each label for the peer
+                    for (Label labelToCheck : labelsToCheck) {
+                        List<Label> allParents = labelListCache.get(labelToCheck.getName() + "AP");
+                        if (allParents == null){
+                            allParents = labelDAO.findAllParents(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, labelToCheck);
+                            labelListCache.put(labelToCheck.getName() + "AP", allParents);
+                        }
+
+                        for (Label parent : allParents) {
+                            if (parent.getName().equalsIgnoreCase(requiredPeer.getName())) { // we found it
+                                labelsToCheck.remove(labelToCheck); // one of its parents matched so this peer is matched, skip to the next one and remove the label from labels to check
+                                validLabelList.add(labelToCheck);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) {
+                            break;
+                        }
+                    }
+                }
+
+                if (!found) {
+                    error += "  I can't find a required peer : " + requiredPeer.getName() + " among the labels";
+                }
+            }
+
+            if (labelsToCheck.size() > 0) { // means they were not used by the required peers, issue a warning
+                for (Label labelToCheck : labelsToCheck) {
+                    warning += "  additional label not required by peers " + labelToCheck.getName();
+                }
+            }
+        }
+
+        if (error.length() > 0) {
+            toReturn.put(ERROR, error);
+        }
+        if (warning.length() > 0) {
+            toReturn.put(WARNING, error);
+        }
+        //System.out.println("track 1-2 : " + (System.currentTimeMillis() - track) + "  ---   ");
+        track = System.currentTimeMillis();
+        return toReturn;
+    }
+
 }
