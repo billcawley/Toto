@@ -30,7 +30,9 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
     @Autowired
     protected NamedParameterJdbcTemplate jdbcTemplate;
 
-    public static final int SELECTLIMIT = 10000;
+    // call it 100000, might as well go for big selects to populate the memory DB
+
+    public static final int SELECTLIMIT = 100000;
 
     public static final String ID = "id";
 
@@ -176,4 +178,11 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
             return results.get(0);
         }
     }
+
+    public int findTotalCount(final String databaseName) throws DataAccessException {
+            final String SQL_SELECT = "Select count(*) from `" + databaseName + "`.`" + getTableName() + "`";
+            return jdbcTemplate.queryForObject(SQL_SELECT, new MapSqlParameterSource() , Integer.class);
+    }
+
+
 }

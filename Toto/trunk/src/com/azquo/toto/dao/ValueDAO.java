@@ -169,6 +169,17 @@ public class ValueDAO extends StandardDAO<Value> {
 
     }
 
+    // for loading into the memory db
+
+    public List<Integer> findValueIdsForLabel(final String databaseName, final Label label) {
+
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(LABELID, label.getId());
+        final String FIND_EXISTING_LINK = "Select `" + VALUEID + "` from `" + databaseName + "`.`" + VALUELABEL + "` where `" + LABELID + "` = :" + LABELID;
+        return jdbcTemplate.queryForList(FIND_EXISTING_LINK, namedParams, Integer.class);
+
+    }
+
     // for the moment this is a direct low level function, it doesn't pay attention to label structure
 
     public List<Value> findForLabels2(final String databaseName, final List<Label> labels) {

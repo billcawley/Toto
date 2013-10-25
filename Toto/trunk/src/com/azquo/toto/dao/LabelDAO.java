@@ -128,6 +128,24 @@ public class LabelDAO extends StandardDAO<Label> {
         return findListWithWhereSQLAndParameters(databaseName, whereCondition, namedParams, false);
     }
 
+    // for loading into the memory db
+
+    public List<Integer> findParentIdsForLabel(final String databaseName, SetDefinitionTable setDefinitionTable, final Label label) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(CHILDID, label.getId());
+        final String FIND_EXISTING_LINKS = "Select `" + PARENTID + "` from `" + databaseName + "`.`" + setDefinitionTable + "` where `" + CHILDID + "` = :" + CHILDID + " order by `" + POSITION + "`";
+        return jdbcTemplate.queryForList(FIND_EXISTING_LINKS, namedParams, Integer.class);
+
+    }
+
+    public List<Integer> findChildIdsForLabel(final String databaseName, SetDefinitionTable setDefinitionTable, final Label label) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(PARENTID, label.getId());
+        final String FIND_EXISTING_LINKS = "Select `" + CHILDID + "` from `" + databaseName + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID + " order by `" + POSITION + "`";
+        return jdbcTemplate.queryForList(FIND_EXISTING_LINKS, namedParams, Integer.class);
+    }
+
+
     public List<Label> findChildren(final String databaseName, final SetDefinitionTable setDefinitionTable, final Label label, final int from, final int to) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, label.getId());
