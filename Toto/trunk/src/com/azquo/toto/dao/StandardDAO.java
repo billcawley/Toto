@@ -24,6 +24,9 @@ import java.util.Map;
  * Unlike Feefo I don't know if there's much of a case for Cacheing.
  *
  * Note : for building SQL I'm veering away from stringbuilder as IntelliJ complains about it and string concantation etc is heavily optimised by the compiler
+ *
+ * Due to new memory DB we don't get Ids back here any more
+ *
  */
 public abstract class StandardDAO<EntityType extends StandardEntity> {
 
@@ -73,44 +76,32 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         jdbcTemplate.update(updateSql, namedParams);
     }
 
+    // now always assumes it's been passed an ID
+
     public void insert(final String databaseName, final EntityType entity) throws DataAccessException {
-        insert(databaseName, entity, false);
-    }
-
-    // there may be no use for force ID in Toto
-    /*
-    public void insert(final EntityType entity, boolean forceId) throws DataAccessException {
-        insert(entity, forceId, getTableName());
-    }*/
-
-    public void insert(final String databaseName, final EntityType entity, boolean forceId) throws DataAccessException {
         String columnsCommaList = "";
         String valuesCommaList = "";
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         Map<String, Object> columnNameValueMap = getColumnNameValueMap(entity);
         for (String columnName : columnNameValueMap.keySet()) {
-            if (forceId || !columnName.equals(ID)) { // don't set id on insert unless we're forcing the id on an insert. Necessary for moving existing data.
-                columnsCommaList += "`" + columnName + "`" + ", "; // build the comma separated list for use in the sql
-                valuesCommaList += ":" + columnName + ", "; // build the comma separated list for use in the sql
-                namedParams.addValue(columnName, columnNameValueMap.get(columnName));
-            }
+            columnsCommaList += "`" + columnName + "`" + ", "; // build the comma separated list for use in the sql
+            valuesCommaList += ":" + columnName + ", "; // build the comma separated list for use in the sql
+            namedParams.addValue(columnName, columnNameValueMap.get(columnName));
         }
         columnsCommaList = columnsCommaList.substring(0, columnsCommaList.length() - 2); //trim the last ", "
         valuesCommaList = valuesCommaList.substring(0, valuesCommaList.length() - 2); //trim the last ", "
         final String insertSql = "INSERT INTO `" + databaseName + "`.`" + getTableName() + "` (" + columnsCommaList + ") VALUES (" + valuesCommaList + ")";
         final GeneratedKeyHolder keyHolder = new GeneratedKeyHolder(); // to get the id back
-        jdbcTemplate.update(insertSql, namedParams, keyHolder, new String[]{ID});
-        entity.setId(keyHolder.getKey().intValue());
+        jdbcTemplate.update(insertSql, namedParams);
     }
 
     public void store(final String databaseName, final EntityType entity) throws DataAccessException {
-        if (entity.getId() > 0) {
-            updateById(databaseName, entity);
+        if (entity.getNeedsInserting()) {
+            insert(databaseName, entity);
         } else {
-            insert(databaseName, entity, false);
+            updateById(databaseName, entity);
         }
     }
-
     // removal means we should just have the object, pass it for the mo, Can cahnge to ID later
 
     public void removeById(final String databaseName, final EntityType entity) throws DataAccessException {

@@ -3,6 +3,7 @@ package com.azquo.toto.service;
 import com.azquo.toto.dao.ValueDAO;
 import com.azquo.toto.entity.Label;
 import com.azquo.toto.entity.Value;
+import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
@@ -30,6 +31,9 @@ public class ValueService {
     @Autowired
     private LabelService labelService;
 
+    @Autowired
+    private TotoMemoryDB totoMemoryDB;
+
     public static String VALUE = "VALUE";
 
     public Value findByLabels(final ArrayList labels) {
@@ -40,7 +44,7 @@ public class ValueService {
         String toReturn = "";
         List<Label> validLabels = new ArrayList<Label>();
         long track = System.currentTimeMillis();
-        Map<String, String> labelCheckResult = labelService.isAValidLabelSet1(labelNames, validLabels);
+        Map<String, String> labelCheckResult = labelService.isAValidLabelSet(labelNames, validLabels);
         String error = labelCheckResult.get(LabelService.ERROR);
         String warning = labelCheckResult.get(LabelService.ERROR);
         if (error != null){
@@ -50,24 +54,61 @@ public class ValueService {
         }
         System.out.println("track 1 : " + (System.currentTimeMillis() - track) + "  ---   ");
         track = System.currentTimeMillis();
-        List<Value> existingValues = valueDAO.findForLabels2(databaseName, validLabels);
+        List<Value> existingValues = findForLabels(validLabels);
 
-        for (Value existingValue : existingValues){
+/*        for (Value existingValue : existingValues){
             valueDAO.setDeleted(databaseName,existingValue);
             valueDAO.unlinkValueFromAnyLabel(databaseName,existingValue);
             // provenance table : person, time, method, name
             toReturn += "  deleting old value entered on put old timestamp here, need provenance table";
         }
         // now add the value??
-        valueDAO.store(databaseName, value);
+        valueDAO.store(databaseName, value);*/
         System.out.println("track 2 : " + (System.currentTimeMillis() - track) + "  ---   ");
-        track = System.currentTimeMillis();
+        /*track = System.currentTimeMillis();
         toReturn += "  stored";
         // and link to labels
         valueDAO.linkValueToLabels(databaseName, value, validLabels);
         System.out.println("track 3 : " + (System.currentTimeMillis() - track) + "  ---   ");
-
+*/
         return toReturn;
+    }
+
+    public List<Value> findForLabels(List<Label> labels){
+        // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
+        ArrayList<Value> values = new ArrayList<Value>();
+        // first get the shortest value list
+        int smallestLabelSetSize = -1;
+        Label smallestLabel = null;
+        for (Label label : labels){
+            if (smallestLabelSetSize == -1 || label.getValues().size() < smallestLabelSetSize){
+                smallestLabelSetSize = label.getValues().size();
+                smallestLabel = label;
+            }
+        }
+
+        // sod it, just go through that set and any which are found in the others add to be returned, Hashmaps could really speed this up later
+        // but will be interesting to see the speed now :)
+
+        for (Value value : smallestLabel.getValues()){
+            int numberOfLabelsTheValueHasBeenFoundIn = 1; // the label we started with :)
+            for (Label label : labels){
+                if (!label.equals(smallestLabel)){ // ignore the one we started with
+                    for(Value valueInThisLabel : label.getValues()){
+                        if (valueInThisLabel.equals(value)){
+                            numberOfLabelsTheValueHasBeenFoundIn++;
+                            break; // don't keep looking through those values, we found it
+                        }
+                    }
+                }
+            }
+            if (numberOfLabelsTheValueHasBeenFoundIn == labels.size()){ // it was in all the labels :)
+                values.add(value);
+            }
+        }
+
+
+        return values;
     }
 
 

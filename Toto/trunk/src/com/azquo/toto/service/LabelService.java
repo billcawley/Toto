@@ -2,7 +2,9 @@ package com.azquo.toto.service;
 
 import com.azquo.toto.dao.LabelDAO;
 import com.azquo.toto.entity.Label;
+import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,8 +26,8 @@ public class LabelService {
 
     // this isn't thread safe or anything like that!
 
-    Map<String, List<Label>> labelListCache = new HashMap<String, List<Label>>();
-    Map<String, Label> labelCache = new HashMap<String, Label>();
+//    Map<String, List<Label>> labelListCache = new HashMap<String, List<Label>>();
+//    Map<String, Label> labelCache = new HashMap<String, Label>();
 
     public void setDatabaseName(String databaseName) {
         this.databaseName = databaseName;
@@ -34,19 +36,19 @@ public class LabelService {
     @Autowired
     private LabelDAO labelDAO;
 
+    @Autowired
+    private TotoMemoryDB totoMemoryDB;
+
     public Label findByName(final String name) {
-        return labelDAO.findByName(databaseName, name);
+        return totoMemoryDB.getLabelByName(name);
     }
 
     public Label findOrCreateLabel(final String name) {
-        Label existing = labelDAO.findByName(databaseName, name);
+        Label existing = totoMemoryDB.getLabelByName(name);
         if (existing != null) {
             return existing;
         } else {
-            Label l = new Label();
-            l.setName(name);
-            labelDAO.store(databaseName, l);
-            return l;
+            return totoMemoryDB.createLabel(name);
         }
     }
 
@@ -68,10 +70,6 @@ public class LabelService {
             currentLevel++;
         }
         return foundAtCurrentLevel;
-    }
-
-    public List<Label> findPeers(final Label label) throws Exception {
-        return labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.peer_set_definition, label, true);
     }
 
     public List<Label> findChildrenSorted(final Label label) throws Exception {
@@ -112,7 +110,16 @@ public class LabelService {
     }
 
     public void createMembers(final Label parentLabel, final List<String> childNames) throws Exception {
-        createMembers(parentLabel, childNames, LabelDAO.SetDefinitionTable.label_set_definition);
+        // in this we're going assume that we overwrite existing labels, the single one can be used for adding
+        //int position = parentLabel.getChildren().size();
+        // by default we look for existing and create if we can't find them
+        List<Label> childLabels = new ArrayList<Label>(childNames.size());
+        for (String childName : childNames) {
+            if (childName.trim().length() > 0) {
+                childLabels.add(findOrCreateLabel(childName));
+            }
+        }
+        parentLabel.setChildrenWillBePersisted(childLabels);
     }
 
     private void createMembers(final Label parentLabel, final List<String> childNames, LabelDAO.SetDefinitionTable setDefinitionTable) throws Exception {
@@ -121,12 +128,11 @@ public class LabelService {
         for (String childName : childNames) {
             if (childName.trim().length() > 0) {
                 position += 1;
-                Label existingChild = labelDAO.findByName(databaseName, childName);
+                Label existingChild = totoMemoryDB.getLabelByName(childName);
                 if (existingChild != null) {
                     labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, existingChild, position);
                 } else {
-                    Label newChild = new Label(childName);
-                    labelDAO.store(databaseName, newChild);
+                    Label newChild = totoMemoryDB.createLabel(childName);
                     labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, newChild, position);
                 }
             }
@@ -135,12 +141,22 @@ public class LabelService {
     // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent labels with peer lists
 
     public void createPeer(final Label parentLabel, final String peerName) throws Exception {
-        createMember(parentLabel, peerName, null, -1, LabelDAO.SetDefinitionTable.peer_set_definition);
+        Label peer = findOrCreateLabel(peerName);
+        List<Label> peers = parentLabel.getPeers();
+        // TODO investigate sets here to make java deal with no duplicates in the set
+        for (Label existingPeer : peers){
+            if (existingPeer.equals(peer)){
+                return; // it's already there
+            }
+        }
+        ArrayList<Label> withNewPeer = new ArrayList<Label>(peers); // required, we're about to change data!
+        withNewPeer.add(peer);
+        parentLabel.setPeersWillBePersisted(withNewPeer);
     }
 
-    public void createPeer(final Label parentLabel, final String peerName, final String afterString, final int after) throws Exception {
+/*    public void createPeer(final Label parentLabel, final String peerName, final String afterString, final int after) throws Exception {
         createMember(parentLabel, peerName, afterString, after, LabelDAO.SetDefinitionTable.peer_set_definition);
-    }
+    }*/
 
     public void createMember(final Label parentLabel, final String childName, final String afterString, final int after) throws Exception {
         createMember(parentLabel, childName, afterString, after, LabelDAO.SetDefinitionTable.label_set_definition);
@@ -161,12 +177,11 @@ public class LabelService {
                 }
             }
             // we look for existing and create if we can't find it
-            Label existingChild = labelDAO.findByName(databaseName, childName);
+            Label existingChild = totoMemoryDB.getLabelByName(childName);
             if (existingChild != null) {
                 labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, existingChild, position);
             } else {
-                Label newChild = new Label(childName);
-                labelDAO.store(databaseName, newChild);
+                Label newChild = totoMemoryDB.createLabel(childName);
                 labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, newChild, position);
             }
         }
@@ -186,12 +201,28 @@ public class LabelService {
         }
     }
 
-    public void renameLabel(String labelName, String renameAs) {
-        Label existing = labelDAO.findByName(databaseName, labelName);
+    public void renameLabel(String labelName, String renameAs) throws Exception {
+        Label existing = totoMemoryDB.getLabelByName(labelName);
         if (existing != null) {
-            existing.setName(renameAs);
-            labelDAO.store(databaseName, existing);
+            existing.changeLabelNameWillBePersisted(renameAs, totoMemoryDB);
         }
+    }
+
+    public List<Label> findAllParents(final Label label) throws DataAccessException {
+        final List<Label> allParents = new ArrayList<Label>();
+        List<Label> foundAtCurrentLevel = label.getParents();
+        while (!foundAtCurrentLevel.isEmpty()) {
+            allParents.addAll(foundAtCurrentLevel);
+            List<Label> nextLevelList = new ArrayList<Label>();
+            for (Label l : foundAtCurrentLevel) {
+                nextLevelList.addAll(l.getParents());
+            }
+            if (nextLevelList.isEmpty()) { // noo more parents to find
+                break;
+            }
+            foundAtCurrentLevel = nextLevelList;
+        }
+        return allParents;
     }
 
     // these should probably live somewhere more global
@@ -200,6 +231,7 @@ public class LabelService {
 
     public Map<String, String> isAValidLabelSet(List<String> labelNames, List<Label> validLabelList) throws Exception {
 
+        System.out.println("pure java function");
         long track = System.currentTimeMillis();
 
         Map<String, String> toReturn = new HashMap<String, String>();
@@ -211,34 +243,37 @@ public class LabelService {
         ArrayList<Label> labelsToCheck = new ArrayList<Label>();
 
         for (String labelName : labelNames) {
-            Label label = findByName(labelName);
+                Label label = findByName(labelName);
             if (label == null) {
                 error += "  I can't find the label : " + labelName;
             } else { // the label exists . . .
                 boolean thisLabelHasPeers = false;
-                if (!findPeers(label).isEmpty()) { // this label is the one that defines what labels the data will require
-                    hasPeers.add(label);
-                    thisLabelHasPeers = true;
-                } else { // try looking up the chain and find the first with peers
-                    List<Label> parents = labelDAO.findAllParents(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label);
-                    for (Label parent : parents) {
-                        if (!findPeers(parent).isEmpty()) { // this label is the one that defines what labels the data will require
-                            hasPeers.add(parent); // put the parent not the actual label in as it will be used to determine the criteria for this value
-                            thisLabelHasPeers = true;
-                            break;
+
+                    if (!label.getPeers().isEmpty()) { // this label is the one that defines what labels the data will require
+                        hasPeers.add(label);
+                        thisLabelHasPeers = true;
+                    } else { // try looking up the chain and find the first with peers
+                        List<Label> parents = findAllParents(label);
+                        for (Label parent : parents) {
+                            if (!parent.getPeers().isEmpty()) { // this label is the one that defines what labels the data will require
+                                hasPeers.add(parent); // put the parent not the actual label in as it will be used to determine the criteria for this value
+                                thisLabelHasPeers = true;
+                                break;
+                            }
                         }
                     }
-                }
                 // it wasn't a label with peers hence it's on the list of labels to match up to the peer list of the label that DOES have peers :)
                 // not adding the label with peers to labelsToCheck is more efficient and it stops the label with peers from showing up as being superfluous to the peer list if that makes sense
                 if (!thisLabelHasPeers) {
                     labelsToCheck.add(label);
+                } else {
+                    validLabelList.add(label); // the rest will be added below but we need to add this here as the peer defining label is not on the list of peers
                 }
             }
         }
 
 
-        System.out.println("track 1-1 : " + (System.currentTimeMillis() - track) + "  ---   ");
+        //System.out.println("track 1-1 : " + (System.currentTimeMillis() - track) + "  ---   ");
         track = System.currentTimeMillis();
 
         if (hasPeers.isEmpty()) {
@@ -251,9 +286,7 @@ public class LabelService {
             error += "I don't know what labels are required for this value";
         } else { // one set of peers, ok :)
             // match peersm child labels are ok, ignore extra labels, warn about this
-            List<Label> requiredPeers = findPeers(hasPeers.get(0));
-            validLabelList.add(hasPeers.get(0)); // the rest will be added below but we need to add this here as the peer defining label is not on the list of peers
-            for (Label requiredPeer : requiredPeers) {
+            for (Label requiredPeer : hasPeers.get(0).getPeers()) {
                 boolean found = false;
                 // do a first direct pass
                 for (Label labelToCheck : labelsToCheck) {
@@ -267,7 +300,7 @@ public class LabelService {
 
                 if (!found) { // couldn't find this peer, need to look up through parents of each label for the peer
                     for (Label labelToCheck : labelsToCheck) {
-                        List<Label> allParents = labelDAO.findAllParents(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, labelToCheck);
+                        List<Label> allParents = findAllParents(labelToCheck);
                         for (Label parent : allParents) {
                             if (parent.getName().equalsIgnoreCase(requiredPeer.getName())) { // we found it
                                 labelsToCheck.remove(labelToCheck); // one of its parents matched so this peer is matched, skip to the next one and remove the label from labels to check
@@ -319,7 +352,7 @@ public class LabelService {
         }
     }
 
-    public Map<String, String> isAValidLabelSet1(List<String> labelNames, List<Label> validLabelList) throws Exception {
+/*    public Map<String, String> isAValidLabelSet1(List<String> labelNames, List<Label> validLabelList) throws Exception {
 
         System.out.println("fast funciton?");
         long track = System.currentTimeMillis();
@@ -449,6 +482,6 @@ public class LabelService {
         //System.out.println("track 1-2 : " + (System.currentTimeMillis() - track) + "  ---   ");
         track = System.currentTimeMillis();
         return toReturn;
-    }
+    }*/
 
 }

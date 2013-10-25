@@ -31,7 +31,6 @@ public class LabelDAO extends StandardDAO<Label> {
     // column names (except ID)
 
     public static final String NAME = "name";
-    public static final String LABELSETLOOKUPNEEDSREBUILDING = "label_set_lookup_needs_rebuilding";
 
 
     // associated table names, currently think here is a good place to put them. Where they're used.
@@ -48,18 +47,13 @@ public class LabelDAO extends StandardDAO<Label> {
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, label.getId());
         toReturn.put(NAME, label.getName());
-        toReturn.put(LABELSETLOOKUPNEEDSREBUILDING, label.getLabelSetLookupNeedsRebuilding());
         return toReturn;
     }
 
     public static final class LabelRowMapper implements RowMapper<Label> {
         @Override
         public Label mapRow(final ResultSet rs, final int row) throws SQLException {
-            final Label label = new Label();
-            label.setId(rs.getInt(ID));
-            label.setName(rs.getString(NAME));
-            label.setLabelSetLookupNeedsRebuilding(rs.getBoolean(LABELSETLOOKUPNEEDSREBUILDING));
-            return label;
+            return new Label(rs.getInt(ID), rs.getString(NAME));
         }
     }
 
@@ -68,8 +62,7 @@ public class LabelDAO extends StandardDAO<Label> {
         return new LabelRowMapper();
     }
 
-    // I think I'm going to specific store for Label due to unique name constraints
-    // simply ignore stores where the id and label exist otherwise throw exception for existing label whether updating or adding
+    /* this is probably now obsolete with the memoory DB
     public void store(final String databaseName, final Label label) throws DataAccessException {
         if (label.getName().contains(";")) {
             throw new InvalidDataAccessApiUsageException("Error, label name cannot contain ; :  " + label.getName());
@@ -87,7 +80,7 @@ public class LabelDAO extends StandardDAO<Label> {
             }
             // otherwise storing a name ID combo that's in the Db already, do nothing!
         }
-    }
+    }*/
 
     // TODO : flags for label set lookup
 

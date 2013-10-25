@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Oct 24, 2013 at 06:04 PM
+-- Generation Time: Oct 25, 2013 at 07:16 PM
 -- Server version: 5.5.33
 -- PHP Version: 5.3.17
 
@@ -35,9 +35,9 @@ CREATE TABLE IF NOT EXISTS `attribute` (
 CREATE TABLE IF NOT EXISTS `label` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `label_set_lookup_needs_rebuilding` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `name` (`name`)
+  UNIQUE KEY `name` (`name`),
+  UNIQUE KEY `name_2` (`name`,`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=111 ;
 
 -- --------------------------------------------------------
@@ -62,19 +62,8 @@ CREATE TABLE IF NOT EXISTS `label_set_definition` (
   `parent_id` int(11) NOT NULL,
   `child_id` int(11) NOT NULL,
   `position` smallint(5) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`parent_id`,`child_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `label_set_lookup`
---
-
-CREATE TABLE IF NOT EXISTS `label_set_lookup` (
-  `label_id` int(11) NOT NULL,
-  `levels_below` smallint(6) NOT NULL,
-  `related_label_id` int(11) NOT NULL
+  PRIMARY KEY (`parent_id`,`child_id`),
+  UNIQUE KEY `child_id` (`child_id`,`parent_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
@@ -112,7 +101,7 @@ CREATE TABLE IF NOT EXISTS `provenance` (
 --
 
 CREATE TABLE IF NOT EXISTS `value` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `provenance_id` int(11) NOT NULL,
   `type` tinyint(4) NOT NULL,
   `int` int(11) DEFAULT NULL,
@@ -122,7 +111,7 @@ CREATE TABLE IF NOT EXISTS `value` (
   `timestamp` timestamp NULL DEFAULT NULL,
   `deleted` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=4721 ;
 
 -- --------------------------------------------------------
 
@@ -132,5 +121,7 @@ CREATE TABLE IF NOT EXISTS `value` (
 
 CREATE TABLE IF NOT EXISTS `value_label` (
   `value_id` int(11) NOT NULL,
-  `label_id` int(11) NOT NULL
+  `label_id` int(11) NOT NULL,
+  PRIMARY KEY (`label_id`,`value_id`),
+  UNIQUE KEY `value_id` (`value_id`,`label_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
