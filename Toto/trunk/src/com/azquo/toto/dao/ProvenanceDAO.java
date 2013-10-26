@@ -45,13 +45,7 @@ public class ProvenanceDAO extends StandardDAO<Provenance>{
     public static final class ProvenanceRowMapper implements RowMapper<Provenance> {
         @Override
         public Provenance mapRow(final ResultSet rs, final int row) throws SQLException {
-            final Provenance provenance = new Provenance();
-            provenance.setId(rs.getInt(ID));
-            provenance.setUser(rs.getString(USER));
-            provenance.setTimeStamp(rs.getDate(TIMESTAMP));
-            provenance.setMethod(rs.getString(METHOD));
-            provenance.setName(rs.getString(NAME));
-            return provenance;
+            return new Provenance(rs.getInt(ID), rs.getString(USER),rs.getDate(TIMESTAMP),rs.getString(METHOD),rs.getString(NAME));
         }
     }
 

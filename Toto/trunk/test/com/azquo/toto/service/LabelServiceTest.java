@@ -39,7 +39,7 @@ public class LabelServiceTest {
         }
         labelService.setDatabaseName("tototest");
     }
-
+/*
     @After
     public void tearDown() throws Exception {
         Label l = labelDao.findByName(databaseName,"eddtest");
@@ -111,6 +111,6 @@ public class LabelServiceTest {
             labelService.logLabelHierarchy(topLabel, 0);
         }
     }
-
+*/
     //rename
 }

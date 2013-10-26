@@ -42,7 +42,7 @@ public class LabelDAOTest {
         clearEddtestLabels();
     }
 
-    @Test
+/*    @Test
     public void testColumnNameValueMap() throws Exception {
         Label l = new Label();
         l.setName("eddtest");
@@ -205,5 +205,5 @@ public class LabelDAOTest {
         labelDao.unlinkParentAndChild(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, l1, l2);
         clearEddtestLabels();
     }
-
+  */
 }

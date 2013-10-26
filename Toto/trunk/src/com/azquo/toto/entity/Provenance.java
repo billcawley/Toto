@@ -17,44 +17,28 @@ public class Provenance extends StandardEntity{
     private String name;
 
 
-    public Provenance() {
-        id = 0;
-        user = null;
-        timeStamp = null;
-        method = null;
-        name = null;
+    public Provenance(int id, String user, Date timeStamp, String method, String name) {
+        this.id = id;
+        this.user = user;
+        this.timeStamp = timeStamp;
+        this.method = method;
+        this.name = name;
     }
 
     public String getUser() {
         return user;
     }
 
-    public void setUser(String user) {
-        this.user = user;
-    }
-
     public Date getTimeStamp() {
         return timeStamp;
-    }
-
-    public void setTimeStamp(Date timeStamp) {
-        this.timeStamp = timeStamp;
     }
 
     public String getMethod() {
         return method;
     }
 
-    public void setMethod(String method) {
-        this.method = method;
-    }
-
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     @Override

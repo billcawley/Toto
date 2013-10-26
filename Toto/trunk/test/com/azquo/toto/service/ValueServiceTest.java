@@ -30,6 +30,8 @@ import java.util.List;
 
 public class ValueServiceTest {
 
+
+
     String databaseName = "tototest"; // hard code here for the moment
     @Autowired
     ValueService valueService;
@@ -56,6 +58,8 @@ public class ValueServiceTest {
 
     @Test
     public void testCsvImport() throws Exception {
+        // skip file opening time . . .
+        long track = System.currentTimeMillis();
         // for initial attempts at running it
         valueService.setDatabaseName("toto");
         // going to write coode here foor CSV import that will be factored off into a function later
@@ -116,20 +120,37 @@ public class ValueServiceTest {
         headers = csvReader.getHeaders();
 
         while (csvReader.readRecord()){
-            List<String> labels = new ArrayList<String>();
-            Value value = new Value();
-            value.setType(Value.Type.VARCHAR);
+            Set<String> labels = new HashSet<String>();
+            // hyst a
+            String value = null;
             for (String header : headers){
                 if (header.equalsIgnoreCase(ValueService.VALUE)){
-                    value.setVarChar(csvReader.get(header));
+                    value = csvReader.get(header);
                 } else {
                     labels.add(csvReader.get(header));
                 }
             }
             System.out.println(valueService.storeValueWithLabels(value, labels));
         }
+        System.out.println("csv import took " + (System.currentTimeMillis() - track) + "ms");
 
 
+        Label test1 = labelService.findByName("Time Activity");
+        Label test2 = labelService.findByName("Total All Methods");
+        Label test3 = labelService.findByName("Primary Strategy - Targeted Support");
+        Label test4 = labelService.findByName("Lynne Swainston");
+//        Label test3 = labelService.findByName("Primary Strategy - Targeted Support");
+//        Label test3 = labelService.findByName("Primary Strategy - Targeted Support");
+
+        Set<Label> searchCriteria = new HashSet<Label>();
+        searchCriteria.add(test1);
+        searchCriteria.add(test2);
+//        searchCriteria.add(test3);
+//        searchCriteria.add(test4);
+        track = System.currentTimeMillis();
+        Set<Value> searchResults = valueService.findForLabels(searchCriteria);
+        track = System.currentTimeMillis() - track;
+        System.out.println(searchResults.size() +  " records in " + track + "ms");
     }
 
 }

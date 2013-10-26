@@ -7,9 +7,7 @@ import com.azquo.toto.entity.Label;
 import com.azquo.toto.entity.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -74,44 +72,43 @@ public class TotoMemoryDB {
 
         for (Label label : labelByIdMap.values()){
             List<Integer> parentIdsForThisLabel = labelDAO.findParentIdsForLabel(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label);
-            List<Label> parentList = new ArrayList<Label>(parentIdsForThisLabel.size());
+            Set<Label> parentSet = new HashSet<Label>(parentIdsForThisLabel.size());
             for (Integer parentId: parentIdsForThisLabel){
-                parentList.add(labelByIdMap.get(parentId));
-                linkCounter++;
+                parentSet.add(labelByIdMap.get(parentId));
             }
-            label.setParentsWillBePersisted(parentList);
+            label.setParentsWillBePersisted(parentSet);
         }
 
         System.out.println(linkCounter + " parent labels linked to labels " + (System.currentTimeMillis() - track) + "ms");
         track = System.currentTimeMillis();
 
+        linkCounter = 0;
         for (Label label : labelByIdMap.values()){
             List<Integer> childIdsForThisLabel = labelDAO.findChildIdsForLabel(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label);
-            List<Label> childList = new ArrayList<Label>(childIdsForThisLabel.size());
+            LinkedHashSet<Label> childSet = new LinkedHashSet<Label>(childIdsForThisLabel.size());
             for (Integer childId: childIdsForThisLabel){
-                childList.add(labelByIdMap.get(childId));
+                childSet.add(labelByIdMap.get(childId));
                 linkCounter++;
             }
-            label.setChildrenWillBePersisted(childList);
+            label.setChildrenWillBePersisted(childSet);
         }
 
         System.out.println(linkCounter + " child labels linked to labels " + (System.currentTimeMillis() - track) + "ms");
         track = System.currentTimeMillis();
+        linkCounter = 0;
 
         for (Label label : labelByIdMap.values()){
             List<Integer> peerIdsForThisLabel = labelDAO.findChildIdsForLabel(databaseName, LabelDAO.SetDefinitionTable.peer_set_definition, label);
-            List<Label> peerList = new ArrayList<Label>(peerIdsForThisLabel.size());
+            LinkedHashSet<Label> peerSet = new LinkedHashSet<Label>(peerIdsForThisLabel.size());
             for (Integer peerId: peerIdsForThisLabel){
-                peerList.add(labelByIdMap.get(peerId));
+                peerSet.add(labelByIdMap.get(peerId));
                 linkCounter++;
             }
-            label.setPeersWillBePersisted(peerList);
+            label.setPeersWillBePersisted(peerSet);
         }
 
         System.out.println(linkCounter + " peer labels linked to labels " + (System.currentTimeMillis() - track) + "ms");
         track = System.currentTimeMillis();
-
-
 
 
         List<Value> allValues = valueDAO.findAll(databaseName);
@@ -129,12 +126,12 @@ public class TotoMemoryDB {
         linkCounter = 0;
         for (Label label : labelByIdMap.values()){
             List<Integer> valueIdsForThisLabel = valueDAO.findValueIdsForLabel(databaseName,label);
-            List<Value> valueList = new ArrayList<Value>(valueIdsForThisLabel.size());
+            Set<Value> valueSet = new HashSet<Value>(valueIdsForThisLabel.size());
             for (Integer valueId: valueIdsForThisLabel){
-                valueList.add(valueByIdMap.get(valueId));
+                valueSet.add(valueByIdMap.get(valueId));
                 linkCounter++;
             }
-            label.setValuesWillBePersisted(valueList);
+            label.setValuesWillBePersisted(valueSet);
         }
 
         System.out.println(linkCounter + " values linked to labels " + (System.currentTimeMillis() - track) + "ms");
@@ -175,9 +172,16 @@ public class TotoMemoryDB {
     public synchronized Label createLabel(String name){
         Label newLabel = new Label(getNextLabelId(), name);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        labelByNameMap.put(newLabel.getName(), newLabel);
+        labelByNameMap.put(newLabel.getName().toLowerCase(), newLabel);
         labelByIdMap.put(newLabel.getId(), newLabel);
         return newLabel;
+    }
+
+    public synchronized Value createValue(int provenanceId, Value.Type type, int intValue, double doubleValue, String varChar, String text, Date timeStamp, boolean deleted){
+        Value newValue = new Value(getNextValueId(),provenanceId, type, intValue, doubleValue, varChar, text, timeStamp, deleted);
+        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
+        valueByIdMap.put(newValue.getId(), newValue);
+        return newValue;
     }
 
 }

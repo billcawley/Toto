@@ -203,7 +203,7 @@ public class LabelController {
                             after = Integer.parseInt(afterString);
                         } catch (NumberFormatException ignored){
                         }
-                        labelService.createPeer(label, elements, afterString, after);
+                        // TODO labelService.createPeer(label, elements, afterString, after);
                         return elements + " added to " + label.getName();
                     }
                 } else if (remove != null){ // delete
@@ -216,7 +216,7 @@ public class LabelController {
                     final Label label = labelService.findByName(labelName);
                     if (label != null){
                         //  Fees; peers {Period, Analysis, Merchant};create;
-                        return getLabelsFormattedForOutput(labelService.findPeers(label));
+                        // TODO return getLabelsFormattedForOutput(labelService.findPeers(label));
                     } else {
                         return "label : " + labelName + "not found";
                     }

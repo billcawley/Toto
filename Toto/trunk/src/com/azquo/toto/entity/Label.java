@@ -2,10 +2,7 @@ package com.azquo.toto.entity;
 
 import com.azquo.toto.memorydb.TotoMemoryDB;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -28,11 +25,14 @@ public final class Label extends StandardEntity {
 
     // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
 
-    // should they be maps or sets?
-    private List<Value> values;
-    private List<Label> parents;
-    private List<Label> children;
-    private List<Label> peers;
+    // ok they're all sets, but some need ordering :)
+    private Set<Value> values;
+    private Set<Label> parents;
+    /* these two have position which we'll reflect by the place in the list. WHen modifying these sets one has to recreate teh set anyway
+    and when doing soo changes to the order are taken into account.
+     */
+    private LinkedHashSet<Label> children;
+    private LinkedHashSet<Label> peers;
 
     boolean valuesChanged;
     boolean parentsChanged;
@@ -42,10 +42,10 @@ public final class Label extends StandardEntity {
     public Label(int id, String name) {
         this.id = id;
         this.name = name;
-        values = new ArrayList<Value>();
-        parents = new ArrayList<Label>();
-        children = new ArrayList<Label>();
-        peers = new ArrayList<Label>();
+        values = new HashSet<Value>();
+        parents = new HashSet<Label>();
+        children = new LinkedHashSet<Label>();
+        peers = new LinkedHashSet<Label>();
         valuesChanged = false;
         parentsChanged = false;
         childrenChanged = false;
@@ -103,41 +103,46 @@ public final class Label extends StandardEntity {
                 '}';
     }
 
-    public List<Value> getValues() {
-        return Collections.unmodifiableList(values);
+    public Set<Value> getValues() {
+        return Collections.unmodifiableSet(values);
     }
 
-    public synchronized void setValuesWillBePersisted(List<Value> values) {
+    public synchronized void setValuesWillBePersisted(Set<Value> values) {
         this.values = values;
         valuesChanged = true;
         inspectForPersistence = true;
     }
 
-    public List<Label> getParents() {
-        return Collections.unmodifiableList(parents);
+    public Set<Label> getParents() {
+        return Collections.unmodifiableSet(parents);
     }
 
-    public synchronized void setParentsWillBePersisted(List<Label> parents) {
+    public synchronized void setParentsWillBePersisted(Set<Label> parents) {
         this.parents = parents;
         parentsChanged = true;
         inspectForPersistence = true;
     }
 
-    public List<Label> getChildren() {
-        return Collections.unmodifiableList(children);
-    }
+    /* ok just return it as a Set so we can use unmodifiableSet, this does make the getters and setters a little inconsistent
+      but hey ho,
+       */
 
-    public synchronized void setChildrenWillBePersisted(List<Label> children) {
+    public Set<Label> getChildren() {
+        return Collections.unmodifiableSet(children);
+    }
+    // as mentioned above, force the set to a linked set, we want it to be ordered :)
+
+    public synchronized void setChildrenWillBePersisted(LinkedHashSet<Label> children) {
         this.children = children;
         childrenChanged = true;
         inspectForPersistence = true;
     }
 
-    public List<Label> getPeers() {
-        return Collections.unmodifiableList(peers);
+    public Set<Label> getPeers() {
+        return Collections.unmodifiableSet(peers);
     }
 
-    public synchronized void setPeersWillBePersisted(List<Label> peers) {
+    public synchronized void setPeersWillBePersisted(LinkedHashSet<Label> peers) {
         this.peers = peers;
         peersChanged = true;
         inspectForPersistence = true;

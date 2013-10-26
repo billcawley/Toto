@@ -62,17 +62,8 @@ public class ValueDAO extends StandardDAO<Value> {
     public static final class ValueRowMapper implements RowMapper<Value> {
         @Override
         public Value mapRow(final ResultSet rs, final int row) throws SQLException {
-            final Value value = new Value();
-            value.setId(rs.getInt(ID));
-            value.setProvenanceId(rs.getInt(PROVENANCEID));
-            value.setType(Value.Type.values()[rs.getInt(TYPE)]);
-            value.setIntValue(rs.getInt(INT));
-            value.setDoubleValue(rs.getInt(DOUBLE));
-            value.setVarChar(rs.getString(VARCHAR));
-            value.setText(rs.getString(TEXT));
-            value.setTimeStamp(rs.getDate(TIMESTAMP));
-            value.setDeleted(rs.getBoolean(DELETED));
-            return value;
+            return new Value(rs.getInt(ID), rs.getInt(PROVENANCEID), Value.Type.values()[rs.getInt(TYPE)],rs.getInt(INT),
+                    rs.getInt(DOUBLE),rs.getString(VARCHAR),rs.getString(TEXT),rs.getDate(TIMESTAMP),rs.getBoolean(DELETED));
         }
     }
 
@@ -144,10 +135,10 @@ public class ValueDAO extends StandardDAO<Value> {
         return jdbcTemplate.queryForObject(FIND_EXISTING_LINK, namedParams, Integer.class) != 0;
     }
 
-    public void setDeleted(String databaseName, Value value) {
+/*    public void setDeleted(String databaseName, Value value) {
         value.setDeleted(true);
         store(databaseName, value);
-    }
+    }*/
 
     // for the moment this is a direct low level function, it doesn't pay attention to label structure
 
