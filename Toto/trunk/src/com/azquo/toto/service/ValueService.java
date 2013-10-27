@@ -55,7 +55,6 @@ public class ValueService {
         unlinkAllNamesFromValue(value);
         value.setNamesWillBePersisted(names);
         for (Name name : names){
-            long track = System.nanoTime();
             name.addToValuesWillBePersisted(value);
         }
     }
@@ -63,7 +62,7 @@ public class ValueService {
     public String storeValueWithNames(final String valueString, final Set<String> names) throws Exception {
         String toReturn = "";
         Set<Name> validNames = new HashSet<Name>();
-        long track = System.nanoTime();
+        //long track = System.nanoTime();
         Map<String, String> nameCheckResult = nameService.isAValidNameSet(names, validNames);
         String error = nameCheckResult.get(NameService.ERROR);
         String warning = nameCheckResult.get(NameService.ERROR);
@@ -73,10 +72,10 @@ public class ValueService {
             toReturn += warning;
         }
         //System.out.println("track 1   : " + (System.nanoTime() - track) + "  ---   ");
-        track = System.nanoTime();
+        //track = System.nanoTime();
         List<Value> existingValues = findForNames(validNames);
         //System.out.println("track 2-1 : " + (System.nanoTime() - track) + "  ---   ");
-        track = System.nanoTime();
+        //track = System.nanoTime();
 
         for (Value existingValue : existingValues){
             deleteValue(existingValue);
@@ -85,11 +84,11 @@ public class ValueService {
         }
 
         //System.out.println("track 2-2 : " + (System.nanoTime() - track) + "  ---   ");
-        track = System.nanoTime();
+        //track = System.nanoTime();
         Value value = createValue(0, 0,valueString);
         // now add the value??
         //System.out.println("track 2-3 : " + (System.nanoTime() - track) + "  ---   ");
-        track = System.nanoTime();
+        //track = System.nanoTime();
         toReturn += "  stored";
         // and link to names
         linkValueToNames(value, validNames);
@@ -100,7 +99,7 @@ public class ValueService {
 
     public List<Value> findForNames(Set<Name> names){
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
-        long track = System.nanoTime();
+        //long track = System.nanoTime();
         List<Value> values = new ArrayList<Value>();
         // first get the shortest value list
         int smallestNameSetSize = -1;
@@ -113,9 +112,9 @@ public class ValueService {
         }
 
         //System.out.println("track a   : " + (System.nanoTime() - track) + "  ---   ");
-        track = System.nanoTime();
+        //track = System.nanoTime();
         // changing to sets for speed (hopefully!)
-        int count = 0;
+        //int count = 0;
 
 
         assert smallestName != null; // make intellij happy :P
@@ -124,7 +123,7 @@ public class ValueService {
             for (Name name : names){
                 if (!name.equals(smallestName)){ // ignore the one we started with
                     if (!value.getNames().contains(name)){
-                        count++;
+//                        count++;
                         theValueIsOk = false;
                         break; // important, stop checking that that value contains he names we're interested in as, we didn't find one no point checking for the rest
                     }
@@ -136,7 +135,7 @@ public class ValueService {
         }
 
         //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
-        track = System.nanoTime();
+        //track = System.nanoTime();
 
         return values;
     }

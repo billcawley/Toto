@@ -1,6 +1,5 @@
 package com.azquo.toto.service;
 
-import com.azquo.toto.dao.NameDAO;
 import com.azquo.toto.entity.Name;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -112,6 +111,39 @@ public class NameService {
         parentName.setChildrenWillBePersisted(childNames);
     }
 
+    // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
+
+    public void createPeer(final Name parentName, final String peerName) throws Exception {
+        Name peer = findOrCreateName(peerName);
+
+        if (!parentName.getPeers().contains(peer)) { // it doesn't already have the peer
+            LinkedHashSet<Name> withNewPeer = new LinkedHashSet<Name>(parentName.getPeers());
+            withNewPeer.add(peer);
+            parentName.setPeersWillBePersisted(withNewPeer);
+        }
+    }
+    // copied from the one below but for peers. Probably scope for some factoring
+    public void createPeer(final Name parentName, final String peerName, final String afterString, final int after) throws Exception {
+        Name newPeer = findOrCreateName(peerName);
+        if (!parentName.getPeers().contains(newPeer)) { // it doesn't already have the peer
+            LinkedHashSet<Name> withNewPeer = new LinkedHashSet<Name>();
+            int position = 1;
+            for (Name peer : parentName.getPeers()){
+                withNewPeer.add(peer);
+                if (afterString != null){
+                    if (peer.getName().equalsIgnoreCase(afterString)){
+                        withNewPeer.add(newPeer);
+                        // no backward link like with normal children
+                    }
+                } else if(after == position){ // only check the numeric position if there's no string passed
+                    withNewPeer.add(newPeer);
+                }
+                position++;
+            }
+            parentName.setPeersWillBePersisted(withNewPeer);
+        }
+    }
+
     public void createPeers(final Name parentName, final List<String> peerNames) throws Exception {
         // in this we're going assume that we overwrite existing name links, the single one can be used for adding
         LinkedHashSet<Name> peers = new LinkedHashSet<Name>(peerNames.size());
@@ -123,15 +155,10 @@ public class NameService {
         parentName.setPeersWillBePersisted(peers);
     }
 
-    // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
-
-    public void createPeer(final Name parentName, final String peerName) throws Exception {
-        Name peer = findOrCreateName(peerName);
-
-        if (!parentName.getPeers().contains(peer)) { // it doesn't already have the peer
-            LinkedHashSet<Name> withNewPeer = new LinkedHashSet<Name>(parentName.getPeers()); // make a new one too add to TODO : address position, this is the time!
-            withNewPeer.add(peer);
-            parentName.setPeersWillBePersisted(withNewPeer);
+    public void removePeer(final Name parentName, final String peerName) throws Exception {
+        Name existingPeer = totoMemoryDB.getNameByName(peerName);
+        if (existingPeer != null) {
+            parentName.removeFromPeersWillBePersisted(existingPeer);
         }
     }
 
@@ -154,13 +181,6 @@ public class NameService {
                 position++;
             }
             parentName.setPeersWillBePersisted(withNewChild);
-        }
-    }
-
-    public void removePeer(final Name parentName, final String peerName) throws Exception {
-        Name existingPeer = totoMemoryDB.getNameByName(peerName);
-        if (existingPeer != null) {
-            parentName.removeFromPeersWillBePersisted(existingPeer);
         }
     }
 

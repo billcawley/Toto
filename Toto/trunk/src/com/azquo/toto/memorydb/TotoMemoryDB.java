@@ -48,7 +48,7 @@ public class TotoMemoryDB {
 
     public TotoMemoryDB(String databaseName, boolean dontLoad) throws Exception {
         this.databaseName = databaseName;
-        boolean needsLoading = true;
+        needsLoading = true;
         maxIdAtLoad = 0;
         nameByNameMap = new HashMap<String, Name>();
         nameByIdMap = new HashMap<Integer, Name>();

@@ -147,7 +147,7 @@ public class NameController {
                             }
 
                         }
-                        Collection<Name> names; // could be a set or list, sine all we want too doo is iterate is no prob
+                        Collection<Name> names; // could be a set or list, sine all we want too do is iterate is no prob
                         if (from != -1 || to != -1){ // numeric, I won't allow mixed for the moment
                             names = nameService.findChildrenFromTo(name, from, to);
                         } else if (fromString != null || toString != null){
@@ -204,7 +204,7 @@ public class NameController {
                             after = Integer.parseInt(afterString);
                         } catch (NumberFormatException ignored){
                         }
-                        // TODO nameService.createPeer(name, elements, afterString, after);
+                        nameService.createPeer(name, elements, afterString, after);
                         return elements + " added to " + name.getName();
                     }
                 } else if (remove != null){ // delete
@@ -217,7 +217,7 @@ public class NameController {
                     final Name name = nameService.findByName(nameString);
                     if (name != null){
                         //  Fees; peers {Period, Analysis, Merchant};create;
-                        // TODO return getNamesFormattedForOutput(nameService.findPeers(name));
+                        return getNamesFormattedForOutput(name.getPeers());
                     } else {
                         return "name : " + nameString + "not found";
                     }
@@ -248,7 +248,7 @@ public class NameController {
         return toReturn;
     }
 
-    private String getNamesFormattedForOutput(List<Name> names){
+    private String getNamesFormattedForOutput(Collection<Name> names){
         // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
         StringBuilder sb = new StringBuilder();
         boolean first = true;

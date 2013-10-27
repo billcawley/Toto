@@ -1,7 +1,6 @@
 package com.azquo.toto.dao;
 
 import com.azquo.toto.entity.Provenance;
-import com.azquo.toto.entity.Value;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -15,7 +14,7 @@ import java.util.Map;
  * User: cawley
  * Date: 24/10/13
  * Time: 17:44
- * To change this template use File | Settings | File Templates.
+ * For persistence of provenance
  */
 public class ProvenanceDAO extends StandardDAO<Provenance>{
 

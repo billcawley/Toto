@@ -30,7 +30,6 @@ public class ValueServiceTest {
 
 
 
-    String databaseName = "tototest"; // hard code here for the moment
     @Autowired
     ValueService valueService;
     @Autowired
@@ -123,10 +122,8 @@ public class ValueServiceTest {
 
         Name test1 = nameService.findByName("Time Activity");
         Name test2 = nameService.findByName("Total All Methods");
-        Name test3 = nameService.findByName("Primary Strategy - Targeted Support");
-        Name test4 = nameService.findByName("Lynne Swainston");
 //        Name test3 = nameService.findByName("Primary Strategy - Targeted Support");
-//        Name test3 = nameService.findByName("Primary Strategy - Targeted Support");
+//        Name test4 = nameService.findByName("Lynne Swainston");
 
         Set<Name> searchCriteria = new HashSet<Name>();
         searchCriteria.add(test1);

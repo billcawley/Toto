@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
  * User: cawley
  * Date: 24/10/13
  * Time: 13:46
- * To change this template use File | Settings | File Templates.
+ *
+ * instructions to manipulate the data itself, will become more complex and deal with a connection to instructions can be in state
+ *
  */
 @Controller
 @RequestMapping("/Value")
