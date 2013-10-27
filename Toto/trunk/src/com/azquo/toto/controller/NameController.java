@@ -6,11 +6,11 @@ package com.azquo.toto.controller;
  * Date: 17/10/13
  * Time: 11:41
  * We're going to try for spring annotation based controllers. Might look into some rest specific spring stuff later.
- * For the moment it parses instructions for manipulating the label set and calls the label service if the instructions seem correctly formed.
+ * For the moment it parses instructions for manipulating the name set and calls the name service if the instructions seem correctly formed.
  */
 
-import com.azquo.toto.entity.Label;
-import com.azquo.toto.service.LabelService;
+import com.azquo.toto.entity.Name;
+import com.azquo.toto.service.NameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,12 +18,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.StringTokenizer;
 
 @Controller
-@RequestMapping("/Label")
-public class LabelController {
+@RequestMapping("/Name")
+public class NameController {
 
     public static final String ELEMENTS = "elements";
     public static final String PEERS = "peers";
@@ -39,7 +40,7 @@ public class LabelController {
     public static final String LOWEST = "lowest";
 
     @Autowired
-    private LabelService labelService;
+    private NameService nameService;
 
 //    private static final Logger logger = Logger.getLogger(TestController.class);
 
@@ -51,11 +52,11 @@ public class LabelController {
             return "no command passed";
         }
         instructions = instructions.trim();
-        // typically a command will start with a label name
+        // typically a command will start with a name
 
         if(instructions.indexOf(';') > 0){
-            final String labelName = instructions.substring(0, instructions.indexOf(';')).trim();
-            // now we have it strip off the label, use getInstructioon to see what we want to do with the label
+            final String nameString = instructions.substring(0, instructions.indexOf(';')).trim();
+            // now we have it strip off the name, use getInstructioon to see what we want to do with the name
             instructions = instructions.substring(instructions.indexOf(';') + 1).trim();
 
             String elements = getInstruction(instructions, ELEMENTS);
@@ -69,7 +70,7 @@ public class LabelController {
             String renameas = getInstruction(instructions, RENAMEAS);
             if (elements != null){
                 if (create != null){
-                    final Label label = labelService.findOrCreateLabel(labelName);
+                    final Name name = nameService.findOrCreateName(nameString);
                     // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
                     if(elements.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
                         // EXAMPLE : 2013;elements {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
@@ -78,13 +79,13 @@ public class LabelController {
                             final StringTokenizer st = new StringTokenizer(elements, ",");
                             final List<String> namesToAdd = new ArrayList<String>();
                             while (st.hasMoreTokens()){
-                                String name = st.nextToken().trim();
-                                if (name.startsWith("`")){
-                                    name = name.substring(1, name.length() - 1); // trim escape chars
+                                String childName = st.nextToken().trim();
+                                if (childName.startsWith("`")){
+                                    childName = childName.substring(1, childName.length() - 1); // trim escape chars
                                 }
-                                namesToAdd.add(name);
+                                namesToAdd.add(childName);
                             }
-                            labelService.createMembers(label, namesToAdd);
+                            nameService.createMembers(name, namesToAdd);
                             return "Create array saved " + namesToAdd.size() + " names";
                         } else{
                             return "Unclosed }";
@@ -96,18 +97,18 @@ public class LabelController {
                             after = Integer.parseInt(afterString);
                         } catch (NumberFormatException ignored){
                         }
-                        labelService.createMember(label, elements, afterString, after);
-                        return elements + " added to " + label.getName();
+                        nameService.createMember(name, elements, afterString, after);
+                        return elements + " added to " + name.getName();
                     }
                 } else if (remove != null){ // delete
-                    final Label label = labelService.findByName(labelName);
-                    if (label != null){
-                        labelService.removeMember(label, elements);
+                    final Name name = nameService.findByName(nameString);
+                    if (name != null){
+                        nameService.removeMember(name, elements);
                         return elements + " deleted";
                     }
                 } else {// they want to read data
-                    final Label label = labelService.findByName(labelName);
-                    if (label != null){
+                    final Name name = nameService.findByName(nameString);
+                    if (name != null){
                         /* examples
                           2013;elements
                           is a basic example
@@ -146,37 +147,37 @@ public class LabelController {
                             }
 
                         }
-                        List<Label> labels;
+                        Collection<Name> names; // could be a set or list, sine all we want too doo is iterate is no prob
                         if (from != -1 || to != -1){ // numeric, I won't allow mixed for the moment
-                            labels = labelService.findChildrenFromTo(label, from, to);
+                            names = nameService.findChildrenFromTo(name, from, to);
                         } else if (fromString != null || toString != null){
-                            labels = labelService.findChildrenFromTo(label, fromString, toString);
+                            names = nameService.findChildrenFromTo(name, fromString, toString);
                         } else { // also won't allow from/to/level mixes either
                             // sorted means level won't work
                             if (getInstruction(instructions, SORTED) != null){
-                                labels = labelService.findChildrenSorted(label);
+                                names = nameService.findChildrenSortedAlphabetically(name);
                             } else {
-                                labels = labelService.findChildrenAtLevel(label, level);
+                                names = nameService.findChildrenAtLevel(name, level);
                             }
                         }
                         // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
                         StringBuilder sb = new StringBuilder();
                         boolean first = true;
-                        for (Label l : labels){
+                        for (Name n : names){
                             if (!first){
                                 sb.append(", ");
                             }
-                            sb.append("`").append(l.getName()).append("`");
+                            sb.append("`").append(n.getName()).append("`");
                             first = false;
                         }
                         return sb.toString();
                     } else {
-                        return "label : " + labelName + "not found";
+                        return "name : " + nameString + "not found";
                     }
                 }
             } else if (peers != null){
                 if (create != null){
-                    final Label label = labelService.findOrCreateLabel(labelName);
+                    final Name name = nameService.findOrCreateName(nameString);
                     // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
                     if(peers.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
                         // EXAMPLE : 2013;elements {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
@@ -185,13 +186,13 @@ public class LabelController {
                             final StringTokenizer st = new StringTokenizer(peers, ",");
                             final List<String> namesToAdd = new ArrayList<String>();
                             while (st.hasMoreTokens()){
-                                String name = st.nextToken().trim();
-                                if (name.startsWith("`")){
-                                    name = name.substring(1, name.length() - 1); // trim escape chars
+                                String peerName = st.nextToken().trim();
+                                if (peerName.startsWith("`")){
+                                    peerName = peerName.substring(1, peerName.length() - 1); // trim escape chars
                                 }
-                                namesToAdd.add(name);
+                                namesToAdd.add(peerName);
                             }
-                            labelService.createPeers(label, namesToAdd);
+                            nameService.createPeers(name, namesToAdd);
                             return "Create array saved " + namesToAdd.size() + " names";
                         } else{
                             return "Unclosed }";
@@ -203,28 +204,28 @@ public class LabelController {
                             after = Integer.parseInt(afterString);
                         } catch (NumberFormatException ignored){
                         }
-                        // TODO labelService.createPeer(label, elements, afterString, after);
-                        return elements + " added to " + label.getName();
+                        // TODO nameService.createPeer(name, elements, afterString, after);
+                        return elements + " added to " + name.getName();
                     }
                 } else if (remove != null){ // delete
-                    final Label label = labelService.findByName(labelName);
-                    if (label != null){
-                        labelService.removePeer(label, elements);
+                    final Name name = nameService.findByName(nameString);
+                    if (name != null){
+                        nameService.removePeer(name, elements);
                         return elements + " deleted";
                     }
                 } else {// they want to read data
-                    final Label label = labelService.findByName(labelName);
-                    if (label != null){
+                    final Name name = nameService.findByName(nameString);
+                    if (name != null){
                         //  Fees; peers {Period, Analysis, Merchant};create;
-                        // TODO return getLabelsFormattedForOutput(labelService.findPeers(label));
+                        // TODO return getNamesFormattedForOutput(nameService.findPeers(name));
                     } else {
-                        return "label : " + labelName + "not found";
+                        return "name : " + nameString + "not found";
                     }
                 }
 
             } else if (renameas != null){ // not specific to peers or elements
-                labelService.renameLabel(labelName, renameas);
-                return "rename " + labelName + " to " + renameas;
+                nameService.renameName(nameString, renameas);
+                return "rename " + nameString + " to " + renameas;
             }
         }
 
@@ -247,15 +248,15 @@ public class LabelController {
         return toReturn;
     }
 
-    private String getLabelsFormattedForOutput(List<Label> labels){
+    private String getNamesFormattedForOutput(List<Name> names){
         // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
         StringBuilder sb = new StringBuilder();
         boolean first = true;
-        for (Label l : labels){
+        for (Name n : names){
             if (!first){
                 sb.append(", ");
             }
-            sb.append("`").append(l.getName()).append("`");
+            sb.append("`").append(n.getName()).append("`");
             first = false;
         }
         return sb.toString();

@@ -1,7 +1,6 @@
 package com.azquo.toto.dao;
 
-import com.azquo.toto.entity.Label;
-import com.azquo.toto.entity.Value;
+import com.azquo.toto.entity.Name;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -20,14 +19,14 @@ import java.util.Map;
  * User: cawley
  * Date: 16/10/13
  * Time: 19:19
- * DAO for Labels, under new model just used for persistence,will hopefully be pretty simple
+ * DAO for Names, under new model just used for persistence,will hopefully be pretty simple
  */
-public class LabelDAO extends StandardDAO<Label> {
+public class NameDAO extends StandardDAO<Name> {
 
     // the default table name for this data.
     @Override
     public String getTableName() {
-        return "label";
+        return "name";
     }
 
     // column names (except ID)
@@ -37,7 +36,7 @@ public class LabelDAO extends StandardDAO<Label> {
 
     // associated table names, currently think here is a good place to put them. Where they're used.
 
-    public enum SetDefinitionTable {label_set_definition, peer_set_definition}
+    public enum SetDefinitionTable {name_set_definition, peer_set_definition}
 
     public static final String PARENTID = "parent_id";
     public static final String CHILDID = "child_id";
@@ -45,25 +44,25 @@ public class LabelDAO extends StandardDAO<Label> {
 
 
     @Override
-    public Map<String, Object> getColumnNameValueMap(final Label label){
+    public Map<String, Object> getColumnNameValueMap(final Name name){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
-        toReturn.put(ID, label.getId());
-        toReturn.put(NAME, label.getName());
+        toReturn.put(ID, name.getId());
+        toReturn.put(NAME, name.getName());
         return toReturn;
     }
 
-    public static final class LabelRowMapper implements RowMapper<Label> {
+    public static final class NameRowMapper implements RowMapper<Name> {
 
         private TotoMemoryDB totoMemoryDB;
 
-        public LabelRowMapper(TotoMemoryDB totoMemoryDB){
+        public NameRowMapper(TotoMemoryDB totoMemoryDB){
             this.totoMemoryDB = totoMemoryDB;
         }
         @Override
-        public Label mapRow(final ResultSet rs, final int row) throws SQLException {
+        public Name mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Label(totoMemoryDB, rs.getInt(ID), rs.getString(NAME));
+                return new Name(totoMemoryDB, rs.getInt(ID), rs.getString(NAME));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -72,55 +71,34 @@ public class LabelDAO extends StandardDAO<Label> {
     }
 
     @Override
-    public RowMapper<Label> getRowMapper(TotoMemoryDB totoMemoryDB) {
-        return new LabelRowMapper(totoMemoryDB);
+    public RowMapper<Name> getRowMapper(TotoMemoryDB totoMemoryDB) {
+        return new NameRowMapper(totoMemoryDB);
     }
 
-    /* this is probably now obsolete with the memoory DB
-    public void store(final TotoMemoryDB totoMemoryDB, final Label label) throws DataAccessException {
-        if (label.getName().contains(";")) {
-            throw new InvalidDataAccessApiUsageException("Error, label name cannot contain ; :  " + label.getName());
-        }
-        final Label existing = findByName(totoMemoryDB.getDatabaseName(), label.getName());
-        if (existing == null) { // no name exists, can store new label or update another to this name
-            super.store(totoMemoryDB.getDatabaseName(), label);
-        } else { // it does exist
-            if (existing.getId() != label.getId()) { // either a new one or some other updated against an existing name, no good
-                throw new InvalidDataAccessApiUsageException("Error, the label " + label.getName() + " already exists");
-            } else { //updating one with teh same ID and name the only thing that could change is the flag
-                if (existing.getLabelSetLookupNeedsRebuilding() != label.getLabelSetLookupNeedsRebuilding()){
-                    super.store(totoMemoryDB.getDatabaseName(), label);
-                }
-            }
-            // otherwise storing a name ID combo that's in the Db already, do nothing!
-        }
-    }*/
 
-    // TODO : flags for label set lookup
-
-    public void remove(final TotoMemoryDB totoMemoryDB, final Label label) throws DataAccessException {
+    public void remove(final TotoMemoryDB totoMemoryDB, final Name name) throws DataAccessException {
         // ok this will unlink everywhere, should we actually delete then or not??
-        List<Label> parents = findParents(totoMemoryDB, SetDefinitionTable.label_set_definition, label);
-        for (Label parent : parents){
-            unlinkParentAndChild(totoMemoryDB,SetDefinitionTable.label_set_definition, parent, label);
+        List<Name> parents = findParents(totoMemoryDB, SetDefinitionTable.name_set_definition, name);
+        for (Name parent : parents){
+            unlinkParentAndChild(totoMemoryDB,SetDefinitionTable.name_set_definition, parent, name);
         }
-        List<Label> children = findChildren(totoMemoryDB, SetDefinitionTable.label_set_definition, label, false);
-        for (Label child : children){
-            unlinkParentAndChild(totoMemoryDB, SetDefinitionTable.label_set_definition, label, child);
+        List<Name> children = findChildren(totoMemoryDB, SetDefinitionTable.name_set_definition, name, false);
+        for (Name child : children){
+            unlinkParentAndChild(totoMemoryDB, SetDefinitionTable.name_set_definition, name, child);
         }
         // now do the same for peers
-        parents = findParents(totoMemoryDB, SetDefinitionTable.peer_set_definition, label);
-        for (Label parent : parents){
-            unlinkParentAndChild(totoMemoryDB,SetDefinitionTable.peer_set_definition, parent, label);
+        parents = findParents(totoMemoryDB, SetDefinitionTable.peer_set_definition, name);
+        for (Name parent : parents){
+            unlinkParentAndChild(totoMemoryDB,SetDefinitionTable.peer_set_definition, parent, name);
         }
-        children = findChildren(totoMemoryDB, SetDefinitionTable.peer_set_definition, label, false);
-        for (Label child : children){
-            unlinkParentAndChild(totoMemoryDB, SetDefinitionTable.peer_set_definition, label, child);
+        children = findChildren(totoMemoryDB, SetDefinitionTable.peer_set_definition, name, false);
+        for (Name child : children){
+            unlinkParentAndChild(totoMemoryDB, SetDefinitionTable.peer_set_definition, name, child);
         }
-        removeById(totoMemoryDB, label);
+        removeById(totoMemoryDB, name);
     }
 
-    public Label findByName(final TotoMemoryDB totoMemoryDB, final String name) throws DataAccessException {
+    public Name findByName(final TotoMemoryDB totoMemoryDB, final String name) throws DataAccessException {
         final String whereCondition = " where `" + NAME + "` = :" + NAME;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(NAME, name);
@@ -128,34 +106,34 @@ public class LabelDAO extends StandardDAO<Label> {
     }
 
     // should this be public? I want the service to have direct access as the code will be normalised better . . .
-    public List<Label> findChildren(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Label label, final boolean sorted) throws DataAccessException {
+    public List<Name> findChildren(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name name, final boolean sorted) throws DataAccessException {
         final String whereCondition = ", `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + CHILDID + "` AND `" + setDefinitionTable + "`.`" + PARENTID + "` = :" + PARENTID + (sorted ? " order by `" + NAME + "`" : " order by `" + POSITION + "`");
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PARENTID, label.getId());
+        namedParams.addValue(PARENTID, name.getId());
         return findListWithWhereSQLAndParameters(totoMemoryDB, whereCondition, namedParams, false);
     }
 
     // for loading into the memory db
 
-    public List<Integer> findParentIdsForLabel(final TotoMemoryDB totoMemoryDB, SetDefinitionTable setDefinitionTable, final Label label) {
+    public List<Integer> findParentIdsForName(final TotoMemoryDB totoMemoryDB, SetDefinitionTable setDefinitionTable, final Name name) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(CHILDID, label.getId());
+        namedParams.addValue(CHILDID, name.getId());
         final String FIND_EXISTING_LINKS = "Select `" + PARENTID + "` from `" + totoMemoryDB + "`.`" + setDefinitionTable + "` where `" + CHILDID + "` = :" + CHILDID + " order by `" + POSITION + "`";
         return jdbcTemplate.queryForList(FIND_EXISTING_LINKS, namedParams, Integer.class);
 
     }
 
-    public List<Integer> findChildIdsForLabel(final TotoMemoryDB totoMemoryDB, SetDefinitionTable setDefinitionTable, final Label label) {
+    public List<Integer> findChildIdsForName(final TotoMemoryDB totoMemoryDB, SetDefinitionTable setDefinitionTable, final Name name) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PARENTID, label.getId());
+        namedParams.addValue(PARENTID, name.getId());
         final String FIND_EXISTING_LINKS = "Select `" + CHILDID + "` from `" + totoMemoryDB + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID + " order by `" + POSITION + "`";
         return jdbcTemplate.queryForList(FIND_EXISTING_LINKS, namedParams, Integer.class);
     }
 
 
-    public List<Label> findChildren(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Label label, final int from, final int to) throws DataAccessException {
+    public List<Name> findChildren(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name name, final int from, final int to) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PARENTID, label.getId());
+        namedParams.addValue(PARENTID, name.getId());
         if (from != -1) {
             namedParams.addValue("from", from);
         }
@@ -166,21 +144,21 @@ public class LabelDAO extends StandardDAO<Label> {
         return findListWithWhereSQLAndParameters(totoMemoryDB, whereCondition, namedParams, false);
     }
 
-    public List<Label> findParents(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Label label) throws DataAccessException {
+    public List<Name> findParents(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name name) throws DataAccessException {
         final String whereCondition = ", `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + PARENTID + "` AND `" + setDefinitionTable + "`.`" + CHILDID + "` = :" + CHILDID;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(CHILDID, label.getId());
+        namedParams.addValue(CHILDID, name.getId());
         return findListWithWhereSQLAndParameters(totoMemoryDB, whereCondition, namedParams, false);
     }
 
-    public List<Label> findAllParents(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Label label) throws DataAccessException {
-        final List<Label> allParents = new ArrayList<Label>();
-        List<Label> foundAtCurrentLevel = findParents(totoMemoryDB, setDefinitionTable, label);
+    public List<Name> findAllParents(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name name) throws DataAccessException {
+        final List<Name> allParents = new ArrayList<Name>();
+        List<Name> foundAtCurrentLevel = findParents(totoMemoryDB, setDefinitionTable, name);
         while (!foundAtCurrentLevel.isEmpty()) {
             allParents.addAll(foundAtCurrentLevel);
-            List<Label> nextLevelList = new ArrayList<Label>();
-            for (Label l : foundAtCurrentLevel) {
-                nextLevelList.addAll(findParents(totoMemoryDB, setDefinitionTable, l));
+            List<Name> nextLevelList = new ArrayList<Name>();
+            for (Name n : foundAtCurrentLevel) {
+                nextLevelList.addAll(findParents(totoMemoryDB, setDefinitionTable, n));
             }
             if (nextLevelList.isEmpty()) { // noo more parents to find
                 break;
@@ -190,14 +168,14 @@ public class LabelDAO extends StandardDAO<Label> {
         return allParents;
     }
 
-    public List<Label> findAllChildren(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Label label) throws DataAccessException {
-        final List<Label> allChildren = new ArrayList<Label>();
-        List<Label> foundAtCurrentLevel = findChildren(totoMemoryDB,setDefinitionTable, label, false);
+    public List<Name> findAllChildren(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name name) throws DataAccessException {
+        final List<Name> allChildren = new ArrayList<Name>();
+        List<Name> foundAtCurrentLevel = findChildren(totoMemoryDB,setDefinitionTable, name, false);
         while (!foundAtCurrentLevel.isEmpty()) {
             allChildren.addAll(foundAtCurrentLevel);
-            List<Label> nextLevelList = new ArrayList<Label>();
-            for (Label l : foundAtCurrentLevel) {
-                nextLevelList.addAll(findChildren(totoMemoryDB, setDefinitionTable, l, false));
+            List<Name> nextLevelList = new ArrayList<Name>();
+            for (Name n : foundAtCurrentLevel) {
+                nextLevelList.addAll(findChildren(totoMemoryDB, setDefinitionTable, n, false));
             }
             if (nextLevelList.isEmpty()) { // no more children to find
                 break;
@@ -209,23 +187,23 @@ public class LabelDAO extends StandardDAO<Label> {
 
 
 
-    public List<Label> findTopLevelLabels(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
+    public List<Name> findTopLevelNames(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
         final String whereCondition = " where `" + getTableName() + "`." + ID + " NOT IN (SELECT `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "`.`" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "`)";
         // no parameters but follow the pattern
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         return findListWithWhereSQLAndParameters(totoMemoryDB, whereCondition, namedParams, false);
     }
 
-    public int getMaxChildPosition(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Label l) throws DataAccessException {
+    public int getMaxChildPosition(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name n) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PARENTID, l.getId());
+        namedParams.addValue(PARENTID, n.getId());
         final String FIND_MAX_POSITION = "Select max(" + POSITION + ") from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID;
         // turns out looking for a null integer is actually the thing in this case as mysql returns null not no rows. I think :P
         Integer integer = jdbcTemplate.queryForObject(FIND_MAX_POSITION, namedParams, Integer.class);
         return (integer == null ? 0 : integer); // no records means we return 0 as the max position
     }
 
-    public int getChildPosition(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Label parent, final Label child) throws DataAccessException {
+    public int getChildPosition(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent, final Name child) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, parent.getId());
         namedParams.addValue(CHILDID, child.getId());
@@ -238,12 +216,12 @@ public class LabelDAO extends StandardDAO<Label> {
         }
     }
 
-    public boolean linkParentAndChild(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Label parent, final Label child, int position) throws DataAccessException {
+    public boolean linkParentAndChild(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent, final Name child, int position) throws DataAccessException {
         if (child.getId() == parent.getId()){
-            throw new InvalidDataAccessApiUsageException("cannot link label to itself!" + parent.getName());
+            throw new InvalidDataAccessApiUsageException("cannot link name to itself!" + parent.getName());
         }
-        List<Label> parentsToCheckForCircularReferences = findAllParents(totoMemoryDB,setDefinitionTable, parent);
-        for (Label higherParent : parentsToCheckForCircularReferences){
+        List<Name> parentsToCheckForCircularReferences = findAllParents(totoMemoryDB,setDefinitionTable, parent);
+        for (Name higherParent : parentsToCheckForCircularReferences){
             if (higherParent.getId() == child.getId()){
                 throw new InvalidDataAccessApiUsageException("cannot create circular reference, " + child.getName() + " is above " + parent.getName());
             }
@@ -296,7 +274,7 @@ public class LabelDAO extends StandardDAO<Label> {
         return true;
     }
 
-    public int unlinkParentAndChild(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Label parent, final Label child) throws DataAccessException {
+    public int unlinkParentAndChild(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent, final Name child) throws DataAccessException {
         int existingPosition = getChildPosition(totoMemoryDB, setDefinitionTable, parent, child);
         if (existingPosition != -1) { // we have something to do!
             // drop the positions above the one we're deleting down . . .

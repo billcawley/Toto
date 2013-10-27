@@ -1,7 +1,6 @@
 package com.azquo.toto.service;
 
-import com.azquo.toto.dao.ValueDAO;
-import com.azquo.toto.entity.Label;
+import com.azquo.toto.entity.Name;
 import com.azquo.toto.entity.Value;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,29 +20,29 @@ public class ValueService {
     public static String VALUE = "VALUE";
 
     @Autowired
-    private LabelService labelService;
+    private NameService nameService;
 
     @Autowired
     private TotoMemoryDB totoMemoryDB;
 
-    // set the labels in delete info and unlink - best I can come up with at the moment
+    // set the names in delete info and unlink - best I can come up with at the moment
     public void deleteValue(Value value) throws Exception {
-        String labelNames = "";
-        for (Label l : value.getLabels()){
-            labelNames += ", `" + l.getName() + "`";
+        String names = "";
+        for (Name n : value.getNames()){
+            names += ", `" + n.getName() + "`";
         }
-        if (labelNames.length() > 0){
-            labelNames = labelNames.substring(2);
+        if (names.length() > 0){
+            names = names.substring(2);
         }
-        value.setDeletedInfoWillBePersisted(labelNames);
-        unlinkAllLabelsFromValue(value);
+        value.setDeletedInfoWillBePersisted(names);
+        unlinkAllNamesFromValue(value);
     }
 
-    public void unlinkAllLabelsFromValue(Value value) throws Exception {
-        for (Label label : value.getLabels()){
-            label.removeFromValuesWillBePersisted(value);
+    public void unlinkAllNamesFromValue(Value value) throws Exception {
+        for (Name name : value.getNames()){
+            name.removeFromValuesWillBePersisted(value);
         }
-        value.setLabelsWillBePersisted(new HashSet<Label>()); // zap the labels against this value.
+        value.setNamesWillBePersisted(new HashSet<Name>()); // zap the names against this value.
     }
 
     public Value createValue(int provenanceId, double doubleValue, String text) throws Exception {
@@ -52,23 +51,22 @@ public class ValueService {
         return new Value(totoMemoryDB,provenanceId,doubleValue,text,null);
     }
 
-    public void linkValueToLabels(Value value, Set<Label> labels) throws Exception {
-        unlinkAllLabelsFromValue(value);
-        value.setLabelsWillBePersisted(labels);
-        for (Label label : labels){
+    public void linkValueToNames(Value value, Set<Name> names) throws Exception {
+        unlinkAllNamesFromValue(value);
+        value.setNamesWillBePersisted(names);
+        for (Name name : names){
             long track = System.nanoTime();
-            label.addToValuesWillBePersisted(value);
-            //System.out.println("linkValueToLabels loop1 " + (track - System.nanoTime()));
+            name.addToValuesWillBePersisted(value);
         }
     }
 
-    public String storeValueWithLabels(final String valueString, final Set<String> labelNames) throws Exception {
+    public String storeValueWithNames(final String valueString, final Set<String> names) throws Exception {
         String toReturn = "";
-        Set<Label> validLabels = new HashSet<Label>();
+        Set<Name> validNames = new HashSet<Name>();
         long track = System.nanoTime();
-        Map<String, String> labelCheckResult = labelService.isAValidLabelSet(labelNames, validLabels);
-        String error = labelCheckResult.get(LabelService.ERROR);
-        String warning = labelCheckResult.get(LabelService.ERROR);
+        Map<String, String> nameCheckResult = nameService.isAValidNameSet(names, validNames);
+        String error = nameCheckResult.get(NameService.ERROR);
+        String warning = nameCheckResult.get(NameService.ERROR);
         if (error != null){
             return  error;
         } else if(warning != null){
@@ -76,7 +74,7 @@ public class ValueService {
         }
         //System.out.println("track 1   : " + (System.nanoTime() - track) + "  ---   ");
         track = System.nanoTime();
-        List<Value> existingValues = findForLabels(validLabels);
+        List<Value> existingValues = findForNames(validNames);
         //System.out.println("track 2-1 : " + (System.nanoTime() - track) + "  ---   ");
         track = System.nanoTime();
 
@@ -93,25 +91,24 @@ public class ValueService {
         //System.out.println("track 2-3 : " + (System.nanoTime() - track) + "  ---   ");
         track = System.nanoTime();
         toReturn += "  stored";
-        // and link to labels
-        linkValueToLabels(value, validLabels);
-        //valueDAO.linkValueToLabels(databaseName, value, validLabels);
+        // and link to names
+        linkValueToNames(value, validNames);
         //System.out.println("track 3   : " + (System.nanoTime() - track) + "  ---   ");
 
         return toReturn;
     }
 
-    public List<Value> findForLabels(Set<Label> labels){
+    public List<Value> findForNames(Set<Name> names){
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
         long track = System.nanoTime();
         List<Value> values = new ArrayList<Value>();
         // first get the shortest value list
-        int smallestLabelSetSize = -1;
-        Label smallestLabel = null;
-        for (Label label : labels){
-            if (smallestLabelSetSize == -1 || label.getValues().size() < smallestLabelSetSize){
-                smallestLabelSetSize = label.getValues().size();
-                smallestLabel = label;
+        int smallestNameSetSize = -1;
+        Name smallestName = null;
+        for (Name name : names){
+            if (smallestNameSetSize == -1 || name.getValues().size() < smallestNameSetSize){
+                smallestNameSetSize = name.getValues().size();
+                smallestName = name;
             }
         }
 
@@ -121,39 +118,24 @@ public class ValueService {
         int count = 0;
 
 
-        assert smallestLabel != null; // make intellij happy :P
-        for (Value value : smallestLabel.getValues()){
+        assert smallestName != null; // make intellij happy :P
+        for (Value value : smallestName.getValues()){
             boolean theValueIsOk = true;
-            for (Label label : labels){
-                if (!label.equals(smallestLabel)){ // ignore the one we started with
-                    /*
-                    boolean foundInThisLabel = false;
-                    for(Value valueInThisLabel : label.getValues()){
-                        if (valueInThisLabel.equals(value)){
-                            count++;
-                            foundInThisLabel = true;
-                            break; // don't keep looking through those values, we found it
-                        }
-                    }
-                    if (!foundInThisLabel){ // then there's no point looking at further labels
-                        theValueIsOk = false;
-                        break;
-                    }
-                    */
-                    // option b, let's see what we can do with set functions
-                    if (!value.getLabels().contains(label)){
+            for (Name name : names){
+                if (!name.equals(smallestName)){ // ignore the one we started with
+                    if (!value.getNames().contains(name)){
                         count++;
                         theValueIsOk = false;
-                        break; // important, stop checking that that value contains he labels we're interested in as, we didn't find one no point checking for the rest
+                        break; // important, stop checking that that value contains he names we're interested in as, we didn't find one no point checking for the rest
                     }
                 }
             }
-            if (theValueIsOk){ // it was in all the labels :)
+            if (theValueIsOk){ // it was in all the names :)
                 values.add(value);
             }
         }
 
-        //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " labels");
+        //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
         track = System.nanoTime();
 
         return values;

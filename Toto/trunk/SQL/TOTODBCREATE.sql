@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Oct 27, 2013 at 11:43 AM
+-- Generation Time: Oct 27, 2013 at 04:46 PM
 -- Server version: 5.5.33
 -- PHP Version: 5.3.17
 
@@ -29,10 +29,10 @@ CREATE TABLE IF NOT EXISTS `attribute` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `label`
+-- Table structure for table `name`
 --
 
-CREATE TABLE IF NOT EXISTS `label` (
+CREATE TABLE IF NOT EXISTS `name` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
@@ -43,11 +43,11 @@ CREATE TABLE IF NOT EXISTS `label` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `label_attribute`
+-- Table structure for table `name_attribute`
 --
 
-CREATE TABLE IF NOT EXISTS `label_attribute` (
-  `label_id` int(11) NOT NULL,
+CREATE TABLE IF NOT EXISTS `name_attribute` (
+  `name_id` int(11) NOT NULL,
   `attribute_id` int(11) NOT NULL,
   `value` varchar(255) COLLATE utf8_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
@@ -55,10 +55,10 @@ CREATE TABLE IF NOT EXISTS `label_attribute` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `label_set_definition`
+-- Table structure for table `name_set_definition`
 --
 
-CREATE TABLE IF NOT EXISTS `label_set_definition` (
+CREATE TABLE IF NOT EXISTS `name_set_definition` (
   `parent_id` int(11) NOT NULL,
   `child_id` int(11) NOT NULL,
   `position` smallint(5) NOT NULL DEFAULT '0',
@@ -116,12 +116,12 @@ CREATE TABLE IF NOT EXISTS `value` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `value_label`
+-- Table structure for table `value_name`
 --
 
-CREATE TABLE IF NOT EXISTS `value_label` (
+CREATE TABLE IF NOT EXISTS `value_name` (
   `value_id` int(11) NOT NULL,
-  `label_id` int(11) NOT NULL,
-  PRIMARY KEY (`label_id`,`value_id`),
-  UNIQUE KEY `value_id` (`value_id`,`label_id`)
+  `name_id` int(11) NOT NULL,
+  PRIMARY KEY (`name_id`,`value_id`),
+  UNIQUE KEY `value_id` (`value_id`,`name_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

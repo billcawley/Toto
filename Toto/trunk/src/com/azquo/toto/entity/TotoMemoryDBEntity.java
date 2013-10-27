@@ -67,7 +67,7 @@ public abstract class TotoMemoryDBEntity {
         entityColumnsChanged = true;
     }
 
-    // this is where each subclass should make sure that it is added to the appropriate maps in the totodb
+    // this is where each subclass should make sure that it is added to the appropriate map in the totodb. Unfortunately this in practice will just be the id map for that object but hey ho
     protected abstract void addToDb(TotoMemoryDB totoMemoryDB) throws Exception;
 
     // no setter for id, that should only be done by the constructor
@@ -78,7 +78,7 @@ public abstract class TotoMemoryDBEntity {
 
     /* part of why I'm so funny about the ids, these two functions!
      might be unorthodox but these entities are part of the memory DB, their interaction with collections sets etc is crucial
-     for speed and data integrity
+     for speed and data integrity, since id should NOT change over an objects life this should be ok and fast
      */
 
     @Override
@@ -107,7 +107,7 @@ public abstract class TotoMemoryDBEntity {
         checkDatabaseMatches(totoMemoryDBEntity.totoMemoryDB);
     }
 
-    public final void checkDatabaseIdsForSet(Set<? extends TotoMemoryDBEntity> entities) throws Exception {
+    public final void checkDatabaseForSet(Set<? extends TotoMemoryDBEntity> entities) throws Exception {
         for (TotoMemoryDBEntity toCheck : entities){
             checkDatabaseMatches(toCheck);
         }

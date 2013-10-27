@@ -9,7 +9,8 @@ import java.util.Date;
  * User: cawley
  * Date: 24/10/13
  * Time: 17:38
- * Attached to each value including values that have been deleted. Should enable rollback
+ * Attached to each value including values that have been deleted.
+ * I think this is immutable, why change a provenance?
  */
 public class Provenance extends TotoMemoryDBEntity {
 

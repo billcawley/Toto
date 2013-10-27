@@ -1,9 +1,9 @@
 package com.azquo.toto.memorydb;
 
-import com.azquo.toto.dao.LabelDAO;
+import com.azquo.toto.dao.NameDAO;
 import com.azquo.toto.dao.ProvenanceDAO;
 import com.azquo.toto.dao.ValueDAO;
-import com.azquo.toto.entity.Label;
+import com.azquo.toto.entity.Name;
 import com.azquo.toto.entity.Provenance;
 import com.azquo.toto.entity.Value;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,13 +23,13 @@ public class TotoMemoryDB {
     @Autowired
     private ValueDAO valueDAO;
     @Autowired
-    private LabelDAO labelDAO;
+    private NameDAO nameDAO;
     @Autowired
     private ProvenanceDAO provenanceDAO;
 
 
-    private HashMap<String, Label> labelByNameMap;
-    private HashMap<Integer, Label> labelByIdMap;
+    private HashMap<String, Name> nameByNameMap;
+    private HashMap<Integer, Name> nameByIdMap;
     private HashMap<Integer, Value> valueByIdMap;
     private HashMap<Integer, Provenance> provenanceByIdMap;
 
@@ -50,8 +50,8 @@ public class TotoMemoryDB {
         this.databaseName = databaseName;
         boolean needsLoading = true;
         maxIdAtLoad = 0;
-        labelByNameMap = new HashMap<String, Label>();
-        labelByIdMap = new HashMap<Integer, Label>();
+        nameByNameMap = new HashMap<String, Name>();
+        nameByIdMap = new HashMap<Integer, Name>();
         valueByIdMap = new HashMap<Integer, Value>();
         if (dontLoad){
             needsLoading = false;
@@ -68,65 +68,67 @@ public class TotoMemoryDB {
         return needsLoading;
     }
 
+    // right now this will not run properly!
+
     synchronized public void loadData() throws Exception{
         if (needsLoading){ // only allow it once!
             // here we'll populate the memory DB from the database
             long track = System.currentTimeMillis();
 
-            List<Label> allLabels = labelDAO.findAll(this);
+            List<Name> allNames = nameDAO.findAll(this);
 
-            for (Label label : allLabels){
-                labelByNameMap.put(label.getName().toLowerCase(), label);
-                labelByIdMap.put(label.getId(), label);
-                if (label.getId() > maxIdAtLoad){
-                    maxIdAtLoad = label.getId();
+            for (Name name : allNames){
+                nameByNameMap.put(name.getName().toLowerCase(), name);
+                nameByIdMap.put(name.getId(), name);
+                if (name.getId() > maxIdAtLoad){
+                    maxIdAtLoad = name.getId();
                 }
             }
 
-            System.out.println(allLabels.size() + " labels loaded in " + (System.currentTimeMillis() - track) + "ms");
+            System.out.println(allNames.size() + " names loaded in " + (System.currentTimeMillis() - track) + "ms");
             track = System.currentTimeMillis();
 
 
             int linkCounter = 0;
 
-            for (Label label : labelByIdMap.values()){
-                List<Integer> parentIdsForThisLabel = labelDAO.findParentIdsForLabel(this, LabelDAO.SetDefinitionTable.label_set_definition, label);
-                Set<Label> parentSet = new HashSet<Label>(parentIdsForThisLabel.size());
-                for (Integer parentId: parentIdsForThisLabel){
-                    parentSet.add(labelByIdMap.get(parentId));
+            for (Name name : nameByIdMap.values()){
+                List<Integer> parentIdsForThisName = nameDAO.findParentIdsForName(this, NameDAO.SetDefinitionTable.name_set_definition, name);
+                Set<Name> parentSet = new HashSet<Name>(parentIdsForThisName.size());
+                for (Integer parentId: parentIdsForThisName){
+                    parentSet.add(nameByIdMap.get(parentId));
                 }
-                label.setParentsWillBePersisted(parentSet);
+                name.setParentsWillBePersisted(parentSet);
             }
 
-            System.out.println(linkCounter + " parent labels linked to labels " + (System.currentTimeMillis() - track) + "ms");
+            System.out.println(linkCounter + " parent names linked to names " + (System.currentTimeMillis() - track) + "ms");
             track = System.currentTimeMillis();
 
             linkCounter = 0;
-            for (Label label : labelByIdMap.values()){
-                List<Integer> childIdsForThisLabel = labelDAO.findChildIdsForLabel(this, LabelDAO.SetDefinitionTable.label_set_definition, label);
-                LinkedHashSet<Label> childSet = new LinkedHashSet<Label>(childIdsForThisLabel.size());
-                for (Integer childId: childIdsForThisLabel){
-                    childSet.add(labelByIdMap.get(childId));
+            for (Name name : nameByIdMap.values()){
+                List<Integer> childIdsForThisName = nameDAO.findChildIdsForName(this, NameDAO.SetDefinitionTable.name_set_definition, name);
+                LinkedHashSet<Name> childSet = new LinkedHashSet<Name>(childIdsForThisName.size());
+                for (Integer childId: childIdsForThisName){
+                    childSet.add(nameByIdMap.get(childId));
                     linkCounter++;
                 }
-                label.setChildrenWillBePersisted(childSet);
+                name.setChildrenWillBePersisted(childSet);
             }
 
-            System.out.println(linkCounter + " child labels linked to labels " + (System.currentTimeMillis() - track) + "ms");
+            System.out.println(linkCounter + " child names linked to names " + (System.currentTimeMillis() - track) + "ms");
             track = System.currentTimeMillis();
             linkCounter = 0;
 
-            for (Label label : labelByIdMap.values()){
-                List<Integer> peerIdsForThisLabel = labelDAO.findChildIdsForLabel(this, LabelDAO.SetDefinitionTable.peer_set_definition, label);
-                LinkedHashSet<Label> peerSet = new LinkedHashSet<Label>(peerIdsForThisLabel.size());
-                for (Integer peerId: peerIdsForThisLabel){
-                    peerSet.add(labelByIdMap.get(peerId));
+            for (Name name : nameByIdMap.values()){
+                List<Integer> peerIdsForThisName = nameDAO.findChildIdsForName(this, NameDAO.SetDefinitionTable.peer_set_definition, name);
+                LinkedHashSet<Name> peerSet = new LinkedHashSet<Name>(peerIdsForThisName.size());
+                for (Integer peerId: peerIdsForThisName){
+                    peerSet.add(nameByIdMap.get(peerId));
                     linkCounter++;
                 }
-                label.setPeersWillBePersisted(peerSet);
+                name.setPeersWillBePersisted(peerSet);
             }
 
-            System.out.println(linkCounter + " peer labels linked to labels " + (System.currentTimeMillis() - track) + "ms");
+            System.out.println(linkCounter + " peer names linked to names " + (System.currentTimeMillis() - track) + "ms");
             track = System.currentTimeMillis();
 
 
@@ -143,22 +145,22 @@ public class TotoMemoryDB {
             track = System.currentTimeMillis();
 
             linkCounter = 0;
-            for (Label label : labelByIdMap.values()){
-                List<Integer> valueIdsForThisLabel = valueDAO.findValueIdsForLabel(this,label);
-                Set<Value> valueSet = new HashSet<Value>(valueIdsForThisLabel.size());
-                for (Integer valueId: valueIdsForThisLabel){
+            for (Name name : nameByIdMap.values()){
+                List<Integer> valueIdsForThisName = valueDAO.findValueIdsForName(this, name);
+                Set<Value> valueSet = new HashSet<Value>(valueIdsForThisName.size());
+                for (Integer valueId: valueIdsForThisName){
                     valueSet.add(valueByIdMap.get(valueId));
                     linkCounter++;
                 }
-                label.setValuesWillBePersisted(valueSet);
+                name.setValuesWillBePersisted(valueSet);
             }
 
-            System.out.println(linkCounter + " values linked to labels " + (System.currentTimeMillis() - track) + "ms");
+            System.out.println(linkCounter + " values linked to names " + (System.currentTimeMillis() - track) + "ms");
             track = System.currentTimeMillis();
 
             // tell all objects that they're up to date as we just loaded 'em
-            for (Label label : labelByIdMap.values()){
-                label.syncedToDB();
+            for (Name name : nameByIdMap.values()){
+                name.syncedToDB();
             }
             for (Value value : valueByIdMap.values()){
                 value.syncedToDB();
@@ -175,35 +177,35 @@ public class TotoMemoryDB {
         return nextId -1;
     }
 
-    public Label getLabelByName(String name){
-        return labelByNameMap.get(name.toLowerCase());
+    public Name getNameByName(String name){
+        return nameByNameMap.get(name.toLowerCase());
     }
 
-    public Label getLabelById(int id){
-        return labelByIdMap.get(id);
+    public Name getNameById(int id){
+        return nameByIdMap.get(id);
     }
 
     // synchronised?
 
-    public void addLabelToDb(Label newLabel) throws Exception{
-        newLabel.checkDatabaseMatches(this);
+    public void addNameToDb(Name newName) throws Exception{
+        newName.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (labelByIdMap.get(newLabel.getId()) != null){
-            throw new Exception("tried to add a label to the database with an existing id!");
+        if (nameByIdMap.get(newName.getId()) != null){
+            throw new Exception("tried to add a name to the database with an existing id!");
         } else {
-            labelByIdMap.put(newLabel.getId(), newLabel);
+            nameByIdMap.put(newName.getId(), newName);
         }
     }
 
-    // ok I'd have liked this to be part of the above function but the name won't have been initialised, has to be called in the label constructor
+    // ok I'd have liked this to be part of the above function but the name won't have been initialised, has to be called in the name constructor
     // custom maps here need to be dealt with in the constructors I think
 
-    public void addLabelToDbNameMap(Label newLabel) throws Exception{
-        newLabel.checkDatabaseMatches(this);
-        if (labelByNameMap.get(newLabel.getName().toLowerCase()) != null){
-            throw new Exception("tried to add a label to the database with an existing name!");
+    public void addNameToDbNameMap(Name newName) throws Exception{
+        newName.checkDatabaseMatches(this);
+        if (nameByNameMap.get(newName.getName().toLowerCase()) != null){
+            throw new Exception("tried to add a name to the database with an existing name!");
         } else {
-            labelByNameMap.put(newLabel.getName().toLowerCase(), newLabel);
+            nameByNameMap.put(newName.getName().toLowerCase(), newName);
         }
     }
 

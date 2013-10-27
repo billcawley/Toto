@@ -1,10 +1,8 @@
 package com.azquo.toto.dao;
 
-import com.azquo.toto.entity.Label;
+import com.azquo.toto.entity.Name;
 import com.azquo.toto.memorydb.TotoMemoryDB;
-import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -24,64 +22,64 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 public class StandardDAOTest {
 
     @Autowired
-    private LabelDAO labelDao;
+    private NameDAO nameDao;
 
     @Autowired
     private TotoMemoryDB totoMemoryDB;
 
     @Before
     public void setUp() throws Exception {
-        Label l = labelDao.findByName(totoMemoryDB, "eddtest");
-        if (l != null){
-            labelDao.removeById(totoMemoryDB,l);
+        Name n = nameDao.findByName(totoMemoryDB, "eddtest");
+        if (n != null){
+            nameDao.removeById(totoMemoryDB,n);
         }
     }
 /*
     @Test
     public void testUpdateById() throws Exception {
-        Label l = new Label();
+        Name l = new Name();
         l.setName("eddtest");
-        labelDao.store(databaseName,l);
+        nameDao.store(databaseName,l);
         l.setName("thing");
-        labelDao.updateById(databaseName,l);
-        labelDao.removeById(databaseName,l);
+        nameDao.updateById(databaseName,l);
+        nameDao.removeById(databaseName,l);
     }
 
     @Test
     public void testInsert() throws Exception {
-        Label l = new Label();
+        Name l = new Name();
         l.setName("eddtest");
-        labelDao.insert(databaseName,l);
-        labelDao.removeById(databaseName,l);
+        nameDao.insert(databaseName,l);
+        nameDao.removeById(databaseName,l);
     }
 
 
     @Test
     public void testStore() throws Exception {
-        Label l = new Label();
+        Name l = new Name();
         l.setName("eddtest");
-        labelDao.store(databaseName,l);
+        nameDao.store(databaseName,l);
         l.setName("thing");
-        labelDao.store(databaseName,l);
-        labelDao.removeById(databaseName,l);
+        nameDao.store(databaseName,l);
+        nameDao.removeById(databaseName,l);
     }
 
     @Test
     public void testFindById() throws Exception {
-        Label l = new Label();
+        Name l = new Name();
         l.setName("eddtest");
-        labelDao.insert(databaseName,l);
-        Assert.assertTrue(labelDao.findById(databaseName,l.getId()) != null);
-        labelDao.removeById(databaseName,l);
+        nameDao.insert(databaseName,l);
+        Assert.assertTrue(nameDao.findById(databaseName,l.getId()) != null);
+        nameDao.removeById(databaseName,l);
     }
 
     @Test
     public void testFindAll() throws Exception {
-        Label l = new Label();
+        Name l = new Name();
         l.setName("eddtest");
-        labelDao.insert(databaseName,l);
-        Assert.assertTrue(labelDao.findAll(databaseName).size() > 0);
-        labelDao.removeById(databaseName,l);
+        nameDao.insert(databaseName,l);
+        Assert.assertTrue(nameDao.findAll(databaseName).size() > 0);
+        nameDao.removeById(databaseName,l);
     }
 
     // deleted find list test as find all does that.
@@ -90,10 +88,10 @@ public class StandardDAOTest {
 
     @Test
     public void testFindOneWithWhereSQLAndParameters() throws Exception {
-        Label l = new Label();
+        Name l = new Name();
         l.setName("eddtest");
-        labelDao.insert(databaseName,l);
-        l = labelDao.findByName(databaseName,l.getName());
-        labelDao.removeById(databaseName,l);
+        nameDao.insert(databaseName,l);
+        l = nameDao.findByName(databaseName,l.getName());
+        nameDao.removeById(databaseName,l);
     }*/
 }

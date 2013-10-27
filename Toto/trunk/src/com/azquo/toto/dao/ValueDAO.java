@@ -1,6 +1,6 @@
 package com.azquo.toto.dao;
 
-import com.azquo.toto.entity.Label;
+import com.azquo.toto.entity.Name;
 import com.azquo.toto.entity.Value;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.dao.DataAccessException;
@@ -36,9 +36,9 @@ public class ValueDAO extends StandardDAO<Value> {
 
     // related table and column names
 
-    public static String VALUELABEL = "value_label";
+    public static String VALUENAME = "value_name";
     public static String VALUEID = "value_id";
-    public static String LABELID = "label_id";
+    public static String NAMEID = "name_id";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(Value value) {
@@ -73,66 +73,63 @@ public class ValueDAO extends StandardDAO<Value> {
         return new ValueRowMapper(totoMemoryDB);
     }
 
-    public boolean linkValueToLabel(final TotoMemoryDB totoMemoryDB, final Value value, final Label label) throws DataAccessException {
-        if (valueLabelLinkExists(totoMemoryDB, value, label)) {
+    public boolean linkValueToName(final TotoMemoryDB totoMemoryDB, final Value value, final Name name) throws DataAccessException {
+        if (valueNameLinkExists(totoMemoryDB, value, name)) {
             return true;
         } else {
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
             namedParams.addValue(VALUEID, value.getId());
-            namedParams.addValue(LABELID, label.getId());
-//            String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES (:" + PARENTID + ",:" + CHILDID + ",:" + POSITION + ")";
+            namedParams.addValue(NAMEID, name.getId());
 
-            String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUELABEL + "` (`" + VALUEID + "`,`" + LABELID + "`) VALUES (:" + VALUEID + ",:" + LABELID + ")";
+            String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUENAME + "` (`" + VALUEID + "`,`" + NAMEID + "`) VALUES (:" + VALUEID + ",:" + NAMEID + ")";
             long track = System.currentTimeMillis();
             jdbcTemplate.update(updateSql, namedParams);
-            System.out.println("value label link time : " + (System.currentTimeMillis() - track));
+            System.out.println("value name link time : " + (System.currentTimeMillis() - track));
             return true;
         }
     }
 
     // for speed
-    public boolean linkValueToLabels(final TotoMemoryDB totoMemoryDB, final Value value, final List<Label> labels) throws DataAccessException {
+    public boolean linkValueToNames(final TotoMemoryDB totoMemoryDB, final Value value, final List<Name> names) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUELABEL + "` (`" + VALUEID + "`,`" + LABELID + "`) VALUES ";
+        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUENAME + "` (`" + VALUEID + "`,`" + NAMEID + "`) VALUES ";
         int count = 1;
-        for (Label label : labels) {
+        for (Name name : names) {
             // I'm taking off the check - I think it's so rare we'll just let the DB complain
-//            if (!valueLabelLinkExists(totoMemoryDB.getDatabaseName(), value, label)) {
-                updateSql += "(:" + VALUEID + count + ",:" + LABELID + count + "),";
+                updateSql += "(:" + VALUEID + count + ",:" + NAMEID + count + "),";
                 namedParams.addValue(VALUEID + count, value.getId());
-                namedParams.addValue(LABELID + count, label.getId());
+                namedParams.addValue(NAMEID + count, name.getId());
                 count++;
-//            }
         }
         updateSql = updateSql.substring(0, updateSql.length() - 1);
         long track = System.currentTimeMillis();
         jdbcTemplate.update(updateSql, namedParams);
-        System.out.println("value label link time : " + (System.currentTimeMillis() - track));
+        System.out.println("value name link time : " + (System.currentTimeMillis() - track));
         return true;
     }
 
-    public boolean unlinkValueFromLabel(final TotoMemoryDB totoMemoryDB, final Value value, final Label label) throws DataAccessException {
+    public boolean unlinkValueFromName(final TotoMemoryDB totoMemoryDB, final Value value, final Name name) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(VALUEID, value.getId());
-        namedParams.addValue(LABELID, label.getId());
-        String updateSql = "Delete from `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUELABEL + "` where `" + VALUEID + "` = :" + VALUEID + " and `" + LABELID + "`:" + LABELID;
+        namedParams.addValue(NAMEID, name.getId());
+        String updateSql = "Delete from `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUENAME + "` where `" + VALUEID + "` = :" + VALUEID + " and `" + NAMEID + "`:" + NAMEID;
         jdbcTemplate.update(updateSql, namedParams);
         return true;
     }
 
-    public boolean unlinkValueFromAnyLabel(final TotoMemoryDB totoMemoryDB, final Value value) throws DataAccessException {
+    public boolean unlinkValueFromAnyName(final TotoMemoryDB totoMemoryDB, final Value value) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(VALUEID, value.getId());
-        String updateSql = "Delete from `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUELABEL + "` where `" + VALUEID + "` = :" + VALUEID;
+        String updateSql = "Delete from `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUENAME + "` where `" + VALUEID + "` = :" + VALUEID;
         jdbcTemplate.update(updateSql, namedParams);
         return true;
     }
 
-    public boolean valueLabelLinkExists(final TotoMemoryDB totoMemoryDB, final Value value, final Label label) {
+    public boolean valueNameLinkExists(final TotoMemoryDB totoMemoryDB, final Value value, final Name name) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(VALUEID, value.getId());
-        namedParams.addValue(LABELID, label.getId());
-        final String FIND_EXISTING_LINK = "Select count(*) from `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUELABEL + "` where `" + VALUEID + "` = :" + VALUEID + " AND `" + LABELID + "` = :" + LABELID;
+        namedParams.addValue(NAMEID, name.getId());
+        final String FIND_EXISTING_LINK = "Select count(*) from `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUENAME + "` where `" + VALUEID + "` = :" + VALUEID + " AND `" + NAMEID + "` = :" + NAMEID;
         return jdbcTemplate.queryForObject(FIND_EXISTING_LINK, namedParams, Integer.class) != 0;
     }
 
@@ -143,11 +140,11 @@ public class ValueDAO extends StandardDAO<Value> {
 
    // for loading into the memory db
 
-    public List<Integer> findValueIdsForLabel(final TotoMemoryDB totoMemoryDB, final Label label) {
+    public List<Integer> findValueIdsForName(final TotoMemoryDB totoMemoryDB, final Name name) {
 
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(LABELID, label.getId());
-        final String FIND_EXISTING_LINK = "Select `" + VALUEID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUELABEL + "` where `" + LABELID + "` = :" + LABELID;
+        namedParams.addValue(NAMEID, name.getId());
+        final String FIND_EXISTING_LINK = "Select `" + VALUEID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUENAME + "` where `" + NAMEID + "` = :" + NAMEID;
         return jdbcTemplate.queryForList(FIND_EXISTING_LINK, namedParams, Integer.class);
 
     }
