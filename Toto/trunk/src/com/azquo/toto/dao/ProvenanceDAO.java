@@ -2,6 +2,7 @@ package com.azquo.toto.dao;
 
 import com.azquo.toto.entity.Provenance;
 import com.azquo.toto.entity.Value;
+import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.sql.ResultSet;
@@ -43,15 +44,27 @@ public class ProvenanceDAO extends StandardDAO<Provenance>{
     }
 
     public static final class ProvenanceRowMapper implements RowMapper<Provenance> {
+
+        TotoMemoryDB totoMemoryDB;
+
+        public ProvenanceRowMapper(TotoMemoryDB totoMemoryDB){
+            this.totoMemoryDB = totoMemoryDB;
+        }
         @Override
         public Provenance mapRow(final ResultSet rs, final int row) throws SQLException {
-            return new Provenance(rs.getInt(ID), rs.getString(USER),rs.getDate(TIMESTAMP),rs.getString(METHOD),rs.getString(NAME));
+            // not pretty, just make it work for the moment
+            try {
+                return new Provenance(totoMemoryDB, rs.getInt(ID), rs.getString(USER),rs.getDate(TIMESTAMP),rs.getString(METHOD),rs.getString(NAME));
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
         }
     }
 
     @Override
-    public RowMapper<Provenance> getRowMapper() {
-        return new ProvenanceRowMapper();
+    public RowMapper<Provenance> getRowMapper(TotoMemoryDB TotoMemoryDB) {
+        return new ProvenanceRowMapper(TotoMemoryDB);
     }
 
 

@@ -15,20 +15,15 @@ import java.util.*;
  * Time: 14:18
  * I've been convinced that a service layer is probably a good idea, with the DAO/Database it can form the model.
  * <p/>
- * THis does the grunt work for label manipulation, might not need to be that quick.
+ * Changes to how the data access will work certainly support this!
+ * It will be passed credentials by the controller, that will determine which DB to use. For the moment will hard code one memory DB
  */
 public class LabelService {
 
-    String databaseName = "toto"; // hard code here for the moment
 
     // this isn't thread safe or anything like that!
 
-//    Map<String, List<Label>> labelListCache = new HashMap<String, List<Label>>();
-//    Map<String, Label> labelCache = new HashMap<String, Label>();
 
-    public void setDatabaseName(String databaseName) {
-        this.databaseName = databaseName;
-    }
 
     @Autowired
     private LabelDAO labelDAO;
@@ -40,12 +35,13 @@ public class LabelService {
         return totoMemoryDB.getLabelByName(name);
     }
 
-    public Label findOrCreateLabel(final String name) {
+    public Label findOrCreateLabel(final String name) throws Exception {
         Label existing = totoMemoryDB.getLabelByName(name);
         if (existing != null) {
             return existing;
         } else {
-            return totoMemoryDB.createLabel(name);
+            //return totoMemoryDB.createLabel(name);
+            return new Label(totoMemoryDB,name);
         }
     }
 
@@ -53,12 +49,12 @@ public class LabelService {
         // level -1 means get me the lowest
         // notable that with current logic asking for a level with no data returns no data not the nearest it can get. Would be simple to change this
         int currentLevel = 1;
-        List<Label> foundAtCurrentLevel = labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label, false);
+        List<Label> foundAtCurrentLevel = labelDAO.findChildren(totoMemoryDB, LabelDAO.SetDefinitionTable.label_set_definition, label, false);
         while ((currentLevel < level || level == -1) && !foundAtCurrentLevel.isEmpty()) {
             // we can't loop over foundAtCurrentLevel and modify it at the same time, this asks for trouble
             List<Label> nextLevelList = new ArrayList<Label>();
             for (Label l : foundAtCurrentLevel) {
-                nextLevelList.addAll(labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, l, false));
+                nextLevelList.addAll(labelDAO.findChildren(totoMemoryDB, LabelDAO.SetDefinitionTable.label_set_definition, l, false));
             }
             if (nextLevelList.isEmpty() && level == -1) { // wanted the lowest, we've hit a level with none so don't go further
                 break;
@@ -70,18 +66,18 @@ public class LabelService {
     }
 
     public List<Label> findChildrenSorted(final Label label) throws Exception {
-        return labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label, true);
+        return labelDAO.findChildren(totoMemoryDB, LabelDAO.SetDefinitionTable.label_set_definition, label, true);
     }
 
     public List<Label> findChildrenFromTo(final Label label, final int from, final int to) throws Exception {
-        return labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label, from, to);
+        return labelDAO.findChildren(totoMemoryDB, LabelDAO.SetDefinitionTable.label_set_definition, label, from, to);
     }
 
     public List<Label> findChildrenFromTo(final Label label, final String from, final String to) throws Exception {
         System.out.println("from " + from);
         System.out.println("to " + to);
         // doing this in java, not sure SQL can do it
-        List<Label> all = labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label, false);
+        List<Label> all = labelDAO.findChildren(totoMemoryDB, LabelDAO.SetDefinitionTable.label_set_definition, label, false);
         List<Label> toReturn = new ArrayList<Label>();
         boolean okByFrom = false;
         if (from == null) {
@@ -114,29 +110,24 @@ public class LabelService {
             if (childName.trim().length() > 0) {
                 Label child = findOrCreateLabel(childName);
                 childLabels.add(child);
-                // need to sort the parents of the children! More simple now I'm using contains
-                if (!child.getParents().contains(parentLabel)) { // the parent set doesn't have it, we need to add it
-                    Set<Label> parentLabels = new HashSet<Label>(child.getParents());
-                    parentLabels.add(parentLabel);
-                    child.setParentsWillBePersisted(parentLabels);
-                }
+                child.addToParentsWillBePersisted(parentLabel);
             }
         }
         parentLabel.setChildrenWillBePersisted(childLabels);
     }
 
     private void createMembers(final Label parentLabel, final List<String> childNames, LabelDAO.SetDefinitionTable setDefinitionTable) throws Exception {
-        int position = labelDAO.getMaxChildPosition(databaseName, setDefinitionTable, parentLabel);
+        int position = labelDAO.getMaxChildPosition(totoMemoryDB, setDefinitionTable, parentLabel);
         // by default we look for existing and create if we can't find them
         for (String childName : childNames) {
             if (childName.trim().length() > 0) {
                 position += 1;
                 Label existingChild = totoMemoryDB.getLabelByName(childName);
                 if (existingChild != null) {
-                    labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, existingChild, position);
+                    labelDAO.linkParentAndChild(totoMemoryDB, setDefinitionTable, parentLabel, existingChild, position);
                 } else {
-                    Label newChild = totoMemoryDB.createLabel(childName);
-                    labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, newChild, position);
+                    Label newChild = new Label(totoMemoryDB, childName);
+                    labelDAO.linkParentAndChild(totoMemoryDB, setDefinitionTable, parentLabel, newChild, position);
                 }
             }
         }
@@ -145,6 +136,7 @@ public class LabelService {
 
     public void createPeer(final Label parentLabel, final String peerName) throws Exception {
         Label peer = findOrCreateLabel(peerName);
+
         if (!parentLabel.getPeers().contains(peer)) { // it doesn't already have the peer
             LinkedHashSet<Label> withNewPeer = new LinkedHashSet<Label>(parentLabel.getPeers()); // make a new one too add to TODO : address position, this is the time!
             withNewPeer.add(peer);
@@ -162,13 +154,13 @@ public class LabelService {
 
     public void createMember(final Label parentLabel, final String childName, final String afterString, final int after, LabelDAO.SetDefinitionTable setDefinitionTable) throws Exception {
         if (childName.trim().length() > 0) {
-            int position = labelDAO.getMaxChildPosition(databaseName, setDefinitionTable, parentLabel) + 1; // default to the end
+            int position = labelDAO.getMaxChildPosition(totoMemoryDB, setDefinitionTable, parentLabel) + 1; // default to the end
             if (after != -1) { // int used before string should both be passed
                 position = after + 1; // the actual insert point is the next ono since it's after that position :)
             } else if (afterString != null) {
-                Label child = labelDAO.findByName(databaseName, afterString);
+                Label child = labelDAO.findByName(totoMemoryDB, afterString);
                 if (child != null) {
-                    int childPosition = labelDAO.getChildPosition(databaseName, setDefinitionTable, parentLabel, child);
+                    int childPosition = labelDAO.getChildPosition(totoMemoryDB, setDefinitionTable, parentLabel, child);
                     if (childPosition != -1) {
                         position = childPosition + 1;
                     }
@@ -177,25 +169,25 @@ public class LabelService {
             // we look for existing and create if we can't find it
             Label existingChild = totoMemoryDB.getLabelByName(childName);
             if (existingChild != null) {
-                labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, existingChild, position);
+                labelDAO.linkParentAndChild(totoMemoryDB, setDefinitionTable, parentLabel, existingChild, position);
             } else {
-                Label newChild = totoMemoryDB.createLabel(childName);
-                labelDAO.linkParentAndChild(databaseName, setDefinitionTable, parentLabel, newChild, position);
+                Label newChild = new Label(totoMemoryDB, childName);
+                labelDAO.linkParentAndChild(totoMemoryDB, setDefinitionTable, parentLabel, newChild, position);
             }
         }
     }
 
     public void removePeer(final Label parentLabel, final String childName) throws Exception {
-        Label existingChild = labelDAO.findByName(databaseName, childName);
+        Label existingChild = labelDAO.findByName(totoMemoryDB, childName);
         if (existingChild != null) {
-            labelDAO.unlinkParentAndChild(databaseName, LabelDAO.SetDefinitionTable.peer_set_definition, parentLabel, existingChild);
+            labelDAO.unlinkParentAndChild(totoMemoryDB, LabelDAO.SetDefinitionTable.peer_set_definition, parentLabel, existingChild);
         }
     }
 
     public void removeMember(final Label parentLabel, final String childName) throws Exception {
-        Label existingChild = labelDAO.findByName(databaseName, childName);
+        Label existingChild = labelDAO.findByName(totoMemoryDB, childName);
         if (existingChild != null) {
-            labelDAO.unlinkParentAndChild(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, parentLabel, existingChild);
+            labelDAO.unlinkParentAndChild(totoMemoryDB, LabelDAO.SetDefinitionTable.label_set_definition, parentLabel, existingChild);
         }
     }
 
@@ -206,10 +198,10 @@ public class LabelService {
         }
     }
 
-    // returns a set as we don't care for duplicates. Would they occur??
+    // returns a set as I don't think we care about duplicates here
 
-    public Set<Label> findAllParents(final Label label) throws DataAccessException {
-        final Set<Label> allParents = new HashSet<Label>();
+    public List<Label> findAllParents(final Label label) throws DataAccessException {
+        final List<Label> allParents = new ArrayList<Label>();
         Set<Label> foundAtCurrentLevel = label.getParents();
         while (!foundAtCurrentLevel.isEmpty()) {
             allParents.addAll(foundAtCurrentLevel);
@@ -231,7 +223,7 @@ public class LabelService {
 
     public Map<String, String> isAValidLabelSet(Set<String> labelNames, Set<Label> validLabelList) throws Exception {
 
-        System.out.println("pure java function");
+        //System.out.println("pure java function");
         long track = System.currentTimeMillis();
 
         Map<String, String> toReturn = new HashMap<String, String>();
@@ -252,7 +244,7 @@ public class LabelService {
                     hasPeers.add(label);
                     thisLabelHasPeers = true;
                 } else { // try looking up the chain and find the first with peers
-                    Set<Label> parents = findAllParents(label);
+                    List<Label> parents = findAllParents(label);
                     for (Label parent : parents) {
                         if (!parent.getPeers().isEmpty()) { // this label is the one that defines what labels the data will require
                             hasPeers.add(parent); // put the parent not the actual label in as it will be used to determine the criteria for this value
@@ -289,8 +281,7 @@ public class LabelService {
             for (Label requiredPeer : hasPeers.iterator().next().getPeers()) {
                 boolean found = false;
                 // do a first direct pass, see old logic below, I think(!) this will work and be faster. Need to think about that equals on label, much cost of tolowercase?
-                if (labelsToCheck.contains(requiredPeer)){
-                    labelsToCheck.remove(requiredPeer); // skip to the next one and remove the label from labels to check and add it to the validated list to return
+                if (labelsToCheck.remove(requiredPeer)){// skip to the next one and remove the label from labels to check and add it to the validated list to return
                     validLabelList.add(requiredPeer);
                     found = true;
                 }
@@ -307,7 +298,7 @@ public class LabelService {
                 if (!found) { // couldn't find this peer, need to look up through parents of each label for the peer
                     // again new logic here
                     for (Label labelToCheck : labelsToCheck) {
-                        Set<Label> allParents = findAllParents(labelToCheck);
+                        List<Label> allParents = findAllParents(labelToCheck);
                         // again trying for more efficient logic
                         if (allParents.contains(requiredPeer)){
                             labelsToCheck.remove(labelToCheck); // skip to the next one and remove the label from labels to check and add it to the validated list to return
@@ -358,7 +349,7 @@ public class LabelService {
             System.out.print("- ");
         }
         System.out.println(label.getName());
-        List<Label> children = labelDAO.findChildren(databaseName, LabelDAO.SetDefinitionTable.label_set_definition, label, false);
+        List<Label> children = labelDAO.findChildren(totoMemoryDB, LabelDAO.SetDefinitionTable.label_set_definition, label, false);
         if (!children.isEmpty()) {
             level++;
             for (Label child : children) {

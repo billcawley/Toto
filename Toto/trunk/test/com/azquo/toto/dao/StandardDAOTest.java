@@ -1,6 +1,7 @@
 package com.azquo.toto.dao;
 
 import com.azquo.toto.entity.Label;
+import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,14 +26,14 @@ public class StandardDAOTest {
     @Autowired
     private LabelDAO labelDao;
 
-    String databaseName = "tototest";
-
+    @Autowired
+    private TotoMemoryDB totoMemoryDB;
 
     @Before
     public void setUp() throws Exception {
-        Label l = labelDao.findByName(databaseName, "eddtest");
+        Label l = labelDao.findByName(totoMemoryDB, "eddtest");
         if (l != null){
-            labelDao.removeById(databaseName,l);
+            labelDao.removeById(totoMemoryDB,l);
         }
     }
 /*

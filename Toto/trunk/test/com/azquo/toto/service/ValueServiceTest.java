@@ -43,7 +43,6 @@ public class ValueServiceTest {
 
     @Before
     public void setUp() throws Exception {
-        valueService.setDatabaseName(databaseName);
     }
 
     @Test
@@ -61,7 +60,6 @@ public class ValueServiceTest {
         // skip file opening time . . .
         long track = System.currentTimeMillis();
         // for initial attempts at running it
-        valueService.setDatabaseName("toto");
         // going to write coode here foor CSV import that will be factored off into a function later
         String nameWithPeers = "Measure";
         CsvReader csvReader = new CsvReader(new InputStreamReader(new FileInputStream("/home/cawley/Downloads/totosample.csv"), "8859_1"), ',');
@@ -130,7 +128,7 @@ public class ValueServiceTest {
                     labels.add(csvReader.get(header));
                 }
             }
-            System.out.println(valueService.storeValueWithLabels(value, labels));
+            valueService.storeValueWithLabels(value, labels);
         }
         System.out.println("csv import took " + (System.currentTimeMillis() - track) + "ms");
 
@@ -148,7 +146,15 @@ public class ValueServiceTest {
 //        searchCriteria.add(test3);
 //        searchCriteria.add(test4);
         track = System.currentTimeMillis();
-        Set<Value> searchResults = valueService.findForLabels(searchCriteria);
+        List<Value> searchResults = valueService.findForLabels(searchCriteria);
+        track = System.currentTimeMillis() - track;
+        System.out.println(searchResults.size() +  " records in " + track + "ms");
+        track = System.currentTimeMillis();
+        searchResults = valueService.findForLabels(searchCriteria);
+        track = System.currentTimeMillis() - track;
+        System.out.println(searchResults.size() +  " records in " + track + "ms");
+        track = System.currentTimeMillis();
+        searchResults = valueService.findForLabels(searchCriteria);
         track = System.currentTimeMillis() - track;
         System.out.println(searchResults.size() +  " records in " + track + "ms");
     }

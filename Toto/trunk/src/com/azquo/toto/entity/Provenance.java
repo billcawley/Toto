@@ -1,5 +1,7 @@
 package com.azquo.toto.entity;
 
+import com.azquo.toto.memorydb.TotoMemoryDB;
+
 import java.util.Date;
 
 /**
@@ -9,16 +11,20 @@ import java.util.Date;
  * Time: 17:38
  * Attached to each value including values that have been deleted. Should enable rollback
  */
-public class Provenance extends StandardEntity{
+public class Provenance extends TotoMemoryDBEntity {
 
     private String user;
     private Date timeStamp;
     private String method;
     private String name;
 
+    public Provenance(TotoMemoryDB totoMemoryDB, String user, Date timeStamp, String method, String name) throws Exception {
+        this(totoMemoryDB, 0,user, timeStamp, method, name);
+    }
 
-    public Provenance(int id, String user, Date timeStamp, String method, String name) {
-        this.id = id;
+
+    public Provenance(TotoMemoryDB totoMemoryDB, int id, String user, Date timeStamp, String method, String name) throws Exception {
+        super(totoMemoryDB, id);
         this.user = user;
         this.timeStamp = timeStamp;
         this.method = method;
@@ -42,30 +48,6 @@ public class Provenance extends StandardEntity{
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        Provenance that = (Provenance) o;
-
-        if (method != null ? !method.equals(that.method) : that.method != null) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
-        if (timeStamp != null ? !timeStamp.equals(that.timeStamp) : that.timeStamp != null) return false;
-        if (user != null ? !user.equals(that.user) : that.user != null) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = user != null ? user.hashCode() : 0;
-        result = 31 * result + (timeStamp != null ? timeStamp.hashCode() : 0);
-        result = 31 * result + (method != null ? method.hashCode() : 0);
-        result = 31 * result + (name != null ? name.hashCode() : 0);
-        return result;
-    }
-
-    @Override
     public String toString() {
         return "Provenance{" +
                 "user='" + user + '\'' +
@@ -73,5 +55,10 @@ public class Provenance extends StandardEntity{
                 ", method='" + method + '\'' +
                 ", name='" + name + '\'' +
                 '}';
+    }
+
+    @Override
+    public void addToDb(TotoMemoryDB totoMemoryDB) throws Exception {
+        totoMemoryDB.addProvenanceToDb(this);
     }
 }

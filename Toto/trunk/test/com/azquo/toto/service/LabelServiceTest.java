@@ -2,6 +2,7 @@ package com.azquo.toto.service;
 
 import com.azquo.toto.dao.LabelDAO;
 import com.azquo.toto.entity.Label;
+import com.azquo.toto.memorydb.TotoMemoryDB;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
@@ -25,19 +26,19 @@ import java.util.List;
 @ContextConfiguration(locations = {"file:web/WEB-INF/totospringdispatcher-servlet.xml"})
 public class LabelServiceTest {
 
-    String databaseName = "tototest"; // hard code here for the moment
     @Autowired
     LabelService labelService;
     @Autowired
     LabelDAO labelDao;
 
+    @Autowired
+    private TotoMemoryDB totoMemoryDB;
     @Before
     public void setUp() throws Exception {
-        Label l = labelDao.findByName(databaseName, "eddtest");
+        Label l = labelDao.findByName(totoMemoryDB, "eddtest");
         if (l != null){
-            labelDao.removeById(databaseName,l);
+            labelDao.removeById(totoMemoryDB,l);
         }
-        labelService.setDatabaseName("tototest");
     }
 /*
     @After
