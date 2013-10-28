@@ -30,11 +30,11 @@
     <bean id="jdbcTemplate" class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
+    <bean name="totoMemoryDB" class="com.azquo.toto.memorydb.TotoMemoryDB"/>
     <bean name="nameDao" class="com.azquo.toto.dao.NameDAO"/>
     <bean name="nameService" class="com.azquo.toto.service.NameService"/>
     <bean name="valueDao" class="com.azquo.toto.dao.ValueDAO"/>
     <bean name="valueService" class="com.azquo.toto.service.ValueService"/>
     <bean name="provenanceDAO" class="com.azquo.toto.dao.ProvenanceDAO"/>
-
-    <bean name="totoMemoryDB" class="com.azquo.toto.memorydb.TotoMemoryDB"/>
+    <bean name="provenanceService" class="com.azquo.toto.service.ProvenanceService"/>
 </beans>
