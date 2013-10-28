@@ -36,14 +36,16 @@ public class NameService {
         }
     }
 
-    public Set<Name> findChildrenAtLevel(final Name name, final int level) throws Exception {
+    // needs to be a list to preserve order when adding. Or could use a linked set, don't see much advantage
+
+    public List<Name> findChildrenAtLevel(final Name name, final int level) throws Exception {
         // level -1 means get me the lowest
         // notable that with current logic asking for a level with no data returns no data not the nearest it can get. Would be simple to change this
         int currentLevel = 1;
-        Set<Name> foundAtCurrentLevel = name.getChildren();
+        List<Name> foundAtCurrentLevel = new ArrayList<Name>(name.getChildren());
         while ((currentLevel < level || level == -1) && !foundAtCurrentLevel.isEmpty()) {
             // we can't loop over foundAtCurrentLevel and modify it at the same time, this asks for trouble
-            Set<Name> nextLevelSet = new HashSet<Name>();
+            List<Name> nextLevelSet = new ArrayList<Name>();
             for (Name n : foundAtCurrentLevel) {
                 nextLevelSet.addAll(n.getChildren());
             }
@@ -69,7 +71,7 @@ public class NameService {
         // internally we know the children are ordered, so iterate over the set adding those in teh positions we care about
         int position = 1;
         for (Name child : name.getChildren()){
-            if (position >= from && position <= to){
+            if ((position >= from || from ==  -1) && (position <= to || to == -1)){
                 toReturn.add(child);
             }
             position++;
@@ -96,19 +98,6 @@ public class NameService {
             }
         }
         return toReturn;
-    }
-
-    public void createMembers(final Name parentName, final List<String> childNameStrings) throws Exception {
-        // in this we're going assume that we overwrite existing name links, the single one can be used for adding
-        LinkedHashSet<Name> childNames = new LinkedHashSet<Name>(childNameStrings.size());
-        for (String childNameString : childNameStrings) {
-            if (childNameString.trim().length() > 0) {
-                Name child = findOrCreateName(childNameString);
-                childNames.add(child);
-                child.addToParentsWillBePersisted(parentName);
-            }
-        }
-        parentName.setChildrenWillBePersisted(childNames);
     }
 
     // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
@@ -162,6 +151,18 @@ public class NameService {
         }
     }
 
+    public Set<Name> getPeersIncludeParents(final Name name) throws Exception {
+        if (name.getPeers().size() > 0){
+            return name.getPeers();
+        }
+        List<Name> parents = findAllParents(name);
+        for (Name parent : parents) {
+            if (!parent.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
+                return parent.getPeers();
+            }
+        }
+        return new HashSet<Name>();
+    }
 
     public void createMember(final Name parentName, final String childName, final String afterString, final int after) throws Exception {
         Name newChild = findOrCreateName(childName);
@@ -170,18 +171,34 @@ public class NameService {
             int position = 1;
             for (Name child : parentName.getChildren()){
                 withNewChild.add(child);
+                // try for the string and number,whichever is hit first will be the position
+                if (after != -1 && after == position){
+                    withNewChild.add(newChild);
+                    newChild.addToParentsWillBePersisted(parentName); // link the other way too
+                }
                 if (afterString != null){
                     if (child.getName().equalsIgnoreCase(afterString)){
                         withNewChild.add(newChild);
-                        newChild.addToParentsWillBePersisted(parentName); // link the other way too!
+                        newChild.addToParentsWillBePersisted(parentName); // link the other way too
                     }
-                } else if(after == position){ // only check the numeric position if there's no string passed
-                    withNewChild.add(newChild);
                 }
                 position++;
             }
-            parentName.setPeersWillBePersisted(withNewChild);
+            parentName.setChildrenWillBePersisted(withNewChild);
         }
+    }
+
+    public void createMembers(final Name parentName, final List<String> childNameStrings) throws Exception {
+        // in this we're going assume that we overwrite existing name links, the single one can be used for adding
+        LinkedHashSet<Name> childNames = new LinkedHashSet<Name>(childNameStrings.size());
+        for (String childNameString : childNameStrings) {
+            if (childNameString.trim().length() > 0) {
+                Name child = findOrCreateName(childNameString);
+                childNames.add(child);
+                child.addToParentsWillBePersisted(parentName);
+            }
+        }
+        parentName.setChildrenWillBePersisted(childNames);
     }
 
     public void removeMember(final Name parentName, final String childName) throws Exception {

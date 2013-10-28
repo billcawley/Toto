@@ -18,18 +18,24 @@ public class Provenance extends TotoMemoryDBEntity {
     private Date timeStamp;
     private String method;
     private String name;
+    private String rowHeadings;
+    private String columnHeadings;
+    private String context;
 
-    public Provenance(TotoMemoryDB totoMemoryDB, String user, Date timeStamp, String method, String name) throws Exception {
-        this(totoMemoryDB, 0,user, timeStamp, method, name);
+    public Provenance(TotoMemoryDB totoMemoryDB, String user, Date timeStamp, String method, String name, String rowHeadings, String columnHeadings, String context) throws Exception {
+        this(totoMemoryDB, 0,user, timeStamp, method, name, rowHeadings, columnHeadings, context);
     }
 
 
-    public Provenance(TotoMemoryDB totoMemoryDB, int id, String user, Date timeStamp, String method, String name) throws Exception {
+    public Provenance(TotoMemoryDB totoMemoryDB, int id, String user, Date timeStamp, String method, String name, String rowHeadings, String columnHeadings, String context) throws Exception {
         super(totoMemoryDB, id);
         this.user = user;
         this.timeStamp = timeStamp;
         this.method = method;
         this.name = name;
+        this.rowHeadings = rowHeadings;
+        this.columnHeadings = columnHeadings;
+        this.context = context;
     }
 
     public String getUser() {
@@ -46,6 +52,18 @@ public class Provenance extends TotoMemoryDBEntity {
 
     public String getName() {
         return name;
+    }
+
+    public String getRowHeadings() {
+        return rowHeadings;
+    }
+
+    public String getColumnHeadings() {
+        return columnHeadings;
+    }
+
+    public String getContext() {
+        return context;
     }
 
     @Override

@@ -147,7 +147,7 @@ public class NameController {
                             }
 
                         }
-                        Collection<Name> names; // could be a set or list, sine all we want too do is iterate is no prob
+                        List<Name> names; // could be a set or list, sine all we want too do is iterate is no prob
                         if (from != -1 || to != -1){ // numeric, I won't allow mixed for the moment
                             names = nameService.findChildrenFromTo(name, from, to);
                         } else if (fromString != null || toString != null){
@@ -217,7 +217,7 @@ public class NameController {
                     final Name name = nameService.findByName(nameString);
                     if (name != null){
                         //  Fees; peers {Period, Analysis, Merchant};create;
-                        return getNamesFormattedForOutput(name.getPeers());
+                        return getNamesFormattedForOutput(nameService.getPeersIncludeParents(name));
                     } else {
                         return "name : " + nameString + "not found";
                     }
