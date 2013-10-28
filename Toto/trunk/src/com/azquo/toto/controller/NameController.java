@@ -9,7 +9,7 @@ package com.azquo.toto.controller;
  * For the moment it parses instructions for manipulating the name set and calls the name service if the instructions seem correctly formed.
  */
 
-import com.azquo.toto.entity.Name;
+import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.service.NameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;

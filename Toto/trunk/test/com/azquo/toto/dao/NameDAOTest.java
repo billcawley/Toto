@@ -1,6 +1,6 @@
 package com.azquo.toto.dao;
 
-import com.azquo.toto.entity.Name;
+import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.junit.Before;
 import org.junit.runner.RunWith;

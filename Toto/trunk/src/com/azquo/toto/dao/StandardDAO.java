@@ -1,6 +1,6 @@
 package com.azquo.toto.dao;
 
-import com.azquo.toto.entity.TotoMemoryDBEntity;
+import com.azquo.toto.memorydb.TotoMemoryDBEntity;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;

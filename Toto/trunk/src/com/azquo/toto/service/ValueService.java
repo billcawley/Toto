@@ -1,7 +1,8 @@
 package com.azquo.toto.service;
 
-import com.azquo.toto.entity.Name;
-import com.azquo.toto.entity.Value;
+import com.azquo.toto.memorydb.Name;
+import com.azquo.toto.memorydb.Provenance;
+import com.azquo.toto.memorydb.Value;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -59,7 +60,9 @@ public class ValueService {
         }
     }
 
-    public String storeValueWithNames(final String valueString, final Set<String> names) throws Exception {
+    // TODO : is passing provenance the
+
+    public String storeValueWithProvenanceAndNames(final String valueString, final Provenance provenance, final Set<String> names) throws Exception {
         String toReturn = "";
         Set<Name> validNames = new HashSet<Name>();
         //long track = System.nanoTime();
@@ -85,7 +88,7 @@ public class ValueService {
 
         //System.out.println("track 2-2 : " + (System.nanoTime() - track) + "  ---   ");
         //track = System.nanoTime();
-        Value value = createValue(0, 0,valueString);
+        Value value = createValue(provenance.getId(), 0,valueString);
         // now add the value??
         //System.out.println("track 2-3 : " + (System.nanoTime() - track) + "  ---   ");
         //track = System.nanoTime();

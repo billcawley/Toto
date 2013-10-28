@@ -1,7 +1,7 @@
 package com.azquo.toto.service;
 
 import com.azquo.toto.dao.NameDAO;
-import com.azquo.toto.entity.Name;
+import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.junit.Before;
 import org.junit.runner.RunWith;

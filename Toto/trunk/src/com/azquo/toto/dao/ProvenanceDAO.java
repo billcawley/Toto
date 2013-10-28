@@ -1,6 +1,6 @@
 package com.azquo.toto.dao;
 
-import com.azquo.toto.entity.Provenance;
+import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.jdbc.core.RowMapper;
 

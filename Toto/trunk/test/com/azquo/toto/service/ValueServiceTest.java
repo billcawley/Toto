@@ -1,8 +1,9 @@
 package com.azquo.toto.service;
 
 import com.azquo.toto.dao.ValueDAO;
-import com.azquo.toto.entity.*;
-import com.azquo.toto.entity.Name;
+import com.azquo.toto.memorydb.Provenance;
+import com.azquo.toto.memorydb.Value;
+import com.azquo.toto.memorydb.Name;
 import com.csvreader.CsvReader;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,6 +35,8 @@ public class ValueServiceTest {
     ValueService valueService;
     @Autowired
     NameService nameService;
+    @Autowired
+    ProvenanceService provenanceService;
     @Autowired
     ValueDAO valueDao;
 
@@ -104,6 +107,8 @@ public class ValueServiceTest {
         csvReader.readHeaders();
         headers = csvReader.getHeaders();
 
+        Provenance provenance = provenanceService.getTestProvenance();
+
         while (csvReader.readRecord()){
             Set<String> names = new HashSet<String>();
             // hyst a
@@ -115,7 +120,7 @@ public class ValueServiceTest {
                     names.add(csvReader.get(header));
                 }
             }
-            valueService.storeValueWithNames(value, names);
+            valueService.storeValueWithProvenanceAndNames(value, provenance, names);
         }
         System.out.println("csv import took " + (System.currentTimeMillis() - track) + "ms");
 

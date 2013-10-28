@@ -3,9 +3,6 @@ package com.azquo.toto.memorydb;
 import com.azquo.toto.dao.NameDAO;
 import com.azquo.toto.dao.ProvenanceDAO;
 import com.azquo.toto.dao.ValueDAO;
-import com.azquo.toto.entity.Name;
-import com.azquo.toto.entity.Provenance;
-import com.azquo.toto.entity.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
@@ -18,7 +15,7 @@ import java.util.*;
  * OK, SQL isn't fast enough, it will be persistence but not much more. Need to think about how a Toto memory DB would work
  * As soon as this starts to be  used in anger there must be a db to file dump in case it goes out of sync with MySQL
  */
-public class TotoMemoryDB {
+public final class TotoMemoryDB {
 
     @Autowired
     private ValueDAO valueDAO;
@@ -40,6 +37,11 @@ public class TotoMemoryDB {
     private int maxIdAtLoad;
     private int nextId;
 
+    // when objects are modified they are added to these lists
+
+    private Set<Name> namesNeedPersisting;
+    private Set<Value> valuesNeedPersisting;
+    private Set<Provenance> provenanceNeedsPersisting;
 
     // convenience constructor, will be zapped later
     public TotoMemoryDB() throws Exception {
@@ -53,6 +55,10 @@ public class TotoMemoryDB {
         nameByNameMap = new HashMap<String, Name>();
         nameByIdMap = new HashMap<Integer, Name>();
         valueByIdMap = new HashMap<Integer, Value>();
+        provenanceByIdMap = new HashMap<Integer, Provenance>();
+        namesNeedPersisting = new HashSet<Name>();
+        valuesNeedPersisting = new HashSet<Value>();
+        provenanceNeedsPersisting = new HashSet<Provenance>();
         if (dontLoad){
             needsLoading = false;
         } else {
@@ -71,7 +77,7 @@ public class TotoMemoryDB {
     // right now this will not run properly!
 
     synchronized public void loadData() throws Exception{
-        if (needsLoading){ // only allow it once!
+/*        if (needsLoading){ // only allow it once!
             // here we'll populate the memory DB from the database
             long track = System.currentTimeMillis();
 
@@ -169,10 +175,16 @@ public class TotoMemoryDB {
             nextId = maxIdAtLoad + 1;
 
             needsLoading = false;
-        }
+        }*/
     }
 
-    public synchronized int getNextId(){
+    // reads from a list of changed objects
+
+    public synchronized void saveDataToMySQL(){
+
+    }
+
+    protected synchronized int getNextId(){
         nextId++; // increment but return what it was . . .a little messy but I want tat value in memory to be what it says
         return nextId -1;
     }
@@ -187,7 +199,7 @@ public class TotoMemoryDB {
 
     // synchronised?
 
-    public void addNameToDb(Name newName) throws Exception{
+    protected void addNameToDb(Name newName) throws Exception{
         newName.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         if (nameByIdMap.get(newName.getId()) != null){
@@ -200,7 +212,7 @@ public class TotoMemoryDB {
     // ok I'd have liked this to be part of the above function but the name won't have been initialised, has to be called in the name constructor
     // custom maps here need to be dealt with in the constructors I think
 
-    public void addNameToDbNameMap(Name newName) throws Exception{
+    protected void addNameToDbNameMap(Name newName) throws Exception{
         newName.checkDatabaseMatches(this);
         if (nameByNameMap.get(newName.getName().toLowerCase()) != null){
             throw new Exception("tried to add a name to the database with an existing name!");
@@ -209,7 +221,15 @@ public class TotoMemoryDB {
         }
     }
 
-    public void addValueToDb(Value newValue) throws Exception{
+    protected void setNameNeedsPersisting(Name name){
+        namesNeedPersisting.add(name);
+    }
+
+    protected void removeNameNeedsPersisting(Name name){
+        namesNeedPersisting.remove(name);
+    }
+
+    protected void addValueToDb(Value newValue) throws Exception{
         newValue.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         if (valueByIdMap.get(newValue.getId()) != null){
@@ -219,7 +239,15 @@ public class TotoMemoryDB {
         }
     }
 
-    public void addProvenanceToDb(Provenance newProvenance) throws Exception{
+    protected void setValueNeedsPersisting(Value value){
+        valuesNeedPersisting.add(value);
+    }
+
+    protected void removeValueNeedsPersisting(Value value){
+        valuesNeedPersisting.remove(value);
+    }
+
+    protected void addProvenanceToDb(Provenance newProvenance) throws Exception{
         newProvenance.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         if (provenanceByIdMap.get(newProvenance.getId()) != null){
@@ -227,6 +255,14 @@ public class TotoMemoryDB {
         } else {
             provenanceByIdMap.put(newProvenance.getId(), newProvenance);
         }
+    }
+
+    protected void setProvenanceNeedsPersisting(Provenance provenance){
+        provenanceNeedsPersisting.add(provenance);
+    }
+
+    protected void removeProvenanceNeedsPersisting(Provenance provenance){
+        provenanceNeedsPersisting.remove(provenance);
     }
 
 }

@@ -1,6 +1,6 @@
 package com.azquo.toto.service;
 
-import com.azquo.toto.entity.Name;
+import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -212,7 +212,7 @@ public class NameService {
     public void renameName(String name, String renameAs) throws Exception {
         Name existing = totoMemoryDB.getNameByName(name);
         if (existing != null) {
-            existing.changeNameWillBePersisted(renameAs, totoMemoryDB);
+            existing.changeNameWillBePersisted(renameAs);
         }
     }
 
