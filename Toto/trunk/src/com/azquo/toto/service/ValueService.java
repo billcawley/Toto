@@ -36,28 +36,16 @@ public class ValueService {
             names = names.substring(2);
         }
         value.setDeletedInfoWillBePersisted(names);
-        unlinkAllNamesFromValue(value);
-    }
-
-    public void unlinkAllNamesFromValue(Value value) throws Exception {
-        for (Name name : value.getNames()){
-            name.removeFromValuesWillBePersisted(value);
-        }
-        value.setNamesWillBePersisted(new HashSet<Name>()); // zap the names against this value.
+        value.setNamesWillBePersisted(new HashSet<Name>());
     }
 
     public Value createValue(int provenanceId, double doubleValue, String text) throws Exception {
-        // TODO : provenance
 //        return totoMemoryDB.createValue(provenanceId,doubleValue,text);
         return new Value(totoMemoryDB,provenanceId,doubleValue,text,null);
     }
 
     public void linkValueToNames(Value value, Set<Name> names) throws Exception {
-        unlinkAllNamesFromValue(value);
         value.setNamesWillBePersisted(names);
-        for (Name name : names){
-            name.addToValuesWillBePersisted(value);
-        }
     }
 
     // TODO : is passing provenance the

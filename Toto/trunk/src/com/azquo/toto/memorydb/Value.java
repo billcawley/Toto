@@ -24,7 +24,8 @@ public final class Value extends TotoMemoryDBEntity {
     private String deletedInfo;
 
     private Set<Name> names;
-    boolean namesChanged;
+
+    private boolean namesChanged;
 
 
     /* This should ONLY be called by a totoMemory database and should stay with that database. I'm wondering how to enforce that.
@@ -55,18 +56,26 @@ public final class Value extends TotoMemoryDBEntity {
     }
 
     @Override
-    protected void needsPersisting() {
+    protected void setNeedsPersisting() {
         getTotoMemoryDB().setValueNeedsPersisting(this);
     }
 
     @Override
-    protected void classSpecificPersisted(){
+    protected void classSpecificSetAsPersisted(){
         namesChanged = false;
         getTotoMemoryDB().removeValueNeedsPersisting(this);
     }
 
+    public boolean getNamesChanged() {
+        return namesChanged;
+    }
+
     public int getProvenanceId() {
         return provenanceId;
+    }
+
+    public Provenance getProvenance() {
+        return getTotoMemoryDB().getProvenanceById(provenanceId);
     }
 
     public double getDoubleValue() {
@@ -85,7 +94,7 @@ public final class Value extends TotoMemoryDBEntity {
         if (!deletedInfo.equals(this.deletedInfo)){
             this.deletedInfo = deletedInfo;
             entityColumnsChanged = true;
-            needsPersisting();
+            setNeedsPersisting();
         }
     }
 
@@ -106,8 +115,22 @@ public final class Value extends TotoMemoryDBEntity {
 
     public synchronized void setNamesWillBePersisted(Set<Name> names) throws Exception {
         checkDatabaseForSet(names);
+
+
+        for (Name oldName : this.names){
+            oldName.removeFromValues(this);
+        }
+
         this.names = names;
-        namesChanged = true;
-        needsPersisting();
+
+        // set all parents on the new list
+        for (Name newName : this.names){
+            newName.addToValues(this);
+        }
+
+        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
+            namesChanged = true;
+            setNeedsPersisting();
+        }
     }
 }

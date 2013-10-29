@@ -75,50 +75,12 @@ public class NameDAO extends StandardDAO<Name> {
         return new NameRowMapper(totoMemoryDB);
     }
 
-
-    public void remove(final TotoMemoryDB totoMemoryDB, final Name name) throws DataAccessException {
-        // ok this will unlink everywhere, should we actually delete then or not??
-        List<Name> parents = findParents(totoMemoryDB, SetDefinitionTable.name_set_definition, name);
-        for (Name parent : parents){
-            unlinkParentAndChild(totoMemoryDB,SetDefinitionTable.name_set_definition, parent, name);
-        }
-        List<Name> children = findChildren(totoMemoryDB, SetDefinitionTable.name_set_definition, name, false);
-        for (Name child : children){
-            unlinkParentAndChild(totoMemoryDB, SetDefinitionTable.name_set_definition, name, child);
-        }
-        // now do the same for peers
-        parents = findParents(totoMemoryDB, SetDefinitionTable.peer_set_definition, name);
-        for (Name parent : parents){
-            unlinkParentAndChild(totoMemoryDB,SetDefinitionTable.peer_set_definition, parent, name);
-        }
-        children = findChildren(totoMemoryDB, SetDefinitionTable.peer_set_definition, name, false);
-        for (Name child : children){
-            unlinkParentAndChild(totoMemoryDB, SetDefinitionTable.peer_set_definition, name, child);
-        }
-        removeById(totoMemoryDB, name);
-    }
-
-    public Name findByName(final TotoMemoryDB totoMemoryDB, final String name) throws DataAccessException {
-        final String whereCondition = " where `" + NAME + "` = :" + NAME;
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(NAME, name);
-        return findOneWithWhereSQLAndParameters(totoMemoryDB, whereCondition, namedParams, false);
-    }
-
-    // should this be public? I want the service to have direct access as the code will be normalised better . . .
-    public List<Name> findChildren(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name name, final boolean sorted) throws DataAccessException {
-        final String whereCondition = ", `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + CHILDID + "` AND `" + setDefinitionTable + "`.`" + PARENTID + "` = :" + PARENTID + (sorted ? " order by `" + NAME + "`" : " order by `" + POSITION + "`");
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PARENTID, name.getId());
-        return findListWithWhereSQLAndParameters(totoMemoryDB, whereCondition, namedParams, false);
-    }
-
     // for loading into the memory db
 
     public List<Integer> findParentIdsForName(final TotoMemoryDB totoMemoryDB, SetDefinitionTable setDefinitionTable, final Name name) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(CHILDID, name.getId());
-        final String FIND_EXISTING_LINKS = "Select `" + PARENTID + "` from `" + totoMemoryDB + "`.`" + setDefinitionTable + "` where `" + CHILDID + "` = :" + CHILDID + " order by `" + POSITION + "`";
+        final String FIND_EXISTING_LINKS = "Select `" + PARENTID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + CHILDID + "` = :" + CHILDID + " order by `" + POSITION + "`";
         return jdbcTemplate.queryForList(FIND_EXISTING_LINKS, namedParams, Integer.class);
 
     }
@@ -126,169 +88,36 @@ public class NameDAO extends StandardDAO<Name> {
     public List<Integer> findChildIdsForName(final TotoMemoryDB totoMemoryDB, SetDefinitionTable setDefinitionTable, final Name name) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, name.getId());
-        final String FIND_EXISTING_LINKS = "Select `" + CHILDID + "` from `" + totoMemoryDB + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID + " order by `" + POSITION + "`";
+        final String FIND_EXISTING_LINKS = "Select `" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID + " order by `" + POSITION + "`";
         return jdbcTemplate.queryForList(FIND_EXISTING_LINKS, namedParams, Integer.class);
     }
 
 
-    public List<Name> findChildren(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name name, final int from, final int to) throws DataAccessException {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PARENTID, name.getId());
-        if (from != -1) {
-            namedParams.addValue("from", from);
-        }
-        if (to != -1) {
-            namedParams.addValue("to", to);
-        }
-        final String whereCondition = ", `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + CHILDID + "` AND `" + setDefinitionTable + "`.`" + PARENTID + "` = :" + PARENTID + (from != -1 ? " AND `" + setDefinitionTable + "`.`" + POSITION + "` >= :from" : "") + (to != -1 ? " AND `" + setDefinitionTable + "`.`" + POSITION + "` <= :to" : "") + " order by `" + POSITION + "`";
-        return findListWithWhereSQLAndParameters(totoMemoryDB, whereCondition, namedParams, false);
-    }
-
-    public List<Name> findParents(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name name) throws DataAccessException {
-        final String whereCondition = ", `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + getTableName() + "`." + ID + " = `" + setDefinitionTable + "`.`" + PARENTID + "` AND `" + setDefinitionTable + "`.`" + CHILDID + "` = :" + CHILDID;
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(CHILDID, name.getId());
-        return findListWithWhereSQLAndParameters(totoMemoryDB, whereCondition, namedParams, false);
-    }
-
-    public List<Name> findAllParents(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name name) throws DataAccessException {
-        final List<Name> allParents = new ArrayList<Name>();
-        List<Name> foundAtCurrentLevel = findParents(totoMemoryDB, setDefinitionTable, name);
-        while (!foundAtCurrentLevel.isEmpty()) {
-            allParents.addAll(foundAtCurrentLevel);
-            List<Name> nextLevelList = new ArrayList<Name>();
-            for (Name n : foundAtCurrentLevel) {
-                nextLevelList.addAll(findParents(totoMemoryDB, setDefinitionTable, n));
-            }
-            if (nextLevelList.isEmpty()) { // noo more parents to find
-                break;
-            }
-            foundAtCurrentLevel = nextLevelList;
-        }
-        return allParents;
-    }
-
-    public List<Name> findAllChildren(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name name) throws DataAccessException {
-        final List<Name> allChildren = new ArrayList<Name>();
-        List<Name> foundAtCurrentLevel = findChildren(totoMemoryDB,setDefinitionTable, name, false);
-        while (!foundAtCurrentLevel.isEmpty()) {
-            allChildren.addAll(foundAtCurrentLevel);
-            List<Name> nextLevelList = new ArrayList<Name>();
-            for (Name n : foundAtCurrentLevel) {
-                nextLevelList.addAll(findChildren(totoMemoryDB, setDefinitionTable, n, false));
-            }
-            if (nextLevelList.isEmpty()) { // no more children to find
-                break;
-            }
-            foundAtCurrentLevel = nextLevelList;
-        }
-        return allChildren;
-    }
-
-
-
-    public List<Name> findTopLevelNames(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable) throws DataAccessException {
-        final String whereCondition = " where `" + getTableName() + "`." + ID + " NOT IN (SELECT `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "`.`" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "`)";
-        // no parameters but follow the pattern
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        return findListWithWhereSQLAndParameters(totoMemoryDB, whereCondition, namedParams, false);
-    }
-
-    public int getMaxChildPosition(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name n) throws DataAccessException {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PARENTID, n.getId());
-        final String FIND_MAX_POSITION = "Select max(" + POSITION + ") from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID;
-        // turns out looking for a null integer is actually the thing in this case as mysql returns null not no rows. I think :P
-        Integer integer = jdbcTemplate.queryForObject(FIND_MAX_POSITION, namedParams, Integer.class);
-        return (integer == null ? 0 : integer); // no records means we return 0 as the max position
-    }
-
-    public int getChildPosition(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent, final Name child) throws DataAccessException {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PARENTID, parent.getId());
-        namedParams.addValue(CHILDID, child.getId());
-        final String FIND_EXISTING_LINK_POSITION = "Select `" + POSITION + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID + " AND `" + CHILDID + "` = :" + CHILDID;
-        List<Integer> existingPositionResult = jdbcTemplate.queryForList(FIND_EXISTING_LINK_POSITION, namedParams, Integer.class);
-        if (!existingPositionResult.isEmpty()) {
-            return existingPositionResult.get(0);// the compiler allows this?? Cool :)
-        } else {
-            return -1; // we'll call -1 not existing
-        }
-    }
+    // these two functions used to have some complexity to do with data integrity, now they are simple as the memory db should take care of that
 
     public boolean linkParentAndChild(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent, final Name child, int position) throws DataAccessException {
-        if (child.getId() == parent.getId()){
-            throw new InvalidDataAccessApiUsageException("cannot link name to itself!" + parent.getName());
-        }
-        List<Name> parentsToCheckForCircularReferences = findAllParents(totoMemoryDB,setDefinitionTable, parent);
-        for (Name higherParent : parentsToCheckForCircularReferences){
-            if (higherParent.getId() == child.getId()){
-                throw new InvalidDataAccessApiUsageException("cannot create circular reference, " + child.getName() + " is above " + parent.getName());
-            }
-        }
-        // init the parameters at the beginning, we can reuse them for all possible queries I think . . . .nice
-        int existingMaxPosition = getMaxChildPosition(totoMemoryDB, setDefinitionTable, parent);
-        if (position > (existingMaxPosition + 1)) { // if the position is greater than one above the top the chop it down
-            position = existingMaxPosition + 1;
-        }
         MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, parent.getId());
         namedParams.addValue(CHILDID, child.getId());
         namedParams.addValue(POSITION, position);
-        //int numberDeleted = unlinkParentAndChild(parent,child);
-        // Check if the link exists and if so at what position, The DB should NOT allow duplicate links!
-        int existingPosition = getChildPosition(totoMemoryDB, setDefinitionTable, parent, child);
-        if (existingPosition != -1) {
-            if (existingPosition == position) { // the link already exists and in that position, return
-                return false;
-            } else { // we need to move the position
-                if (position == (existingMaxPosition + 1)) {// can't allow a position that high if modifying the position rather than adding
-                    position--;
-                    // re rwite to the map since it's been updated . . . is this bad practice or acceptable here?
-                    namedParams.addValue(POSITION, position);
-                }
-                System.out.println("existing position for  : " + child.getName() + ", " + existingPosition + " and new position : " + position);
-                namedParams.addValue("EXISTINGPOSITION", existingPosition);
-                // first move the positions that may be affected
-                if (position > existingPosition) {
-                    final String SHIFT_POSITIONS = "UPDATE `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` set `" + POSITION + "` = (`" + POSITION + "` - 1) where `" + PARENTID + "` = :" + PARENTID + " AND `" + POSITION + "` > :EXISTINGPOSITION AND `" + POSITION + "`<= :" + POSITION;
-                    jdbcTemplate.update(SHIFT_POSITIONS, namedParams);
-                } else { // this child is moving down in position, positions will have to be shifted up!
-                    final String SHIFT_POSITIONS = "UPDATE `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` set `" + POSITION + "` = (`" + POSITION + "` + 1) where `" + PARENTID + "` = :" + PARENTID + " AND `" + POSITION + "` < :EXISTINGPOSITION AND `" + POSITION + "`>= :" + POSITION;
-                    jdbcTemplate.update(SHIFT_POSITIONS, namedParams);
-                }
-            }
-            // now move the existing which will right now have two links on that position
-            final String SHIFT_POSITION = "UPDATE `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` set `" + POSITION + "` = :" + POSITION + " where `" + PARENTID + "` = :" + PARENTID + " AND `" + CHILDID + "` = :" + CHILDID;
-            jdbcTemplate.update(SHIFT_POSITION, namedParams);
-        } else { // insert a new one, shift positions up if necessary and sort out the lookup flags . . . .
-            if (position < (existingMaxPosition + 1)) {// not right at the top, some positions need to be moved up
-                final String SHIFT_POSITIONS = "UPDATE `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` set `" + POSITION + "` = (`" + POSITION + "` + 1) where `" + PARENTID + "` = :" + PARENTID + " AND `" + POSITION + "`>= :" + POSITION;
-                jdbcTemplate.update(SHIFT_POSITIONS, namedParams);
-            }
-            // now make the link
-            String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES (:" + PARENTID + ",:" + CHILDID + ",:" + POSITION + ")";
-            jdbcTemplate.update(updateSql, namedParams);
-            // TODO : lookup flags
-        }
+        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES (:" + PARENTID + ",:" + CHILDID + ",:" + POSITION + ")";
+        jdbcTemplate.update(updateSql, namedParams);
         return true;
     }
 
     public int unlinkParentAndChild(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent, final Name child) throws DataAccessException {
-        int existingPosition = getChildPosition(totoMemoryDB, setDefinitionTable, parent, child);
-        if (existingPosition != -1) { // we have something to do!
-            // drop the positions above the one we're deleting down . . .
-            MapSqlParameterSource namedParams = new MapSqlParameterSource();
-            namedParams.addValue(PARENTID, parent.getId());
-            namedParams.addValue(CHILDID, child.getId());
-            namedParams.addValue(POSITION, existingPosition);
-            final String SHIFT_POSITIONS = "UPDATE `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` set `" + POSITION + "` = (`" + POSITION + "` - 1) where `" + PARENTID + "` = :" + PARENTID + " AND `" + POSITION + "` > :" + POSITION;
-            jdbcTemplate.update(SHIFT_POSITIONS, namedParams);
-            String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID + " and `" + CHILDID + "` = :" + CHILDID + "";
-            return jdbcTemplate.update(updateSql, namedParams);
-            // TODO : need to set that the look up tables need to be rebuilt appropriately
-        }
-        return 0; // nothing deleted
+        MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(PARENTID, parent.getId());
+        namedParams.addValue(CHILDID, child.getId());
+        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID + " and `" + CHILDID + "` = :" + CHILDID + "";
+        return jdbcTemplate.update(updateSql, namedParams);
+    }
+
+    public int unlinkAllForParent(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent) throws DataAccessException {
+        MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(PARENTID, parent.getId());
+        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID;
+        return jdbcTemplate.update(updateSql, namedParams);
     }
 
 }

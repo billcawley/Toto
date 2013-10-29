@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Oct 27, 2013 at 04:46 PM
+-- Generation Time: Oct 28, 2013 at 03:38 PM
 -- Server version: 5.5.33
 -- PHP Version: 5.3.17
 
@@ -36,8 +36,7 @@ CREATE TABLE IF NOT EXISTS `name` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `name` (`name`),
-  UNIQUE KEY `name_2` (`name`,`id`)
+  UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
@@ -62,8 +61,7 @@ CREATE TABLE IF NOT EXISTS `name_set_definition` (
   `parent_id` int(11) NOT NULL,
   `child_id` int(11) NOT NULL,
   `position` smallint(5) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`parent_id`,`child_id`),
-  UNIQUE KEY `child_id` (`child_id`,`parent_id`)
+  PRIMARY KEY (`parent_id`,`child_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
@@ -122,6 +120,5 @@ CREATE TABLE IF NOT EXISTS `value` (
 CREATE TABLE IF NOT EXISTS `value_name` (
   `value_id` int(11) NOT NULL,
   `name_id` int(11) NOT NULL,
-  PRIMARY KEY (`name_id`,`value_id`),
-  UNIQUE KEY `value_id` (`value_id`,`name_id`)
+  PRIMARY KEY (`name_id`,`value_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

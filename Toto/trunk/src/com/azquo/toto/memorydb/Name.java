@@ -31,10 +31,10 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     private LinkedHashSet<Name> children;
     private LinkedHashSet<Name> peers;
 
-    boolean valuesChanged;
-    boolean parentsChanged;
-    boolean childrenChanged;
-    boolean peersChanged;
+    private boolean childrenChanged;
+    private boolean peersChanged;
+
+    // parents is maintained according to children, it isn't persisted in the same way
 
     public Name(TotoMemoryDB totoMemoryDB, String name) throws Exception {
         this(totoMemoryDB, 0, name);
@@ -47,11 +47,10 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         parents = new HashSet<Name>();
         children = new LinkedHashSet<Name>();
         peers = new LinkedHashSet<Name>();
-        valuesChanged = false;
-        parentsChanged = false;
         childrenChanged = false;
         peersChanged = false;
         // it annoys me that this can't be folded into addToDb but I can't see how it would as the name won't be initialised when that is called
+        // we could pull a trick above as in they have to override "assign variables" or something . . .not sure
         totoMemoryDB.addNameToDbNameMap(this);
     }
 
@@ -61,17 +60,23 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     }
 
     @Override
-    protected void needsPersisting() {
+    protected void setNeedsPersisting() {
         getTotoMemoryDB().setNameNeedsPersisting(this);
     }
 
     @Override
-    protected void classSpecificPersisted() {
-        valuesChanged = false;
-        parentsChanged = false;
+    protected void classSpecificSetAsPersisted() {
         childrenChanged = false;
         peersChanged = false;
         getTotoMemoryDB().removeNameNeedsPersisting(this);
+    }
+
+    public boolean getChildrenChanged() {
+        return childrenChanged;
+    }
+
+    public boolean getPeersChanged() {
+        return peersChanged;
     }
 
     public String getName() {
@@ -86,7 +91,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         }
         this.name = name;
         entityColumnsChanged = true;
-        needsPersisting();
+        setNeedsPersisting();
     }
 
     @Override
@@ -101,59 +106,28 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         return Collections.unmodifiableSet(values);
     }
 
-    public synchronized void setValuesWillBePersisted(Set<Value> values) throws Exception {
-        checkDatabaseForSet(values);
-        this.values = values;
-        valuesChanged = true;
-        needsPersisting();
-    }
+    // these tow are becoming protected so they can be set by Value.
+    // Value will be the reference point for the value name link, the ones here are for fast lookup, no need for persistence
 
     // turns out recreating sets is not so efficient so while the object can accept a new value set it's better too allow it to be changed but not externally
 
-    public synchronized void addToValuesWillBePersisted(Value value) throws Exception {
+    protected synchronized void addToValues(Value value) throws Exception {
         checkDatabaseMatches(value);
-        if (values.add(value)) { // it changed the set
-            valuesChanged = true;
-            needsPersisting();
-        }
+        values.add(value);
     }
 
     // turns out recreating sets is not so efficient so while the object can accept a new value set it's better to allow it to be changed but not externally
 
-    public synchronized void removeFromValuesWillBePersisted(Value value) throws Exception {
+    protected synchronized void removeFromValues(Value value) throws Exception {
         checkDatabaseMatches(value);// even if not needed throw the damn exception!
-        if (values.remove(value)) { // it changed the set
-            valuesChanged = true;
-            needsPersisting();
-        }
+        values.remove(value); // it changed the set
     }
 
     public Set<Name> getParents() {
         return Collections.unmodifiableSet(parents);
     }
 
-    public synchronized void setParentsWillBePersisted(Set<Name> parents) throws Exception {
-        checkDatabaseForSet(parents);
-        this.parents = parents;
-        parentsChanged = true;
-        needsPersisting();
-    }
-
-    public synchronized void addToParentsWillBePersisted(Name parent) throws Exception {
-        checkDatabaseMatches(parent);
-        if (parents.add(parent)) { // something changed, this was a new name
-            parentsChanged = true;
-            needsPersisting();
-        }
-    }
-
-    public synchronized void removeFromParentsWillBePersisted(Name name) throws Exception {
-        checkDatabaseMatches(name);// even if not needed throw the damn exception!
-        if (parents.remove(name)) { // it changed the set
-            parentsChanged = true;
-            needsPersisting();
-        }
-    }
+    // don't allow external classes to set the parents, Name can manage this based on set children
 
     /* ok I can return a linked hash set but I'm not sure oof the advantage
 
@@ -162,6 +136,8 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
        */
 
+    // TODO : make parent and child lists interact with each other correctly in here (as in when adding a child add parent to the child too) - in fact make the prent lists only changeable in this class?
+
     public Set<Name> getChildren() {
         return Collections.unmodifiableSet(children);
     }
@@ -169,18 +145,35 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public synchronized void setChildrenWillBePersisted(LinkedHashSet<Name> children) throws Exception {
         checkDatabaseForSet(children);
+
+        // remove all parents on the old one
+        for (Name oldChild : this.children){
+            oldChild.parents.remove(this);
+        }
+
         this.children = children;
-        childrenChanged = true;
-        needsPersisting();
+        // set the parents based of the children
+
+        // set all parents on the new list
+        for (Name newChild : this.children){
+            newChild.parents.add(this);
+        }
+
+        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
+            childrenChanged = true;
+            setNeedsPersisting();
+        }
+
     }
 
     // removal ok on linked lists
 
     public synchronized void removeFromChildrenWillBePersisted(Name name) throws Exception {
         checkDatabaseMatches(name);// even if not needed throw the damn exception!
+        name.parents.remove(this);
         if (children.remove(name)) { // it changed the set
             childrenChanged = true;
-            needsPersisting();
+            setNeedsPersisting();
         }
     }
 
@@ -192,7 +185,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         checkDatabaseForSet(peers);
         this.peers = peers;
         peersChanged = true;
-        needsPersisting();
+        setNeedsPersisting();
     }
 
     // removal ok on linked lists
@@ -201,7 +194,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         checkDatabaseMatches(name);// even if not needed throw the damn exception!
         if (peers.remove(name)) { // it changed the set
             peersChanged = true;
-            needsPersisting();
+            setNeedsPersisting();
         }
     }
 

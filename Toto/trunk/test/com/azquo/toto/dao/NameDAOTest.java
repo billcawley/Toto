@@ -26,14 +26,6 @@ public class NameDAOTest {
     private TotoMemoryDB totoMemoryDB;
 
     public void clearEddtestLabels(){
-        Name n = nameDao.findByName(totoMemoryDB,"eddtest");
-        if (n != null){
-            nameDao.removeById(totoMemoryDB,n);
-        }
-        Name n2 = nameDao.findByName(totoMemoryDB,"eddtest2");
-        if (n2 != null){
-            nameDao.removeById(totoMemoryDB,n2);
-        }
     }
 
     @Before

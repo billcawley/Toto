@@ -174,12 +174,10 @@ public class NameService {
                 // try for the string and number,whichever is hit first will be the position
                 if (after != -1 && after == position){
                     withNewChild.add(newChild);
-                    newChild.addToParentsWillBePersisted(parentName); // link the other way too
                 }
                 if (afterString != null){
                     if (child.getName().equalsIgnoreCase(afterString)){
                         withNewChild.add(newChild);
-                        newChild.addToParentsWillBePersisted(parentName); // link the other way too
                     }
                 }
                 position++;
@@ -195,7 +193,6 @@ public class NameService {
             if (childNameString.trim().length() > 0) {
                 Name child = findOrCreateName(childNameString);
                 childNames.add(child);
-                child.addToParentsWillBePersisted(parentName);
             }
         }
         parentName.setChildrenWillBePersisted(childNames);
@@ -205,7 +202,6 @@ public class NameService {
         Name existingChild = totoMemoryDB.getNameByName(childName);
         if (existingChild != null) {
             parentName.removeFromChildrenWillBePersisted(existingChild);
-            existingChild.removeFromParentsWillBePersisted(parentName); // and unlink the other way
         }
     }
 

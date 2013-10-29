@@ -29,10 +29,6 @@ public class StandardDAOTest {
 
     @Before
     public void setUp() throws Exception {
-        Name n = nameDao.findByName(totoMemoryDB, "eddtest");
-        if (n != null){
-            nameDao.removeById(totoMemoryDB,n);
-        }
     }
 /*
     @Test

@@ -42,12 +42,12 @@ public final class Provenance extends TotoMemoryDBEntity {
     }
 
     @Override
-    protected void needsPersisting() {
+    protected void setNeedsPersisting() {
         getTotoMemoryDB().setProvenanceNeedsPersisting(this);
     }
 
     @Override
-    protected void classSpecificPersisted() {
+    protected void classSpecificSetAsPersisted() {
         getTotoMemoryDB().removeProvenanceNeedsPersisting(this);
     }
 

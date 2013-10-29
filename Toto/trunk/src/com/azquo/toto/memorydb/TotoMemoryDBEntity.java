@@ -49,6 +49,9 @@ public abstract class TotoMemoryDBEntity {
         // other bits of code overriding the entities ID
         if (totoMemoryDB.getNeedsLoading()){ // building objects from the disk store, rules are different, we can set the id as a parameter
             this.id = id;
+            // and say that it's in sync
+            needsInserting = false;
+            entityColumnsChanged = false;
         } else { // normal create
             if (id != 0){
                 throw new Exception("id is trying to be assigned to an entity after the database is loaded!");
@@ -56,13 +59,14 @@ public abstract class TotoMemoryDBEntity {
             this.id = totoMemoryDB.getNextId();
             // point of this is attempt at lockdown on entity constructors. Any entity that's instantiated is part of the
             // memory database and fair game for persistence
+            // if it's not been built with an assigned ID then it needs to be persisted
+            setNeedsPersisting();
+            // set them both true by default, if created by loading then the flags will be sorted after.
+            needsInserting = true;
+            entityColumnsChanged = true;
+
         }
         addToDb();
-        // by default we assume a new one needs to be persisted. On load the sets will be emptied and persisted will be called.
-        needsPersisting();
-        // set them both true by default, if created by loading then the flags will be sorted after.
-        needsInserting = true;
-        entityColumnsChanged = true;
     }
 
     // this is where each subclass should make sure that it is added to the appropriate map in the totodb. Unfortunately this in practice will just be the id map for that object but hey ho
@@ -71,11 +75,11 @@ public abstract class TotoMemoryDBEntity {
     // this is where each subclass should make sure that it is added to the appropriate modified list in the
     // not doing this in here as I'd like it class specific ad there may be quirks
     // and we're not going to make a removed, that will be dealt with by totomemorydb object
-    protected abstract void needsPersisting();
+    protected abstract void setNeedsPersisting();
 
     //force implementing classes to add functions for their fields when setting persisted
 
-    protected abstract void classSpecificPersisted();
+    protected abstract void classSpecificSetAsPersisted();
 
     // this seems to be the best way too constrain, others in teh package can get the class but not reset it's value
 
@@ -126,10 +130,10 @@ public abstract class TotoMemoryDBEntity {
         }
     }
 
-    protected final void persisted(){
+    protected final void setAsPersisted(){
         needsInserting = false;
         entityColumnsChanged = false;
-        classSpecificPersisted();
+        classSpecificSetAsPersisted();
     }
     // public for the DAOs
     public final boolean getNeedsInserting() {

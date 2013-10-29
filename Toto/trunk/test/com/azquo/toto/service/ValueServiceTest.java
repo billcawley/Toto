@@ -2,6 +2,7 @@ package com.azquo.toto.service;
 
 import com.azquo.toto.dao.ValueDAO;
 import com.azquo.toto.memorydb.Provenance;
+import com.azquo.toto.memorydb.TotoMemoryDB;
 import com.azquo.toto.memorydb.Value;
 import com.azquo.toto.memorydb.Name;
 import com.csvreader.CsvReader;
@@ -39,6 +40,8 @@ public class ValueServiceTest {
     ProvenanceService provenanceService;
     @Autowired
     ValueDAO valueDao;
+    @Autowired
+    TotoMemoryDB totoMemoryDB;
 
 
     @Before
@@ -98,6 +101,7 @@ public class ValueServiceTest {
         for (String parentNameName : setMap.keySet()){
             Name parentName = nameService.findByName(parentNameName);
             Map<String, String> childNames = setMap.get(parentNameName);
+            System.out.println("creating child labels for : " + parentName + " chidren : " + childNames.keySet().size());
             nameService.createMembers(parentName, new ArrayList<String>(childNames.keySet()));
         }
         csvReader.close();
@@ -111,7 +115,6 @@ public class ValueServiceTest {
 
         while (csvReader.readRecord()){
             Set<String> names = new HashSet<String>();
-            // hyst a
             String value = null;
             for (String header : headers){
                 if (header.equalsIgnoreCase(ValueService.VALUE)){
@@ -147,6 +150,10 @@ public class ValueServiceTest {
         searchResults = valueService.findForNames(searchCriteria);
         track = System.currentTimeMillis() - track;
         System.out.println(searchResults.size() +  " records in " + track + "ms");
+
+        System.out.println("going too try to save some data!");
+        totoMemoryDB.saveDataToMySQL();
+
     }
 
 }
