@@ -13,6 +13,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created with IntelliJ IDEA.
@@ -38,17 +39,17 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
 
     // call it 100000, might as well go for big selects to populate the memory DB
 
-    public static final int SELECTLIMIT = 100000;
+    private static final int SELECTLIMIT = 100000;
 
-    public static final String ID = "id";
+    protected static final String ID = "id";
 
-    public abstract String getTableName();
+    protected abstract String getTableName();
 
-    public abstract Map<String, Object> getColumnNameValueMap(EntityType entity);
+    protected abstract Map<String, Object> getColumnNameValueMap(EntityType entity);
 
-    public abstract RowMapper<EntityType> getRowMapper(TotoMemoryDB totoMemoryDB);
+    protected abstract RowMapper<EntityType> getRowMapper(TotoMemoryDB totoMemoryDB);
 
-    public final class StandardEntityByIdRowMapper implements RowMapper<EntityType> {
+    private final class StandardEntityByIdRowMapper implements RowMapper<EntityType> {
 
         TotoMemoryDB totoMemoryDB;
 
@@ -95,6 +96,50 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
         valuesCommaList = valuesCommaList.substring(0, valuesCommaList.length() - 2); //trim the last ", "
         final String insertSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "` (" + columnsCommaList + ") VALUES (" + valuesCommaList + ")";
         jdbcTemplate.update(insertSql, namedParams);
+    }
+
+    // inspired by value but could be used for a lot
+
+    public void bulkInsert(final TotoMemoryDB totoMemoryDB, final Set<EntityType> entities) throws DataAccessException {
+        if (!entities.isEmpty()){
+            long track = System.currentTimeMillis();
+
+            EntityType first = entities.iterator().next();
+
+            String columnsCommaList = "";
+            Map<String, Object> columnNameValueMap = getColumnNameValueMap(first);
+            final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+
+            for (String columnName : columnNameValueMap.keySet()) {
+                columnsCommaList += "`" + columnName + "`" + ", "; // build the comma separated list for use in the sql
+            }
+
+            columnsCommaList = columnsCommaList.substring(0, columnsCommaList.length() - 2); //trim the last ", "
+            StringBuilder insertSql = new StringBuilder();
+
+            insertSql.append("INSERT INTO `").append(totoMemoryDB.getDatabaseName()).append("`.`").append(getTableName()).append("` (").append(columnsCommaList).append(") VALUES ");
+
+            int count = 1;
+
+            for(EntityType entity : entities){
+
+
+                columnNameValueMap = getColumnNameValueMap(entity);
+                insertSql.append("(");
+                for (String columnName : columnNameValueMap.keySet()) {
+                    insertSql.append(":").append(columnName).append(count).append(", "); // build the comma separated list for use in the sql
+                    namedParams.addValue(columnName + count, columnNameValueMap.get(columnName));
+                }
+                insertSql.delete(insertSql.length() - 2, insertSql.length());
+                insertSql.append("), ");
+                count++;
+            }
+
+            insertSql.delete(insertSql.length() - 2, insertSql.length());
+            System.out.println(insertSql.toString());
+            jdbcTemplate.update(insertSql.toString(), namedParams);
+            System.out.println("bulk inserted " + entities.size() + " " + first.getClass().getName() + " objects in " + (System.currentTimeMillis() - track));
+        }
     }
 
     public void store(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {

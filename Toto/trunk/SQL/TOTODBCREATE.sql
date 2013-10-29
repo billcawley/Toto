@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Oct 28, 2013 at 03:38 PM
+-- Generation Time: Oct 29, 2013 at 04:53 PM
 -- Server version: 5.5.33
 -- PHP Version: 5.3.17
 
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `name` (
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=2476 ;
 
 -- --------------------------------------------------------
 
@@ -89,6 +89,9 @@ CREATE TABLE IF NOT EXISTS `provenance` (
   `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `method` varchar(40) COLLATE utf8_unicode_ci NOT NULL,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `row_headings` text COLLATE utf8_unicode_ci,
+  `column_headings` text COLLATE utf8_unicode_ci,
+  `context` text COLLATE utf8_unicode_ci,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
@@ -101,15 +104,11 @@ CREATE TABLE IF NOT EXISTS `provenance` (
 CREATE TABLE IF NOT EXISTS `value` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `provenance_id` int(11) NOT NULL,
-  `type` tinyint(4) NOT NULL,
-  `int` int(11) DEFAULT NULL,
   `double` double DEFAULT NULL,
-  `varchar` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `text` text COLLATE utf8_unicode_ci,
-  `timestamp` timestamp NULL DEFAULT NULL,
-  `deleted` tinyint(1) NOT NULL,
+  `deleted_info` text COLLATE utf8_unicode_ci,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=101535 ;
 
 -- --------------------------------------------------------
 
@@ -120,5 +119,6 @@ CREATE TABLE IF NOT EXISTS `value` (
 CREATE TABLE IF NOT EXISTS `value_name` (
   `value_id` int(11) NOT NULL,
   `name_id` int(11) NOT NULL,
-  PRIMARY KEY (`name_id`,`value_id`)
+  PRIMARY KEY (`name_id`,`value_id`),
+  KEY `value_id` (`value_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

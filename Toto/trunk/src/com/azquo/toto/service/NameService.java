@@ -20,8 +20,19 @@ import java.util.*;
 public class NameService {
 
 
+    /*TODO : move some of the basic child/peer manipulation stuff into Name?
+    criteria : the name can accept other names but NOT strings as parameters, that will be done in here
+     */
+
+
     @Autowired
     private TotoMemoryDB totoMemoryDB;
+
+    // hacky but testing for the moment
+
+    public void persist() {
+        totoMemoryDB.saveDataToMySQL();
+    }
 
     public Name findByName(final String name) {
         return totoMemoryDB.getNameByName(name);
@@ -101,6 +112,7 @@ public class NameService {
     }
 
     // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
+    // also use an add peer type thing as beloow?
 
     public void createPeer(final Name parentName, final String peerName) throws Exception {
         Name peer = findOrCreateName(peerName);
@@ -111,6 +123,13 @@ public class NameService {
             parentName.setPeersWillBePersisted(withNewPeer);
         }
     }
+
+    public Name addOrCreateMember(final Name parentName, final String nameName) throws Exception {
+        Name name = findOrCreateName(nameName);
+        parentName.addChildWillBePersisted(name);
+        return name;
+    }
+
     // copied from the one below but for peers. Probably scope for some factoring
     public void createPeer(final Name parentName, final String peerName, final String afterString, final int after) throws Exception {
         Name newPeer = findOrCreateName(peerName);

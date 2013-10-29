@@ -50,12 +50,16 @@ public class ValueServiceTest {
 
     @Test
     public void testCsvImport() throws Exception {
+
+        String filePath = "/home/cawley/Downloads/100000.csv";
         // skip file opening time . . .
         long track = System.currentTimeMillis();
         // for initial attempts at running it
         // going to write coode here foor CSV import that will be factored off into a function later
-        String nameWithPeersName = "Measure";
-        CsvReader csvReader = new CsvReader(new InputStreamReader(new FileInputStream("/home/cawley/Downloads/totosample.csv"), "8859_1"), ',');
+        String nameWithPeersName = "vendorstatsname";
+        System.out.println("about to open csv reader");
+        CsvReader csvReader = new CsvReader(new InputStreamReader(new FileInputStream(filePath), "8859_1"), '\t');
+        System.out.println("opened");
         csvReader.readHeaders();
         String[] headers = csvReader.getHeaders();
         Name nameWithPeers = null;
@@ -64,6 +68,7 @@ public class ValueServiceTest {
                 Name name = nameService.findOrCreateName(header);
                 if (header.equalsIgnoreCase(nameWithPeersName)){
                     nameWithPeers = name;
+                    System.out.println("name with peers : " + nameWithPeers);
                 }
             }
         }
@@ -76,43 +81,84 @@ public class ValueServiceTest {
             }
         }
 
-        // now sort out the name sets
-        Map<String, Map<String, String>> setMap = new HashMap<String, Map<String, String>>();
+        // now sort out the name sets directly under each header
+        // we're using arraylists here in case the order in the file is important
+        Map<String, List<String>> setMap = new HashMap<String, List<String>>();
 
         for (String header : headers){
             if (!header.equalsIgnoreCase(ValueService.VALUE)){
-                setMap.put(header, new HashMap<String, String>());
+                setMap.put(header, new ArrayList<String>());
             }
         }
 
-        // ok header maps prepared,now need to find all possible name values for each
-
+        /* ok header maps prepared,now need to find all possible name values for each - note we now need support
+        for labels with / in them soo right here we're just looking for the top level
+         */
+        int recordcount = 0;
         while (csvReader.readRecord()){
             for (String header : headers){
                 if (!header.equalsIgnoreCase(ValueService.VALUE)){
-                    Map<String, String> namesInThisColumn = setMap.get(header);
-                    if (namesInThisColumn.get(csvReader.get(header)) == null){ // not seen this name yet
-                        namesInThisColumn.put(csvReader.get(header),"");
+                    List<String> namesInThisColumn = setMap.get(header);
+                    if (!namesInThisColumn.contains(csvReader.get(header))){ // not seen this name yet
+                        namesInThisColumn.add(csvReader.get(header));
                     }
                 }
+            }
+            recordcount++;
+            if (recordcount%5000 == 0){
+                System.out.println("reading record" + recordcount);
             }
         }
 
         for (String parentNameName : setMap.keySet()){
             Name parentName = nameService.findByName(parentNameName);
-            Map<String, String> childNames = setMap.get(parentNameName);
-            System.out.println("creating child labels for : " + parentName + " chidren : " + childNames.keySet().size());
-            nameService.createMembers(parentName, new ArrayList<String>(childNames.keySet()));
+            List<String> rawChildNames = setMap.get(parentNameName);
+            // ok here need to get clever to deal with slashes
+            int count = 0;
+            for (String rawChildName : rawChildNames){
+                if (rawChildName.endsWith("/")){
+                    rawChildName = rawChildName.substring(0, rawChildName.length() -1);
+                }
+                if (rawChildName.startsWith("/")){
+                    rawChildName = rawChildName.substring(1, rawChildName.length());
+                }
+                if (rawChildName.contains("/")){
+                    Name justAdded = null;
+                    while (rawChildName.contains("/")){
+                        // lest work from the top
+                        String remainingTop = rawChildName.substring(0, rawChildName.indexOf("/"));
+                        rawChildName = rawChildName.substring(rawChildName.indexOf("/") + 1); // chop off the name we just extracted
+                        if (justAdded == null){ // the first of the directory string so to speak
+                            justAdded = nameService.addOrCreateMember(parentName, remainingTop);
+                            //System.out.println("parent : " + parentName + " child " + remainingTop);
+                            count++;
+                        } else {
+                            justAdded = nameService.addOrCreateMember(justAdded, remainingTop);
+                            //System.out.println("parent : " + justAdded + " child " + remainingTop);
+                            count++;
+                        }
+                        if (!rawChildName.contains("/")){ // the final one
+                            nameService.addOrCreateMember(justAdded, rawChildName);
+                            //System.out.println("parent : " + justAdded + " child " + rawChildName);
+                            count++;
+                        }
+                    }
+                } else {
+                    nameService.addOrCreateMember(parentName,rawChildName);
+                    count++;
+                }
+            }
+            System.out.println("creating child labels for : " + parentName + " chidren : " + count);
         }
         csvReader.close();
         // now put the data in  . . .watch out!
         // open the file again.
-        csvReader = new CsvReader(new InputStreamReader(new FileInputStream("/home/cawley/Downloads/totosample.csv"), "8859_1"), ',');
+        csvReader = new CsvReader(new InputStreamReader(new FileInputStream(filePath), "8859_1"), '\t');
         csvReader.readHeaders();
         headers = csvReader.getHeaders();
 
         Provenance provenance = provenanceService.getTestProvenance();
-
+        recordcount = 0;
         while (csvReader.readRecord()){
             Set<String> names = new HashSet<String>();
             String value = null;
@@ -120,16 +166,31 @@ public class ValueServiceTest {
                 if (header.equalsIgnoreCase(ValueService.VALUE)){
                     value = csvReader.get(header);
                 } else {
-                    names.add(csvReader.get(header));
+                    String rawName = csvReader.get(header);
+                    if (rawName.endsWith("/")){
+                        rawName = rawName.substring(0, rawName.length() -1);
+                    }
+                    if (rawName.startsWith("/")){
+                        rawName = rawName.substring(1, rawName.length());
+                    }
+                    // after trimming we want the last lowest level once against the value
+                    if (rawName.contains("/")){
+                        rawName = rawName.substring(rawName.lastIndexOf("/") + 1);
+                    }
+                    names.add(rawName);
                 }
             }
+            recordcount++;
             valueService.storeValueWithProvenanceAndNames(value, provenance, names);
+            if (recordcount%5000 == 0){
+                System.out.println("reading record" + recordcount);
+            }
         }
         System.out.println("csv import took " + (System.currentTimeMillis() - track) + "ms");
 
 
-        Name test1 = nameService.findByName("Time Activity");
-        Name test2 = nameService.findByName("Total All Methods");
+        Name test1 = nameService.findByName("S++");
+        Name test2 = nameService.findByName("www.treesdirect.co.uk");
 //        Name test3 = nameService.findByName("Primary Strategy - Targeted Support");
 //        Name test4 = nameService.findByName("Lynne Swainston");
 
@@ -151,8 +212,26 @@ public class ValueServiceTest {
         track = System.currentTimeMillis() - track;
         System.out.println(searchResults.size() +  " records in " + track + "ms");
 
-        System.out.println("going too try to save some data!");
         totoMemoryDB.saveDataToMySQL();
+
+        /*System.out.println("search results expanded");
+        for (Value v : searchResults){
+            System.out.print(v.getText() + " ");
+            for (Name n : v.getNames()){
+                System.out.print(n.getName() + " ");
+            }
+            System.out.println("");
+        } */
+
+        //System.out.println("going too try to save some data!");
+        //totoMemoryDB.saveDataToMySQL();
+
+/*        System.out.println("name hierarchy from this uploaded file :");
+        for (String header : headers){
+            if (!header.equalsIgnoreCase(ValueService.VALUE)){
+                nameService.logNameHierarchy(nameService.findByName(header), 0);
+            }
+        }*/
 
     }
 

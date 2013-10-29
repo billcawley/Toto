@@ -166,12 +166,26 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     }
 
+    // more efficient if just building the set by adding
+
+    public synchronized void addChildWillBePersisted(Name child) throws Exception {
+        checkDatabaseMatches(child);
+        if (children.add(child)){ // something actually changed :)
+            child.parents.add(this);
+            if(!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
+                childrenChanged = true;
+                setNeedsPersisting();
+            }
+        }
+
+    }
+
     // removal ok on linked lists
 
     public synchronized void removeFromChildrenWillBePersisted(Name name) throws Exception {
         checkDatabaseMatches(name);// even if not needed throw the damn exception!
         name.parents.remove(this);
-        if (children.remove(name)) { // it changed the set
+        if (children.remove(name) && !getTotoMemoryDB().getNeedsLoading()) { // it changed the set and we're not loading
             childrenChanged = true;
             setNeedsPersisting();
         }
@@ -184,15 +198,18 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     public synchronized void setPeersWillBePersisted(LinkedHashSet<Name> peers) throws Exception {
         checkDatabaseForSet(peers);
         this.peers = peers;
-        peersChanged = true;
-        setNeedsPersisting();
+        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
+            peersChanged = true;
+            setNeedsPersisting();
+        }
+
     }
 
     // removal ok on linked lists
 
     public synchronized void removeFromPeersWillBePersisted(Name name) throws Exception {
         checkDatabaseMatches(name);// even if not needed throw the damn exception!
-        if (peers.remove(name)) { // it changed the set
+        if (peers.remove(name) && !getTotoMemoryDB().getNeedsLoading()) { // it changed the set
             peersChanged = true;
             setNeedsPersisting();
         }

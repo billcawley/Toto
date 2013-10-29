@@ -51,6 +51,9 @@ public class NameController {
         if (instructions == null){
             return "no command passed";
         }
+        if (instructions.equals("persist")){
+            nameService.persist();
+        }
         instructions = instructions.trim();
         // typically a command will start with a name
 

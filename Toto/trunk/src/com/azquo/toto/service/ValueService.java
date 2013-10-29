@@ -53,7 +53,6 @@ public class ValueService {
     public String storeValueWithProvenanceAndNames(final String valueString, final Provenance provenance, final Set<String> names) throws Exception {
         String toReturn = "";
         Set<Name> validNames = new HashSet<Name>();
-        //long track = System.nanoTime();
         Map<String, String> nameCheckResult = nameService.isAValidNameSet(names, validNames);
         String error = nameCheckResult.get(NameService.ERROR);
         String warning = nameCheckResult.get(NameService.ERROR);
@@ -62,29 +61,24 @@ public class ValueService {
         } else if(warning != null){
             toReturn += warning;
         }
-        //System.out.println("track 1   : " + (System.nanoTime() - track) + "  ---   ");
-        //track = System.nanoTime();
         List<Value> existingValues = findForNames(validNames);
-        //System.out.println("track 2-1 : " + (System.nanoTime() - track) + "  ---   ");
-        //track = System.nanoTime();
-
-        for (Value existingValue : existingValues){
-            deleteValue(existingValue);
-            // provenance table : person, time, method, name
-            toReturn += "  deleting old value entered on put old timestamp here, need provenance table";
+        boolean alreadyInDatabase = false;
+        for (Value existingValue : existingValues){ // really should only be one
+            if (existingValue.getText().equals(valueString)){
+                toReturn += "  that value already exists, skipping";
+                alreadyInDatabase = true;
+            } else {
+                deleteValue(existingValue);
+                // provenance table : person, time, method, name
+                toReturn += "  deleting old value entered on put old timestamp here, need provenance table";
+            }
         }
-
-        //System.out.println("track 2-2 : " + (System.nanoTime() - track) + "  ---   ");
-        //track = System.nanoTime();
-        Value value = createValue(provenance.getId(), 0,valueString);
-        // now add the value??
-        //System.out.println("track 2-3 : " + (System.nanoTime() - track) + "  ---   ");
-        //track = System.nanoTime();
-        toReturn += "  stored";
-        // and link to names
-        linkValueToNames(value, validNames);
-        //System.out.println("track 3   : " + (System.nanoTime() - track) + "  ---   ");
-
+        if(!alreadyInDatabase){
+            Value value = createValue(provenance.getId(), 0,valueString);
+            toReturn += "  stored";
+            // and link to names
+            linkValueToNames(value, validNames);
+        }
         return toReturn;
     }
 

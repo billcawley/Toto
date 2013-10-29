@@ -105,6 +105,26 @@ public class NameDAO extends StandardDAO<Name> {
         return true;
     }
 
+    public boolean linkParentAndChildren(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent) throws DataAccessException {
+
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES ";
+        int count = 1;
+        for (Name child : parent.getChildren()) {
+            // I'm taking off the check - I think it's so rare we'll just let the DB complain
+            updateSql += "(:" + PARENTID + count + ",:" + CHILDID + count + ",:" + POSITION + count + "),";
+            namedParams.addValue(PARENTID + count, parent.getId());
+            namedParams.addValue(CHILDID + count, child.getId());
+            namedParams.addValue(POSITION + count, count);
+            count++;
+        }
+        updateSql = updateSql.substring(0, updateSql.length() - 1);
+        long track = System.currentTimeMillis();
+        jdbcTemplate.update(updateSql, namedParams);
+        System.out.println("parent child link time : " + (System.currentTimeMillis() - track) + " for " + (count - 1) + " names");
+        return true;
+    }
+
     public int unlinkParentAndChild(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent, final Name child) throws DataAccessException {
         MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, parent.getId());

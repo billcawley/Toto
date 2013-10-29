@@ -32,8 +32,6 @@ public class TotoMemoryDBTest {
     @Test
     public void testLoadData() throws Exception {
 
-        totoMemoryDB.loadData();
-
         Name test1 = nameService.findByName("Time Activity");
         Name test2 = nameService.findByName("Total All Methods");
 //        Name test3 = nameService.findByName("Primary Strategy - Targeted Support");
@@ -44,19 +42,13 @@ public class TotoMemoryDBTest {
         searchCriteria.add(test2);
 //        searchCriteria.add(test3);
 //        searchCriteria.add(test4);
-        long track = System.currentTimeMillis();
-        List<Value> searchResults = valueService.findForNames(searchCriteria);
-        track = System.currentTimeMillis() - track;
-        System.out.println(searchResults.size() +  " records in " + track + "ms");
-        track = System.currentTimeMillis();
-        searchResults = valueService.findForNames(searchCriteria);
-        track = System.currentTimeMillis() - track;
-        System.out.println(searchResults.size() +  " records in " + track + "ms");
-        track = System.currentTimeMillis();
-        searchResults = valueService.findForNames(searchCriteria);
-        track = System.currentTimeMillis() - track;
-        System.out.println(searchResults.size() +  " records in " + track + "ms");
-
-
+        long track = System.nanoTime();
+        int count = 100;
+        for (int i = 0; i < count; i++){
+            List<Value> searchResults = valueService.findForNames(searchCriteria);
+            System.out.println(searchResults.size() +  " records");
+        }
+        long average = (System.nanoTime() - track) / count;
+        System.out.println("records " + average + "ns");
     }
 }
