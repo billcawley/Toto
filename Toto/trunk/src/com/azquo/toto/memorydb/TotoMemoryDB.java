@@ -62,18 +62,18 @@ public final class TotoMemoryDB {
         nextId = maxIdAtLoad + 1;
     }
 
-    public String getDatabaseName(){
+    public String getDatabaseName() {
         return databaseName;
     }
 
-    public boolean getNeedsLoading(){
+    public boolean getNeedsLoading() {
         return needsLoading;
     }
 
     // right now this will not run properly!
 
-    synchronized protected void loadData() throws Exception{
-        if (needsLoading){ // only allow it once!
+    synchronized protected void loadData() throws Exception {
+        if (needsLoading) { // only allow it once!
             // here we'll populate the memory DB from the database
             long track = System.currentTimeMillis();
 
@@ -88,37 +88,64 @@ public final class TotoMemoryDB {
             // now gotta link 'em
 
             track = System.currentTimeMillis();
+
             int linkCounter = 0;
+            // going to speed things up by selecting the lot like we do with value
 
-            for (Name name : nameByIdMap.values()){
-                List<Integer> childIdsForThisName = nameDAO.findChildIdsForName(this, NameDAO.SetDefinitionTable.name_set_definition, name);
-                LinkedHashSet<Name> childSet = new LinkedHashSet<Name>(childIdsForThisName.size());
-                for (Integer childId: childIdsForThisName){
-                    childSet.add(nameByIdMap.get(childId));
-                    linkCounter++;
+
+            int currentParentId = -1;
+            LinkedHashSet<Name> childSet = new LinkedHashSet<Name>();
+            for (String parentIdChildIdPair : nameDAO.findAllParentChildLinksOrderByParentIdPosition(this)) {
+                int parentId = Integer.parseInt(parentIdChildIdPair.substring(0, parentIdChildIdPair.indexOf(",")));
+                int childId = Integer.parseInt(parentIdChildIdPair.substring(parentIdChildIdPair.indexOf(",") + 1));
+                // ok we're switching to a new value ID, link the ones previously
+                if (parentId != currentParentId) {
+                    if (currentParentId != -1) { // assign ones just passed if not the first
+                        Name parent = nameByIdMap.get(currentParentId);
+                        parent.setChildrenWillBePersisted(childSet);
+                    }
+                    currentParentId = parentId;
+                    childSet = new LinkedHashSet<Name>();
                 }
-                // this function will now take care of the parents
-                name.setChildrenWillBePersisted(childSet);
-                if (name.getId() > maxIdAtLoad){
-                    maxIdAtLoad = name.getId();
-                }
+                childSet.add(nameByIdMap.get(childId));
+                linkCounter++;
             }
-
-            System.out.println(linkCounter + " child.parent names linked " + (System.currentTimeMillis() - track) + "ms");
+            // clear up the last one
+            if (childSet.size() > 0) {
+                Name parent = nameByIdMap.get(currentParentId);
+                parent.setChildrenWillBePersisted(childSet);
+            }
+            System.out.println(linkCounter + " child parent linked created in " + (System.currentTimeMillis() - track) + "ms");
             track = System.currentTimeMillis();
+
+
             linkCounter = 0;
+            // again need too speed things up . . .
 
-            for (Name name : nameByIdMap.values()){
-                List<Integer> peerIdsForThisName = nameDAO.findChildIdsForName(this, NameDAO.SetDefinitionTable.peer_set_definition, name);
-                LinkedHashSet<Name> peerSet = new LinkedHashSet<Name>(peerIdsForThisName.size());
-                for (Integer peerId: peerIdsForThisName){
-                    peerSet.add(nameByIdMap.get(peerId));
-                    linkCounter++;
+
+            currentParentId = -1;
+            LinkedHashSet<Name> peerSet = new LinkedHashSet<Name>();
+            for (String parentIdPeerIdPair : nameDAO.findAllPeerLinksOrderByParentIdPosition(this)) {
+                int parentId = Integer.parseInt(parentIdPeerIdPair.substring(0, parentIdPeerIdPair.indexOf(",")));
+                int peerId = Integer.parseInt(parentIdPeerIdPair.substring(parentIdPeerIdPair.indexOf(",") + 1));
+                // ok we're switching to a new value ID, link the ones previously
+                if (parentId != currentParentId) {
+                    if (currentParentId != -1) { // assign ones just passed if not the first
+                        Name parent = nameByIdMap.get(currentParentId);
+                        parent.setPeersWillBePersisted(peerSet);
+                    }
+                    currentParentId = parentId;
+                    peerSet = new LinkedHashSet<Name>();
                 }
-                name.setPeersWillBePersisted(peerSet);
+                peerSet.add(nameByIdMap.get(peerId));
+                linkCounter++;
             }
-
-            System.out.println(linkCounter + " peer names linked " + (System.currentTimeMillis() - track) + "ms");
+            // clear up the last one
+            if (peerSet.size() > 0) {
+                Name parent = nameByIdMap.get(currentParentId);
+                parent.setPeersWillBePersisted(peerSet);
+            }
+            System.out.println(linkCounter + " peer names links created in " + (System.currentTimeMillis() - track) + "ms");
             track = System.currentTimeMillis();
 
             // ok this was taking a while so let's try a new idea where we select the whole lot ordering by value id
@@ -139,12 +166,12 @@ public final class TotoMemoryDB {
             }*/
             int currentValueId = -1;
             Set<Name> nameSet = new HashSet<Name>();
-            for (String valueNameIdPair : valueDAO.findAllValueNameLinksOrderByValue(this)){
+            for (String valueNameIdPair : valueDAO.findAllValueNameLinksOrderByValue(this)) {
                 int valueId = Integer.parseInt(valueNameIdPair.substring(0, valueNameIdPair.indexOf(",")));
                 int nameId = Integer.parseInt(valueNameIdPair.substring(valueNameIdPair.indexOf(",") + 1));
                 // ok we're switching too a new value ID, link the ones previously
-                if (valueId != currentValueId){
-                    if (currentValueId != -1){ // assign ones just passed if not the first
+                if (valueId != currentValueId) {
+                    if (currentValueId != -1) { // assign ones just passed if not the first
                         Value value = valueByIdMap.get(currentValueId);
                         value.setNamesWillBePersisted(nameSet);
                     }
@@ -155,23 +182,23 @@ public final class TotoMemoryDB {
                 linkCounter++;
             }
             // clear up the last one
-            if (nameSet.size() > 0){
+            if (nameSet.size() > 0) {
                 Value value = valueByIdMap.get(currentValueId);
                 value.setNamesWillBePersisted(nameSet);
             }
 
-            System.out.println(linkCounter + " values linked to names " + (System.currentTimeMillis() - track) + "ms");
+            System.out.println(linkCounter + " values name links created in " + (System.currentTimeMillis() - track) + "ms");
             track = System.currentTimeMillis();
 
             // check ids for max, a bit hacky
 
-            for (Provenance provenance : allProvenance){
-                if (provenance.getId() > maxIdAtLoad){
+            for (Provenance provenance : allProvenance) {
+                if (provenance.getId() > maxIdAtLoad) {
                     maxIdAtLoad = provenance.getId();
                 }
             }
-            for (Value value : allValues){
-                if (value.getId() > maxIdAtLoad){
+            for (Value value : allValues) {
+                if (value.getId() > maxIdAtLoad) {
                     maxIdAtLoad = value.getId();
                 }
             }
@@ -181,31 +208,31 @@ public final class TotoMemoryDB {
 
     // reads from a list of changed objects
 
-    public synchronized void saveDataToMySQL(){
+    public synchronized void saveDataToMySQL() {
         // need to go through each object and links I guess!
 
         // this is where I need to think carefully about concurrency, totodb has the last say when the maps are modified although the flags are another point
         // for the moment just make it work.
-        System.out.println("nnp size : " +  namesNeedPersisting.size());
-        for (Name name : new ArrayList<Name>(namesNeedPersisting)){
-            if (name.getEntityColumnsChanged()){
+        System.out.println("nnp size : " + namesNeedPersisting.size());
+        for (Name name : new ArrayList<Name>(namesNeedPersisting)) {
+            if (name.getEntityColumnsChanged()) {
                 // store the name
                 nameDAO.store(this, name);
             }
             int links = 0;
-            if (name.getChildrenChanged()){
-                nameDAO.unlinkAllForParent(this, NameDAO.SetDefinitionTable.name_set_definition,name);
-                    nameDAO.linkParentAndChildren(this, NameDAO.SetDefinitionTable.name_set_definition,name);
-                    links += name.getChildren().size();
-                System.out.println(name.getName() + " changed children size : " + name.getChildren().size() + " links : " +  links);
+            if (name.getChildrenChanged()) { // then add to a sat to be passed to a faster function??
+                nameDAO.unlinkAllForParent(this, NameDAO.SetDefinitionTable.name_set_definition, name);
+                nameDAO.linkParentAndChildren(this, NameDAO.SetDefinitionTable.name_set_definition, name);
+                links += name.getChildren().size();
+                System.out.println(name.getName() + " changed children size : " + name.getChildren().size() + " links : " + links);
             }
 
 
-            if (name.getPeersChanged()){
+            if (name.getPeersChanged()) {
                 int position = 1;
-                nameDAO.unlinkAllForParent(this, NameDAO.SetDefinitionTable.peer_set_definition,name);
-                for (Name peer : name.getPeers()){
-                    nameDAO.linkParentAndChild(this, NameDAO.SetDefinitionTable.peer_set_definition,name, peer, position);
+                nameDAO.unlinkAllForParent(this, NameDAO.SetDefinitionTable.peer_set_definition, name);
+                for (Name peer : name.getPeers()) {
+                    nameDAO.linkParentAndChild(this, NameDAO.SetDefinitionTable.peer_set_definition, name, peer, position);
                     position++;
                 }
             }
@@ -213,17 +240,17 @@ public final class TotoMemoryDB {
             // going to save value label links by value to label rather than label to value as the lists on the latter will be big. Change too one value may cause much relinking
             // we don't deal with parents, they're just convenience lookup lists
         }
-        System.out.println("vnp size : " +  valuesNeedPersisting.size());
+        System.out.println("vnp size : " + valuesNeedPersisting.size());
 
         Set<Value> upTo500toLink = new HashSet<Value>();
         Set<Value> upTo500toInsert = new HashSet<Value>();
 
-        for (Value value : new ArrayList<Value>(valuesNeedPersisting)){
-        long track = System.currentTimeMillis();
+        for (Value value : new ArrayList<Value>(valuesNeedPersisting)) {
+            long track = System.currentTimeMillis();
 
 
-            if(value.getEntityColumnsChanged()){
-                if (value.getNeedsInserting()){
+            if (value.getEntityColumnsChanged()) {
+                if (value.getNeedsInserting()) {
                     upTo500toInsert.add(value);
                 } else { // this really means update then
                     System.out.println("value needed updating : " + value);
@@ -236,18 +263,18 @@ public final class TotoMemoryDB {
 
             // ok going to go in groups of 500 here for linking. May need to do the same for store also
 
-            if(value.getNamesChanged()){
+            if (value.getNamesChanged()) {
                 upTo500toLink.add(value);
             }
             //System.out.println("track 2 " + (System.currentTimeMillis() - track));
             track = System.currentTimeMillis();
-            if (upTo500toLink.size() == 500){
+            if (upTo500toLink.size() == 500) {
                 valueDAO.unlinkValuesFromNames(this, upTo500toLink);
                 valueDAO.linkValuesToNames(this, upTo500toLink);
                 upTo500toLink = new HashSet<Value>();
             }
             //System.out.println("track 3 " + (System.currentTimeMillis() - track));
-            if (upTo500toInsert.size() == 500){
+            if (upTo500toInsert.size() == 500) {
                 valueDAO.bulkInsert(this, upTo500toInsert);
                 upTo500toInsert = new HashSet<Value>();
             }
@@ -255,16 +282,16 @@ public final class TotoMemoryDB {
             value.setAsPersisted();
             //System.out.println("track 5 " + (System.currentTimeMillis() - track));
         }
-        if (!upTo500toLink.isEmpty()){
+        if (!upTo500toLink.isEmpty()) {
             valueDAO.unlinkValuesFromNames(this, upTo500toLink);
             valueDAO.linkValuesToNames(this, upTo500toLink);
         }
-        if (!upTo500toInsert.isEmpty()){
+        if (!upTo500toInsert.isEmpty()) {
             valueDAO.bulkInsert(this, upTo500toInsert);
         }
-        System.out.println("pnp size : " +  provenanceNeedsPersisting.size());
-        for (Provenance  provenance : new ArrayList<Provenance>(provenanceNeedsPersisting)){
-            if(provenance.getEntityColumnsChanged()){
+        System.out.println("pnp size : " + provenanceNeedsPersisting.size());
+        for (Provenance provenance : new ArrayList<Provenance>(provenanceNeedsPersisting)) {
+            if (provenance.getEntityColumnsChanged()) {
                 provenanceDAO.store(this, provenance);
             }
             provenance.setAsPersisted();
@@ -274,33 +301,35 @@ public final class TotoMemoryDB {
 
     }
 
-    protected synchronized int getNextId(){
+    protected synchronized int getNextId() {
         nextId++; // increment but return what it was . . .a little messy but I want tat value in memory to be what it says
-        return nextId -1;
+        return nextId - 1;
     }
 
-    public Name getNameByName(String name){
-        return nameByNameMap.get(name.toLowerCase());
+    // for search purposes probably should trim
+
+    public Name getNameByName(String name) {
+        return nameByNameMap.get(name.toLowerCase().trim());
     }
 
-    public Name getNameById(int id){
+    public Name getNameById(int id) {
         return nameByIdMap.get(id);
     }
 
-    public Value getValueById(int id){
+    public Value getValueById(int id) {
         return valueByIdMap.get(id);
     }
 
-    public Provenance getProvenanceById(int id){
+    public Provenance getProvenanceById(int id) {
         return provenanceByIdMap.get(id);
     }
 
     // synchronised?
 
-    protected void addNameToDb(Name newName) throws Exception{
+    protected void addNameToDb(Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (nameByIdMap.get(newName.getId()) != null){
+        if (nameByIdMap.get(newName.getId()) != null) {
             throw new Exception("tried to add a name to the database with an existing id! new id = " + newName.getId());
         } else {
             nameByIdMap.put(newName.getId(), newName);
@@ -310,56 +339,56 @@ public final class TotoMemoryDB {
     // ok I'd have liked this to be part of the above function but the name won't have been initialised, has to be called in the name constructor
     // custom maps here need to be dealt with in the constructors I think
 
-    protected void addNameToDbNameMap(Name newName) throws Exception{
+    protected void addNameToDbNameMap(Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
-        if (nameByNameMap.get(newName.getName().toLowerCase()) != null){
+        if (nameByNameMap.get(newName.getName().toLowerCase()) != null) {
             throw new Exception("tried to add a name to the database with an existing name!");
         } else {
             nameByNameMap.put(newName.getName().toLowerCase(), newName);
         }
     }
 
-    protected void setNameNeedsPersisting(Name name){
+    protected void setNameNeedsPersisting(Name name) {
         namesNeedPersisting.add(name);
     }
 
-    protected void removeNameNeedsPersisting(Name name){
+    protected void removeNameNeedsPersisting(Name name) {
         namesNeedPersisting.remove(name);
     }
 
-    protected void addValueToDb(Value newValue) throws Exception{
+    protected void addValueToDb(Value newValue) throws Exception {
         newValue.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (valueByIdMap.get(newValue.getId()) != null){
+        if (valueByIdMap.get(newValue.getId()) != null) {
             throw new Exception("tried to add a value to the database with an existing id!");
         } else {
             valueByIdMap.put(newValue.getId(), newValue);
         }
     }
 
-    protected void setValueNeedsPersisting(Value value){
+    protected void setValueNeedsPersisting(Value value) {
         valuesNeedPersisting.add(value);
     }
 
-    protected void removeValueNeedsPersisting(Value value){
+    protected void removeValueNeedsPersisting(Value value) {
         valuesNeedPersisting.remove(value);
     }
 
-    protected void addProvenanceToDb(Provenance newProvenance) throws Exception{
+    protected void addProvenanceToDb(Provenance newProvenance) throws Exception {
         newProvenance.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (provenanceByIdMap.get(newProvenance.getId()) != null){
+        if (provenanceByIdMap.get(newProvenance.getId()) != null) {
             throw new Exception("tried to add a value to the database with an existing id!");
         } else {
             provenanceByIdMap.put(newProvenance.getId(), newProvenance);
         }
     }
 
-    protected void setProvenanceNeedsPersisting(Provenance provenance){
+    protected void setProvenanceNeedsPersisting(Provenance provenance) {
         provenanceNeedsPersisting.add(provenance);
     }
 
-    protected void removeProvenanceNeedsPersisting(Provenance provenance){
+    protected void removeProvenanceNeedsPersisting(Provenance provenance) {
         provenanceNeedsPersisting.remove(provenance);
     }
 

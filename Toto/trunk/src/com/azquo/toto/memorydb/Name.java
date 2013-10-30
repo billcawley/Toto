@@ -42,7 +42,11 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public Name(TotoMemoryDB totoMemoryDB, int id, String name) throws Exception {
         super(totoMemoryDB, id);
-        this.name = name;
+        if (name == null || name.trim().length() == 0){ // then I think we thrown an exception, can't have a blank name!
+            throw new Exception("error cannot create name with blank oor null name!");
+        }
+        // Is there anything wrong with trimming here?
+        this.name = name.trim();
         values = new HashSet<Value>();
         parents = new HashSet<Name>();
         children = new LinkedHashSet<Name>();
@@ -146,6 +150,14 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     public synchronized void setChildrenWillBePersisted(LinkedHashSet<Name> children) throws Exception {
         checkDatabaseForSet(children);
 
+        // check for circular references
+        for (Name newChild : children){
+            if (newChild.equals(this) || getParents().contains(newChild)){
+                throw new Exception("error cannot assign child due to circular reference, " + newChild + " cannot be added to " + this);
+            }
+        }
+
+
         // remove all parents on the old one
         for (Name oldChild : this.children){
             oldChild.parents.remove(this);
@@ -170,6 +182,10 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public synchronized void addChildWillBePersisted(Name child) throws Exception {
         checkDatabaseMatches(child);
+        if (child.equals(this) || getParents().contains(child)){
+            throw new Exception("error cannot assign child due to circular reference, " + child + " cannot be added to " + this);
+        }
+
         if (children.add(child)){ // something actually changed :)
             child.parents.add(this);
             if(!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
@@ -197,6 +213,11 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public synchronized void setPeersWillBePersisted(LinkedHashSet<Name> peers) throws Exception {
         checkDatabaseForSet(peers);
+        for (Name peer : peers){
+            if (peer.equals(this)){
+                throw new Exception("error name cannot be a peer of itself " + this);
+            }
+        }
         this.peers = peers;
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
             peersChanged = true;

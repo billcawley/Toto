@@ -112,7 +112,7 @@ public class NameService {
     }
 
     // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
-    // also use an add peer type thing as beloow?
+    // also use an add peer type thing as below? what about blank, throw an exception here?
 
     public void createPeer(final Name parentName, final String peerName) throws Exception {
         Name peer = findOrCreateName(peerName);
@@ -301,7 +301,7 @@ public class NameService {
         track = System.currentTimeMillis();
 
         if (hasPeers.isEmpty()) {
-            error += "  none of the namess passed have peers, I don't know what namess are required for this value";
+            error += "  none of the names passed have peers, I don't know what names are required for this value";
         } else if (hasPeers.size() > 1) {
             error += "  more than one name passed has peers ";
             for (Name has : hasPeers) {

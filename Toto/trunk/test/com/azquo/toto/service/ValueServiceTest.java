@@ -51,7 +51,7 @@ public class ValueServiceTest {
     @Test
     public void testCsvImport() throws Exception {
 
-        String filePath = "/home/cawley/Downloads/100000.csv";
+        String filePath = "/home/cawley/Downloads/300000.csv";
         // skip file opening time . . .
         long track = System.currentTimeMillis();
         // for initial attempts at running it
@@ -62,6 +62,15 @@ public class ValueServiceTest {
         System.out.println("opened");
         csvReader.readHeaders();
         String[] headers = csvReader.getHeaders();
+        // are the following few lines necessary??
+        ArrayList<String> checkedHeaders = new ArrayList<String>();
+        for(String header : headers){
+            if (header.trim().length() > 0){ // I don't know if the csv reader checks for this
+                checkedHeaders.add(header);
+            }
+        }
+        // seems a bit of a complex way around it!
+        headers = checkedHeaders.toArray(new String[checkedHeaders.size()]);
         Name nameWithPeers = null;
         for (String header : headers){
             if (!header.equalsIgnoreCase(ValueService.VALUE)){
@@ -99,8 +108,9 @@ public class ValueServiceTest {
             for (String header : headers){
                 if (!header.equalsIgnoreCase(ValueService.VALUE)){
                     List<String> namesInThisColumn = setMap.get(header);
-                    if (!namesInThisColumn.contains(csvReader.get(header))){ // not seen this name yet
-                        namesInThisColumn.add(csvReader.get(header));
+                    if (csvReader.get(header).trim().length() > 0 && !namesInThisColumn.contains(csvReader.get(header))){ // not seen this name yet
+                        //System.out.println("adding to names in the column : " + csvReader.get(header).trim());
+                        namesInThisColumn.add(csvReader.get(header).trim());
                     }
                 }
             }
@@ -116,6 +126,7 @@ public class ValueServiceTest {
             // ok here need to get clever to deal with slashes
             int count = 0;
             for (String rawChildName : rawChildNames){
+                rawChildName = rawChildName.replace("//", "/");
                 if (rawChildName.endsWith("/")){
                     rawChildName = rawChildName.substring(0, rawChildName.length() -1);
                 }
@@ -148,14 +159,13 @@ public class ValueServiceTest {
                     count++;
                 }
             }
-            System.out.println("creating child labels for : " + parentName + " chidren : " + count);
+            System.out.println("created child labels for : " + parentName + " chidren : " + count);
         }
         csvReader.close();
         // now put the data in  . . .watch out!
         // open the file again.
         csvReader = new CsvReader(new InputStreamReader(new FileInputStream(filePath), "8859_1"), '\t');
-        csvReader.readHeaders();
-        headers = csvReader.getHeaders();
+        csvReader.readHeaders(); // might be necessary for init
 
         Provenance provenance = provenanceService.getTestProvenance();
         recordcount = 0;
@@ -166,7 +176,7 @@ public class ValueServiceTest {
                 if (header.equalsIgnoreCase(ValueService.VALUE)){
                     value = csvReader.get(header);
                 } else {
-                    String rawName = csvReader.get(header);
+                    String rawName = csvReader.get(header).trim();
                     if (rawName.endsWith("/")){
                         rawName = rawName.substring(0, rawName.length() -1);
                     }
@@ -177,13 +187,15 @@ public class ValueServiceTest {
                     if (rawName.contains("/")){
                         rawName = rawName.substring(rawName.lastIndexOf("/") + 1);
                     }
-                    names.add(rawName);
+                    names.add(rawName.trim());
                 }
             }
-            recordcount++;
-            valueService.storeValueWithProvenanceAndNames(value, provenance, names);
-            if (recordcount%5000 == 0){
-                System.out.println("reading record" + recordcount);
+            if (value.trim().length() > 0){ // no point storing if there's no value!
+                recordcount++;
+                valueService.storeValueWithProvenanceAndNames(value, provenance, names);
+                if (recordcount%5000 == 0){
+                    System.out.println("reading record" + recordcount);
+                }
             }
         }
         System.out.println("csv import took " + (System.currentTimeMillis() - track) + "ms");
