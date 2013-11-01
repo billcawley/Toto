@@ -3,7 +3,6 @@ package com.azquo.toto.memorydb;
 import com.azquo.toto.dao.NameDAO;
 import com.azquo.toto.dao.ProvenanceDAO;
 import com.azquo.toto.dao.ValueDAO;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
 
@@ -188,7 +187,7 @@ public final class TotoMemoryDB {
             }
 
             System.out.println(linkCounter + " values name links created in " + (System.currentTimeMillis() - track) + "ms");
-            track = System.currentTimeMillis();
+            //track = System.currentTimeMillis();
 
             // check ids for max, a bit hacky
 
@@ -246,9 +245,6 @@ public final class TotoMemoryDB {
         Set<Value> upTo500toInsert = new HashSet<Value>();
 
         for (Value value : new ArrayList<Value>(valuesNeedPersisting)) {
-            long track = System.currentTimeMillis();
-
-
             if (value.getEntityColumnsChanged()) {
                 if (value.getNeedsInserting()) {
                     upTo500toInsert.add(value);
@@ -258,29 +254,22 @@ public final class TotoMemoryDB {
                 }
             }
 
-            //System.out.println("track 1 " + (System.currentTimeMillis() - track));
-            track = System.currentTimeMillis();
 
             // ok going to go in groups of 500 here for linking. May need to do the same for store also
 
             if (value.getNamesChanged()) {
                 upTo500toLink.add(value);
             }
-            //System.out.println("track 2 " + (System.currentTimeMillis() - track));
-            track = System.currentTimeMillis();
             if (upTo500toLink.size() == 500) {
                 valueDAO.unlinkValuesFromNames(this, upTo500toLink);
                 valueDAO.linkValuesToNames(this, upTo500toLink);
                 upTo500toLink = new HashSet<Value>();
             }
-            //System.out.println("track 3 " + (System.currentTimeMillis() - track));
             if (upTo500toInsert.size() == 500) {
                 valueDAO.bulkInsert(this, upTo500toInsert);
                 upTo500toInsert = new HashSet<Value>();
             }
-            //System.out.println("track 4 " + (System.currentTimeMillis() - track));
             value.setAsPersisted();
-            //System.out.println("track 5 " + (System.currentTimeMillis() - track));
         }
         if (!upTo500toLink.isEmpty()) {
             valueDAO.unlinkValuesFromNames(this, upTo500toLink);

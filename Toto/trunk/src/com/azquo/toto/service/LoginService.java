@@ -1,6 +1,5 @@
 package com.azquo.toto.service;
 
-import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -22,7 +21,7 @@ public class LoginService {
 
 
     public LoggedInConnection login(String databaseName, String user, String password){
-
+        // TODO : detect duplicate logins?
         if (databaseName.equalsIgnoreCase("tototest") && user.equalsIgnoreCase("bill") && password.equalsIgnoreCase("thew1password")){
             // just hacking it for the mo
             LoggedInConnection lim = new LoggedInConnection(System.nanoTime() + "" , totoMemoryDB, user);

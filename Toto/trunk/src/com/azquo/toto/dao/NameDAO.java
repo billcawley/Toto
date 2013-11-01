@@ -3,13 +3,11 @@ package com.azquo.toto.dao;
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.dao.DataAccessException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,24 +88,6 @@ public class NameDAO extends StandardDAO<Name> {
     public RowMapper<Name> getRowMapper(TotoMemoryDB totoMemoryDB) {
         return new NameRowMapper(totoMemoryDB);
     }
-
-    // for loading into the memory db
-
-    public List<Integer> findParentIdsForName(final TotoMemoryDB totoMemoryDB, SetDefinitionTable setDefinitionTable, final Name name) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(CHILDID, name.getId());
-        final String FIND_EXISTING_LINKS = "Select `" + PARENTID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + CHILDID + "` = :" + CHILDID + " order by `" + POSITION + "`";
-        return jdbcTemplate.queryForList(FIND_EXISTING_LINKS, namedParams, Integer.class);
-
-    }
-
-    public List<Integer> findChildIdsForName(final TotoMemoryDB totoMemoryDB, SetDefinitionTable setDefinitionTable, final Name name) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PARENTID, name.getId());
-        final String FIND_EXISTING_LINKS = "Select `" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID + " order by `" + POSITION + "`";
-        return jdbcTemplate.queryForList(FIND_EXISTING_LINKS, namedParams, Integer.class);
-    }
-
 
     // these two functions used to have some complexity to do with data integrity, now they are simple as the memory db should take care of that
 

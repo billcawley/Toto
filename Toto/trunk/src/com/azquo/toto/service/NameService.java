@@ -1,8 +1,6 @@
 package com.azquo.toto.service;
 
 import com.azquo.toto.memorydb.Name;
-import com.azquo.toto.memorydb.TotoMemoryDB;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 
 import java.util.*;
@@ -18,11 +16,6 @@ import java.util.*;
  * It will be passed credentials by the controller, that will determine which memory DB to use - it won;t access the DAO any more. For the moment will hard code one memory DB
  */
 public class NameService {
-
-
-    /*TODO : move some of the basic child/peer manipulation stuff into Name?
-    criteria : the name can accept other names but NOT strings as parameters, that will be done in here
-     */
 
 
     // hacky but testing for the moment

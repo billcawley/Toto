@@ -2,7 +2,6 @@ package com.azquo.toto.controller;
 
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
-import com.azquo.toto.service.NameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,9 +27,11 @@ public class LoginController {
     @RequestMapping
     @ResponseBody
     public String handleRequest(@RequestParam(value = "database", required = false) String database, @RequestParam(value = "user", required = false) String user, @RequestParam(value = "password", required = false) String password) throws Exception {
-        LoggedInConnection loggedInConnection = loginService.login(database,user,password);
-        if (loggedInConnection != null){
-            return loggedInConnection.getConnectionId();
+        if (database != null && database.length() > 0 && user != null && user.length() > 0 && password != null && password.length() > 0){
+            LoggedInConnection loggedInConnection = loginService.login(database,user,password);
+            if (loggedInConnection != null){
+                return loggedInConnection.getConnectionId();
+            }
         }
         return "false";
     }

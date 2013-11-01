@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * User: cawley
  * Date: 28/10/13
  * Time: 10:55
- * To change this template use File | Settings | File Templates.
+ * Do we actually need a provenance service??
  */
 public class ProvenanceService {
 

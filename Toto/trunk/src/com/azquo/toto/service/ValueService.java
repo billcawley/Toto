@@ -12,8 +12,8 @@ import java.util.*;
  * User: cawley
  * Date: 23/10/13
  * Time: 16:49
- * Workhorse hammering away at the memory DB. Will later be used in context of a toto session - instead we'll just
- * have a memory db here for the moment
+ * Workhorse hammering away at the memory DB.
+
  */
 public class ValueService {
 

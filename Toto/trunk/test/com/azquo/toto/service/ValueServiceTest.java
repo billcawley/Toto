@@ -2,7 +2,6 @@ package com.azquo.toto.service;
 
 import com.azquo.toto.dao.ValueDAO;
 import com.azquo.toto.memorydb.Provenance;
-import com.azquo.toto.memorydb.TotoMemoryDB;
 import com.azquo.toto.memorydb.Value;
 import com.azquo.toto.memorydb.Name;
 import com.csvreader.CsvReader;
@@ -205,7 +204,6 @@ public class ValueServiceTest {
 
         Name test1 = nameService.findByName(loggedInConnection,"S++");
         Name test2 = nameService.findByName(loggedInConnection,"www.treesdirect.co.uk");
-        Name test3 = nameService.findByName(loggedInConnection,"www.examplesupplier.com");
 //        Name test3 = nameService.findByName("Primary Strategy - Targeted Support");
 //        Name test4 = nameService.findByName("Lynne Swainston");
 
