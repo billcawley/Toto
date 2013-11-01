@@ -1,5 +1,7 @@
 package com.azquo.toto.memorydb;
 
+import org.springframework.dao.DataAccessException;
+
 import java.util.*;
 
 /**
@@ -140,7 +142,45 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
        */
 
-    // TODO : make parent and child lists interact with each other correctly in here (as in when adding a child add parent to the child too) - in fact make the prent lists only changeable in this class?
+
+    // returns a list as I don't think we care about duplicates here
+    // these two functions moved here from the service
+
+    public List<Name> findAllParents() {
+        final List<Name> allParents = new ArrayList<Name>();
+        Set<Name> foundAtCurrentLevel = parents;
+        while (!foundAtCurrentLevel.isEmpty()) {
+            allParents.addAll(foundAtCurrentLevel);
+            Set<Name> nextLevelSet = new HashSet<Name>();
+            for (Name n : foundAtCurrentLevel) {
+                nextLevelSet.addAll(n.getParents());
+            }
+            if (nextLevelSet.isEmpty()) { // no more parents to find
+                break;
+            }
+            foundAtCurrentLevel = nextLevelSet;
+        }
+        return allParents;
+    }
+
+    // same logic as above but returns a set, should be correct
+
+    public Set<Name> findAllChildren() {
+        final Set<Name> allChildren = new HashSet<Name>();
+        Set<Name> foundAtCurrentLevel = children;
+        while (!foundAtCurrentLevel.isEmpty()) {
+            allChildren.addAll(foundAtCurrentLevel);
+            Set<Name> nextLevelSet = new HashSet<Name>();
+            for (Name n : foundAtCurrentLevel) {
+                nextLevelSet.addAll(n.getChildren());
+            }
+            if (nextLevelSet.isEmpty()) { // no more parents to find
+                break;
+            }
+            foundAtCurrentLevel = nextLevelSet;
+        }
+        return allChildren;
+    }
 
     public Set<Name> getChildren() {
         return Collections.unmodifiableSet(children);
@@ -152,7 +192,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
         // check for circular references
         for (Name newChild : children){
-            if (newChild.equals(this) || getParents().contains(newChild)){
+            if (newChild.equals(this) || findAllParents().contains(newChild)){
                 throw new Exception("error cannot assign child due to circular reference, " + newChild + " cannot be added to " + this);
             }
         }
@@ -182,7 +222,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public synchronized void addChildWillBePersisted(Name child) throws Exception {
         checkDatabaseMatches(child);
-        if (child.equals(this) || getParents().contains(child)){
+        if (child.equals(this) || findAllParents().contains(child)){
             throw new Exception("error cannot assign child due to circular reference, " + child + " cannot be added to " + this);
         }
 

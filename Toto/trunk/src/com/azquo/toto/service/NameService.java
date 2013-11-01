@@ -28,6 +28,10 @@ public class NameService {
         return loggedInConnection.getTotoMemoryDB().getNameByName(name);
     }
 
+    public List<Name> searchNames(LoggedInConnection loggedInConnection, final String search) {
+        return loggedInConnection.getTotoMemoryDB().searchNames(search);
+    }
+
     public Name findOrCreateName(LoggedInConnection loggedInConnection, final String name) throws Exception {
         Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(name);
         if (existing != null) {
@@ -164,7 +168,7 @@ public class NameService {
         if (name.getPeers().size() > 0){
             return name.getPeers();
         }
-        List<Name> parents = findAllParents(name);
+        List<Name> parents = name.findAllParents();
         for (Name parent : parents) {
             if (!parent.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
                 return parent.getPeers();
@@ -221,44 +225,6 @@ public class NameService {
         }
     }
 
-    // returns a list as I don't think we care about duplicates here
-
-    public List<Name> findAllParents(final Name name) throws DataAccessException {
-        final List<Name> allParents = new ArrayList<Name>();
-        Set<Name> foundAtCurrentLevel = name.getParents();
-        while (!foundAtCurrentLevel.isEmpty()) {
-            allParents.addAll(foundAtCurrentLevel);
-            Set<Name> nextLevelSet = new HashSet<Name>();
-            for (Name n : foundAtCurrentLevel) {
-                nextLevelSet.addAll(n.getParents());
-            }
-            if (nextLevelSet.isEmpty()) { // no more parents to find
-                break;
-            }
-            foundAtCurrentLevel = nextLevelSet;
-        }
-        return allParents;
-    }
-
-    // same logic as above but returns a set, should be correct
-
-    public Set<Name> findAllChildren(final Name name) throws DataAccessException {
-        final Set<Name> allChildren = new HashSet<Name>();
-        Set<Name> foundAtCurrentLevel = name.getChildren();
-        while (!foundAtCurrentLevel.isEmpty()) {
-            allChildren.addAll(foundAtCurrentLevel);
-            Set<Name> nextLevelSet = new HashSet<Name>();
-            for (Name n : foundAtCurrentLevel) {
-                nextLevelSet.addAll(n.getChildren());
-            }
-            if (nextLevelSet.isEmpty()) { // no more parents to find
-                break;
-            }
-            foundAtCurrentLevel = nextLevelSet;
-        }
-        return allChildren;
-    }
-
     // these should probably live somewhere more global
     public static final String ERROR = "ERROR";
     public static final String WARNING = "WARNING";
@@ -286,7 +252,7 @@ public class NameService {
                     hasPeers.add(name);
                     thisNameHasPeers = true;
                 } else { // try looking up the chain and find the first with peers
-                    List<Name> parents = findAllParents(name);
+                    List<Name> parents = name.findAllParents();
                     for (Name parent : parents) {
                         if (!parent.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
                             hasPeers.add(parent); // put the parent not the actual name in as it will be used to determine the criteria for this value
@@ -331,7 +297,7 @@ public class NameService {
                 if (!found) { // couldn't find this peer, need to look up through parents of each name for the peer
                     // again new logic here
                     for (Name nameToCheck : namesToCheck) {
-                        List<Name> allParents = findAllParents(nameToCheck);
+                        List<Name> allParents = nameToCheck.findAllParents();
                         // again trying for more efficient logic
                         if (allParents.contains(requiredPeer)){
                             namesToCheck.remove(nameToCheck); // skip to the next one and remove the name from names to check and add it to the validated list to return

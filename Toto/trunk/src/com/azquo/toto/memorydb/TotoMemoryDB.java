@@ -301,6 +301,45 @@ public final class TotoMemoryDB {
         return nameByNameMap.get(name.toLowerCase().trim());
     }
 
+    public List<Name> searchNames(String search) {
+        long track = System.currentTimeMillis();
+        search = search.trim().toLowerCase();
+        boolean wildCardAtBeginning = false;
+        boolean wildCardAtEnd = false;
+        if (search.startsWith("*")){
+            wildCardAtBeginning = true;
+            search = search.substring(1);
+        }
+        if (search.endsWith("*")){
+            wildCardAtEnd = true;
+            search = search.substring(0,search.length() - 1);
+        }
+        List<Name> toReturn = new ArrayList<Name>();
+        if (!wildCardAtBeginning && !wildCardAtEnd){
+            toReturn.add(getNameByName(search));
+        } else {
+            // search the lot!
+            for (Name name : nameByIdMap.values()){
+                if (wildCardAtBeginning && wildCardAtEnd){
+                    if (name.getName().toLowerCase().contains(search)){
+                        toReturn.add(name);
+                    }
+                } else if(wildCardAtBeginning){
+                    if (name.getName().toLowerCase().endsWith(search)){
+                        toReturn.add(name);
+                    }
+                } else if(wildCardAtEnd){
+                    if (name.getName().toLowerCase().startsWith(search)){
+                        toReturn.add(name);
+                    }
+                }
+            }
+
+        }
+        System.out.println("search time : " + (System.currentTimeMillis() - track));
+        return toReturn;
+    }
+
     public Name getNameById(int id) {
         return nameByIdMap.get(id);
     }

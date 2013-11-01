@@ -36,8 +36,10 @@ public class LoginService {
     public LoggedInConnection getConnection(String connectionId){
 
         LoggedInConnection lic = connections.get(connectionId);
-        // TODO : timeout here
-        lic.setLastAccessed(new Date());
+        if (lic != null){
+            // TODO : timeout here
+            lic.setLastAccessed(new Date());
+        }
         return lic;
 
     }

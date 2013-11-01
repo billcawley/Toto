@@ -132,7 +132,7 @@ public class ValueService {
         Name smallestName = null;
         for (Name name : names){
             int setSizeIncludingChildren = name.getValues().size();
-            for (Name child : nameService.findAllChildren(name)){
+            for (Name child : name.findAllChildren()){
                 setSizeIncludingChildren += child.getValues().size();
             }
             if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize){
@@ -148,7 +148,7 @@ public class ValueService {
                 if (!name.equals(smallestName)){ // ignore the one we started with
                     if (!value.getNames().contains(name)){ // top name not in there check children also
                         boolean foundInChildList = false;
-                        for (Name child : nameService.findAllChildren(name)){
+                        for (Name child : name.findAllChildren()){
                             if (value.getNames().contains(child)){
                                 foundInChildList = true;
                                 break;
@@ -173,9 +173,33 @@ public class ValueService {
         return values;
     }
 
+    public double findSumForNamesIncludeChildren(Set<Name> names){
+        System.out.println("findSumForNamesIncludeChildren");
+
+        List<Value> values = findForNamesIncludeChildren(names);
+        double sumValue = 0;
+        for (Value value : values){
+            if (value.getText() != null && value.getText().length() > 0){
+                try{
+                    System.out.print("adding " + value.getText());
+                    for (Name n : value.getNames()){
+                        System.out.print(" " + n.getName());
+                    }
+                    System.out.println();
+                    sumValue += Double.parseDouble(value.getText());
+                } catch (Exception ignored){
+                }
+            } else {
+                sumValue += value.getDoubleValue();
+            }
+        }
+        return sumValue;
+    }
+
     public List<Value> findValuesForNameIncludeAllChildren(Name name){
         List<Value> toReturn = new ArrayList<Value>();
-        for (Name child : nameService.findAllChildren(name)){
+        toReturn.addAll(name.getValues());
+        for (Name child : name.findAllChildren()){
             toReturn.addAll(child.getValues());
         }
         return toReturn;

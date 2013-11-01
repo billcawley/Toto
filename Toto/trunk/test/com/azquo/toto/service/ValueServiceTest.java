@@ -52,7 +52,7 @@ public class ValueServiceTest {
 
         LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password");
 
-        String filePath = "/home/cawley/Downloads/300000.csv";
+        String filePath = "/home/cawley/Downloads/10daysinjan.csv";
         // skip file opening time . . .
         long track = System.currentTimeMillis();
         // for initial attempts at running it
@@ -145,12 +145,12 @@ public class ValueServiceTest {
                             //System.out.println("parent : " + parentName + " child " + remainingTop);
                             count++;
                         } else {
-                            justAdded = nameService.addOrCreateMember(loggedInConnection,justAdded, remainingTop);
+                                justAdded = nameService.addOrCreateMember(loggedInConnection,justAdded, remainingTop);
                             //System.out.println("parent : " + justAdded + " child " + remainingTop);
                             count++;
                         }
                         if (!rawChildName.contains("/")){ // the final one
-                            nameService.addOrCreateMember(loggedInConnection,justAdded, rawChildName);
+                                nameService.addOrCreateMember(loggedInConnection,justAdded, rawChildName);
                             //System.out.println("parent : " + justAdded + " child " + rawChildName);
                             count++;
                         }
@@ -203,7 +203,7 @@ public class ValueServiceTest {
 
 
         Name test1 = nameService.findByName(loggedInConnection,"S++");
-        Name test2 = nameService.findByName(loggedInConnection,"www.treesdirect.co.uk");
+        Name test2 = nameService.findByName(loggedInConnection,"www.ctshirts.co.uk");
 //        Name test3 = nameService.findByName("Primary Strategy - Targeted Support");
 //        Name test4 = nameService.findByName("Lynne Swainston");
 

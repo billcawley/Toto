@@ -19,10 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.StringTokenizer;
+import java.util.*;
 
 @Controller
 @RequestMapping("/Name")
@@ -30,8 +27,10 @@ public class NameController {
 
     public static final String ELEMENTS = "elements";
     public static final String PEERS = "peers";
+    public static final String STRUCTURE = "structure";
     public static final String CREATE = "create";
     public static final String REMOVE = "remove";
+    public static final String SEARCH = "search";
     public static final String LEVEL = "level";
     public static final String FROM = "from";
     public static final String TO = "to";
@@ -64,10 +63,6 @@ public class NameController {
             return "invalid or expired connection id";
         }
 
-        if (instructions == null){
-            return "no command passed";
-        }
-
         // this certainly will NOT stay here :)
         if (instructions.equals("persist")){
             nameService.persist(loggedInConnection);
@@ -77,19 +72,33 @@ public class NameController {
 
         if(instructions.indexOf(';') > 0){
             final String nameString = instructions.substring(0, instructions.indexOf(';')).trim();
-            // now we have it strip off the name, use getInstructioon to see what we want to do with the name
+            // now we have it strip off the name, use getInstruction to see what we want to do with the name
             instructions = instructions.substring(instructions.indexOf(';') + 1).trim();
 
             String elements = getInstruction(instructions, ELEMENTS);
             String peers = getInstruction(instructions, PEERS);
+            String structure = getInstruction(instructions, STRUCTURE);
             String create = getInstruction(instructions, CREATE);
             String levelString = getInstruction(instructions, LEVEL);
             String fromString = getInstruction(instructions, FROM);
             String toString = getInstruction(instructions, TO);
             String afterString = getInstruction(instructions, AFTER);
             String remove = getInstruction(instructions, REMOVE);
+            String search = getInstruction(instructions, SEARCH);
             String renameas = getInstruction(instructions, RENAMEAS);
-            if (elements != null){
+            // since elements can be part of structure definition we do structure first
+            if (structure != null){
+                final Name name = nameService.findByName(loggedInConnection, nameString);
+                if (name != null){
+                    if (structure.length() > 0){// define the structure - this won't be dependant on the structure instruction length it will be on there being anything after
+                    } else {// read it
+                        return getParentStructureFormattedForOutput(name, true) + getChildStructureFormattedForOutput(name, false);
+                    }
+                } else {
+                    return "name : " + nameString + "not found";
+                }
+
+            } else if (elements != null){
                 if (create != null){
                     final Name name = nameService.findOrCreateName(loggedInConnection, nameString);
                     // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
@@ -125,19 +134,11 @@ public class NameController {
                     final Name name = nameService.findByName(loggedInConnection, nameString);
                     if (name != null){
                         nameService.removeMember(loggedInConnection, name, elements);
-                        return elements + " deleted";
+                        return elements + " removed";
                     }
                 } else {// they want to read data
                     final Name name = nameService.findByName(loggedInConnection, nameString);
                     if (name != null){
-                        /* examples
-                          2013;elements
-                          is a basic example
-                          2013;elements;level 2
-                          with level
-                          2013; elements; from 4; to 6;
-                          with from and to
-                          */
                         int level = 1;
                         if (levelString != null){
                             if (levelString.equalsIgnoreCase(LOWEST)){
@@ -182,16 +183,7 @@ public class NameController {
                             }
                         }
                         // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
-                        StringBuilder sb = new StringBuilder();
-                        boolean first = true;
-                        for (Name n : names){
-                            if (!first){
-                                sb.append(", ");
-                            }
-                            sb.append("`").append(n.getName()).append("`");
-                            first = false;
-                        }
-                        return sb.toString();
+                        return getNamesFormattedForOutput(names);
                     } else {
                         return "name : " + nameString + "not found";
                     }
@@ -247,6 +239,8 @@ public class NameController {
             } else if (renameas != null){ // not specific to peers or elements
                 nameService.renameName(loggedInConnection, nameString, renameas);
                 return "rename " + nameString + " to " + renameas;
+            } else if (search != null){ // search
+                return getNamesFormattedForOutput(nameService.searchNames(loggedInConnection, nameString));
             }
         }
 
@@ -273,6 +267,7 @@ public class NameController {
         // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
         StringBuilder sb = new StringBuilder();
         boolean first = true;
+        sb.append("{");
         for (Name n : names){
             if (!first){
                 sb.append(", ");
@@ -280,8 +275,53 @@ public class NameController {
             sb.append("`").append(n.getName()).append("`");
             first = false;
         }
+        sb.append("}");
         return sb.toString();
     }
+
+    private String getParentStructureFormattedForOutput(Name name, boolean showParent){
+        StringBuilder sb = new StringBuilder();
+        if (showParent){
+            sb.append("`").append(name.getName()).append("`");
+        }
+        Set<Name> parents = name.getParents();
+        if (!parents.isEmpty()) {
+            sb.append("; in {");
+            int count = 1;
+            for (Name parent : parents) {
+                sb.append(getParentStructureFormattedForOutput(parent, true));
+                if (count < parents.size()){
+                    sb.append(",");
+                }
+                count++;
+            }
+            sb.append("}");
+        }
+        return sb.toString();
+    }
+
+
+    private String getChildStructureFormattedForOutput(Name name, boolean showChild){
+        StringBuilder sb = new StringBuilder();
+        if (showChild){
+            sb.append("`").append(name.getName()).append("`");
+        }
+        Set<Name> children = name.getChildren();
+        if (!children.isEmpty()) {
+            sb.append("; elements {");
+            int count = 1;
+            for (Name child : children) {
+                sb.append(getChildStructureFormattedForOutput(child, true));
+                if (count < children.size()){
+                    sb.append(",");
+                }
+                count++;
+            }
+            sb.append("}");
+        }
+        return sb.toString();
+    }
+
 
 
 }

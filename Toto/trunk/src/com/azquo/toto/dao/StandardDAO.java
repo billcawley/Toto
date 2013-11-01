@@ -217,10 +217,5 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
         }
     }
 
-    public int findTotalCount(final TotoMemoryDB totoMemoryDB) throws DataAccessException {
-            final String SQL_SELECT = "Select count(*) from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`";
-            return jdbcTemplate.queryForObject(SQL_SELECT, new MapSqlParameterSource() , Integer.class);
-    }
-
 
 }

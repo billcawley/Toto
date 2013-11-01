@@ -1,8 +1,11 @@
 package com.azquo.toto.service;
 
+import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
@@ -22,12 +25,17 @@ public class LoggedInConnection {
     private Date loginTime;
     private Date lastAccessed;
 
+    private List<Name> rowHeadings;
+    private List<Name> columnHeadings;
+
     public LoggedInConnection(String connectionId, TotoMemoryDB totoMemoryDB, String userName){
         this.connectionId = connectionId;
         this.totoMemoryDB = totoMemoryDB;
         this.userName = userName;
         loginTime = new Date();
         lastAccessed = new Date();
+        rowHeadings = new ArrayList<Name>();
+        columnHeadings = new ArrayList<Name>();
     }
 
     public String getConnectionId() {
@@ -54,4 +62,21 @@ public class LoggedInConnection {
     public void setLastAccessed(Date lastAccessed) {
         this.lastAccessed = lastAccessed;
     }
+
+    public List<Name> getRowHeadings() {
+        return rowHeadings;
+    }
+
+    public void setRowHeadings(List<Name> rowHeadings) {
+        this.rowHeadings = rowHeadings;
+    }
+
+    public List<Name> getColumnHeadings() {
+        return columnHeadings;
+    }
+
+    public void setColumnHeadings(List<Name> columnHeadings) {
+        this.columnHeadings = columnHeadings;
+    }
+
 }
