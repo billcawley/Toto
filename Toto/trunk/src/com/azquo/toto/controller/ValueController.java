@@ -1,5 +1,7 @@
 package com.azquo.toto.controller;
 
+import com.azquo.toto.service.LoginService;
+import com.azquo.toto.service.NameService;
 import com.azquo.toto.service.ValueService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -20,6 +22,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @RequestMapping("/Value")
 public class ValueController {
 
+    @Autowired
+    private NameService nameService;
+    @Autowired
+    private LoginService loginService;
     @Autowired
     private ValueService valueServiceService;
 

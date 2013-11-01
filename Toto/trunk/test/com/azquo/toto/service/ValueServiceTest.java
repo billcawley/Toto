@@ -41,7 +41,7 @@ public class ValueServiceTest {
     @Autowired
     ValueDAO valueDao;
     @Autowired
-    TotoMemoryDB totoMemoryDB;
+    LoginService loginService;
 
 
     @Before
@@ -50,6 +50,8 @@ public class ValueServiceTest {
 
     @Test
     public void testCsvImport() throws Exception {
+
+        LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password");
 
         String filePath = "/home/cawley/Downloads/300000.csv";
         // skip file opening time . . .
@@ -74,7 +76,7 @@ public class ValueServiceTest {
         Name nameWithPeers = null;
         for (String header : headers){
             if (!header.equalsIgnoreCase(ValueService.VALUE)){
-                Name name = nameService.findOrCreateName(header);
+                Name name = nameService.findOrCreateName(loggedInConnection, header);
                 if (header.equalsIgnoreCase(nameWithPeersName)){
                     nameWithPeers = name;
                     System.out.println("name with peers : " + nameWithPeers);
@@ -85,7 +87,7 @@ public class ValueServiceTest {
         if(nameWithPeers != null){ // run through again linking peers. OK not that efficient but doesn't matter for the moment
             for (String header : headers){
                 if (!header.equalsIgnoreCase(ValueService.VALUE) && !header.equalsIgnoreCase(nameWithPeers.getName())){
-                    nameService.createPeer(nameWithPeers, header);
+                    nameService.createPeer(loggedInConnection,nameWithPeers, header);
                 }
             }
         }
@@ -121,7 +123,7 @@ public class ValueServiceTest {
         }
 
         for (String parentNameName : setMap.keySet()){
-            Name parentName = nameService.findByName(parentNameName);
+            Name parentName = nameService.findByName(loggedInConnection,parentNameName);
             List<String> rawChildNames = setMap.get(parentNameName);
             // ok here need to get clever to deal with slashes
             int count = 0;
@@ -140,22 +142,22 @@ public class ValueServiceTest {
                         String remainingTop = rawChildName.substring(0, rawChildName.indexOf("/"));
                         rawChildName = rawChildName.substring(rawChildName.indexOf("/") + 1); // chop off the name we just extracted
                         if (justAdded == null){ // the first of the directory string so to speak
-                            justAdded = nameService.addOrCreateMember(parentName, remainingTop);
+                            justAdded = nameService.addOrCreateMember(loggedInConnection,parentName, remainingTop);
                             //System.out.println("parent : " + parentName + " child " + remainingTop);
                             count++;
                         } else {
-                            justAdded = nameService.addOrCreateMember(justAdded, remainingTop);
+                            justAdded = nameService.addOrCreateMember(loggedInConnection,justAdded, remainingTop);
                             //System.out.println("parent : " + justAdded + " child " + remainingTop);
                             count++;
                         }
                         if (!rawChildName.contains("/")){ // the final one
-                            nameService.addOrCreateMember(justAdded, rawChildName);
+                            nameService.addOrCreateMember(loggedInConnection,justAdded, rawChildName);
                             //System.out.println("parent : " + justAdded + " child " + rawChildName);
                             count++;
                         }
                     }
                 } else {
-                    nameService.addOrCreateMember(parentName,rawChildName);
+                    nameService.addOrCreateMember(loggedInConnection,parentName,rawChildName);
                     count++;
                 }
             }
@@ -192,7 +194,7 @@ public class ValueServiceTest {
             }
             if (value.trim().length() > 0){ // no point storing if there's no value!
                 recordcount++;
-                valueService.storeValueWithProvenanceAndNames(value, provenance, names);
+                valueService.storeValueWithProvenanceAndNames(loggedInConnection,value, provenance, names);
                 if (recordcount%5000 == 0){
                     System.out.println("reading record" + recordcount);
                 }
@@ -201,8 +203,9 @@ public class ValueServiceTest {
         System.out.println("csv import took " + (System.currentTimeMillis() - track) + "ms");
 
 
-        Name test1 = nameService.findByName("S++");
-        Name test2 = nameService.findByName("www.treesdirect.co.uk");
+        Name test1 = nameService.findByName(loggedInConnection,"S++");
+        Name test2 = nameService.findByName(loggedInConnection,"www.treesdirect.co.uk");
+        Name test3 = nameService.findByName(loggedInConnection,"www.examplesupplier.com");
 //        Name test3 = nameService.findByName("Primary Strategy - Targeted Support");
 //        Name test4 = nameService.findByName("Lynne Swainston");
 
@@ -224,7 +227,9 @@ public class ValueServiceTest {
         track = System.currentTimeMillis() - track;
         System.out.println(searchResults.size() +  " records in " + track + "ms");
 
-        totoMemoryDB.saveDataToMySQL();
+        // this will we dealt with differently later!
+
+        nameService.persist(loggedInConnection);
 
         /*System.out.println("search results expanded");
         for (Value v : searchResults){

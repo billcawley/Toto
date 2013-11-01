@@ -161,14 +161,14 @@ FROM `name_set_definition`
 ORDER BY parent_id, position*/
     public List<String> findAllParentChildLinksOrderByParentIdPosition(final TotoMemoryDB totoMemoryDB) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        final String FIND_EXISTING_LINK = "Select `" + PARENTID + "`,`" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + SetDefinitionTable.name_set_definition + "` order by `" + POSITION + "`";
+        final String FIND_EXISTING_LINK = "Select `" + PARENTID + "`,`" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + SetDefinitionTable.name_set_definition + "` order by `" + PARENTID + "`,`" + POSITION + "`";
         return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedIdsRowMapper());
 
     }
 
     public List<String> findAllPeerLinksOrderByParentIdPosition(final TotoMemoryDB totoMemoryDB) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        final String FIND_EXISTING_LINK = "Select `" + PARENTID + "`,`" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + SetDefinitionTable.peer_set_definition + "` order by `" + POSITION + "`";
+        final String FIND_EXISTING_LINK = "Select `" + PARENTID + "`,`" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + SetDefinitionTable.peer_set_definition + "` order by `" + PARENTID + "`,`" + POSITION + "`";
         return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedIdsRowMapper());
 
     }

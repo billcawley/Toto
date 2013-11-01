@@ -10,6 +10,8 @@ package com.azquo.toto.controller;
  */
 
 import com.azquo.toto.memorydb.Name;
+import com.azquo.toto.service.LoggedInConnection;
+import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -42,17 +44,33 @@ public class NameController {
     @Autowired
     private NameService nameService;
 
+    @Autowired
+    private LoginService loginService;
 //    private static final Logger logger = Logger.getLogger(TestController.class);
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "instructions", required = false) String instructions) throws Exception {
+    public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId, @RequestParam(value = "instructions", required = false) String instructions) throws Exception {
+
+        LoggedInConnection loggedInConnection;
+
+        if (connectionId == null){
+            return "no connection Id";
+        }
+
+        loggedInConnection = loginService.getConnection(connectionId);
+
+        if (loggedInConnection == null){
+            return "invalid or expired connection id";
+        }
 
         if (instructions == null){
             return "no command passed";
         }
+
+        // this certainly will NOT stay here :)
         if (instructions.equals("persist")){
-            nameService.persist();
+            nameService.persist(loggedInConnection);
         }
         instructions = instructions.trim();
         // typically a command will start with a name
@@ -73,7 +91,7 @@ public class NameController {
             String renameas = getInstruction(instructions, RENAMEAS);
             if (elements != null){
                 if (create != null){
-                    final Name name = nameService.findOrCreateName(nameString);
+                    final Name name = nameService.findOrCreateName(loggedInConnection, nameString);
                     // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
                     if(elements.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
                         // EXAMPLE : 2013;elements {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
@@ -88,7 +106,7 @@ public class NameController {
                                 }
                                 namesToAdd.add(childName);
                             }
-                            nameService.createMembers(name, namesToAdd);
+                            nameService.createMembers(loggedInConnection, name, namesToAdd);
                             return "Create array saved " + namesToAdd.size() + " names";
                         } else{
                             return "Unclosed }";
@@ -100,17 +118,17 @@ public class NameController {
                             after = Integer.parseInt(afterString);
                         } catch (NumberFormatException ignored){
                         }
-                        nameService.createMember(name, elements, afterString, after);
+                        nameService.createMember(loggedInConnection, name, elements, afterString, after);
                         return elements + " added to " + name.getName();
                     }
                 } else if (remove != null){ // delete
-                    final Name name = nameService.findByName(nameString);
+                    final Name name = nameService.findByName(loggedInConnection, nameString);
                     if (name != null){
-                        nameService.removeMember(name, elements);
+                        nameService.removeMember(loggedInConnection, name, elements);
                         return elements + " deleted";
                     }
                 } else {// they want to read data
-                    final Name name = nameService.findByName(nameString);
+                    final Name name = nameService.findByName(loggedInConnection, nameString);
                     if (name != null){
                         /* examples
                           2013;elements
@@ -180,7 +198,7 @@ public class NameController {
                 }
             } else if (peers != null){
                 if (create != null){
-                    final Name name = nameService.findOrCreateName(nameString);
+                    final Name name = nameService.findOrCreateName(loggedInConnection, nameString);
                     // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
                     if(peers.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
                         // EXAMPLE : 2013;elements {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
@@ -195,7 +213,7 @@ public class NameController {
                                 }
                                 namesToAdd.add(peerName);
                             }
-                            nameService.createPeers(name, namesToAdd);
+                            nameService.createPeers(loggedInConnection, name, namesToAdd);
                             return "Create array saved " + namesToAdd.size() + " names";
                         } else{
                             return "Unclosed }";
@@ -207,17 +225,17 @@ public class NameController {
                             after = Integer.parseInt(afterString);
                         } catch (NumberFormatException ignored){
                         }
-                        nameService.createPeer(name, elements, afterString, after);
+                        nameService.createPeer(loggedInConnection, name, elements, afterString, after);
                         return elements + " added to " + name.getName();
                     }
                 } else if (remove != null){ // delete
-                    final Name name = nameService.findByName(nameString);
+                    final Name name = nameService.findByName(loggedInConnection, nameString);
                     if (name != null){
-                        nameService.removePeer(name, elements);
+                        nameService.removePeer(loggedInConnection, name, elements);
                         return elements + " deleted";
                     }
                 } else {// they want to read data
-                    final Name name = nameService.findByName(nameString);
+                    final Name name = nameService.findByName(loggedInConnection, nameString);
                     if (name != null){
                         //  Fees; peers {Period, Analysis, Merchant};create;
                         return getNamesFormattedForOutput(nameService.getPeersIncludeParents(name));
@@ -227,7 +245,7 @@ public class NameController {
                 }
 
             } else if (renameas != null){ // not specific to peers or elements
-                nameService.renameName(nameString, renameas);
+                nameService.renameName(loggedInConnection, nameString, renameas);
                 return "rename " + nameString + " to " + renameas;
             }
         }

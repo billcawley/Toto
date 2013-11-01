@@ -36,6 +36,7 @@
     <bean name="valueService" class="com.azquo.toto.service.ValueService"/>
     <bean name="provenanceDAO" class="com.azquo.toto.dao.ProvenanceDAO"/>
     <bean name="provenanceService" class="com.azquo.toto.service.ProvenanceService"/>
+    <bean name="loginService" class="com.azquo.toto.service.LoginService"/>
     <!-- instantiate the memory db when our connection to MySQL is up :) -->
     <bean name="totoMemoryDB" class="com.azquo.toto.memorydb.TotoMemoryDB">
         <constructor-arg name="databaseName" value="toto"/>

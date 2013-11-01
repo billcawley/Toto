@@ -3,7 +3,6 @@ package com.azquo.toto.service;
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.Value;
-import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
@@ -23,9 +22,6 @@ public class ValueService {
     @Autowired
     private NameService nameService;
 
-    @Autowired
-    private TotoMemoryDB totoMemoryDB;
-
     // set the names in delete info and unlink - best I can come up with at the moment
     public void deleteValue(Value value) throws Exception {
         String names = "";
@@ -39,9 +35,9 @@ public class ValueService {
         value.setNamesWillBePersisted(new HashSet<Name>());
     }
 
-    public Value createValue(int provenanceId, double doubleValue, String text) throws Exception {
+    public Value createValue(LoggedInConnection loggedInConnection, int provenanceId, double doubleValue, String text) throws Exception {
 //        return totoMemoryDB.createValue(provenanceId,doubleValue,text);
-        return new Value(totoMemoryDB,provenanceId,doubleValue,text,null);
+        return new Value(loggedInConnection.getTotoMemoryDB(),provenanceId,doubleValue,text,null);
     }
 
     public void linkValueToNames(Value value, Set<Name> names) throws Exception {
@@ -50,10 +46,10 @@ public class ValueService {
 
     // TODO : is passing provenance the
 
-    public String storeValueWithProvenanceAndNames(final String valueString, final Provenance provenance, final Set<String> names) throws Exception {
+    public String storeValueWithProvenanceAndNames(LoggedInConnection loggedInConnection, final String valueString, final Provenance provenance, final Set<String> names) throws Exception {
         String toReturn = "";
         Set<Name> validNames = new HashSet<Name>();
-        Map<String, String> nameCheckResult = nameService.isAValidNameSet(names, validNames);
+        Map<String, String> nameCheckResult = nameService.isAValidNameSet(loggedInConnection, names, validNames);
         String error = nameCheckResult.get(NameService.ERROR);
         String warning = nameCheckResult.get(NameService.ERROR);
         if (error != null){
@@ -74,7 +70,7 @@ public class ValueService {
             }
         }
         if(!alreadyInDatabase){
-            Value value = createValue(provenance.getId(), 0,valueString);
+            Value value = createValue(loggedInConnection, provenance.getId(), 0,valueString);
             toReturn += "  stored";
             // and link to names
             linkValueToNames(value, validNames);
@@ -123,6 +119,66 @@ public class ValueService {
         //track = System.nanoTime();
 
         return values;
+    }
+
+    // while the above is what would be used to check if data exists for a specific label combination (e.g. when inserting data) this will navigate down through the labels
+    // I'm going to try for similar logic but using the lists of children for each label rather than just the label if that makes sense
+    // I wonder if it should be a list or set returned?
+
+    public List<Value> findForNamesIncludeChildren(Set<Name> names){
+        List<Value> values = new ArrayList<Value>();
+        // first get the shortest value list taking into account children
+        int smallestNameSetSize = -1;
+        Name smallestName = null;
+        for (Name name : names){
+            int setSizeIncludingChildren = name.getValues().size();
+            for (Name child : nameService.findAllChildren(name)){
+                setSizeIncludingChildren += child.getValues().size();
+            }
+            if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize){
+                smallestNameSetSize = setSizeIncludingChildren;
+                smallestName = name;
+            }
+        }
+
+        assert smallestName != null; // make intellij happy :P
+        for (Value value : findValuesForNameIncludeAllChildren(smallestName)){
+            boolean theValueIsOk = true;
+            for (Name name : names){
+                if (!name.equals(smallestName)){ // ignore the one we started with
+                    if (!value.getNames().contains(name)){ // top name not in there check children also
+                        boolean foundInChildList = false;
+                        for (Name child : nameService.findAllChildren(name)){
+                            if (value.getNames().contains(child)){
+                                foundInChildList = true;
+                                break;
+                            }
+                        }
+                        if (!foundInChildList){
+//                        count++;
+                            theValueIsOk = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (theValueIsOk){ // it was in all the names :)
+                values.add(value);
+            }
+        }
+
+        //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
+        //track = System.nanoTime();
+
+        return values;
+    }
+
+    public List<Value> findValuesForNameIncludeAllChildren(Name name){
+        List<Value> toReturn = new ArrayList<Value>();
+        for (Name child : nameService.findAllChildren(name)){
+            toReturn.addAll(child.getValues());
+        }
+        return toReturn;
     }
 
 

@@ -18,7 +18,7 @@ import java.util.*;
 public final class TotoMemoryDB {
 
     /* damn, I don't think I can auto wire these as I can't guarantee they'll be
-       ready for the conostructor
+       ready for the constructor
      */
 
     private ValueDAO valueDAO;

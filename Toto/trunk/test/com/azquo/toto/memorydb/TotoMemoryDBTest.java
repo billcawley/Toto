@@ -1,5 +1,7 @@
 package com.azquo.toto.memorydb;
 
+import com.azquo.toto.service.LoggedInConnection;
+import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
 import com.azquo.toto.service.ValueService;
 import org.junit.Test;
@@ -17,7 +19,7 @@ import java.util.Set;
  * User: cawley
  * Date: 25/10/13
  * Time: 11:10
- * To change this template use File | Settings | File Templates.
+ * does a straight load from Mysql then we can test query speed
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {"file:web/WEB-INF/totospringdispatcher-servlet.xml"})
@@ -29,11 +31,15 @@ public class TotoMemoryDBTest {
     NameService nameService;
     @Autowired
     ValueService valueService;
+    @Autowired
+    LoginService loginService;
     @Test
     public void testLoadData() throws Exception {
 
-        Name test1 = nameService.findByName("Time Activity");
-        Name test2 = nameService.findByName("Total All Methods");
+        LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password");
+
+        Name test1 = nameService.findByName(loggedInConnection, "www.examplesupplier.com");
+        Name test2 = nameService.findByName(loggedInConnection, "S++");
 //        Name test3 = nameService.findByName("Primary Strategy - Targeted Support");
 //        Name test4 = nameService.findByName("Lynne Swainston");
 
@@ -43,12 +49,19 @@ public class TotoMemoryDBTest {
 //        searchCriteria.add(test3);
 //        searchCriteria.add(test4);
         long track = System.nanoTime();
-        int count = 100;
+        int count = 10000;
         for (int i = 0; i < count; i++){
-            List<Value> searchResults = valueService.findForNames(searchCriteria);
-            System.out.println(searchResults.size() +  " records");
+            List<Value> searchResults = valueService.findForNamesIncludeChildren(searchCriteria);
+/*            for (Value v : searchResults){
+                System.out.print("value ");
+                for (Name n : v.getNames()){
+                    System.out.print(n.getName() + " ");
+                }
+                System.out.println();
+            }*/
+            //System.out.println(searchResults.size() +  " records");
         }
         long average = (System.nanoTime() - track) / count;
-        System.out.println("records " + average + "ns");
+        System.out.println("average " + average + "ns");
     }
 }
