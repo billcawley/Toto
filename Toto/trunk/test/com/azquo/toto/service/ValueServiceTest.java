@@ -50,17 +50,27 @@ public class ValueServiceTest {
     @Test
     public void testCsvImport() throws Exception {
 
+//        LoggedInConnection loggedInConnection = loginService.login("imftest", "edd", "edd123");
         LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password");
 
+//        String filePath = "/home/cawley/Downloads/imf.txt";
         String filePath = "/home/cawley/Downloads/10daysinjan.csv";
         // skip file opening time . . .
         long track = System.currentTimeMillis();
         // for initial attempts at running it
-        // going to write coode here foor CSV import that will be factored off into a function later
+        // going to write code here for CSV import that will be factored off into a function later
+
+
+        // the header after which the headers stop being top parent names and become from a subset e.g. dates and then all the cells below are values
+//        String valuesAfter = "Country";
+        String valuesAfter = null;
+
+//        String valuesAfterParentName = "Period";
+        String valuesAfterParentName = null;
+
+//        String nameWithPeersName = "Data Item";
         String nameWithPeersName = "vendorstatsname";
-        System.out.println("about to open csv reader");
         CsvReader csvReader = new CsvReader(new InputStreamReader(new FileInputStream(filePath), "8859_1"), '\t');
-        System.out.println("opened");
         csvReader.readHeaders();
         String[] headers = csvReader.getHeaders();
         // are the following few lines necessary??
@@ -68,6 +78,9 @@ public class ValueServiceTest {
         for(String header : headers){
             if (header.trim().length() > 0){ // I don't know if the csv reader checks for this
                 checkedHeaders.add(header);
+            }
+            if (header.equalsIgnoreCase(valuesAfter)){
+                break; // stop scanning the headers when we're into the data bits
             }
         }
         // seems a bit of a complex way around it!
@@ -81,6 +94,10 @@ public class ValueServiceTest {
                     System.out.println("name with peers : " + nameWithPeers);
                 }
             }
+        }
+
+        if (nameWithPeers == null){
+            throw new Exception("unable to find name with peers" + nameWithPeersName);
         }
 
         if(nameWithPeers != null){ // run through again linking peers. OK not that efficient but doesn't matter for the moment
@@ -119,6 +136,25 @@ public class ValueServiceTest {
             if (recordcount%5000 == 0){
                 System.out.println("reading record" + recordcount);
             }
+        }
+
+        // manually fix up the final top name and children
+        if (valuesAfterParentName != null && valuesAfter != null){
+            nameService.createPeer(loggedInConnection,nameWithPeers, valuesAfterParentName);
+            // and the set of names which are column headings
+            String[] rawHeaders = csvReader.getHeaders();
+            boolean afterValuesAfter = false;
+            List<String> namesHeadingValues = new ArrayList<String>();
+            for (String rawHeader : rawHeaders){
+                if (afterValuesAfter){
+                    // ok we're in teh values bit of the headers so add
+                    namesHeadingValues.add(rawHeader);
+                }
+                if (rawHeader.equalsIgnoreCase(valuesAfter)){
+                    afterValuesAfter = true;
+                }
+            }
+            setMap.put(valuesAfterParentName, namesHeadingValues);
         }
 
         for (String parentNameName : setMap.keySet()){
@@ -169,7 +205,7 @@ public class ValueServiceTest {
         csvReader.readHeaders(); // might be necessary for init
 
         Provenance provenance = provenanceService.getTestProvenance();
-        recordcount = 0;
+        int valuecount = 0;
         while (csvReader.readRecord()){
             Set<String> names = new HashSet<String>();
             String value = null;
@@ -191,18 +227,43 @@ public class ValueServiceTest {
                     names.add(rawName.trim());
                 }
             }
-            if (value.trim().length() > 0){ // no point storing if there's no value!
-                recordcount++;
-                valueService.storeValueWithProvenanceAndNames(loggedInConnection,value, provenance, names);
-                if (recordcount%5000 == 0){
-                    System.out.println("reading record" + recordcount);
+            if (valuesAfterParentName != null && valuesAfter != null){ // we need to get sets of values for each line
+                List<String> namesHeadingValues = new ArrayList<String>();
+                boolean afterValuesAfter = false;
+                for (String rawHeader : csvReader.getHeaders()){
+                    if (afterValuesAfter){
+                        // copy names so far and add the column heading we're on
+                        Set<String> namesForValue = new HashSet<String>();
+                        namesForValue.addAll(names);
+                        namesForValue.add(rawHeader);
+                        value = csvReader.get(rawHeader);
+                        // copied from below, maybe factor later
+                        if (value.trim().length() > 0){ // no point storing if there's no value!
+                            valuecount++;
+                            valueService.storeValueWithProvenanceAndNames(loggedInConnection,value, provenance, namesForValue);
+                            if (valuecount%5000 == 0){
+                                System.out.println("storing value " + valuecount);
+                            }
+                        }
+                    }
+                    if (rawHeader.equalsIgnoreCase(valuesAfter)){
+                        afterValuesAfter = true;
+                    }
+                }
+            } else { // single value per line
+                if (value.trim().length() > 0){ // no point storing if there's no value!
+                    valuecount++;
+                    valueService.storeValueWithProvenanceAndNames(loggedInConnection,value, provenance, names);
+                    if (valuecount%5000 == 0){
+                        System.out.println("storing value " + valuecount);
+                    }
                 }
             }
         }
         System.out.println("csv import took " + (System.currentTimeMillis() - track) + "ms");
 
 
-        Name test1 = nameService.findByName(loggedInConnection,"S++");
+/*        Name test1 = nameService.findByName(loggedInConnection,"S++");
         Name test2 = nameService.findByName(loggedInConnection,"www.ctshirts.co.uk");
 //        Name test3 = nameService.findByName("Primary Strategy - Targeted Support");
 //        Name test4 = nameService.findByName("Lynne Swainston");
@@ -223,7 +284,7 @@ public class ValueServiceTest {
         track = System.currentTimeMillis();
         searchResults = valueService.findForNames(searchCriteria);
         track = System.currentTimeMillis() - track;
-        System.out.println(searchResults.size() +  " records in " + track + "ms");
+        System.out.println(searchResults.size() +  " records in " + track + "ms");*/
 
         // this will we dealt with differently later!
 
