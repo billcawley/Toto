@@ -19,7 +19,7 @@ import java.util.Map;
  * Time: 19:19
  * DAO for Names, under new model just used for persistence,will hopefully be pretty simple
  */
-public class NameDAO extends StandardDAO<Name> {
+public final class NameDAO extends StandardDAO<Name> {
 
     // the default table name for this data.
     @Override
@@ -49,15 +49,15 @@ public class NameDAO extends StandardDAO<Name> {
         return toReturn;
     }
 
-    public static final class NameRowMapper implements RowMapper<Name> {
+    public static class NameRowMapper implements RowMapper<Name> {
 
-        private TotoMemoryDB totoMemoryDB;
+        private final TotoMemoryDB totoMemoryDB;
 
         public NameRowMapper(TotoMemoryDB totoMemoryDB){
             this.totoMemoryDB = totoMemoryDB;
         }
         @Override
-        public Name mapRow(final ResultSet rs, final int row) throws SQLException {
+        public final Name mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
                 return new Name(totoMemoryDB, rs.getInt(ID), rs.getString(NAME));
@@ -70,10 +70,10 @@ public class NameDAO extends StandardDAO<Name> {
 
     // copy from the value DAO, normalise?
 
-    private static final class CommaSeparatedIdsRowMapper implements RowMapper<String> {
+    private static class CommaSeparatedIdsRowMapper implements RowMapper<String> {
 
         @Override
-        public String mapRow(final ResultSet rs, final int row) throws SQLException {
+        public final String mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
                 return rs.getInt(PARENTID) + "," + rs.getInt(CHILDID);
@@ -92,7 +92,7 @@ public class NameDAO extends StandardDAO<Name> {
     // these two functions used to have some complexity to do with data integrity, now they are simple as the memory db should take care of that
 
     public boolean linkParentAndChild(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent, final Name child, int position) throws DataAccessException {
-        MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, parent.getId());
         namedParams.addValue(CHILDID, child.getId());
         namedParams.addValue(POSITION, position);
@@ -130,7 +130,7 @@ public class NameDAO extends StandardDAO<Name> {
     }*/
 
     public int unlinkAllForParent(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent) throws DataAccessException {
-        MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, parent.getId());
         String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID;
         return jdbcTemplate.update(updateSql, namedParams);
@@ -152,7 +152,5 @@ ORDER BY parent_id, position*/
         return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedIdsRowMapper());
 
     }
-
-
 
 }

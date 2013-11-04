@@ -16,7 +16,7 @@ import java.util.Map;
  * Time: 17:44
  * For persistence of provenance
  */
-public class ProvenanceDAO extends StandardDAO<Provenance>{
+public final class ProvenanceDAO extends StandardDAO<Provenance>{
 
     // the default table name for this data.
     @Override

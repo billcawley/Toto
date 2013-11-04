@@ -15,15 +15,15 @@ import java.util.*;
  * Workhorse hammering away at the memory DB.
 
  */
-public class ValueService {
+public final class ValueService {
 
-    public static String VALUE = "VALUE";
+    public final static String VALUE = "VALUE";
 
     @Autowired
     private NameService nameService;
 
     // set the names in delete info and unlink - best I can come up with at the moment
-    public void deleteValue(Value value) throws Exception {
+    public void deleteValue(final Value value) throws Exception {
         String names = "";
         for (Name n : value.getNames()){
             names += ", `" + n.getName() + "`";
@@ -35,29 +35,29 @@ public class ValueService {
         value.setNamesWillBePersisted(new HashSet<Name>());
     }
 
-    public Value createValue(LoggedInConnection loggedInConnection, int provenanceId, double doubleValue, String text) throws Exception {
+    public Value createValue(final LoggedInConnection loggedInConnection, final int provenanceId, final double doubleValue, final String text) throws Exception {
 //        return totoMemoryDB.createValue(provenanceId,doubleValue,text);
         return new Value(loggedInConnection.getTotoMemoryDB(),provenanceId,doubleValue,text,null);
     }
 
-    public void linkValueToNames(Value value, Set<Name> names) throws Exception {
+    public void linkValueToNames(final Value value, final Set<Name> names) throws Exception {
         value.setNamesWillBePersisted(names);
     }
 
     // TODO : is passing provenance the
 
-    public String storeValueWithProvenanceAndNames(LoggedInConnection loggedInConnection, final String valueString, final Provenance provenance, final Set<String> names) throws Exception {
+    public String storeValueWithProvenanceAndNames(final LoggedInConnection loggedInConnection, final String valueString, final Provenance provenance, final Set<String> names) throws Exception {
         String toReturn = "";
-        Set<Name> validNames = new HashSet<Name>();
-        Map<String, String> nameCheckResult = nameService.isAValidNameSet(loggedInConnection, names, validNames);
-        String error = nameCheckResult.get(NameService.ERROR);
-        String warning = nameCheckResult.get(NameService.ERROR);
+        final Set<Name> validNames = new HashSet<Name>();
+        final Map<String, String> nameCheckResult = nameService.isAValidNameSet(loggedInConnection, names, validNames);
+        final String error = nameCheckResult.get(NameService.ERROR);
+        final String warning = nameCheckResult.get(NameService.ERROR);
         if (error != null){
             return  error;
         } else if(warning != null){
             toReturn += warning;
         }
-        List<Value> existingValues = findForNames(validNames);
+        final List<Value> existingValues = findForNames(validNames);
         boolean alreadyInDatabase = false;
         for (Value existingValue : existingValues){ // really should only be one
             if (existingValue.getText().equals(valueString)){
@@ -78,10 +78,10 @@ public class ValueService {
         return toReturn;
     }
 
-    public List<Value> findForNames(Set<Name> names){
+    public List<Value> findForNames(final Set<Name> names){
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
         //long track = System.nanoTime();
-        List<Value> values = new ArrayList<Value>();
+        final List<Value> values = new ArrayList<Value>();
         // first get the shortest value list
         int smallestNameSetSize = -1;
         Name smallestName = null;
@@ -134,10 +134,10 @@ public class ValueService {
     int numberOfTimesCalled1 = 0;
 
 
-    public List<Value> findForNamesIncludeChildren(Set<Name> names){
+    public List<Value> findForNamesIncludeChildren(final Set<Name> names){
         long start = System.nanoTime();
 
-        List<Value> values = new ArrayList<Value>();
+        final List<Value> values = new ArrayList<Value>();
         // first get the shortest value list taking into account children
         int smallestNameSetSize = -1;
         Name smallestName = null;
@@ -155,7 +155,7 @@ public class ValueService {
         part1NanoCallTime1 += (System.nanoTime() - start);
         long point =System.nanoTime();
         assert smallestName != null; // make intellij happy :P
-        List<Value> valueList = findValuesForNameIncludeAllChildren(smallestName);
+        final List<Value> valueList = findValuesForNameIncludeAllChildren(smallestName);
         part2NanoCallTime1 += (System.nanoTime() - point);
         point =System.nanoTime();
         for (Value value : valueList){

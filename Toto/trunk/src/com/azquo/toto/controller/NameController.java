@@ -49,15 +49,13 @@ public class NameController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId, @RequestParam(value = "instructions", required = false) String instructions) throws Exception {
-
-        LoggedInConnection loggedInConnection;
+    public String handleRequest(@RequestParam(value = "connectionid", required = false)final String connectionId, @RequestParam(value = "instructions", required = false) String instructions) throws Exception {
 
         if (connectionId == null){
             return "no connection Id";
         }
 
-        loggedInConnection = loginService.getConnection(connectionId);
+        final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
 
         if (loggedInConnection == null){
             return "invalid or expired connection id";
@@ -90,10 +88,7 @@ public class NameController {
             if (structure != null){
                 final Name name = nameService.findByName(loggedInConnection, nameString);
                 if (name != null){
-                    if (structure.length() > 0){// define the structure - this won't be dependant on the structure instruction length it will be on there being anything after
-                    } else {// read it
-                        return getParentStructureFormattedForOutput(name, true) + getChildStructureFormattedForOutput(name, false);
-                    }
+                    return getParentStructureFormattedForOutput(name, true) + getChildStructureFormattedForOutput(name, false);
                 } else {
                     return "name : " + nameString + "not found";
                 }
@@ -247,7 +242,7 @@ public class NameController {
         return "No action taken";
     }
 
-    private String getInstruction(String instructions, String instructionName){
+    private String getInstruction(final String instructions, final String instructionName){
         String toReturn = null;
         if (instructions.toLowerCase().contains(instructionName.toLowerCase())){
             int commandStart = instructions.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length();
@@ -263,7 +258,7 @@ public class NameController {
         return toReturn;
     }
 
-    private String getNamesFormattedForOutput(Collection<Name> names){
+    private String getNamesFormattedForOutput(final Collection<Name> names){
         // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
         StringBuilder sb = new StringBuilder();
         boolean first = true;
@@ -279,7 +274,7 @@ public class NameController {
         return sb.toString();
     }
 
-    private String getParentStructureFormattedForOutput(Name name, boolean showParent){
+    private String getParentStructureFormattedForOutput(final Name name, final boolean showParent){
         StringBuilder sb = new StringBuilder();
         if (showParent){
             sb.append("`").append(name.getName()).append("`");
@@ -301,12 +296,12 @@ public class NameController {
     }
 
 
-    private String getChildStructureFormattedForOutput(Name name, boolean showChild){
+    private String getChildStructureFormattedForOutput(final Name name, final boolean showChild){
         StringBuilder sb = new StringBuilder();
         if (showChild){
             sb.append("`").append(name.getName()).append("`");
         }
-        Set<Name> children = name.getChildren();
+        final Set<Name> children = name.getChildren();
         if (!children.isEmpty()) {
             sb.append("; elements {");
             int count = 1;

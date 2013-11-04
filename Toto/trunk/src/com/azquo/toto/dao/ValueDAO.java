@@ -21,7 +21,7 @@ import java.util.Set;
  * Time: 10:28
  * DAO for Values, under new model just used for persistence,will hopefully be pretty simple
  * */
-public class ValueDAO extends StandardDAO<Value> {
+public final class ValueDAO extends StandardDAO<Value> {
     // the default table name for this data.
     @Override
     public String getTableName() {
@@ -37,9 +37,9 @@ public class ValueDAO extends StandardDAO<Value> {
 
     // related table and column names
 
-    public static String VALUENAME = "value_name";
-    public static String VALUEID = "value_id";
-    public static String NAMEID = "name_id";
+    public static final String VALUENAME = "value_name";
+    public static final String VALUEID = "value_id";
+    public static final String NAMEID = "name_id";
 
     @Override
     protected Map<String, Object> getColumnNameValueMap(Value value) {
@@ -53,7 +53,7 @@ public class ValueDAO extends StandardDAO<Value> {
     }
 
     private static final class ValueRowMapper implements RowMapper<Value> {
-        TotoMemoryDB totoMemoryDB;
+        final TotoMemoryDB totoMemoryDB;
         public ValueRowMapper(TotoMemoryDB totoMemoryDB){
             this.totoMemoryDB = totoMemoryDB;
         }
@@ -111,7 +111,7 @@ public class ValueDAO extends StandardDAO<Value> {
     public boolean linkValuesToNames(final TotoMemoryDB totoMemoryDB, final Set<Value> values) throws DataAccessException {
         long track = System.currentTimeMillis();
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        StringBuilder updateSql = new StringBuilder();
+        final StringBuilder updateSql = new StringBuilder();
         updateSql.append("INSERT INTO `").append(totoMemoryDB.getDatabaseName()).append("`.`").append(VALUENAME).append("` (`").append(VALUEID).append("`,`").append(NAMEID).append("`) VALUES ");
         int count = 1;
         for(Value value : values){
@@ -140,7 +140,7 @@ public class ValueDAO extends StandardDAO<Value> {
     public boolean unlinkValuesFromNames(final TotoMemoryDB totoMemoryDB, final Set<Value> values) throws DataAccessException {
         long track = System.currentTimeMillis();
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        StringBuilder updateSql = new StringBuilder();
+        final StringBuilder updateSql = new StringBuilder();
         updateSql.append("Delete from `").append(totoMemoryDB.getDatabaseName()).append("`.`").append(VALUENAME).append("` where ");
         int count = 1;
         for (Value value : values) {

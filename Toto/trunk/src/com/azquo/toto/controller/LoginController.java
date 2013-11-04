@@ -26,9 +26,9 @@ public class LoginController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "database", required = false) String database, @RequestParam(value = "user", required = false) String user, @RequestParam(value = "password", required = false) String password) throws Exception {
+    public String handleRequest(@RequestParam(value = "database", required = false) final String database, @RequestParam(value = "user", required = false) final String user, @RequestParam(value = "password", required = false) final String password) throws Exception {
         if (database != null && database.length() > 0 && user != null && user.length() > 0 && password != null && password.length() > 0){
-            LoggedInConnection loggedInConnection = loginService.login(database,user,password);
+            final LoggedInConnection loggedInConnection = loginService.login(database,user,password);
             if (loggedInConnection != null){
                 return loggedInConnection.getConnectionId();
             }

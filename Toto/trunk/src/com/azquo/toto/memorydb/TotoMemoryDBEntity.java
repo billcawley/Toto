@@ -43,7 +43,7 @@ public abstract class TotoMemoryDBEntity {
     // the columns for the entity were changed (as opposed to lists for example), sublasses will change this
     protected boolean entityColumnsChanged;
     // I think protected is right here, while the class may be referenced externally (for generics) this makes it difficult to be subclassed externally?
-    protected TotoMemoryDBEntity(TotoMemoryDB totoMemoryDB, int id) throws Exception {
+    protected TotoMemoryDBEntity(final TotoMemoryDB totoMemoryDB, final int id) throws Exception {
         this.totoMemoryDB = totoMemoryDB;
         // This getNeedsLoading is important, an instance of TotoMemoryDB should only be in needsloading during the constructor and hence it will stop
         // other bits of code overriding the entities ID
@@ -114,17 +114,17 @@ public abstract class TotoMemoryDBEntity {
     }
 
 
-    protected final void checkDatabaseMatches(TotoMemoryDB totoMemoryDB) throws Exception {
+    protected final void checkDatabaseMatches(final TotoMemoryDB totoMemoryDB) throws Exception {
         if (this.totoMemoryDB != totoMemoryDB){
             throw new Exception("Error, objects from different databases interacting!");
         }
     }
 
-    protected final void checkDatabaseMatches(TotoMemoryDBEntity totoMemoryDBEntity) throws Exception{
+    protected final void checkDatabaseMatches(final TotoMemoryDBEntity totoMemoryDBEntity) throws Exception{
         checkDatabaseMatches(totoMemoryDBEntity.totoMemoryDB);
     }
 
-    protected final void checkDatabaseForSet(Set<? extends TotoMemoryDBEntity> entities) throws Exception {
+    protected final void checkDatabaseForSet(final Set<? extends TotoMemoryDBEntity> entities) throws Exception {
         for (TotoMemoryDBEntity toCheck : entities){
             checkDatabaseMatches(toCheck);
         }

@@ -11,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Time: 10:55
  * Do we actually need a provenance service??
  */
-public class ProvenanceService {
+public final class ProvenanceService {
 
     @Autowired
     private TotoMemoryDB totoMemoryDB;

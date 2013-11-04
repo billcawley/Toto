@@ -27,6 +27,9 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     // ok they're all sets, but some need ordering :)
     private Set<Value> values;
     private Set<Name> parents;
+    // this is an interesting one. A name has peers, simple structure. If a name is one of those peers I'd like to record what it is a peer of.
+    // think I'll make this cascade down as well, so that when being set it will be set on oll children and when a child is added it will inherit from the parent
+    private Name peerOf;
     /* these two have position which we'll reflect by the place in the list. WHen modifying these sets one has to recreate teh set anyway
     and when doing soo changes to the order are taken into account.
      */
@@ -51,6 +54,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         this.name = name.trim();
         values = new HashSet<Value>();
         parents = new HashSet<Name>();
+        peerOf = null;
         children = new LinkedHashSet<Name>();
         peers = new LinkedHashSet<Name>();
         childrenChanged = false;
@@ -77,11 +81,11 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         getTotoMemoryDB().removeNameNeedsPersisting(this);
     }
 
-    public boolean getChildrenChanged() {
+    protected boolean getChildrenChanged() {
         return childrenChanged;
     }
 
-    public boolean getPeersChanged() {
+    protected boolean getPeersChanged() {
         return peersChanged;
     }
 
@@ -265,6 +269,12 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             if (peer.equals(this)){
                 throw new Exception("error name cannot be a peer of itself " + this);
             }
+            // tell the peer and its children who it is a peer of
+            peer.peerOf = this;
+            for(Name child : peer.findAllChildren()){
+                child.peerOf = this;
+            }
+
         }
         this.peers = peers;
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
@@ -281,8 +291,17 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         if (peers.remove(name) && !getTotoMemoryDB().getNeedsLoading()) { // it changed the set
             peersChanged = true;
             setNeedsPersisting();
+            name.peerOf = null;
+            for(Name child : name.findAllChildren()){
+                child.peerOf = null;
+            }
         }
     }
+
+    public Name getPeerOf() {
+        return peerOf;
+    }
+
 
     @Override
     public int compareTo(Name n) {

@@ -20,19 +20,19 @@ public class LoginService {
     @Autowired
     private TotoMemoryDB IMFMemoryDB;
 
-    private HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
+    private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
 
 
-    public LoggedInConnection login(String databaseName, String user, String password){
+    public LoggedInConnection login(final String databaseName, final String user, final String password){
         // TODO : detect duplicate logins?
         if (databaseName.equalsIgnoreCase("tototest") && user.equalsIgnoreCase("bill") && password.equalsIgnoreCase("thew1password")){
             // just hacking it for the mo
-            LoggedInConnection lim = new LoggedInConnection(System.nanoTime() + "" , totoMemoryDB, user);
+            final LoggedInConnection lim = new LoggedInConnection(System.nanoTime() + "" , totoMemoryDB, user);
             connections.put(lim.getConnectionId(), lim);
             return lim;
         } else if (databaseName.equalsIgnoreCase("imftest") && user.equalsIgnoreCase("edd") && password.equalsIgnoreCase("edd123")){
             // just hacking it for the mo
-            LoggedInConnection lim = new LoggedInConnection(System.nanoTime() + "" , IMFMemoryDB, user);
+            final LoggedInConnection lim = new LoggedInConnection(System.nanoTime() + "" , IMFMemoryDB, user);
             connections.put(lim.getConnectionId(), lim);
             return lim;
         } else {
@@ -43,7 +43,7 @@ public class LoginService {
 
     public LoggedInConnection getConnection(String connectionId){
 
-        LoggedInConnection lic = connections.get(connectionId);
+        final LoggedInConnection lic = connections.get(connectionId);
         if (lic != null){
             // TODO : timeout here
             lic.setLastAccessed(new Date());

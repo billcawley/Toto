@@ -12,13 +12,13 @@ import java.util.Date;
  */
 public final class Provenance extends TotoMemoryDBEntity {
 
-    private String user;
-    private Date timeStamp;
-    private String method;
-    private String name;
-    private String rowHeadings;
-    private String columnHeadings;
-    private String context;
+    private final String user;
+    private final Date timeStamp;
+    private final String method;
+    private final String name;
+    private final String rowHeadings;
+    private final String columnHeadings;
+    private final String context;
 
     public Provenance(TotoMemoryDB totoMemoryDB, String user, Date timeStamp, String method, String name, String rowHeadings, String columnHeadings, String context) throws Exception {
         this(totoMemoryDB, 0,user, timeStamp, method, name, rowHeadings, columnHeadings, context);

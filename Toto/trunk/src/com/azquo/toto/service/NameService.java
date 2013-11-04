@@ -15,25 +15,25 @@ import java.util.*;
  * Changes to how the data access will work certainly support this!
  * It will be passed credentials by the controller, that will determine which memory DB to use - it won;t access the DAO any more. For the moment will hard code one memory DB
  */
-public class NameService {
+public final class NameService {
 
 
     // hacky but testing for the moment
 
-    public void persist(LoggedInConnection loggedInConnection) {
+    public void persist(final LoggedInConnection loggedInConnection) {
         loggedInConnection.getTotoMemoryDB().saveDataToMySQL();
     }
 
-    public Name findByName(LoggedInConnection loggedInConnection, final String name) {
+    public Name findByName(final LoggedInConnection loggedInConnection, final String name) {
         return loggedInConnection.getTotoMemoryDB().getNameByName(name);
     }
 
-    public List<Name> searchNames(LoggedInConnection loggedInConnection, final String search) {
+    public List<Name> searchNames(final LoggedInConnection loggedInConnection, final String search) {
         return loggedInConnection.getTotoMemoryDB().searchNames(search);
     }
 
-    public Name findOrCreateName(LoggedInConnection loggedInConnection, final String name) throws Exception {
-        Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(name);
+    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
+        final Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(name);
         if (existing != null) {
             return existing;
         } else {
@@ -72,7 +72,7 @@ public class NameService {
     }
 
     public List<Name> findChildrenFromTo(final Name name, final int from, final int to) throws Exception {
-        ArrayList<Name> toReturn = new ArrayList<Name>();
+        final ArrayList<Name> toReturn = new ArrayList<Name>();
         // internally we know the children are ordered, so iterate over the set adding those in teh positions we care about
         int position = 1;
         for (Name child : name.getChildren()){
@@ -85,7 +85,7 @@ public class NameService {
     }
 
     public List<Name> findChildrenFromTo(final Name name, final String from, final String to) throws Exception {
-        List<Name> toReturn = new ArrayList<Name>();
+        final List<Name> toReturn = new ArrayList<Name>();
         boolean okByFrom = false;
         if (from == null) {
             okByFrom = true;
@@ -108,8 +108,8 @@ public class NameService {
     // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
     // also use an add peer type thing as below? what about blank, throw an exception here?
 
-    public void createPeer(LoggedInConnection loggedInConnection, final Name parentName, final String peerName) throws Exception {
-        Name peer = findOrCreateName(loggedInConnection, peerName);
+    public void createPeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName) throws Exception {
+        final Name peer = findOrCreateName(loggedInConnection, peerName);
 
         if (!parentName.getPeers().contains(peer)) { // it doesn't already have the peer
             LinkedHashSet<Name> withNewPeer = new LinkedHashSet<Name>(parentName.getPeers());
@@ -118,15 +118,15 @@ public class NameService {
         }
     }
 
-    public Name addOrCreateMember(LoggedInConnection loggedInConnection, final Name parentName, final String nameName) throws Exception {
-        Name name = findOrCreateName(loggedInConnection, nameName);
+    public Name addOrCreateMember(final LoggedInConnection loggedInConnection, final Name parentName, final String nameName) throws Exception {
+        final Name name = findOrCreateName(loggedInConnection, nameName);
         parentName.addChildWillBePersisted(name);
         return name;
     }
 
     // copied from the one below but for peers. Probably scope for some factoring
-    public void createPeer(LoggedInConnection loggedInConnection, final Name parentName, final String peerName, final String afterString, final int after) throws Exception {
-        Name newPeer = findOrCreateName(loggedInConnection, peerName);
+    public void createPeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName, final String afterString, final int after) throws Exception {
+        final Name newPeer = findOrCreateName(loggedInConnection, peerName);
         if (!parentName.getPeers().contains(newPeer)) { // it doesn't already have the peer
             LinkedHashSet<Name> withNewPeer = new LinkedHashSet<Name>();
             int position = 1;
@@ -146,9 +146,9 @@ public class NameService {
         }
     }
 
-    public void createPeers(LoggedInConnection loggedInConnection, final Name parentName, final List<String> peerNames) throws Exception {
+    public void createPeers(final LoggedInConnection loggedInConnection, final Name parentName, final List<String> peerNames) throws Exception {
         // in this we're going assume that we overwrite existing name links, the single one can be used for adding
-        LinkedHashSet<Name> peers = new LinkedHashSet<Name>(peerNames.size());
+        final LinkedHashSet<Name> peers = new LinkedHashSet<Name>(peerNames.size());
         for (String peerName : peerNames) {
             if (peerName.trim().length() > 0) {
                 peers.add(findOrCreateName(loggedInConnection, peerName));
@@ -157,7 +157,7 @@ public class NameService {
         parentName.setPeersWillBePersisted(peers);
     }
 
-    public void removePeer(LoggedInConnection loggedInConnection, final Name parentName, final String peerName) throws Exception {
+    public void removePeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName) throws Exception {
         Name existingPeer = loggedInConnection.getTotoMemoryDB().getNameByName(peerName);
         if (existingPeer != null) {
             parentName.removeFromPeersWillBePersisted(existingPeer);
@@ -168,7 +168,7 @@ public class NameService {
         if (name.getPeers().size() > 0){
             return name.getPeers();
         }
-        List<Name> parents = name.findAllParents();
+        final List<Name> parents = name.findAllParents();
         for (Name parent : parents) {
             if (!parent.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
                 return parent.getPeers();
@@ -177,10 +177,10 @@ public class NameService {
         return new HashSet<Name>();
     }
 
-    public void createMember(LoggedInConnection loggedInConnection, final Name parentName, final String childName, final String afterString, final int after) throws Exception {
-        Name newChild = findOrCreateName(loggedInConnection,childName);
+    public void createMember(final LoggedInConnection loggedInConnection, final Name parentName, final String childName, final String afterString, final int after) throws Exception {
+        final Name newChild = findOrCreateName(loggedInConnection,childName);
         if (!parentName.getChildren().contains(newChild)) { // it doesn't already have the peer
-            LinkedHashSet<Name> withNewChild = new LinkedHashSet<Name>();
+            final LinkedHashSet<Name> withNewChild = new LinkedHashSet<Name>();
             int position = 1;
             for (Name child : parentName.getChildren()){
                 withNewChild.add(child);
@@ -201,25 +201,28 @@ public class NameService {
 
     public void createMembers(LoggedInConnection loggedInConnection, final Name parentName, final List<String> childNameStrings) throws Exception {
         // in this we're going assume that we overwrite existing name links, the single one can be used for adding
-        LinkedHashSet<Name> childNames = new LinkedHashSet<Name>(childNameStrings.size());
+        final LinkedHashSet<Name> childNames = new LinkedHashSet<Name>(childNameStrings.size());
         for (String childNameString : childNameStrings) {
             if (childNameString.trim().length() > 0) {
                 Name child = findOrCreateName(loggedInConnection,childNameString);
-                childNames.add(child);
+                // here we need to check the peer status.
+                if (child.getParents().size() == 0 && child.getPeers().size() == 0){ // it's safe to add
+                    childNames.add(child);
+                }
             }
         }
         parentName.setChildrenWillBePersisted(childNames);
     }
 
     public void removeMember(LoggedInConnection loggedInConnection, final Name parentName, final String childName) throws Exception {
-        Name existingChild = loggedInConnection.getTotoMemoryDB().getNameByName(childName);
+        final Name existingChild = loggedInConnection.getTotoMemoryDB().getNameByName(childName);
         if (existingChild != null) {
             parentName.removeFromChildrenWillBePersisted(existingChild);
         }
     }
 
     public void renameName(LoggedInConnection loggedInConnection, String name, String renameAs) throws Exception {
-        Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(name);
+        final Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(name);
         if (existing != null) {
             existing.changeNameWillBePersisted(renameAs);
         }
@@ -229,18 +232,18 @@ public class NameService {
     public static final String ERROR = "ERROR";
     public static final String WARNING = "WARNING";
 
-    public Map<String, String> isAValidNameSet(LoggedInConnection loggedInConnection, Set<String> names, Set<Name> validNameList) throws Exception {
+    public Map<String, String> isAValidNameSet(final LoggedInConnection loggedInConnection, final Set<String> names, final Set<Name> validNameList) throws Exception {
 
         //System.out.println("pure java function");
         long track = System.currentTimeMillis();
 
-        Map<String, String> toReturn = new HashMap<String, String>();
+        final Map<String, String> toReturn = new HashMap<String, String>();
 
         String error = "";
         String warning = "";
 
-        Set<Name> hasPeers = new HashSet<Name>(); // the names (or their parents) in this list which have peer requirements, should only be one
-        Set<Name> namesToCheck = new HashSet<Name>();
+        final Set<Name> hasPeers = new HashSet<Name>(); // the names (or their parents) in this list which have peer requirements, should only be one
+        final Set<Name> namesToCheck = new HashSet<Name>();
 
         for (String nameString : names) {
             Name name = findByName(loggedInConnection, nameString);
@@ -252,7 +255,7 @@ public class NameService {
                     hasPeers.add(name);
                     thisNameHasPeers = true;
                 } else { // try looking up the chain and find the first with peers
-                    List<Name> parents = name.findAllParents();
+                    final List<Name> parents = name.findAllParents();
                     for (Name parent : parents) {
                         if (!parent.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
                             hasPeers.add(parent); // put the parent not the actual name in as it will be used to determine the criteria for this value
@@ -297,7 +300,7 @@ public class NameService {
                 if (!found) { // couldn't find this peer, need to look up through parents of each name for the peer
                     // again new logic here
                     for (Name nameToCheck : namesToCheck) {
-                        List<Name> allParents = nameToCheck.findAllParents();
+                        final List<Name> allParents = nameToCheck.findAllParents();
                         // again trying for more efficient logic
                         if (allParents.contains(requiredPeer)){
                             namesToCheck.remove(nameToCheck); // skip to the next one and remove the name from names to check and add it to the validated list to return
@@ -331,12 +334,12 @@ public class NameService {
         return toReturn;
     }
 
-    public void logNameHierarchy(Name name, int level) {
+    public void logNameHierarchy(final Name name, int level) {
         for (int i = 1; i <= level; i++) {
             System.out.print("- ");
         }
         System.out.println(name.getName());
-        Set<Name> children = name.getChildren();
+        final Set<Name> children = name.getChildren();
         if (!children.isEmpty()) {
             level++;
             for (Name child : children) {

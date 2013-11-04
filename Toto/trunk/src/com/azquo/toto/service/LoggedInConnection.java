@@ -17,11 +17,11 @@ import java.util.List;
  * ok here I'm pretty much making it up. I would use spring for session management but we can't use cookies here, it's requests from Excel
  * just make it work for the moment, worry about making it neater later. I've moved it to the service package as I want to protect calls to get the database object
  */
-public class LoggedInConnection {
+public final class LoggedInConnection {
 
-    private String connectionId;
-    private TotoMemoryDB totoMemoryDB;
-    private String userName;
+    private final String connectionId;
+    private final TotoMemoryDB totoMemoryDB;
+    private final String userName;
     private Date loginTime;
     private Date lastAccessed;
 
@@ -59,7 +59,7 @@ public class LoggedInConnection {
         return lastAccessed;
     }
 
-    public void setLastAccessed(Date lastAccessed) {
+    public void setLastAccessed(final Date lastAccessed) {
         this.lastAccessed = lastAccessed;
     }
 
@@ -67,7 +67,7 @@ public class LoggedInConnection {
         return rowHeadings;
     }
 
-    public void setRowHeadings(List<Name> rowHeadings) {
+    public void setRowHeadings(final List<Name> rowHeadings) {
         this.rowHeadings = rowHeadings;
     }
 
@@ -75,7 +75,7 @@ public class LoggedInConnection {
         return columnHeadings;
     }
 
-    public void setColumnHeadings(List<Name> columnHeadings) {
+    public void setColumnHeadings(final List<Name> columnHeadings) {
         this.columnHeadings = columnHeadings;
     }
 

@@ -20,19 +20,19 @@ public final class TotoMemoryDB {
        ready for the constructor
      */
 
-    private ValueDAO valueDAO;
-    private NameDAO nameDAO;
-    private ProvenanceDAO provenanceDAO;
+    private final ValueDAO valueDAO;
+    private final NameDAO nameDAO;
+    private final ProvenanceDAO provenanceDAO;
 
 
-    private HashMap<String, Name> nameByNameMap;
-    private HashMap<Integer, Name> nameByIdMap;
-    private HashMap<Integer, Value> valueByIdMap;
-    private HashMap<Integer, Provenance> provenanceByIdMap;
+    private final HashMap<String, Name> nameByNameMap;
+    private final HashMap<Integer, Name> nameByIdMap;
+    private final HashMap<Integer, Value> valueByIdMap;
+    private final HashMap<Integer, Provenance> provenanceByIdMap;
 
     private boolean needsLoading;
 
-    private String databaseName;
+    private final String databaseName;
 
     private int maxIdAtLoad;
     private int nextId;
@@ -71,16 +71,16 @@ public final class TotoMemoryDB {
 
     // right now this will not run properly!
 
-    synchronized protected void loadData() throws Exception {
+    synchronized private void loadData() throws Exception {
         if (needsLoading) { // only allow it once!
             // here we'll populate the memory DB from the database
             long track = System.currentTimeMillis();
 
             // these 3 commands will automatically load teh data into the memory DB set as persisted
 
-            List<Name> allNames = nameDAO.findAll(this);
-            List<Value> allValues = valueDAO.findAll(this);
-            List<Provenance> allProvenance = provenanceDAO.findAll(this);
+            final List<Name> allNames = nameDAO.findAll(this);
+            final List<Value> allValues = valueDAO.findAll(this);
+            final List<Provenance> allProvenance = provenanceDAO.findAll(this);
 
             System.out.println(allNames.size() + allValues.size() + allProvenance.size() + " unlinked entities loaded in " + (System.currentTimeMillis() - track) + "ms");
 
@@ -314,7 +314,7 @@ public final class TotoMemoryDB {
             wildCardAtEnd = true;
             search = search.substring(0,search.length() - 1);
         }
-        List<Name> toReturn = new ArrayList<Name>();
+        final List<Name> toReturn = new ArrayList<Name>();
         if (!wildCardAtBeginning && !wildCardAtEnd){
             toReturn.add(getNameByName(search));
         } else {
@@ -328,7 +328,7 @@ public final class TotoMemoryDB {
                     if (name.getName().toLowerCase().endsWith(search)){
                         toReturn.add(name);
                     }
-                } else if(wildCardAtEnd){
+                } else {
                     if (name.getName().toLowerCase().startsWith(search)){
                         toReturn.add(name);
                     }
@@ -340,13 +340,13 @@ public final class TotoMemoryDB {
         return toReturn;
     }
 
-    public Name getNameById(int id) {
+/*    public Name getNameById(int id) {
         return nameByIdMap.get(id);
     }
 
     public Value getValueById(int id) {
         return valueByIdMap.get(id);
-    }
+    }*/
 
     public Provenance getProvenanceById(int id) {
         return provenanceByIdMap.get(id);

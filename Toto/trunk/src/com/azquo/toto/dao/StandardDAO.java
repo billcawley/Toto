@@ -51,7 +51,7 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
 
     private final class StandardEntityByIdRowMapper implements RowMapper<EntityType> {
 
-        TotoMemoryDB totoMemoryDB;
+        final TotoMemoryDB totoMemoryDB;
 
         public StandardEntityByIdRowMapper(final TotoMemoryDB totoMemoryDB){
             this.totoMemoryDB = totoMemoryDB;
@@ -63,11 +63,11 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
         }
     }
 
-    public void updateById(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
+    public final void updateById(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
 //        final NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplateFactory.getJDBCTemplateForEntity(entity);
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         String updateSql = "UPDATE `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "` set ";
-        Map<String, Object> columnNameValueMap = getColumnNameValueMap(entity);
+        final Map<String, Object> columnNameValueMap = getColumnNameValueMap(entity);
         for (String columnName : columnNameValueMap.keySet()) {
             if (!columnName.equals(ID)) {
                 updateSql += "`" + columnName + "` = :" + columnName + ", ";
@@ -82,11 +82,11 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
 
     // now always assumes it's been passed an ID
 
-    public void insert(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
+    public final void insert(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
         String columnsCommaList = "";
         String valuesCommaList = "";
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        Map<String, Object> columnNameValueMap = getColumnNameValueMap(entity);
+        final Map<String, Object> columnNameValueMap = getColumnNameValueMap(entity);
         for (String columnName : columnNameValueMap.keySet()) {
             columnsCommaList += "`" + columnName + "`" + ", "; // build the comma separated list for use in the sql
             valuesCommaList += ":" + columnName + ", "; // build the comma separated list for use in the sql
@@ -100,11 +100,11 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
 
     // inspired by value but could be used for a lot
 
-    public void bulkInsert(final TotoMemoryDB totoMemoryDB, final Set<EntityType> entities) throws DataAccessException {
+    public final void bulkInsert(final TotoMemoryDB totoMemoryDB, final Set<EntityType> entities) throws DataAccessException {
         if (!entities.isEmpty()){
             long track = System.currentTimeMillis();
 
-            EntityType first = entities.iterator().next();
+            final EntityType first = entities.iterator().next();
 
             String columnsCommaList = "";
             Map<String, Object> columnNameValueMap = getColumnNameValueMap(first);
@@ -115,7 +115,7 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
             }
 
             columnsCommaList = columnsCommaList.substring(0, columnsCommaList.length() - 2); //trim the last ", "
-            StringBuilder insertSql = new StringBuilder();
+            final StringBuilder insertSql = new StringBuilder();
 
             insertSql.append("INSERT INTO `").append(totoMemoryDB.getDatabaseName()).append("`.`").append(getTableName()).append("` (").append(columnsCommaList).append(") VALUES ");
 
@@ -142,23 +142,23 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
         }
     }
 
-    public void store(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
+    public final void store(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
         if (entity.getNeedsInserting()) {
             insert(totoMemoryDB, entity);
         } else {
             updateById(totoMemoryDB, entity);
         }
     }
-    // removal means we should just have the object, pass it for the mo, Can cahnge to ID later
+    // removal means we should just have the object, pass it for the mo, Can change to ID later
 
-    public void removeById(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
+/*    public final void removeById(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue("id", entity.getId());
         final String SQL_DELETE = "DELETE  from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "` where " + ID + " = :" + ID;
         jdbcTemplate.update(SQL_DELETE, namedParams);
-    }
+    }*/
 
-    public EntityType findById(final TotoMemoryDB totoMemoryDB, int id) throws DataAccessException {
+    public final EntityType findById(final TotoMemoryDB totoMemoryDB, int id) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue("id", id);
         final String FIND_BY_ID = "Select * from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "` where " + ID + " = :" + ID;
@@ -173,11 +173,11 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
 
     // Assume not by id, adding wouldn't be difficult. A by table name one could be added later.
 
-    public List<EntityType> findAll(final TotoMemoryDB totoMemoryDB) throws DataAccessException {
+    public final List<EntityType> findAll(final TotoMemoryDB totoMemoryDB) throws DataAccessException {
         return findListWithWhereSQLAndParameters(totoMemoryDB, null, null, false);
     }
 
-    public List<EntityType> findListWithWhereSQLAndParameters(final TotoMemoryDB totoMemoryDB, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
+    public final List<EntityType> findListWithWhereSQLAndParameters(final TotoMemoryDB totoMemoryDB, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
         return findListWithWhereSQLAndParameters(totoMemoryDB, whereCondition, namedParams, lookupById, 0, SELECTLIMIT);
     }
 
@@ -185,7 +185,7 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
         return findListWithWhereSQLAndParameters(entity, whereCondition, namedParams, lookupById, 0, SELECTLIMIT, tableName);
     }*/
 
-    public List<EntityType> findListWithWhereSQLAndParameters(final TotoMemoryDB totoMemoryDB, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById, final int from, final int limit) throws DataAccessException {
+    public final List<EntityType> findListWithWhereSQLAndParameters(final TotoMemoryDB totoMemoryDB, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById, final int from, final int limit) throws DataAccessException {
         if (limit > SELECTLIMIT) {
             throw new InvalidDataAccessApiUsageException("Error, limit in SQL select greater than : " + SELECTLIMIT);
         }
@@ -199,7 +199,7 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
     }
 
 
-    public EntityType findOneWithWhereSQLAndParameters(final TotoMemoryDB totoMemoryDB, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
+/*    public final EntityType findOneWithWhereSQLAndParameters(final TotoMemoryDB totoMemoryDB, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
         if (lookupById) {
             final String SQL_SELECT = "Select `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`." + ID + " from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
             final List<EntityType> results = jdbcTemplate.query(SQL_SELECT, namedParams, new StandardEntityByIdRowMapper(totoMemoryDB));
@@ -217,5 +217,5 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
         }
     }
 
-
+*/
 }
