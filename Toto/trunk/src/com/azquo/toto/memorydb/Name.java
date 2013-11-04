@@ -165,11 +165,16 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     // same logic as above but returns a set, should be correct
 
+    private Set<Name> findAllChildrenCache = null;
+
     public Set<Name> findAllChildren() {
-        final Set<Name> allChildren = new HashSet<Name>();
+        if (findAllChildrenCache != null){
+            return findAllChildrenCache;
+        }
+        findAllChildrenCache = new HashSet<Name>();
         Set<Name> foundAtCurrentLevel = children;
         while (!foundAtCurrentLevel.isEmpty()) {
-            allChildren.addAll(foundAtCurrentLevel);
+            findAllChildrenCache.addAll(foundAtCurrentLevel);
             Set<Name> nextLevelSet = new HashSet<Name>();
             for (Name n : foundAtCurrentLevel) {
                 nextLevelSet.addAll(n.getChildren());
@@ -179,7 +184,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             }
             foundAtCurrentLevel = nextLevelSet;
         }
-        return allChildren;
+        return findAllChildrenCache;
     }
 
     public Set<Name> getChildren() {
@@ -204,6 +209,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         }
 
         this.children = children;
+        findAllChildrenCache = null;
         // set the parents based of the children
 
         // set all parents on the new list
@@ -227,6 +233,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         }
 
         if (children.add(child)){ // something actually changed :)
+            findAllChildrenCache = null;
             child.parents.add(this);
             if(!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
                 childrenChanged = true;
@@ -242,6 +249,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         checkDatabaseMatches(name);// even if not needed throw the damn exception!
         name.parents.remove(this);
         if (children.remove(name) && !getTotoMemoryDB().getNeedsLoading()) { // it changed the set and we're not loading
+            findAllChildrenCache = null;
             childrenChanged = true;
             setNeedsPersisting();
         }

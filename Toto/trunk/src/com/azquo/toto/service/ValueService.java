@@ -125,7 +125,18 @@ public class ValueService {
     // I'm going to try for similar logic but using the lists of children for each label rather than just the label if that makes sense
     // I wonder if it should be a list or set returned?
 
+    // this is slow relatively speaking
+
+
+    long part1NanoCallTime1 = 0;
+    long part2NanoCallTime1 = 0;
+    long part3NanoCallTime1 = 0;
+    int numberOfTimesCalled1 = 0;
+
+
     public List<Value> findForNamesIncludeChildren(Set<Name> names){
+        long start = System.nanoTime();
+
         List<Value> values = new ArrayList<Value>();
         // first get the shortest value list taking into account children
         int smallestNameSetSize = -1;
@@ -141,8 +152,13 @@ public class ValueService {
             }
         }
 
+        part1NanoCallTime1 += (System.nanoTime() - start);
+        long point =System.nanoTime();
         assert smallestName != null; // make intellij happy :P
-        for (Value value : findValuesForNameIncludeAllChildren(smallestName)){
+        List<Value> valueList = findValuesForNameIncludeAllChildren(smallestName);
+        part2NanoCallTime1 += (System.nanoTime() - point);
+        point =System.nanoTime();
+        for (Value value : valueList){
             boolean theValueIsOk = true;
             for (Name name : names){
                 if (!name.equals(smallestName)){ // ignore the one we started with
@@ -166,26 +182,45 @@ public class ValueService {
                 values.add(value);
             }
         }
-
+        part3NanoCallTime1 += (System.nanoTime() - point);
+        numberOfTimesCalled1++;
         //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
         //track = System.nanoTime();
 
         return values;
     }
 
-    public double findSumForNamesIncludeChildren(Set<Name> names){
-        System.out.println("findSumForNamesIncludeChildren");
+    public void printFindForNamesIncludeChildrenStats(){
+        System.out.println("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
+        System.out.println("part 1 average nano : " + (part1NanoCallTime1/numberOfTimesCalled1));
+        System.out.println("part 2 average nano : " + (part2NanoCallTime1/numberOfTimesCalled1));
+        System.out.println("part 3 average nano : " + (part3NanoCallTime1/numberOfTimesCalled1));
+    }
+
+
+    long totalNanoCallTime = 0;
+    long part1NanoCallTime = 0;
+    long part2NanoCallTime = 0;
+    int numberOfTimesCalled = 0;
+
+    public double findSumForNamesIncludeChildren(LoggedInConnection loggedInConnection, Set<Name> names){
+        //System.out.println("findSumForNamesIncludeChildren");
+        long start = System.nanoTime();
 
         List<Value> values = findForNamesIncludeChildren(names);
+        part1NanoCallTime += (System.nanoTime() - start);
+        long point = System.nanoTime();
         double sumValue = 0;
         for (Value value : values){
             if (value.getText() != null && value.getText().length() > 0){
                 try{
-                    System.out.print("adding " + value.getText());
-                    for (Name n : value.getNames()){
-                        System.out.print(" " + n.getName());
-                    }
-                    System.out.println();
+/*                    if (names.contains(nameService.findByName(loggedInConnection, "www.bakerross.co.uk"))){
+                        System.out.print("adding " + value.getText());
+                        for (Name n : value.getNames()){
+                            System.out.print(" " + n.getName());
+                        }
+                        System.out.println();
+                    }                        */
                     sumValue += Double.parseDouble(value.getText());
                 } catch (Exception ignored){
                 }
@@ -193,7 +228,17 @@ public class ValueService {
                 sumValue += value.getDoubleValue();
             }
         }
+        part2NanoCallTime += (System.nanoTime() - point);
+        totalNanoCallTime += (System.nanoTime() - start);
+        numberOfTimesCalled++;
         return sumValue;
+    }
+
+    public void printSumStats(){
+        System.out.println("calls to  findSumForNamesIncludeChildren : " + numberOfTimesCalled);
+        System.out.println("part 1 average nano : " + (part1NanoCallTime/numberOfTimesCalled));
+        System.out.println("part 2 average nano : " + (part2NanoCallTime/numberOfTimesCalled));
+        System.out.println("total average nano : " + (totalNanoCallTime/numberOfTimesCalled));
     }
 
     public List<Value> findValuesForNameIncludeAllChildren(Name name){

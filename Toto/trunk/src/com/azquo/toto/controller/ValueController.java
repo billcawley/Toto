@@ -123,7 +123,7 @@ public class ValueController {
                         namesForThisCell.add(contextName);
                         namesForThisCell.add(columnName);
                         namesForThisCell.add(rowName);
-                        sb.append(valueService.findSumForNamesIncludeChildren(namesForThisCell));
+                        sb.append(valueService.findSumForNamesIncludeChildren(loggedInConnection, namesForThisCell));
                         if (count < loggedInConnection.getColumnHeadings().size()){
                             sb.append("\t");
                         } else {
@@ -132,6 +132,8 @@ public class ValueController {
                         count++;
                     }
                 }
+                valueService.printSumStats();
+                valueService.printFindForNamesIncludeChildrenStats();
                 System.out.println("time to execute : " + (System.currentTimeMillis() - track));
                 return sb.toString();
             } else {
