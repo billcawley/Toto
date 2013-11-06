@@ -50,11 +50,11 @@ public class ValueServiceTest {
     @Test
     public void testCsvImport() throws Exception {
 
-//        LoggedInConnection loggedInConnection = loginService.login("imftest", "edd", "edd123");
-        LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password");
+        LoggedInConnection loggedInConnection = loginService.login("imftest", "edd", "edd123",0);
+//        LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password",0);
 
-//        String filePath = "/home/cawley/Downloads/imf.txt";
-        String filePath = "/home/cawley/Downloads/10daysinjan.csv";
+        String filePath = "/home/cawley/Downloads/imf.txt";
+//        String filePath = "/home/cawley/Downloads/10daysinjan.csv";
         // skip file opening time . . .
         long track = System.currentTimeMillis();
         // for initial attempts at running it
@@ -62,15 +62,15 @@ public class ValueServiceTest {
 
 
         // the header after which the headers stop being top parent names and become from a subset e.g. dates and then all the cells below are values
-//        String valuesAfter = "Country";
-        String valuesAfter = null;
+        String valuesAfter = "Country";
+//        String valuesAfter = null;
 
-//        String valuesAfterParentName = "Period";
-        String valuesAfterParentName = null;
+        String valuesAfterParentName = "Period";
+//        String valuesAfterParentName = null;
 
-//        String nameWithPeersName = "Data Item";
-        String nameWithPeersName = "vendorstatsname";
-        CsvReader csvReader = new CsvReader(new InputStreamReader(new FileInputStream(filePath), "8859_1"), '\t');
+        String nameWithPeersName = "Data Item";
+//        String nameWithPeersName = "vendorstatsname";
+        CsvReader csvReader = new CsvReader(new InputStreamReader(new FileInputStream(filePath), "utf-8"), '\t');
         csvReader.readHeaders();
         String[] headers = csvReader.getHeaders();
         // are the following few lines necessary??

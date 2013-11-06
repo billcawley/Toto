@@ -3,9 +3,7 @@ package com.azquo.toto.service;
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -24,18 +22,26 @@ public final class LoggedInConnection {
     private final String userName;
     private Date loginTime;
     private Date lastAccessed;
+    private long timeOut;
 
-    private List<Name> rowHeadings;
-    private List<Name> columnHeadings;
+    private final Map<String, List<Name>> rowHeadings;
+    private final Map<String, List<Name>> columnHeadings;
 
-    public LoggedInConnection(String connectionId, TotoMemoryDB totoMemoryDB, String userName){
+    private static final String defaultRegion = "default-region";
+
+    public LoggedInConnection(final String connectionId, final TotoMemoryDB totoMemoryDB, final String userName, long timeOut){
         this.connectionId = connectionId;
         this.totoMemoryDB = totoMemoryDB;
         this.userName = userName;
         loginTime = new Date();
         lastAccessed = new Date();
-        rowHeadings = new ArrayList<Name>();
-        columnHeadings = new ArrayList<Name>();
+        rowHeadings = new HashMap<String, List<Name>>();
+        columnHeadings = new HashMap<String, List<Name>>();
+        if (timeOut > 0){
+            this.timeOut = timeOut;
+        } else {
+            this.timeOut = 1000 *60 * 120;
+        }
     }
 
     public String getConnectionId() {
@@ -59,24 +65,44 @@ public final class LoggedInConnection {
         return lastAccessed;
     }
 
+    public long getTimeOut() {
+        return timeOut;
+    }
+
     public void setLastAccessed(final Date lastAccessed) {
         this.lastAccessed = lastAccessed;
     }
 
-    public List<Name> getRowHeadings() {
-        return rowHeadings;
+    public List<Name> getRowHeadings(final String region) {
+        if (region == null){
+            return rowHeadings.get(defaultRegion);
+        } else {
+            return rowHeadings.get(region);
+        }
     }
 
-    public void setRowHeadings(final List<Name> rowHeadings) {
-        this.rowHeadings = rowHeadings;
+    public void setRowHeadings(final String region,  final List<Name> rowHeadings) {
+        if (region == null){
+            this.rowHeadings.put(defaultRegion, rowHeadings);
+        } else {
+            this.rowHeadings.put(region, rowHeadings);
+        }
     }
 
-    public List<Name> getColumnHeadings() {
-        return columnHeadings;
+    public List<Name> getColumnHeadings(final String region) {
+        if (region == null){
+            return columnHeadings.get(defaultRegion);
+        } else {
+            return columnHeadings.get(region);
+        }
     }
 
-    public void setColumnHeadings(final List<Name> columnHeadings) {
-        this.columnHeadings = columnHeadings;
+    public void setColumnHeadings(final String region,  final List<Name> columnHeadings) {
+        if (region == null){
+            this.columnHeadings.put(defaultRegion, columnHeadings);
+        } else {
+            this.columnHeadings.put(region, columnHeadings);
+        }
     }
 
 }

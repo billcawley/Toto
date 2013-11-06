@@ -40,28 +40,29 @@ public class ValueController {
     @RequestMapping
     @ResponseBody
     public String handleRequest(@RequestParam(value = "rowheadings", required = false)final String rowheadings, @RequestParam(value = "columnheadings", required = false) final String columnheadings,
-                                @RequestParam(value = "context", required = false)final String context, @RequestParam(value = "connectionid", required = false)final String connectionId) throws Exception {
+                                @RequestParam(value = "context", required = false)final String context, @RequestParam(value = "connectionid", required = false)final String connectionId,
+                                @RequestParam(value = "region", required = false)final String region) throws Exception {
 
         // these 3 statements copied, should factor
 
         if (connectionId == null){
-            return "no connection Id";
+            return "error:no connection id";
         }
 
         final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
 
         if (loggedInConnection == null){
-            return "invalid or expired connection id";
+            return "error:invalid or expired connection id";
         }
 
 
         if (rowheadings != null && rowheadings.length() > 0){
-            // ok we'll assume a list or command. First just a basic elements
+            // ok we'll assume a list or command. First just a basic children
             if (rowheadings.contains(";")){
                 final String nameString = rowheadings.substring(0, rowheadings.indexOf(";")).trim();
                 final Name parent = nameService.findByName(loggedInConnection, nameString);
                 if (parent != null){
-                    loggedInConnection.setRowHeadings(new ArrayList<Name>(parent.getChildren()));
+                    loggedInConnection.setRowHeadings(region,new ArrayList<Name>(parent.getChildren()));
                     final StringBuilder sb = new StringBuilder();
                     int count = 1;
                     for (Name child : parent.getChildren()){
@@ -73,20 +74,20 @@ public class ValueController {
                     }
                     return sb.toString();
                 } else {
-                    return "cannot find name : " + nameString;
+                    return "error:cannot find name : " + nameString;
                 }
             } else {
-                return "cannot parse row headings string!";
+                return "error:cannot parse row headings string!";
             }
         }
 
         if (columnheadings != null && columnheadings.length() > 0){
-            // ok we'll assume a list or command. First just a basic elements
+            // ok we'll assume a list or command. First just a basic children
             if (columnheadings.contains(";")){
                 final String nameString = columnheadings.substring(0, columnheadings.indexOf(";")).trim();
                 final Name parent = nameService.findByName(loggedInConnection, nameString);
                 if (parent != null){
-                    loggedInConnection.setColumnHeadings(new ArrayList<Name>(parent.getChildren()));
+                    loggedInConnection.setColumnHeadings(region,new ArrayList<Name>(parent.getChildren()));
                     final StringBuilder sb = new StringBuilder();
                     int count = 1;
                     for (Name child : parent.getChildren()){
@@ -98,29 +99,29 @@ public class ValueController {
                     }
                     return sb.toString();
                 } else {
-                    return "cannot find name : " + nameString;
+                    return "error:cannot find name : " + nameString;
                 }
             } else {
-                return "cannot parse column headings string!";
+                return "error:cannot parse column headings string!";
             }
         }
         if (context != null && context.length() > 0){
             final Name contextName = nameService.findByName(loggedInConnection, context);
             if (contextName == null){
-                return "I can't find a name for the context : " + context;
+                return "error:I can't find a name for the context : " + context;
             }
             long track = System.currentTimeMillis();
-            if (loggedInConnection.getRowHeadings() != null && loggedInConnection.getRowHeadings().size() > 0 && loggedInConnection.getColumnHeadings() != null && loggedInConnection.getColumnHeadings().size() > 0 ){
+            if (loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0 && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0 ){
                 final StringBuilder sb = new StringBuilder();
-                for (Name rowName : loggedInConnection.getRowHeadings()){ // make it like a document
+                for (Name rowName : loggedInConnection.getRowHeadings(region)){ // make it like a document
                     int count = 1;
-                    for (Name columnName : loggedInConnection.getColumnHeadings()){
+                    for (Name columnName : loggedInConnection.getColumnHeadings(region)){
                         final Set<Name> namesForThisCell = new HashSet<Name>();
                         namesForThisCell.add(contextName);
                         namesForThisCell.add(columnName);
                         namesForThisCell.add(rowName);
                         sb.append(valueService.findSumForNamesIncludeChildren(loggedInConnection, namesForThisCell));
-                        if (count < loggedInConnection.getColumnHeadings().size()){
+                        if (count < loggedInConnection.getColumnHeadings(region).size()){
                             sb.append("\t");
                         } else {
                             sb.append("\r");
@@ -133,11 +134,11 @@ public class ValueController {
                 System.out.println("time to execute : " + (System.currentTimeMillis() - track));
                 return sb.toString();
             } else {
-                return "Column and/or row headings are not defined for use with context";
+                return "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
             }
 
         }
-        return "value controller here!";
+        return "error:no action taken";
     }
 
 }

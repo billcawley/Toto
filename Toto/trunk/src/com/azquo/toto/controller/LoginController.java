@@ -26,13 +26,20 @@ public class LoginController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "database", required = false) final String database, @RequestParam(value = "user", required = false) final String user, @RequestParam(value = "password", required = false) final String password) throws Exception {
+    public String handleRequest(@RequestParam(value = "database", required = false) final String database, @RequestParam(value = "user", required = false) final String user, @RequestParam(value = "password", required = false) final String password, @RequestParam(value = "timeout", required = false) final String timeout) throws Exception {
         if (database != null && database.length() > 0 && user != null && user.length() > 0 && password != null && password.length() > 0){
-            final LoggedInConnection loggedInConnection = loginService.login(database,user,password);
+            int minutesTimeout = 0;
+            if (timeout != null && timeout.length() > 0){
+                try{
+                    minutesTimeout = Integer.parseInt(timeout);
+                } catch (Exception ignored){
+                }
+            }
+            final LoggedInConnection loggedInConnection = loginService.login(database,user,password, minutesTimeout);
             if (loggedInConnection != null){
                 return loggedInConnection.getConnectionId();
             }
         }
-        return "false";
+        return "error:incorrect login details";
     }
 }

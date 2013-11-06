@@ -110,7 +110,6 @@ public final class NameService {
 
     public void createPeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName) throws Exception {
         final Name peer = findOrCreateName(loggedInConnection, peerName);
-
         if (!parentName.getPeers().contains(peer)) { // it doesn't already have the peer
             LinkedHashSet<Name> withNewPeer = new LinkedHashSet<Name>(parentName.getPeers());
             withNewPeer.add(peer);
@@ -120,6 +119,8 @@ public final class NameService {
 
     public Name addOrCreateMember(final LoggedInConnection loggedInConnection, final Name parentName, final String nameName) throws Exception {
         final Name name = findOrCreateName(loggedInConnection, nameName);
+        // check peers here
+
         parentName.addChildWillBePersisted(name);
         return name;
     }

@@ -23,16 +23,16 @@ public class LoginService {
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
 
 
-    public LoggedInConnection login(final String databaseName, final String user, final String password){
+    public LoggedInConnection login(final String databaseName, final String user, final String password, int timeOutInMinutes){
         // TODO : detect duplicate logins?
         if (databaseName.equalsIgnoreCase("tototest") && user.equalsIgnoreCase("bill") && password.equalsIgnoreCase("thew1password")){
             // just hacking it for the mo
-            final LoggedInConnection lim = new LoggedInConnection(System.nanoTime() + "" , totoMemoryDB, user);
+            final LoggedInConnection lim = new LoggedInConnection(System.nanoTime() + "" , totoMemoryDB, user, timeOutInMinutes * 60 * 1000);
             connections.put(lim.getConnectionId(), lim);
             return lim;
         } else if (databaseName.equalsIgnoreCase("imftest") && user.equalsIgnoreCase("edd") && password.equalsIgnoreCase("edd123")){
             // just hacking it for the mo
-            final LoggedInConnection lim = new LoggedInConnection(System.nanoTime() + "" , IMFMemoryDB, user);
+            final LoggedInConnection lim = new LoggedInConnection(System.nanoTime() + "" , IMFMemoryDB, user, timeOutInMinutes * 60 * 1000);
             connections.put(lim.getConnectionId(), lim);
             return lim;
         } else {
@@ -45,6 +45,12 @@ public class LoginService {
 
         final LoggedInConnection lic = connections.get(connectionId);
         if (lic != null){
+            System.out.println("last accessed : " + lic.getLastAccessed() + " timeout " + lic.getTimeOut());
+            if ((System.currentTimeMillis() - lic.getLastAccessed().getTime()) > lic.getTimeOut()){
+                // connection timed out
+                connections.remove(lic.getConnectionId());
+                return null;
+            }
             // TODO : timeout here
             lic.setLastAccessed(new Date());
         }

@@ -25,7 +25,7 @@ import java.util.*;
 @RequestMapping("/Name")
 public class NameController {
 
-    public static final String ELEMENTS = "elements";
+    public static final String CHILDREN = "CHILDREN";
     public static final String PEERS = "peers";
     public static final String STRUCTURE = "structure";
     public static final String CREATE = "create";
@@ -52,13 +52,13 @@ public class NameController {
     public String handleRequest(@RequestParam(value = "connectionid", required = false)final String connectionId, @RequestParam(value = "instructions", required = false) String instructions) throws Exception {
 
         if (connectionId == null){
-            return "no connection Id";
+            return "error:no connection id";
         }
 
         final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
 
         if (loggedInConnection == null){
-            return "invalid or expired connection id";
+            return "error:invalid or expired connection id";
         }
 
         // this certainly will NOT stay here :)
@@ -73,7 +73,7 @@ public class NameController {
             // now we have it strip off the name, use getInstruction to see what we want to do with the name
             instructions = instructions.substring(instructions.indexOf(';') + 1).trim();
 
-            String elements = getInstruction(instructions, ELEMENTS);
+            String children = getInstruction(instructions, CHILDREN);
             String peers = getInstruction(instructions, PEERS);
             String structure = getInstruction(instructions, STRUCTURE);
             String create = getInstruction(instructions, CREATE);
@@ -84,24 +84,24 @@ public class NameController {
             String remove = getInstruction(instructions, REMOVE);
             String search = getInstruction(instructions, SEARCH);
             String renameas = getInstruction(instructions, RENAMEAS);
-            // since elements can be part of structure definition we do structure first
+            // since children can be part of structure definition we do structure first
             if (structure != null){
                 final Name name = nameService.findByName(loggedInConnection, nameString);
                 if (name != null){
                     return getParentStructureFormattedForOutput(name, true) + getChildStructureFormattedForOutput(name, false);
                 } else {
-                    return "name : " + nameString + "not found";
+                    return "error:name : " + nameString + "not found";
                 }
 
-            } else if (elements != null){
+            } else if (children != null){
                 if (create != null){
                     final Name name = nameService.findOrCreateName(loggedInConnection, nameString);
                     // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
-                    if(elements.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
-                        // EXAMPLE : 2013;elements {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
-                        if (elements.contains("}")){
-                            elements = elements.substring(1, elements.indexOf("}"));
-                            final StringTokenizer st = new StringTokenizer(elements, ",");
+                    if(children.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
+                        // EXAMPLE : 2013;children {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
+                        if (children.contains("}")){
+                            children = children.substring(1, children.indexOf("}"));
+                            final StringTokenizer st = new StringTokenizer(children, ",");
                             final List<String> namesToAdd = new ArrayList<String>();
                             while (st.hasMoreTokens()){
                                 String childName = st.nextToken().trim();
@@ -113,7 +113,7 @@ public class NameController {
                             nameService.createMembers(loggedInConnection, name, namesToAdd);
                             return "Create array saved " + namesToAdd.size() + " names";
                         } else{
-                            return "Unclosed }";
+                            return "error:Unclosed }";
                         }
                     } else { // insert after a certain position
                         // currently won't support before and after on create arrays, probably could later
@@ -122,14 +122,14 @@ public class NameController {
                             after = Integer.parseInt(afterString);
                         } catch (NumberFormatException ignored){
                         }
-                        nameService.createMember(loggedInConnection, name, elements, afterString, after);
-                        return elements + " added to " + name.getName();
+                        nameService.createMember(loggedInConnection, name, children, afterString, after);
+                        return children + " added to " + name.getName();
                     }
                 } else if (remove != null){ // delete
                     final Name name = nameService.findByName(loggedInConnection, nameString);
                     if (name != null){
-                        nameService.removeMember(loggedInConnection, name, elements);
-                        return elements + " removed";
+                        nameService.removeMember(loggedInConnection, name, children);
+                        return children + " removed";
                     }
                 } else {// they want to read data
                     final Name name = nameService.findByName(loggedInConnection, nameString);
@@ -143,7 +143,7 @@ public class NameController {
                                 try{
                                     level = Integer.parseInt(levelString);
                                 } catch (NumberFormatException nfe){
-                                    return "problem parsing level : " + levelString;
+                                    return "error:problem parsing level : " + levelString;
                                 }
                             }
 
@@ -180,7 +180,7 @@ public class NameController {
                         // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
                         return getNamesFormattedForOutput(names);
                     } else {
-                        return "name : " + nameString + "not found";
+                        return "error:name : " + nameString + "not found";
                     }
                 }
             } else if (peers != null){
@@ -188,7 +188,7 @@ public class NameController {
                     final Name name = nameService.findOrCreateName(loggedInConnection, nameString);
                     // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
                     if(peers.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
-                        // EXAMPLE : 2013;elements {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
+                        // EXAMPLE : 2013;children {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
                         if (peers.contains("}")){
                             peers = peers.substring(1, peers.indexOf("}"));
                             final StringTokenizer st = new StringTokenizer(peers, ",");
@@ -203,7 +203,7 @@ public class NameController {
                             nameService.createPeers(loggedInConnection, name, namesToAdd);
                             return "Create array saved " + namesToAdd.size() + " names";
                         } else{
-                            return "Unclosed }";
+                            return "error:Unclosed }";
                         }
                     } else { // insert after a certain position
                         // currently won't support before and after on create arrays, probably could later
@@ -212,14 +212,14 @@ public class NameController {
                             after = Integer.parseInt(afterString);
                         } catch (NumberFormatException ignored){
                         }
-                        nameService.createPeer(loggedInConnection, name, elements, afterString, after);
-                        return elements + " added to " + name.getName();
+                        nameService.createPeer(loggedInConnection, name, children, afterString, after);
+                        return children + " added to " + name.getName();
                     }
                 } else if (remove != null){ // delete
                     final Name name = nameService.findByName(loggedInConnection, nameString);
                     if (name != null){
-                        nameService.removePeer(loggedInConnection, name, elements);
-                        return elements + " deleted";
+                        nameService.removePeer(loggedInConnection, name, children);
+                        return children + " deleted";
                     }
                 } else {// they want to read data
                     final Name name = nameService.findByName(loggedInConnection, nameString);
@@ -227,11 +227,11 @@ public class NameController {
                         //  Fees; peers {Period, Analysis, Merchant};create;
                         return getNamesFormattedForOutput(nameService.getPeersIncludeParents(name));
                     } else {
-                        return "name : " + nameString + "not found";
+                        return "error:name : " + nameString + "not found";
                     }
                 }
 
-            } else if (renameas != null){ // not specific to peers or elements
+            } else if (renameas != null){ // not specific to peers or children
                 nameService.renameName(loggedInConnection, nameString, renameas);
                 return "rename " + nameString + " to " + renameas;
             } else if (search != null){ // search
@@ -239,7 +239,7 @@ public class NameController {
             }
         }
 
-        return "No action taken";
+        return "error:No action taken";
     }
 
     private String getInstruction(final String instructions, final String instructionName){
@@ -281,7 +281,7 @@ public class NameController {
         }
         Set<Name> parents = name.getParents();
         if (!parents.isEmpty()) {
-            sb.append("; in {");
+            sb.append("; parents {");
             int count = 1;
             for (Name parent : parents) {
                 sb.append(getParentStructureFormattedForOutput(parent, true));
@@ -303,7 +303,7 @@ public class NameController {
         }
         final Set<Name> children = name.getChildren();
         if (!children.isEmpty()) {
-            sb.append("; elements {");
+            sb.append("; children {");
             int count = 1;
             for (Name child : children) {
                 sb.append(getChildStructureFormattedForOutput(child, true));
@@ -316,7 +316,5 @@ public class NameController {
         }
         return sb.toString();
     }
-
-
 
 }

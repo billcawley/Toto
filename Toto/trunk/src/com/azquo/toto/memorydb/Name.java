@@ -1,7 +1,5 @@
 package com.azquo.toto.memorydb;
 
-import org.springframework.dao.DataAccessException;
-
 import java.util.*;
 
 /**
@@ -27,9 +25,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     // ok they're all sets, but some need ordering :)
     private Set<Value> values;
     private Set<Name> parents;
-    // this is an interesting one. A name has peers, simple structure. If a name is one of those peers I'd like to record what it is a peer of.
-    // think I'll make this cascade down as well, so that when being set it will be set on oll children and when a child is added it will inherit from the parent
-    private Name peerOf;
     /* these two have position which we'll reflect by the place in the list. WHen modifying these sets one has to recreate teh set anyway
     and when doing soo changes to the order are taken into account.
      */
@@ -54,7 +49,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         this.name = name.trim();
         values = new HashSet<Value>();
         parents = new HashSet<Name>();
-        peerOf = null;
         children = new LinkedHashSet<Name>();
         peers = new LinkedHashSet<Name>();
         childrenChanged = false;
@@ -167,6 +161,22 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         return allParents;
     }
 
+    // since we're not going to allow a name to exist in two top "root" names one should be able to just get the first from parent lists and get there
+
+    public Name findTopParent() {
+        if (parents.size() > 0){
+            Name parent = parents.iterator().next();
+            while (parent != null){
+                if (parent.getParents().size() > 0){
+                    parent = parent.getParents().iterator().next();
+                } else {
+                    return parent; // it has no parents, must be top
+                }
+            }
+        }
+        return null;
+    }
+
     // same logic as above but returns a set, should be correct
 
     private Set<Name> findAllChildrenCache = null;
@@ -204,8 +214,13 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             if (newChild.equals(this) || findAllParents().contains(newChild)){
                 throw new Exception("error cannot assign child due to circular reference, " + newChild + " cannot be added to " + this);
             }
+            // now we need to check the top parent is not changing ont eh child
+            if (newChild.getParents().size() > 0){ // it has parents so we need to check
+                if (!newChild.findTopParent().equals(this) && parents.size() > 0 && !newChild.findTopParent().equals(findTopParent())){
+                    throw new Exception("error cannot assign child as it has a different top parent" + newChild + " has top parent " + newChild.findTopParent() + " " + this + " has or is a different top parent");
+                }
+            }
         }
-
 
         // remove all parents on the old one
         for (Name oldChild : this.children){
@@ -235,6 +250,12 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         if (child.equals(this) || findAllParents().contains(child)){
             throw new Exception("error cannot assign child due to circular reference, " + child + " cannot be added to " + this);
         }
+        // now we need to check the top parent is not changing ont eh child
+        if (child.getParents().size() > 0){ // it has parents so we need to check
+            if (!child.findTopParent().equals(this) && parents.size() > 0 && !child.findTopParent().equals(findTopParent())){
+                throw new Exception("error cannot assign child as it has a different top parent" + child + " has top parent " + child.findTopParent() + " " + this + " has or is a different top parent");
+            }
+        }
 
         if (children.add(child)){ // something actually changed :)
             findAllChildrenCache = null;
@@ -251,6 +272,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public synchronized void removeFromChildrenWillBePersisted(Name name) throws Exception {
         checkDatabaseMatches(name);// even if not needed throw the damn exception!
+        // no need for the top parent check
         name.parents.remove(this);
         if (children.remove(name) && !getTotoMemoryDB().getNeedsLoading()) { // it changed the set and we're not loading
             findAllChildrenCache = null;
@@ -269,12 +291,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             if (peer.equals(this)){
                 throw new Exception("error name cannot be a peer of itself " + this);
             }
-            // tell the peer and its children who it is a peer of
-            peer.peerOf = this;
-            for(Name child : peer.findAllChildren()){
-                child.peerOf = this;
-            }
-
         }
         this.peers = peers;
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
@@ -291,17 +307,8 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         if (peers.remove(name) && !getTotoMemoryDB().getNeedsLoading()) { // it changed the set
             peersChanged = true;
             setNeedsPersisting();
-            name.peerOf = null;
-            for(Name child : name.findAllChildren()){
-                child.peerOf = null;
-            }
         }
     }
-
-    public Name getPeerOf() {
-        return peerOf;
-    }
-
 
     @Override
     public int compareTo(Name n) {
