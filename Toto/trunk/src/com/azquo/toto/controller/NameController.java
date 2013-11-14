@@ -90,47 +90,79 @@ public class NameController {
                 if (name != null){
                     return getParentStructureFormattedForOutput(name, true) + getChildStructureFormattedForOutput(name, false);
                 } else {
-                    return "error:name : " + nameString + "not found";
+                    return "error:name:" + nameString + " not found";
                 }
 
             } else if (children != null){
-                if (create != null){
-                    final Name name = nameService.findOrCreateName(loggedInConnection, nameString);
-                    // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
-                    if(children.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
-                        // EXAMPLE : 2013;children {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
-                        if (children.contains("}")){
-                            children = children.substring(1, children.indexOf("}"));
-                            final StringTokenizer st = new StringTokenizer(children, ",");
-                            final List<String> namesToAdd = new ArrayList<String>();
-                            while (st.hasMoreTokens()){
-                                String childName = st.nextToken().trim();
-                                if (childName.startsWith("`")){
-                                    childName = childName.substring(1, childName.length() - 1); // trim escape chars
-                                }
-                                namesToAdd.add(childName);
+                System.out.println("children : |" + children + "|");
+                if (children.length() > 0){ // we want to affect the structure, add, remove, create
+                    if (remove != null){ // remove a child form the set
+                        final Name name = nameService.findByName(loggedInConnection, nameString);
+                        if (name != null){
+                            if (nameService.removeChild(loggedInConnection, name, children)){
+                                return children + " removed";
+                            } else {
+                                return "error:child: " + children + " not found";
                             }
-                            nameService.createMembers(loggedInConnection, name, namesToAdd);
-                            return "Create array saved " + namesToAdd.size() + " names";
-                        } else{
-                            return "error:Unclosed }";
                         }
-                    } else { // insert after a certain position
-                        // currently won't support before and after on create arrays, probably could later
-                        int after = -1;
-                        try{
-                            after = Integer.parseInt(afterString);
-                        } catch (NumberFormatException ignored){
+                    } else { // some kind of create or set add
+                        Name name;
+                        if (create != null){
+                            name = nameService.findOrCreateName(loggedInConnection, nameString);
+                        } else {
+                            name = nameService.findByName(loggedInConnection, nameString);
+                            if (name == null){
+                                return "error:name:" + nameString + " not found";
+                            }
                         }
-                        nameService.createMember(loggedInConnection, name, children, afterString, after);
-                        return children + " added to " + name.getName();
+                        // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
+                        if(children.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
+                            // EXAMPLE : 2013;children {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
+                            if (children.contains("}")){
+                                children = children.substring(1, children.indexOf("}"));
+                                final StringTokenizer st = new StringTokenizer(children, ",");
+                                final List<String> namesToAdd = new ArrayList<String>();
+                                // TODO : move this error checking logic to the service??
+                                String notFoundError = new String();
+                                while (st.hasMoreTokens()){
+                                    String childName = st.nextToken().trim();
+                                    if (childName.startsWith("`")){
+                                        childName = childName.substring(1, childName.length() - 1); // trim escape chars
+                                    }
+                                    if (create == null && nameService.findByName(loggedInConnection, childName) == null){
+                                        if (notFoundError.isEmpty()){
+                                            notFoundError = "unknown names : " + childName;
+                                        } else {
+                                            notFoundError += ", " + childName;
+                                        }
+                                    }
+                                    namesToAdd.add(childName);
+                                }
+                                if (notFoundError.isEmpty()){
+                                    nameService.createChildren(loggedInConnection, name, namesToAdd);
+                                } else {
+                                    return "error:" + notFoundError;
+                                }
+                                return "array saved " + namesToAdd.size() + " names";
+                            } else{
+                                return "error:Unclosed }";
+                            }
+                        } else { // insert after a certain position
+                            // currently won't support before and after on create arrays, probably could later
+                            int after = -1;
+                            try{
+                                after = Integer.parseInt(afterString);
+                            } catch (NumberFormatException ignored){
+                            }
+                            if (create == null && nameService.findByName(loggedInConnection, children) == null){
+                                return "error:" + children + " not found";
+                            }
+                            nameService.createChild(loggedInConnection, name, children, afterString, after);
+                            return children + " added to " + name.getName();
+                        }
+
                     }
-                } else if (remove != null){ // delete
-                    final Name name = nameService.findByName(loggedInConnection, nameString);
-                    if (name != null){
-                        nameService.removeMember(loggedInConnection, name, children);
-                        return children + " removed";
-                    }
+
                 } else {// they want to read data
                     final Name name = nameService.findByName(loggedInConnection, nameString);
                     if (name != null){
@@ -180,47 +212,86 @@ public class NameController {
                         // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
                         return getNamesFormattedForOutput(names);
                     } else {
-                        return "error:name : " + nameString + "not found";
+                        return "error:name : " + nameString + " not found";
                     }
                 }
             } else if (peers != null){
-                if (create != null){
-                    final Name name = nameService.findOrCreateName(loggedInConnection, nameString);
-                    // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
-                    if(peers.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
-                        // EXAMPLE : 2013;children {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
-                        if (peers.contains("}")){
-                            peers = peers.substring(1, peers.indexOf("}"));
-                            final StringTokenizer st = new StringTokenizer(peers, ",");
-                            final List<String> namesToAdd = new ArrayList<String>();
-                            while (st.hasMoreTokens()){
-                                String peerName = st.nextToken().trim();
-                                if (peerName.startsWith("`")){
-                                    peerName = peerName.substring(1, peerName.length() - 1); // trim escape chars
-                                }
-                                namesToAdd.add(peerName);
+
+
+
+
+
+
+
+
+
+                System.out.println("peers : |" + peers + "|");
+                if (peers.length() > 0){ // we want to affect the structure, add, remove, create
+                    if (remove != null){ // remove a peer form the set
+                        final Name name = nameService.findByName(loggedInConnection, nameString);
+                        if (name != null){
+                            if (nameService.removePeer(loggedInConnection, name, peers)){
+                                return peers + " removed";
+                            } else {
+                                return "error:peer: " + peers + " not found";
                             }
-                            nameService.createPeers(loggedInConnection, name, namesToAdd);
-                            return "Create array saved " + namesToAdd.size() + " names";
-                        } else{
-                            return "error:Unclosed }";
                         }
-                    } else { // insert after a certain position
-                        // currently won't support before and after on create arrays, probably could later
-                        int after = -1;
-                        try{
-                            after = Integer.parseInt(afterString);
-                        } catch (NumberFormatException ignored){
+                    } else { // copied from above but for peers, probably should factor at some point
+                        Name name;
+                        if (create != null){
+                            name = nameService.findOrCreateName(loggedInConnection, nameString);
+                        } else {
+                            name = nameService.findByName(loggedInConnection, nameString);
+                            if (name == null){
+                                return "error:name:" + nameString + " not found";
+                            }
                         }
-                        nameService.createPeer(loggedInConnection, name, children, afterString, after);
-                        return children + " added to " + name.getName();
+                        // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
+                        if(peers.startsWith("{")){ // array, typically when creating in the first place, the service call will insert after any existing
+                            if (peers.contains("}")){
+                                peers = peers.substring(1, peers.indexOf("}"));
+                                final StringTokenizer st = new StringTokenizer(peers, ",");
+                                final List<String> peersToAdd = new ArrayList<String>();
+                                String notFoundError = new String();
+                                while (st.hasMoreTokens()){
+                                    String peerName = st.nextToken().trim();
+                                    if (peerName.startsWith("`")){
+                                        peerName = peerName.substring(1, peerName.length() - 1); // trim escape chars
+                                    }
+                                    if (create == null && nameService.findByName(loggedInConnection, peerName) == null){
+                                        if (notFoundError.isEmpty()){
+                                            notFoundError = "unknown names : " + peerName;
+                                        } else {
+                                            notFoundError += ", " + peerName;
+                                        }
+                                    }
+                                    peersToAdd.add(peerName);
+                                }
+                                if (notFoundError.isEmpty()){
+                                    nameService.createPeers(loggedInConnection, name, peersToAdd);
+                                } else {
+                                    return "error:" + notFoundError;
+                                }
+                                return "array saved " + peersToAdd.size() + " names";
+                            } else{
+                                return "error:Unclosed }";
+                            }
+                        } else { // insert after a certain position
+                            // currently won't support before and after on create arrays, probably could later
+                            int after = -1;
+                            try{
+                                after = Integer.parseInt(afterString);
+                            } catch (NumberFormatException ignored){
+                            }
+                            if (create == null && nameService.findByName(loggedInConnection, peers) == null){
+                                return "error:" + peers + " not found";
+                            }
+                            nameService.createPeer(loggedInConnection, name, peers, afterString, after);
+                            return peers + " added to " + name.getName();
+                        }
+
                     }
-                } else if (remove != null){ // delete
-                    final Name name = nameService.findByName(loggedInConnection, nameString);
-                    if (name != null){
-                        nameService.removePeer(loggedInConnection, name, children);
-                        return children + " deleted";
-                    }
+
                 } else {// they want to read data
                     final Name name = nameService.findByName(loggedInConnection, nameString);
                     if (name != null){
@@ -230,6 +301,7 @@ public class NameController {
                         return "error:name : " + nameString + "not found";
                     }
                 }
+
 
             } else if (renameas != null){ // not specific to peers or children
                 nameService.renameName(loggedInConnection, nameString, renameas);

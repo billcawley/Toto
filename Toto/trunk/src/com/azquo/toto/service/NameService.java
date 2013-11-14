@@ -117,7 +117,7 @@ public final class NameService {
         }
     }
 
-    public Name addOrCreateMember(final LoggedInConnection loggedInConnection, final Name parentName, final String nameName) throws Exception {
+    public Name addOrCreateChild(final LoggedInConnection loggedInConnection, final Name parentName, final String nameName) throws Exception {
         final Name name = findOrCreateName(loggedInConnection, nameName);
         // check peers here
 
@@ -158,11 +158,13 @@ public final class NameService {
         parentName.setPeersWillBePersisted(peers);
     }
 
-    public void removePeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName) throws Exception {
+    public boolean removePeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName) throws Exception {
         Name existingPeer = loggedInConnection.getTotoMemoryDB().getNameByName(peerName);
         if (existingPeer != null) {
             parentName.removeFromPeersWillBePersisted(existingPeer);
+            return true;
         }
+        return false;
     }
 
     public Set<Name> getPeersIncludeParents(final Name name) throws Exception {
@@ -178,7 +180,7 @@ public final class NameService {
         return new HashSet<Name>();
     }
 
-    public void createMember(final LoggedInConnection loggedInConnection, final Name parentName, final String childName, final String afterString, final int after) throws Exception {
+    public void createChild(final LoggedInConnection loggedInConnection, final Name parentName, final String childName, final String afterString, final int after) throws Exception {
         final Name newChild = findOrCreateName(loggedInConnection,childName);
         if (!parentName.getChildren().contains(newChild)) { // it doesn't already have the peer
             final LinkedHashSet<Name> withNewChild = new LinkedHashSet<Name>();
@@ -200,7 +202,7 @@ public final class NameService {
         }
     }
 
-    public void createMembers(LoggedInConnection loggedInConnection, final Name parentName, final List<String> childNameStrings) throws Exception {
+    public void createChildren(LoggedInConnection loggedInConnection, final Name parentName, final List<String> childNameStrings) throws Exception {
         // in this we're going assume that we overwrite existing name links, the single one can be used for adding
         final LinkedHashSet<Name> childNames = new LinkedHashSet<Name>(childNameStrings.size());
         for (String childNameString : childNameStrings) {
@@ -215,11 +217,13 @@ public final class NameService {
         parentName.setChildrenWillBePersisted(childNames);
     }
 
-    public void removeMember(LoggedInConnection loggedInConnection, final Name parentName, final String childName) throws Exception {
+    public boolean removeChild(LoggedInConnection loggedInConnection, final Name parentName, final String childName) throws Exception {
         final Name existingChild = loggedInConnection.getTotoMemoryDB().getNameByName(childName);
         if (existingChild != null) {
             parentName.removeFromChildrenWillBePersisted(existingChild);
+            return true;
         }
+        return false;
     }
 
     public void renameName(LoggedInConnection loggedInConnection, String name, String renameAs) throws Exception {
