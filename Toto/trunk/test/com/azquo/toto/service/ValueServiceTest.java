@@ -177,22 +177,22 @@ public class ValueServiceTest {
                         String remainingTop = rawChildName.substring(0, rawChildName.indexOf("/"));
                         rawChildName = rawChildName.substring(rawChildName.indexOf("/") + 1); // chop off the name we just extracted
                         if (justAdded == null){ // the first of the directory string so to speak
-                            justAdded = nameService.addOrCreateMember(loggedInConnection,parentName, remainingTop);
+                            justAdded = nameService.addOrCreateChild(loggedInConnection,parentName, remainingTop);
                             //System.out.println("parent : " + parentName + " child " + remainingTop);
                             count++;
                         } else {
-                                justAdded = nameService.addOrCreateMember(loggedInConnection,justAdded, remainingTop);
+                                justAdded = nameService.addOrCreateChild(loggedInConnection,justAdded, remainingTop);
                             //System.out.println("parent : " + justAdded + " child " + remainingTop);
                             count++;
                         }
                         if (!rawChildName.contains("/")){ // the final one
-                                nameService.addOrCreateMember(loggedInConnection,justAdded, rawChildName);
+                                nameService.addOrCreateChild(loggedInConnection,justAdded, rawChildName);
                             //System.out.println("parent : " + justAdded + " child " + rawChildName);
                             count++;
                         }
                     }
                 } else {
-                    nameService.addOrCreateMember(loggedInConnection,parentName,rawChildName);
+                    nameService.addOrCreateChild(loggedInConnection,parentName,rawChildName);
                     count++;
                 }
             }
