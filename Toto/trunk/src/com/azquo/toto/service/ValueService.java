@@ -203,7 +203,7 @@ public final class ValueService {
     long part2NanoCallTime = 0;
     int numberOfTimesCalled = 0;
 
-    public double findSumForNamesIncludeChildren(LoggedInConnection loggedInConnection, Set<Name> names){
+    public double findSumForNamesIncludeChildren(Set<Name> names, List valuesFound){
         //System.out.println("findSumForNamesIncludeChildren");
         long start = System.nanoTime();
 
@@ -228,6 +228,9 @@ public final class ValueService {
                 sumValue += value.getDoubleValue();
             }
         }
+        if (valuesFound != null){
+            valuesFound.addAll(values);
+        }
         part2NanoCallTime += (System.nanoTime() - point);
         totalNanoCallTime += (System.nanoTime() - start);
         numberOfTimesCalled++;
@@ -248,6 +251,52 @@ public final class ValueService {
             toReturn.addAll(child.getValues());
         }
         return toReturn;
+    }
+
+    public String getExcelDataForColumnsRowsAndContext(LoggedInConnection loggedInConnection, Name contextName, String region) throws Exception {
+        long track = System.currentTimeMillis();
+        final StringBuilder sb = new StringBuilder();
+        final StringBuilder lockMapsb = new StringBuilder();
+        for (Name rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
+            int count = 1;
+            for (Name columnName : loggedInConnection.getColumnHeadings(region)) {
+                final Set<Name> namesForThisCell = new HashSet<Name>();
+                namesForThisCell.add(contextName);
+                namesForThisCell.add(columnName);
+                namesForThisCell.add(rowName);
+                List<Value> values = new ArrayList<Value>();
+                sb.append(findSumForNamesIncludeChildren(namesForThisCell, values));
+                if (values.size() != 1) {
+                    if (values.size() > 0) {
+                        lockMapsb.append("LOCKED");
+                    } else { // blank
+                        Set<String> names = new HashSet<String>();
+                        for (Name name : namesForThisCell) {
+                            names.add(name.getName());
+                        }
+                        // ok this call is a bit awkward here
+                        Map result = nameService.isAValidNameSet(loggedInConnection, names, new HashSet<Name>());
+                        if (result.get(NameService.ERROR) != null) { // it's not a cell where we can put date
+                            lockMapsb.append("LOCKED");
+                        }
+                    }
+                }
+                if (count < loggedInConnection.getColumnHeadings(region).size()) {
+                    sb.append("\t");
+                    lockMapsb.append("\t");
+                } else {
+                    sb.append("\r");
+                    lockMapsb.append("\r");
+                }
+                count++;
+            }
+        }
+        printSumStats();
+        printFindForNamesIncludeChildrenStats();
+        System.out.println("time to execute : " + (System.currentTimeMillis() - track));
+        loggedInConnection.setLockMap(region, lockMapsb.toString());
+        loggedInConnection.setSentDataMap(region, sb.toString());
+        return sb.toString();
     }
 
 

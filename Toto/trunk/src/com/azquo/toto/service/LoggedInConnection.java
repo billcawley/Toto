@@ -2,6 +2,7 @@ package com.azquo.toto.service;
 
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.TotoMemoryDB;
+import com.azquo.toto.memorydb.Value;
 
 import java.util.*;
 
@@ -26,6 +27,9 @@ public final class LoggedInConnection {
 
     private final Map<String, List<Name>> rowHeadings;
     private final Map<String, List<Name>> columnHeadings;
+    private final Map<String, String> lockMaps;
+    private final Map<String, String> sentDataMaps;
+    private final Map<String, List<Value>[][]> sentDataValuesMaps; // a map of two dimensional arrays of lists of values! Useful for when data is saved
 
     private static final String defaultRegion = "default-region";
 
@@ -37,6 +41,9 @@ public final class LoggedInConnection {
         lastAccessed = new Date();
         rowHeadings = new HashMap<String, List<Name>>();
         columnHeadings = new HashMap<String, List<Name>>();
+        lockMaps = new HashMap<String, String>();
+        sentDataMaps = new HashMap<String, String>();
+        sentDataValuesMaps = new HashMap<String, List<Value>[][]>();
         if (timeOut > 0){
             this.timeOut = timeOut;
         } else {
@@ -102,6 +109,54 @@ public final class LoggedInConnection {
             this.columnHeadings.put(defaultRegion, columnHeadings);
         } else {
             this.columnHeadings.put(region, columnHeadings);
+        }
+    }
+
+    public String getLockMap(final String region) {
+        if (region == null){
+            return lockMaps.get(defaultRegion);
+        } else {
+            return lockMaps.get(region);
+        }
+    }
+
+    public void setLockMap(final String region,  final String lockMap) {
+        if (region == null){
+            this.lockMaps.put(defaultRegion, lockMap);
+        } else {
+            this.lockMaps.put(region, lockMap);
+        }
+    }
+
+    public String getSentDataMap(final String region) {
+        if (region == null){
+            return sentDataMaps.get(defaultRegion);
+        } else {
+            return sentDataMaps.get(region);
+        }
+    }
+
+    public void setSentDataMap(final String region,  final String sentDataMap) {
+        if (region == null){
+            this.lockMaps.put(defaultRegion, sentDataMap);
+        } else {
+            this.lockMaps.put(region, sentDataMap);
+        }
+    }
+
+    public List<Value>[][] getDataValueMap(final String region) {
+        if (region == null){
+            return sentDataValuesMaps.get(defaultRegion);
+        } else {
+            return sentDataValuesMaps.get(region);
+        }
+    }
+
+    public void setDataValueMap(final String region,  final List<Value>[][] sentDataValueMap) {
+        if (region == null){
+            this.sentDataValuesMaps.put(defaultRegion, sentDataValueMap);
+        } else {
+            this.sentDataValuesMaps.put(region, sentDataValueMap);
         }
     }
 

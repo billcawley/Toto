@@ -32,6 +32,10 @@ public final class NameService {
         return loggedInConnection.getTotoMemoryDB().searchNames(search);
     }
 
+    public List<Name> findTopNames(final LoggedInConnection loggedInConnection) {
+        return loggedInConnection.getTotoMemoryDB().findTopNames();
+    }
+
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
         final Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(name);
         if (existing != null) {

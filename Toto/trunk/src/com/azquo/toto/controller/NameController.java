@@ -68,6 +68,7 @@ public class NameController {
         instructions = instructions.trim();
         // typically a command will start with a name
 
+        String search = getInstruction(instructions, SEARCH);
         if(instructions.indexOf(';') > 0){
             final String nameString = instructions.substring(0, instructions.indexOf(';')).trim();
             // now we have it strip off the name, use getInstruction to see what we want to do with the name
@@ -82,7 +83,6 @@ public class NameController {
             String toString = getInstruction(instructions, TO);
             String afterString = getInstruction(instructions, AFTER);
             String remove = getInstruction(instructions, REMOVE);
-            String search = getInstruction(instructions, SEARCH);
             String renameas = getInstruction(instructions, RENAMEAS);
             // since children can be part of structure definition we do structure first
             if (structure != null){
@@ -90,7 +90,7 @@ public class NameController {
                 if (name != null){
                     return getParentStructureFormattedForOutput(name, true) + getChildStructureFormattedForOutput(name, false);
                 } else {
-                    return "error:name:" + nameString + " not found";
+                    return "error:name not found:`" + nameString + "`";
                 }
 
             } else if (children != null){
@@ -102,8 +102,10 @@ public class NameController {
                             if (nameService.removeChild(loggedInConnection, name, children)){
                                 return children + " removed";
                             } else {
-                                return "error:child: " + children + " not found";
+                                return "error:name not found:`" + children + "`";
                             }
+                        } else {
+                            return "error:name not found:`" + nameString + "`";
                         }
                     } else { // some kind of create or set add
                         Name name;
@@ -112,7 +114,7 @@ public class NameController {
                         } else {
                             name = nameService.findByName(loggedInConnection, nameString);
                             if (name == null){
-                                return "error:name:" + nameString + " not found";
+                                return "error:name not found:`" + nameString + "`";
                             }
                         }
                         // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
@@ -131,9 +133,9 @@ public class NameController {
                                     }
                                     if (create == null && nameService.findByName(loggedInConnection, childName) == null){
                                         if (notFoundError.isEmpty()){
-                                            notFoundError = "unknown names : " + childName;
+                                            notFoundError = childName;
                                         } else {
-                                            notFoundError += ", " + childName;
+                                            notFoundError += (", " + childName);
                                         }
                                     }
                                     namesToAdd.add(childName);
@@ -141,7 +143,7 @@ public class NameController {
                                 if (notFoundError.isEmpty()){
                                     nameService.createChildren(loggedInConnection, name, namesToAdd);
                                 } else {
-                                    return "error:" + notFoundError;
+                                    return "error:name not found:`" + notFoundError + "`";
                                 }
                                 return "array saved " + namesToAdd.size() + " names";
                             } else{
@@ -155,7 +157,7 @@ public class NameController {
                             } catch (NumberFormatException ignored){
                             }
                             if (create == null && nameService.findByName(loggedInConnection, children) == null){
-                                return "error:" + children + " not found";
+                                return "error:name not found:`" + children + "`";
                             }
                             nameService.createChild(loggedInConnection, name, children, afterString, after);
                             return children + " added to " + name.getName();
@@ -212,19 +214,10 @@ public class NameController {
                         // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
                         return getNamesFormattedForOutput(names);
                     } else {
-                        return "error:name : " + nameString + " not found";
+                        return "error:name not found:`" + nameString + "`";
                     }
                 }
             } else if (peers != null){
-
-
-
-
-
-
-
-
-
                 System.out.println("peers : |" + peers + "|");
                 if (peers.length() > 0){ // we want to affect the structure, add, remove, create
                     if (remove != null){ // remove a peer form the set
@@ -233,7 +226,7 @@ public class NameController {
                             if (nameService.removePeer(loggedInConnection, name, peers)){
                                 return peers + " removed";
                             } else {
-                                return "error:peer: " + peers + " not found";
+                                return "error:name not found:`" + peers + "`";
                             }
                         }
                     } else { // copied from above but for peers, probably should factor at some point
@@ -243,7 +236,7 @@ public class NameController {
                         } else {
                             name = nameService.findByName(loggedInConnection, nameString);
                             if (name == null){
-                                return "error:name:" + nameString + " not found";
+                                return "error:name not found:`" + nameString + "`";
                             }
                         }
                         // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
@@ -260,9 +253,9 @@ public class NameController {
                                     }
                                     if (create == null && nameService.findByName(loggedInConnection, peerName) == null){
                                         if (notFoundError.isEmpty()){
-                                            notFoundError = "unknown names : " + peerName;
+                                            notFoundError = peerName;
                                         } else {
-                                            notFoundError += ", " + peerName;
+                                            notFoundError += ("," + peerName);
                                         }
                                     }
                                     peersToAdd.add(peerName);
@@ -270,7 +263,7 @@ public class NameController {
                                 if (notFoundError.isEmpty()){
                                     nameService.createPeers(loggedInConnection, name, peersToAdd);
                                 } else {
-                                    return "error:" + notFoundError;
+                                    return "error:name not found:`" + notFoundError + "`";
                                 }
                                 return "array saved " + peersToAdd.size() + " names";
                             } else{
@@ -284,7 +277,7 @@ public class NameController {
                             } catch (NumberFormatException ignored){
                             }
                             if (create == null && nameService.findByName(loggedInConnection, peers) == null){
-                                return "error:" + peers + " not found";
+                                return "error:name not found:`" + nameString + "`";
                             }
                             nameService.createPeer(loggedInConnection, name, peers, afterString, after);
                             return peers + " added to " + name.getName();
@@ -298,7 +291,7 @@ public class NameController {
                         //  Fees; peers {Period, Analysis, Merchant};create;
                         return getNamesFormattedForOutput(nameService.getPeersIncludeParents(name));
                     } else {
-                        return "error:name : " + nameString + "not found";
+                        return "error:name not found:`" + nameString + "`";
                     }
                 }
 
@@ -310,7 +303,9 @@ public class NameController {
                 return getNamesFormattedForOutput(nameService.searchNames(loggedInConnection, nameString));
             }
         }
-
+        if (search != null){ // blank search
+            return getNamesFormattedForOutput(nameService.findTopNames(loggedInConnection));
+        }
         return "error:No action taken";
     }
 

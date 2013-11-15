@@ -301,6 +301,19 @@ public final class TotoMemoryDB {
         return nameByNameMap.get(name.toLowerCase().trim());
     }
 
+    public List<Name> findTopNames() {
+        long track = System.currentTimeMillis();
+        final List<Name> toReturn = new ArrayList<Name>();
+        System.out.println("top name : " + (System.currentTimeMillis() - track));
+        for (Name name : nameByIdMap.values()){
+            if (name.getParents().size() == 0){
+                toReturn.add(name);
+            }
+        }
+        return toReturn;
+    }
+
+
     public List<Name> searchNames(String search) {
         long track = System.currentTimeMillis();
         search = search.trim().toLowerCase();
@@ -316,7 +329,9 @@ public final class TotoMemoryDB {
         }
         final List<Name> toReturn = new ArrayList<Name>();
         if (!wildCardAtBeginning && !wildCardAtEnd){
-            toReturn.add(getNameByName(search));
+            if (getNameByName(search) != null){
+                toReturn.add(getNameByName(search));
+            }
         } else {
             // search the lot!
             for (Name name : nameByIdMap.values()){
