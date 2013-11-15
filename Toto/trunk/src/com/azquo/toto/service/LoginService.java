@@ -51,7 +51,6 @@ public class LoginService {
                 connections.remove(lic.getConnectionId());
                 return null;
             }
-            // TODO : timeout here
             lic.setLastAccessed(new Date());
         }
         return lic;

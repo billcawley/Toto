@@ -44,8 +44,6 @@ public final class ValueService {
         value.setNamesWillBePersisted(names);
     }
 
-    // TODO : is passing provenance the
-
     public String storeValueWithProvenanceAndNames(final LoggedInConnection loggedInConnection, final String valueString, final Provenance provenance, final Set<String> names) throws Exception {
         String toReturn = "";
         final Set<Name> validNames = new HashSet<Name>();
@@ -203,7 +201,7 @@ public final class ValueService {
     long part2NanoCallTime = 0;
     int numberOfTimesCalled = 0;
 
-    public double findSumForNamesIncludeChildren(Set<Name> names, List valuesFound){
+    public double findSumForNamesIncludeChildren(Set<Name> names, List<Value> valuesFound){
         //System.out.println("findSumForNamesIncludeChildren");
         long start = System.nanoTime();
 
@@ -251,6 +249,34 @@ public final class ValueService {
             toReturn.addAll(child.getValues());
         }
         return toReturn;
+    }
+
+    public String getRowHeadings(LoggedInConnection loggedInConnection, String region, Name forName){
+        loggedInConnection.setRowHeadings(region, new ArrayList<Name>(forName.getChildren()));
+        final StringBuilder sb = new StringBuilder();
+        int count = 1;
+        for (Name child : forName.getChildren()) {
+            sb.append(child.getName());
+            if (count < forName.getChildren().size()) {
+                sb.append("\n");
+            }
+            count++;
+        }
+        return sb.toString();
+    }
+
+    public String getColumnHeadings(LoggedInConnection loggedInConnection, String region, Name forName){
+        loggedInConnection.setColumnHeadings(region, new ArrayList<Name>(forName.getChildren()));
+        final StringBuilder sb = new StringBuilder();
+        int count = 1;
+        for (Name child : forName.getChildren()) {
+            sb.append(child.getName());
+            if (count < forName.getChildren().size()) {
+                sb.append("\t");
+            }
+            count++;
+        }
+        return sb.toString();
     }
 
     public String getExcelDataForColumnsRowsAndContext(LoggedInConnection loggedInConnection, Name contextName, String region) throws Exception {

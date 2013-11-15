@@ -109,12 +109,13 @@ public class NameController {
                         }
                     } else { // some kind of create or set add
                         Name name;
+                        String notFoundError = "";
                         if (create != null){
                             name = nameService.findOrCreateName(loggedInConnection, nameString);
                         } else {
                             name = nameService.findByName(loggedInConnection, nameString);
                             if (name == null){
-                                return "error:name not found:`" + nameString + "`";
+                                notFoundError = "error:name not found:`" + nameString + "`";
                             }
                         }
                         // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
@@ -124,8 +125,6 @@ public class NameController {
                                 children = children.substring(1, children.indexOf("}"));
                                 final StringTokenizer st = new StringTokenizer(children, ",");
                                 final List<String> namesToAdd = new ArrayList<String>();
-                                // TODO : move this error checking logic to the service??
-                                String notFoundError = new String();
                                 while (st.hasMoreTokens()){
                                     String childName = st.nextToken().trim();
                                     if (childName.startsWith("`")){
@@ -160,6 +159,7 @@ public class NameController {
                                 return "error:name not found:`" + children + "`";
                             }
                             nameService.createChild(loggedInConnection, name, children, afterString, after);
+                            assert name != null; // just to shut intellij up
                             return children + " added to " + name.getName();
                         }
 
@@ -245,7 +245,7 @@ public class NameController {
                                 peers = peers.substring(1, peers.indexOf("}"));
                                 final StringTokenizer st = new StringTokenizer(peers, ",");
                                 final List<String> peersToAdd = new ArrayList<String>();
-                                String notFoundError = new String();
+                                String notFoundError = "";
                                 while (st.hasMoreTokens()){
                                     String peerName = st.nextToken().trim();
                                     if (peerName.startsWith("`")){

@@ -363,9 +363,9 @@ public final class TotoMemoryDB {
         return valueByIdMap.get(id);
     }*/
 
-    public Provenance getProvenanceById(int id) {
+/*    public Provenance getProvenanceById(int id) {
         return provenanceByIdMap.get(id);
-    }
+    }*/
 
     // synchronised?
 

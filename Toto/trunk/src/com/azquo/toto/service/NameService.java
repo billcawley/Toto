@@ -1,7 +1,6 @@
 package com.azquo.toto.service;
 
 import com.azquo.toto.memorydb.Name;
-import org.springframework.dao.DataAccessException;
 
 import java.util.*;
 
@@ -244,7 +243,7 @@ public final class NameService {
     public Map<String, String> isAValidNameSet(final LoggedInConnection loggedInConnection, final Set<String> names, final Set<Name> validNameList) throws Exception {
 
         //System.out.println("pure java function");
-        long track = System.currentTimeMillis();
+        //long track = System.currentTimeMillis();
 
         final Map<String, String> toReturn = new HashMap<String, String>();
 
@@ -285,7 +284,7 @@ public final class NameService {
 
 
         //System.out.println("track 1-1 : " + (System.currentTimeMillis() - track) + "  ---   ");
-        track = System.currentTimeMillis();
+        //track = System.currentTimeMillis();
 
         if (hasPeers.isEmpty()) {
             error += "  none of the names passed have peers, I don't know what names are required for this value";
@@ -339,7 +338,7 @@ public final class NameService {
             toReturn.put(WARNING, error);
         }
         //System.out.println("track 1-2 : " + (System.currentTimeMillis() - track) + "  ---   ");
-        track = System.currentTimeMillis();
+        //track = System.currentTimeMillis();
         return toReturn;
     }
 

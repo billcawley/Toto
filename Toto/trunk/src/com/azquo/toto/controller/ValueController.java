@@ -1,7 +1,6 @@
 package com.azquo.toto.controller;
 
 import com.azquo.toto.memorydb.Name;
-import com.azquo.toto.memorydb.Value;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
@@ -11,8 +10,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -53,26 +50,13 @@ public class ValueController {
             return "error:invalid or expired connection id";
         }
 
-        // TODO : look at stuff that should be moved to the service layer
-
-
         if (rowheadings != null && rowheadings.length() > 0) {
             // ok we'll assume a list or command. First just a basic children
             if (rowheadings.contains(";")) {
                 final String nameString = rowheadings.substring(0, rowheadings.indexOf(";")).trim();
-                final Name parent = nameService.findByName(loggedInConnection, nameString);
-                if (parent != null) {
-                    loggedInConnection.setRowHeadings(region, new ArrayList<Name>(parent.getChildren()));
-                    final StringBuilder sb = new StringBuilder();
-                    int count = 1;
-                    for (Name child : parent.getChildren()) {
-                        sb.append(child.getName());
-                        if (count < parent.getChildren().size()) {
-                            sb.append("\n");
-                        }
-                        count++;
-                    }
-                    return sb.toString();
+                final Name forName = nameService.findByName(loggedInConnection, nameString);
+                if (forName != null) {
+                    return valueService.getRowHeadings(loggedInConnection,region,forName);
                 } else {
                     return "error:cannot find name : " + nameString;
                 }
@@ -85,19 +69,9 @@ public class ValueController {
             // ok we'll assume a list or command. First just a basic children
             if (columnheadings.contains(";")) {
                 final String nameString = columnheadings.substring(0, columnheadings.indexOf(";")).trim();
-                final Name parent = nameService.findByName(loggedInConnection, nameString);
-                if (parent != null) {
-                    loggedInConnection.setColumnHeadings(region, new ArrayList<Name>(parent.getChildren()));
-                    final StringBuilder sb = new StringBuilder();
-                    int count = 1;
-                    for (Name child : parent.getChildren()) {
-                        sb.append(child.getName());
-                        if (count < parent.getChildren().size()) {
-                            sb.append("\t");
-                        }
-                        count++;
-                    }
-                    return sb.toString();
+                final Name forName = nameService.findByName(loggedInConnection, nameString);
+                if (forName != null) {
+                    valueService.getColumnHeadings(loggedInConnection,region,forName);
                 } else {
                     return "error:cannot find name : " + nameString;
                 }
