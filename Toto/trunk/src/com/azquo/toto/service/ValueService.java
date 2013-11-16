@@ -76,6 +76,27 @@ public final class ValueService {
         return toReturn;
     }
 
+    public boolean overWriteExistingValue(final LoggedInConnection loggedInConnection, String region, final Value existingValue, final String newValueString) throws Exception {
+        StringBuilder rowsString = new StringBuilder();
+        for (Name name : loggedInConnection.getRowHeadings(region))
+        {
+            rowsString.append(name.getName());
+            rowsString.append(",");
+        }
+        StringBuilder columnsString = new StringBuilder();
+        for (Name name : loggedInConnection.getColumnHeadings(region))
+        {
+            columnsString.append(name.getName());
+            columnsString.append(",");
+        }
+
+        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUserName(), new java.util.Date(),"edit data", "excel spraedsheet name here??",rowsString.toString(), columnsString.toString(), loggedInConnection.getContext(region));
+        Value newValue = new Value(loggedInConnection.getTotoMemoryDB(), provenance.getId(), 0, newValueString, null);
+        newValue.setNamesWillBePersisted(existingValue.getNames());
+        deleteValue(existingValue);
+        return true;
+    }
+
     public List<Value> findForNames(final Set<Name> names){
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
         //long track = System.nanoTime();
@@ -280,10 +301,16 @@ public final class ValueService {
     }
 
     public String getExcelDataForColumnsRowsAndContext(LoggedInConnection loggedInConnection, Name contextName, String region) throws Exception {
+        loggedInConnection.setContext(region, contextName.getName()); // needed for provenance
         long track = System.currentTimeMillis();
         final StringBuilder sb = new StringBuilder();
         final StringBuilder lockMapsb = new StringBuilder();
+
+        List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
+
         for (Name rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
+            ArrayList<List<Value>> thisRow = new ArrayList<List<Value>>(loggedInConnection.getColumnHeadings(region).size());
+            dataValuesMap.add(thisRow);
             int count = 1;
             for (Name columnName : loggedInConnection.getColumnHeadings(region)) {
                 final Set<Name> namesForThisCell = new HashSet<Name>();
@@ -291,6 +318,7 @@ public final class ValueService {
                 namesForThisCell.add(columnName);
                 namesForThisCell.add(rowName);
                 List<Value> values = new ArrayList<Value>();
+                thisRow.add(values);
                 sb.append(findSumForNamesIncludeChildren(namesForThisCell, values));
                 if (values.size() != 1) {
                     if (values.size() > 0) {
@@ -322,6 +350,7 @@ public final class ValueService {
         System.out.println("time to execute : " + (System.currentTimeMillis() - track));
         loggedInConnection.setLockMap(region, lockMapsb.toString());
         loggedInConnection.setSentDataMap(region, sb.toString());
+        loggedInConnection.setDataValueMap(region, dataValuesMap);
         return sb.toString();
     }
 

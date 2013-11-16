@@ -27,9 +27,10 @@ public final class LoggedInConnection {
 
     private final Map<String, List<Name>> rowHeadings;
     private final Map<String, List<Name>> columnHeadings;
+    private final Map<String, String> contexts;
     private final Map<String, String> lockMaps;
     private final Map<String, String> sentDataMaps;
-    private final Map<String, List<Value>[][]> sentDataValuesMaps; // a map of two dimensional arrays of lists of values! Useful for when data is saved
+    private final Map<String, List<List<List<Value>>>> sentDataValuesMaps; // As in a 2 d array (lists of lists) of lists of valuer Useful for when data is saved
 
     private static final String defaultRegion = "default-region";
 
@@ -41,9 +42,10 @@ public final class LoggedInConnection {
         lastAccessed = new Date();
         rowHeadings = new HashMap<String, List<Name>>();
         columnHeadings = new HashMap<String, List<Name>>();
+        contexts = new HashMap<String, String>();
         lockMaps = new HashMap<String, String>();
         sentDataMaps = new HashMap<String, String>();
-        sentDataValuesMaps = new HashMap<String, List<Value>[][]>();
+        sentDataValuesMaps = new HashMap<String, List<List<List<Value>>>>();
         if (timeOut > 0){
             this.timeOut = timeOut;
         } else {
@@ -112,6 +114,22 @@ public final class LoggedInConnection {
         }
     }
 
+    public String getContext(final String region) {
+        if (region == null){
+            return contexts.get(defaultRegion);
+        } else {
+            return contexts.get(region);
+        }
+    }
+
+    public void setContext(final String region,  final String context) {
+        if (region == null){
+            this.contexts.put(defaultRegion, context);
+        } else {
+            this.contexts.put(region, context);
+        }
+    }
+
     public String getLockMap(final String region) {
         if (region == null){
             return lockMaps.get(defaultRegion);
@@ -144,7 +162,7 @@ public final class LoggedInConnection {
         }
     }
 
-    public List<Value>[][] getDataValueMap(final String region) {
+    public List<List<List<Value>>> getDataValueMap(final String region) {
         if (region == null){
             return sentDataValuesMaps.get(defaultRegion);
         } else {
@@ -152,7 +170,7 @@ public final class LoggedInConnection {
         }
     }
 
-    public void setDataValueMap(final String region,  final List<Value>[][] sentDataValueMap) {
+    public void setDataValueMap(final String region,  final List<List<List<Value>>> sentDataValueMap) {
         if (region == null){
             this.sentDataValuesMaps.put(defaultRegion, sentDataValueMap);
         } else {
