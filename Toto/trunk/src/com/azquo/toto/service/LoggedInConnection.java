@@ -156,9 +156,9 @@ public final class LoggedInConnection {
 
     public void setSentDataMap(final String region,  final String sentDataMap) {
         if (region == null){
-            this.lockMaps.put(defaultRegion, sentDataMap);
+            this.sentDataMaps.put(defaultRegion, sentDataMap);
         } else {
-            this.lockMaps.put(region, sentDataMap);
+            this.sentDataMaps.put(region, sentDataMap);
         }
     }
 
