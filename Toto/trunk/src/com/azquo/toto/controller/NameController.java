@@ -322,7 +322,7 @@ public class NameController {
             if (search != null) { // blank search
                 return getNamesFormattedForOutput(nameService.findTopNames(loggedInConnection));
             }
-            return "error:No action taken";
+            return "No action taken";
         } catch (Exception e) {
             e.printStackTrace();
             return "error:" + e.getMessage();
