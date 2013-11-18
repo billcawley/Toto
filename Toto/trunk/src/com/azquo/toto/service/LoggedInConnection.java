@@ -31,6 +31,7 @@ public final class LoggedInConnection {
     private final Map<String, String> lockMaps;
     private final Map<String, String> sentDataMaps;
     private final Map<String, List<List<List<Value>>>> sentDataValuesMaps; // As in a 2 d array (lists of lists) of lists of valuer Useful for when data is saved
+    private final Map<String, List<List<Set<Name>>>> sentDataNamesMaps; // As in a 2 d array (lists of lists) of sets of names, identifying each cell. Necessary if saving new data in that cell. SHould the values map use sets also???
 
     private static final String defaultRegion = "default-region";
 
@@ -46,6 +47,7 @@ public final class LoggedInConnection {
         lockMaps = new HashMap<String, String>();
         sentDataMaps = new HashMap<String, String>();
         sentDataValuesMaps = new HashMap<String, List<List<List<Value>>>>();
+        sentDataNamesMaps = new HashMap<String, List<List<Set<Name>>>>();
         if (timeOut > 0){
             this.timeOut = timeOut;
         } else {
@@ -170,11 +172,27 @@ public final class LoggedInConnection {
         }
     }
 
-    public void setDataValueMap(final String region,  final List<List<List<Value>>> sentDataValueMap) {
+    public void setDataValueMap(final String region,  final List<List<List<Value>>> sentDataValuesMap) {
         if (region == null){
-            this.sentDataValuesMaps.put(defaultRegion, sentDataValueMap);
+            this.sentDataValuesMaps.put(defaultRegion, sentDataValuesMap);
         } else {
-            this.sentDataValuesMaps.put(region, sentDataValueMap);
+            this.sentDataValuesMaps.put(region, sentDataValuesMap);
+        }
+    }
+
+    public List<List<Set<Name>>> getDataNamesMap(final String region) {
+        if (region == null){
+            return sentDataNamesMaps.get(defaultRegion);
+        } else {
+            return sentDataNamesMaps.get(region);
+        }
+    }
+
+    public void setDataNamesMap(final String region,  final List<List<Set<Name>>> sentDataNamesMap) {
+        if (region == null){
+            this.sentDataNamesMaps.put(defaultRegion, sentDataNamesMap);
+        } else {
+            this.sentDataNamesMaps.put(region, sentDataNamesMap);
         }
     }
 

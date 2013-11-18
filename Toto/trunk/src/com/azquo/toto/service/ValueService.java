@@ -44,7 +44,9 @@ public final class ValueService {
         value.setNamesWillBePersisted(names);
     }
 
-    public String storeValueWithProvenanceAndNames(final LoggedInConnection loggedInConnection, final String valueString, final Provenance provenance, final Set<String> names) throws Exception {
+    // this is passed a string for the value, not sure if that is the best practice, need to think on it.
+
+    public String storeValueWithProvenanceAndNames(final LoggedInConnection loggedInConnection, final String valueString, final Provenance provenance, final Set<Name> names) throws Exception {
         String toReturn = "";
         final Set<Name> validNames = new HashSet<Name>();
         final Map<String, String> nameCheckResult = nameService.isAValidNameSet(loggedInConnection, names, validNames);
@@ -94,6 +96,25 @@ public final class ValueService {
         Value newValue = new Value(loggedInConnection.getTotoMemoryDB(), provenance.getId(), 0, newValueString, null);
         newValue.setNamesWillBePersisted(existingValue.getNames());
         deleteValue(existingValue);
+        return true;
+    }
+
+    public boolean storeNewValueFromEdit(final LoggedInConnection loggedInConnection, String region, final Set<Name>names, final String newValueString) throws Exception {
+        StringBuilder rowsString = new StringBuilder();
+        for (Name name : loggedInConnection.getRowHeadings(region))
+        {
+            rowsString.append(name.getName());
+            rowsString.append(",");
+        }
+        StringBuilder columnsString = new StringBuilder();
+        for (Name name : loggedInConnection.getColumnHeadings(region))
+        {
+            columnsString.append(name.getName());
+            columnsString.append(",");
+        }
+
+        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUserName(), new java.util.Date(),"edit data", "excel spraedsheet name here??",rowsString.toString(), columnsString.toString(), loggedInConnection.getContext(region));
+        storeValueWithProvenanceAndNames(loggedInConnection,newValueString,provenance, names);
         return true;
     }
 
@@ -307,10 +328,13 @@ public final class ValueService {
         final StringBuilder lockMapsb = new StringBuilder();
 
         List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
+        List<List<Set<Name>>> dataNamesMap = new ArrayList<List<Set<Name>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of names for each cell
 
         for (Name rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
-            ArrayList<List<Value>> thisRow = new ArrayList<List<Value>>(loggedInConnection.getColumnHeadings(region).size());
-            dataValuesMap.add(thisRow);
+            ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(loggedInConnection.getColumnHeadings(region).size());
+            ArrayList<Set<Name>> thisRowNames = new ArrayList<Set<Name>>(loggedInConnection.getColumnHeadings(region).size());
+            dataValuesMap.add(thisRowValues);
+            dataNamesMap.add(thisRowNames);
             int count = 1;
             for (Name columnName : loggedInConnection.getColumnHeadings(region)) {
                 final Set<Name> namesForThisCell = new HashSet<Name>();
@@ -318,18 +342,15 @@ public final class ValueService {
                 namesForThisCell.add(columnName);
                 namesForThisCell.add(rowName);
                 List<Value> values = new ArrayList<Value>();
-                thisRow.add(values);
+                thisRowValues.add(values);
+                thisRowNames.add(namesForThisCell);
                 sb.append(findSumForNamesIncludeChildren(namesForThisCell, values));
                 if (values.size() != 1) {
                     if (values.size() > 0) {
                         lockMapsb.append("LOCKED");
                     } else { // blank
-                        Set<String> names = new HashSet<String>();
-                        for (Name name : namesForThisCell) {
-                            names.add(name.getName());
-                        }
                         // ok this call is a bit awkward here
-                        Map result = nameService.isAValidNameSet(loggedInConnection, names, new HashSet<Name>());
+                        Map result = nameService.isAValidNameSet(loggedInConnection, namesForThisCell, new HashSet<Name>());
                         if (result.get(NameService.ERROR) != null) { // it's not a cell where we can put date
                             lockMapsb.append("LOCKED");
                         }
@@ -351,6 +372,7 @@ public final class ValueService {
         loggedInConnection.setLockMap(region, lockMapsb.toString());
         loggedInConnection.setSentDataMap(region, sb.toString());
         loggedInConnection.setDataValueMap(region, dataValuesMap);
+        loggedInConnection.setDataNamesMap(region, dataNamesMap);
         return sb.toString();
     }
 
