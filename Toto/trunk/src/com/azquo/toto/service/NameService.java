@@ -212,9 +212,7 @@ public final class NameService {
             if (childNameString.trim().length() > 0) {
                 Name child = findOrCreateName(loggedInConnection,childNameString);
                 // here we need to check the peer status.
-                if (child.getParents().size() == 0 && child.getPeers().size() == 0){ // it's safe to add
-                    childNames.add(child);
-                }
+                childNames.add(child);
             }
         }
         parentName.setChildrenWillBePersisted(childNames);
@@ -236,11 +234,26 @@ public final class NameService {
         }
     }
 
+    // this expects valid names really, used by things like import routines
+
+    public Set<Name> getNameSetForStrings(final LoggedInConnection loggedInConnection, final Set<String> nameStrings) throws Exception{
+        Set<Name> toReturn = new HashSet<Name>();
+        for (String nameString : nameStrings) {
+            Name name = findByName(loggedInConnection, nameString);
+            if (name == null) {
+                throw new Exception("  I can't find the name : " + nameString);
+            } else {
+                toReturn.add(name);
+            }
+        }
+        return toReturn;
+    }
+
     // these should probably live somewhere more global
     public static final String ERROR = "ERROR";
     public static final String WARNING = "WARNING";
 
-    public Map<String, String> isAValidNameSet(final LoggedInConnection loggedInConnection, final Set<String> names, final Set<Name> validNameList) throws Exception {
+    public Map<String, String> isAValidNameSet(final LoggedInConnection loggedInConnection, final Set<Name> names, final Set<Name> validNameList) throws Exception {
 
         //System.out.println("pure java function");
         //long track = System.currentTimeMillis();
@@ -253,34 +266,30 @@ public final class NameService {
         final Set<Name> hasPeers = new HashSet<Name>(); // the names (or their parents) in this list which have peer requirements, should only be one
         final Set<Name> namesToCheck = new HashSet<Name>();
 
-        for (String nameString : names) {
-            Name name = findByName(loggedInConnection, nameString);
-            if (name == null) {
-                error += "  I can't find the name : " + nameString;
-            } else { // the name exists . . .
-                boolean thisNameHasPeers = false;
-                if (!name.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
-                    hasPeers.add(name);
-                    thisNameHasPeers = true;
-                } else { // try looking up the chain and find the first with peers
-                    final List<Name> parents = name.findAllParents();
-                    for (Name parent : parents) {
-                        if (!parent.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
-                            hasPeers.add(parent); // put the parent not the actual name in as it will be used to determine the criteria for this value
-                            thisNameHasPeers = true;
-                            break;
+            for (Name name : names) {
+                    boolean thisNameHasPeers = false;
+                    if (!name.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
+                        hasPeers.add(name);
+                        thisNameHasPeers = true;
+                    } else { // try looking up the chain and find the first with peers
+                        final List<Name> parents = name.findAllParents();
+                        for (Name parent : parents) {
+                            if (!parent.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
+                                hasPeers.add(parent); // put the parent not the actual name in as it will be used to determine the criteria for this value
+                                thisNameHasPeers = true;
+                                break;
+                            }
                         }
                     }
-                }
-                // it wasn't a name with peers hence it's on the list of names to match up to the peer list of the name that DOES have peers :)
-                if (!thisNameHasPeers) {
-                    namesToCheck.add(name);
-                } else {
-                    // not adding the name with peers to namesToCheck is more efficient and it stops the name with peers from showing up as being superfluous to the peer list if that makes sense
-                    validNameList.add(name); // the rest will be added below but we need to add this here as the peer defining name is not on the list of peers
-                }
+                    // it wasn't a name with peers hence it's on the list of names to match up to the peer list of the name that DOES have peers :)
+                    if (!thisNameHasPeers) {
+                        namesToCheck.add(name);
+                    } else {
+                        // not adding the name with peers to namesToCheck is more efficient and it stops the name with peers from showing up as being superfluous to the peer list if that makes sense
+                        validNameList.add(name); // the rest will be added below but we need to add this here as the peer defining name is not on the list of peers
+                    }
             }
-        }
+
 
 
         //System.out.println("track 1-1 : " + (System.currentTimeMillis() - track) + "  ---   ");
