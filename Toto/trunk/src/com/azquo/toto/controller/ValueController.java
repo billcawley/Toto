@@ -1,6 +1,7 @@
 package com.azquo.toto.controller;
 
 import com.azquo.toto.memorydb.Name;
+import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.Value;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.StringReader;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created with IntelliJ IDEA.
@@ -125,11 +127,13 @@ public class ValueController {
                 CsvReader lockMapReader = new CsvReader(new StringReader(loggedInConnection.getLockMap(region)), '\t');
                 // rows, columns, value lists
                 List<List<List<Value>>> dataValuesMap = loggedInConnection.getDataValueMap(region);
+                List<List<Set<Name>>> dataNamesMap = loggedInConnection.getDataNamesMap(region);
                 // TODO : deal with mismatched column and row counts
                 int numberOfValuesModified = 0;
                 while (lockMapReader.readRecord()) {
                     int columnCounter = 0;
                     List<List<Value>> rowValues = dataValuesMap.get(rowCounter);
+                    List<Set<Name>> rowNames = dataNamesMap.get(rowCounter);
                     originalReader.readRecord();
                     editedReader.readRecord();
                     String[] originalValues = originalReader.getValues();
@@ -142,14 +146,15 @@ public class ValueController {
                                 // for the moment we'll only play ball if there's an existing value, will add new value possibility tomorrow
                                 System.out.println(columnCounter + ", " + rowCounter + " not locked and modified");
                                 List<Value> valuesForCell = rowValues.get(columnCounter);
+                                Set<Name> namesForCell = rowNames.get(columnCounter);
                                 if (valuesForCell.size() == 1) {
                                     Value theValue = valuesForCell.get(0);
                                     System.out.println("trying to overwrite");
                                     valueService.overWriteExistingValue(loggedInConnection, region, theValue, editedValues[columnCounter]);
                                     numberOfValuesModified++;
                                 } else if (valuesForCell.isEmpty()) {
-                                    System.out.println("would be storing new value here . . .");
-                                    // TODO : new value
+                                    System.out.println("storing new value here . . .");
+                                    valueService.storeNewValueFromEdit(loggedInConnection, region,namesForCell, editedValues[columnCounter]);
                                 }
                             } else {
                                 // should this add on for a list???
