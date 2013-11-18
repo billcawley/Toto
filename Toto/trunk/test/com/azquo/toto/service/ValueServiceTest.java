@@ -240,7 +240,7 @@ public class ValueServiceTest {
                         // copied from below, maybe factor later
                         if (value.trim().length() > 0){ // no point storing if there's no value!
                             valuecount++;
-                            valueService.storeValueWithProvenanceAndNames(loggedInConnection,value, provenance, namesForValue);
+                            valueService.storeValueWithProvenanceAndNames(loggedInConnection,value, provenance, nameService.getNameSetForStrings(loggedInConnection, names));
                             if (valuecount%5000 == 0){
                                 System.out.println("storing value " + valuecount);
                             }
@@ -253,7 +253,7 @@ public class ValueServiceTest {
             } else { // single value per line
                 if (value.trim().length() > 0){ // no point storing if there's no value!
                     valuecount++;
-                    valueService.storeValueWithProvenanceAndNames(loggedInConnection,value, provenance, names);
+                    valueService.storeValueWithProvenanceAndNames(loggedInConnection,value, provenance, nameService.getNameSetForStrings(loggedInConnection, names));
                     if (valuecount%5000 == 0){
                         System.out.println("storing value " + valuecount);
                     }
