@@ -215,6 +215,7 @@ public final class NameService {
                 childNames.add(child);
             }
         }
+        System.out.println("names to add : " + childNames);
         parentName.setChildrenWillBePersisted(childNames);
     }
 

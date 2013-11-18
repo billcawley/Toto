@@ -50,127 +50,134 @@ public class ValueController {
 
         // these 3 statements copied, should factor
 
-        if (connectionId == null) {
-            return "error:no connection id";
-        }
+        try {
 
-        final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
-
-        if (loggedInConnection == null) {
-            return "error:invalid or expired connection id";
-        }
-
-        if (rowheadings != null && rowheadings.length() > 0) {
-            // ok we'll assume a list or command. First just a basic children
-            if (rowheadings.contains(";")) {
-                final String nameString = rowheadings.substring(0, rowheadings.indexOf(";")).trim();
-                final Name forName = nameService.findByName(loggedInConnection, nameString);
-                if (forName != null) {
-                    return valueService.getRowHeadings(loggedInConnection, region, forName);
-                } else {
-                    return "error:cannot find name : " + nameString;
-                }
-            } else {
-                return "error:cannot parse row headings string!";
+            if (connectionId == null) {
+                return "error:no connection id";
             }
-        }
 
-        if (columnheadings != null && columnheadings.length() > 0) {
-            // ok we'll assume a list or command. First just a basic children
-            if (columnheadings.contains(";")) {
-                final String nameString = columnheadings.substring(0, columnheadings.indexOf(";")).trim();
-                final Name forName = nameService.findByName(loggedInConnection, nameString);
-                if (forName != null) {
-                    return valueService.getColumnHeadings(loggedInConnection, region, forName);
-                } else {
-                    return "error:cannot find name : " + nameString;
-                }
-            } else {
-                return "error:cannot parse column headings string!";
+            final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
+
+            if (loggedInConnection == null) {
+                return "error:invalid or expired connection id";
             }
-        }
 
-        if (context != null && context.length() > 0) {
-            final Name contextName = nameService.findByName(loggedInConnection, context);
-            if (contextName == null) {
-                return "error:I can't find a name for the context : " + context;
-            }
-            if (loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0 && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0) {
-                return valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextName, region);
-            } else {
-                return "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
-            }
-        }
-
-        if (lockMap != null) {
-            return loggedInConnection.getLockMap(region);
-        }
-
-        System.out.println("edited data " + editedData);
-        if (editedData != null && editedData.length() > 0){
-            System.out.println("------------------");
-            System.out.println(loggedInConnection.getLockMap(region));
-            System.out.println(loggedInConnection.getRowHeadings(region));
-            System.out.println(loggedInConnection.getColumnHeadings(region));
-            System.out.println(loggedInConnection.getSentDataMap(region));
-            System.out.println(loggedInConnection.getContext(region));
-            if (loggedInConnection.getLockMap(region) != null &&
-                    loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0
-                    && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0
-                    && loggedInConnection.getSentDataMap(region) != null && loggedInConnection.getContext(region) != null) {
-                // oh-kay, need to compare against the sent data
-                // going to parse the data here for the moment as parsing is controller stuff
-                // I need to track column and Row
-                int rowCounter = 0;
-                CsvReader originalReader = new CsvReader(new StringReader(loggedInConnection.getSentDataMap(region)), '\t');
-                CsvReader editedReader = new CsvReader(new StringReader(editedData), '\t');
-                CsvReader lockMapReader = new CsvReader(new StringReader(loggedInConnection.getLockMap(region)), '\t');
-                // rows, columns, value lists
-                List<List<List<Value>>> dataValuesMap = loggedInConnection.getDataValueMap(region);
-                List<List<Set<Name>>> dataNamesMap = loggedInConnection.getDataNamesMap(region);
-                // TODO : deal with mismatched column and row counts
-                int numberOfValuesModified = 0;
-                while (lockMapReader.readRecord()) {
-                    int columnCounter = 0;
-                    List<List<Value>> rowValues = dataValuesMap.get(rowCounter);
-                    List<Set<Name>> rowNames = dataNamesMap.get(rowCounter);
-                    originalReader.readRecord();
-                    editedReader.readRecord();
-                    String[] originalValues = originalReader.getValues();
-                    String[] editedValues = editedReader.getValues();
-                    for (String locked : lockMapReader.getValues()) {
-                        //System.out.println("on " + columnCounter + ", " + rowCounter + " locked : " + locked);
-                        // and here we get to the crux, the values do NOT match
-                        if (!originalValues[columnCounter].trim().equals(editedValues[columnCounter])) {
-                            if (!locked.equalsIgnoreCase("locked")) { // it wasn't locked, good to go, check inside the different values bit to error if the excel tries something it should not
-                                // for the moment we'll only play ball if there's an existing value, will add new value possibility tomorrow
-                                System.out.println(columnCounter + ", " + rowCounter + " not locked and modified");
-                                List<Value> valuesForCell = rowValues.get(columnCounter);
-                                Set<Name> namesForCell = rowNames.get(columnCounter);
-                                if (valuesForCell.size() == 1) {
-                                    Value theValue = valuesForCell.get(0);
-                                    System.out.println("trying to overwrite");
-                                    valueService.overWriteExistingValue(loggedInConnection, region, theValue, editedValues[columnCounter]);
-                                    numberOfValuesModified++;
-                                } else if (valuesForCell.isEmpty()) {
-                                    System.out.println("storing new value here . . .");
-                                    valueService.storeNewValueFromEdit(loggedInConnection, region,namesForCell, editedValues[columnCounter]);
-                                }
-                            } else {
-                                // should this add on for a list???
-                                return "error:cannot edit locked cell " + columnCounter + ", " + rowCounter + " in region " + region;
-                            }
-                        }
-                        columnCounter++;
+            if (rowheadings != null && rowheadings.length() > 0) {
+                // ok we'll assume a list or command. First just a basic children
+                if (rowheadings.contains(";")) {
+                    final String nameString = rowheadings.substring(0, rowheadings.indexOf(";")).trim();
+                    final Name forName = nameService.findByName(loggedInConnection, nameString);
+                    if (forName != null) {
+                        return valueService.getRowHeadings(loggedInConnection, region, forName);
+                    } else {
+                        return "error:cannot find name : " + nameString;
                     }
-                    rowCounter++;
+                } else {
+                    return "error:cannot parse row headings string!";
                 }
-                return numberOfValuesModified + " values modified";
-            } else {
-                return "error:cannot deal with edited data as there is no sent data/rows/columns/context";
             }
+
+            if (columnheadings != null && columnheadings.length() > 0) {
+                // ok we'll assume a list or command. First just a basic children
+                if (columnheadings.contains(";")) {
+                    final String nameString = columnheadings.substring(0, columnheadings.indexOf(";")).trim();
+                    final Name forName = nameService.findByName(loggedInConnection, nameString);
+                    if (forName != null) {
+                        return valueService.getColumnHeadings(loggedInConnection, region, forName);
+                    } else {
+                        return "error:cannot find name : " + nameString;
+                    }
+                } else {
+                    return "error:cannot parse column headings string!";
+                }
+            }
+
+            if (context != null && context.length() > 0) {
+                final Name contextName = nameService.findByName(loggedInConnection, context);
+                if (contextName == null) {
+                    return "error:I can't find a name for the context : " + context;
+                }
+                if (loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0 && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0) {
+                    return valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextName, region);
+                } else {
+                    return "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
+                }
+            }
+
+            if (lockMap != null) {
+                return loggedInConnection.getLockMap(region);
+            }
+
+            System.out.println("edited data " + editedData);
+            if (editedData != null && editedData.length() > 0) {
+                System.out.println("------------------");
+                System.out.println(loggedInConnection.getLockMap(region));
+                System.out.println(loggedInConnection.getRowHeadings(region));
+                System.out.println(loggedInConnection.getColumnHeadings(region));
+                System.out.println(loggedInConnection.getSentDataMap(region));
+                System.out.println(loggedInConnection.getContext(region));
+                if (loggedInConnection.getLockMap(region) != null &&
+                        loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0
+                        && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0
+                        && loggedInConnection.getSentDataMap(region) != null && loggedInConnection.getContext(region) != null) {
+                    // oh-kay, need to compare against the sent data
+                    // going to parse the data here for the moment as parsing is controller stuff
+                    // I need to track column and Row
+                    int rowCounter = 0;
+                    CsvReader originalReader = new CsvReader(new StringReader(loggedInConnection.getSentDataMap(region)), '\t');
+                    CsvReader editedReader = new CsvReader(new StringReader(editedData), '\t');
+                    CsvReader lockMapReader = new CsvReader(new StringReader(loggedInConnection.getLockMap(region)), '\t');
+                    // rows, columns, value lists
+                    List<List<List<Value>>> dataValuesMap = loggedInConnection.getDataValueMap(region);
+                    List<List<Set<Name>>> dataNamesMap = loggedInConnection.getDataNamesMap(region);
+                    // TODO : deal with mismatched column and row counts
+                    int numberOfValuesModified = 0;
+                    while (lockMapReader.readRecord()) {
+                        int columnCounter = 0;
+                        List<List<Value>> rowValues = dataValuesMap.get(rowCounter);
+                        List<Set<Name>> rowNames = dataNamesMap.get(rowCounter);
+                        originalReader.readRecord();
+                        editedReader.readRecord();
+                        String[] originalValues = originalReader.getValues();
+                        String[] editedValues = editedReader.getValues();
+                        for (String locked : lockMapReader.getValues()) {
+                            //System.out.println("on " + columnCounter + ", " + rowCounter + " locked : " + locked);
+                            // and here we get to the crux, the values do NOT match
+                            if (!originalValues[columnCounter].trim().equals(editedValues[columnCounter])) {
+                                if (!locked.equalsIgnoreCase("locked")) { // it wasn't locked, good to go, check inside the different values bit to error if the excel tries something it should not
+                                    // for the moment we'll only play ball if there's an existing value, will add new value possibility tomorrow
+                                    System.out.println(columnCounter + ", " + rowCounter + " not locked and modified");
+                                    List<Value> valuesForCell = rowValues.get(columnCounter);
+                                    Set<Name> namesForCell = rowNames.get(columnCounter);
+                                    if (valuesForCell.size() == 1) {
+                                        Value theValue = valuesForCell.get(0);
+                                        System.out.println("trying to overwrite");
+                                        valueService.overWriteExistingValue(loggedInConnection, region, theValue, editedValues[columnCounter]);
+                                        numberOfValuesModified++;
+                                    } else if (valuesForCell.isEmpty()) {
+                                        System.out.println("storing new value here . . .");
+                                        valueService.storeNewValueFromEdit(loggedInConnection, region, namesForCell, editedValues[columnCounter]);
+                                    }
+                                } else {
+                                    // should this add on for a list???
+                                    return "error:cannot edit locked cell " + columnCounter + ", " + rowCounter + " in region " + region;
+                                }
+                            }
+                            columnCounter++;
+                        }
+                        rowCounter++;
+                    }
+                    return numberOfValuesModified + " values modified";
+                } else {
+                    return "error:cannot deal with edited data as there is no sent data/rows/columns/context";
+                }
+            }
+            return "no action taken";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "error:" + e.getMessage();
         }
-        return "no action taken";
+
     }
 
 }
