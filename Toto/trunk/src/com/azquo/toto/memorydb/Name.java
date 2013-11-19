@@ -18,6 +18,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     // leaving here as a reminder to consider proper logging
     //private static final Logger logger = Logger.getLogger(Name.class.getName());
     // data fields
+    private Provenance provenance;
     private String name;
 
     // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
@@ -36,17 +37,18 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     // parents is maintained according to children, it isn't persisted in the same way
 
-    public Name(TotoMemoryDB totoMemoryDB, String name) throws Exception {
-        this(totoMemoryDB, 0, name);
+    public Name(TotoMemoryDB totoMemoryDB, Provenance provenance, String name) throws Exception {
+        this(totoMemoryDB, 0, provenance, name);
     }
 
-    public Name(TotoMemoryDB totoMemoryDB, int id, String name) throws Exception {
+    public Name(TotoMemoryDB totoMemoryDB, int id, Provenance provenance,String name) throws Exception {
         super(totoMemoryDB, id);
         if (name == null || name.trim().length() == 0){ // then I think we thrown an exception, can't have a blank name!
             throw new Exception("error cannot create name with blank oor null name!");
         }
         // Is there anything wrong with trimming here?
         this.name = name.trim();
+        this.provenance = provenance;
         values = new HashSet<Value>();
         parents = new HashSet<Name>();
         children = new LinkedHashSet<Name>();
@@ -85,6 +87,10 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public String getName() {
         return name;
+    }
+
+    public Provenance getProvenance() {
+        return provenance;
     }
 
     // needs the db to check the name is not there

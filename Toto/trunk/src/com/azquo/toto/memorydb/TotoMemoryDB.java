@@ -78,9 +78,12 @@ public final class TotoMemoryDB {
 
             // these 3 commands will automatically load teh data into the memory DB set as persisted
 
+            // Must load provenance first as used by the other two!
+
+            final List<Provenance> allProvenance = provenanceDAO.findAll(this);
+
             final List<Name> allNames = nameDAO.findAll(this);
             final List<Value> allValues = valueDAO.findAll(this);
-            final List<Provenance> allProvenance = provenanceDAO.findAll(this);
 
             System.out.println(allNames.size() + allValues.size() + allProvenance.size() + " unlinked entities loaded in " + (System.currentTimeMillis() - track) + "ms");
 
@@ -363,9 +366,9 @@ public final class TotoMemoryDB {
         return valueByIdMap.get(id);
     }*/
 
-/*    public Provenance getProvenanceById(int id) {
+    public Provenance getProvenanceById(int id) {
         return provenanceByIdMap.get(id);
-    }*/
+    }
 
     // synchronised?
 

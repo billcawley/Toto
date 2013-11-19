@@ -30,6 +30,7 @@ public final class NameDAO extends StandardDAO<Name> {
     // column names (except ID)
 
     public static final String NAME = "name";
+    public static final String PROVENANCEID = "provenance_id";
 
 
     // associated table names, currently think here is a good place to put them. Where they're used.
@@ -60,7 +61,7 @@ public final class NameDAO extends StandardDAO<Name> {
         public final Name mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Name(totoMemoryDB, rs.getInt(ID), rs.getString(NAME));
+                return new Name(totoMemoryDB, rs.getInt(ID), totoMemoryDB.getProvenanceById(rs.getInt(PROVENANCEID)), rs.getString(NAME));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

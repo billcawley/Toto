@@ -43,6 +43,7 @@ public abstract class TotoMemoryDBEntity {
     // the columns for the entity were changed (as opposed to lists for example), sublasses will change this
     protected boolean entityColumnsChanged;
     // I think protected is right here, while the class may be referenced externally (for generics) this makes it difficult to be subclassed externally?
+    //key with this is it makes the setting of an In only in context of a memory db
     protected TotoMemoryDBEntity(final TotoMemoryDB totoMemoryDB, final int id) throws Exception {
         this.totoMemoryDB = totoMemoryDB;
         // This getNeedsLoading is important, an instance of TotoMemoryDB should only be in needsloading during the constructor and hence it will stop

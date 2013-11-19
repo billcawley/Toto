@@ -45,7 +45,7 @@ public final class ValueDAO extends StandardDAO<Value> {
     protected Map<String, Object> getColumnNameValueMap(Value value) {
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, value.getId());
-        toReturn.put(PROVENANCEID, value.getProvenanceId());
+        toReturn.put(PROVENANCEID, value.getProvenance().getId());
         toReturn.put(DOUBLE, value.getDoubleValue());
         toReturn.put(TEXT, value.getText());
         toReturn.put(DELETEDINFO, value.getDeletedInfo());
@@ -61,7 +61,7 @@ public final class ValueDAO extends StandardDAO<Value> {
         public Value mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Value(totoMemoryDB,rs.getInt(ID), rs.getInt(PROVENANCEID),rs.getInt(DOUBLE),rs.getString(TEXT),rs.getString(DELETEDINFO));
+                return new Value(totoMemoryDB,rs.getInt(ID), totoMemoryDB.getProvenanceById(rs.getInt(PROVENANCEID)),rs.getInt(DOUBLE),rs.getString(TEXT),rs.getString(DELETEDINFO));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

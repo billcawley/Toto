@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS `attribute` (
 
 CREATE TABLE IF NOT EXISTS `name` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `provenance_id` int(11) NOT NULL,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
