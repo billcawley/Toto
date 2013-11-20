@@ -50,10 +50,8 @@ public class NameController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(HttpServletRequest request, @RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "instructions", required = false) String instructions) throws Exception {
+    public String handleRequest(@RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "instructions", required = false) String instructions) throws Exception {
         try {
-
-            System.out.println(request.getQueryString());
 
             if (instructions == null) {
                 return "error:no instrucitons passed";
