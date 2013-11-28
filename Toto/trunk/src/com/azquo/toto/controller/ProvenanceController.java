@@ -38,6 +38,7 @@ public class ProvenanceController {
     @ResponseBody
     public String handleRequest(@RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "name", required = false) String name
             , @RequestParam(value = "region", required = false) String region, @RequestParam(value = "col", required = false) String col, @RequestParam(value = "row", required = false) String row) throws Exception {
+        // we assume row and col starting at 0
         try {
             if (connectionId == null) {
                 return "error:no connection id";
@@ -52,6 +53,7 @@ public class ProvenanceController {
             if (name != null && name.length() > 0){
                 Name theName = nameService.findByName(loggedInConnection, name);
                 if (theName != null){
+                    System.out.println("In provenance controller name found : " + name);
                     return formatProvenanceForExcel(theName.getProvenance());
                 } else {
                     return "error:name not found :" + name;
@@ -71,10 +73,10 @@ public class ProvenanceController {
 
                 // going to assume row and col start at 1 hence for index bits on here need to decrement
                 if (dataValueMap != null){
-                    if (dataValueMap.get(rowInt - 1) != null){
-                        List<List<Value>> rowValues = dataValueMap.get(rowInt - 1);
-                        if (rowValues.get(colInt - 1) != null){
-                            List<Value> valuesForCell = rowValues.get(colInt - 1);
+                    if (dataValueMap.get(rowInt) != null){
+                        List<List<Value>> rowValues = dataValueMap.get(rowInt);
+                        if (rowValues.get(colInt) != null){
+                            List<Value> valuesForCell = rowValues.get(colInt);
                             if (valuesForCell.size() == 1){
                                 return formatProvenanceForExcel(valuesForCell.get(0).getProvenance());
                             } else {
@@ -104,7 +106,7 @@ public class ProvenanceController {
         if (provenance == null){
             return "no provenance";
         } else {
-            return provenance.getName() + " " + provenance.getColumnHeadings() + " " + provenance.getRowHeadings() + " " + provenance.getContext() + " " + provenance.getMethod() + " " + provenance.getUser() + " " + provenance.getTimeStamp();
+            return provenance.getUser() + "\r" + provenance.getTimeStamp() + "\r" + provenance.getMethod() + "\r" + provenance.getName() + "\r" + provenance.getColumnHeadings() + "\r" + provenance.getRowHeadings() + "\r" + provenance.getContext();
         }
     }
 
