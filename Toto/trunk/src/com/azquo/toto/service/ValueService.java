@@ -321,6 +321,20 @@ public final class ValueService {
         return sb.toString();
     }
 
+    public String getExcelDataForNamesSearch(LoggedInConnection loggedInConnection, Set<Name> searchNames) throws Exception {
+        final StringBuilder sb = new StringBuilder();
+        List<Value> values =findForNamesIncludeChildren(searchNames);
+        for (Value value : values){
+            sb.append(value.getText());
+            for(Name name : value.getNames()){
+                sb.append("\t" + name.getName());
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+
+
     public String getExcelDataForColumnsRowsAndContext(LoggedInConnection loggedInConnection, Name contextName, String region) throws Exception {
         loggedInConnection.setContext(region, contextName.getName()); // needed for provenance
         long track = System.currentTimeMillis();

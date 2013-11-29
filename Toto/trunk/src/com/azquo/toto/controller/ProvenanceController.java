@@ -37,7 +37,7 @@ public class ProvenanceController {
     @RequestMapping
     @ResponseBody
     public String handleRequest(@RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "name", required = false) String name
-            , @RequestParam(value = "region", required = false) String region, @RequestParam(value = "col", required = false) String col, @RequestParam(value = "row", required = false) String row) throws Exception {
+            , @RequestParam(value = "region", required = false) final String region, @RequestParam(value = "col", required = false) String col, @RequestParam(value = "row", required = false) String row) throws Exception {
         // we assume row and col starting at 0
         try {
             if (connectionId == null) {

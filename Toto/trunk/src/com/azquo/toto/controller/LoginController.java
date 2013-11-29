@@ -26,7 +26,8 @@ public class LoginController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "database", required = false) final String database, @RequestParam(value = "user", required = false) final String user, @RequestParam(value = "password", required = false) final String password, @RequestParam(value = "timeout", required = false) final String timeout) throws Exception {
+    public String handleRequest(@RequestParam(value = "database", required = false) final String database, @RequestParam(value = "user", required = false) final String user, @RequestParam(value = "password", required = false) final String password,
+                                @RequestParam(value = "timeout", required = false) final String timeout, @RequestParam(value = "checkconnectionid", required = false) final String checkConnectionId) throws Exception {
         if (database != null && database.length() > 0 && user != null && user.length() > 0 && password != null && password.length() > 0){
             int minutesTimeout = 0;
             if (timeout != null && timeout.length() > 0){
@@ -38,6 +39,13 @@ public class LoginController {
             final LoggedInConnection loggedInConnection = loginService.login(database,user,password, minutesTimeout);
             if (loggedInConnection != null){
                 return loggedInConnection.getConnectionId();
+            }
+        }
+        if (checkConnectionId != null && checkConnectionId.length() > 0){
+            if (loginService.getConnection(checkConnectionId) != null){
+                return "ok";
+            } else {
+                return "error:expired or incorrect connection id";
             }
         }
         return "error:incorrect login details";

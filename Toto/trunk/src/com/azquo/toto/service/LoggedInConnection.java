@@ -85,7 +85,7 @@ public final class LoggedInConnection {
     }
 
     public List<Name> getRowHeadings(final String region) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             return rowHeadings.get(defaultRegion);
         } else {
             return rowHeadings.get(region);
@@ -93,7 +93,7 @@ public final class LoggedInConnection {
     }
 
     public void setRowHeadings(final String region,  final List<Name> rowHeadings) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             this.rowHeadings.put(defaultRegion, rowHeadings);
         } else {
             this.rowHeadings.put(region, rowHeadings);
@@ -101,7 +101,7 @@ public final class LoggedInConnection {
     }
 
     public List<Name> getColumnHeadings(final String region) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             return columnHeadings.get(defaultRegion);
         } else {
             return columnHeadings.get(region);
@@ -109,7 +109,7 @@ public final class LoggedInConnection {
     }
 
     public void setColumnHeadings(final String region,  final List<Name> columnHeadings) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             this.columnHeadings.put(defaultRegion, columnHeadings);
         } else {
             this.columnHeadings.put(region, columnHeadings);
@@ -117,7 +117,7 @@ public final class LoggedInConnection {
     }
 
     public String getContext(final String region) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             return contexts.get(defaultRegion);
         } else {
             return contexts.get(region);
@@ -125,7 +125,7 @@ public final class LoggedInConnection {
     }
 
     public void setContext(final String region,  final String context) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             this.contexts.put(defaultRegion, context);
         } else {
             this.contexts.put(region, context);
@@ -133,7 +133,7 @@ public final class LoggedInConnection {
     }
 
     public String getLockMap(final String region) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             return lockMaps.get(defaultRegion);
         } else {
             return lockMaps.get(region);
@@ -141,7 +141,7 @@ public final class LoggedInConnection {
     }
 
     public void setLockMap(final String region,  final String lockMap) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             this.lockMaps.put(defaultRegion, lockMap);
         } else {
             this.lockMaps.put(region, lockMap);
@@ -149,7 +149,7 @@ public final class LoggedInConnection {
     }
 
     public String getSentDataMap(final String region) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             return sentDataMaps.get(defaultRegion);
         } else {
             return sentDataMaps.get(region);
@@ -157,7 +157,7 @@ public final class LoggedInConnection {
     }
 
     public void setSentDataMap(final String region,  final String sentDataMap) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             this.sentDataMaps.put(defaultRegion, sentDataMap);
         } else {
             this.sentDataMaps.put(region, sentDataMap);
@@ -165,7 +165,7 @@ public final class LoggedInConnection {
     }
 
     public List<List<List<Value>>> getDataValueMap(final String region) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             return sentDataValuesMaps.get(defaultRegion);
         } else {
             return sentDataValuesMaps.get(region);
@@ -173,7 +173,7 @@ public final class LoggedInConnection {
     }
 
     public void setDataValueMap(final String region,  final List<List<List<Value>>> sentDataValuesMap) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             this.sentDataValuesMaps.put(defaultRegion, sentDataValuesMap);
         } else {
             this.sentDataValuesMaps.put(region, sentDataValuesMap);
@@ -181,7 +181,7 @@ public final class LoggedInConnection {
     }
 
     public List<List<Set<Name>>> getDataNamesMap(final String region) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             return sentDataNamesMaps.get(defaultRegion);
         } else {
             return sentDataNamesMaps.get(region);
@@ -189,7 +189,7 @@ public final class LoggedInConnection {
     }
 
     public void setDataNamesMap(final String region,  final List<List<Set<Name>>> sentDataNamesMap) {
-        if (region == null){
+        if (region == null || region.isEmpty()){
             this.sentDataNamesMaps.put(defaultRegion, sentDataNamesMap);
         } else {
             this.sentDataNamesMaps.put(region, sentDataNamesMap);

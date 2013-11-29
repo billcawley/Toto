@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.StringReader;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.StringTokenizer;
 
 /**
  * Created with IntelliJ IDEA.
@@ -45,10 +47,14 @@ public class ValueController {
     @ResponseBody
     public String handleRequest(@RequestParam(value = "rowheadings", required = false) final String rowheadings, @RequestParam(value = "columnheadings", required = false) final String columnheadings,
                                 @RequestParam(value = "context", required = false) final String context, @RequestParam(value = "connectionid", required = false) final String connectionId,
-                                @RequestParam(value = "region", required = false) final String region, @RequestParam(value = "lockmap", required = false) final String lockMap,
-                                @RequestParam(value = "editeddata", required = false) final String editedData) throws Exception {
+                                @RequestParam(value = "region", required = false) String region, @RequestParam(value = "lockmap", required = false) final String lockMap,
+                                @RequestParam(value = "editeddata", required = false) final String editedData, @RequestParam(value = "searchbynames", required = false) String searchByNames) throws Exception {
 
         // these 3 statements copied, should factor
+
+        if (region != null && region.length() == 0){
+            region = null; // make region null and blank the same . . .   , maybe change later???
+        }
 
         try {
 
@@ -172,11 +178,38 @@ public class ValueController {
                     return "error:cannot deal with edited data as there is no sent data/rows/columns/context";
                 }
             }
+
+            if (searchByNames != null && searchByNames.length() > 0) {
+                System.out.println("search by names : " + searchByNames);
+                if (searchByNames.startsWith("`")){
+                    searchByNames = searchByNames.substring(1);
+                }
+                if (searchByNames.endsWith("`")){
+                    searchByNames = searchByNames.substring(0, searchByNames.length() - 1);
+                }
+                StringTokenizer st = new StringTokenizer(searchByNames, "`,`");
+                Set<Name> names = new HashSet<Name>();
+                while (st.hasMoreTokens()){
+                    String nameName = st.nextToken().trim();
+                    Name name = nameService.findByName(loggedInConnection, nameName);
+                    if (name != null){
+                        names.add(name);
+                    }
+                }
+                if (!names.isEmpty()){
+                    String result = valueService.getExcelDataForNamesSearch(loggedInConnection,names);
+                    System.out.println("search by names result : " + result);
+                    return result;
+                }
+            }
+
+
             return "no action taken";
         } catch (Exception e) {
             e.printStackTrace();
             return "error:" + e.getMessage();
         }
+
 
     }
 
