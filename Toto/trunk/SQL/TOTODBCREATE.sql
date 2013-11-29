@@ -72,10 +72,11 @@ CREATE TABLE IF NOT EXISTS `name_set_definition` (
 --
 
 CREATE TABLE IF NOT EXISTS `peer_set_definition` (
-  `parent_id` int(11) NOT NULL,
-  `child_id` int(11) NOT NULL,
+  `name_id` int(11) NOT NULL,
+  `peer_id` int(11) NOT NULL,
   `position` smallint(5) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`parent_id`,`child_id`)
+  `additive` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`name_id`,`peer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------

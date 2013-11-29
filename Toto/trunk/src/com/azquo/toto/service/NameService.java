@@ -117,9 +117,9 @@ public final class NameService {
 
     public void createPeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName) throws Exception {
         final Name peer = findOrCreateName(loggedInConnection, peerName);
-        if (!parentName.getPeers().contains(peer)) { // it doesn't already have the peer
-            LinkedHashSet<Name> withNewPeer = new LinkedHashSet<Name>(parentName.getPeers());
-            withNewPeer.add(peer);
+        if (!parentName.getPeers().keySet().contains(peer)) { // it doesn't already have the peer
+            LinkedHashMap<Name,Boolean> withNewPeer = new LinkedHashMap<Name,Boolean>(parentName.getPeers());
+            withNewPeer.put(peer, true); // default to additive for the mo
             parentName.setPeersWillBePersisted(withNewPeer);
         }
     }
@@ -135,18 +135,18 @@ public final class NameService {
     // copied from the one below but for peers. Probably scope for some factoring
     public void createPeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName, final String afterString, final int after) throws Exception {
         final Name newPeer = findOrCreateName(loggedInConnection, peerName);
-        if (!parentName.getPeers().contains(newPeer)) { // it doesn't already have the peer
-            LinkedHashSet<Name> withNewPeer = new LinkedHashSet<Name>();
+        if (!parentName.getPeers().keySet().contains(newPeer)) { // it doesn't already have the peer
+            LinkedHashMap<Name,Boolean> withNewPeer = new LinkedHashMap<Name, Boolean>();
             int position = 1;
-            for (Name peer : parentName.getPeers()){
-                withNewPeer.add(peer);
+            for (Name peer : parentName.getPeers().keySet()){
+                withNewPeer.put(peer, true); // additive by default
                 if (afterString != null){
                     if (peer.getName().equalsIgnoreCase(afterString)){
-                        withNewPeer.add(newPeer);
+                        withNewPeer.put(newPeer, true);// additive by default
                         // no backward link like with normal children
                     }
                 } else if(after == position){ // only check the numeric position if there's no string passed
-                    withNewPeer.add(newPeer);
+                    withNewPeer.put(newPeer, true); // additive by default
                 }
                 position++;
             }
@@ -156,10 +156,10 @@ public final class NameService {
 
     public void createPeers(final LoggedInConnection loggedInConnection, final Name parentName, final List<String> peerNames) throws Exception {
         // in this we're going assume that we overwrite existing name links, the single one can be used for adding
-        final LinkedHashSet<Name> peers = new LinkedHashSet<Name>(peerNames.size());
+        final LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>(peerNames.size());
         for (String peerName : peerNames) {
             if (peerName.trim().length() > 0) {
-                peers.add(findOrCreateName(loggedInConnection, peerName));
+                peers.put(findOrCreateName(loggedInConnection, peerName), true); // additive by default for the mo
             }
         }
         parentName.setPeersWillBePersisted(peers);
@@ -174,7 +174,7 @@ public final class NameService {
         return false;
     }
 
-    public Set<Name> getPeersIncludeParents(final Name name) throws Exception {
+    public Map<Name, Boolean> getPeersIncludeParents(final Name name) throws Exception {
         if (name.getPeers().size() > 0){
             return name.getPeers();
         }
@@ -184,7 +184,7 @@ public final class NameService {
                 return parent.getPeers();
             }
         }
-        return new HashSet<Name>();
+        return new LinkedHashMap<Name, Boolean>();
     }
 
     public void createChild(final LoggedInConnection loggedInConnection, final Name parentName, final String childName, final String afterString, final int after) throws Exception {
@@ -311,7 +311,7 @@ public final class NameService {
         } else { // one set of peers, ok :)
             // match peers child names are ok, ignore extra namess, warn about this
             // think that is a bit ofo dirty way of getting the single item in the set . . .just assign it?
-            for (Name requiredPeer : hasPeers.iterator().next().getPeers()) {
+            for (Name requiredPeer : hasPeers.iterator().next().getPeers().keySet()) {
                 boolean found = false;
                 // do a first direct pass, see old logic below, I think(!) this will work and be faster. Need to think about that equals on name, much cost of tolowercase?
                 if (namesToCheck.remove(requiredPeer)){// skip to the next one and remove the name from names to check and add it to the validated list to return

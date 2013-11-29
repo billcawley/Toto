@@ -125,27 +125,30 @@ public final class TotoMemoryDB {
             // again need too speed things up . . .
 
 
-            currentParentId = -1;
-            LinkedHashSet<Name> peerSet = new LinkedHashSet<Name>();
-            for (String parentIdPeerIdPair : nameDAO.findAllPeerLinksOrderByParentIdPosition(this)) {
-                int parentId = Integer.parseInt(parentIdPeerIdPair.substring(0, parentIdPeerIdPair.indexOf(",")));
-                int peerId = Integer.parseInt(parentIdPeerIdPair.substring(parentIdPeerIdPair.indexOf(",") + 1));
+            int currentNameId = -1;
+            LinkedHashMap<Name,Boolean> peerSet = new LinkedHashMap<Name, Boolean>();
+            for (String nameIdPeerIdBooleanTriple : nameDAO.findAllPeerLinksOrderByNameIdPosition(this)) {
+                int firstCommaIndex = nameIdPeerIdBooleanTriple.indexOf(",");
+                int secondCommaIndex = nameIdPeerIdBooleanTriple.indexOf(",", firstCommaIndex + 1);
+                int nameId = Integer.parseInt(nameIdPeerIdBooleanTriple.substring(0, firstCommaIndex));
+                int peerId = Integer.parseInt(nameIdPeerIdBooleanTriple.substring(firstCommaIndex + 1, secondCommaIndex));
+                boolean additive = Boolean.parseBoolean(nameIdPeerIdBooleanTriple.substring(secondCommaIndex + 1));
                 // ok we're switching to a new value ID, link the ones previously
-                if (parentId != currentParentId) {
-                    if (currentParentId != -1) { // assign ones just passed if not the first
-                        Name parent = nameByIdMap.get(currentParentId);
-                        parent.setPeersWillBePersisted(peerSet);
+                if (nameId != currentNameId) {
+                    if (currentNameId != -1) { // assign ones just passed if not the first
+                        Name name = nameByIdMap.get(currentNameId);
+                        name.setPeersWillBePersisted(peerSet);
                     }
-                    currentParentId = parentId;
-                    peerSet = new LinkedHashSet<Name>();
+                    currentNameId = nameId;
+                    peerSet = new LinkedHashMap<Name, Boolean>();
                 }
-                peerSet.add(nameByIdMap.get(peerId));
+                peerSet.put(nameByIdMap.get(peerId), additive); // hard code to additive for the mo
                 linkCounter++;
             }
             // clear up the last one
             if (peerSet.size() > 0) {
-                Name parent = nameByIdMap.get(currentParentId);
-                parent.setPeersWillBePersisted(peerSet);
+                Name name = nameByIdMap.get(currentNameId);
+                name.setPeersWillBePersisted(peerSet);
             }
             System.out.println(linkCounter + " peer names links created in " + (System.currentTimeMillis() - track) + "ms");
             track = System.currentTimeMillis();
@@ -223,8 +226,8 @@ public final class TotoMemoryDB {
             }
             int links = 0;
             if (name.getChildrenChanged()) { // then add to a sat to be passed to a faster function??
-                nameDAO.unlinkAllForParent(this, NameDAO.SetDefinitionTable.name_set_definition, name);
-                nameDAO.linkParentAndChildren(this, NameDAO.SetDefinitionTable.name_set_definition, name);
+                nameDAO.unlinkAllChildrenForParent(this, name);
+                nameDAO.linkParentAndChildren(this, name);
                 links += name.getChildren().size();
                 System.out.println(name.getName() + " changed children size : " + name.getChildren().size() + " links : " + links);
             }
@@ -232,9 +235,9 @@ public final class TotoMemoryDB {
 
             if (name.getPeersChanged()) {
                 int position = 1;
-                nameDAO.unlinkAllForParent(this, NameDAO.SetDefinitionTable.peer_set_definition, name);
-                for (Name peer : name.getPeers()) {
-                    nameDAO.linkParentAndChild(this, NameDAO.SetDefinitionTable.peer_set_definition, name, peer, position);
+                nameDAO.unlinkAllPeersForName(this, name);
+                for (Name peer : name.getPeers().keySet()) {
+                    nameDAO.linkNameAndPeer(this, name, peer, position,name.getPeers().get(peer));
                     position++;
                 }
             }

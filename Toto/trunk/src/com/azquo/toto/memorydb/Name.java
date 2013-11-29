@@ -27,10 +27,13 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     private Set<Value> values;
     private Set<Name> parents;
     /* these two have position which we'll reflect by the place in the list. WHen modifying these sets one has to recreate teh set anyway
-    and when doing soo changes to the order are taken into account.
+    and when doing so changes to the order are taken into account.
+
+    Peers is going to become a linked hash map as opposed to set as I need to store whether they are additive or not and this cannot be against the
+     name object. A name may be an additive peer in one scenario and not in another.
      */
     private LinkedHashSet<Name> children;
-    private LinkedHashSet<Name> peers;
+    private LinkedHashMap<Name, Boolean> peers;
 
     private boolean childrenChanged;
     private boolean peersChanged;
@@ -52,7 +55,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         values = new HashSet<Value>();
         parents = new HashSet<Name>();
         children = new LinkedHashSet<Name>();
-        peers = new LinkedHashSet<Name>();
+        peers = new LinkedHashMap<Name, Boolean>();
         childrenChanged = false;
         peersChanged = false;
         // it annoys me that this can't be folded into addToDb but I can't see how it would as the name won't be initialised when that is called
@@ -287,13 +290,13 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         }
     }
 
-    public Set<Name> getPeers() {
-        return Collections.unmodifiableSet(peers);
+    public Map<Name,Boolean> getPeers() {
+        return Collections.unmodifiableMap(peers);
     }
 
-    public synchronized void setPeersWillBePersisted(LinkedHashSet<Name> peers) throws Exception {
-        checkDatabaseForSet(peers);
-        for (Name peer : peers){
+    public synchronized void setPeersWillBePersisted(LinkedHashMap<Name,Boolean> peers) throws Exception {
+        checkDatabaseForSet(peers.keySet());
+        for (Name peer : peers.keySet()){
             if (peer.equals(this)){
                 throw new Exception("error name cannot be a peer of itself " + this);
             }

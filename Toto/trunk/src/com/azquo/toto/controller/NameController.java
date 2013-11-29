@@ -303,7 +303,8 @@ public class NameController {
                         final Name name = nameService.findByName(loggedInConnection, nameString);
                         if (name != null) {
                             //  Fees; peers {Period, Analysis, Merchant};create;
-                            return getNamesFormattedForOutput(nameService.getPeersIncludeParents(name));
+                            // TODO, how to deal with additive?
+                            return getNamesFormattedForOutput(nameService.getPeersIncludeParents(name).keySet());
                         } else {
                             return "error:name not found:`" + nameString + "`";
                         }

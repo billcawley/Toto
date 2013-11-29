@@ -33,13 +33,19 @@ public final class NameDAO extends StandardDAO<Name> {
     public static final String PROVENANCEID = "provenance_id";
 
 
-    // associated table names, currently think here is a good place to put them. Where they're used.
 
-    public enum SetDefinitionTable {name_set_definition, peer_set_definition}
+    // associated table names, currently think here is a good place to put them. Where they're used.
+    // used to be the same structure on teh two tables but peer needed additive
+
+    public static final String NAMESETDEFINTION = "name_set_definition";
+    public static final String PEERSETDEFINTION = "peer_set_definition";
 
     public static final String PARENTID = "parent_id";
     public static final String CHILDID = "child_id";
     public static final String POSITION = "position";
+    public static final String NAMEID = "name_id";
+    public static final String PEERID = "peer_id";
+    public static final String ADDITIVE = "additive";
 
 
     @Override
@@ -71,7 +77,7 @@ public final class NameDAO extends StandardDAO<Name> {
 
     // copy from the value DAO, normalise?
 
-    private static class CommaSeparatedIdsRowMapper implements RowMapper<String> {
+    private static class CommaSeparatedParentNameIdsRowMapper implements RowMapper<String> {
 
         @Override
         public final String mapRow(final ResultSet rs, final int row) throws SQLException {
@@ -85,27 +91,52 @@ public final class NameDAO extends StandardDAO<Name> {
         }
     }
 
+    private static class CommaSeparatedNamePeerIdsRowMapper implements RowMapper<String> {
+
+        @Override
+        public final String mapRow(final ResultSet rs, final int row) throws SQLException {
+            // not pretty, just make it work for the moment
+            try {
+                return rs.getInt(NAMEID) + "," + rs.getInt(PEERID) + "," + rs.getBoolean(ADDITIVE);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+    }
+
     @Override
     public RowMapper<Name> getRowMapper(TotoMemoryDB totoMemoryDB) {
         return new NameRowMapper(totoMemoryDB);
     }
 
-    // these two functions used to have some complexity to do with data integrity, now they are simple as the memory db should take care of that
+    // these functions used to have some complexity to do with data integrity, now they are simple as the memory db should take care of that
 
-    public boolean linkParentAndChild(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent, final Name child, int position) throws DataAccessException {
+    public boolean linkParentAndChild(final TotoMemoryDB totoMemoryDB, final Name parent, final Name child, int position) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, parent.getId());
         namedParams.addValue(CHILDID, child.getId());
         namedParams.addValue(POSITION, position);
-        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES (:" + PARENTID + ",:" + CHILDID + ",:" + POSITION + ")";
+        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMESETDEFINTION + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES (:" + PARENTID + ",:" + CHILDID + ",:" + POSITION + ")";
         jdbcTemplate.update(updateSql, namedParams);
         return true;
     }
 
-    public boolean linkParentAndChildren(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent) throws DataAccessException {
+    public boolean linkNameAndPeer(final TotoMemoryDB totoMemoryDB, final Name name, final Name peer, int position, boolean additive) throws DataAccessException {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(NAMEID, name.getId());
+        namedParams.addValue(PEERID, peer.getId());
+        namedParams.addValue(POSITION, position);
+        namedParams.addValue(ADDITIVE, additive);
+        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + PEERSETDEFINTION + "` (`" + NAMEID + "`,`" + PEERID + "`,`" + POSITION + "`,`" + ADDITIVE + "`) VALUES (:" + NAMEID + ",:" + PEERID + ",:" + POSITION + ",:" + ADDITIVE + ")";
+        jdbcTemplate.update(updateSql, namedParams);
+        return true;
+    }
+
+    public boolean linkParentAndChildren(final TotoMemoryDB totoMemoryDB, final Name parent) throws DataAccessException {
 
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES ";
+        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMESETDEFINTION + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES ";
         int count = 1;
         for (Name child : parent.getChildren()) {
             // I'm taking off the check - I think it's so rare we'll just let the DB complain
@@ -122,18 +153,17 @@ public final class NameDAO extends StandardDAO<Name> {
         return true;
     }
 
-/*    public int unlinkParentAndChild(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent, final Name child) throws DataAccessException {
-        MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PARENTID, parent.getId());
-        namedParams.addValue(CHILDID, child.getId());
-        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID + " and `" + CHILDID + "` = :" + CHILDID + "";
-        return jdbcTemplate.update(updateSql, namedParams);
-    }*/
-
-    public int unlinkAllForParent(final TotoMemoryDB totoMemoryDB, final SetDefinitionTable setDefinitionTable, final Name parent) throws DataAccessException {
+    public int unlinkAllChildrenForParent(final TotoMemoryDB totoMemoryDB, final Name parent) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, parent.getId());
-        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + setDefinitionTable + "` where `" + PARENTID + "` = :" + PARENTID;
+        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMESETDEFINTION + "` where `" + PARENTID + "` = :" + PARENTID;
+        return jdbcTemplate.update(updateSql, namedParams);
+    }
+
+    public int unlinkAllPeersForName(final TotoMemoryDB totoMemoryDB, final Name name) throws DataAccessException {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(NAMEID, name.getId());
+        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + PEERSETDEFINTION + "` where `" + NAMEID + "` = :" + NAMEID;
         return jdbcTemplate.update(updateSql, namedParams);
     }
 
@@ -142,15 +172,15 @@ FROM `name_set_definition`
 ORDER BY parent_id, position*/
     public List<String> findAllParentChildLinksOrderByParentIdPosition(final TotoMemoryDB totoMemoryDB) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        final String FIND_EXISTING_LINK = "Select `" + PARENTID + "`,`" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + SetDefinitionTable.name_set_definition + "` order by `" + PARENTID + "`,`" + POSITION + "`";
-        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedIdsRowMapper());
+        final String FIND_EXISTING_LINK = "Select `" + PARENTID + "`,`" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMESETDEFINTION + "` order by `" + PARENTID + "`,`" + POSITION + "`";
+        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedParentNameIdsRowMapper());
 
     }
 
-    public List<String> findAllPeerLinksOrderByParentIdPosition(final TotoMemoryDB totoMemoryDB) {
+    public List<String> findAllPeerLinksOrderByNameIdPosition(final TotoMemoryDB totoMemoryDB) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        final String FIND_EXISTING_LINK = "Select `" + PARENTID + "`,`" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + SetDefinitionTable.peer_set_definition + "` order by `" + PARENTID + "`,`" + POSITION + "`";
-        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedIdsRowMapper());
+        final String FIND_EXISTING_LINK = "Select `" + NAMEID + "`,`" + PEERID + "`,`" + ADDITIVE + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + PEERSETDEFINTION + "` order by `" + NAMEID + "`,`" + POSITION + "`";
+        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedNamePeerIdsRowMapper());
 
     }
 
