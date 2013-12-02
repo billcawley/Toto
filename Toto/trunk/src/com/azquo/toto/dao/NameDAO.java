@@ -67,15 +67,13 @@ public final class NameDAO extends StandardDAO<Name> {
         public final Name mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Name(totoMemoryDB, rs.getInt(ID), totoMemoryDB.getProvenanceById(rs.getInt(PROVENANCEID)), rs.getString(NAME));
+                return new Name(totoMemoryDB, rs.getInt(ID), totoMemoryDB.getProvenanceById(rs.getInt(PROVENANCEID)), rs.getString(NAME), rs.getBoolean(ADDITIVE));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
             }
         }
     }
-
-    // copy from the value DAO, normalise?
 
     private static class CommaSeparatedParentNameIdsRowMapper implements RowMapper<String> {
 

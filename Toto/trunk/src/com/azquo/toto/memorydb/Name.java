@@ -20,6 +20,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     // data fields
     private Provenance provenance;
     private String name;
+    private boolean additive;
 
     // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
 
@@ -40,11 +41,11 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     // parents is maintained according to children, it isn't persisted in the same way
 
-    public Name(TotoMemoryDB totoMemoryDB, Provenance provenance, String name) throws Exception {
-        this(totoMemoryDB, 0, provenance, name);
+    public Name(TotoMemoryDB totoMemoryDB, Provenance provenance, String name, boolean additive) throws Exception {
+        this(totoMemoryDB, 0, provenance, name, additive);
     }
 
-    public Name(TotoMemoryDB totoMemoryDB, int id, Provenance provenance,String name) throws Exception {
+    public Name(TotoMemoryDB totoMemoryDB, int id, Provenance provenance,String name, boolean additive) throws Exception {
         super(totoMemoryDB, id);
         if (name == null || name.trim().length() == 0){ // then I think we thrown an exception, can't have a blank name!
             throw new Exception("error cannot create name with blank oor null name!");
@@ -52,6 +53,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         // Is there anything wrong with trimming here?
         this.name = name.trim();
         this.provenance = provenance;
+        this.additive = additive;
         values = new HashSet<Value>();
         parents = new HashSet<Name>();
         children = new LinkedHashSet<Name>();
@@ -96,6 +98,10 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         return provenance;
     }
 
+    public boolean getAdditive() {
+        return additive;
+    }
+
     // needs the db to check the name is not there
 
     public synchronized void changeNameWillBePersisted(String name) throws Exception {
@@ -105,6 +111,16 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         this.name = name;
         entityColumnsChanged = true;
         setNeedsPersisting();
+    }
+
+    // needs the db to check the name is not there
+
+    public synchronized void setAdditiveWillBePersisted(boolean additive) throws Exception {
+        if (this.additive != additive){
+            this.additive = additive;
+            entityColumnsChanged = true;
+            setNeedsPersisting();
+        }
     }
 
     @Override

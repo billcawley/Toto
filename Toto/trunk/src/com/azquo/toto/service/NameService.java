@@ -44,7 +44,7 @@ public final class NameService {
             //Provenance(TotoMemoryDB totoMemoryDB, String user, Date timeStamp, String method, String name, String rowHeadings, String columnHeadings, String context)
             //TODO : make provenance come from somewhere else e.g. get it from the logged in connection??
             Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(),loggedInConnection.getUserName(), new Date(), "method", "name", "rows", "cols", "context");
-            return new Name(loggedInConnection.getTotoMemoryDB(),provenance,name);
+            return new Name(loggedInConnection.getTotoMemoryDB(),provenance,name, true); // default additive to true
         }
     }
 

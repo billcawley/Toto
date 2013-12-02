@@ -358,6 +358,7 @@ public final class ValueService {
                 List<Value> values = new ArrayList<Value>();
                 thisRowValues.add(values);
                 thisRowNames.add(namesForThisCell);
+                // TODO - peer additive check. If using peers and not additive, don't include children
                 sb.append(findSumForNamesIncludeChildren(namesForThisCell, values));
                 if (values.size() != 1) {
                     if (values.size() > 0) {
