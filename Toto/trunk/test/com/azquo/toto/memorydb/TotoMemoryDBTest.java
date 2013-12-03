@@ -51,7 +51,7 @@ public class TotoMemoryDBTest {
         long track = System.nanoTime();
         int count = 10000;
         for (int i = 0; i < count; i++){
-            List<Value> searchResults = valueService.findForNamesIncludeChildren(searchCriteria);
+            List<Value> searchResults = valueService.findForNamesIncludeChildren(searchCriteria, false);
 /*            for (Value v : searchResults){
                 System.out.print("value ");
                 for (Name n : v.getNames()){

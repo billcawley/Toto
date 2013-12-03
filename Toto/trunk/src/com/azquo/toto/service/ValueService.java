@@ -174,7 +174,7 @@ public final class ValueService {
     int numberOfTimesCalled1 = 0;
 
 
-    public List<Value> findForNamesIncludeChildren(final Set<Name> names){
+    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive){
         long start = System.nanoTime();
 
         final List<Value> values = new ArrayList<Value>();
@@ -183,7 +183,7 @@ public final class ValueService {
         Name smallestName = null;
         for (Name name : names){
             int setSizeIncludingChildren = name.getValues().size();
-            for (Name child : name.findAllChildren()){
+            for (Name child : name.findAllChildren(payAttentionToAdditive)){
                 setSizeIncludingChildren += child.getValues().size();
             }
             if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize){
@@ -195,7 +195,7 @@ public final class ValueService {
         part1NanoCallTime1 += (System.nanoTime() - start);
         long point =System.nanoTime();
         assert smallestName != null; // make intellij happy :P
-        final List<Value> valueList = findValuesForNameIncludeAllChildren(smallestName);
+        final List<Value> valueList = findValuesForNameIncludeAllChildren(smallestName, payAttentionToAdditive);
         part2NanoCallTime1 += (System.nanoTime() - point);
         point =System.nanoTime();
         for (Value value : valueList){
@@ -204,7 +204,7 @@ public final class ValueService {
                 if (!name.equals(smallestName)){ // ignore the one we started with
                     if (!value.getNames().contains(name)){ // top name not in there check children also
                         boolean foundInChildList = false;
-                        for (Name child : name.findAllChildren()){
+                        for (Name child : name.findAllChildren(payAttentionToAdditive)){
                             if (value.getNames().contains(child)){
                                 foundInChildList = true;
                                 break;
@@ -243,11 +243,11 @@ public final class ValueService {
     long part2NanoCallTime = 0;
     int numberOfTimesCalled = 0;
 
-    public double findSumForNamesIncludeChildren(Set<Name> names, List<Value> valuesFound){
+    public double findSumForNamesIncludeChildren(Set<Name> names, List<Value> valuesFound, boolean payAttentionToAdditive){
         //System.out.println("findSumForNamesIncludeChildren");
         long start = System.nanoTime();
 
-        List<Value> values = findForNamesIncludeChildren(names);
+        List<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive);
         part1NanoCallTime += (System.nanoTime() - start);
         long point = System.nanoTime();
         double sumValue = 0;
@@ -284,10 +284,10 @@ public final class ValueService {
         System.out.println("total average nano : " + (totalNanoCallTime/numberOfTimesCalled));
     }
 
-    public List<Value> findValuesForNameIncludeAllChildren(Name name){
+    public List<Value> findValuesForNameIncludeAllChildren(Name name, boolean payAttentionToAdditive){
         List<Value> toReturn = new ArrayList<Value>();
         toReturn.addAll(name.getValues());
-        for (Name child : name.findAllChildren()){
+        for (Name child : name.findAllChildren(payAttentionToAdditive)){
             toReturn.addAll(child.getValues());
         }
         return toReturn;
@@ -323,7 +323,7 @@ public final class ValueService {
 
     public String getExcelDataForNamesSearch(LoggedInConnection loggedInConnection, Set<Name> searchNames) throws Exception {
         final StringBuilder sb = new StringBuilder();
-        List<Value> values =findForNamesIncludeChildren(searchNames);
+        List<Value> values =findForNamesIncludeChildren(searchNames, false);
         for (Value value : values){
             sb.append(value.getText());
             for(Name name : value.getNames()){
@@ -359,7 +359,7 @@ public final class ValueService {
                 thisRowValues.add(values);
                 thisRowNames.add(namesForThisCell);
                 // TODO - peer additive check. If using peers and not additive, don't include children
-                sb.append(findSumForNamesIncludeChildren(namesForThisCell, values));
+                sb.append(findSumForNamesIncludeChildren(namesForThisCell, values, true)); // true = pay attention to names additive flag
                 if (values.size() != 1) {
                     if (values.size() > 0) {
                         lockMapsb.append("LOCKED");

@@ -205,26 +205,53 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     // same logic as above but returns a set, should be correct
 
     private Set<Name> findAllChildrenCache = null;
+    private Set<Name> findAllChildrenPayAttentionToAdditiveCache = null;
 
-    public Set<Name> findAllChildren() {
-        if (findAllChildrenCache != null){
+    public Set<Name> findAllChildren(boolean payAttentionToAdditive) {
+        if (payAttentionToAdditive){
+            if (findAllChildrenPayAttentionToAdditiveCache != null){
+                return findAllChildrenPayAttentionToAdditiveCache;
+            }
+            findAllChildrenPayAttentionToAdditiveCache = new HashSet<Name>();
+            Set<Name> foundAtCurrentLevel = children;
+            if (!additive){ // stop it at the first hurdle
+                foundAtCurrentLevel = new HashSet<Name>();
+            }
+            while (!foundAtCurrentLevel.isEmpty()) {
+                findAllChildrenPayAttentionToAdditiveCache.addAll(foundAtCurrentLevel);
+                Set<Name> nextLevelSet = new HashSet<Name>();
+                for (Name n : foundAtCurrentLevel) {
+                    if (n.additive){
+                        nextLevelSet.addAll(n.getChildren());
+                    }
+                }
+                if (nextLevelSet.isEmpty()) { // no more parents to find
+                    break;
+                }
+                foundAtCurrentLevel = nextLevelSet;
+            }
+            return findAllChildrenPayAttentionToAdditiveCache;
+        } else {
+            if (findAllChildrenCache != null){
+                return findAllChildrenCache;
+            }
+            findAllChildrenCache = new HashSet<Name>();
+            Set<Name> foundAtCurrentLevel = children;
+            while (!foundAtCurrentLevel.isEmpty()) {
+                findAllChildrenCache.addAll(foundAtCurrentLevel);
+                Set<Name> nextLevelSet = new HashSet<Name>();
+                for (Name n : foundAtCurrentLevel) {
+                    nextLevelSet.addAll(n.getChildren());
+                }
+                if (nextLevelSet.isEmpty()) { // no more parents to find
+                    break;
+                }
+                foundAtCurrentLevel = nextLevelSet;
+            }
             return findAllChildrenCache;
         }
-        findAllChildrenCache = new HashSet<Name>();
-        Set<Name> foundAtCurrentLevel = children;
-        while (!foundAtCurrentLevel.isEmpty()) {
-            findAllChildrenCache.addAll(foundAtCurrentLevel);
-            Set<Name> nextLevelSet = new HashSet<Name>();
-            for (Name n : foundAtCurrentLevel) {
-                nextLevelSet.addAll(n.getChildren());
-            }
-            if (nextLevelSet.isEmpty()) { // no more parents to find
-                break;
-            }
-            foundAtCurrentLevel = nextLevelSet;
-        }
-        return findAllChildrenCache;
     }
+
 
     public Set<Name> getChildren() {
         return Collections.unmodifiableSet(children);
