@@ -355,6 +355,13 @@ public final class ValueService {
                 namesForThisCell.add(contextName);
                 namesForThisCell.add(columnName);
                 namesForThisCell.add(rowName);
+
+                // edd putting in peer check stuff here, should I not???
+                Map<String, String> result = nameService.isAValidNameSet(loggedInConnection, namesForThisCell, new HashSet<Name>());
+                if (result.get(NameService.ERROR) != null) { // not a valid peer set? must say something useful to the user!
+                    return result.get(NameService.ERROR);
+                }
+
                 List<Value> values = new ArrayList<Value>();
                 thisRowValues.add(values);
                 thisRowNames.add(namesForThisCell);
@@ -365,7 +372,8 @@ public final class ValueService {
                         lockMapsb.append("LOCKED");
                     } else { // blank
                         // ok this call is a bit awkward here
-                        Map result = nameService.isAValidNameSet(loggedInConnection, namesForThisCell, new HashSet<Name>());
+                        // TODO : will this be redundant if we can't select without a valid peer set anyway??
+                        result = nameService.isAValidNameSet(loggedInConnection, namesForThisCell, new HashSet<Name>());
                         if (result.get(NameService.ERROR) != null) { // it's not a cell where we can put date
                             lockMapsb.append("LOCKED");
                         }
