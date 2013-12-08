@@ -92,7 +92,14 @@ public final class ValueService {
             columnsString.append(",");
         }
 
-        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUserName(), new java.util.Date(),"edit data", "excel spraedsheet name here??",rowsString.toString(), columnsString.toString(), loggedInConnection.getContext(region));
+        StringBuilder contextString = new StringBuilder();
+        for (Name name : loggedInConnection.getContext(region))
+        {
+            contextString.append(name.getName());
+            contextString.append(",");
+        }
+
+        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUserName(), new java.util.Date(),"edit data", "excel spraedsheet name here??",rowsString.toString(), columnsString.toString(), contextString.toString());
         Value newValue = new Value(loggedInConnection.getTotoMemoryDB(), provenance, 0, newValueString, null);
         newValue.setNamesWillBePersisted(existingValue.getNames());
         deleteValue(existingValue);
@@ -113,7 +120,14 @@ public final class ValueService {
             columnsString.append(",");
         }
 
-        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUserName(), new java.util.Date(),"edit data", "excel spraedsheet name here??",rowsString.toString(), columnsString.toString(), loggedInConnection.getContext(region));
+        StringBuilder contextString = new StringBuilder();
+        for (Name name : loggedInConnection.getContext(region))
+        {
+            contextString.append(name.getName());
+            contextString.append(",");
+        }
+
+        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUserName(), new java.util.Date(),"edit data", "excel spraedsheet name here??",rowsString.toString(), columnsString.toString(), contextString.toString());
         storeValueWithProvenanceAndNames(loggedInConnection,newValueString,provenance, names);
         return true;
     }
@@ -324,10 +338,34 @@ public final class ValueService {
     public String getExcelDataForNamesSearch(LoggedInConnection loggedInConnection, Set<Name> searchNames) throws Exception {
         final StringBuilder sb = new StringBuilder();
         List<Value> values =findForNamesIncludeChildren(searchNames, false);
+        Set<String> headings = new LinkedHashSet<String>();
+        // this may not be optimal, can sort later . . .
+        for (Value value : values){
+            for(Name name : value.getNames()){
+                if (!headings.contains(name.findTopParent().getName())){
+                    headings.add(name.findTopParent().getName());
+                }
+            }
+        }
+        sb.append(" ");
+        for (String heading : headings){
+            sb.append("\t").append(heading);
+        }
+        sb.append("\n");
         for (Value value : values){
             sb.append(value.getText());
-            for(Name name : value.getNames()){
-                sb.append("\t" + name.getName());
+            String[] names = new String[headings.size()];
+            int i = 0;
+            for(String heading : headings){
+                for(Name name : value.getNames()){
+                    if (name.findTopParent().getName().equals(heading)){
+                        names[i] = name.getName();
+                    }
+                }
+                i++;
+            }
+            for (String name : names){
+                sb.append("\t").append(name);
             }
             sb.append("\n");
         }
@@ -335,8 +373,8 @@ public final class ValueService {
     }
 
 
-    public String getExcelDataForColumnsRowsAndContext(LoggedInConnection loggedInConnection, Name contextName, String region) throws Exception {
-        loggedInConnection.setContext(region, contextName.getName()); // needed for provenance
+    public String getExcelDataForColumnsRowsAndContext(LoggedInConnection loggedInConnection, List<Name> contextNames, String region) throws Exception {
+        loggedInConnection.setContext(region, contextNames); // needed for provenance
         long track = System.currentTimeMillis();
         final StringBuilder sb = new StringBuilder();
         final StringBuilder lockMapsb = new StringBuilder();
@@ -352,7 +390,7 @@ public final class ValueService {
             int count = 1;
             for (Name columnName : loggedInConnection.getColumnHeadings(region)) {
                 final Set<Name> namesForThisCell = new HashSet<Name>();
-                namesForThisCell.add(contextName);
+                namesForThisCell.addAll(contextNames);
                 namesForThisCell.add(columnName);
                 namesForThisCell.add(rowName);
 

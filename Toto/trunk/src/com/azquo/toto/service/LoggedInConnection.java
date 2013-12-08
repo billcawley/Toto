@@ -27,7 +27,7 @@ public final class LoggedInConnection {
 
     private final Map<String, List<Name>> rowHeadings;
     private final Map<String, List<Name>> columnHeadings;
-    private final Map<String, String> contexts;
+    private final Map<String, List<Name>> contexts;
     private final Map<String, String> lockMaps;
     private final Map<String, String> sentDataMaps;
     private final Map<String, List<List<List<Value>>>> sentDataValuesMaps; // As in a 2 d array (lists of lists) of lists of valuer Useful for when data is saved
@@ -43,7 +43,7 @@ public final class LoggedInConnection {
         lastAccessed = new Date();
         rowHeadings = new HashMap<String, List<Name>>();
         columnHeadings = new HashMap<String, List<Name>>();
-        contexts = new HashMap<String, String>();
+        contexts = new HashMap<String, List<Name>>();
         lockMaps = new HashMap<String, String>();
         sentDataMaps = new HashMap<String, String>();
         sentDataValuesMaps = new HashMap<String, List<List<List<Value>>>>();
@@ -116,7 +116,7 @@ public final class LoggedInConnection {
         }
     }
 
-    public String getContext(final String region) {
+    public List<Name> getContext(final String region) {
         if (region == null || region.isEmpty()){
             return contexts.get(defaultRegion);
         } else {
@@ -124,11 +124,11 @@ public final class LoggedInConnection {
         }
     }
 
-    public void setContext(final String region,  final String context) {
+    public void setContext(final String region,  final List<Name> contexts) {
         if (region == null || region.isEmpty()){
-            this.contexts.put(defaultRegion, context);
+            this.contexts.put(defaultRegion, contexts);
         } else {
-            this.contexts.put(region, context);
+            this.contexts.put(region, contexts);
         }
     }
 

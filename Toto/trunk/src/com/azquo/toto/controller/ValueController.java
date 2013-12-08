@@ -15,10 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.StringReader;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.StringTokenizer;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -99,12 +96,18 @@ public class ValueController {
             }
 
             if (context != null && context.length() > 0) {
-                final Name contextName = nameService.findByName(loggedInConnection, context);
-                if (contextName == null) {
-                    return "error:I can't find a name for the context : " + context;
+                //System.out.println("passed context : " + context);
+                StringTokenizer st = new StringTokenizer(context, ";");
+                List<Name> contextNames = new ArrayList<Name>();
+                while (st.hasMoreTokens()){
+                    final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim());
+                    if (contextName == null) {
+                        return "error:I can't find a name for the context : " + context;
+                    }
+                    contextNames.add(contextName);
                 }
                 if (loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0 && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0) {
-                    return valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextName, region);
+                    return valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region);
                 } else {
                     return "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
                 }
@@ -180,6 +183,8 @@ public class ValueController {
             }
 
             if (searchByNames != null && searchByNames.length() > 0) {
+
+
                 System.out.println("search by names : " + searchByNames);
                 if (searchByNames.startsWith("`")){
                     searchByNames = searchByNames.substring(1);
