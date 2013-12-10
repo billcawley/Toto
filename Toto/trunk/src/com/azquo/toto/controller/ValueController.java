@@ -154,8 +154,9 @@ public class ValueController {
                             // and here we get to the crux, the values do NOT match
                             if (!originalValues[columnCounter].trim().equals(editedValues[columnCounter])) {
                                 if (!locked.equalsIgnoreCase("locked")) { // it wasn't locked, good to go, check inside the different values bit to error if the excel tries something it should not
-                                    // for the moment we'll only play ball if there's an existing value, will add new value possibility tomorrow
                                     System.out.println(columnCounter + ", " + rowCounter + " not locked and modified");
+                                    System.out.println(originalValues[columnCounter].trim() + "|" + editedValues[columnCounter] + "|");
+
                                     List<Value> valuesForCell = rowValues.get(columnCounter);
                                     Set<Name> namesForCell = rowNames.get(columnCounter);
                                     if (valuesForCell.size() == 1) {

@@ -127,7 +127,7 @@ public final class ValueService {
             contextString.append(",");
         }
 
-        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUserName(), new java.util.Date(),"edit data", "excel spraedsheet name here??",rowsString.toString(), columnsString.toString(), contextString.toString());
+        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUserName(), new java.util.Date(),"edit data", "excel spreadsheet name here??",rowsString.toString(), columnsString.toString(), contextString.toString());
         storeValueWithProvenanceAndNames(loggedInConnection,newValueString,provenance, names);
         return true;
     }
@@ -405,18 +405,10 @@ public final class ValueService {
                 thisRowNames.add(namesForThisCell);
                 // TODO - peer additive check. If using peers and not additive, don't include children
                 sb.append(findSumForNamesIncludeChildren(namesForThisCell, values, true)); // true = pay attention to names additive flag
-                if (values.size() != 1) {
-                    if (values.size() > 0) {
-                        lockMapsb.append("LOCKED");
-                    } else { // blank
-                        // ok this call is a bit awkward here
-                        // TODO : will this be redundant if we can't select without a valid peer set anyway??
-                        result = nameService.isAValidNameSet(loggedInConnection, namesForThisCell, new HashSet<Name>());
-                        if (result.get(NameService.ERROR) != null) { // it's not a cell where we can put date
-                            lockMapsb.append("LOCKED");
-                        }
-                    }
+                if (values.size() > 1) {
+                    lockMapsb.append("LOCKED");
                 }
+                // if it's 1 then saving is easy, overwrite the old value. If not then since it's valid peer set I guess we add the new value?
                 if (count < loggedInConnection.getColumnHeadings(region).size()) {
                     sb.append("\t");
                     lockMapsb.append("\t");
