@@ -39,6 +39,8 @@ public final class NameDAO extends StandardDAO<Name> {
 
     public static final String NAMESETDEFINTION = "name_set_definition";
     public static final String PEERSETDEFINTION = "peer_set_definition";
+    public static final String NAMEATTRIBUTE = "name_attribute";
+    public static final String ATTRIBUTE = "attribute";
 
     public static final String PARENTID = "parent_id";
     public static final String CHILDID = "child_id";
@@ -46,6 +48,8 @@ public final class NameDAO extends StandardDAO<Name> {
     public static final String NAMEID = "name_id";
     public static final String PEERID = "peer_id";
     public static final String ADDITIVE = "additive";
+    public static final String ATTRIBUTENAME = "attribute_name";
+    public static final String ATTRIBUTEVALUE = "attribute_value";
 
 
     @Override
@@ -103,6 +107,24 @@ public final class NameDAO extends StandardDAO<Name> {
         }
     }
 
+
+
+    private static class CommaSeparatedNameAttribute implements RowMapper<String> {
+
+        @Override
+        public final String mapRow(final ResultSet rs, final int row) throws SQLException {
+            // not pretty, just make it work for the moment
+            try {
+                return rs.getInt(NAMEID) + "," + rs.getString(ATTRIBUTENAME) + "," + rs.getBoolean(ATTRIBUTEVALUE);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+    }
+
+
+
     @Override
     public RowMapper<Name> getRowMapper(TotoMemoryDB totoMemoryDB) {
         return new NameRowMapper(totoMemoryDB);
@@ -130,6 +152,18 @@ public final class NameDAO extends StandardDAO<Name> {
         jdbcTemplate.update(updateSql, namedParams);
         return true;
     }
+
+
+    public boolean linkNameAndAttribute(final TotoMemoryDB totoMemoryDB, final Name name, final String attributeName, String attributeValue) throws DataAccessException {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(NAMEID, name.getId());
+        namedParams.addValue(ATTRIBUTENAME, attributeName);
+        namedParams.addValue(ATTRIBUTEVALUE, attributeValue);
+        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMEATTRIBUTE + "` (`" + NAMEID + "`,`" + ATTRIBUTENAME + "`,`" + ATTRIBUTEVALUE + "`) VALUES (:" + NAMEID + ",:" + ATTRIBUTENAME + ",:" + ATTRIBUTEVALUE + ")";
+        jdbcTemplate.update(updateSql, namedParams);
+        return true;
+    }
+
 
     public boolean linkParentAndChildren(final TotoMemoryDB totoMemoryDB, final Name parent) throws DataAccessException {
 
@@ -164,6 +198,12 @@ public final class NameDAO extends StandardDAO<Name> {
         String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + PEERSETDEFINTION + "` where `" + NAMEID + "` = :" + NAMEID;
         return jdbcTemplate.update(updateSql, namedParams);
     }
+    public int unlinkAllAttributesForName(final TotoMemoryDB totoMemoryDB, final Name name) throws DataAccessException {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(NAMEID, name.getId());
+        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + ATTRIBUTENAME + "` where `" + NAMEID + "` = :" + NAMEID;
+        return jdbcTemplate.update(updateSql, namedParams);
+    }
 
     /*SELECT *
 FROM `name_set_definition`
@@ -181,5 +221,13 @@ ORDER BY parent_id, position*/
         return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedNamePeerIdsRowMapper());
 
     }
+    public List<String> findAllAttributeLinksOrderByNameId(final TotoMemoryDB totoMemoryDB) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        final String FIND_EXISTING_LINK = "Select `" + NAMEID + "`,`" + ATTRIBUTENAME + "`,`" + ATTRIBUTEVALUE + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMEATTRIBUTE + "` order by `" + NAMEID + "`";
+        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedNameAttribute());
+
+    }
+
+
 
 }

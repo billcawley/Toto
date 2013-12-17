@@ -53,7 +53,7 @@ public class ValueServiceTest {
         LoggedInConnection loggedInConnection = loginService.login("imftest", "edd", "edd123",0);
 //        LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password",0);
 
-        String filePath = "/home/cawley/Downloads/imf.txt";
+        String filePath = "/home/bill/Downloads/imf.txt";
 //        String filePath = "/home/cawley/Downloads/10daysinjan.csv";
         // skip file opening time . . .
         long track = System.currentTimeMillis();

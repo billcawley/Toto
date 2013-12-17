@@ -45,7 +45,7 @@
         <constructor-arg type="com.azquo.toto.dao.ProvenanceDAO" ref="provenanceDAO"/>
     </bean>
     <bean name="IMFMemoryDB" class="com.azquo.toto.memorydb.TotoMemoryDB">
-        <constructor-arg name="databaseName" value="totoimf"/>
+        <constructor-arg name="databaseName" value="totoexport"/>
         <constructor-arg type="com.azquo.toto.dao.NameDAO" ref="nameDao"/>
         <constructor-arg type="com.azquo.toto.dao.ValueDAO" ref="valueDao"/>
         <constructor-arg type="com.azquo.toto.dao.ProvenanceDAO" ref="provenanceDAO"/>

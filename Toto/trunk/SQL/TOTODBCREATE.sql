@@ -1,14 +1,20 @@
 -- phpMyAdmin SQL Dump
--- version 4.0.8
+-- version 3.4.10.1deb1
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Oct 29, 2013 at 04:53 PM
--- Server version: 5.5.33
--- PHP Version: 5.3.17
+-- Generation Time: Dec 16, 2013 at 05:36 PM
+-- Server version: 5.5.34
+-- PHP Version: 5.3.10-1ubuntu3.8
 
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
 
 --
 -- Database: `toto`
@@ -17,21 +23,8 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Table structure for table `attribute`
---
-
-CREATE TABLE IF NOT EXISTS `attribute` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `name`
 --
-
 
 CREATE TABLE IF NOT EXISTS `name` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -40,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `name` (
   `additive` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=276 ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -50,8 +43,8 @@ CREATE TABLE IF NOT EXISTS `name` (
 
 CREATE TABLE IF NOT EXISTS `name_attribute` (
   `name_id` int(11) NOT NULL,
-  `attribute_id` int(11) NOT NULL,
-  `value` varchar(255) COLLATE utf8_unicode_ci NOT NULL
+  `attribute_name` varchar(40) COLLATE utf8_unicode_ci NOT NULL,
+  `attribute_value` varchar(255) COLLATE utf8_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
@@ -112,7 +105,7 @@ CREATE TABLE IF NOT EXISTS `value` (
   `text` text COLLATE utf8_unicode_ci,
   `deleted_info` text COLLATE utf8_unicode_ci,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=101535 ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -126,3 +119,7 @@ CREATE TABLE IF NOT EXISTS `value_name` (
   PRIMARY KEY (`name_id`,`value_id`),
   KEY `value_id` (`value_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

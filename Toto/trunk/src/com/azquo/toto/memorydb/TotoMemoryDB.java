@@ -25,7 +25,7 @@ public final class TotoMemoryDB {
     private final ProvenanceDAO provenanceDAO;
 
 
-    private final HashMap<String, Name> nameByNameMap;
+    private final HashMap<String, Set<Name>> nameByNameMap;
     private final HashMap<Integer, Name> nameByIdMap;
     private final HashMap<Integer, Value> valueByIdMap;
     private final HashMap<Integer, Provenance> provenanceByIdMap;
@@ -48,13 +48,13 @@ public final class TotoMemoryDB {
         this.nameDAO = nameDAO;
         this.valueDAO = valueDAO;
         this.provenanceDAO = provenanceDAO;
-        needsLoading = true;
+         needsLoading = true;
         maxIdAtLoad = 0;
-        nameByNameMap = new HashMap<String, Name>();
+        nameByNameMap = new HashMap<String, Set<Name>>();
         nameByIdMap = new HashMap<Integer, Name>();
         valueByIdMap = new HashMap<Integer, Value>();
         provenanceByIdMap = new HashMap<Integer, Provenance>();
-        namesNeedPersisting = new HashSet<Name>();
+         namesNeedPersisting = new HashSet<Name>();
         valuesNeedPersisting = new HashSet<Value>();
         provenanceNeedsPersisting = new HashSet<Provenance>();
         loadData();
@@ -127,6 +127,7 @@ public final class TotoMemoryDB {
 
             int currentNameId = -1;
             LinkedHashMap<Name,Boolean> peerSet = new LinkedHashMap<Name, Boolean>();
+
             for (String nameIdPeerIdBooleanTriple : nameDAO.findAllPeerLinksOrderByNameIdPosition(this)) {
                 int firstCommaIndex = nameIdPeerIdBooleanTriple.indexOf(",");
                 int secondCommaIndex = nameIdPeerIdBooleanTriple.indexOf(",", firstCommaIndex + 1);
@@ -152,6 +153,45 @@ public final class TotoMemoryDB {
             }
             System.out.println(linkCounter + " peer names links created in " + (System.currentTimeMillis() - track) + "ms");
             track = System.currentTimeMillis();
+
+            //ATTRIBUTES
+            linkCounter = 0;
+            // again need too speed things up . . .
+
+
+            currentNameId = -1;
+            LinkedHashMap<String, String> attributeSet = new LinkedHashMap<String, String>();
+
+            for (String attributeInfo : nameDAO.findAllAttributeLinksOrderByNameId(this)) {
+                int firstCommaIndex = attributeInfo.indexOf(",");
+                int secondCommaIndex = attributeInfo.indexOf(",", firstCommaIndex + 1);
+                int nameId = Integer.parseInt(attributeInfo.substring(0, firstCommaIndex));
+                String attributeName = attributeInfo.substring(firstCommaIndex + 1, secondCommaIndex);
+                String attValue = attributeInfo.substring(secondCommaIndex + 1);
+                // ok we're switching to a new value ID, link the ones previously
+                if (nameId != currentNameId) {
+                    if (currentNameId != -1) { // assign ones just passed if not the first
+                        Name name = nameByIdMap.get(currentNameId);
+                        name.setAttributesWillBePersisted(attributeSet);
+                    }
+                    currentNameId = nameId;
+                    attributeSet = new LinkedHashMap<String, String>();
+                }
+                attributeSet.put(attributeName, attValue); // hard code to additive for the mo
+                linkCounter++;
+            }
+            // clear up the last one
+            if (attributeSet.size() > 0) {
+                Name name = nameByIdMap.get(currentNameId);
+                name.setAttributesWillBePersisted(attributeSet);
+            }
+            System.out.println(linkCounter + " attribute names links created in " + (System.currentTimeMillis() - track) + "ms");
+            track = System.currentTimeMillis();
+
+
+
+
+            //END ATTRIBUTES
 
             // ok this was taking a while so let's try a new idea where we select the whole lot ordering by value id
             // might be a bit hacky but should massively speed loading
@@ -241,6 +281,14 @@ public final class TotoMemoryDB {
                     position++;
                 }
             }
+            if (name.getAttributesChanged()) {
+                int position = 1;
+                nameDAO.unlinkAllAttributesForName(this, name);
+                for (String attribute : name.getAttributes().keySet()) {
+                    nameDAO.linkNameAndAttribute(this, name, attribute, name.getAttributes().get(attribute));
+                    position++;
+                }
+            }
             name.setAsPersisted(); // is this dangerous here???
             // going to save value label links by value to label rather than label to value as the lists on the latter will be big. Change too one value may cause much relinking
             // we don't deal with parents, they're just convenience lookup lists
@@ -303,9 +351,37 @@ public final class TotoMemoryDB {
 
     // for search purposes probably should trim
 
-    public Name getNameByName(String name) {
-        return nameByNameMap.get(name.toLowerCase().trim());
+
+    public Name getNameByName(String name, Name parent){
+        Set<Name> possibles = nameByNameMap.get(name.toLowerCase().replace("`",""));
+        if (possibles == null) return null;
+        if (parent == null){
+            if (possibles.size() != 1) return null;
+            for (Name possible:possibles){
+                return possible;
+            }
+
+        }else{
+            for (Name possible:possibles){
+                if(isInParentTreeOf(possible, parent)){
+                    return possible;
+                }
+            }
+        }
+        return null;
+
     }
+
+    public boolean isInParentTreeOf(Name child, Name testParent){
+        for (Name parent:child.getParents()){
+            if (testParent == parent || isInParentTreeOf(parent, testParent)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+
 
     public List<Name> findTopNames() {
         long track = System.currentTimeMillis();
@@ -335,8 +411,8 @@ public final class TotoMemoryDB {
         }
         final List<Name> toReturn = new ArrayList<Name>();
         if (!wildCardAtBeginning && !wildCardAtEnd){
-            if (getNameByName(search) != null){
-                toReturn.add(getNameByName(search));
+            if (getNameByName(search, null) != null){
+                toReturn.add(getNameByName(search, null));
             }
         } else {
             // search the lot!
@@ -375,6 +451,10 @@ public final class TotoMemoryDB {
 
     // synchronised?
 
+
+
+
+
     protected void addNameToDb(Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
@@ -390,10 +470,17 @@ public final class TotoMemoryDB {
 
     protected void addNameToDbNameMap(Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
-        if (nameByNameMap.get(newName.getName().toLowerCase()) != null) {
-            throw new Exception("tried to add a name to the database with an existing name!");
+        String lcName = newName.getName().toLowerCase();
+        if (newName.getName().contains("`")){
+            String error = "has quotes";
+            throw new Exception(error);
+        }
+        if (nameByNameMap.get(lcName) != null) {
+            nameByNameMap.get(lcName).add(newName);
         } else {
-            nameByNameMap.put(newName.getName().toLowerCase(), newName);
+            Set<Name> possibles = new HashSet<Name>();
+            possibles.add(newName);
+            nameByNameMap.put(lcName, possibles);
         }
     }
 
@@ -440,5 +527,34 @@ public final class TotoMemoryDB {
     protected void removeProvenanceNeedsPersisting(Provenance provenance) {
         provenanceNeedsPersisting.remove(provenance);
     }
+
+    public void translateNames(String language) throws Exception{
+        Iterator it = nameByIdMap.entrySet().iterator();
+        while (it.hasNext()) {
+            Name name = (Name)((Map.Entry)it.next()).getValue();
+            it.remove(); // avoids a ConcurrentModificationException
+            String displayName = name.getAttribute("name");
+            if (displayName == null){
+                name.setAttribute("name", name.getName());
+            }
+            String newName = name.getAttribute(language);
+            if (newName != null){
+                name.setName(newName);
+            }
+        }
+    }
+    public void restoreNames() throws Exception{
+        Iterator it = nameByIdMap.entrySet().iterator();
+        while (it.hasNext()) {
+            Name name = (Name)((Map.Entry)it.next()).getValue();
+            it.remove(); // avoids a ConcurrentModificationException
+            String newName = name.getAttribute("name");
+            if (newName != null){
+                name.setName(newName);
+            }
+        }
+    }
+
+
 
 }

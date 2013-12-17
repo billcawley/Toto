@@ -25,12 +25,12 @@ public class LoginService {
 
     public LoggedInConnection login(final String databaseName, final String user, final String password, int timeOutInMinutes){
         // TODO : detect duplicate logins?
-        if (databaseName.equalsIgnoreCase("tototest") && user.equalsIgnoreCase("bill") && password.equalsIgnoreCase("thew1password")){
+        if (user.equalsIgnoreCase("bill") && password.equalsIgnoreCase("b1ll")){
             // just hacking it for the mo
             final LoggedInConnection lim = new LoggedInConnection(System.nanoTime() + "" , totoMemoryDB, user, timeOutInMinutes * 60 * 1000);
             connections.put(lim.getConnectionId(), lim);
             return lim;
-        } else if (databaseName.equalsIgnoreCase("imftest") && user.equalsIgnoreCase("edd") && password.equalsIgnoreCase("edd123")){
+        } else if (databaseName.equalsIgnoreCase("totoexport") && user.equalsIgnoreCase("edd") && password.equalsIgnoreCase("edd123")){
             // just hacking it for the mo
             final LoggedInConnection lim = new LoggedInConnection(System.nanoTime() + "" , IMFMemoryDB, user, timeOutInMinutes * 60 * 1000);
             connections.put(lim.getConnectionId(), lim);

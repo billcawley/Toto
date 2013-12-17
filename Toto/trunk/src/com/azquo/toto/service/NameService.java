@@ -24,8 +24,43 @@ public final class NameService {
         loggedInConnection.getTotoMemoryDB().saveDataToMySQL();
     }
 
+    private String findParentFromList(String name){
+
+        if (name.lastIndexOf(",") < 0) return null;
+        int nStartPos = name.indexOf("`");
+        int commaPos = name.lastIndexOf(",");
+        if (nStartPos > 0  && nStartPos < commaPos){
+            int nEndPos = name.indexOf("`", nStartPos);
+            if (nEndPos < 0) return null;
+            return findParentFromList(name.substring(nEndPos + 1));
+        }
+        return name.substring(commaPos + 1).trim();
+    }
+
+
     public Name findByName(final LoggedInConnection loggedInConnection, final String name) {
-        return loggedInConnection.getTotoMemoryDB().getNameByName(name);
+
+     /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
+        This may not be an immediate hierarchy.
+        e.g.  if 'London, place' is sent, then the system will look for any 'London' that is ultimately in the set 'Place', whether through direct parent, or parent of parents.
+        It can accept multiple layers - ' London, Ontario, Place' would find   Place/Canada/Ontario/London
+        It should also recognise ``    `London, North`, `Ontario`, `Place`     should recognise that the 'North' is part of 'London, North'
+        */
+
+        String parentName =  findParentFromList(name);
+        if (parentName == null){
+            return loggedInConnection.getTotoMemoryDB().getNameByName(name, null);
+        }
+        Name parent = loggedInConnection.getTotoMemoryDB().getNameByName(parentName, null);
+        if (parent== null) return null;
+        String remainder = name.substring(0, name.lastIndexOf(",",name.length() - parentName.length()));
+        parentName = findParentFromList(remainder);
+        while (parentName != null){
+            parent = loggedInConnection.getTotoMemoryDB().getNameByName(parentName, null);
+            remainder = name.substring(0, name.lastIndexOf(",",name.length() - parentName.length()));
+            parentName = findParentFromList(remainder);
+        }
+        return loggedInConnection.getTotoMemoryDB().getNameByName(remainder,parent);
     }
 
     public List<Name> searchNames(final LoggedInConnection loggedInConnection, final String search) {
@@ -36,15 +71,56 @@ public final class NameService {
         return loggedInConnection.getTotoMemoryDB().findTopNames();
     }
 
+
+
+
+
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
-        final Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(name);
+
+        /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
+        This may not be an immediate hierarchy.
+
+        e.g.  if 'London, place' is sent, then the system will look for any 'London' that is ultimately in the set 'Place', whether through direct parent, or parent of parents.
+
+        It can accept multiple layers - ' London, Ontario, Place' would find   Place/Canada/Ontario/London
+
+        It should also recognise ``    `London, North`, `Ontario`, `Place`     should recognise that the 'North' is part of 'London, North'
+
+         */
+         String parentName =  findParentFromList(name);
+         if (parentName == null){
+            return findOrCreateName(loggedInConnection, name, null);
+         }
+        Name parent = findOrCreateName(loggedInConnection, parentName, null);
+        String remainder = name.substring(0, name.lastIndexOf(",",name.length() - parentName.length()));
+        parentName = findParentFromList(remainder);
+        while (parentName != null){
+            parent = findOrCreateName(loggedInConnection, parentName, parent);
+            remainder = name.substring(0, name.lastIndexOf(",",remainder.length() - parentName.length()));
+            parentName = findParentFromList(remainder);
+        }
+        return findOrCreateName(loggedInConnection, remainder, parent);
+
+    }
+
+
+    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, final Name parent) throws Exception {
+
+
+
+        String storeName = name.replace("`","");
+        final Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(storeName, parent);
         if (existing != null) {
             return existing;
         } else {
             //Provenance(TotoMemoryDB totoMemoryDB, String user, Date timeStamp, String method, String name, String rowHeadings, String columnHeadings, String context)
-            //TODO : make provenance come from somewhere else e.g. get it from the logged in connection??
+            //TODO : make provenance come from somewhere else e.g. get it from the logged in connection?? DEFINITELY!
             Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(),loggedInConnection.getUserName(), new Date(), "method", "name", "rows", "cols", "context");
-            return new Name(loggedInConnection.getTotoMemoryDB(),provenance,name, true); // default additive to true
+            Name newName =  new Name(loggedInConnection.getTotoMemoryDB(),provenance,storeName, true); // default additive to true
+            if (parent!=null) {
+                parent.addChildWillBePersisted(newName);
+            }
+            return newName;
         }
     }
 
@@ -166,7 +242,7 @@ public final class NameService {
     }
 
     public boolean removePeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName) throws Exception {
-        Name existingPeer = loggedInConnection.getTotoMemoryDB().getNameByName(peerName);
+        Name existingPeer = findByName(loggedInConnection, peerName);
         if (existingPeer != null) {
             parentName.removeFromPeersWillBePersisted(existingPeer);
             return true;
@@ -186,6 +262,7 @@ public final class NameService {
         }
         return new LinkedHashMap<Name, Boolean>();
     }
+
 
     public void createChild(final LoggedInConnection loggedInConnection, final Name parentName, final String childName, final String afterString, final int after) throws Exception {
         final Name newChild = findOrCreateName(loggedInConnection,childName);
@@ -224,7 +301,7 @@ public final class NameService {
     }
 
     public boolean removeChild(LoggedInConnection loggedInConnection, final Name parentName, final String childName) throws Exception {
-        final Name existingChild = loggedInConnection.getTotoMemoryDB().getNameByName(childName);
+        final Name existingChild = findByName(loggedInConnection, childName);
         if (existingChild != null) {
             parentName.removeFromChildrenWillBePersisted(existingChild);
             return true;
@@ -233,7 +310,7 @@ public final class NameService {
     }
 
     public void renameName(LoggedInConnection loggedInConnection, String name, String renameAs) throws Exception {
-        final Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(name);
+        final Name existing = findByName(loggedInConnection, name);
         if (existing != null) {
             existing.changeNameWillBePersisted(renameAs);
         }
@@ -369,4 +446,14 @@ public final class NameService {
             }
         }
     }
+
+    public void translateNames(final LoggedInConnection loggedInConnection,final String language) throws Exception{
+        loggedInConnection.getTotoMemoryDB().translateNames(language);
+    }
+
+
+    public void restoreNames(final LoggedInConnection loggedInConnection) throws Exception{
+        loggedInConnection.getTotoMemoryDB().restoreNames();
+    }
 }
+

@@ -42,22 +42,17 @@ public class NameController {
     public static final String LOWEST = "lowest";
 
     @Autowired
-    private NameService nameService;
+    private NameService nameService = new NameService();
 
     @Autowired
-    private LoginService loginService;
+    private LoginService loginService = new LoginService();
 //    private static final Logger logger = Logger.getLogger(TestController.class);
 
     @RequestMapping
     @ResponseBody
     public String handleRequest(@RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "instructions", required = false) String instructions) throws Exception {
+        String result = null;
         try {
-
-            if (instructions == null) {
-                return "error:no instrucitons passed";
-            }
-
-            System.out.println("instructions : |" + instructions + "|");
 
             if (connectionId == null) {
                 return "error:no connection id";
@@ -68,7 +63,23 @@ public class NameController {
             if (loggedInConnection == null) {
                 return "error:invalid or expired connection id";
             }
+            result = handleRequest(loggedInConnection, instructions);
+        }catch(Exception e){
+            e.printStackTrace();
+            return "error:" + e.getMessage();
+        }
+        return result;
+    }
 
+    public String handleRequest(LoggedInConnection loggedInConnection, String instructions)
+        throws Exception{
+        try{
+            String nameString = instructions;
+            if (instructions == null) {
+                return "error:no instrucitons passed";
+            }
+
+            System.out.println("instructions : |" + instructions + "|");
             if (instructions.equals("lognames")) {
                 for (Name topName : nameService.findTopNames(loggedInConnection)) {
                     nameService.logNameHierarchy(topName, 0);
@@ -84,7 +95,7 @@ public class NameController {
 
             String search = getInstruction(instructions, SEARCH);
             if (instructions.indexOf(';') > 0) {
-                final String nameString = instructions.substring(0, instructions.indexOf(';')).trim();
+                nameString = instructions.substring(0, instructions.indexOf(';')).trim();
                 // now we have it strip off the name, use getInstruction to see what we want to do with the name
                 instructions = instructions.substring(instructions.indexOf(';') + 1).trim();
 
@@ -321,7 +332,7 @@ public class NameController {
             if (search != null) { // blank search
                 return getNamesFormattedForOutput(nameService.findTopNames(loggedInConnection));
             }
-            return "No action taken";
+            return nameString;
         } catch (Exception e) {
             e.printStackTrace();
             return "error:" + e.getMessage();
@@ -354,7 +365,7 @@ public class NameController {
             if (!first) {
                 sb.append(", ");
             }
-            sb.append("`").append(n.getName()).append("`");
+            sb.append("`").append(n.getDisplayName()).append("`");
             first = false;
         }
         sb.append("}");
@@ -364,7 +375,7 @@ public class NameController {
     private String getParentStructureFormattedForOutput(final Name name, final boolean showParent) {
         StringBuilder sb = new StringBuilder();
         if (showParent) {
-            sb.append("`").append(name.getName()).append("`");
+            sb.append("`").append(name.getDisplayName()).append("`");
         }
         Set<Name> parents = name.getParents();
         if (!parents.isEmpty()) {
@@ -386,7 +397,7 @@ public class NameController {
     private String getChildStructureFormattedForOutput(final Name name, final boolean showChild) {
         StringBuilder sb = new StringBuilder();
         if (showChild) {
-            sb.append("`").append(name.getName()).append("`");
+            sb.append("`").append(name.getDisplayName()).append("`");
         }
         final Set<Name> children = name.getChildren();
         if (!children.isEmpty()) {

@@ -1,5 +1,6 @@
 package com.azquo.toto.memorydb;
 
+import javax.management.Attribute;
 import java.util.*;
 
 /**
@@ -35,9 +36,12 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
      */
     private LinkedHashSet<Name> children;
     private LinkedHashMap<Name, Boolean> peers;
+    private LinkedHashMap<String, String> attributes;
 
     private boolean childrenChanged;
     private boolean peersChanged;
+    private boolean attributesChanged;
+    private String importHeading;
 
     // parents is maintained according to children, it isn't persisted in the same way
 
@@ -58,8 +62,10 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         parents = new HashSet<Name>();
         children = new LinkedHashSet<Name>();
         peers = new LinkedHashMap<Name, Boolean>();
+        attributes = new LinkedHashMap<String, String>();
         childrenChanged = false;
         peersChanged = false;
+        attributesChanged = false;
         // it annoys me that this can't be folded into addToDb but I can't see how it would as the name won't be initialised when that is called
         // we could pull a trick above as in they have to override "assign variables" or something . . .not sure
         totoMemoryDB.addNameToDbNameMap(this);
@@ -79,6 +85,8 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     protected void classSpecificSetAsPersisted() {
         childrenChanged = false;
         peersChanged = false;
+        attributesChanged = false;
+
         getTotoMemoryDB().removeNameNeedsPersisting(this);
     }
 
@@ -90,7 +98,23 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         return peersChanged;
     }
 
+    protected boolean getAttributesChanged() {
+        return attributesChanged;
+    }
+
+
+    //added by WFC - not sure if this is the right way to set and get this field
+    public String getImportHeading(){return importHeading; }
+
+    public void setImportHeading(String importHeading){this.importHeading = importHeading; }
+
     public String getName() {
+        return name;
+    }
+
+    public String getDisplayName(){
+        String displayName = getAttribute("name");
+        if (displayName!=null) return displayName;
         return name;
     }
 
@@ -105,12 +129,17 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     // needs the db to check the name is not there
 
     public synchronized void changeNameWillBePersisted(String name) throws Exception {
-        if (getTotoMemoryDB().getNameByName(name) != null) {
+        //maybe should allow name change even if name already exists - need to set some better rule.
+        if (getTotoMemoryDB().getNameByName(name, null) != null) {
             throw new Exception("that name name already exists in the database");
         }
         this.name = name;
         entityColumnsChanged = true;
         setNeedsPersisting();
+    }
+
+    public synchronized void setName(String name){
+          this.name = name;
     }
 
     // needs the db to check the name is not there
@@ -156,6 +185,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         return Collections.unmodifiableSet(parents);
     }
 
+
     // don't allow external classes to set the parents, Name can manage this based on set children
 
     /* ok I can return a linked hash set but I'm not sure oof the advantage
@@ -168,6 +198,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     // returns a list as I don't think we care about duplicates here
     // these two functions moved here from the service
+
 
     public List<Name> findAllParents() {
         final List<Name> allParents = new ArrayList<Name>();
@@ -199,7 +230,8 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
                 }
             }
         }
-        return null;
+        //WFC amendment - used to be 'null' below
+        return this;
     }
 
     // same logic as above but returns a set, should be correct
@@ -337,6 +369,10 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         return Collections.unmodifiableMap(peers);
     }
 
+    public Map<String, String> getAttributes() {
+        return Collections.unmodifiableMap(attributes);
+    }
+
     public synchronized void setPeersWillBePersisted(LinkedHashMap<Name,Boolean> peers) throws Exception {
         checkDatabaseForSet(peers.keySet());
         for (Name peer : peers.keySet()){
@@ -350,6 +386,23 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             setNeedsPersisting();
         }
 
+    }
+
+
+    public synchronized void setAttributesWillBePersisted(LinkedHashMap<String,String> attributes) throws Exception {
+        this.attributes = attributes;
+        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
+            attributesChanged = true;
+            setNeedsPersisting();
+        }
+
+    }
+    public synchronized void setAttribute(String attributeName, String attributeValue){
+        attributes.put(attributeName, attributeValue);
+    }
+
+    public synchronized String getAttribute(String attributeName){
+        return attributes.get(attributeName);
     }
 
     // removal ok on linked lists
