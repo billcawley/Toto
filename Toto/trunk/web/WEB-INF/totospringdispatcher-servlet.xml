@@ -31,6 +31,7 @@
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
     <bean name="nameDao" class="com.azquo.toto.dao.NameDAO"/>
+    <bean name="importer" class="com.azquo.toto.service.Importer"/>
     <bean name="nameService" class="com.azquo.toto.service.NameService"/>
     <bean name="valueDao" class="com.azquo.toto.dao.ValueDAO"/>
     <bean name="valueService" class="com.azquo.toto.service.ValueService"/>
