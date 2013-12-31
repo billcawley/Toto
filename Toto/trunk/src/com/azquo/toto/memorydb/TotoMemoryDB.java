@@ -285,7 +285,9 @@ public final class TotoMemoryDB {
                 int position = 1;
                 nameDAO.unlinkAllAttributesForName(this, name);
                 for (String attribute : name.getAttributes().keySet()) {
-                    nameDAO.linkNameAndAttribute(this, name, attribute, name.getAttributes().get(attribute));
+                    if (!attribute.equals("name")){
+                        nameDAO.linkNameAndAttribute(this, name, attribute, name.getAttributes().get(attribute));
+                    }
                     position++;
                 }
             }
@@ -353,7 +355,7 @@ public final class TotoMemoryDB {
 
 
     public Name getNameByName(String name, Name parent){
-        Set<Name> possibles = nameByNameMap.get(name.toLowerCase().replace("`",""));
+        Set<Name> possibles = nameByNameMap.get(name.toLowerCase().replace("\"",""));
         if (possibles == null) return null;
         if (parent == null){
             if (possibles.size() != 1) return null;
@@ -370,6 +372,23 @@ public final class TotoMemoryDB {
         }
         return null;
 
+    }
+
+
+
+
+    public Set<Name> getNamesContainingName(String name){
+        Iterator it = nameByNameMap.entrySet().iterator();
+        Set<Name> names = new HashSet<Name>();
+        while (it.hasNext()){
+            Map.Entry pairs = (Map.Entry) it.next();
+            String key = (String)pairs.getKey();
+            if (key.contains(name)){
+                names.addAll((Set<Name>)pairs.getValue());
+            }
+
+        }
+        return names;
     }
 
     public boolean isInParentTreeOf(Name child, Name testParent){
@@ -529,10 +548,10 @@ public final class TotoMemoryDB {
     }
 
     public void translateNames(String language) throws Exception{
+        nameByNameMap.clear();
         Iterator it = nameByIdMap.entrySet().iterator();
         while (it.hasNext()) {
             Name name = (Name)((Map.Entry)it.next()).getValue();
-            it.remove(); // avoids a ConcurrentModificationException
             String displayName = name.getAttribute("name");
             if (displayName == null){
                 name.setAttribute("name", name.getName());
@@ -541,17 +560,20 @@ public final class TotoMemoryDB {
             if (newName != null){
                 name.setName(newName);
             }
+            addNameToDbNameMap(name);
         }
     }
+
     public void restoreNames() throws Exception{
+        nameByNameMap.clear();
         Iterator it = nameByIdMap.entrySet().iterator();
         while (it.hasNext()) {
             Name name = (Name)((Map.Entry)it.next()).getValue();
-            it.remove(); // avoids a ConcurrentModificationException
             String newName = name.getAttribute("name");
             if (newName != null){
                 name.setName(newName);
             }
+            addNameToDbNameMap(name);
         }
     }
 
