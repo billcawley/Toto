@@ -43,9 +43,11 @@ public class ValueController {
     @RequestMapping
     @ResponseBody
     public String handleRequest(@RequestParam(value = "rowheadings", required = false) final String rowheadings, @RequestParam(value = "columnheadings", required = false) final String columnheadings,
-                                @RequestParam(value = "context", required = false) final String context, @RequestParam(value = "connectionid", required = false) final String connectionId,
+                                @RequestParam(value = "context", required = false) final String context, @RequestParam(value = "connectionid", required = false)  String connectionId,
                                 @RequestParam(value = "region", required = false) String region, @RequestParam(value = "lockmap", required = false) final String lockMap,
-                                @RequestParam(value = "editeddata", required = false) final String editedData, @RequestParam(value = "searchbynames", required = false) String searchByNames) throws Exception {
+                                @RequestParam(value = "editeddata", required = false) final String editedData, @RequestParam(value = "searchbynames", required = false) String searchByNames,
+                                @RequestParam(value = "jsonfunction", required = false) String jsonfunction, @RequestParam(value = "user", required = false) String user,
+                                @RequestParam(value = "password", required = false) String password, @RequestParam(value = "database", required = false) String database) throws Exception {
 
         // these 3 statements copied, should factor
 
@@ -56,9 +58,14 @@ public class ValueController {
         try {
 
             if (connectionId == null) {
-                return "error:no connection id";
-            }
+                LoginController loginController = new LoginController();
+                LoggedInConnection loggedInConnection = loginService.login(database,user, password,0);
+                if (loggedInConnection == null){
+                    return "error:no connection id";
+                }
+                connectionId = loggedInConnection.getConnectionId();
 
+            }
             final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
 
             if (loggedInConnection == null) {
@@ -66,38 +73,16 @@ public class ValueController {
             }
 
             if (rowheadings != null && rowheadings.length() > 0) {
-                // ok we'll assume a list or command. First just a basic children
-                if (rowheadings.contains(";")) {
-                    final String nameString = rowheadings.substring(0, rowheadings.indexOf(";")).trim();
-                    final Name forName = nameService.findByName(loggedInConnection, nameString);
-                    if (forName != null) {
-                        return valueService.getRowHeadings(loggedInConnection, region, forName);
-                    } else {
-                        return "error:cannot find name : " + nameString;
-                    }
-                } else {
-                    return "error:cannot parse row headings string!";
-                }
-            }
+                 return valueService.getRowHeadings(loggedInConnection, region, rowheadings);
+             }
 
             if (columnheadings != null && columnheadings.length() > 0) {
-                // ok we'll assume a list or command. First just a basic children
-                if (columnheadings.contains(";")) {
-                    final String nameString = columnheadings.substring(0, columnheadings.indexOf(";")).trim();
-                    final Name forName = nameService.findByName(loggedInConnection, nameString);
-                    if (forName != null) {
-                        return valueService.getColumnHeadings(loggedInConnection, region, forName);
-                    } else {
-                        return "error:cannot find name : " + nameString;
-                    }
-                } else {
-                    return "error:cannot parse column headings string!";
-                }
+               return valueService.getColumnHeadings(loggedInConnection, region, columnheadings);
             }
 
             if (context != null && context.length() > 0) {
                 //System.out.println("passed context : " + context);
-                StringTokenizer st = new StringTokenizer(context, ";");
+                StringTokenizer st = new StringTokenizer(context, "\n");
                 List<Name> contextNames = new ArrayList<Name>();
                 while (st.hasMoreTokens()){
                     final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim());
@@ -187,25 +172,15 @@ public class ValueController {
 
 
                 System.out.println("search by names : " + searchByNames);
-                if (searchByNames.startsWith("`")){
-                    searchByNames = searchByNames.substring(1);
-                }
-                if (searchByNames.endsWith("`")){
-                    searchByNames = searchByNames.substring(0, searchByNames.length() - 1);
-                }
-                StringTokenizer st = new StringTokenizer(searchByNames, "`,`");
-                Set<Name> names = new HashSet<Name>();
-                while (st.hasMoreTokens()){
-                    String nameName = st.nextToken().trim();
-                    Name name = nameService.findByName(loggedInConnection, nameName);
-                    if (name != null){
-                        names.add(name);
-                    }
-                }
+
+                Set<Name> names = nameService.decodeString(loggedInConnection, searchByNames);
                 if (!names.isEmpty()){
-                    String result = valueService.getExcelDataForNamesSearch(loggedInConnection,names);
-                    System.out.println("search by names result : " + result);
-                    return result;
+                    String result = valueService.getExcelDataForNamesSearch(names);
+                    if (jsonfunction!=null && jsonfunction.length() > 0){
+                        return jsonfunction + "({\"data\": [[\"" + result.replace("\t","\",\"").replace("\n","\"],[\"") + "\"]]})";
+                    }else{
+                        return result;
+                    }
                 }
             }
 
