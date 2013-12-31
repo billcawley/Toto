@@ -31,13 +31,13 @@
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
     <bean name="nameDao" class="com.azquo.toto.dao.NameDAO"/>
-    <bean name="importer" class="com.azquo.toto.service.Importer"/>
-    <bean name="nameService" class="com.azquo.toto.service.NameService"/>
+     <bean name="nameService" class="com.azquo.toto.service.NameService"/>
     <bean name="valueDao" class="com.azquo.toto.dao.ValueDAO"/>
     <bean name="valueService" class="com.azquo.toto.service.ValueService"/>
     <bean name="provenanceDAO" class="com.azquo.toto.dao.ProvenanceDAO"/>
     <bean name="provenanceService" class="com.azquo.toto.service.ProvenanceService"/>
     <bean name="loginService" class="com.azquo.toto.service.LoginService"/>
+    <bean name="importer" class="com.azquo.toto.service.Importer"/>
     <!-- instantiate the memory db when our connection to MySQL is up :) -->
     <bean name="totoMemoryDB" class="com.azquo.toto.memorydb.TotoMemoryDB">
         <constructor-arg name="databaseName" value="toto"/>
