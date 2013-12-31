@@ -156,7 +156,6 @@ public final class Importer {
     CsvReader csvReader = new CsvReader(new InputStreamReader(new FileInputStream(filePath), "utf-8"), '\t');
     csvReader.readHeaders();
     String[] headers = csvReader.getHeaders();
-    // are the following few lines necessary??
 
 
      while (csvReader.readRecord()){
@@ -173,14 +172,16 @@ public final class Importer {
         }
         if (name != null){
             for (String header: headers){
-              String newName = csvReader.get(header);
-              name.setAttribute(header,newName);
+              if (header.length() > 0){
+                  String newName = csvReader.get(header);
+                  name.setAttribute(header,getFirstName(newName));
+                  name.setEntityColumnsChanged();// may be overdoing it if the attributes do not affect the current name
+              }
             }
 
         }
     }
 
-    nameService.persist(loggedInConnection);
 
     return "";
 }
@@ -277,6 +278,20 @@ public final class Importer {
         }
         return newFile.getPath();
     }
+
+
+    private String getFirstName(String nameGiven){
+        if (nameGiven == null) return null;
+        int commaPos = nameGiven.indexOf(",");
+        if (commaPos < 0) return nameGiven;
+        int quotePos = nameGiven.indexOf("`");
+        if (quotePos < commaPos && quotePos >= 0){
+            int endQuote = nameGiven.indexOf("`", quotePos + 1);
+            return nameGiven.substring(quotePos + 1, endQuote);
+        }
+        return nameGiven.substring(0, commaPos);
+    }
+
 
 
 
