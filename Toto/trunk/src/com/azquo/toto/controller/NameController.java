@@ -50,12 +50,19 @@ public class NameController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "instructions", required = false) String instructions) throws Exception {
+    public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId, @RequestParam(value = "instructions", required = false) String instructions,
+                                @RequestParam(value = "jsonfunction", required = false) String jsonfunction, @RequestParam(value = "user", required = false) String user,
+                                @RequestParam(value = "password", required = false) String password, @RequestParam(value = "database", required = false) String database) throws Exception {
         String result = null;
         try {
 
             if (connectionId == null) {
-                return "error:no connection id";
+                LoginController loginController = new LoginController();
+                LoggedInConnection loggedInConnection = loginService.login(database,user, password,0);
+                 if (loggedInConnection == null){
+                     return "error:no connection id";
+                 }
+                 connectionId = loggedInConnection.getConnectionId();
             }
 
             final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
@@ -68,7 +75,12 @@ public class NameController {
             e.printStackTrace();
             return "error:" + e.getMessage();
         }
-        return result;
+        if (jsonfunction != null && jsonfunction.length() > 0){
+            return jsonfunction + "{(" + result + ")}";
+        }
+        else {
+            return "{" + result + "}";
+        }
     }
 
     public String handleRequest(LoggedInConnection loggedInConnection, String instructions)
@@ -76,7 +88,7 @@ public class NameController {
         try{
             String nameString = instructions;
             if (instructions == null) {
-                return "error:no instrucitons passed";
+                return "error:no instructions passed";
             }
 
             System.out.println("instructions : |" + instructions + "|");
@@ -93,32 +105,51 @@ public class NameController {
             instructions = instructions.trim();
             // typically a command will start with a name
 
-            String search = getInstruction(instructions, SEARCH);
+            String search = nameService.getInstruction(instructions, SEARCH);
             if (instructions.indexOf(';') > 0) {
                 nameString = instructions.substring(0, instructions.indexOf(';')).trim();
                 // now we have it strip off the name, use getInstruction to see what we want to do with the name
                 instructions = instructions.substring(instructions.indexOf(';') + 1).trim();
 
-                String children = getInstruction(instructions, CHILDREN);
-                String peers = getInstruction(instructions, PEERS);
-                String structure = getInstruction(instructions, STRUCTURE);
-                String create = getInstruction(instructions, CREATE);
-                String levelString = getInstruction(instructions, LEVEL);
-                String fromString = getInstruction(instructions, FROM);
-                String toString = getInstruction(instructions, TO);
-                String afterString = getInstruction(instructions, AFTER);
-                String remove = getInstruction(instructions, REMOVE);
-                String renameas = getInstruction(instructions, RENAMEAS);
+                String children = nameService.getInstruction(instructions, CHILDREN);
+                String peers = nameService.getInstruction(instructions, PEERS);
+                String structure = nameService.getInstruction(instructions, STRUCTURE);
+                String create = nameService.getInstruction(instructions, CREATE);
+                String afterString = nameService.getInstruction(instructions, AFTER);
+                String remove = nameService.getInstruction(instructions, REMOVE);
+                String renameas = nameService.getInstruction(instructions, RENAMEAS);
                 // since children can be part of structure definition we do structure first
                 if (structure != null) {
+                    // New logic.  If name is not found, then first find names containing the name sent.  If none are found, return top names in structure
                     final Name name = nameService.findByName(loggedInConnection, nameString);
                     if (name != null) {
-                        return getParentStructureFormattedForOutput(name, true) + getChildStructureFormattedForOutput(name, false);
+                        //return getParentStructureFormattedForOutput(name, true) + getChildStructureFormattedForOutput(name, false, json);
+                        return "{\"names\":[" + getChildStructureFormattedForOutput(name) + "]}";
                     } else {
-                        return "error:name not found:`" + nameString + "`";
+                        ArrayList<Name> names = nameService.findContainingName(loggedInConnection, nameString);
+                        if (names.size() == 0){
+                            names = (ArrayList<Name>)nameService.findTopNames(loggedInConnection);
+                            names = nameService.sortNames(names);
+                        }
+                        StringBuffer sb = new StringBuffer();
+                        sb.append("{\"names\":[");
+                        int count = 0;
+                        for (Name outputName:names){
+                            String nameJson = getChildStructureFormattedForOutput(outputName);
+                            if (nameJson.length() > 0){
+                                if (count > 0) sb.append(",");
+                                sb.append(nameJson);
+                                count++;
+                            }
+                        }
+                        sb.append("]}");
+                        return sb.toString();
+
+
                     }
 
                 } else if (children != null) {
+
                     if (children.length() > 0) { // we want to affect the structure, add, remove, create
                         if (remove != null) { // remove a child form the set
                             final Name name = nameService.findByName(loggedInConnection, nameString);
@@ -191,53 +222,10 @@ public class NameController {
                         }
 
                     } else {// they want to read data
-                        final Name name = nameService.findByName(loggedInConnection, nameString);
-                        if (name != null) {
-                            int level = 1;
-                            if (levelString != null) {
-                                if (levelString.equalsIgnoreCase(LOWEST)) {
-                                    System.out.println("lowest");
-                                    level = -1;
-                                } else {
-                                    try {
-                                        level = Integer.parseInt(levelString);
-                                    } catch (NumberFormatException nfe) {
-                                        return "error:problem parsing level : " + levelString;
-                                    }
-                                }
 
-                            }
-                            int from = -1;
-                            int to = -1;
-                            if (fromString != null) {
-                                try {
-                                    from = Integer.parseInt(fromString);
-                                } catch (NumberFormatException nfe) {// may be a number, may not . . .
-                                }
-
-                            }
-                            if (toString != null) {
-                                try {
-                                    to = Integer.parseInt(toString);
-                                } catch (NumberFormatException nfe) {// may be a number, may not . . .
-                                }
-
-                            }
-                            List<Name> names; // could be a set or list, sine all we want too do is iterate is no prob
-                            if (from != -1 || to != -1) { // numeric, I won't allow mixed for the moment
-                                names = nameService.findChildrenFromTo(name, from, to);
-                            } else if (fromString != null || toString != null) {
-                                names = nameService.findChildrenFromTo(name, fromString, toString);
-                            } else { // also won't allow from/to/level mixes either
-                                // sorted means level won't work
-                                if (getInstruction(instructions, SORTED) != null) {
-                                    names = nameService.findChildrenSortedAlphabetically(name);
-                                } else {
-                                    names = nameService.findChildrenAtLevel(name, level);
-                                }
-                            }
-                            // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
-                            return getNamesFormattedForOutput(names);
+                        List<Name> names = nameService.interpretName(loggedInConnection, instructions);
+                        if (names!= null){
+                               return getNamesFormattedForOutput(names);
                         } else {
                             return "error:name not found:`" + nameString + "`";
                         }
@@ -340,35 +328,23 @@ public class NameController {
 
     }
 
-    private String getInstruction(final String instructions, final String instructionName) {
-        String toReturn = null;
-        if (instructions.toLowerCase().contains(instructionName.toLowerCase())) {
-            int commandStart = instructions.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length();
-            if (instructions.indexOf(";", commandStart) != -1) {
-                toReturn = instructions.substring(commandStart, instructions.indexOf(";", commandStart)).trim();
-            } else {
-                toReturn = instructions.substring(commandStart).trim();
-            }
-            if (toReturn.startsWith("`")) {
-                toReturn = toReturn.substring(1, toReturn.length() - 1); // trim escape chars
-            }
-        }
-        return toReturn;
-    }
 
     private String getNamesFormattedForOutput(final Collection<Name> names) {
         // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
+
         StringBuilder sb = new StringBuilder();
         boolean first = true;
-        sb.append("{");
+        sb.append("\"names\":[");
+        int elementNo = 0;
         for (Name n : names) {
             if (!first) {
                 sb.append(", ");
             }
-            sb.append("`").append(n.getDisplayName()).append("`");
+            sb.append("{\"name\":");
+            sb.append("\"").append(n.getDisplayName()).append("\"}");
             first = false;
         }
-        sb.append("}");
+        sb.append("]");
         return sb.toString();
     }
 
@@ -393,26 +369,48 @@ public class NameController {
         return sb.toString();
     }
 
-
-    private String getChildStructureFormattedForOutput(final Name name, final boolean showChild) {
-        StringBuilder sb = new StringBuilder();
-        if (showChild) {
-            sb.append("`").append(name.getDisplayName()).append("`");
+    private int getTotalValues(Name name){
+        int values = name.getValues().size();
+        for (Name child:name.getChildren()){
+            values += getTotalValues(child);
         }
-        final Set<Name> children = name.getChildren();
-        if (!children.isEmpty()) {
-            sb.append("; children {");
-            int count = 1;
-            for (Name child : children) {
-                sb.append(getChildStructureFormattedForOutput(child, true));
-                if (count < children.size()) {
-                    sb.append(",");
+        return values;
+    }
+
+    private String getChildStructureFormattedForOutput(final Name name) {
+        int totalValues = getTotalValues(name);
+        if (totalValues > 0){
+            StringBuilder sb = new StringBuilder();
+            sb.append("{\"name\":");
+            sb.append("\"").append(name.getDisplayName()).append("\"");
+            if (totalValues > name.getValues().size()) {
+                sb.append(", \"dataitems\":\"" + totalValues + "\"");
+            }
+            if (name.getValues().size() > 0){
+                sb.append(", \"mydataitems\":\"" + name.getValues().size() + "\"");
+            }
+            final Set<Name> children = name.getChildren();
+            if (!children.isEmpty()) {
+                sb.append(", \"elements\":\"" + children.size() + "\"");
+                sb.append(", \"children\":[");
+                int count = 0;
+                for (Name child : children) {
+                     String childData = getChildStructureFormattedForOutput(child);
+                    if (childData.length() > 0){
+                        if (count > 0) sb.append(",");
+                         sb.append(childData);
+                         count++;
+                    }
                 }
-                count++;
+                sb.append("]");
             }
             sb.append("}");
+            return sb.toString();
         }
-        return sb.toString();
+        return "";
     }
+
+
+
 
 }
