@@ -80,16 +80,20 @@ public final class ValueService {
 
     public boolean overWriteExistingValue(final LoggedInConnection loggedInConnection, String region, final Value existingValue, final String newValueString) throws Exception {
         StringBuilder rowsString = new StringBuilder();
-        for (Name name : loggedInConnection.getRowHeadings(region))
+        for (List<Name> rowNames : loggedInConnection.getRowHeadings(region))
         {
-            rowsString.append(name.getName());
-            rowsString.append(",");
+            for (Name name : rowNames){
+                rowsString.append(name.getName());
+                rowsString.append(",");
+            }
         }
         StringBuilder columnsString = new StringBuilder();
-        for (Name name : loggedInConnection.getColumnHeadings(region))
+        for (List<Name> colName : loggedInConnection.getColumnHeadings(region))
         {
-            columnsString.append(name.getName());
-            columnsString.append(",");
+            for (Name name:colName){
+                columnsString.append(name.getName());
+                columnsString.append(",");
+            }
         }
 
         StringBuilder contextString = new StringBuilder();
@@ -108,16 +112,20 @@ public final class ValueService {
 
     public boolean storeNewValueFromEdit(final LoggedInConnection loggedInConnection, String region, final Set<Name>names, final String newValueString) throws Exception {
         StringBuilder rowsString = new StringBuilder();
-        for (Name name : loggedInConnection.getRowHeadings(region))
+        for (List<Name> rowNames : loggedInConnection.getRowHeadings(region))
         {
-            rowsString.append(name.getName());
-            rowsString.append(",");
+            for (Name name:rowNames){
+                rowsString.append(name.getName());
+                rowsString.append(",");
+            }
         }
         StringBuilder columnsString = new StringBuilder();
-        for (Name name : loggedInConnection.getColumnHeadings(region))
+        for (List<Name> colNames : loggedInConnection.getColumnHeadings(region))
         {
-            columnsString.append(name.getName());
-            columnsString.append(",");
+            for (Name name:colNames){
+                columnsString.append(name.getName());
+                columnsString.append(",");
+            }
         }
 
         StringBuilder contextString = new StringBuilder();
@@ -307,40 +315,214 @@ public final class ValueService {
         return toReturn;
     }
 
-    public String getRowHeadings(LoggedInConnection loggedInConnection, String region, Name forName){
-        loggedInConnection.setRowHeadings(region, new ArrayList<Name>(forName.getChildren()));
-        final StringBuilder sb = new StringBuilder();
-        int count = 1;
-        for (Name child : forName.getChildren()) {
-            sb.append(child.getName());
-            if (count < forName.getChildren().size()) {
-                sb.append("\n");
+
+    public List<List<List<Name>>> transposeHeadingLists(List<List<List<Name>>> headingLists) {
+        List<List<List<Name>>> flipped = new ArrayList<List<List<Name>>>();
+        final int N = headingLists.get(0).size();
+        for (int i = 0; i < N; i++) {
+            List<List<Name>> col = new ArrayList<List<Name>>();
+            for (List<List<Name>> row : headingLists) {
+                col.add(row.get(i));
             }
-            count++;
+            flipped.add(col);
+        }
+        return flipped;
+    }
+
+    public List<List<Name>> transposeHeadings(List<List<Name>> headings) {
+        List<List<Name>> flipped = new ArrayList<List<Name>>();
+        final int N = headings.get(0).size();
+        for (int i = 0; i < N; i++) {
+            List<Name> col = new ArrayList<Name>();
+            for (List<Name> row : headings) {
+                col.add(row.get(i));
+            }
+            flipped.add(col);
+        }
+        return flipped;
+    }
+
+    public String outputHeadings(List<List<Name>> headings) {
+        final StringBuilder sb = new StringBuilder();
+        List<Name> lastxNames = null;
+        for (int x = 0; x < headings.size();x++) {
+            List<Name> xNames = headings.get(x);
+            if (x > 0) sb.append("\n");
+            for (int y = 0; y < xNames.size(); y++) {
+                if (y > 0) sb.append("\t");
+                //don't show repeating names in the headings - leave blank.
+                if ((x==0 || !lastxNames.get(y).equals(xNames.get(y))) && (y==0 || !xNames.get(y-1).equals(xNames.get(y)))){
+                   sb.append(xNames.get(y).getName());
+                }
+            }
+            lastxNames = xNames;
         }
         return sb.toString();
     }
 
-    public String getColumnHeadings(LoggedInConnection loggedInConnection, String region, Name forName){
-        loggedInConnection.setColumnHeadings(region, new ArrayList<Name>(forName.getChildren()));
-        final StringBuilder sb = new StringBuilder();
-        int count = 1;
-        for (Name child : forName.getChildren()) {
-            sb.append(child.getName());
-            if (count < forName.getChildren().size()) {
-                sb.append("\t");
-            }
-            count++;
-        }
-        return sb.toString();
+    public List<Name> interpretItem(String item){
+     //todo  - item should be a string, but potentially include ;children; level x; from a; to b; from n; to n;
+        return null;
     }
 
-    public String getExcelDataForNamesSearch(LoggedInConnection loggedInConnection, Set<Name> searchNames) throws Exception {
+    public List<List<List<Name>>> interpretHeadings(LoggedInConnection loggedInConnection, String headingsSent) throws Exception{
+
+        int maxx = 1;
+        int y = 0;
+        int pos = 0;
+        int lineend = (headingsSent + "\n").indexOf("\n", pos);
+        while (lineend > 0){
+            int x = 1;
+            int tabPos = headingsSent.indexOf("\t", pos);
+            while (tabPos > 0 && tabPos < lineend){
+                if (++x > maxx) maxx = x;
+                pos = tabPos + 1;
+                tabPos = headingsSent.indexOf("\t", pos);
+            }
+            y++;
+            pos = lineend + 1;
+            lineend = (headingsSent + "\n").indexOf("\n", pos);
+        }
+        pos = 0;
+        List<List<List<Name>>> headingNames = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
+        lineend =  (headingsSent + "\n").indexOf("\n", pos);
+        while (lineend > 0){
+            List<List<Name>> lineNames = new ArrayList<List<Name>>();
+            int x = 0;
+            int tabPos = headingsSent.indexOf("\t", pos);
+            while (tabPos > 0 && tabPos < lineend){
+               x++;
+               String item = headingsSent.substring(pos, tabPos);
+               lineNames.add(nameService.interpretName(loggedInConnection,item));
+               pos = tabPos + 1;
+               tabPos = headingsSent.indexOf("\t", pos);
+            }
+            String item = headingsSent.substring(pos, lineend);
+            lineNames.add(nameService.interpretName(loggedInConnection,item));
+
+            while (++x < maxx) lineNames.add(null);
+            y++;
+            headingNames.add(lineNames);
+            pos = lineend + 1;
+            lineend = (headingsSent + "\n").indexOf("\n", pos);
+        }
+        return headingNames;
+    }
+
+    private boolean blankCol(List<List<List<Name>>> headingLists, int i){
+        int N = headingLists.size();
+        if (N==1) return false;
+        for (int j= 0; j < N-1; j++){
+            if (headingLists.get(j).get(i) != null) return false;
+
+        }
+        return true;
+    }
+
+    private List<List<Name>> permuteRowList(List<List<Name>> collist){
+
+        //this will return only up to three levels.  I tried a recursive routine, but the arrays, though created correctly (see below) did not return correctly
+        List<List<Name>> output = new ArrayList<List<Name>>();
+        int n = collist.size();
+        for (Name name:collist.get(0)){
+             if (n==1){
+                 List<Name> nameList = new ArrayList<Name>();
+                 nameList.add(name);
+                 output.add(nameList);
+             }else{
+                 for (Name name2 : collist.get(1)){
+                     if (n==2){
+                         List<Name> nameList = new ArrayList<Name>();
+                         nameList.add(name);
+                         nameList.add(name2);
+                         output.add(nameList);
+                     }else{
+                         for (Name name3 : collist.get(2)){
+                             List<Name> nameList = new ArrayList<Name>();
+                             nameList.add(name);
+                             nameList.add(name2);
+                             nameList.add(name3);
+                             output.add(nameList);
+                         }
+                     }
+                 }
+             }
+        }
+        return output;
+    }
+
+        /*tried a recursive routine here, but became muddled in parameter passing - it created the correct list, then lost it in passing the parameters
+        for (Name name:collist.get(cellNo)){
+            input.add(name);
+            if (++cellNo == collist.size()){
+                output.add(input);
+
+            }else{
+                output = permuteRow(input, output, collist, cellNo);
+            }
+            input.remove(input.size()-1);
+            cellNo--;
+        }
+     return output;
+
+}
+*/
+
+
+    public List<List<Name>> expandHeadings(List<List<List<Name>>> headingLists){
+          /*
+          e.g.                      null    1,2,3,         null     4,5
+                                     a        b     c,d,e   f        g   h
+                          this should expand to
+                                    null   1  1  1  1  1  2  2  2   2  2  3  3   3   3   3  4  4   5   5
+                                     a     b  c  d  e  f  b  c  d   e  f  b  c   d   e   f  g  h   g   h
+
+                                     the rows are permuted as far as the next item on the same line
+           */
+
+        //Note that this routine transposes the list while expanding!
+        List<List<Name>> output = new ArrayList<List<Name>>();
+        final int rowCount = headingLists.size()-1;
+        final int N = headingLists.get(0).size();
+        for (int i = 0; i < N; i++) {
+            List<List<Name>> col = new ArrayList<List<Name>>();
+
+            for (List<List<Name>> row : headingLists) {
+                col.add(row.get(i));
+            }
+            while (i < N && blankCol(headingLists, i)){
+                col.get(rowCount).addAll(headingLists.get(rowCount).get(++i));
+            }
+            List<List<Name>> permuted = permuteRowList(col);
+            output.addAll(permuted);
+        }
+        return output;
+     }
+
+
+    public String getRowHeadings(LoggedInConnection loggedInConnection, String region, String headingsSent)throws Exception{
+        List<List<List<Name>>> rowHeadingLists = transposeHeadingLists(interpretHeadings(loggedInConnection, headingsSent));
+        loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
+        return outputHeadings(loggedInConnection.getRowHeadings(region));
+    }
+
+    public String getColumnHeadings(LoggedInConnection loggedInConnection, String region, String headingsSent)throws Exception{
+        List<List<List<Name>>> columnHeadingLists = (interpretHeadings(loggedInConnection,headingsSent));
+        loggedInConnection.setColumnHeadings(region, expandHeadings(columnHeadingLists));
+        return outputHeadings(transposeHeadings(loggedInConnection.getColumnHeadings(region)));
+    }
+
+
+    public String getExcelDataForNamesSearch(Set<Name> searchNames) throws Exception {
         final StringBuilder sb = new StringBuilder();
         List<Value> values =findForNamesIncludeChildren(searchNames, false);
         Set<String> headings = new LinkedHashSet<String>();
         // this may not be optimal, can sort later . . .
+        int count = 0;
         for (Value value : values){
+            if (count++ == 2000){
+                break;
+            }
             for(Name name : value.getNames()){
                 if (!headings.contains(name.findTopParent().getName())){
                     headings.add(name.findTopParent().getName());
@@ -352,7 +534,11 @@ public final class ValueService {
             sb.append("\t").append(heading);
         }
         sb.append("\n");
+        count = 0;
         for (Value value : values){
+            if (count++ == 2000){
+                break;
+            }
             sb.append(value.getText());
             String[] names = new String[headings.size()];
             int i = 0;
@@ -365,7 +551,11 @@ public final class ValueService {
                 i++;
             }
             for (String name : names){
-                sb.append("\t").append(name);
+                if  (name!=null){
+                    sb.append("\t").append(name);
+                }else{
+                    sb.append("\t");
+                }
             }
             sb.append("\n");
         }
@@ -382,17 +572,17 @@ public final class ValueService {
         List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
         List<List<Set<Name>>> dataNamesMap = new ArrayList<List<Set<Name>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of names for each cell
 
-        for (Name rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
+        for (List<Name> rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
             ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(loggedInConnection.getColumnHeadings(region).size());
             ArrayList<Set<Name>> thisRowNames = new ArrayList<Set<Name>>(loggedInConnection.getColumnHeadings(region).size());
             dataValuesMap.add(thisRowValues);
             dataNamesMap.add(thisRowNames);
             int count = 1;
-            for (Name columnName : loggedInConnection.getColumnHeadings(region)) {
+            for (List<Name> columnName : loggedInConnection.getColumnHeadings(region)) {
                 final Set<Name> namesForThisCell = new HashSet<Name>();
                 namesForThisCell.addAll(contextNames);
-                namesForThisCell.add(columnName);
-                namesForThisCell.add(rowName);
+                namesForThisCell.addAll(columnName);
+                namesForThisCell.addAll(rowName);
 
                 // edd putting in peer check stuff here, should I not???
                 Map<String, String> result = nameService.isAValidNameSet(loggedInConnection, namesForThisCell, new HashSet<Name>());
