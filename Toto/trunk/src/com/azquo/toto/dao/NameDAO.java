@@ -201,7 +201,7 @@ public final class NameDAO extends StandardDAO<Name> {
     public int unlinkAllAttributesForName(final TotoMemoryDB totoMemoryDB, final Name name) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(NAMEID, name.getId());
-        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + ATTRIBUTENAME + "` where `" + NAMEID + "` = :" + NAMEID;
+        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMEATTRIBUTE + "` where `" + NAMEID + "` = :" + NAMEID;
         return jdbcTemplate.update(updateSql, namedParams);
     }
 
