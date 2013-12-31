@@ -6,6 +6,7 @@ import com.azquo.toto.memorydb.Value;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
+import com.azquo.toto.service.ValueService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created with IntelliJ IDEA.
@@ -32,16 +34,26 @@ public class ProvenanceController {
     private LoginService loginService;
     @Autowired
     private NameService nameService;
+    @Autowired
+    private ValueService valueService;
 //    private static final Logger logger = Logger.getLogger(TestController.class);
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "name", required = false) String name
-            , @RequestParam(value = "region", required = false) final String region, @RequestParam(value = "col", required = false) String col, @RequestParam(value = "row", required = false) String row) throws Exception {
-        // we assume row and col starting at 0
+    public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId, @RequestParam(value = "name", required = false) String name,
+              @RequestParam(value = "region", required = false) final String region, @RequestParam(value = "col", required = false) String col, @RequestParam(value = "row", required = false) String row,
+              @RequestParam(value = "searchnames", required = false) String searchnames,
+              @RequestParam(value = "jsonfunction", required = false) String jsonfunction, @RequestParam(value = "user", required = false) String user,
+              @RequestParam(value = "password", required = false) String password, @RequestParam(value = "database", required = false) String database) throws Exception {
         try {
+
             if (connectionId == null) {
-                return "error:no connection id";
+                LoginController loginController = new LoginController();
+                LoggedInConnection loggedInConnection = loginService.login(database,user, password,0);
+                if (loggedInConnection == null){
+                    return "error:no connection id";
+                }
+                connectionId = loggedInConnection.getConnectionId();
             }
 
             final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
@@ -50,14 +62,31 @@ public class ProvenanceController {
                 return "error:invalid or expired connection id";
             }
 
+
             if (name != null && name.length() > 0){
                 Name theName = nameService.findByName(loggedInConnection, name);
                 if (theName != null){
                     System.out.println("In provenance controller name found : " + name);
-                    return formatProvenanceForExcel(theName.getProvenance());
+                    return formatProvenanceForOutput(theName.getProvenance(), jsonfunction);
                 } else {
                     return "error:name not found :" + name;
                 }
+            }
+            if (searchnames != null && searchnames.length() > 0){
+                Set<Name> names = nameService.decodeString(loggedInConnection, searchnames);
+                if (!names.isEmpty()){
+                    if (names.size() == 1){
+                        for (Name theName: names){
+                            return formatProvenanceForOutput(theName.getProvenance(), jsonfunction);
+                        }
+                    }else{
+                        List<Value> values =valueService.findForNamesIncludeChildren(names, false);
+                        if (values.size() == 1){
+                            return formatProvenanceForOutput(values.get(0).getProvenance(), jsonfunction);
+                        }
+                    }
+                }
+                return formatProvenanceForOutput(null, jsonfunction);
             }
 
             if (row != null && row.length() > 0 && col != null && col.length() > 0){
@@ -78,7 +107,7 @@ public class ProvenanceController {
                         if (rowValues.get(colInt) != null){
                             List<Value> valuesForCell = rowValues.get(colInt);
                             if (valuesForCell.size() == 1){
-                                return formatProvenanceForExcel(valuesForCell.get(0).getProvenance());
+                                return formatProvenanceForOutput(valuesForCell.get(0).getProvenance(), jsonfunction);
                             } else {
                                 // TODO : deal with provanence on a cell where there were mulitple values to make that cell's value
                             }
@@ -102,12 +131,24 @@ public class ProvenanceController {
         return "no action taken";
     }
 
-    public String formatProvenanceForExcel(Provenance provenance){
-        if (provenance == null){
-            return "no provenance";
-        } else {
-            return provenance.getUser() + "\r" + provenance.getTimeStamp() + "\r" + provenance.getMethod() + "\r" + provenance.getName() + "\r" + provenance.getColumnHeadings() + "\r" + provenance.getRowHeadings() + "\r" + provenance.getContext();
+    public String formatProvenanceForOutput(Provenance provenance, String jsonFunction){
+
+        if (jsonFunction != null && jsonFunction.length() > 0){
+
+            if (provenance == null){
+                return jsonFunction + "({provenance:{\"who\":\"no provenance\"}})";
+            }else{
+                String result =  jsonFunction + "({provenance:{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}})";
+                return result;
+            }
+        }else{
+            if (provenance == null){
+                return "error: no provenance";
+            }else{
+                return provenance.getUser() + "\r" + provenance.getTimeStamp() + "\r" + provenance.getMethod() + "\r" + provenance.getName() + "\r" + provenance.getColumnHeadings() + "\r" + provenance.getRowHeadings() + "\r" + provenance.getContext();
+            }
         }
     }
+
 
 }
