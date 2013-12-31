@@ -138,6 +138,10 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         setNeedsPersisting();
     }
 
+    public synchronized void setEntityColumnsChanged() throws Exception{
+        entityColumnsChanged = true;
+    }
+
     public synchronized void setName(String name){
           this.name = name;
     }
@@ -398,7 +402,13 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     }
     public synchronized void setAttribute(String attributeName, String attributeValue){
+        int attributeCount = attributes.size();
         attributes.put(attributeName, attributeValue);
+        if (attributeCount < attributes.size() ){
+            attributesChanged = true;
+            setNeedsPersisting();
+
+        }
     }
 
     public synchronized String getAttribute(String attributeName){
