@@ -25,8 +25,8 @@ public final class LoggedInConnection {
     private Date lastAccessed;
     private long timeOut;
 
-    private final Map<String, List<Name>> rowHeadings;
-    private final Map<String, List<Name>> columnHeadings;
+    private final Map<String, List<List<Name>>> rowHeadings;
+    private final Map<String, List<List<Name>>> columnHeadings;
     private final Map<String, List<Name>> contexts;
     private final Map<String, String> lockMaps;
     private final Map<String, String> sentDataMaps;
@@ -41,8 +41,8 @@ public final class LoggedInConnection {
         this.userName = userName;
         loginTime = new Date();
         lastAccessed = new Date();
-        rowHeadings = new HashMap<String, List<Name>>();
-        columnHeadings = new HashMap<String, List<Name>>();
+        rowHeadings = new HashMap<String, List<List<Name>>>();
+        columnHeadings = new HashMap<String, List<List<Name>>>();
         contexts = new HashMap<String, List<Name>>();
         lockMaps = new HashMap<String, String>();
         sentDataMaps = new HashMap<String, String>();
@@ -84,7 +84,7 @@ public final class LoggedInConnection {
         this.lastAccessed = lastAccessed;
     }
 
-    public List<Name> getRowHeadings(final String region) {
+    public List<List<Name>> getRowHeadings(final String region) {
         if (region == null || region.isEmpty()){
             return rowHeadings.get(defaultRegion);
         } else {
@@ -92,7 +92,7 @@ public final class LoggedInConnection {
         }
     }
 
-    public void setRowHeadings(final String region,  final List<Name> rowHeadings) {
+    public void setRowHeadings(final String region,  final List<List<Name>> rowHeadings) {
         if (region == null || region.isEmpty()){
             this.rowHeadings.put(defaultRegion, rowHeadings);
         } else {
@@ -100,7 +100,7 @@ public final class LoggedInConnection {
         }
     }
 
-    public List<Name> getColumnHeadings(final String region) {
+    public List<List<Name>> getColumnHeadings(final String region) {
         if (region == null || region.isEmpty()){
             return columnHeadings.get(defaultRegion);
         } else {
@@ -108,7 +108,7 @@ public final class LoggedInConnection {
         }
     }
 
-    public void setColumnHeadings(final String region,  final List<Name> columnHeadings) {
+    public void setColumnHeadings(final String region,  final List<List<Name>> columnHeadings) {
         if (region == null || region.isEmpty()){
             this.columnHeadings.put(defaultRegion, columnHeadings);
         } else {
