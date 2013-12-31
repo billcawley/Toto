@@ -16,6 +16,12 @@ import java.util.*;
  * It will be passed credentials by the controller, that will determine which memory DB to use - it won;t access the DAO any more. For the moment will hard code one memory DB
  */
 public final class NameService {
+    public static final String LEVEL = "level";
+    public static final String FROM = "from";
+    public static final String TO = "to";
+    public static final String SORTED = "sorted";
+    public static final String CHILDREN = "children";
+    public static final String LOWEST = "lowest";
 
 
     // hacky but testing for the moment
@@ -27,10 +33,10 @@ public final class NameService {
     private String findParentFromList(String name){
 
         if (name.lastIndexOf(",") < 0) return null;
-        int nStartPos = name.indexOf("`");
+        int nStartPos = name.indexOf("\"");
         int commaPos = name.lastIndexOf(",");
         if (nStartPos > 0  && nStartPos < commaPos){
-            int nEndPos = name.indexOf("`", nStartPos);
+            int nEndPos = name.indexOf("\"", nStartPos);
             if (nEndPos < 0) return null;
             return findParentFromList(name.substring(nEndPos + 1));
         }
@@ -38,13 +44,52 @@ public final class NameService {
     }
 
 
+    public ArrayList<Name> sortNames(final ArrayList<Name> namesList){
+
+        Comparator<Name> compareName = new Comparator<Name>() {
+            public int compare(Name n1, Name n2) {
+                return n1.getName().compareTo(n2.getName());
+            }
+        };
+
+        Collections.sort(namesList, compareName);
+        return namesList;
+
+    }
+
+    public Set<Name> decodeString(LoggedInConnection loggedInConnection, String searchByNames){
+        if (searchByNames.startsWith("\"")){
+            searchByNames = searchByNames.substring(1);
+        }
+        if (searchByNames.endsWith("\"")){
+            searchByNames = searchByNames.substring(0, searchByNames.length() - 1);
+        }
+        StringTokenizer st = new StringTokenizer(searchByNames, "\",\"");
+        Set<Name> names = new HashSet<Name>();
+        while (st.hasMoreTokens()){
+            String nameName = st.nextToken().trim();
+            Name name = findByName(loggedInConnection, nameName);
+            if (name != null){
+                names.add(name);
+            }
+        }
+        return names;
+
+    }
+
+    public ArrayList<Name> findContainingName(final LoggedInConnection loggedInConnection, final String name){
+
+        return sortNames(new ArrayList<Name>(loggedInConnection.getTotoMemoryDB().getNamesContainingName(name)));
+
+    }
+
     public Name findByName(final LoggedInConnection loggedInConnection, final String name) {
 
      /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
         This may not be an immediate hierarchy.
         e.g.  if 'London, place' is sent, then the system will look for any 'London' that is ultimately in the set 'Place', whether through direct parent, or parent of parents.
         It can accept multiple layers - ' London, Ontario, Place' would find   Place/Canada/Ontario/London
-        It should also recognise ``    `London, North`, `Ontario`, `Place`     should recognise that the 'North' is part of 'London, North'
+        It should also recognise ""    "London, North", "Ontario", "Place"     should recognise that the 'North' is part of 'London, North'
         */
 
         String parentName =  findParentFromList(name);
@@ -57,7 +102,7 @@ public final class NameService {
         parentName = findParentFromList(remainder);
         while (parentName != null){
             parent = loggedInConnection.getTotoMemoryDB().getNameByName(parentName, null);
-            remainder = name.substring(0, name.lastIndexOf(",",name.length() - parentName.length()));
+            remainder = name.substring(0, remainder.lastIndexOf(",",name.length() - parentName.length()));
             parentName = findParentFromList(remainder);
         }
         return loggedInConnection.getTotoMemoryDB().getNameByName(remainder,parent);
@@ -84,7 +129,7 @@ public final class NameService {
 
         It can accept multiple layers - ' London, Ontario, Place' would find   Place/Canada/Ontario/London
 
-        It should also recognise ``    `London, North`, `Ontario`, `Place`     should recognise that the 'North' is part of 'London, North'
+        It should also recognise ""    "London, North", "Ontario", "Place"     should recognise that the 'North' is part of 'London, North'
 
          */
          String parentName =  findParentFromList(name);
@@ -108,7 +153,7 @@ public final class NameService {
 
 
 
-        String storeName = name.replace("`","");
+        String storeName = name.replace("\"","");
         final Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(storeName, parent);
         if (existing != null) {
             return existing;
@@ -174,7 +219,7 @@ public final class NameService {
             okByFrom = true;
         }
         for (Name child : findChildrenSortedAlphabetically(name)) {
-            System.out.println("child `" + child.getName() + "`");
+            System.out.println("child \"" + child.getName() + "\"");
             if (!okByFrom && child.getName().equalsIgnoreCase(from)) {
                 okByFrom = true;
             }
@@ -455,5 +500,92 @@ public final class NameService {
     public void restoreNames(final LoggedInConnection loggedInConnection) throws Exception{
         loggedInConnection.getTotoMemoryDB().restoreNames();
     }
+
+    public String getInstruction(final String instructions, final String instructionName) {
+        String toReturn = null;
+        if (instructions.toLowerCase().contains(instructionName.toLowerCase())) {
+            int commandStart = instructions.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length();
+            if (instructions.indexOf(";", commandStart) != -1) {
+                toReturn = instructions.substring(commandStart, instructions.indexOf(";", commandStart)).trim();
+            } else {
+                toReturn = instructions.substring(commandStart).trim();
+            }
+            if (toReturn.startsWith("`")) {
+                toReturn = toReturn.substring(1, toReturn.length() - 1); // trim escape chars
+            }
+        }
+        return toReturn;
+    }
+
+
+    public List<Name> interpretName(LoggedInConnection loggedInConnection, String instructions)
+        throws Exception{
+
+
+
+        String levelString = getInstruction(instructions, LEVEL);
+        String fromString = getInstruction(instructions, FROM);
+        String childrenString = getInstruction(instructions, CHILDREN);
+        String toString = getInstruction(instructions, TO);
+
+        List <Name> names = new ArrayList<Name>();
+        String nameString = instructions;
+        if (instructions.indexOf(';') > 0) {
+            nameString = instructions.substring(0, instructions.indexOf(';')).trim();
+        }
+        final Name name = findByName(loggedInConnection, nameString);
+        if (name== null){
+            return null;
+        }
+        if (childrenString == null){
+            names.add(name);
+            return names;
+        }
+        int level = 1;
+        if (levelString != null) {
+            if (levelString.equalsIgnoreCase(LOWEST)) {
+                System.out.println("lowest");
+                level = -1;
+            } else {
+                try {
+                    level = Integer.parseInt(levelString);
+                } catch (NumberFormatException nfe) {
+                    //carry on regardless!
+                }
+            }
+        }
+
+        int from = -1;
+        int to = -1;
+        if (fromString != null) {
+            try {
+                from = Integer.parseInt(fromString);
+            } catch (NumberFormatException nfe) {// may be a number, may not . . .
+            }
+
+        }
+        if (toString != null) {
+            try {
+                to = Integer.parseInt(toString);
+            } catch (NumberFormatException nfe) {// may be a number, may not . . .
+            }
+
+        }
+        if (from != -1 || to != -1) { // numeric, I won't allow mixed for the moment
+            names = findChildrenFromTo(name, from, to);
+        } else if (fromString != null || toString != null) {
+            names = findChildrenFromTo(name, fromString, toString);
+        } else { // also won't allow from/to/level mixes either
+            // sorted means level won't work
+            if (getInstruction(instructions, SORTED) != null) {
+                names = findChildrenSortedAlphabetically(name);
+            } else {
+                names = findChildrenAtLevel(name, level);
+            }
+        }
+        return names;
+    }
+
+
 }
 
