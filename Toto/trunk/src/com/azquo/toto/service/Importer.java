@@ -42,7 +42,7 @@ public final class Importer {
 
 
 
-     public String dataImport(LoggedInConnection loggedInConnection, String fileName, String separator, boolean create) throws Exception {
+     public String dataImport(LoggedInConnection loggedInConnection, String fileName, boolean create) throws Exception {
 
 
 
@@ -145,7 +145,7 @@ public final class Importer {
     }
 
 
-  public String attributeImport(LoggedInConnection loggedInConnection, String fileName, String language, String separator, boolean create) throws Exception {
+  public String attributeImport(LoggedInConnection loggedInConnection, String fileName, String language, boolean create) throws Exception {
 
     //String filePath = "/home/bill/Downloads/exportcodes.csv";
     //TODO  set correct filepath
@@ -174,8 +174,15 @@ public final class Importer {
             for (String header: headers){
               if (header.length() > 0){
                   String newName = csvReader.get(header);
-                  name.setAttribute(header,getFirstName(newName));
-                  name.setEntityColumnsChanged();// may be overdoing it if the attributes do not affect the current name
+                  String oldName = name.getAttribute(header);
+                  if ((oldName == null && newName.length() > 0) || (oldName != null && !newName.equals(oldName))){
+                      if (newName.length()==0){
+                          name.removeAttribute(header);
+                      }else{
+                        name.setAttribute(header,getFirstName(newName));
+                      }
+                      name.setEntityColumnsChanged();// may be overdoing it if the attributes do not affect the current name
+                  }
               }
             }
 
@@ -185,53 +192,6 @@ public final class Importer {
 
     return "";
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-    public void storeStructuredName(Name parentName, String rawChildName, LoggedInConnection loggedInConnection)
-            throws Exception{
-
-
-        rawChildName = rawChildName.replace("//", "/");
-        if (rawChildName.endsWith("/")){
-            rawChildName = rawChildName.substring(0, rawChildName.length() -1);
-        }
-        if (rawChildName.startsWith("/")){
-            rawChildName = rawChildName.substring(1, rawChildName.length());
-        }
-        if (rawChildName.contains("/")){
-            Name justAdded = null;
-            while (rawChildName.contains("/")){
-                // lest work from the top
-                String remainingTop = rawChildName.substring(0, rawChildName.indexOf("/"));
-                rawChildName = rawChildName.substring(rawChildName.indexOf("/") + 1); // chop off the name we just extracted
-                if (justAdded == null){ // the first of the directory string so to speak
-                    justAdded = nameService.addOrCreateChild(loggedInConnection,parentName, remainingTop);
-                    //System.out.println("parent : " + parentName + " child " + remainingTop);
-                } else {
-                    justAdded = nameService.addOrCreateChild(loggedInConnection,justAdded, remainingTop);
-                    //System.out.println("parent : " + justAdded + " child " + remainingTop);
-                }
-                if (!rawChildName.contains("/")){ // the final one
-                    nameService.addOrCreateChild(loggedInConnection,justAdded, rawChildName);
-                    //System.out.println("parent : " + justAdded + " child " + rawChildName);
-                }
-            }
-        } else {
-            nameService.addOrCreateChild(loggedInConnection,parentName,rawChildName);
-        }
-
-    }
 
     public String unzip(String zipFile){
 
