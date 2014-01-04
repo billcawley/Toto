@@ -80,33 +80,19 @@ function azquojsonfeed(obj) {
 
 function showLegend(){
     htmlText = "<p>In the list below, you can click on any item with elements to see the elements</p>";
-    htmlText += "<p>" +
-        "<span style=\"color:blue\">data in the set</span></br>" +
-        "<span style=\"color:blue\"><b>data for this name</b></span></br>" +
-        "<span style=\"color:green\">elements in this set</span></br>" +
-        "</p>"
-    return htmlText;
+     return htmlText;
 }
+
 
 function showDetails(nameFound){
-    htmlText = "";
-    if (nameFound.dataitems != null){
-        htmlText += "<span style=\"color:blue\">" + nameFound.dataitems + "</span> ";
-    }
-    if (nameFound.elements != null){
-        htmlText += "<span style=\"color:green\">" + nameFound.elements + "</span> ";
-    }
     if (nameFound.mydataitems != null){
-        htmlText += "<span style=\"color:blue\"><b>" + nameFound.mydataitems ;
-        htmlText += " <span  ondblclick=\"az_getdata(this)\">" + nameFound.name + "</span></b></span>";
+        return "<b> <span  style=\"color:#222222;\" ondblclick=\"az_getdata(this)\">" + nameFound.name + "</span></b> (" + nameFound.mydataitems  + ")";
     }else{
-        htmlText += nameFound.name;
+        return  nameFound.name + " (" + nameFound.dataitems + " in " + nameFound.elements + " subsets)";
     }
-    return htmlText;
-
-
 
 }
+
 
 
 function  az_showSet(namesFound, style){
