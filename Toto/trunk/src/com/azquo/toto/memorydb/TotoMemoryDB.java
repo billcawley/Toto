@@ -353,6 +353,10 @@ public final class TotoMemoryDB {
 
     // for search purposes probably should trim
 
+    public Name getNameById(int id){
+        return nameByIdMap.get(id);
+
+    }
 
     public Name getNameByName(String name, Name parent){
         Set<Name> possibles = nameByNameMap.get(name.toLowerCase().replace("\"",""));
