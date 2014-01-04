@@ -4,6 +4,8 @@ import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Provenance;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created with IntelliJ IDEA.
@@ -22,6 +24,7 @@ public final class NameService {
     public static final String SORTED = "sorted";
     public static final String CHILDREN = "children";
     public static final String LOWEST = "lowest";
+    public static final String NAMEMARKER = "!";
 
 
     // hacky but testing for the moment
@@ -83,6 +86,11 @@ public final class NameService {
 
     }
 
+    public Name findById(final LoggedInConnection loggedInConnection,int id){
+        return loggedInConnection.getTotoMemoryDB().getNameById(id);
+    }
+
+
     public Name findByName(final LoggedInConnection loggedInConnection, final String name) {
 
      /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
@@ -116,11 +124,18 @@ public final class NameService {
         return loggedInConnection.getTotoMemoryDB().findTopNames();
     }
 
-
-
-
-
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
+        if (name.toLowerCase().endsWith(";unique")){
+            return findOrCreateName(loggedInConnection, name.substring(0,name.length() - 7), true);
+        }
+        return findOrCreateName(loggedInConnection, name, false);
+    }
+
+
+
+
+
+    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, boolean unique) throws Exception {
 
         /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
         This may not be an immediate hierarchy.
@@ -133,37 +148,53 @@ public final class NameService {
 
          */
          String parentName =  findParentFromList(name);
-         if (parentName == null){
-            return findOrCreateName(loggedInConnection, name, null);
+
+        if (parentName == null){
+            return findOrCreateName(loggedInConnection, name, null, null);
          }
-        Name parent = findOrCreateName(loggedInConnection, parentName, null);
+        Name parent = findOrCreateName(loggedInConnection, parentName, null, null);
+        Name topParent = parent;
         String remainder = name.substring(0, name.lastIndexOf(",",name.length() - parentName.length()));
         parentName = findParentFromList(remainder);
         while (parentName != null){
-            parent = findOrCreateName(loggedInConnection, parentName, parent);
+            if (!unique){
+                topParent = parent;
+            }
+            parent = findOrCreateName(loggedInConnection, parentName, topParent, parent);
             remainder = name.substring(0, name.lastIndexOf(",",remainder.length() - parentName.length()));
             parentName = findParentFromList(remainder);
         }
-        return findOrCreateName(loggedInConnection, remainder, parent);
+        if (!unique){
+            topParent = parent;
+        }
+        return findOrCreateName(loggedInConnection, remainder, topParent,parent);
 
     }
 
 
-    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, final Name parent) throws Exception {
+    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, final Name parent, final Name newparent) throws Exception {
 
-
+     /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import,and insert a structure into it
+        the 'parent' will usually be the top of the tree, and the new parent will be a name created as a branch.  */
 
         String storeName = name.replace("\"","");
         final Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(storeName, parent);
         if (existing != null) {
+            if (newparent!=null && newparent != parent){
+                 parent.removeFromChildrenWillBePersisted(existing);
+                 newparent.addChildWillBePersisted(existing);
+            }
             return existing;
         } else {
             //Provenance(TotoMemoryDB totoMemoryDB, String user, Date timeStamp, String method, String name, String rowHeadings, String columnHeadings, String context)
             //TODO : make provenance come from somewhere else e.g. get it from the logged in connection?? DEFINITELY!
             Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(),loggedInConnection.getUserName(), new Date(), "method", "name", "rows", "cols", "context");
             Name newName =  new Name(loggedInConnection.getTotoMemoryDB(),provenance,storeName, true); // default additive to true
-            if (parent!=null) {
-                parent.addChildWillBePersisted(newName);
+            if (newparent!=null) {
+                if (newparent != parent){
+                    parent.removeFromChildrenWillBePersisted(newName);
+                }
+                newparent.addChildWillBePersisted(newName);
             }
             return newName;
         }
@@ -539,6 +570,7 @@ public final class NameService {
         }
         if (childrenString == null){
             names.add(name);
+            String reversePolish = shuntingYardAlgorithm(loggedInConnection,name);
             return names;
         }
         int level = 1;
@@ -583,9 +615,127 @@ public final class NameService {
                 names = findChildrenAtLevel(name, level);
             }
         }
+        for (Name name2:names){
+            shuntingYardAlgorithm(loggedInConnection,name2);
+        }
         return names;
     }
 
 
+    private String interpretTerm(LoggedInConnection loggedInConnection, Name name, String term){
+
+
+        if (term.startsWith(NAMEMARKER)) return term + " ";
+        Name nameFound = findByName(loggedInConnection,term);
+        try{
+            double d = Double.parseDouble(term);
+            return d + " ";
+        }catch (Exception e){
+
+        }
+
+        if (nameFound == null){
+            return "error: formula for " + name.getName() + " not understood: " + term;
+        }
+        return (NAMEMARKER + nameFound.getId() + " ");
+
+    }
+
+
+    private String shuntingYardAlgorithm(LoggedInConnection loggedInConnection,Name name){
+/*   TODO SORT OUT ACTION ON ERROR
+        Routine to convert a formula (if it exists) to reverse polish.
+
+        Read a token.
+                If the token is a number, then add it to the output queue.
+        If the token is a function token, then push it onto the stack.
+                If the token is a function argument separator (e.g., a comma):
+        Until the token at the top of the stack is a left parenthesis, pop operators off the stack onto the output queue. If no left parentheses are encountered, either the separator was misplaced or parentheses were mismatched.
+        If the token is an operator, o1, then:
+        while there is an operator token, o2, at the top of the stack, and
+        either o1 is left-associative and its precedence is equal to that of o2,
+                or o1 has precedence less than that of o2,
+        pop o2 off the stack, onto the output queue;
+        push o1 onto the stack.
+                If the token is a left parenthesis, then push it onto the stack.
+                If the token is a right parenthesis:
+        Until the token at the top of the stack is a left parenthesis, pop operators off the stack onto the output queue.
+        Pop the left parenthesis from the stack, but not onto the output queue.
+                If the token at the top of the stack is a function token, pop it onto the output queue.
+                If the stack runs out without finding a left parenthesis, then there are mismatched parentheses.
+        When there are no more tokens to read:
+        While there are still operator tokens in the stack:
+        If the operator token on the top of the stack is a parenthesis, then there are mismatched parentheses.
+        Pop the operator onto the output queue.
+                Exit.
+*/
+        String calc = name.getAttribute("CALCULATION");
+        if (calc == null || calc.length()== 0) return "";
+
+        Pattern p = Pattern.compile("\"[^\"]+\"");//sort out variables in quotes first
+
+        Matcher m = p.matcher(calc);
+        while (m.find()){
+            String nameString = m.group();
+            String result = interpretTerm(loggedInConnection, name, nameString.substring(1, nameString.length() - 1));
+            if (result.startsWith("error:")){
+                return result;
+            }
+            calc = calc.replace(nameString, result);
+        }
+        p = Pattern.compile("[\\+-/\\*\\(\\)]"); // only simple maths allowed at present
+        StringBuffer sb = new StringBuffer();
+        String stack = "";
+        m = p.matcher(calc);
+        String origCalc = calc;
+        int startPos = 0;
+        while (m.find()){
+            String opfound = m.group();
+            char thisOp = opfound.charAt(0);
+            int pos = m.start();
+            String namefound = calc.substring(startPos,pos).trim();
+            if (namefound.length() > 0){
+                String result = interpretTerm(loggedInConnection, name, namefound);
+                if (result.startsWith("error:")){
+                    return result;
+                }
+                sb.append(result);
+            }
+            char lastOffStack = ' ';
+            while (!(thisOp== ')' && lastOffStack == '(') && (stack.length() > 0 &&  ")+-*/(".indexOf(thisOp) <= "(+-*/".indexOf(stack.charAt(0)))){
+
+                if (stack.charAt(0) != '('){
+                    sb.append(stack.charAt(0) + " ");
+                }
+                lastOffStack = stack.charAt(0);
+                stack = stack.substring(1);
+            }
+            if ((thisOp == ')' && lastOffStack != '(' ) || (thisOp!=')'&&lastOffStack=='(')){
+                return "error mismatched brackets in " + origCalc;
+            }
+            if (thisOp != ')'){
+              stack = thisOp + stack;
+            }
+            startPos = m.end();
+
+        }
+
+        if (calc.substring(startPos).trim().length() > 0){
+            String result = interpretTerm(loggedInConnection,name, calc.substring(startPos).trim());
+            if (result.startsWith("error:")){
+                return result;
+            }
+            sb.append(result);
+        }
+        while (stack.length() > 0){
+            sb.append(stack.charAt(0) + " ");
+            stack = stack.substring(1);
+        }
+
+        if (name.getAttribute("RPCALC")== null || name.getAttribute("RPCALC") != sb.toString())
+            name.setAttribute("RPCALC", sb.toString());
+
+        return "";
+    }
 }
 
