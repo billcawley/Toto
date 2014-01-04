@@ -1,7 +1,6 @@
 package com.azquo.toto.controller;
 
 import com.azquo.toto.service.Importer;
-import com.azquo.toto.memorydb.TotoMemoryDB;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
@@ -13,7 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 
 /**
- * Created by root on 17/12/13.
+ * Created by bill on 17/12/13.
+ * will import csv files (usual record structure, with headings specifying peers if necessary)
  */
 
 @Controller
@@ -58,7 +58,7 @@ public class ImportController {
          */
 
 
-        String result = null;
+        String result;
         try {
 
             if (connectionId == null) {
