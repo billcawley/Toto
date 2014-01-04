@@ -76,10 +76,10 @@ public class NameController {
             return "error:" + e.getMessage();
         }
         if (jsonfunction != null && jsonfunction.length() > 0){
-            return jsonfunction + "{(" + result + ")}";
+            return jsonfunction + "(" + result + ")";
         }
         else {
-            return "{" + result + "}";
+            return result;
         }
     }
 
@@ -109,6 +109,7 @@ public class NameController {
             if (instructions.indexOf(';') > 0) {
                 nameString = instructions.substring(0, instructions.indexOf(';')).trim();
                 // now we have it strip off the name, use getInstruction to see what we want to do with the name
+                String origInstructions = instructions;
                 instructions = instructions.substring(instructions.indexOf(';') + 1).trim();
 
                 String children = nameService.getInstruction(instructions, CHILDREN);
@@ -223,7 +224,7 @@ public class NameController {
 
                     } else {// they want to read data
 
-                        List<Name> names = nameService.interpretName(loggedInConnection, instructions);
+                        List<Name> names = nameService.interpretName(loggedInConnection, origInstructions);
                         if (names!= null){
                                return getNamesFormattedForOutput(names);
                         } else {
@@ -334,7 +335,7 @@ public class NameController {
 
         StringBuilder sb = new StringBuilder();
         boolean first = true;
-        sb.append("\"names\":[");
+        sb.append("{\"names\":[");
         int elementNo = 0;
         for (Name n : names) {
             if (!first) {
@@ -344,7 +345,7 @@ public class NameController {
             sb.append("\"").append(n.getDisplayName()).append("\"}");
             first = false;
         }
-        sb.append("]");
+        sb.append("]}");
         return sb.toString();
     }
 
