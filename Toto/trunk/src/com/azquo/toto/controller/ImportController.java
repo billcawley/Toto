@@ -22,11 +22,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 public class ImportController {
 
-
-    private Importer importer = new Importer();
+    @Autowired
+    private Importer importer;
 
     @Autowired
-    private LoginService loginService = new LoginService();
+    private LoginService loginService;
 
 //    private static final Logger logger = Logger.getLogger(TestController.class);
 
@@ -80,11 +80,11 @@ public class ImportController {
 
 
     public String handleRequest(LoggedInConnection loggedInConnection, String fileName, String language, String fileType, String separator, String strCreate)
-        throws Exception{
+            throws Exception{
 
         NameService nameService = new NameService();
 
-        if (separator.length() == 0) separator = "\t";
+        if (separator == null || separator.length() == 0) separator = "\t";
         if (separator.equals("comma")) separator = ",";
         if (separator.equals("pipe")) separator = "|";
 
@@ -95,14 +95,15 @@ public class ImportController {
         nameService.translateNames(loggedInConnection,language);
         String result = "";
         if (fileType.toLowerCase().equals("data")){
-            result =  importer.dataImport(loggedInConnection, fileName, separator, create);
+            result =  importer.dataImport(loggedInConnection, fileName, create);
         }
         if (fileType.toLowerCase().equals("attributes")){
-            result = importer.attributeImport(loggedInConnection,fileName,language,separator,create);
+            result = importer.attributeImport(loggedInConnection,fileName,language,create);
 
         }
 
-         nameService.restoreNames(loggedInConnection);
+        nameService.restoreNames(loggedInConnection);
+        nameService.persist(loggedInConnection);
 
 
         return result;
