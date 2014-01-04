@@ -2,6 +2,7 @@ package com.azquo.toto.service;
 
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Provenance;
+import com.azquo.toto.memorydb.TotoMemoryDB;
 import com.azquo.toto.memorydb.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -21,6 +22,9 @@ public final class ValueService {
 
     @Autowired
     private NameService nameService;
+
+    @Autowired
+    private TotoMemoryDB totoMemoryDB;
 
     // set the names in delete info and unlink - best I can come up with at the moment
     public void deleteValue(final Value value) throws Exception {
@@ -265,7 +269,77 @@ public final class ValueService {
     long part2NanoCallTime = 0;
     int numberOfTimesCalled = 0;
 
-    public double findSumForNamesIncludeChildren(Set<Name> names, List<Value> valuesFound, boolean payAttentionToAdditive){
+
+    public double findValueForNames(LoggedInConnection loggedInConnection, Set<Name> names, boolean[] locklist, boolean payAttentionToAdditive){
+        //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
+        List<Name> calcnames = new ArrayList<Name>();
+        String calcString = "";
+        boolean hasCalc = false;
+        for (Name name:names){
+            if (!hasCalc){
+                calcString = name.getAttribute("RPCALC");
+                if (calcString != null){
+                    hasCalc = true;
+                }else{
+                    calcnames.add(name);
+                }
+            }else{
+                calcnames.add(name);
+            }
+        }
+        if (!hasCalc){
+            return findSumForNamesIncludeChildren(names, locklist, payAttentionToAdditive);
+
+        }else{
+            double[] values = new double[20];//should be enough!!
+            int valNo = 0;
+            int pos = 0;
+            while (pos < calcString.length()){
+                int spacepos = (calcString + " ").indexOf(" ", pos);
+                String term = calcString.substring(pos, spacepos);
+                pos = spacepos + 1;
+                double calcedVal = 0.0;
+                if (term.length()== 1){ // operation
+                    valNo--;
+                    char charTerm = term.charAt(0);
+                    if (charTerm == '+'){
+                        values[valNo-1] += values[valNo];
+                    }else{
+                        if (charTerm=='-'){
+                            values[valNo-1] -= values[valNo];
+                        }else{
+                            if (charTerm=='*'){
+                                values[valNo-1] *= values[valNo];
+                            }else{
+                                 if (values[valNo] == 0){
+                                     values[valNo-1] = 0;
+                                 }else{
+                                     values[valNo-1] /= values[valNo];
+                                 }
+                            }
+                        }
+                    }
+                 }else{
+                    try{
+                        calcedVal = Double.parseDouble(term);
+                        values[valNo++]= calcedVal;
+                    }catch(Exception e){
+                      int id = Integer.parseInt(term.substring(1));
+                       Name name = nameService.findById(loggedInConnection,id);
+                       calcnames.add(name);
+                       //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
+                       values[valNo++] =findSumForNamesIncludeChildren(new HashSet<Name>(calcnames), locklist, payAttentionToAdditive);
+                       calcnames.remove(calcnames.size()-1);
+                    }
+
+                }
+                pos = spacepos + 1;
+            }
+            return values[0];
+        }
+    }
+
+    public double findSumForNamesIncludeChildren(Set<Name> names, boolean[]locklist, boolean payAttentionToAdditive){
         //System.out.println("findSumForNamesIncludeChildren");
         long start = System.nanoTime();
 
@@ -290,8 +364,8 @@ public final class ValueService {
                 sumValue += value.getDoubleValue();
             }
         }
-        if (valuesFound != null){
-            valuesFound.addAll(values);
+        if (values.size()> 1){
+           locklist[0] = true;
         }
         part2NanoCallTime += (System.nanoTime() - point);
         totalNanoCallTime += (System.nanoTime() - start);
@@ -593,9 +667,11 @@ public final class ValueService {
                 List<Value> values = new ArrayList<Value>();
                 thisRowValues.add(values);
                 thisRowNames.add(namesForThisCell);
+                boolean[] locklist = new boolean[1]; // needs an array so that the function can set it
+                locklist[0] = false;
                 // TODO - peer additive check. If using peers and not additive, don't include children
-                sb.append(findSumForNamesIncludeChildren(namesForThisCell, values, true)); // true = pay attention to names additive flag
-                if (values.size() > 1) {
+                 sb.append(findValueForNames(loggedInConnection, namesForThisCell, locklist, true)); // true = pay attention to names additive flag
+                if (locklist[0]) {
                     lockMapsb.append("LOCKED");
                 }
                 // if it's 1 then saving is easy, overwrite the old value. If not then since it's valid peer set I guess we add the new value?
