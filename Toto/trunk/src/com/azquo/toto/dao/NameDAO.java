@@ -115,7 +115,7 @@ public final class NameDAO extends StandardDAO<Name> {
         public final String mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return rs.getInt(NAMEID) + "," + rs.getString(ATTRIBUTENAME) + "," + rs.getBoolean(ATTRIBUTEVALUE);
+                return rs.getInt(NAMEID) + "," + rs.getString(ATTRIBUTENAME) + "," + rs.getString(ATTRIBUTEVALUE);
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
