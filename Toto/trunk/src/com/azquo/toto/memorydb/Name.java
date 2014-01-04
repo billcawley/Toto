@@ -404,11 +404,15 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     public synchronized void setAttribute(String attributeName, String attributeValue){
         int attributeCount = attributes.size();
         attributes.put(attributeName, attributeValue);
-        if (attributeCount < attributes.size() ){
-            attributesChanged = true;
-            setNeedsPersisting();
+        attributesChanged = true;
+        setNeedsPersisting();
 
-        }
+    }
+
+    public synchronized void removeAttribute(String attributeName){
+         attributes.remove(attributeName);
+         attributesChanged = true;
+        setNeedsPersisting();
     }
 
     public synchronized String getAttribute(String attributeName){
