@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 
 @Controller
@@ -32,14 +31,14 @@ public class NameController {
     public static final String CREATE = "create";
     public static final String REMOVE = "remove";
     public static final String SEARCH = "search";
-    public static final String LEVEL = "level";
+    /*public static final String LEVEL = "level";
     public static final String FROM = "from";
     public static final String TO = "to";
-    public static final String SORTED = "sorted";
+    public static final String SORTED = "sorted";*/
     public static final String AFTER = "after";
     public static final String RENAMEAS = "rename as";
 
-    public static final String LOWEST = "lowest";
+    //public static final String LOWEST = "lowest";
 
     @Autowired
     private NameService nameService = new NameService();
@@ -53,11 +52,10 @@ public class NameController {
     public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId, @RequestParam(value = "instructions", required = false) String instructions,
                                 @RequestParam(value = "jsonfunction", required = false) String jsonfunction, @RequestParam(value = "user", required = false) String user,
                                 @RequestParam(value = "password", required = false) String password, @RequestParam(value = "database", required = false) String database) throws Exception {
-        String result = null;
+        String result;
         try {
 
             if (connectionId == null) {
-                LoginController loginController = new LoginController();
                 LoggedInConnection loggedInConnection = loginService.login(database,user, password,0);
                  if (loggedInConnection == null){
                      return "error:no connection id";
@@ -132,7 +130,7 @@ public class NameController {
                             names = (ArrayList<Name>)nameService.findTopNames(loggedInConnection);
                             names = nameService.sortNames(names);
                         }
-                        StringBuffer sb = new StringBuffer();
+                        StringBuilder sb = new StringBuilder();
                         sb.append("{\"names\":[");
                         int count = 0;
                         for (Name outputName:names){
@@ -336,7 +334,6 @@ public class NameController {
         StringBuilder sb = new StringBuilder();
         boolean first = true;
         sb.append("{\"names\":[");
-        int elementNo = 0;
         for (Name n : names) {
             if (!first) {
                 sb.append(", ");
@@ -349,7 +346,7 @@ public class NameController {
         return sb.toString();
     }
 
-    private String getParentStructureFormattedForOutput(final Name name, final boolean showParent) {
+/*    private String getParentStructureFormattedForOutput(final Name name, final boolean showParent) {
         StringBuilder sb = new StringBuilder();
         if (showParent) {
             sb.append("`").append(name.getDisplayName()).append("`");
@@ -368,7 +365,7 @@ public class NameController {
             sb.append("}");
         }
         return sb.toString();
-    }
+    }*/
 
     private int getTotalValues(Name name){
         int values = name.getValues().size();

@@ -40,7 +40,7 @@ public final class NameDAO extends StandardDAO<Name> {
     public static final String NAMESETDEFINTION = "name_set_definition";
     public static final String PEERSETDEFINTION = "peer_set_definition";
     public static final String NAMEATTRIBUTE = "name_attribute";
-    public static final String ATTRIBUTE = "attribute";
+    //public static final String ATTRIBUTE = "attribute";
 
     public static final String PARENTID = "parent_id";
     public static final String CHILDID = "child_id";
@@ -132,7 +132,7 @@ public final class NameDAO extends StandardDAO<Name> {
 
     // these functions used to have some complexity to do with data integrity, now they are simple as the memory db should take care of that
 
-    public boolean linkParentAndChild(final TotoMemoryDB totoMemoryDB, final Name parent, final Name child, int position) throws DataAccessException {
+/*    public boolean linkParentAndChild(final TotoMemoryDB totoMemoryDB, final Name parent, final Name child, int position) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, parent.getId());
         namedParams.addValue(CHILDID, child.getId());
@@ -140,7 +140,7 @@ public final class NameDAO extends StandardDAO<Name> {
         String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMESETDEFINTION + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES (:" + PARENTID + ",:" + CHILDID + ",:" + POSITION + ")";
         jdbcTemplate.update(updateSql, namedParams);
         return true;
-    }
+    }*/
 
     public boolean linkNameAndPeer(final TotoMemoryDB totoMemoryDB, final Name name, final Name peer, int position, boolean additive) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();

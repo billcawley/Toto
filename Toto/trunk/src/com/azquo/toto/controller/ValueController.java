@@ -1,7 +1,6 @@
 package com.azquo.toto.controller;
 
 import com.azquo.toto.memorydb.Name;
-import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.Value;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
@@ -58,7 +57,6 @@ public class ValueController {
         try {
 
             if (connectionId == null) {
-                LoginController loginController = new LoginController();
                 LoggedInConnection loggedInConnection = loginService.login(database,user, password,0);
                 if (loggedInConnection == null){
                     return "error:no connection id";

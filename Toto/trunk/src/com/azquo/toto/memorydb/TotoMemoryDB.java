@@ -282,13 +282,11 @@ public final class TotoMemoryDB {
                 }
             }
             if (name.getAttributesChanged()) {
-                int position = 1;
                 nameDAO.unlinkAllAttributesForName(this, name);
                 for (String attribute : name.getAttributes().keySet()) {
                     if (!attribute.equals("name")){
                         nameDAO.linkNameAndAttribute(this, name, attribute, name.getAttributes().get(attribute));
                     }
-                    position++;
                 }
             }
             name.setAsPersisted(); // is this dangerous here???
@@ -363,10 +361,7 @@ public final class TotoMemoryDB {
         if (possibles == null) return null;
         if (parent == null){
             if (possibles.size() != 1) return null;
-            for (Name possible:possibles){
-                return possible;
-            }
-
+            return possibles.iterator().next();
         }else{
             for (Name possible:possibles){
                 if(isInParentTreeOf(possible, parent)){
@@ -381,7 +376,7 @@ public final class TotoMemoryDB {
 
 
 
-    public Set<Name> getNamesContainingName(String name){
+/*    public Set<Name> getNamesContainingName(String name){
         Iterator it = nameByNameMap.entrySet().iterator();
         Set<Name> names = new HashSet<Name>();
         while (it.hasNext()){
@@ -389,6 +384,18 @@ public final class TotoMemoryDB {
             String key = (String)pairs.getKey();
             if (key.contains(name)){
                 names.addAll((Set<Name>)pairs.getValue());
+            }
+
+        }
+        return names;
+    }
+*/
+    // Edd's rewrite of the above function to avoid class cast warning, think functionality is the same
+    public Set<Name> getNamesContainingName(String name){
+        Set<Name> names = new HashSet<Name>();
+        for (String nameName : nameByNameMap.keySet()){
+            if (nameName.contains(name)){
+                names.addAll(nameByNameMap.get(nameName));
             }
 
         }
@@ -551,7 +558,9 @@ public final class TotoMemoryDB {
         provenanceNeedsPersisting.remove(provenance);
     }
 
-    public void translateNames(String language) throws Exception{
+
+
+/*    public void translateNames(String language) throws Exception{
         nameByNameMap.clear();
         Iterator it = nameByIdMap.entrySet().iterator();
         while (it.hasNext()) {
@@ -566,9 +575,24 @@ public final class TotoMemoryDB {
             }
             addNameToDbNameMap(name);
         }
+    }*/
+
+    public void translateNames(String language) throws Exception{
+        nameByNameMap.clear();
+        for (Name name : nameByIdMap.values()) {
+            String displayName = name.getAttribute("name");
+            if (displayName == null){
+                name.setAttribute("name", name.getName());
+            }
+            String newName = name.getAttribute(language);
+            if (newName != null){
+                name.setName(newName);
+            }
+            addNameToDbNameMap(name);
+        }
     }
 
-    public void restoreNames() throws Exception{
+/*    public void restoreNames() throws Exception{
         nameByNameMap.clear();
         Iterator it = nameByIdMap.entrySet().iterator();
         while (it.hasNext()) {
@@ -579,8 +603,17 @@ public final class TotoMemoryDB {
             }
             addNameToDbNameMap(name);
         }
+    }*/
+
+    public void restoreNames() throws Exception{
+        nameByNameMap.clear();
+        for (Name name : nameByIdMap.values()) {
+            String newName = name.getAttribute("name");
+            if (newName != null){
+                name.setName(newName);
+            }
+            addNameToDbNameMap(name);
+        }
     }
-
-
 
 }

@@ -1,6 +1,5 @@
 package com.azquo.toto.memorydb;
 
-import javax.management.Attribute;
 import java.util.*;
 
 /**
@@ -402,11 +401,9 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     }
     public synchronized void setAttribute(String attributeName, String attributeValue){
-        int attributeCount = attributes.size();
         attributes.put(attributeName, attributeValue);
         attributesChanged = true;
         setNeedsPersisting();
-
     }
 
     public synchronized void removeAttribute(String attributeName){

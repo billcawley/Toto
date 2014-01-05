@@ -86,6 +86,7 @@ public class ImportController {
 
         if (separator == null || separator.length() == 0) separator = "\t";
         if (separator.equals("comma")) separator = ",";
+        // separator not used??
         if (separator.equals("pipe")) separator = "|";
 
         boolean create = false;
