@@ -49,13 +49,13 @@ public final class NameService {
 
     public ArrayList<Name> sortNames(final ArrayList<Name> namesList){
 
-        Comparator<Name> compareName = new Comparator<Name>() {
+        /*Comparator<Name> compareName = new Comparator<Name>() {
             public int compare(Name n1, Name n2) {
                 return n1.getName().compareTo(n2.getName());
             }
-        };
+        };*/
 
-        Collections.sort(namesList, compareName);
+        Collections.sort(namesList);
         return namesList;
 
     }
@@ -189,7 +189,8 @@ public final class NameService {
             //Provenance(TotoMemoryDB totoMemoryDB, String user, Date timeStamp, String method, String name, String rowHeadings, String columnHeadings, String context)
             //TODO : make provenance come from somewhere else e.g. get it from the logged in connection?? DEFINITELY!
             Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(),loggedInConnection.getUserName(), new Date(), "method", "name", "rows", "cols", "context");
-            Name newName =  new Name(loggedInConnection.getTotoMemoryDB(),provenance,storeName, true); // default additive to true
+            Name newName =  new Name(loggedInConnection.getTotoMemoryDB(),provenance, true); // default additive to true
+            newName.setDefaultDisplayNameWillBePersisted(storeName);
             if (newparent!=null) {
                 if (newparent != parent){
                     parent.removeFromChildrenWillBePersisted(newName);
@@ -250,14 +251,14 @@ public final class NameService {
             okByFrom = true;
         }
         for (Name child : findChildrenSortedAlphabetically(name)) {
-            System.out.println("child \"" + child.getName() + "\"");
-            if (!okByFrom && child.getName().equalsIgnoreCase(from)) {
+            System.out.println("child \"" + child.getDefaultDisplayName() + "\"");
+            if (!okByFrom && child.getDefaultDisplayName().equalsIgnoreCase(from)) {
                 okByFrom = true;
             }
             if (okByFrom) {
                 toReturn.add(child);
             }
-            if (to != null && child.getName().equalsIgnoreCase(to)) { // we just hit the last one
+            if (to != null && child.getDefaultDisplayName().equalsIgnoreCase(to)) { // we just hit the last one
                 break;
             }
         }
@@ -293,7 +294,7 @@ public final class NameService {
             for (Name peer : parentName.getPeers().keySet()){
                 withNewPeer.put(peer, true); // additive by default
                 if (afterString != null){
-                    if (peer.getName().equalsIgnoreCase(afterString)){
+                    if (peer.getDefaultDisplayName().equalsIgnoreCase(afterString)){
                         withNewPeer.put(newPeer, true);// additive by default
                         // no backward link like with normal children
                     }
@@ -352,7 +353,7 @@ public final class NameService {
                     withNewChild.add(newChild);
                 }
                 if (afterString != null){
-                    if (child.getName().equalsIgnoreCase(afterString)){
+                    if (child.getDefaultDisplayName().equalsIgnoreCase(afterString)){
                         withNewChild.add(newChild);
                     }
                 }
@@ -388,7 +389,7 @@ public final class NameService {
     public void renameName(LoggedInConnection loggedInConnection, String name, String renameAs) throws Exception {
         final Name existing = findByName(loggedInConnection, name);
         if (existing != null) {
-            existing.changeNameWillBePersisted(renameAs);
+            existing.setDefaultDisplayNameWillBePersisted(renameAs);
         }
     }
 
@@ -458,7 +459,7 @@ public final class NameService {
         } else if (hasPeers.size() > 1) {
             error += "  more than one name passed has peers ";
             for (Name has : hasPeers) {
-                error += has.getName() + ", ";
+                error += has.getDefaultDisplayName() + ", ";
             }
             error += "I don't know what names are required for this value";
         } else { // one set of peers, ok :)
@@ -487,13 +488,13 @@ public final class NameService {
                 }
 
                 if (!found) {
-                    error += "  I can't find a required peer : " + requiredPeer.getName() + " among the names";
+                    error += "  I can't find a required peer : " + requiredPeer.getDefaultDisplayName() + " among the names";
                 }
             }
 
             if (namesToCheck.size() > 0) { // means they were not used by the required peers, issue a warning
                 for (Name nameToCheck : namesToCheck) {
-                    warning += "  additional name not required by peers " + nameToCheck.getName();
+                    warning += "  additional name not required by peers " + nameToCheck.getDefaultDisplayName();
                 }
             }
         }
@@ -513,7 +514,7 @@ public final class NameService {
         for (int i = 1; i <= level; i++) {
             System.out.print("- ");
         }
-        System.out.println(name.getName());
+        System.out.println(name.getDefaultDisplayName());
         final Set<Name> children = name.getChildren();
         if (!children.isEmpty()) {
             level++;
@@ -635,7 +636,7 @@ public final class NameService {
         }
 
         if (nameFound == null){
-            return "error: formula for " + name.getName() + " not understood: " + term;
+            return "error: formula for " + name.getDefaultDisplayName() + " not understood: " + term;
         }
         return (NAMEMARKER + nameFound.getId() + " ");
 

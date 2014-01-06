@@ -29,7 +29,6 @@ public final class NameDAO extends StandardDAO<Name> {
 
     // column names (except ID)
 
-    public static final String NAME = "name";
     public static final String PROVENANCEID = "provenance_id";
 
 
@@ -56,7 +55,6 @@ public final class NameDAO extends StandardDAO<Name> {
     public Map<String, Object> getColumnNameValueMap(final Name name){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, name.getId());
-        toReturn.put(NAME, name.getName());
         return toReturn;
     }
 
@@ -71,7 +69,7 @@ public final class NameDAO extends StandardDAO<Name> {
         public final Name mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Name(totoMemoryDB, rs.getInt(ID), totoMemoryDB.getProvenanceById(rs.getInt(PROVENANCEID)), rs.getString(NAME), rs.getBoolean(ADDITIVE));
+                return new Name(totoMemoryDB, rs.getInt(ID), totoMemoryDB.getProvenanceById(rs.getInt(PROVENANCEID)), rs.getBoolean(ADDITIVE));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -131,16 +129,6 @@ public final class NameDAO extends StandardDAO<Name> {
     }
 
     // these functions used to have some complexity to do with data integrity, now they are simple as the memory db should take care of that
-
-/*    public boolean linkParentAndChild(final TotoMemoryDB totoMemoryDB, final Name parent, final Name child, int position) throws DataAccessException {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PARENTID, parent.getId());
-        namedParams.addValue(CHILDID, child.getId());
-        namedParams.addValue(POSITION, position);
-        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMESETDEFINTION + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES (:" + PARENTID + ",:" + CHILDID + ",:" + POSITION + ")";
-        jdbcTemplate.update(updateSql, namedParams);
-        return true;
-    }*/
 
     public boolean linkNameAndPeer(final TotoMemoryDB totoMemoryDB, final Name name, final Name peer, int position, boolean additive) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();

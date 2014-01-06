@@ -215,7 +215,7 @@ public class NameController {
                                 }
                                 nameService.createChild(loggedInConnection, name, children, afterString, after);
                                 assert name != null; // just to shut intellij up
-                                return children + " added to " + name.getName();
+                                return children + " added to " + name.getDefaultDisplayName();
                             }
 
                         }
@@ -292,7 +292,7 @@ public class NameController {
                                     return "error:name not found:`" + nameString + "`";
                                 }
                                 nameService.createPeer(loggedInConnection, name, peers, afterString, after);
-                                return peers + " added to " + name.getName();
+                                return peers + " added to " + name.getDefaultDisplayName();
                             }
 
                         }
@@ -339,7 +339,7 @@ public class NameController {
                 sb.append(", ");
             }
             sb.append("{\"name\":");
-            sb.append("\"").append(n.getDisplayName()).append("\"}");
+            sb.append("\"").append(n.getDefaultDisplayName()).append("\"}");
             first = false;
         }
         sb.append("]}");
@@ -380,7 +380,7 @@ public class NameController {
         if (totalValues > 0){
             StringBuilder sb = new StringBuilder();
             sb.append("{\"name\":");
-            sb.append("\"").append(name.getDisplayName()).append("\"");
+            sb.append("\"").append(name.getDefaultDisplayName()).append("\"");
             if (totalValues > name.getValues().size()) {
                 sb.append(", \"dataitems\":\"" + totalValues + "\"");
             }

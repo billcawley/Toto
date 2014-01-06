@@ -86,12 +86,12 @@ public final class Importer {
                 Set<Name> namesForValue = new HashSet<Name>();
                 namesForValue.add(headerName);
                 for (Name peer : headerName.getPeers().keySet()){
-                    String peerVal = csvReader.get(peer.getName());
+                    String peerVal = csvReader.get(peer.getDefaultDisplayName());
                     if (peerVal == null || peerVal.length() == 0){
                         //throw new Exception("unable to find " + peer.getName() + " for " + headerName.getName());
                     }else{
                         //storeStructuredName(peer,peerVal, loggedInConnection);
-                        String nameToFind =  peerVal + "," + peer.getName();
+                        String nameToFind =  peerVal + "," + peer.getDefaultDisplayName();
                         Name nameFound = namesFound.get(nameToFind);
                         if (nameFound==null){
                             if (create){

@@ -30,7 +30,7 @@ public final class ValueService {
     public void deleteValue(final Value value) throws Exception {
         String names = "";
         for (Name n : value.getNames()){
-            names += ", `" + n.getName() + "`";
+            names += ", `" + n.getDefaultDisplayName() + "`";
         }
         if (names.length() > 0){
             names = names.substring(2);
@@ -87,7 +87,7 @@ public final class ValueService {
         for (List<Name> rowNames : loggedInConnection.getRowHeadings(region))
         {
             for (Name name : rowNames){
-                rowsString.append(name.getName());
+                rowsString.append(name.getDefaultDisplayName());
                 rowsString.append(",");
             }
         }
@@ -95,7 +95,7 @@ public final class ValueService {
         for (List<Name> colName : loggedInConnection.getColumnHeadings(region))
         {
             for (Name name:colName){
-                columnsString.append(name.getName());
+                columnsString.append(name.getDefaultDisplayName());
                 columnsString.append(",");
             }
         }
@@ -103,7 +103,7 @@ public final class ValueService {
         StringBuilder contextString = new StringBuilder();
         for (Name name : loggedInConnection.getContext(region))
         {
-            contextString.append(name.getName());
+            contextString.append(name.getDefaultDisplayName());
             contextString.append(",");
         }
 
@@ -119,7 +119,7 @@ public final class ValueService {
         for (List<Name> rowNames : loggedInConnection.getRowHeadings(region))
         {
             for (Name name:rowNames){
-                rowsString.append(name.getName());
+                rowsString.append(name.getDefaultDisplayName());
                 rowsString.append(",");
             }
         }
@@ -127,7 +127,7 @@ public final class ValueService {
         for (List<Name> colNames : loggedInConnection.getColumnHeadings(region))
         {
             for (Name name:colNames){
-                columnsString.append(name.getName());
+                columnsString.append(name.getDefaultDisplayName());
                 columnsString.append(",");
             }
         }
@@ -135,7 +135,7 @@ public final class ValueService {
         StringBuilder contextString = new StringBuilder();
         for (Name name : loggedInConnection.getContext(region))
         {
-            contextString.append(name.getName());
+            contextString.append(name.getDefaultDisplayName());
             contextString.append(",");
         }
 
@@ -426,7 +426,7 @@ public final class ValueService {
                 if (y > 0) sb.append("\t");
                 //don't show repeating names in the headings - leave blank.
                 if ((x==0 || !lastxNames.get(y).equals(xNames.get(y))) && (y==0 || !xNames.get(y-1).equals(xNames.get(y)))){
-                   sb.append(xNames.get(y).getName());
+                   sb.append(xNames.get(y).getDefaultDisplayName());
                 }
             }
             lastxNames = xNames;
@@ -598,8 +598,8 @@ public final class ValueService {
                 break;
             }
             for(Name name : value.getNames()){
-                if (!headings.contains(name.findTopParent().getName())){
-                    headings.add(name.findTopParent().getName());
+                if (!headings.contains(name.findTopParent().getDefaultDisplayName())){
+                    headings.add(name.findTopParent().getDefaultDisplayName());
                 }
             }
         }
@@ -618,8 +618,8 @@ public final class ValueService {
             int i = 0;
             for(String heading : headings){
                 for(Name name : value.getNames()){
-                    if (name.findTopParent().getName().equals(heading)){
-                        names[i] = name.getName();
+                    if (name.findTopParent().getDefaultDisplayName().equals(heading)){
+                        names[i] = name.getDefaultDisplayName();
                     }
                 }
                 i++;
@@ -694,6 +694,4 @@ public final class ValueService {
         loggedInConnection.setDataNamesMap(region, dataNamesMap);
         return sb.toString();
     }
-
-
 }

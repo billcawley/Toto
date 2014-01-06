@@ -7,7 +7,7 @@ import java.util.*;
  * User: cawley
  * Date: 16/10/13
  * Time: 19:17
- * A fundamental Toto object, names only have names but they can have parent and child relationships with multiple
+ * A fundamental Toto object, names now have attributes and what was the name is now simply an attribute of the name, defined currently in a static below. Names can have parent and child relationships with multiple
  * other names. Sets of names. Used to be called label, there may be remnants of this in the code.
  * <p/>
  * OK we want this object to only be modified if explicit functions are called, hence getters must not return mutable objects
@@ -15,12 +15,16 @@ import java.util.*;
  */
 public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
+
+    public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
+
     // leaving here as a reminder to consider proper logging
     //private static final Logger logger = Logger.getLogger(Name.class.getName());
     // data fields
     private Provenance provenance;
-    private String name;
+//    private String name;
     private boolean additive;
+    private LinkedHashMap<String, String> attributes;
 
     // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
 
@@ -35,26 +39,24 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
      */
     private LinkedHashSet<Name> children;
     private LinkedHashMap<Name, Boolean> peers;
-    private LinkedHashMap<String, String> attributes;
 
     private boolean childrenChanged;
     private boolean peersChanged;
     private boolean attributesChanged;
-//    private String importHeading;
 
     // parents is maintained according to children, it isn't persisted in the same way
 
-    public Name(TotoMemoryDB totoMemoryDB, Provenance provenance, String name, boolean additive) throws Exception {
-        this(totoMemoryDB, 0, provenance, name, additive);
+    public Name(TotoMemoryDB totoMemoryDB, Provenance provenance, boolean additive) throws Exception {
+        this(totoMemoryDB, 0, provenance, additive);
     }
 
-    public Name(TotoMemoryDB totoMemoryDB, int id, Provenance provenance,String name, boolean additive) throws Exception {
+    public Name(TotoMemoryDB totoMemoryDB, int id, Provenance provenance, boolean additive) throws Exception {
         super(totoMemoryDB, id);
-        if (name == null || name.trim().length() == 0){ // then I think we thrown an exception, can't have a blank name!
+/*        if (name == null || name.trim().length() == 0){ // then I think we thrown an exception, can't have a blank name!
             throw new Exception("error cannot create name with blank oor null name!");
         }
         // Is there anything wrong with trimming here?
-        this.name = name.trim();
+        this.name = name.trim();*/
         this.provenance = provenance;
         this.additive = additive;
         values = new HashSet<Value>();
@@ -67,7 +69,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         attributesChanged = false;
         // it annoys me that this can't be folded into addToDb but I can't see how it would as the name won't be initialised when that is called
         // we could pull a trick above as in they have to override "assign variables" or something . . .not sure
-        totoMemoryDB.addNameToDbNameMap(this);
     }
 
     @Override
@@ -101,20 +102,8 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         return attributesChanged;
     }
 
-
-    //added by WFC - not sure if this is the right way to set and get this field
-/*    public String getImportHeading(){return importHeading; }
-
-    public void setImportHeading(String importHeading){this.importHeading = importHeading; }*/
-
-    public String getName() {
-        return name;
-    }
-
-    public String getDisplayName(){
-        String displayName = getAttribute("name");
-        if (displayName!=null) return displayName;
-        return name;
+    public String getDefaultDisplayName() {
+        return getAttribute(DEFAULT_DISPLAY_NAME);
     }
 
     public Provenance getProvenance() {
@@ -127,23 +116,27 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     // needs the db to check the name is not there
 
-    public synchronized void changeNameWillBePersisted(String name) throws Exception {
-        //maybe should allow name change even if name already exists - need to set some better rule.
-        if (getTotoMemoryDB().getNameByName(name, null) != null) {
-            throw new Exception("that name name already exists in the database");
+    public synchronized void setDefaultDisplayNameWillBePersisted(String name) throws Exception {
+        // important, manage persistence, allowed name rules, db look ups
+        // only care about ones in this set
+        for (Name parent : parents){
+            for (Name fellowChild : parent.getChildren()){
+                if (fellowChild.getId() != getId() && fellowChild.getDefaultDisplayName().equalsIgnoreCase(getDefaultDisplayName())){
+                    throw new Exception("that name name already exists in the database");
+                }
+            }
         }
-        this.name = name;
-        entityColumnsChanged = true;
-        setNeedsPersisting();
+        if (getDefaultDisplayName() != null){
+            getTotoMemoryDB().addNameToDbNameMap(this);
+        }
+        setAttributeWillBePersisted(DEFAULT_DISPLAY_NAME, name);
+        getTotoMemoryDB().addNameToDbNameMap(this);
+        // now deal with the DB maps!
     }
 
     public synchronized void setEntityColumnsChanged() throws Exception{
         entityColumnsChanged = true;
     }
-
-    /*public synchronized void setName(String name){
-          this.name = name;
-    }*/
 
     // needs the db to check the name is not there
 
@@ -159,7 +152,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     public String toString() {
         return "Name{" +
                 "id='" + getId() + '\'' +
-                "name='" + name + '\'' +
+                "attributes='" + attributes + '\'' +
                 '}';
     }
 
@@ -402,14 +395,18 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     }
     public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue){
         attributes.put(attributeName, attributeValue);
-        attributesChanged = true;
-        setNeedsPersisting();
+        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
+            attributesChanged = true;
+            setNeedsPersisting();
+        }
     }
 
     public synchronized void removeAttributeWillBePersisted(String attributeName){
-         attributes.remove(attributeName);
-         attributesChanged = true;
-        setNeedsPersisting();
+        attributes.remove(attributeName);
+        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
+            attributesChanged = true;
+            setNeedsPersisting();
+        }
     }
 
     public synchronized String getAttribute(String attributeName){
@@ -428,6 +425,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     @Override
     public int compareTo(Name n) {
-        return name.toLowerCase().compareTo(n.getName().toLowerCase()); // think that will give us a case insensitive sort!
+        return getDefaultDisplayName().toLowerCase().compareTo(getDefaultDisplayName().toLowerCase()); // think that will give us a case insensitive sort!
     }
 }

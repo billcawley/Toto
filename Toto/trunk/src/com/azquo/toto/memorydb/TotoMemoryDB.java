@@ -269,7 +269,7 @@ public final class TotoMemoryDB {
                 nameDAO.unlinkAllChildrenForParent(this, name);
                 nameDAO.linkParentAndChildren(this, name);
                 links += name.getChildren().size();
-                System.out.println(name.getName() + " changed children size : " + name.getChildren().size() + " links : " + links);
+                System.out.println(name.getDefaultDisplayName() + " changed children size : " + name.getChildren().size() + " links : " + links);
             }
 
 
@@ -449,15 +449,15 @@ public final class TotoMemoryDB {
             // search the lot!
             for (Name name : nameByIdMap.values()){
                 if (wildCardAtBeginning && wildCardAtEnd){
-                    if (name.getName().toLowerCase().contains(search)){
+                    if (name.getDefaultDisplayName().toLowerCase().contains(search)){
                         toReturn.add(name);
                     }
                 } else if(wildCardAtBeginning){
-                    if (name.getName().toLowerCase().endsWith(search)){
+                    if (name.getDefaultDisplayName().toLowerCase().endsWith(search)){
                         toReturn.add(name);
                     }
                 } else {
-                    if (name.getName().toLowerCase().startsWith(search)){
+                    if (name.getDefaultDisplayName().toLowerCase().startsWith(search)){
                         toReturn.add(name);
                     }
                 }
@@ -501,8 +501,8 @@ public final class TotoMemoryDB {
 
     protected void addNameToDbNameMap(Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
-        String lcName = newName.getName().toLowerCase();
-        if (newName.getName().contains("`")){
+        String lcName = newName.getDefaultDisplayName().toLowerCase();
+        if (newName.getDefaultDisplayName().contains("`")){
             String error = "has quotes";
             throw new Exception(error);
         }
@@ -512,6 +512,14 @@ public final class TotoMemoryDB {
             Set<Name> possibles = new HashSet<Name>();
             possibles.add(newName);
             nameByNameMap.put(lcName, possibles);
+        }
+    }
+
+    protected void removeNameFromDbNameMap(Name name) throws Exception {
+        name.checkDatabaseMatches(this);
+        String lcName = name.getDefaultDisplayName().toLowerCase();
+        if (nameByNameMap.get(lcName) != null) {
+            nameByNameMap.get(lcName).remove(name);
         }
     }
 
