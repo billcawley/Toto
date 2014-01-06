@@ -45,6 +45,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     private boolean attributesChanged;
 
     // parents is maintained according to children, it isn't persisted in the same way
+    // ok no longer dealing with a name check here, it's all done through attributes
 
     public Name(TotoMemoryDB totoMemoryDB, Provenance provenance, boolean additive) throws Exception {
         this(totoMemoryDB, 0, provenance, additive);
@@ -52,11 +53,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public Name(TotoMemoryDB totoMemoryDB, int id, Provenance provenance, boolean additive) throws Exception {
         super(totoMemoryDB, id);
-/*        if (name == null || name.trim().length() == 0){ // then I think we thrown an exception, can't have a blank name!
-            throw new Exception("error cannot create name with blank oor null name!");
-        }
-        // Is there anything wrong with trimming here?
-        this.name = name.trim();*/
         this.provenance = provenance;
         this.additive = additive;
         values = new HashSet<Value>();
@@ -102,6 +98,8 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         return attributesChanged;
     }
 
+    // for convenience but be careful where it is used . . .
+
     public String getDefaultDisplayName() {
         return getAttribute(DEFAULT_DISPLAY_NAME);
     }
@@ -112,26 +110,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public boolean getAdditive() {
         return additive;
-    }
-
-    // needs the db to check the name is not there
-
-    public synchronized void setDefaultDisplayNameWillBePersisted(String name) throws Exception {
-        // important, manage persistence, allowed name rules, db look ups
-        // only care about ones in this set
-        for (Name parent : parents){
-            for (Name fellowChild : parent.getChildren()){
-                if (fellowChild.getId() != getId() && fellowChild.getDefaultDisplayName().equalsIgnoreCase(getDefaultDisplayName())){
-                    throw new Exception("that name name already exists in the database");
-                }
-            }
-        }
-        if (getDefaultDisplayName() != null){
-            getTotoMemoryDB().addNameToDbNameMap(this);
-        }
-        setAttributeWillBePersisted(DEFAULT_DISPLAY_NAME, name);
-        getTotoMemoryDB().addNameToDbNameMap(this);
-        // now deal with the DB maps!
     }
 
     public synchronized void setEntityColumnsChanged() throws Exception{
@@ -384,8 +362,9 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     }
 
+    // think I'm only going to allow bulk attribute settings in this package as it won't do the checks the single below will
 
-    public synchronized void setAttributesWillBePersisted(LinkedHashMap<String,String> attributes) throws Exception {
+    protected synchronized void setAttributesWillBePersisted(LinkedHashMap<String,String> attributes) throws Exception {
         this.attributes = attributes;
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
             attributesChanged = true;
@@ -393,23 +372,39 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         }
 
     }
-    public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue){
+    public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
+
+        // important, manage persistence, allowed name rules, db look ups
+        // only care about ones in this set
+        for (Name parent : parents){
+            for (Name fellowChild : parent.getChildren()){
+                if (fellowChild.getId() != getId() && fellowChild.getAttribute(attributeName).equalsIgnoreCase(attributeValue)){
+                    throw new Exception (attributeName + " value : " + attributeValue + " already exists among siblings of " + getAttribute(DEFAULT_DISPLAY_NAME));
+                }
+            }
+        }
+        setAttributeWillBePersisted(attributeName, attributeValue);
+        // TODO, uncomment when good to go
         attributes.put(attributeName, attributeValue);
+        // now deal with the DB maps!
+        getTotoMemoryDB().addNameToAttributeNameMap(this); // will overwrite but that's fine
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
             attributesChanged = true;
             setNeedsPersisting();
         }
     }
 
-    public synchronized void removeAttributeWillBePersisted(String attributeName){
-        attributes.remove(attributeName);
+    public synchronized void removeAttributeWillBePersisted(String attributeName) throws Exception {
+        if (attributes.containsKey(attributeName)){
+            getTotoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, attributes.remove(attributeName), this);
+        }
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
             attributesChanged = true;
             setNeedsPersisting();
         }
     }
 
-    public synchronized String getAttribute(String attributeName){
+    public String getAttribute(String attributeName){
         return attributes.get(attributeName);
     }
 
@@ -423,8 +418,11 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         }
     }
 
+    // assign a comparator if wanted for a specific language!
+
     @Override
     public int compareTo(Name n) {
         return getDefaultDisplayName().toLowerCase().compareTo(getDefaultDisplayName().toLowerCase()); // think that will give us a case insensitive sort!
     }
+
 }

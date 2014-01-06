@@ -29,10 +29,8 @@ SET time_zone = "+00:00";
 CREATE TABLE IF NOT EXISTS `name` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `provenance_id` int(11) NOT NULL,
-  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `additive` tinyint(1) NOT NULL DEFAULT '1',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `name` (`name`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------

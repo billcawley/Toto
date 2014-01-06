@@ -18,7 +18,7 @@ import java.util.zip.ZipInputStream;
 
 
 
-public final class Importer {
+public final class ImportService {
 
 
 
@@ -29,8 +29,10 @@ public final class Importer {
     @Autowired
     private ProvenanceService provenanceService;
 
-     public String dataImport(LoggedInConnection loggedInConnection, String fileName, boolean create) throws Exception {
+     public String dataImport(LoggedInConnection loggedInConnection, String fileName, String language, boolean create) throws Exception {
 
+
+         // OK I think I'm supposed to use language in here but how??? Will go to default name for the moment
 
          HashMap<Name, String> nameImportHeadingMap = new HashMap<Name, String>();
 

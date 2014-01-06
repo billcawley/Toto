@@ -48,7 +48,7 @@ public final class NameService {
 
 
     public ArrayList<Name> sortNames(final ArrayList<Name> namesList){
-
+        // TODO : languages, otherwise use default comparators
         /*Comparator<Name> compareName = new Comparator<Name>() {
             public int compare(Name n1, Name n2) {
                 return n1.getName().compareTo(n2.getName());
@@ -81,9 +81,8 @@ public final class NameService {
     }
 
     public ArrayList<Name> findContainingName(final LoggedInConnection loggedInConnection, final String name){
-
-        return sortNames(new ArrayList<Name>(loggedInConnection.getTotoMemoryDB().getNamesContainingName(name)));
-
+        // go for the default for the moment
+        return sortNames(new ArrayList<Name>(loggedInConnection.getTotoMemoryDB().getNamesWithAttributeContaining(Name.DEFAULT_DISPLAY_NAME, name)));
     }
 
     public Name findById(final LoggedInConnection loggedInConnection,int id){
@@ -102,22 +101,22 @@ public final class NameService {
 
         String parentName =  findParentFromList(name);
         if (parentName == null){
-            return loggedInConnection.getTotoMemoryDB().getNameByName(name, null);
+            return loggedInConnection.getTotoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, name, null);
         }
-        Name parent = loggedInConnection.getTotoMemoryDB().getNameByName(parentName, null);
+        Name parent = loggedInConnection.getTotoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, parentName, null);
         if (parent== null) return null;
         String remainder = name.substring(0, name.lastIndexOf(",",name.length() - parentName.length()));
         parentName = findParentFromList(remainder);
         while (parentName != null){
-            parent = loggedInConnection.getTotoMemoryDB().getNameByName(parentName, null);
+            parent = loggedInConnection.getTotoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, parentName, null);
             remainder = name.substring(0, remainder.lastIndexOf(",",name.length() - parentName.length()));
             parentName = findParentFromList(remainder);
         }
-        return loggedInConnection.getTotoMemoryDB().getNameByName(remainder,parent);
+        return loggedInConnection.getTotoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, remainder, parent);
     }
 
     public List<Name> searchNames(final LoggedInConnection loggedInConnection, final String search) {
-        return loggedInConnection.getTotoMemoryDB().searchNames(search);
+        return loggedInConnection.getTotoMemoryDB().searchNames(Name.DEFAULT_DISPLAY_NAME, search);
     }
 
     public List<Name> findTopNames(final LoggedInConnection loggedInConnection) {
@@ -178,7 +177,7 @@ public final class NameService {
         the 'parent' will usually be the top of the tree, and the new parent will be a name created as a branch.  */
 
         String storeName = name.replace("\"","");
-        final Name existing = loggedInConnection.getTotoMemoryDB().getNameByName(storeName, parent);
+        final Name existing = loggedInConnection.getTotoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, storeName, parent);
         if (existing != null) {
             if (newparent!=null && newparent != parent){
                  parent.removeFromChildrenWillBePersisted(existing);
@@ -190,7 +189,7 @@ public final class NameService {
             //TODO : make provenance come from somewhere else e.g. get it from the logged in connection?? DEFINITELY!
             Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(),loggedInConnection.getUserName(), new Date(), "method", "name", "rows", "cols", "context");
             Name newName =  new Name(loggedInConnection.getTotoMemoryDB(),provenance, true); // default additive to true
-            newName.setDefaultDisplayNameWillBePersisted(storeName);
+            newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName);
             if (newparent!=null) {
                 if (newparent != parent){
                     parent.removeFromChildrenWillBePersisted(newName);
@@ -389,7 +388,7 @@ public final class NameService {
     public void renameName(LoggedInConnection loggedInConnection, String name, String renameAs) throws Exception {
         final Name existing = findByName(loggedInConnection, name);
         if (existing != null) {
-            existing.setDefaultDisplayNameWillBePersisted(renameAs);
+            existing.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, renameAs);
         }
     }
 
@@ -643,7 +642,7 @@ public final class NameService {
     }
 
 
-    private String shuntingYardAlgorithm(LoggedInConnection loggedInConnection,Name name){
+    private String shuntingYardAlgorithm(LoggedInConnection loggedInConnection,Name name) throws Exception {
 /*   TODO SORT OUT ACTION ON ERROR
         Routine to convert a formula (if it exists) to reverse polish.
 
@@ -733,8 +732,9 @@ public final class NameService {
             stack = stack.substring(1);
         }
 
-        if (name.getAttribute("RPCALC")== null || name.getAttribute("RPCALC") != sb.toString())
+        if (name.getAttribute("RPCALC")== null || name.getAttribute("RPCALC") != sb.toString()){
             name.setAttributeWillBePersisted("RPCALC", sb.toString());
+        }
 
         return "";
     }

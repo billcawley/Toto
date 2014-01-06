@@ -1,6 +1,6 @@
 package com.azquo.toto.controller;
 
-import com.azquo.toto.service.Importer;
+import com.azquo.toto.service.ImportService;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
@@ -23,7 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class ImportController {
 
     @Autowired
-    private Importer importer;
+    private ImportService importService;
 
     @Autowired
     private LoginService loginService;
@@ -94,56 +94,17 @@ public class ImportController {
             create = true;
         }
 
+        // there was a translate service thing before and after but now we need to do it internally
 
-        // this was here, need to work out how to to the same thing in the data import function
-        /*
-    public void translateNames(String language) throws Exception{
-        nameByNameMap.clear();
-        for (Name name : nameByIdMap.values()) {
-            String displayName = name.getAttribute("name");
-            if (displayName == null){
-                name.setAttributeWillBePersisted("name", name.getName());
-            }
-            String newName = name.getAttribute(language);
-            if (newName != null){
-                name.setName(newName);
-            }
-            addNameToDbNameMap(name);
-        }
-    }
-
-         */
-
-
-
-//        nameService.translateNames(loggedInConnection,language);
         String result = "";
         if (fileType.toLowerCase().equals("data")){
-            result =  importer.dataImport(loggedInConnection, fileName, create);
+            result =  importService.dataImport(loggedInConnection, fileName, language, create);
         }
         if (fileType.toLowerCase().equals("attributes")){
-            result = importer.attributeImport(loggedInConnection,fileName,language,create);
+            result = importService.attributeImport(loggedInConnection,fileName,language,create);
 
         }
 
-        /*
-        and the deleted restore
-
-            public void restoreNames() throws Exception{
-        nameByNameMap.clear();
-        for (Name name : nameByIdMap.values()) {
-            String newName = name.getAttribute("name");
-            if (newName != null){
-                name.setName(newName);
-            }
-            addNameToDbNameMap(name);
-        }
-    }
-
-
-         */
-
-        //nameService.restoreNames(loggedInConnection);
         nameService.persist(loggedInConnection);
 
 

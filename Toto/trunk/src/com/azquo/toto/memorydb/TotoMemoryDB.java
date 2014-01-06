@@ -25,10 +25,10 @@ public final class TotoMemoryDB {
     private final ProvenanceDAO provenanceDAO;
 
 
-    private final HashMap<String, Set<Name>> nameByNameMap;
-    private final HashMap<Integer, Name> nameByIdMap;
-    private final HashMap<Integer, Value> valueByIdMap;
-    private final HashMap<Integer, Provenance> provenanceByIdMap;
+    private final Map<String, Map<String, Set<Name>>> nameByAttributeMap; // a map of maps of sets of names. Fun!
+    private final Map<Integer, Name> nameByIdMap;
+    private final Map<Integer, Value> valueByIdMap;
+    private final Map<Integer, Provenance> provenanceByIdMap;
 
     private boolean needsLoading;
 
@@ -50,7 +50,7 @@ public final class TotoMemoryDB {
         this.provenanceDAO = provenanceDAO;
          needsLoading = true;
         maxIdAtLoad = 0;
-        nameByNameMap = new HashMap<String, Set<Name>>();
+        nameByAttributeMap = new HashMap<String, Map<String, Set<Name>>>();
         nameByIdMap = new HashMap<Integer, Name>();
         valueByIdMap = new HashMap<Integer, Value>();
         provenanceByIdMap = new HashMap<Integer, Provenance>();
@@ -189,7 +189,7 @@ public final class TotoMemoryDB {
             track = System.currentTimeMillis();
 
 
-
+            initAttributeNameMap();
 
             //END ATTRIBUTES
 
@@ -290,7 +290,7 @@ public final class TotoMemoryDB {
                 }
             }
             name.setAsPersisted(); // is this dangerous here???
-            // going to save value label links by value to label rather than label to value as the lists on the latter will be big. Change too one value may cause much relinking
+            // going to save value label links by value to label rather than label to value as the lists on the latter will be big. Change to one value may cause much relinking
             // we don't deal with parents, they're just convenience lookup lists
         }
         System.out.println("vnp size : " + valuesNeedPersisting.size());
@@ -356,8 +356,8 @@ public final class TotoMemoryDB {
 
     }
 
-    public Name getNameByName(String name, Name parent){
-        Set<Name> possibles = nameByNameMap.get(name.toLowerCase().replace("\"",""));
+    public Name getNameByAttribute(String attributeName, String attributeValue, Name parent){
+        Set<Name> possibles = nameByAttributeMap.get(attributeName).get(attributeValue);
         if (possibles == null) return null;
         if (parent == null){
             if (possibles.size() != 1) return null;
@@ -373,30 +373,27 @@ public final class TotoMemoryDB {
 
     }
 
-
-
-
-/*    public Set<Name> getNamesContainingName(String name){
-        Iterator it = nameByNameMap.entrySet().iterator();
-        Set<Name> names = new HashSet<Name>();
-        while (it.hasNext()){
-            Map.Entry pairs = (Map.Entry) it.next();
-            String key = (String)pairs.getKey();
-            if (key.contains(name)){
-                names.addAll((Set<Name>)pairs.getValue());
-            }
-
-        }
-        return names;
+    public Set<Name> getNamesWithAttributeContaining(String attributeName, String attributeValue){
+        return getNamesByAttributeValueWildcards(attributeName,attributeValue, true, true);
     }
-*/
-    // Edd's rewrite of the above function to avoid class cast warning, think functionality is the same
-    // I also made it case insersetive
-    public Set<Name> getNamesContainingName(String name){
+
+    // cet names containing an attribute using wildcards, start end both
+
+    private Set<Name> getNamesByAttributeValueWildcards(String attributeName, String attributeValueSearch, boolean startsWith, boolean endsWith){
         Set<Name> names = new HashSet<Name>();
-        for (String nameName : nameByNameMap.keySet()){
-            if (nameName.toLowerCase().contains(name.toLowerCase())){
-                names.addAll(nameByNameMap.get(nameName));
+        for (String attributeValue : nameByAttributeMap.get(attributeName).keySet()){
+            if (startsWith && endsWith){
+                if (attributeValue.toLowerCase().contains(attributeValueSearch.toLowerCase())){
+                    names.addAll(nameByAttributeMap.get(attributeName).get(attributeValue));
+                }
+            } else if(startsWith){
+                if (attributeValue.toLowerCase().startsWith(attributeValueSearch.toLowerCase())){
+                    names.addAll(nameByAttributeMap.get(attributeName).get(attributeValue));
+                }
+            } else if(endsWith){
+                if (attributeValue.toLowerCase().endsWith(attributeValueSearch.toLowerCase())){
+                    names.addAll(nameByAttributeMap.get(attributeName).get(attributeValue));
+                }
             }
 
         }
@@ -427,7 +424,7 @@ public final class TotoMemoryDB {
     }
 
 
-    public List<Name> searchNames(String search) {
+    public List<Name> searchNames(String attribute, String search) {
         long track = System.currentTimeMillis();
         search = search.trim().toLowerCase();
         boolean wildCardAtBeginning = false;
@@ -442,27 +439,13 @@ public final class TotoMemoryDB {
         }
         final List<Name> toReturn = new ArrayList<Name>();
         if (!wildCardAtBeginning && !wildCardAtEnd){
-            if (getNameByName(search, null) != null){
-                toReturn.add(getNameByName(search, null));
+            Name check = getNameByAttribute(attribute, search, null);
+            if (check != null){
+                toReturn.add(check);
             }
         } else {
-            // search the lot!
-            for (Name name : nameByIdMap.values()){
-                if (wildCardAtBeginning && wildCardAtEnd){
-                    if (name.getDefaultDisplayName().toLowerCase().contains(search)){
-                        toReturn.add(name);
-                    }
-                } else if(wildCardAtBeginning){
-                    if (name.getDefaultDisplayName().toLowerCase().endsWith(search)){
-                        toReturn.add(name);
-                    }
-                } else {
-                    if (name.getDefaultDisplayName().toLowerCase().startsWith(search)){
-                        toReturn.add(name);
-                    }
-                }
-            }
-
+            // use new function, remember booleans are swapped
+            toReturn.addAll(getNamesByAttributeValueWildcards(attribute,search,wildCardAtEnd, wildCardAtBeginning));
         }
         System.out.println("search time : " + (System.currentTimeMillis() - track));
         return toReturn;
@@ -482,10 +465,6 @@ public final class TotoMemoryDB {
 
     // synchronised?
 
-
-
-
-
     protected void addNameToDb(Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
@@ -499,29 +478,59 @@ public final class TotoMemoryDB {
     // ok I'd have liked this to be part of the above function but the name won't have been initialised, has to be called in the name constructor
     // custom maps here need to be dealt with in the constructors I think
 
-    protected void addNameToDbNameMap(Name newName) throws Exception {
+    protected void addNameToAttributeNameMap(Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
-        String lcName = newName.getDefaultDisplayName().toLowerCase();
-        if (newName.getDefaultDisplayName().contains("`")){
-            String error = "has quotes";
-            throw new Exception(error);
+        Map<String, String> attributes = newName.getAttributes();
+
+        for (String attributeName : attributes.keySet()){
+            if (nameByAttributeMap.get(attributeName) == null){ // make a new map for the attributes
+                nameByAttributeMap.put(attributeName, new HashMap<String, Set<Name>>());
+            }
+            Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName);
+            String attributeValue = attributes.get(attributeName).toLowerCase();
+            if (attributeValue.contains("`")){
+                String error = "has quotes";
+                throw new Exception(error);
+            }
+            if (namesForThisAttribute.get(attributeValue) != null) {
+                namesForThisAttribute.get(attributeValue).add(newName);
+            } else {
+                Set<Name> possibles = new HashSet<Name>();
+                possibles.add(newName);
+                namesForThisAttribute.put(attributeValue, possibles);
+            }
         }
-        if (nameByNameMap.get(lcName) != null) {
-            nameByNameMap.get(lcName).add(newName);
-        } else {
-            Set<Name> possibles = new HashSet<Name>();
-            possibles.add(newName);
-            nameByNameMap.put(lcName, possibles);
+
+    }
+
+    protected void removeAttributeFromNameInAttributeNameMap(String attributeName, String attributeValue, Name name) throws Exception {
+        name.checkDatabaseMatches(this);
+
+            if (nameByAttributeMap.get(attributeName) != null){// the map we care about
+                Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName);
+                Set<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase());
+                if (namesForThatAttributeAndAttributeValue != null){
+                    namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the set . . .
+                }
+            }
+
+    }
+
+    // to be called after loading extracts attributes to useful maps
+
+    protected void initAttributeNameMap() throws Exception {
+        for (Name name : nameByIdMap.values()){
+            addNameToAttributeNameMap(name);
         }
     }
 
-    protected void removeNameFromDbNameMap(Name name) throws Exception {
+/*    protected void removeNameFromDbNameMap(Name name) throws Exception {
         name.checkDatabaseMatches(this);
         String lcName = name.getDefaultDisplayName().toLowerCase();
         if (nameByNameMap.get(lcName) != null) {
             nameByNameMap.get(lcName).remove(name);
         }
-    }
+    }*/
 
     protected void setNameNeedsPersisting(Name name) {
         namesNeedPersisting.add(name);
@@ -566,38 +575,4 @@ public final class TotoMemoryDB {
     protected void removeProvenanceNeedsPersisting(Provenance provenance) {
         provenanceNeedsPersisting.remove(provenance);
     }
-
-
-
-/*    public void translateNames(String language) throws Exception{
-        nameByNameMap.clear();
-        Iterator it = nameByIdMap.entrySet().iterator();
-        while (it.hasNext()) {
-            Name name = (Name)((Map.Entry)it.next()).getValue();
-            String displayName = name.getAttribute("name");
-            if (displayName == null){
-                name.setAttributeWillBePersisted("name", name.getName());
-            }
-            String newName = name.getAttribute(language);
-            if (newName != null){
-                name.setName(newName);
-            }
-            addNameToDbNameMap(name);
-        }
-    }*/
-
-
-/*    public void restoreNames() throws Exception{
-        nameByNameMap.clear();
-        Iterator it = nameByIdMap.entrySet().iterator();
-        while (it.hasNext()) {
-            Name name = (Name)((Map.Entry)it.next()).getValue();
-            String newName = name.getAttribute("name");
-            if (newName != null){
-                name.setName(newName);
-            }
-            addNameToDbNameMap(name);
-        }
-    }*/
-
 }
