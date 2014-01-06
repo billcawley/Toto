@@ -1,17 +1,10 @@
 package com.azquo.toto.service;
 
 import com.azquo.toto.controller.NameController;
-import com.azquo.toto.dao.ValueDAO;
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Provenance;
-import com.azquo.toto.service.*;
 import com.csvreader.CsvReader;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.io.*;
 import java.util.*;
@@ -35,20 +28,16 @@ public final class Importer {
     private NameService nameService;
     @Autowired
     private ProvenanceService provenanceService;
-    @Autowired
-    private ValueDAO valueDao;
-    @Autowired
-    private LoginService loginService;
-
-
 
      public String dataImport(LoggedInConnection loggedInConnection, String fileName, boolean create) throws Exception {
 
 
+         HashMap<Name, String> nameImportHeadingMap = new HashMap<Name, String>();
+
 
         //String filePath = "/home/bill/Downloads/exportcodes.csv";
         //TODO  set correct filepath
-        String filePath = "/home/bill/Downloads/" + fileName;
+        String filePath = "/home/cawley/Downloads/" + fileName;
         if (filePath.endsWith(".zip")) {
             filePath = unzip(filePath);
         }
@@ -76,7 +65,7 @@ public final class Importer {
                 if (header.contains(";")) nameToFind = header.substring(0,header.indexOf(";"));
                 Name name = nameService.findOrCreateName(loggedInConnection, nameToFind);
                 if (name.getPeers().size() > 0){
-                    name.setImportHeading(header);
+                    nameImportHeadingMap.put(name, header);
                     headerNames.add(name);
                 }
             }
@@ -92,16 +81,12 @@ public final class Importer {
         int valuecount = 0;
         HashMap<String, Name> namesFound = new HashMap<String, Name>();
         while (csvReader.readRecord()){
-            String value = null;
+            String value;
             for (Name headerName : headerNames){
                 Set<Name> namesForValue = new HashSet<Name>();
                 namesForValue.add(headerName);
-                String newName = csvReader.get(headerName.getName());
-                Iterator it = headerName.getPeers().entrySet().iterator();
-                while (it.hasNext()){
-                    Map.Entry peerset = (Map.Entry) it.next();
-                    Name peer = (Name)peerset.getKey();
-                    String peerVal = csvReader.get((String) peer.getName());
+                for (Name peer : headerName.getPeers().keySet()){
+                    String peerVal = csvReader.get(peer.getName());
                     if (peerVal == null || peerVal.length() == 0){
                         //throw new Exception("unable to find " + peer.getName() + " for " + headerName.getName());
                     }else{
@@ -126,7 +111,7 @@ public final class Importer {
                     //namesForValue.add(nameService.findOrCreateName(loggedInConnection,peerVal + "," + peer.getName())) ;
 
                 }
-                value = csvReader.get(headerName.getImportHeading());
+                value = csvReader.get(nameImportHeadingMap.get(headerName));
                 if (value.trim().length() > 0){ // no point storing if there's no value!
                     valuecount++;
                     valueService.storeValueWithProvenanceAndNames(loggedInConnection, value, provenance, namesForValue);
@@ -149,7 +134,7 @@ public final class Importer {
 
     //String filePath = "/home/bill/Downloads/exportcodes.csv";
     //TODO  set correct filepath
-    String filePath = "/home/bill/Downloads/" + fileName;
+    String filePath = "/home/cawley/Downloads/" + fileName;
     if (filePath.endsWith(".zip")) {
         filePath = unzip(filePath);
     }
@@ -159,7 +144,6 @@ public final class Importer {
 
 
      while (csvReader.readRecord()){
-        String value = null;
         String searchName = csvReader.get(language);
         Name name = null;
 
@@ -177,9 +161,9 @@ public final class Importer {
                   String oldName = name.getAttribute(header);
                   if ((oldName == null && newName.length() > 0) || (oldName != null && !newName.equals(oldName))){
                       if (newName.length()==0){
-                          name.removeAttribute(header);
+                          name.removeAttributeWillBePersisted(header);
                       }else{
-                        name.setAttribute(header,getFirstName(newName));
+                        name.setAttributeWillBePersisted(header, getFirstName(newName));
                       }
                       name.setEntityColumnsChanged();// may be overdoing it if the attributes do not affect the current name
                   }

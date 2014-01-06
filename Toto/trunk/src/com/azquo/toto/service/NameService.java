@@ -523,14 +523,14 @@ public final class NameService {
         }
     }
 
-    public void translateNames(final LoggedInConnection loggedInConnection,final String language) throws Exception{
+/*    public void translateNames(final LoggedInConnection loggedInConnection,final String language) throws Exception{
         loggedInConnection.getTotoMemoryDB().translateNames(language);
     }
 
 
     public void restoreNames(final LoggedInConnection loggedInConnection) throws Exception{
         loggedInConnection.getTotoMemoryDB().restoreNames();
-    }
+    }*/
 
     public String getInstruction(final String instructions, final String instructionName) {
         String toReturn = null;
@@ -733,7 +733,7 @@ public final class NameService {
         }
 
         if (name.getAttribute("RPCALC")== null || name.getAttribute("RPCALC") != sb.toString())
-            name.setAttribute("RPCALC", sb.toString());
+            name.setAttributeWillBePersisted("RPCALC", sb.toString());
 
         return "";
     }

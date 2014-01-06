@@ -93,7 +93,30 @@ public class ImportController {
         if (strCreate.equals("true")){
             create = true;
         }
-        nameService.translateNames(loggedInConnection,language);
+
+
+        // this was here, need to work out how to to the same thing in the data import function
+        /*
+    public void translateNames(String language) throws Exception{
+        nameByNameMap.clear();
+        for (Name name : nameByIdMap.values()) {
+            String displayName = name.getAttribute("name");
+            if (displayName == null){
+                name.setAttributeWillBePersisted("name", name.getName());
+            }
+            String newName = name.getAttribute(language);
+            if (newName != null){
+                name.setName(newName);
+            }
+            addNameToDbNameMap(name);
+        }
+    }
+
+         */
+
+
+
+//        nameService.translateNames(loggedInConnection,language);
         String result = "";
         if (fileType.toLowerCase().equals("data")){
             result =  importer.dataImport(loggedInConnection, fileName, create);
@@ -103,7 +126,24 @@ public class ImportController {
 
         }
 
-        nameService.restoreNames(loggedInConnection);
+        /*
+        and the deleted restore
+
+            public void restoreNames() throws Exception{
+        nameByNameMap.clear();
+        for (Name name : nameByIdMap.values()) {
+            String newName = name.getAttribute("name");
+            if (newName != null){
+                name.setName(newName);
+            }
+            addNameToDbNameMap(name);
+        }
+    }
+
+
+         */
+
+        //nameService.restoreNames(loggedInConnection);
         nameService.persist(loggedInConnection);
 
 

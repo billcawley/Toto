@@ -40,7 +40,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     private boolean childrenChanged;
     private boolean peersChanged;
     private boolean attributesChanged;
-    private String importHeading;
+//    private String importHeading;
 
     // parents is maintained according to children, it isn't persisted in the same way
 
@@ -103,9 +103,9 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
 
     //added by WFC - not sure if this is the right way to set and get this field
-    public String getImportHeading(){return importHeading; }
+/*    public String getImportHeading(){return importHeading; }
 
-    public void setImportHeading(String importHeading){this.importHeading = importHeading; }
+    public void setImportHeading(String importHeading){this.importHeading = importHeading; }*/
 
     public String getName() {
         return name;
@@ -141,9 +141,9 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         entityColumnsChanged = true;
     }
 
-    public synchronized void setName(String name){
+    /*public synchronized void setName(String name){
           this.name = name;
-    }
+    }*/
 
     // needs the db to check the name is not there
 
@@ -400,13 +400,13 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         }
 
     }
-    public synchronized void setAttribute(String attributeName, String attributeValue){
+    public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue){
         attributes.put(attributeName, attributeValue);
         attributesChanged = true;
         setNeedsPersisting();
     }
 
-    public synchronized void removeAttribute(String attributeName){
+    public synchronized void removeAttributeWillBePersisted(String attributeName){
          attributes.remove(attributeName);
          attributesChanged = true;
         setNeedsPersisting();

@@ -391,10 +391,11 @@ public final class TotoMemoryDB {
     }
 */
     // Edd's rewrite of the above function to avoid class cast warning, think functionality is the same
+    // I also made it case insersetive
     public Set<Name> getNamesContainingName(String name){
         Set<Name> names = new HashSet<Name>();
         for (String nameName : nameByNameMap.keySet()){
-            if (nameName.contains(name)){
+            if (nameName.toLowerCase().contains(name.toLowerCase())){
                 names.addAll(nameByNameMap.get(nameName));
             }
 
@@ -567,7 +568,7 @@ public final class TotoMemoryDB {
             Name name = (Name)((Map.Entry)it.next()).getValue();
             String displayName = name.getAttribute("name");
             if (displayName == null){
-                name.setAttribute("name", name.getName());
+                name.setAttributeWillBePersisted("name", name.getName());
             }
             String newName = name.getAttribute(language);
             if (newName != null){
@@ -577,20 +578,6 @@ public final class TotoMemoryDB {
         }
     }*/
 
-    public void translateNames(String language) throws Exception{
-        nameByNameMap.clear();
-        for (Name name : nameByIdMap.values()) {
-            String displayName = name.getAttribute("name");
-            if (displayName == null){
-                name.setAttribute("name", name.getName());
-            }
-            String newName = name.getAttribute(language);
-            if (newName != null){
-                name.setName(newName);
-            }
-            addNameToDbNameMap(name);
-        }
-    }
 
 /*    public void restoreNames() throws Exception{
         nameByNameMap.clear();
@@ -604,16 +591,5 @@ public final class TotoMemoryDB {
             addNameToDbNameMap(name);
         }
     }*/
-
-    public void restoreNames() throws Exception{
-        nameByNameMap.clear();
-        for (Name name : nameByIdMap.values()) {
-            String newName = name.getAttribute("name");
-            if (newName != null){
-                name.setName(newName);
-            }
-            addNameToDbNameMap(name);
-        }
-    }
 
 }
