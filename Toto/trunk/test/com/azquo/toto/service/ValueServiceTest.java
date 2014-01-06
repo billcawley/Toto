@@ -102,7 +102,7 @@ public class ValueServiceTest {
 
         if(nameWithPeers != null){ // run through again linking peers. OK not that efficient but doesn't matter for the moment
             for (String header : headers){
-                if (!header.equalsIgnoreCase(ValueService.VALUE) && !header.equalsIgnoreCase(nameWithPeers.getName())){
+                if (!header.equalsIgnoreCase(ValueService.VALUE) && !header.equalsIgnoreCase(nameWithPeers.getDefaultDisplayName())){
                     nameService.createPeer(loggedInConnection,nameWithPeers, header);
                 }
             }
