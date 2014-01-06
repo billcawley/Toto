@@ -357,15 +357,17 @@ public final class TotoMemoryDB {
     }
 
     public Name getNameByAttribute(String attributeName, String attributeValue, Name parent){
-        Set<Name> possibles = nameByAttributeMap.get(attributeName).get(attributeValue);
-        if (possibles == null) return null;
-        if (parent == null){
-            if (possibles.size() != 1) return null;
-            return possibles.iterator().next();
-        }else{
-            for (Name possible:possibles){
-                if(isInParentTreeOf(possible, parent)){
-                    return possible;
+        if (nameByAttributeMap.get(attributeName) != null){// there is an attribute with that name in the whole db . . .
+            Set<Name> possibles = nameByAttributeMap.get(attributeName).get(attributeValue);
+            if (possibles == null) return null;
+            if (parent == null){
+                if (possibles.size() != 1) return null;
+                return possibles.iterator().next();
+            }else{
+                for (Name possible:possibles){
+                    if(isInParentTreeOf(possible, parent)){
+                        return possible;
+                    }
                 }
             }
         }

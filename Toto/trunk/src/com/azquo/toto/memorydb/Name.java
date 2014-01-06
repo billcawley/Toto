@@ -378,12 +378,11 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         // only care about ones in this set
         for (Name parent : parents){
             for (Name fellowChild : parent.getChildren()){
-                if (fellowChild.getId() != getId() && fellowChild.getAttribute(attributeName).equalsIgnoreCase(attributeValue)){
+                if (fellowChild.getId() != getId() && fellowChild.getAttribute(attributeName) != null && fellowChild.getAttribute(attributeName).equalsIgnoreCase(attributeValue)){
                     throw new Exception (attributeName + " value : " + attributeValue + " already exists among siblings of " + getAttribute(DEFAULT_DISPLAY_NAME));
                 }
             }
         }
-        setAttributeWillBePersisted(attributeName, attributeValue);
         // TODO, uncomment when good to go
         attributes.put(attributeName, attributeValue);
         // now deal with the DB maps!

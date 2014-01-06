@@ -149,6 +149,8 @@ public final class ImportService {
         String searchName = csvReader.get(language);
         Name name = null;
 
+         // ok this is going to search for things in the language column with the default name . . doesn't really make sense!
+
         if (searchName != null){
             if (create){
                 name = nameService.findOrCreateName(loggedInConnection, searchName);

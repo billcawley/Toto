@@ -95,11 +95,12 @@ public class ImportController {
         }
 
         // there was a translate service thing before and after but now we need to do it internally
-
+        // ok the data import actually ignores names for the moment
         String result = "";
         if (fileType.toLowerCase().equals("data")){
             result =  importService.dataImport(loggedInConnection, fileName, language, create);
         }
+        // we will pay attention onn the attribute import and replicate
         if (fileType.toLowerCase().equals("attributes")){
             result = importService.attributeImport(loggedInConnection,fileName,language,create);
 

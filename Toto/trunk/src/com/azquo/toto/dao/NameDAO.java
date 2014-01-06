@@ -55,6 +55,9 @@ public final class NameDAO extends StandardDAO<Name> {
     public Map<String, Object> getColumnNameValueMap(final Name name){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, name.getId());
+        // should we allow null provenance??
+        toReturn.put(PROVENANCEID, (name.getProvenance() != null ? name.getProvenance().getId(): 0));
+        toReturn.put(ADDITIVE, name.getAdditive());
         return toReturn;
     }
 
