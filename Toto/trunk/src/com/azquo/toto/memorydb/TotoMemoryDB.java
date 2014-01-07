@@ -357,8 +357,8 @@ public final class TotoMemoryDB {
     }
 
     public Name getNameByAttribute(String attributeName, String attributeValue, Name parent){
-        if (nameByAttributeMap.get(attributeName) != null){// there is an attribute with that name in the whole db . . .
-            Set<Name> possibles = nameByAttributeMap.get(attributeName).get(attributeValue);
+        if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null){// there is an attribute with that name in the whole db . . .
+            Set<Name> possibles = nameByAttributeMap.get(attributeName.toLowerCase().trim()).get(attributeValue.toLowerCase().trim());
             if (possibles == null) return null;
             if (parent == null){
                 if (possibles.size() != 1) return null;
@@ -382,19 +382,21 @@ public final class TotoMemoryDB {
     // cet names containing an attribute using wildcards, start end both
 
     private Set<Name> getNamesByAttributeValueWildcards(String attributeName, String attributeValueSearch, boolean startsWith, boolean endsWith){
+        String  lctAttributeName = attributeName.toLowerCase().trim();
+        String  lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
         Set<Name> names = new HashSet<Name>();
-        for (String attributeValue : nameByAttributeMap.get(attributeName).keySet()){
+        for (String attributeValue : nameByAttributeMap.get(lctAttributeName).keySet()){
             if (startsWith && endsWith){
-                if (attributeValue.toLowerCase().contains(attributeValueSearch.toLowerCase())){
-                    names.addAll(nameByAttributeMap.get(attributeName).get(attributeValue));
+                if (attributeValue.toLowerCase().contains(lctAttributeValueSearch.toLowerCase())){
+                    names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
                 }
             } else if(startsWith){
-                if (attributeValue.toLowerCase().startsWith(attributeValueSearch.toLowerCase())){
-                    names.addAll(nameByAttributeMap.get(attributeName).get(attributeValue));
+                if (attributeValue.toLowerCase().startsWith(lctAttributeValueSearch.toLowerCase())){
+                    names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
                 }
             } else if(endsWith){
-                if (attributeValue.toLowerCase().endsWith(attributeValueSearch.toLowerCase())){
-                    names.addAll(nameByAttributeMap.get(attributeName).get(attributeValue));
+                if (attributeValue.toLowerCase().endsWith(lctAttributeValueSearch.toLowerCase())){
+                    names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
                 }
             }
 
@@ -485,11 +487,11 @@ public final class TotoMemoryDB {
         Map<String, String> attributes = newName.getAttributes();
 
         for (String attributeName : attributes.keySet()){
-            if (nameByAttributeMap.get(attributeName) == null){ // make a new map for the attributes
-                nameByAttributeMap.put(attributeName, new HashMap<String, Set<Name>>());
+            if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) == null){ // make a new map for the attributes
+                nameByAttributeMap.put(attributeName.toLowerCase().trim(), new HashMap<String, Set<Name>>());
             }
-            Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName);
-            String attributeValue = attributes.get(attributeName).toLowerCase();
+            Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+            String attributeValue = attributes.get(attributeName).toLowerCase().trim();
             if (attributeValue.contains("`")){
                 String error = "has quotes";
                 throw new Exception(error);
@@ -508,9 +510,9 @@ public final class TotoMemoryDB {
     protected void removeAttributeFromNameInAttributeNameMap(String attributeName, String attributeValue, Name name) throws Exception {
         name.checkDatabaseMatches(this);
 
-            if (nameByAttributeMap.get(attributeName) != null){// the map we care about
-                Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName);
-                Set<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase());
+            if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null){// the map we care about
+                Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+                Set<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase().trim());
                 if (namesForThatAttributeAndAttributeValue != null){
                     namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the set . . .
                 }
