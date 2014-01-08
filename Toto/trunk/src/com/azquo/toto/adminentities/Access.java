@@ -78,7 +78,8 @@ public class Access extends StandardEntity{
     @Override
     public String toString() {
         return "Access{" +
-                "active=" + active +
+                "id=" + id +
+                ", active=" + active +
                 ", startDate=" + startDate +
                 ", userId=" + userId +
                 ", databaseId=" + databaseId +

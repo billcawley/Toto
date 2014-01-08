@@ -24,7 +24,7 @@ public class DatabaseDAOTest {
     @Test
     public void testBasics() throws Exception {
 
-        Database d = new Database(0, true, new Date(),"databasename", 123,456);
+        Database d = new Database(0, true, new Date(),324,"databasename", 123,456);
         System.out.println("id before insert : " + d.getId());
         databaseDAO.store(d);
         System.out.println("id after insert : " + d.getId());

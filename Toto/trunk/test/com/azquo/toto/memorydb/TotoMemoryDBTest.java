@@ -1,9 +1,6 @@
 package com.azquo.toto.memorydb;
 
-import com.azquo.toto.service.LoggedInConnection;
-import com.azquo.toto.service.LoginService;
-import com.azquo.toto.service.NameService;
-import com.azquo.toto.service.ValueService;
+import com.azquo.toto.service.*;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;

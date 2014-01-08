@@ -110,6 +110,9 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         return results.get(0);
     }
 
+
+    // TODO add code for single? Necessary?
+
     // Assume not by id, adding wouldn't be difficult. A by table name one could be added later.
 
     public final List<EntityType> findAll() throws DataAccessException {

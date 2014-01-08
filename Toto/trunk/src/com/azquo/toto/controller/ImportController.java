@@ -1,9 +1,6 @@
 package com.azquo.toto.controller;
 
-import com.azquo.toto.service.ImportService;
-import com.azquo.toto.service.LoggedInConnection;
-import com.azquo.toto.service.LoginService;
-import com.azquo.toto.service.NameService;
+import com.azquo.toto.service.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;

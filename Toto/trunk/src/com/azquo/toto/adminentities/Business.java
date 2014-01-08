@@ -65,7 +65,8 @@ public class Business extends StandardEntity{
     @Override
     public String toString() {
         return "Business{" +
-                "active=" + active +
+                "id=" + id +
+                ", active=" + active +
                 ", startDate=" + startDate +
                 ", businessName='" + businessName + '\'' +
                 ", parentId=" + parentId +
@@ -83,8 +84,9 @@ public class Business extends StandardEntity{
         String postcode;
         String telephone;
         String website;
+        String validationKey; // temporary place to store validation key
 
-        public BusinessDetails(String address1, String address2, String address3, String address4, String postcode, String telephone, String website) {
+        public BusinessDetails(String address1, String address2, String address3, String address4, String postcode, String telephone, String website, String validationKey) {
             this.address1 = address1;
             this.address2 = address2;
             this.address3 = address3;
@@ -92,6 +94,7 @@ public class Business extends StandardEntity{
             this.postcode = postcode;
             this.telephone = telephone;
             this.website = website;
+            this.validationKey = validationKey;
         }
 
         public String getAddress1() {
@@ -141,6 +144,7 @@ public class Business extends StandardEntity{
         public void setTelephone(String telephone) {
             this.telephone = telephone;
         }
+
         public String getWebsite() {
             return website;
         }
@@ -149,6 +153,13 @@ public class Business extends StandardEntity{
             this.website = website;
         }
 
+        public String getValidationKey() {
+            return validationKey;
+        }
+
+        public void setValidationKey(String validationKey) {
+            this.validationKey = validationKey;
+        }
         @Override
         public String toString() {
             return "BusinessDetails{" +

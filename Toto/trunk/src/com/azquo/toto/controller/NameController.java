@@ -10,6 +10,7 @@ package com.azquo.toto.controller;
  */
 
 import com.azquo.toto.memorydb.Name;
+import com.azquo.toto.service.BusinessService;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
@@ -41,10 +42,10 @@ public class NameController {
     //public static final String LOWEST = "lowest";
 
     @Autowired
-    private NameService nameService = new NameService();
+    private NameService nameService;
 
     @Autowired
-    private LoginService loginService = new LoginService();
+    private LoginService loginService;
 //    private static final Logger logger = Logger.getLogger(TestController.class);
 
     @RequestMapping

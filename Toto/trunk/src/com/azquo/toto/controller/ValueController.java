@@ -2,10 +2,7 @@ package com.azquo.toto.controller;
 
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Value;
-import com.azquo.toto.service.LoggedInConnection;
-import com.azquo.toto.service.LoginService;
-import com.azquo.toto.service.NameService;
-import com.azquo.toto.service.ValueService;
+import com.azquo.toto.service.*;
 import com.csvreader.CsvReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;

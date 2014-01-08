@@ -16,14 +16,16 @@ public class Database extends StandardEntity {
 
     boolean active;
     Date startDate;
+    int businessId;
     String name;
     int nameCount;
     int valueCount;
 
-    public Database(int id, boolean active, Date startDate, String name, int nameCount, int valueCount) {
+    public Database(int id, boolean active, Date startDate, int businessId, String name, int nameCount, int valueCount) {
         this.id = id;
         this.active = active;
         this.startDate = startDate;
+        this.businessId = businessId;
         this.name = name;
         this.nameCount = nameCount;
         this.valueCount = valueCount;
@@ -43,6 +45,14 @@ public class Database extends StandardEntity {
 
     public void setStartDate(Date startDate) {
         this.startDate = startDate;
+    }
+
+    public int getBusinessId() {
+        return businessId;
+    }
+
+    public void setBusinessId(int businessId) {
+        this.businessId = businessId;
     }
 
     public String getName() {
@@ -72,8 +82,10 @@ public class Database extends StandardEntity {
     @Override
     public String toString() {
         return "Database{" +
-                "active=" + active +
+                "id=" + id +
+                ", active=" + active +
                 ", startDate=" + startDate +
+                ", businessId=" + businessId +
                 ", name='" + name + '\'' +
                 ", nameCount=" + nameCount +
                 ", valueCount=" + valueCount +

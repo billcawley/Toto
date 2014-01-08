@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS `business` (
   `business_name` varchar(255) NOT NULL,
   `parent_id` int(11) NOT NULL,
   `business_details` text NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `business_name` (`business_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
 CREATE TABLE IF NOT EXISTS `user` (
@@ -18,6 +19,8 @@ CREATE TABLE IF NOT EXISTS `user` (
   `email` varchar(255) NOT NULL,
   `name` varchar(255) NOT NULL,
   `status` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `seed` varchar(255) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
@@ -25,6 +28,7 @@ CREATE TABLE IF NOT EXISTS `database` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `active` boolean NOT NULL,
   `start_date` timestamp NOT NULL,
+  `business_id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
   `name_count` int(11) NOT NULL,
   `value_count` int(11) NOT NULL,

@@ -30,6 +30,7 @@
     <bean id="jdbcTemplate" class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
+    <bean name="mySQLDatabaseManager" class="com.azquo.toto.admindao.MySQLDatabaseManager"/>
     <bean name="businessDao" class="com.azquo.toto.admindao.BusinessDAO"/>
     <bean name="userDao" class="com.azquo.toto.admindao.UserDAO"/>
     <bean name="databaseDao" class="com.azquo.toto.admindao.DatabaseDAO"/>
@@ -42,6 +43,7 @@
     <bean name="provenanceService" class="com.azquo.toto.service.ProvenanceService"/>
     <bean name="loginService" class="com.azquo.toto.service.LoginService"/>
     <bean name="importService" class="com.azquo.toto.service.ImportService"/>
+    <bean name="businessService" class="com.azquo.toto.service.BusinessService"/>
     <!-- instantiate the memory db when our connection to MySQL is up :) -->
     <bean name="totoMemoryDB" class="com.azquo.toto.memorydb.TotoMemoryDB">
         <constructor-arg name="databaseName" value="toto"/>
