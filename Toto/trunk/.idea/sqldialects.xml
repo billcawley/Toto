@@ -2,7 +2,6 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/SQL/TOTODBCREATE.sql" dialect="MySQL" />
-    <file url="file://$PROJECT_DIR$/src/com/azquo/toto/dao" dialect="MySQL" />
   </component>
 </project>
 

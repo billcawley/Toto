@@ -1,8 +1,7 @@
 package com.azquo.toto.service;
 
-import com.azquo.toto.dao.ValueDAO;
+import com.azquo.toto.memorydbdao.ValueDAO;
 import com.azquo.toto.memorydb.Provenance;
-import com.azquo.toto.memorydb.Value;
 import com.azquo.toto.memorydb.Name;
 import com.csvreader.CsvReader;
 import org.junit.Before;
