@@ -62,9 +62,20 @@ public class Business extends StandardEntity{
         this.businessDetails = businessDetails;
     }
 
+    @Override
+    public String toString() {
+        return "Business{" +
+                "active=" + active +
+                ", startDate=" + startDate +
+                ", businessName='" + businessName + '\'' +
+                ", parentId=" + parentId +
+                ", businessDetails=" + businessDetails +
+                '}';
+    }
+
     // for Gson mapping, these bits of data will be as gson in the DB. Hence if you want a new one you should just be able to add it here :)
     // Note gson does not need getters and setters, it just goes straight for the fields.
-    public class BusinessDetails{
+    public static class BusinessDetails{
         String address1;
         String address2;
         String address3;
@@ -72,6 +83,16 @@ public class Business extends StandardEntity{
         String postcode;
         String telephone;
         String website;
+
+        public BusinessDetails(String address1, String address2, String address3, String address4, String postcode, String telephone, String website) {
+            this.address1 = address1;
+            this.address2 = address2;
+            this.address3 = address3;
+            this.address4 = address4;
+            this.postcode = postcode;
+            this.telephone = telephone;
+            this.website = website;
+        }
 
         public String getAddress1() {
             return address1;
@@ -126,6 +147,19 @@ public class Business extends StandardEntity{
 
         public void setWebsite(String website) {
             this.website = website;
+        }
+
+        @Override
+        public String toString() {
+            return "BusinessDetails{" +
+                    "address1='" + address1 + '\'' +
+                    ", address2='" + address2 + '\'' +
+                    ", address3='" + address3 + '\'' +
+                    ", address4='" + address4 + '\'' +
+                    ", postcode='" + postcode + '\'' +
+                    ", telephone='" + telephone + '\'' +
+                    ", website='" + website + '\'' +
+                    '}';
         }
     }
 

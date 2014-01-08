@@ -7,6 +7,7 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -61,66 +62,24 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         jdbcTemplate.update(updateSql, namedParams);
     }
 
-    // now always assumes it's been passed an ID
-
     public final void insert(final EntityType entity) throws DataAccessException {
         String columnsCommaList = "";
         String valuesCommaList = "";
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         final Map<String, Object> columnNameValueMap = getColumnNameValueMap(entity);
         for (String columnName : columnNameValueMap.keySet()) {
-            columnsCommaList += "`" + columnName + "`" + ", "; // build the comma separated list for use in the sql
-            valuesCommaList += ":" + columnName + ", "; // build the comma separated list for use in the sql
-            namedParams.addValue(columnName, columnNameValueMap.get(columnName));
+            if (!columnName.equals(ID)) { // skip id on insert
+                columnsCommaList += "`" + columnName + "`" + ", "; // build the comma separated list for use in the sql
+                valuesCommaList += ":" + columnName + ", "; // build the comma separated list for use in the sql
+                namedParams.addValue(columnName, columnNameValueMap.get(columnName));
+            }
         }
         columnsCommaList = columnsCommaList.substring(0, columnsCommaList.length() - 2); //trim the last ", "
         valuesCommaList = valuesCommaList.substring(0, valuesCommaList.length() - 2); //trim the last ", "
         final String insertSql = "INSERT INTO `" + MASTER_DB + "`.`" + getTableName() + "` (" + columnsCommaList + ") VALUES (" + valuesCommaList + ")";
-        jdbcTemplate.update(insertSql, namedParams);
-    }
-
-    // inspired by value but could be used for a lot
-
-    public final void bulkInsert(final Set<EntityType> entities) throws DataAccessException {
-        if (!entities.isEmpty()){
-            long track = System.currentTimeMillis();
-
-            final EntityType first = entities.iterator().next();
-
-            String columnsCommaList = "";
-            Map<String, Object> columnNameValueMap = getColumnNameValueMap(first);
-            final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-
-            for (String columnName : columnNameValueMap.keySet()) {
-                columnsCommaList += "`" + columnName + "`" + ", "; // build the comma separated list for use in the sql
-            }
-
-            columnsCommaList = columnsCommaList.substring(0, columnsCommaList.length() - 2); //trim the last ", "
-            final StringBuilder insertSql = new StringBuilder();
-
-            insertSql.append("INSERT INTO `").append(MASTER_DB).append("`.`").append(getTableName()).append("` (").append(columnsCommaList).append(") VALUES ");
-
-            int count = 1;
-
-            for(EntityType entity : entities){
-
-
-                columnNameValueMap = getColumnNameValueMap(entity);
-                insertSql.append("(");
-                for (String columnName : columnNameValueMap.keySet()) {
-                    insertSql.append(":").append(columnName).append(count).append(", "); // build the comma separated list for use in the sql
-                    namedParams.addValue(columnName + count, columnNameValueMap.get(columnName));
-                }
-                insertSql.delete(insertSql.length() - 2, insertSql.length());
-                insertSql.append("), ");
-                count++;
-            }
-
-            insertSql.delete(insertSql.length() - 2, insertSql.length());
-            System.out.println(insertSql.toString());
-            jdbcTemplate.update(insertSql.toString(), namedParams);
-            System.out.println("bulk inserted " + entities.size() + " " + first.getClass().getName() + " objects in " + (System.currentTimeMillis() - track));
-        }
+        final GeneratedKeyHolder keyHolder = new GeneratedKeyHolder(); // to get the id back
+        jdbcTemplate.update(insertSql, namedParams, keyHolder, new String[]{ID});
+        entity.setId(keyHolder.getKey().intValue());
     }
 
     public final void store(final EntityType entity) throws DataAccessException {
@@ -131,14 +90,12 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         }
     }
 
-    // TODO - deal with delete
-
-/*    public final void removeById(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
+    public final void removeById(final EntityType entity) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue("id", entity.getId());
         final String SQL_DELETE = "DELETE  from `" + MASTER_DB + "`.`" + getTableName() + "` where " + ID + " = :" + ID;
         jdbcTemplate.update(SQL_DELETE, namedParams);
-    }*/
+    }
 
     public final EntityType findById(int id) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
