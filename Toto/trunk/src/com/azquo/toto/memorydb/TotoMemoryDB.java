@@ -1,7 +1,8 @@
 package com.azquo.toto.memorydb;
 
-import com.azquo.toto.dao.ProvenanceDAO;
-import com.azquo.toto.dao.ValueDAO;
+import com.azquo.toto.memorydbdao.NameDAO;
+import com.azquo.toto.memorydbdao.ProvenanceDAO;
+import com.azquo.toto.memorydbdao.ValueDAO;
 
 import java.util.*;
 

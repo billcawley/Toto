@@ -1,4 +1,4 @@
-package com.azquo.toto.dao;
+package com.azquo.toto.memorydbdao;
 
 import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.TotoMemoryDB;

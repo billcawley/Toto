@@ -1,4 +1,4 @@
-package com.azquo.toto.dao;
+package com.azquo.toto.memorydbdao;
 
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Value;
