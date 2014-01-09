@@ -68,7 +68,7 @@ public class BusinessDAO extends StandardDAO<Business>{
     public Business findByName(String businessName){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSNAME, businessName);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + MASTER_DB + "`.`" + getTableName() + "`." + BUSINESSNAME + "` = :" + BUSINESSNAME, namedParams);
+        return findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSNAME + "` = :" + BUSINESSNAME, namedParams);
     }
 
 }

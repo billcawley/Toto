@@ -70,12 +70,12 @@ public class UserDAO extends StandardDAO<User>{
     public User findByEmail(String email){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(EMAIL, email);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + MASTER_DB + "`.`" + getTableName() + "`." + EMAIL + "` = :" + EMAIL, namedParams);
+        return findOneWithWhereSQLAndParameters(" WHERE `" + EMAIL + "` = :" + EMAIL, namedParams);
     }
 
     public List<User> findForBusinessId(int businessId){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(BUSINESSID, BUSINESSID);
+        namedParams.addValue(BUSINESSID, businessId);
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
 

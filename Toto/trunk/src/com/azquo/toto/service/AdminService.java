@@ -52,6 +52,10 @@ public class AdminService {
         if (business != null && business.getBusinessDetails().getValidationKey().equals(key)){
             business.setActive(true);
             businessDao.store(business);
+            User user = userDao.findForBusinessId(business.getId()).get(0);
+            user.setActive(true);
+            userDao.store(user);
+            return true;
         }
         return false;
     }
