@@ -64,7 +64,7 @@ public class AccessDAO extends StandardDAO<Access>{
 
     public List<Access> findForUserId(int userId){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(USERID, USERID);
+        namedParams.addValue(USERID, userId);
         return findListWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID, namedParams, false);
     }
 

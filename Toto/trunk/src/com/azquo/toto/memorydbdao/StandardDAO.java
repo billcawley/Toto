@@ -66,7 +66,7 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
     public final void updateById(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
 //        final NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplateFactory.getJDBCTemplateForEntity(entity);
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        String updateSql = "UPDATE `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "` set ";
+        String updateSql = "UPDATE `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "` set ";
         final Map<String, Object> columnNameValueMap = getColumnNameValueMap(entity);
         for (String columnName : columnNameValueMap.keySet()) {
             if (!columnName.equals(ID)) {
@@ -94,7 +94,7 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
         }
         columnsCommaList = columnsCommaList.substring(0, columnsCommaList.length() - 2); //trim the last ", "
         valuesCommaList = valuesCommaList.substring(0, valuesCommaList.length() - 2); //trim the last ", "
-        final String insertSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "` (" + columnsCommaList + ") VALUES (" + valuesCommaList + ")";
+        final String insertSql = "INSERT INTO `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "` (" + columnsCommaList + ") VALUES (" + valuesCommaList + ")";
         jdbcTemplate.update(insertSql, namedParams);
     }
 
@@ -117,7 +117,7 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
             columnsCommaList = columnsCommaList.substring(0, columnsCommaList.length() - 2); //trim the last ", "
             final StringBuilder insertSql = new StringBuilder();
 
-            insertSql.append("INSERT INTO `").append(totoMemoryDB.getDatabaseName()).append("`.`").append(getTableName()).append("` (").append(columnsCommaList).append(") VALUES ");
+            insertSql.append("INSERT INTO `").append(totoMemoryDB.getMySQLName()).append("`.`").append(getTableName()).append("` (").append(columnsCommaList).append(") VALUES ");
 
             int count = 1;
 
@@ -154,14 +154,14 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
 /*    public final void removeById(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue("id", entity.getId());
-        final String SQL_DELETE = "DELETE  from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "` where " + ID + " = :" + ID;
+        final String SQL_DELETE = "DELETE  from `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "` where " + ID + " = :" + ID;
         jdbcTemplate.update(SQL_DELETE, namedParams);
     }*/
 
     public final EntityType findById(final TotoMemoryDB totoMemoryDB, int id) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue("id", id);
-        final String FIND_BY_ID = "Select * from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "` where " + ID + " = :" + ID;
+        final String FIND_BY_ID = "Select * from `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "` where " + ID + " = :" + ID;
         final List<EntityType> results = jdbcTemplate.query(FIND_BY_ID, namedParams, getRowMapper(totoMemoryDB));
 
         if (results.size() == 0) {
@@ -190,10 +190,10 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
             throw new InvalidDataAccessApiUsageException("Error, limit in SQL select greater than : " + SELECTLIMIT);
         }
         if (lookupById) {
-            final String SQL_SELECT = "Select `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`." + ID + " from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
+            final String SQL_SELECT = "Select `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`." + ID + " from `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
             return jdbcTemplate.query(SQL_SELECT, namedParams, new StandardEntityByIdRowMapper(totoMemoryDB));
         } else {
-            final String SQL_SELECT_ALL = "Select `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`.* from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;;
+            final String SQL_SELECT_ALL = "Select `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`.* from `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;;
             return jdbcTemplate.query(SQL_SELECT_ALL, namedParams, getRowMapper(totoMemoryDB));
         }
     }
@@ -201,14 +201,14 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
 
 /*    public final EntityType findOneWithWhereSQLAndParameters(final TotoMemoryDB totoMemoryDB, final String whereCondition, final MapSqlParameterSource namedParams, final boolean lookupById) throws DataAccessException {
         if (lookupById) {
-            final String SQL_SELECT = "Select `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`." + ID + " from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
+            final String SQL_SELECT = "Select `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`." + ID + " from `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
             final List<EntityType> results = jdbcTemplate.query(SQL_SELECT, namedParams, new StandardEntityByIdRowMapper(totoMemoryDB));
             if (results.size() == 0) {
                 return null;
             }
             return results.get(0);
         } else {
-            final String SQL_SELECT_ALL = "Select `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`.* from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
+            final String SQL_SELECT_ALL = "Select `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`.* from `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
             final List<EntityType> results = jdbcTemplate.query(SQL_SELECT_ALL, namedParams, getRowMapper(totoMemoryDB));
             if (results.size() == 0) {
                 return null;

@@ -50,18 +50,25 @@ public class LoginService {
                 // ok user should be ok :)
                 List<Access> userAccess = accessDao.findForUserId(user.getId());
                 Map<String, Database> okDatabases = new HashMap<String, Database>();
-
-                for (Access access : userAccess){
-                    if (access.getActive()){
-                        Database database = databaseDao.findById(access.getDatabaseId());
+                if (user.isAdministrator()){ // automatically has all dbs regardless of access
+                    for (Database database : databaseDao.findForBusinessId(user.getBusinessId())){
                         if (database.getActive()){
                             okDatabases.put(database.getName(), database);
                         }
                     }
+                } else {
+                    for (Access access : userAccess){
+                        if (access.getActive()){
+                            Database database = databaseDao.findById(access.getDatabaseId());
+                            if (database.getActive()){
+                                okDatabases.put(database.getName(), database);
+                            }
+                        }
+                    }
                 }
 
-                TotoMemoryDB memoryDB = null;
 
+                TotoMemoryDB memoryDB = null;
                 if (okDatabases.size() == 1){
                     memoryDB = memoryDBManager.getTotoMemoryDB(okDatabases.values().iterator().next());
                 } else {

@@ -1,5 +1,6 @@
 package com.azquo.toto.memorydb;
 
+import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.memorydbdao.NameDAO;
 import com.azquo.toto.memorydbdao.ProvenanceDAO;
 import com.azquo.toto.memorydbdao.ValueDAO;
@@ -32,7 +33,7 @@ public final class TotoMemoryDB {
 
     private boolean needsLoading;
 
-    private final String databaseName;
+    private final Database database;
 
     private int maxIdAtLoad;
     private int nextId;
@@ -43,8 +44,8 @@ public final class TotoMemoryDB {
     private Set<Value> valuesNeedPersisting;
     private Set<Provenance> provenanceNeedsPersisting;
 
-    public TotoMemoryDB(String databaseName, NameDAO nameDAO, ValueDAO valueDAO, ProvenanceDAO provenanceDAO) throws Exception {
-        this.databaseName = databaseName;
+    public TotoMemoryDB(Database database, NameDAO nameDAO, ValueDAO valueDAO, ProvenanceDAO provenanceDAO) throws Exception {
+        this.database = database;
         this.nameDAO = nameDAO;
         this.valueDAO = valueDAO;
         this.provenanceDAO = provenanceDAO;
@@ -60,9 +61,13 @@ public final class TotoMemoryDB {
         loadData();
         nextId = maxIdAtLoad + 1;
     }
+    // convenience
+    public String getMySQLName() {
+        return database.getMySQLName();
+    }
 
-    public String getDatabaseName() {
-        return databaseName;
+    public Database getDatabase() {
+        return database;
     }
 
     public boolean getNeedsLoading() {

@@ -91,7 +91,7 @@ public final class ValueDAO extends StandardDAO<Value> {
     // for speed
 /*    public boolean linkValueToNames(final TotoMemoryDB totoMemoryDB, final Value value) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUENAME + "` (`" + VALUEID + "`,`" + NAMEID + "`) VALUES ";
+        String updateSql = "INSERT INTO `" + totoMemoryDB.getMySQLName() + "`.`" + VALUENAME + "` (`" + VALUEID + "`,`" + NAMEID + "`) VALUES ";
         int count = 1;
         for (Name name : value.getNames()) {
             // I'm taking off the check - I think it's so rare we'll just let the DB complain
@@ -112,7 +112,7 @@ public final class ValueDAO extends StandardDAO<Value> {
         long track = System.currentTimeMillis();
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         final StringBuilder updateSql = new StringBuilder();
-        updateSql.append("INSERT INTO `").append(totoMemoryDB.getDatabaseName()).append("`.`").append(VALUENAME).append("` (`").append(VALUEID).append("`,`").append(NAMEID).append("`) VALUES ");
+        updateSql.append("INSERT INTO `").append(totoMemoryDB.getMySQLName()).append("`.`").append(VALUENAME).append("` (`").append(VALUEID).append("`,`").append(NAMEID).append("`) VALUES ");
         int count = 1;
         for(Value value : values){
             for (Name name : value.getNames()) {
@@ -132,7 +132,7 @@ public final class ValueDAO extends StandardDAO<Value> {
 /*    public boolean unlinkValueFromNames(final TotoMemoryDB totoMemoryDB, final Value value) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(VALUEID, value.getId());
-        String updateSql = "Delete from `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUENAME + "` where `" + VALUEID + "` = :" + VALUEID;
+        String updateSql = "Delete from `" + totoMemoryDB.getMySQLName() + "`.`" + VALUENAME + "` where `" + VALUEID + "` = :" + VALUEID;
         jdbcTemplate.update(updateSql, namedParams);
         return true;
     }*/
@@ -141,7 +141,7 @@ public final class ValueDAO extends StandardDAO<Value> {
         long track = System.currentTimeMillis();
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         final StringBuilder updateSql = new StringBuilder();
-        updateSql.append("Delete from `").append(totoMemoryDB.getDatabaseName()).append("`.`").append(VALUENAME).append("` where ");
+        updateSql.append("Delete from `").append(totoMemoryDB.getMySQLName()).append("`.`").append(VALUENAME).append("` where ");
         int count = 1;
         for (Value value : values) {
             // I'm taking off the check - I think it's so rare we'll just let the DB complain
@@ -155,9 +155,9 @@ public final class ValueDAO extends StandardDAO<Value> {
         return true;
     }
 
-/*    public void setDeleted(String totoMemoryDB.getDatabaseName(), Value value) {
+/*    public void setDeleted(String totoMemoryDB.getMySQLName(), Value value) {
         value.setDeleted(true);
-        store(totoMemoryDB.getDatabaseName(), value);
+        store(totoMemoryDB.getMySQLName(), value);
     }*/
 
    // for loading into the memory db
@@ -166,7 +166,7 @@ public final class ValueDAO extends StandardDAO<Value> {
 
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(VALUEID, value.getId());
-        final String FIND_EXISTING_LINK = "Select `" + NAMEID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUENAME + "` where `" + VALUEID + "` = :" + VALUEID;
+        final String FIND_EXISTING_LINK = "Select `" + NAMEID + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + VALUENAME + "` where `" + VALUEID + "` = :" + VALUEID;
         return jdbcTemplate.queryForList(FIND_EXISTING_LINK, namedParams, Integer.class);
 
     }*/
@@ -174,7 +174,7 @@ public final class ValueDAO extends StandardDAO<Value> {
     public List<String> findAllValueNameLinksOrderByValue(final TotoMemoryDB totoMemoryDB) {
 
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        final String FIND_EXISTING_LINK = "Select `" + VALUEID + "`,`" + NAMEID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + VALUENAME + "` order by `" + VALUEID + "`";
+        final String FIND_EXISTING_LINK = "Select `" + VALUEID + "`,`" + NAMEID + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + VALUENAME + "` order by `" + VALUEID + "`";
         return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedIdsRowMapper());
 
     }

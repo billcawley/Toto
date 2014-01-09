@@ -139,7 +139,7 @@ public final class NameDAO extends StandardDAO<Name> {
         namedParams.addValue(PEERID, peer.getId());
         namedParams.addValue(POSITION, position);
         namedParams.addValue(ADDITIVE, additive);
-        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + PEERSETDEFINTION + "` (`" + NAMEID + "`,`" + PEERID + "`,`" + POSITION + "`,`" + ADDITIVE + "`) VALUES (:" + NAMEID + ",:" + PEERID + ",:" + POSITION + ",:" + ADDITIVE + ")";
+        String updateSql = "INSERT INTO `" + totoMemoryDB.getMySQLName() + "`.`" + PEERSETDEFINTION + "` (`" + NAMEID + "`,`" + PEERID + "`,`" + POSITION + "`,`" + ADDITIVE + "`) VALUES (:" + NAMEID + ",:" + PEERID + ",:" + POSITION + ",:" + ADDITIVE + ")";
         jdbcTemplate.update(updateSql, namedParams);
         return true;
     }
@@ -150,7 +150,7 @@ public final class NameDAO extends StandardDAO<Name> {
         namedParams.addValue(NAMEID, name.getId());
         namedParams.addValue(ATTRIBUTENAME, attributeName);
         namedParams.addValue(ATTRIBUTEVALUE, attributeValue);
-        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMEATTRIBUTE + "` (`" + NAMEID + "`,`" + ATTRIBUTENAME + "`,`" + ATTRIBUTEVALUE + "`) VALUES (:" + NAMEID + ",:" + ATTRIBUTENAME + ",:" + ATTRIBUTEVALUE + ")";
+        String updateSql = "INSERT INTO `" + totoMemoryDB.getMySQLName() + "`.`" + NAMEATTRIBUTE + "` (`" + NAMEID + "`,`" + ATTRIBUTENAME + "`,`" + ATTRIBUTEVALUE + "`) VALUES (:" + NAMEID + ",:" + ATTRIBUTENAME + ",:" + ATTRIBUTEVALUE + ")";
         jdbcTemplate.update(updateSql, namedParams);
         return true;
     }
@@ -159,7 +159,7 @@ public final class NameDAO extends StandardDAO<Name> {
     public boolean linkParentAndChildren(final TotoMemoryDB totoMemoryDB, final Name parent) throws DataAccessException {
 
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        String updateSql = "INSERT INTO `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMESETDEFINTION + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES ";
+        String updateSql = "INSERT INTO `" + totoMemoryDB.getMySQLName() + "`.`" + NAMESETDEFINTION + "` (`" + PARENTID + "`,`" + CHILDID + "`,`" + POSITION + "`) VALUES ";
         int count = 1;
         for (Name child : parent.getChildren()) {
             // I'm taking off the check - I think it's so rare we'll just let the DB complain
@@ -179,20 +179,20 @@ public final class NameDAO extends StandardDAO<Name> {
     public int unlinkAllChildrenForParent(final TotoMemoryDB totoMemoryDB, final Name parent) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PARENTID, parent.getId());
-        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMESETDEFINTION + "` where `" + PARENTID + "` = :" + PARENTID;
+        String updateSql = "DELETE from `" + totoMemoryDB.getMySQLName() + "`.`" + NAMESETDEFINTION + "` where `" + PARENTID + "` = :" + PARENTID;
         return jdbcTemplate.update(updateSql, namedParams);
     }
 
     public int unlinkAllPeersForName(final TotoMemoryDB totoMemoryDB, final Name name) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(NAMEID, name.getId());
-        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + PEERSETDEFINTION + "` where `" + NAMEID + "` = :" + NAMEID;
+        String updateSql = "DELETE from `" + totoMemoryDB.getMySQLName() + "`.`" + PEERSETDEFINTION + "` where `" + NAMEID + "` = :" + NAMEID;
         return jdbcTemplate.update(updateSql, namedParams);
     }
     public int unlinkAllAttributesForName(final TotoMemoryDB totoMemoryDB, final Name name) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(NAMEID, name.getId());
-        String updateSql = "DELETE from `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMEATTRIBUTE + "` where `" + NAMEID + "` = :" + NAMEID;
+        String updateSql = "DELETE from `" + totoMemoryDB.getMySQLName() + "`.`" + NAMEATTRIBUTE + "` where `" + NAMEID + "` = :" + NAMEID;
         return jdbcTemplate.update(updateSql, namedParams);
     }
 
@@ -201,20 +201,20 @@ FROM `name_set_definition`
 ORDER BY parent_id, position*/
     public List<String> findAllParentChildLinksOrderByParentIdPosition(final TotoMemoryDB totoMemoryDB) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        final String FIND_EXISTING_LINK = "Select `" + PARENTID + "`,`" + CHILDID + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMESETDEFINTION + "` order by `" + PARENTID + "`,`" + POSITION + "`";
+        final String FIND_EXISTING_LINK = "Select `" + PARENTID + "`,`" + CHILDID + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + NAMESETDEFINTION + "` order by `" + PARENTID + "`,`" + POSITION + "`";
         return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedParentNameIdsRowMapper());
 
     }
 
     public List<String> findAllPeerLinksOrderByNameIdPosition(final TotoMemoryDB totoMemoryDB) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        final String FIND_EXISTING_LINK = "Select `" + NAMEID + "`,`" + PEERID + "`,`" + ADDITIVE + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + PEERSETDEFINTION + "` order by `" + NAMEID + "`,`" + POSITION + "`";
+        final String FIND_EXISTING_LINK = "Select `" + NAMEID + "`,`" + PEERID + "`,`" + ADDITIVE + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + PEERSETDEFINTION + "` order by `" + NAMEID + "`,`" + POSITION + "`";
         return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedNamePeerIdsRowMapper());
 
     }
     public List<String> findAllAttributeLinksOrderByNameId(final TotoMemoryDB totoMemoryDB) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        final String FIND_EXISTING_LINK = "Select `" + NAMEID + "`,`" + ATTRIBUTENAME + "`,`" + ATTRIBUTEVALUE + "` from `" + totoMemoryDB.getDatabaseName() + "`.`" + NAMEATTRIBUTE + "` order by `" + NAMEID + "`";
+        final String FIND_EXISTING_LINK = "Select `" + NAMEID + "`,`" + ATTRIBUTENAME + "`,`" + ATTRIBUTEVALUE + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + NAMEATTRIBUTE + "` order by `" + NAMEID + "`";
         return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedNameAttribute());
 
     }

@@ -86,13 +86,14 @@ public class AdminController {
                 }
             }
             if(op.equalsIgnoreCase(DATABASELIST)){
-                if (businessName != null && businessName.length() > 0){
-                    return gson.toJson(adminService.getDatabaseListForBusiness(businessName));
-                }
+                    return gson.toJson(adminService.getDatabaseListForBusiness(loggedInConnection));
             }
             if(op.equalsIgnoreCase(USERLIST)){
-                if (businessName != null && businessName.length() > 0){
-                    return gson.toJson(adminService.getDatabaseListForBusiness(businessName));
+                    return gson.toJson(adminService.getUserListForBusiness(loggedInConnection));
+            }
+            if(op.equalsIgnoreCase(ACCESSLIST)){
+                if (email != null && email.length() > 0){
+                    return gson.toJson(adminService.getAccessList(loggedInConnection,email));
                 }
             }
 

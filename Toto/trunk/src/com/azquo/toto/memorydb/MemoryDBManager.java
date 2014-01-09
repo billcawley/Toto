@@ -33,7 +33,7 @@ public final class MemoryDBManager {
         memoryDatabaseMap = new HashMap<String, TotoMemoryDB>(); // by ID I think
         List<Database> databases = databaseDAO.findAll();
         for (Database database : databases){
-            TotoMemoryDB totoMemoryDB = new TotoMemoryDB(database.getMySQLName(), nameDAO, valueDAO, provenanceDAO);
+            TotoMemoryDB totoMemoryDB = new TotoMemoryDB(database, nameDAO, valueDAO, provenanceDAO);
             memoryDatabaseMap.put(database.getMySQLName(), totoMemoryDB);
         }
     }

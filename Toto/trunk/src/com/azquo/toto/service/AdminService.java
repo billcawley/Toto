@@ -71,7 +71,6 @@ public class AdminService {
 
     public boolean createDatabase(String databaseName, LoggedInConnection loggedInConnection) throws IOException {
 
-        // TODO : check security!!
         if (loggedInConnection.getUser().isAdministrator()){
             String mysqlName = getSQLDatabaseName(loggedInConnection,databaseName);
             Business b = businessDao.findById(loggedInConnection.getUser().getBusinessId());
@@ -86,18 +85,22 @@ public class AdminService {
 
     public boolean createUser(String email, String userName, String status,String password, LoggedInConnection loggedInConnection) throws IOException {
 
-        // TODO : check security!!
-        String salt = shaHash(System.currentTimeMillis() + "salt");
-        User user = new User(0, false, new Date(),123, email, userName, "registered", encrypt(password, salt), salt);
-        return true;
+        if (loggedInConnection.getUser().isAdministrator()){
+            String salt = shaHash(System.currentTimeMillis() + "salt");
+            User user = new User(0, true, new Date(),loggedInConnection.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt);
+            userDao.store(user);
+            return true;
+        }
+        return false;
     }
 
     public boolean createUserAccess(String email, String readList,String writeList, LoggedInConnection loggedInConnection) throws IOException {
-
-        // TODO : check security and we need the db id from the connection id
-        Access access = new Access(0, true, new Date(), userDao.findByEmail(email).getId(), 0, readList,writeList);
-        accessDao.store(access);
-        return true;
+        if (loggedInConnection.getUser().isAdministrator() && loggedInConnection.getTotoMemoryDB() != null){ // actually have a DB selected
+            Access access = new Access(0, true, new Date(), userDao.findByEmail(email).getId(), loggedInConnection.getTotoMemoryDB().getDatabase().getId(), readList,writeList);
+            accessDao.store(access);
+            return true;
+        }
+        return false;
     }
 
     //variation on a function I've used before
@@ -151,23 +154,27 @@ public class AdminService {
     }
 
 
-    public List<Database> getDatabaseListForBusiness(String businessName) {
-        Business b = businessDao.findByName(businessName);
-        if (b != null){
-            return databaseDao.findForBusinessId(b.getId());
+    public List<Database> getDatabaseListForBusiness(LoggedInConnection loggedInConnection) {
+        if (loggedInConnection.getUser().isAdministrator()){
+            return databaseDao.findForBusinessId(loggedInConnection.getUser().getBusinessId());
         }
         return null;
     }
 
-    public List<User> getUserListForBusiness(String businessName) {
-        Business b = businessDao.findByName(businessName);
-        if (b != null){
-            return userDao.findForBusinessId(b.getId());
+    public List<User> getUserListForBusiness(LoggedInConnection loggedInConnection) {
+        if (loggedInConnection.getUser().isAdministrator()){
+            return userDao.findForBusinessId(loggedInConnection.getUser().getBusinessId());
         }
         return null;
     }
 
-    public List<Access> getAccessList(LoggedInConnection lic) {
-        return accessDao.findForUserId(1);
+    public List<Access> getAccessList(LoggedInConnection loggedInConnection, String userEmail) {
+        if (loggedInConnection.getUser().isAdministrator()){
+            User user = userDao.findByEmail(userEmail);
+            if (user != null && user.getBusinessId() == loggedInConnection.getUser().getBusinessId()){ // we can show access for that user
+                return accessDao.findForUserId(user.getId());
+            }
+        }
+        return null;
     }
 }
