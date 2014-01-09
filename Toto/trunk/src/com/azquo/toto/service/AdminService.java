@@ -61,13 +61,20 @@ public class AdminService {
         return false;
     }
 
+    public String getSQLDatabaseName(LoggedInConnection loggedInConnection, String databaseName) {
+        Business b = businessDao.findById(loggedInConnection.getUser().getBusinessId());
+        String mysqlName = b.getBusinessName().substring(0,5) + "_" + databaseName;
+        return mysqlName.replaceAll("[^A-Za-z0-9]", "");
+
+
+    }
+
     public boolean createDatabase(String databaseName, LoggedInConnection loggedInConnection) throws IOException {
 
         // TODO : check security!!
         if (loggedInConnection.getUser().isAdministrator()){
+            String mysqlName = getSQLDatabaseName(loggedInConnection,databaseName);
             Business b = businessDao.findById(loggedInConnection.getUser().getBusinessId());
-            String mysqlName = b.getBusinessName().substring(0,5) + databaseName;
-            mysqlName = mysqlName.replaceAll("[^A-Za-z0-9]", "");
             Database database = new Database(0,true, new Date(), b.getId(), databaseName,mysqlName,0,0);
             mySQLDatabaseManager.createNewDatabase(mysqlName);
             databaseDao.store(database);
