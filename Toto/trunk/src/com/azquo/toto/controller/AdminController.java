@@ -1,8 +1,9 @@
 package com.azquo.toto.controller;
 
-import com.azquo.toto.service.BusinessService;
+import com.azquo.toto.service.AdminService;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
+import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,8 +21,11 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @RequestMapping("/Maintain")
 
 public class AdminController {
+
+    private static Gson gson = new Gson();
+
     @Autowired
-    private BusinessService businessService;
+    private AdminService adminService;
     @Autowired
     private LoginService loginService;
 
@@ -31,6 +35,9 @@ public class AdminController {
     private static final String NEWDATABASE = "newdatabase";
     private static final String NEWUSER = "newuser";
     private static final String USERACCESS = "useraccess";
+    private static final String DATABASELIST = "databaselist";
+    private static final String USERLIST = "userlist";
+    private static final String ACCESSLIST = "accesslist";
 
     @RequestMapping
     @ResponseBody
@@ -46,9 +53,9 @@ public class AdminController {
 
         if(op.equalsIgnoreCase(SIGNON)){
             if (key != null && key.length() > 0 && businessName != null && businessName.length() > 0){
-                return businessService.confirmKey(businessName,key) + "";
+                return adminService.confirmKey(businessName,key) + "";
             } else if (email != null && email.length() > 0 && userName != null && userName.length() > 0 && businessName != null && businessName.length() > 0){
-                return businessService.registerBusiness(email,businessName,password,businessName,address1 != null ? address1 : "", address2 != null ? address2 : "",
+                return adminService.registerBusiness(email,businessName,password,businessName,address1 != null ? address1 : "", address2 != null ? address2 : "",
                         address3 != null ? address3 : "", address4 != null ? address4 : "",postcode != null ? postcode : "",telephone != null ? telephone : "");
             }
         } else {
@@ -63,19 +70,29 @@ public class AdminController {
             }
             if(op.equalsIgnoreCase(NEWDATABASE)){
                 if (database != null && database.length() > 0){
-                    return businessService.createDatabase(database, loggedInConnection) + "";
+                    return adminService.createDatabase(database, loggedInConnection) + "";
                 }
             }
             if(op.equalsIgnoreCase(NEWUSER)){
                 if (email != null && email.length() > 0 && userName != null && userName.length() > 0
                         && status != null && status.length() > 0 && password != null && password.length() > 0){
-                    return businessService.createUser(email,userName,status,password, loggedInConnection) + "";
+                    return adminService.createUser(email, userName, status, password, loggedInConnection) + "";
                 }
             }
             if(op.equalsIgnoreCase(USERACCESS)){
                 if (email != null && email.length() > 0 && readList != null && readList.length() > 0
                         && writeList != null && writeList.length() > 0 ){
-                    return businessService.createUserAccess(email,readList,writeList,loggedInConnection) + "";
+                    return adminService.createUserAccess(email, readList, writeList, loggedInConnection) + "";
+                }
+            }
+            if(op.equalsIgnoreCase(DATABASELIST)){
+                if (businessName != null && businessName.length() > 0){
+                    return gson.toJson(adminService.getDatabaseListForBusiness(businessName));
+                }
+            }
+            if(op.equalsIgnoreCase(USERLIST)){
+                if (businessName != null && businessName.length() > 0){
+                    return gson.toJson(adminService.getDatabaseListForBusiness(businessName));
                 }
             }
 

@@ -5,6 +5,7 @@ import com.azquo.toto.adminentities.Access;
 import com.azquo.toto.adminentities.Business;
 import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.User;
+import com.google.gson.Gson;
 import com.sun.accessibility.internal.resources.accessibility_de;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.Date;
 import java.util.Formatter;
+import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
@@ -21,16 +23,16 @@ import java.util.Formatter;
  * Time: 19:31
  * Used for admin functions. Register, validate
  */
-public class BusinessService {
+public class AdminService {
 
     @Autowired
     private BusinessDAO businessDao;
     @Autowired
     private DatabaseDAO databaseDao;
     @Autowired
-    private UserDAO userDAO;
+    private UserDAO userDao;
     @Autowired
-    private AccessDAO accessDAO;
+    private AccessDAO accessDao;
     @Autowired
     MySQLDatabaseManager mySQLDatabaseManager;
 
@@ -40,8 +42,8 @@ public class BusinessService {
         Business business = new Business(0,false,new Date(), businessName,0, bd);
         businessDao.store(business);
         String salt = shaHash(System.currentTimeMillis() + "salt");
-        User user = new User(0, false, new Date(), email, userName, "registered", salt, encrypt(password, salt));
-        userDAO.store(user);
+        User user = new User(0, false, new Date(),business.getId(), email, userName, "registered", salt, encrypt(password, salt));
+        userDao.store(user);
         return key;
     }
 
@@ -67,15 +69,15 @@ public class BusinessService {
 
         // TODO : check security!!
         String salt = shaHash(System.currentTimeMillis() + "salt");
-        User user = new User(0, false, new Date(), email, userName, "registered", salt, encrypt(password, salt));
+        User user = new User(0, false, new Date(),123, email, userName, "registered", salt, encrypt(password, salt));
         return true;
     }
 
     public boolean createUserAccess(String email, String readList,String writeList, LoggedInConnection loggedInConnection) throws IOException {
 
         // TODO : check security and we need the db id from the connection id
-        Access access = new Access(0, true, new Date(), userDAO.findByEmail(email).getId(), 0, readList,writeList);
-        accessDAO.store(access);
+        Access access = new Access(0, true, new Date(), userDao.findByEmail(email).getId(), 0, readList,writeList);
+        accessDao.store(access);
         return true;
     }
 
@@ -130,6 +132,23 @@ public class BusinessService {
     }
 
 
+    public List<Database> getDatabaseListForBusiness(String businessName) {
+        Business b = businessDao.findByName(businessName);
+        if (b != null){
+            return databaseDao.findForBusinessId(b.getId());
+        }
+        return null;
+    }
 
+    public List<User> getUserListForBusiness(String businessName) {
+        Business b = businessDao.findByName(businessName);
+        if (b != null){
+            return userDao.findForBusinessId(b.getId());
+        }
+        return null;
+    }
 
+    public List<Access> getAccessList(LoggedInConnection lic) {
+        return accessDao.findForUserId(1);
+    }
 }

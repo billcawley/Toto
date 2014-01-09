@@ -1,6 +1,7 @@
 package com.azquo.toto.admindao;
 
 import com.azquo.toto.adminentities.Business;
+import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.User;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -8,6 +9,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,6 +25,7 @@ public class UserDAO extends StandardDAO<User>{
 
     public static final String ACTIVE = "active";
     public static final String STARTDATE = "start_date";
+    public static final String BUSINESSID = "business_id";
     public static final String EMAIL = "email";
     public static final String NAME = "name";
     public static final String STATUS = "status";
@@ -35,6 +38,7 @@ public class UserDAO extends StandardDAO<User>{
         toReturn.put(ID, user.getId());
         toReturn.put(ACTIVE, user.getActive());
         toReturn.put(STARTDATE, user.getStartDate());
+        toReturn.put(BUSINESSID, user.getBusinessId());
         toReturn.put(EMAIL, user.getEmail());
         toReturn.put(NAME, user.getName());
         toReturn.put(STATUS, user.getStatus());
@@ -49,7 +53,7 @@ public class UserDAO extends StandardDAO<User>{
         public User mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new User(rs.getInt(ID), rs.getBoolean(ACTIVE),rs.getDate(STARTDATE)
+                return new User(rs.getInt(ID), rs.getBoolean(ACTIVE),rs.getDate(STARTDATE),rs.getInt(BUSINESSID)
                         ,rs.getString(EMAIL),rs.getString(NAME), rs.getString(STATUS), rs.getString(PASSWORD), rs.getString(SEED));
             } catch (Exception e) {
                 e.printStackTrace();
@@ -69,5 +73,10 @@ public class UserDAO extends StandardDAO<User>{
         return findOneWithWhereSQLAndParameters(" WHERE `" + MASTER_DB + "`.`" + getTableName() + "`." + EMAIL + "` = :" + EMAIL, namedParams);
     }
 
+    public List<User> findForBusinessId(int businessId){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, BUSINESSID);
+        return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
+    }
 
 }

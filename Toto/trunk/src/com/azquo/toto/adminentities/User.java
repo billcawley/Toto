@@ -8,17 +8,19 @@ import java.util.Date;
 public class User extends StandardEntity{
 
     private boolean active;
-    Date startDate;
-    String email;
-    String name;
-    String status;
-    String password;
-    String seed;
+    private Date startDate;
+    private int businessId;
+    private String email;
+    private String name;
+    private String status;
+    private String password;
+    private String seed;
 
-    public User(int id, boolean active, Date startDate, String email, String name, String status, String password, String seed) {
+    public User(int id, boolean active, Date startDate, int businessId, String email, String name, String status, String password, String seed) {
         this.id = id;
         this.active = active;
         this.startDate = startDate;
+        this.businessId = businessId;
         this.email = email;
         this.name = name;
         this.status = status;
@@ -40,6 +42,14 @@ public class User extends StandardEntity{
 
     public void setStartDate(Date startDate) {
         this.startDate = startDate;
+    }
+
+    public int getBusinessId() {
+        return businessId;
+    }
+
+    public void setBusinessId(int businessId) {
+        this.businessId = businessId;
     }
 
     public String getEmail() {
@@ -88,6 +98,7 @@ public class User extends StandardEntity{
                 "id=" + id +
                 ", active=" + active +
                 ", startDate=" + startDate +
+                ", businessId=" + businessId +
                 ", email='" + email + '\'' +
                 ", name='" + name + '\'' +
                 ", status='" + status + '\'' +

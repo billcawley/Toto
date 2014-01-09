@@ -92,14 +92,14 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
 
     public final void removeById(final EntityType entity) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue("id", entity.getId());
+        namedParams.addValue(ID, entity.getId());
         final String SQL_DELETE = "DELETE  from `" + MASTER_DB + "`.`" + getTableName() + "` where " + ID + " = :" + ID;
         jdbcTemplate.update(SQL_DELETE, namedParams);
     }
 
     public final EntityType findById(int id) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue("id", id);
+        namedParams.addValue(ID, id);
         final String FIND_BY_ID = "Select * from `" + MASTER_DB + "`.`" + getTableName() + "` where " + ID + " = :" + ID;
         final List<EntityType> results = jdbcTemplate.query(FIND_BY_ID, namedParams, getRowMapper());
 

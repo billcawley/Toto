@@ -1,6 +1,5 @@
 package com.azquo.toto.admindao;
 
-import com.azquo.toto.adminentities.Access;
 import com.azquo.toto.adminentities.UploadRecord;
 import org.junit.Test;
 import org.junit.runner.RunWith;

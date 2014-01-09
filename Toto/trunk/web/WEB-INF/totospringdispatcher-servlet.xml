@@ -40,22 +40,22 @@
     <bean name="nameService" class="com.azquo.toto.service.NameService"/>
     <bean name="valueDao" class="com.azquo.toto.memorydbdao.ValueDAO"/>
     <bean name="valueService" class="com.azquo.toto.service.ValueService"/>
-    <bean name="provenanceDAO" class="com.azquo.toto.memorydbdao.ProvenanceDAO"/>
+    <bean name="provenanceDao" class="com.azquo.toto.memorydbdao.ProvenanceDAO"/>
     <bean name="provenanceService" class="com.azquo.toto.service.ProvenanceService"/>
     <bean name="loginService" class="com.azquo.toto.service.LoginService"/>
     <bean name="importService" class="com.azquo.toto.service.ImportService"/>
-    <bean name="businessService" class="com.azquo.toto.service.BusinessService"/>
+    <bean name="businessService" class="com.azquo.toto.service.AdminService"/>
     <!-- instantiate the memory db when our connection to MySQL is up :) -->
     <bean name="totoMemoryDB" class="com.azquo.toto.memorydb.TotoMemoryDB">
         <constructor-arg name="databaseName" value="toto"/>
         <constructor-arg type="com.azquo.toto.memorydbdao.NameDAO" ref="nameDao"/>
         <constructor-arg type="com.azquo.toto.memorydbdao.ValueDAO" ref="valueDao"/>
-        <constructor-arg type="com.azquo.toto.memorydbdao.ProvenanceDAO" ref="provenanceDAO"/>
+        <constructor-arg type="com.azquo.toto.memorydbdao.ProvenanceDAO" ref="provenanceDao"/>
     </bean>
     <bean name="IMFMemoryDB" class="com.azquo.toto.memorydb.TotoMemoryDB">
         <constructor-arg name="databaseName" value="totoexport"/>
         <constructor-arg type="com.azquo.toto.memorydbdao.NameDAO" ref="nameDao"/>
         <constructor-arg type="com.azquo.toto.memorydbdao.ValueDAO" ref="valueDao"/>
-        <constructor-arg type="com.azquo.toto.memorydbdao.ProvenanceDAO" ref="provenanceDAO"/>
+        <constructor-arg type="com.azquo.toto.memorydbdao.ProvenanceDAO" ref="provenanceDao"/>
     </bean>
 </beans>

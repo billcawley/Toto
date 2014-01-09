@@ -23,11 +23,11 @@ public class UserDAOTest {
     @Test
     public void testBasics() throws Exception {
 
-        User u = new User(0, true, new Date(),"user email", "the user name","their status", "password thing", " password seed");
+        User u = new User(0, true, new Date(),1,"user email", "the user name","their status", "password thing", " password seed");
         System.out.println("id before insert : " + u.getId());
         userDAO.store(u);
         System.out.println("id after insert : " + u.getId());
         System.out.println(userDAO.findById(u.getId()));
-        userDAO.removeById(u);
+        //userDAO.removeById(u);
     }
 }

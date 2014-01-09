@@ -2,11 +2,13 @@ package com.azquo.toto.admindao;
 
 import com.azquo.toto.adminentities.Database;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -58,5 +60,11 @@ public class DatabaseDAO extends StandardDAO<Database>{
     @Override
     public RowMapper<Database> getRowMapper() {
         return new DatabaseRowMapper();
+    }
+
+    public List<Database> findForBusinessId(int businessId){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, BUSINESSID);
+        return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
 }

@@ -1,11 +1,14 @@
 package com.azquo.toto.admindao;
 
 import com.azquo.toto.adminentities.Access;
+import com.azquo.toto.adminentities.User;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -58,4 +61,11 @@ public class AccessDAO extends StandardDAO<Access>{
     public RowMapper<Access> getRowMapper() {
         return new AccessRowMapper();
     }
+
+    public List<Access> findForUserId(int userId){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(USERID, USERID);
+        return findListWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID, namedParams, false);
+    }
+
 }
