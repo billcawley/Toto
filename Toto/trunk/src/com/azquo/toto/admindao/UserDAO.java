@@ -30,7 +30,7 @@ public class UserDAO extends StandardDAO<User>{
     public static final String NAME = "name";
     public static final String STATUS = "status";
     public static final String PASSWORD = "password";
-    public static final String SEED = "seed";
+    public static final String SALT = "salt";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(User user){
@@ -43,7 +43,7 @@ public class UserDAO extends StandardDAO<User>{
         toReturn.put(NAME, user.getName());
         toReturn.put(STATUS, user.getStatus());
         toReturn.put(PASSWORD, user.getPassword());
-        toReturn.put(SEED, user.getSeed());
+        toReturn.put(SALT, user.getSalt());
         return toReturn;
     }
 
@@ -54,7 +54,7 @@ public class UserDAO extends StandardDAO<User>{
             // not pretty, just make it work for the moment
             try {
                 return new User(rs.getInt(ID), rs.getBoolean(ACTIVE),rs.getDate(STARTDATE),rs.getInt(BUSINESSID)
-                        ,rs.getString(EMAIL),rs.getString(NAME), rs.getString(STATUS), rs.getString(PASSWORD), rs.getString(SEED));
+                        ,rs.getString(EMAIL),rs.getString(NAME), rs.getString(STATUS), rs.getString(PASSWORD), rs.getString(SALT));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

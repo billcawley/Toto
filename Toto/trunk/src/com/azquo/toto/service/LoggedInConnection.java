@@ -1,5 +1,6 @@
 package com.azquo.toto.service;
 
+import com.azquo.toto.adminentities.User;
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import com.azquo.toto.memorydb.Value;
@@ -20,7 +21,7 @@ public final class LoggedInConnection {
 
     private final String connectionId;
     private final TotoMemoryDB totoMemoryDB;
-    private final String userName;
+    private final User user;
     private Date loginTime;
     private Date lastAccessed;
     private long timeOut;
@@ -35,10 +36,10 @@ public final class LoggedInConnection {
 
     private static final String defaultRegion = "default-region";
 
-    public LoggedInConnection(final String connectionId, final TotoMemoryDB totoMemoryDB, final String userName, long timeOut){
+    public LoggedInConnection(final String connectionId, final TotoMemoryDB totoMemoryDB, final User user, final long timeOut){
         this.connectionId = connectionId;
         this.totoMemoryDB = totoMemoryDB;
-        this.userName = userName;
+        this.user = user;
         loginTime = new Date();
         lastAccessed = new Date();
         rowHeadings = new HashMap<String, List<List<Name>>>();
@@ -64,8 +65,8 @@ public final class LoggedInConnection {
         return totoMemoryDB;
     }
 
-    public String getUserName() {
-        return userName;
+    public User getUser() {
+        return user;
     }
 
     public Date getLoginTime() {

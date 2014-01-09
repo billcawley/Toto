@@ -14,9 +14,9 @@ public class User extends StandardEntity{
     private String name;
     private String status;
     private String password;
-    private String seed;
+    private String salt;
 
-    public User(int id, boolean active, Date startDate, int businessId, String email, String name, String status, String password, String seed) {
+    public User(int id, boolean active, Date startDate, int businessId, String email, String name, String status, String password, String salt) {
         this.id = id;
         this.active = active;
         this.startDate = startDate;
@@ -25,7 +25,7 @@ public class User extends StandardEntity{
         this.name = name;
         this.status = status;
         this.password = password;
-        this.seed = seed;
+        this.salt = salt;
     }
 
     public boolean getActive() {
@@ -84,12 +84,12 @@ public class User extends StandardEntity{
         this.password = password;
     }
 
-    public String getSeed() {
-        return seed;
+    public String getSalt() {
+        return salt;
     }
 
-    public void setSeed(String seed) {
-        this.seed = seed;
+    public void setSalt(String salt) {
+        this.salt= salt;
     }
 
     @Override
@@ -103,7 +103,7 @@ public class User extends StandardEntity{
                 ", name='" + name + '\'' +
                 ", status='" + status + '\'' +
                 ", password='" + password + '\'' +
-                ", seed='" + seed + '\'' +
+                ", salt='" + salt + '\'' +
                 '}';
     }
 }

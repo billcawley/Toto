@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `name` varchar(255) NOT NULL,
   `status` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `seed` varchar(255) NOT NULL,
+  `salt` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS `database` (
   `start_date` timestamp NOT NULL,
   `business_id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
+  `mysql_name` varchar(255) NOT NULL,
   `name_count` int(11) NOT NULL,
   `value_count` int(11) NOT NULL,
   PRIMARY KEY (`id`)

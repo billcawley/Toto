@@ -26,6 +26,7 @@ public class DatabaseDAO extends StandardDAO<Database>{
     public static final String STARTDATE = "start_date";
     public static final String BUSINESSID = "business_id";
     public static final String NAME = "name";
+    public static final String MYSQLNAME = "mysql_name";
     public static final String NAMECOUNT = "name_count";
     public static final String VALUECOUNT = "value_count";
 
@@ -37,6 +38,7 @@ public class DatabaseDAO extends StandardDAO<Database>{
         toReturn.put(STARTDATE, database.getStartDate());
         toReturn.put(BUSINESSID, database.getBusinessId());
         toReturn.put(NAME, database.getName());
+        toReturn.put(MYSQLNAME, database.getMySQLName());
         toReturn.put(NAMECOUNT, database.getNameCount());
         toReturn.put(VALUECOUNT, database.getValueCount());
         return toReturn;
@@ -49,7 +51,7 @@ public class DatabaseDAO extends StandardDAO<Database>{
             // not pretty, just make it work for the moment
             try {
                 return new Database(rs.getInt(ID), rs.getBoolean(ACTIVE),rs.getDate(STARTDATE)
-                        ,rs.getInt(BUSINESSID),rs.getString(NAME),rs.getInt(NAMECOUNT), rs.getInt(VALUECOUNT));
+                        ,rs.getInt(BUSINESSID),rs.getString(NAME),rs.getString(MYSQLNAME),rs.getInt(NAMECOUNT), rs.getInt(VALUECOUNT));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

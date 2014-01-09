@@ -18,15 +18,17 @@ public class Database extends StandardEntity {
     Date startDate;
     int businessId;
     String name;
+    String mySQLName;
     int nameCount;
     int valueCount;
 
-    public Database(int id, boolean active, Date startDate, int businessId, String name, int nameCount, int valueCount) {
+    public Database(int id, boolean active, Date startDate, int businessId, String name, String mySQLName, int nameCount, int valueCount) {
         this.id = id;
         this.active = active;
         this.startDate = startDate;
         this.businessId = businessId;
         this.name = name;
+        this.mySQLName = mySQLName;
         this.nameCount = nameCount;
         this.valueCount = valueCount;
     }
@@ -63,6 +65,14 @@ public class Database extends StandardEntity {
         this.name = name;
     }
 
+    public String getMySQLName() {
+        return mySQLName;
+    }
+
+    public void setMySQLName(String mySQLName) {
+        this.mySQLName = mySQLName;
+    }
+
     public int getNameCount() {
         return nameCount;
     }
@@ -87,6 +97,7 @@ public class Database extends StandardEntity {
                 ", startDate=" + startDate +
                 ", businessId=" + businessId +
                 ", name='" + name + '\'' +
+                ", mySQLName='" + mySQLName + '\'' +
                 ", nameCount=" + nameCount +
                 ", valueCount=" + valueCount +
                 '}';

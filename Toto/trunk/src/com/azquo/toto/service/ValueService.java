@@ -23,9 +23,6 @@ public final class ValueService {
     @Autowired
     private NameService nameService;
 
-    @Autowired
-    private TotoMemoryDB totoMemoryDB;
-
     // set the names in delete info and unlink - best I can come up with at the moment
     public void deleteValue(final Value value) throws Exception {
         String names = "";
@@ -107,7 +104,7 @@ public final class ValueService {
             contextString.append(",");
         }
 
-        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUserName(), new java.util.Date(),"edit data", "excel spraedsheet name here??",rowsString.toString(), columnsString.toString(), contextString.toString());
+        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUser().getName(), new java.util.Date(),"edit data", "excel spraedsheet name here??",rowsString.toString(), columnsString.toString(), contextString.toString());
         Value newValue = new Value(loggedInConnection.getTotoMemoryDB(), provenance, 0, newValueString, null);
         newValue.setNamesWillBePersisted(existingValue.getNames());
         deleteValue(existingValue);
@@ -139,7 +136,7 @@ public final class ValueService {
             contextString.append(",");
         }
 
-        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUserName(), new java.util.Date(),"edit data", "excel spreadsheet name here??",rowsString.toString(), columnsString.toString(), contextString.toString());
+        Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getUser().getName(), new java.util.Date(),"edit data", "excel spreadsheet name here??",rowsString.toString(), columnsString.toString(), contextString.toString());
         storeValueWithProvenanceAndNames(loggedInConnection,newValueString,provenance, names);
         return true;
     }

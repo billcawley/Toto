@@ -14,10 +14,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 public final class ProvenanceService {
 
     @Autowired
-    private TotoMemoryDB totoMemoryDB;
 
     public Provenance getTestProvenance() throws Exception {
-        return new Provenance(totoMemoryDB, "testuser", new java.util.Date(),"testimport", "testuser","rowheadings", "columnheadings", "context");
+        //return new Provenance(totoMemoryDB, "testuser", new java.util.Date(),"testimport", "testuser","rowheadings", "columnheadings", "context");
+        return null;
     }
 
 }

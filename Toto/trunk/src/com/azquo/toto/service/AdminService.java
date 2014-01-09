@@ -59,7 +59,8 @@ public class AdminService {
     public boolean createDatabase(String databaseName, LoggedInConnection loggedInConnection) throws IOException {
 
         // TODO : check security!!
-        Database database = new Database(0,true, new Date(), 123, databaseName,0,0);
+
+        Database database = new Database(0,true, new Date(), 123, databaseName,"mysqlname",0,0);
         mySQLDatabaseManager.createNewDatabase(databaseName);
         databaseDao.store(database);
         return true;
