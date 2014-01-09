@@ -37,9 +37,9 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
     @Autowired
     protected NamedParameterJdbcTemplate jdbcTemplate;
 
-    // call it 100000, might as well go for big selects to populate the memory DB
+    // 10 million select limit for the moment . . .
 
-    private static final int SELECTLIMIT = 100000;
+    private static final int SELECTLIMIT = 10000000;
 
     protected static final String ID = "id";
 

@@ -31,6 +31,7 @@
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
     <bean name="mySQLDatabaseManager" class="com.azquo.toto.admindao.MySQLDatabaseManager"/>
+    <bean name="uploadRecordDao" class="com.azquo.toto.admindao.UploadRecordDAO"/>
     <bean name="businessDao" class="com.azquo.toto.admindao.BusinessDAO"/>
     <bean name="userDao" class="com.azquo.toto.admindao.UserDAO"/>
     <bean name="databaseDao" class="com.azquo.toto.admindao.DatabaseDAO"/>

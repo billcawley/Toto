@@ -46,3 +46,15 @@ CREATE TABLE IF NOT EXISTS `access` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
+CREATE TABLE IF NOT EXISTS `upload_record` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `date` timestamp NOT NULL,
+  `business_id` int(11) NOT NULL,
+  `database_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `file_name` varchar (255) NOT NULL,
+  `file_type` text NOT NULL,
+  `comments` text NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+

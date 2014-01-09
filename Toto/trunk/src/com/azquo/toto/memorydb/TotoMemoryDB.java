@@ -218,6 +218,9 @@ public final class TotoMemoryDB {
                 if (valueId != currentValueId) {
                     if (currentValueId != -1) { // assign ones just passed if not the first
                         Value value = valueByIdMap.get(currentValueId);
+                        if (value == null){
+                            System.out.println("couldn't find value with  id : ");
+                        }
                         value.setNamesWillBePersisted(nameSet);
                     }
                     currentValueId = valueId;
