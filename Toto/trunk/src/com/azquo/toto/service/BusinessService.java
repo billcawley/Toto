@@ -1,13 +1,15 @@
 package com.azquo.toto.service;
 
-import com.azquo.toto.admindao.BusinessDAO;
-import com.azquo.toto.admindao.MySQLDatabaseManager;
-import com.azquo.toto.admindao.UserDAO;
+import com.azquo.toto.admindao.*;
+import com.azquo.toto.adminentities.Access;
 import com.azquo.toto.adminentities.Business;
+import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.User;
+import com.sun.accessibility.internal.resources.accessibility_de;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.Date;
 import java.util.Formatter;
@@ -24,7 +26,11 @@ public class BusinessService {
     @Autowired
     private BusinessDAO businessDao;
     @Autowired
+    private DatabaseDAO databaseDao;
+    @Autowired
     private UserDAO userDAO;
+    @Autowired
+    private AccessDAO accessDAO;
     @Autowired
     MySQLDatabaseManager mySQLDatabaseManager;
 
@@ -46,6 +52,31 @@ public class BusinessService {
             businessDao.store(business);
         }
         return false;
+    }
+
+    public boolean createDatabase(String databaseName, LoggedInConnection loggedInConnection) throws IOException {
+
+        // TODO : check security!!
+        Database database = new Database(0,true, new Date(), 123, databaseName,0,0);
+        mySQLDatabaseManager.createNewDatabase(databaseName);
+        databaseDao.store(database);
+        return true;
+    }
+
+    public boolean createUser(String email, String userName, String status,String password, LoggedInConnection loggedInConnection) throws IOException {
+
+        // TODO : check security!!
+        String salt = shaHash(System.currentTimeMillis() + "salt");
+        User user = new User(0, false, new Date(), email, userName, "registered", salt, encrypt(password, salt));
+        return true;
+    }
+
+    public boolean createUserAccess(String email, String readList,String writeList, LoggedInConnection loggedInConnection) throws IOException {
+
+        // TODO : check security and we need the db id from the connection id
+        Access access = new Access(0, true, new Date(), userDAO.findByEmail(email).getId(), 0, readList,writeList);
+        accessDAO.store(access);
+        return true;
     }
 
     //variation on a function I've used before

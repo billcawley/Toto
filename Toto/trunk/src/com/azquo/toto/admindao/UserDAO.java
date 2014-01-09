@@ -1,7 +1,9 @@
 package com.azquo.toto.admindao;
 
+import com.azquo.toto.adminentities.Business;
 import com.azquo.toto.adminentities.User;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -60,4 +62,12 @@ public class UserDAO extends StandardDAO<User>{
     public RowMapper<User> getRowMapper() {
         return new UserRowMapper();
     }
+
+    public User findByEmail(String email){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(EMAIL, email);
+        return findOneWithWhereSQLAndParameters(" WHERE `" + MASTER_DB + "`.`" + getTableName() + "`." + EMAIL + "` = :" + EMAIL, namedParams);
+    }
+
+
 }

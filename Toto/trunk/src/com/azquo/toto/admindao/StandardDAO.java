@@ -131,10 +131,18 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
             final String SQL_SELECT = "Select `" + MASTER_DB + "`.`" + getTableName() + "`." + ID + " from `" + MASTER_DB + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
             return jdbcTemplate.query(SQL_SELECT, namedParams, new StandardEntityByIdRowMapper());
         } else {
-            final String SQL_SELECT_ALL = "Select `" + MASTER_DB + "`.`" + getTableName() + "`.* from `" + MASTER_DB + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "");
+            final String SQL_SELECT_ALL = "Select `" + MASTER_DB + "`.`" + getTableName() + "`.* from `" + MASTER_DB + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
             return jdbcTemplate.query(SQL_SELECT_ALL, namedParams, getRowMapper());
         }
     }
 
+    public final EntityType findOneWithWhereSQLAndParameters(final String whereCondition, final MapSqlParameterSource namedParams) throws DataAccessException {
+            final String SQL_SELECT_ALL = "Select `" + MASTER_DB + "`.`" + getTableName() + "`.* from `" + MASTER_DB + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
+            final List<EntityType> results = jdbcTemplate.query(SQL_SELECT_ALL, namedParams, getRowMapper());
+            if (results.size() == 0) {
+                return null;
+            }
+            return results.get(0);
+    }
 
 }

@@ -193,7 +193,7 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
             final String SQL_SELECT = "Select `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`." + ID + " from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
             return jdbcTemplate.query(SQL_SELECT, namedParams, new StandardEntityByIdRowMapper(totoMemoryDB));
         } else {
-            final String SQL_SELECT_ALL = "Select `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`.* from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "");
+            final String SQL_SELECT_ALL = "Select `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`.* from `" + totoMemoryDB.getDatabaseName() + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;;
             return jdbcTemplate.query(SQL_SELECT_ALL, namedParams, getRowMapper(totoMemoryDB));
         }
     }
