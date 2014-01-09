@@ -31,7 +31,7 @@ public class User extends StandardEntity{
     }
 
     public boolean isAdministrator(){
-        return status.equals(STATUS_ADMINISTRATOR);
+        return status.equalsIgnoreCase(STATUS_ADMINISTRATOR);
     }
 
     public boolean getActive() {
