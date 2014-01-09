@@ -69,9 +69,9 @@ public class AdminController {
                 return "error:invalid or expired connection id";
             }
             if(op.equalsIgnoreCase(NEWDATABASE)){
-                if (database != null && database.length() > 0){
-                    return adminService.createDatabase(database, loggedInConnection) + "";
-                }
+                    if (database != null && database.length() > 0){
+                        return adminService.createDatabase(database, loggedInConnection) + "";
+                    }
             }
             if(op.equalsIgnoreCase(NEWUSER)){
                 if (email != null && email.length() > 0 && userName != null && userName.length() > 0

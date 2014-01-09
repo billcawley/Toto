@@ -7,6 +7,8 @@ import java.util.Date;
  */
 public class User extends StandardEntity{
 
+    public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
+
     private boolean active;
     private Date startDate;
     private int businessId;
@@ -26,6 +28,10 @@ public class User extends StandardEntity{
         this.status = status;
         this.password = password;
         this.salt = salt;
+    }
+
+    public boolean isAdministrator(){
+        return status.equals(STATUS_ADMINISTRATOR);
     }
 
     public boolean getActive() {

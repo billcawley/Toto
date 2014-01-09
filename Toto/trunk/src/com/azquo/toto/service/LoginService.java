@@ -45,7 +45,6 @@ public class LoginService {
     v.setPassword(PasswordUtils.encrypt(password, salt)); // new better encryption . . .*/
 
         User user = userDao.findByEmail(userEmail);
-
         if (user != null){
             if (AdminService.encrypt(password, user.getSalt()).equals(user.getPassword())){
                 // ok user should be ok :)
@@ -61,18 +60,20 @@ public class LoginService {
                     }
                 }
 
+                TotoMemoryDB memoryDB = null;
+
                 if (okDatabases.size() == 1){
-                    final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "" , memoryDBManager.getTotoMemoryDB(okDatabases.values().iterator().next()), user, timeOutInMinutes * 60 * 1000);
-                    connections.put(lic.getConnectionId(), lic);
-                    return lic;
+                    memoryDB = memoryDBManager.getTotoMemoryDB(okDatabases.values().iterator().next());
                 } else {
                     Database database = okDatabases.get(databaseName);
                     if (database != null){
-                        final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "" , memoryDBManager.getTotoMemoryDB(okDatabases.values().iterator().next()), user, timeOutInMinutes * 60 * 1000);
-                        connections.put(lic.getConnectionId(), lic);
-                        return lic;
+                        memoryDB = memoryDBManager.getTotoMemoryDB(database);
                     }
                 }
+                // could be a null memory db . . .
+                final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "" , memoryDB, user, timeOutInMinutes * 60 * 1000);
+                connections.put(lic.getConnectionId(), lic);
+                return lic;
 
             } else {
                 // say wrong password??

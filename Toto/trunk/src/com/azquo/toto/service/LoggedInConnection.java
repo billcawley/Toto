@@ -20,7 +20,8 @@ import java.util.*;
 public final class LoggedInConnection {
 
     private final String connectionId;
-    private final TotoMemoryDB totoMemoryDB;
+    // ok I am gonna allow DB switching
+    private TotoMemoryDB totoMemoryDB;
     private final User user;
     private Date loginTime;
     private Date lastAccessed;
@@ -63,6 +64,10 @@ public final class LoggedInConnection {
 
     protected TotoMemoryDB getTotoMemoryDB() {
         return totoMemoryDB;
+    }
+
+    protected void setTotoMemoryDB(TotoMemoryDB totoMemoryDB) {
+        this.totoMemoryDB = totoMemoryDB;
     }
 
     public User getUser() {

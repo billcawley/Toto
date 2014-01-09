@@ -42,7 +42,7 @@ public class AdminService {
         Business business = new Business(0,false,new Date(), businessName,0, bd);
         businessDao.store(business);
         String salt = shaHash(System.currentTimeMillis() + "salt");
-        User user = new User(0, false, new Date(),business.getId(), email, userName, "registered", salt, encrypt(password, salt));
+        User user = new User(0, false, new Date(),business.getId(), email, userName, "registered", encrypt(password, salt), salt);
         userDao.store(user);
         return key;
     }
@@ -54,6 +54,7 @@ public class AdminService {
             businessDao.store(business);
             User user = userDao.findForBusinessId(business.getId()).get(0);
             user.setActive(true);
+            user.setStatus(User.STATUS_ADMINISTRATOR);
             userDao.store(user);
             return true;
         }
@@ -63,18 +64,24 @@ public class AdminService {
     public boolean createDatabase(String databaseName, LoggedInConnection loggedInConnection) throws IOException {
 
         // TODO : check security!!
+        if (loggedInConnection.getUser().isAdministrator()){
+            Business b = businessDao.findById(loggedInConnection.getUser().getBusinessId());
+            String mysqlName = b.getBusinessName().substring(0,5) + databaseName;
+            mysqlName = mysqlName.replaceAll("[^A-Za-z0-9]", "");
+            Database database = new Database(0,true, new Date(), b.getId(), databaseName,mysqlName,0,0);
+            mySQLDatabaseManager.createNewDatabase(mysqlName);
+            databaseDao.store(database);
+            return true;
 
-        Database database = new Database(0,true, new Date(), 123, databaseName,"mysqlname",0,0);
-        mySQLDatabaseManager.createNewDatabase(databaseName);
-        databaseDao.store(database);
-        return true;
+        }
+        return false;
     }
 
     public boolean createUser(String email, String userName, String status,String password, LoggedInConnection loggedInConnection) throws IOException {
 
         // TODO : check security!!
         String salt = shaHash(System.currentTimeMillis() + "salt");
-        User user = new User(0, false, new Date(),123, email, userName, "registered", salt, encrypt(password, salt));
+        User user = new User(0, false, new Date(),123, email, userName, "registered", encrypt(password, salt), salt);
         return true;
     }
 
