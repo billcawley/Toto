@@ -79,7 +79,7 @@ public class ImportController {
     }
 
 
-    public String handleRequest(LoggedInConnection loggedInConnection, String fileName, String language, String fileType, String separator, String strCreate)
+    public String handleRequest(final LoggedInConnection loggedInConnection, final String fileName, final String language, final String fileType, String separator, final String strCreate)
             throws Exception{
 
         if (separator == null || separator.length() == 0) separator = "\t";

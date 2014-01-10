@@ -41,9 +41,9 @@ public class ValueController {
     public String handleRequest(@RequestParam(value = "rowheadings", required = false) final String rowheadings, @RequestParam(value = "columnheadings", required = false) final String columnheadings,
                                 @RequestParam(value = "context", required = false) final String context, @RequestParam(value = "connectionid", required = false)  String connectionId,
                                 @RequestParam(value = "region", required = false) String region, @RequestParam(value = "lockmap", required = false) final String lockMap,
-                                @RequestParam(value = "editeddata", required = false) final String editedData, @RequestParam(value = "searchbynames", required = false) String searchByNames,
-                                @RequestParam(value = "jsonfunction", required = false) String jsonfunction, @RequestParam(value = "user", required = false) String user,
-                                @RequestParam(value = "password", required = false) String password, @RequestParam(value = "database", required = false) String database) throws Exception {
+                                @RequestParam(value = "editeddata", required = false) final String editedData, @RequestParam(value = "searchbynames", required = false) final String searchByNames,
+                                @RequestParam(value = "jsonfunction", required = false) final String jsonfunction, @RequestParam(value = "user", required = false) final String user,
+                                @RequestParam(value = "password", required = false) final String password, @RequestParam(value = "database", required = false) final String database) throws Exception {
 
         // these 3 statements copied, should factor
 
@@ -77,8 +77,8 @@ public class ValueController {
 
             if (context != null && context.length() > 0) {
                 //System.out.println("passed context : " + context);
-                StringTokenizer st = new StringTokenizer(context, "\n");
-                List<Name> contextNames = new ArrayList<Name>();
+                final StringTokenizer st = new StringTokenizer(context, "\n");
+                final List<Name> contextNames = new ArrayList<Name>();
                 while (st.hasMoreTokens()){
                     final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim());
                     if (contextName == null) {
@@ -113,22 +113,22 @@ public class ValueController {
                     // going to parse the data here for the moment as parsing is controller stuff
                     // I need to track column and Row
                     int rowCounter = 0;
-                    CsvReader originalReader = new CsvReader(new StringReader(loggedInConnection.getSentDataMap(region)), '\t');
-                    CsvReader editedReader = new CsvReader(new StringReader(editedData), '\t');
-                    CsvReader lockMapReader = new CsvReader(new StringReader(loggedInConnection.getLockMap(region)), '\t');
+                    final CsvReader originalReader = new CsvReader(new StringReader(loggedInConnection.getSentDataMap(region)), '\t');
+                    final CsvReader editedReader = new CsvReader(new StringReader(editedData), '\t');
+                    final CsvReader lockMapReader = new CsvReader(new StringReader(loggedInConnection.getLockMap(region)), '\t');
                     // rows, columns, value lists
-                    List<List<List<Value>>> dataValuesMap = loggedInConnection.getDataValueMap(region);
-                    List<List<Set<Name>>> dataNamesMap = loggedInConnection.getDataNamesMap(region);
+                    final List<List<List<Value>>> dataValuesMap = loggedInConnection.getDataValueMap(region);
+                    final List<List<Set<Name>>> dataNamesMap = loggedInConnection.getDataNamesMap(region);
                     // TODO : deal with mismatched column and row counts
                     int numberOfValuesModified = 0;
                     while (lockMapReader.readRecord()) {
                         int columnCounter = 0;
-                        List<List<Value>> rowValues = dataValuesMap.get(rowCounter);
-                        List<Set<Name>> rowNames = dataNamesMap.get(rowCounter);
+                        final List<List<Value>> rowValues = dataValuesMap.get(rowCounter);
+                        final List<Set<Name>> rowNames = dataNamesMap.get(rowCounter);
                         originalReader.readRecord();
                         editedReader.readRecord();
-                        String[] originalValues = originalReader.getValues();
-                        String[] editedValues = editedReader.getValues();
+                        final String[] originalValues = originalReader.getValues();
+                        final String[] editedValues = editedReader.getValues();
                         for (String locked : lockMapReader.getValues()) {
                             //System.out.println("on " + columnCounter + ", " + rowCounter + " locked : " + locked);
                             // and here we get to the crux, the values do NOT match
@@ -137,10 +137,10 @@ public class ValueController {
                                     System.out.println(columnCounter + ", " + rowCounter + " not locked and modified");
                                     System.out.println(originalValues[columnCounter].trim() + "|" + editedValues[columnCounter] + "|");
 
-                                    List<Value> valuesForCell = rowValues.get(columnCounter);
-                                    Set<Name> namesForCell = rowNames.get(columnCounter);
+                                    final List<Value> valuesForCell = rowValues.get(columnCounter);
+                                    final Set<Name> namesForCell = rowNames.get(columnCounter);
                                     if (valuesForCell.size() == 1) {
-                                        Value theValue = valuesForCell.get(0);
+                                        final Value theValue = valuesForCell.get(0);
                                         System.out.println("trying to overwrite");
                                         valueService.overWriteExistingValue(loggedInConnection, region, theValue, editedValues[columnCounter]);
                                         numberOfValuesModified++;
@@ -168,9 +168,9 @@ public class ValueController {
 
                 System.out.println("search by names : " + searchByNames);
 
-                Set<Name> names = nameService.decodeString(loggedInConnection, searchByNames);
+                final Set<Name> names = nameService.decodeString(loggedInConnection, searchByNames);
                 if (!names.isEmpty()){
-                    String result = valueService.getExcelDataForNamesSearch(names);
+                    final String result = valueService.getExcelDataForNamesSearch(names);
                     if (jsonfunction!=null && jsonfunction.length() > 0){
                         return jsonfunction + "({\"data\": [[\"" + result.replace("\t","\",\"").replace("\n","\"],[\"") + "\"]]})";
                     }else{

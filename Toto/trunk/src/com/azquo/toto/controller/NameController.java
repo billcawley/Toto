@@ -9,7 +9,6 @@ package com.azquo.toto.controller;
  * For the moment it parses instructions for manipulating the name set and calls the name service if the instructions seem correctly formed.
  */
 
-import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
@@ -18,8 +17,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import java.util.*;
 
 @Controller
 @RequestMapping("/Name")
