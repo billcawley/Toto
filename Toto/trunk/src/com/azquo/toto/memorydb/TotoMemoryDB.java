@@ -225,8 +225,9 @@ public final class TotoMemoryDB {
                         Value value = valueByIdMap.get(currentValueId);
                         if (value == null){
                             System.out.println("couldn't find value with  id : ");
+                        } else {
+                            value.setNamesWillBePersisted(nameSet);
                         }
-                        value.setNamesWillBePersisted(nameSet);
                     }
                     currentValueId = valueId;
                     nameSet = new HashSet<Name>();
@@ -253,6 +254,11 @@ public final class TotoMemoryDB {
             for (Value value : allValues) {
                 if (value.getId() > maxIdAtLoad) {
                     maxIdAtLoad = value.getId();
+                }
+            }
+            for (Name name : allNames) {
+                if (name.getId() > maxIdAtLoad) {
+                    maxIdAtLoad = name.getId();
                 }
             }
             needsLoading = false;
