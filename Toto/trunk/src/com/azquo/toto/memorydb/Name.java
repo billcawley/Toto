@@ -21,8 +21,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     // leaving here as a reminder to consider proper logging
     //private static final Logger logger = Logger.getLogger(Name.class.getName());
     // data fields
-    private Provenance provenance;
-//    private String name;
+    private final Provenance provenance;
     private boolean additive;
     private LinkedHashMap<String, String> attributes;
 
@@ -47,11 +46,11 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     // parents is maintained according to children, it isn't persisted in the same way
     // ok no longer dealing with a name check here, it's all done through attributes
 
-    public Name(TotoMemoryDB totoMemoryDB, Provenance provenance, boolean additive) throws Exception {
+    public Name(final TotoMemoryDB totoMemoryDB, final Provenance provenance, final boolean additive) throws Exception {
         this(totoMemoryDB, 0, provenance, additive);
     }
 
-    public Name(TotoMemoryDB totoMemoryDB, int id, Provenance provenance, boolean additive) throws Exception {
+    public Name(final TotoMemoryDB totoMemoryDB, int id, final Provenance provenance, final boolean additive) throws Exception {
         super(totoMemoryDB, id);
         this.provenance = provenance;
         this.additive = additive;
@@ -118,7 +117,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     // needs the db to check the name is not there
 
-    public synchronized void setAdditiveWillBePersisted(boolean additive) throws Exception {
+    public synchronized void setAdditiveWillBePersisted(final boolean additive) throws Exception {
         if (this.additive != additive){
             this.additive = additive;
             entityColumnsChanged = true;
@@ -143,14 +142,14 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     // turns out recreating sets is not so efficient so while the object can accept a new value set it's better too allow it to be changed but not externally
 
-    protected synchronized void addToValues(Value value) throws Exception {
+    protected synchronized void addToValues(final Value value) throws Exception {
         checkDatabaseMatches(value);
         values.add(value);
     }
 
     // turns out recreating sets is not so efficient so while the object can accept a new value set it's better to allow it to be changed but not externally
 
-    protected synchronized void removeFromValues(Value value) throws Exception {
+    protected synchronized void removeFromValues(final Value value) throws Exception {
         checkDatabaseMatches(value);// even if not needed throw the damn exception!
         values.remove(value); // it changed the set
     }
@@ -179,7 +178,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         Set<Name> foundAtCurrentLevel = parents;
         while (!foundAtCurrentLevel.isEmpty()) {
             allParents.addAll(foundAtCurrentLevel);
-            Set<Name> nextLevelSet = new HashSet<Name>();
+            final Set<Name> nextLevelSet = new HashSet<Name>();
             for (Name n : foundAtCurrentLevel) {
                 nextLevelSet.addAll(n.getParents());
             }
@@ -225,7 +224,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             }
             while (!foundAtCurrentLevel.isEmpty()) {
                 findAllChildrenPayAttentionToAdditiveCache.addAll(foundAtCurrentLevel);
-                Set<Name> nextLevelSet = new HashSet<Name>();
+                final Set<Name> nextLevelSet = new HashSet<Name>();
                 for (Name n : foundAtCurrentLevel) {
                     if (n.additive){
                         nextLevelSet.addAll(n.getChildren());
@@ -363,6 +362,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     }
 
     // think I'm only going to allow bulk attribute settings in this package as it won't do the checks the single below will
+    // really the below should only be called by totomemorydb
 
     protected synchronized void setAttributesWillBePersisted(LinkedHashMap<String,String> attributes) throws Exception {
         this.attributes = attributes;
@@ -383,7 +383,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
                 }
             }
         }
-        // TODO, uncomment when good to go
         attributes.put(attributeName, attributeValue);
         // now deal with the DB maps!
         getTotoMemoryDB().addNameToAttributeNameMap(this); // will overwrite but that's fine

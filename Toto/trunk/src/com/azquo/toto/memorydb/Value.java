@@ -78,7 +78,7 @@ public final class Value extends TotoMemoryDBEntity {
         return deletedInfo;
     }
 
-    public synchronized void setDeletedInfoWillBePersisted(String deletedInfo) throws Exception {
+    public synchronized void setDeletedInfoWillBePersisted(final String deletedInfo) throws Exception {
         if (!deletedInfo.equals(this.deletedInfo)){
             this.deletedInfo = deletedInfo;
             entityColumnsChanged = true;

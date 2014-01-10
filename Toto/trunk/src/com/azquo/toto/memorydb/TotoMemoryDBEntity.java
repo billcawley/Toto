@@ -22,7 +22,7 @@ import java.util.Set;
  *
  * in summary : id and database id need to be rigidly controlled in this object or all hell could break loose
  *
- * I think I may even go so far as actually holding the object reference too the database as opposed to a database id.
+ * I think I may even go so far as actually holding the object reference to the database as opposed to a database id.
  *
  * If there is a way I don't yet know about for a constructor to only be called by another class this could be simplified
  *

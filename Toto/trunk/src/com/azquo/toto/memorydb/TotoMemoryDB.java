@@ -40,9 +40,9 @@ public final class TotoMemoryDB {
 
     // when objects are modified they are added to these lists
 
-    private Set<Name> namesNeedPersisting;
-    private Set<Value> valuesNeedPersisting;
-    private Set<Provenance> provenanceNeedsPersisting;
+    private final Set<Name> namesNeedPersisting;
+    private final Set<Value> valuesNeedPersisting;
+    private final Set<Provenance> provenanceNeedsPersisting;
 
     public TotoMemoryDB(Database database, NameDAO nameDAO, ValueDAO valueDAO, ProvenanceDAO provenanceDAO) throws Exception {
         this.database = database;
@@ -102,13 +102,13 @@ public final class TotoMemoryDB {
 
             int currentParentId = -1;
             LinkedHashSet<Name> childSet = new LinkedHashSet<Name>();
-            for (String parentIdChildIdPair : nameDAO.findAllParentChildLinksOrderByParentIdPosition(this)) {
-                int parentId = Integer.parseInt(parentIdChildIdPair.substring(0, parentIdChildIdPair.indexOf(",")));
-                int childId = Integer.parseInt(parentIdChildIdPair.substring(parentIdChildIdPair.indexOf(",") + 1));
+            for (NameDAO.ParentIdNameId parentIdChildId : nameDAO.findAllParentChildLinksOrderByParentIdPosition(this)) {
+                final int parentId = parentIdChildId.parentId;
+                final int childId = parentIdChildId.nameId; // different terminology but fine. I see no point in getters
                 // ok we're switching to a new value ID, link the ones previously
                 if (parentId != currentParentId) {
                     if (currentParentId != -1) { // assign ones just passed if not the first
-                        Name parent = nameByIdMap.get(currentParentId);
+                        final Name parent = nameByIdMap.get(currentParentId);
                         parent.setChildrenWillBePersisted(childSet);
                     }
                     currentParentId = parentId;
@@ -119,7 +119,7 @@ public final class TotoMemoryDB {
             }
             // clear up the last one
             if (childSet.size() > 0) {
-                Name parent = nameByIdMap.get(currentParentId);
+                final Name parent = nameByIdMap.get(currentParentId);
                 parent.setChildrenWillBePersisted(childSet);
             }
             System.out.println(linkCounter + " child parent linked created in " + (System.currentTimeMillis() - track) + "ms");
@@ -133,12 +133,11 @@ public final class TotoMemoryDB {
             int currentNameId = -1;
             LinkedHashMap<Name,Boolean> peerSet = new LinkedHashMap<Name, Boolean>();
 
-            for (String nameIdPeerIdBooleanTriple : nameDAO.findAllPeerLinksOrderByNameIdPosition(this)) {
-                int firstCommaIndex = nameIdPeerIdBooleanTriple.indexOf(",");
-                int secondCommaIndex = nameIdPeerIdBooleanTriple.indexOf(",", firstCommaIndex + 1);
-                int nameId = Integer.parseInt(nameIdPeerIdBooleanTriple.substring(0, firstCommaIndex));
-                int peerId = Integer.parseInt(nameIdPeerIdBooleanTriple.substring(firstCommaIndex + 1, secondCommaIndex));
-                boolean additive = Boolean.parseBoolean(nameIdPeerIdBooleanTriple.substring(secondCommaIndex + 1));
+            for (NameDAO.NameIdPeerIdAdditive nameIdPeerIdAdditive : nameDAO.findAllPeerLinksOrderByNameIdPosition(this)) {
+                // since final could just reference but think this makes the code easier to understand
+                final int nameId = nameIdPeerIdAdditive.nameId;
+                final int peerId = nameIdPeerIdAdditive.peerId;
+                final boolean additive = nameIdPeerIdAdditive.additive;
                 // ok we're switching to a new value ID, link the ones previously
                 if (nameId != currentNameId) {
                     if (currentNameId != -1) { // assign ones just passed if not the first
@@ -153,7 +152,7 @@ public final class TotoMemoryDB {
             }
             // clear up the last one
             if (peerSet.size() > 0) {
-                Name name = nameByIdMap.get(currentNameId);
+                final Name name = nameByIdMap.get(currentNameId);
                 name.setPeersWillBePersisted(peerSet);
             }
             System.out.println(linkCounter + " peer names links created in " + (System.currentTimeMillis() - track) + "ms");
@@ -167,27 +166,25 @@ public final class TotoMemoryDB {
             currentNameId = -1;
             LinkedHashMap<String, String> attributeSet = new LinkedHashMap<String, String>();
 
-            for (String attributeInfo : nameDAO.findAllAttributeLinksOrderByNameId(this)) {
-                int firstCommaIndex = attributeInfo.indexOf(",");
-                int secondCommaIndex = attributeInfo.indexOf(",", firstCommaIndex + 1);
-                int nameId = Integer.parseInt(attributeInfo.substring(0, firstCommaIndex));
-                String attributeName = attributeInfo.substring(firstCommaIndex + 1, secondCommaIndex);
-                String attValue = attributeInfo.substring(secondCommaIndex + 1);
-                // ok we're switching to a new value ID, link the ones previously
+            for (NameDAO.NameIdAttributeValue nameIdAttributeValue : nameDAO.findAllAttributeLinksOrderByNameId(this)) {
+                int nameId = nameIdAttributeValue.nameId;
+                String attributeName = nameIdAttributeValue.attribute;
+                String attValue = nameIdAttributeValue.value;
+                // ok we're switching to a new name ID, link the ones previously
                 if (nameId != currentNameId) {
                     if (currentNameId != -1) { // assign ones just passed if not the first
-                        Name name = nameByIdMap.get(currentNameId);
+                        final Name name = nameByIdMap.get(currentNameId);
                         name.setAttributesWillBePersisted(attributeSet);
                     }
                     currentNameId = nameId;
                     attributeSet = new LinkedHashMap<String, String>();
                 }
-                attributeSet.put(attributeName, attValue); // hard code to additive for the mo
+                attributeSet.put(attributeName, attValue);
                 linkCounter++;
             }
             // clear up the last one
             if (attributeSet.size() > 0) {
-                Name name = nameByIdMap.get(currentNameId);
+                final Name name = nameByIdMap.get(currentNameId);
                 name.setAttributesWillBePersisted(attributeSet);
             }
             System.out.println(linkCounter + " attribute names links created in " + (System.currentTimeMillis() - track) + "ms");
@@ -202,27 +199,15 @@ public final class TotoMemoryDB {
             // might be a bit hacky but should massively speed loading
 
             linkCounter = 0;
-/*            for (Value value : valueByIdMap.values()){
-                List<Integer> nameIdsForThisValue = valueDAO.findNameIdsForValue(this, value);
-                Set<Name> nameSet = new HashSet<Name>(nameIdsForThisValue.size());
-                for (Integer nameId: nameIdsForThisValue){
-                    nameSet.add(nameByIdMap.get(nameId));
-                    linkCounter++;
-                }
-                value.setNamesWillBePersisted(nameSet);
-                if (value.getId() > maxIdAtLoad){
-                    maxIdAtLoad = value.getId();
-                }
-            }*/
             int currentValueId = -1;
             Set<Name> nameSet = new HashSet<Name>();
-            for (String valueNameIdPair : valueDAO.findAllValueNameLinksOrderByValue(this)) {
-                int valueId = Integer.parseInt(valueNameIdPair.substring(0, valueNameIdPair.indexOf(",")));
-                int nameId = Integer.parseInt(valueNameIdPair.substring(valueNameIdPair.indexOf(",") + 1));
-                // ok we're switching too a new value ID, link the ones previously
+            for (ValueDAO.ValueIdNameId valueIdNameId : valueDAO.findAllValueNameLinksOrderByValue(this)) {
+                int valueId = valueIdNameId.valueId;
+                int nameId = valueIdNameId.nameId;
+                // ok we're switching to a new value ID, link the ones previously
                 if (valueId != currentValueId) {
                     if (currentValueId != -1) { // assign ones just passed if not the first
-                        Value value = valueByIdMap.get(currentValueId);
+                        final Value value = valueByIdMap.get(currentValueId);
                         if (value == null){
                             System.out.println("couldn't find value with  id : ");
                         } else {
@@ -237,7 +222,7 @@ public final class TotoMemoryDB {
             }
             // clear up the last one
             if (nameSet.size() > 0) {
-                Value value = valueByIdMap.get(currentValueId);
+                final Value value = valueByIdMap.get(currentValueId);
                 value.setNamesWillBePersisted(nameSet);
             }
 
@@ -365,14 +350,14 @@ public final class TotoMemoryDB {
 
     // for search purposes probably should trim
 
-    public Name getNameById(int id){
+    public Name getNameById(final int id){
         return nameByIdMap.get(id);
 
     }
 
-    public Name getNameByAttribute(String attributeName, String attributeValue, Name parent){
+    public Name getNameByAttribute(final String attributeName, final String attributeValue, final Name parent){
         if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null){// there is an attribute with that name in the whole db . . .
-            Set<Name> possibles = nameByAttributeMap.get(attributeName.toLowerCase().trim()).get(attributeValue.toLowerCase().trim());
+            final Set<Name> possibles = nameByAttributeMap.get(attributeName.toLowerCase().trim()).get(attributeValue.toLowerCase().trim());
             if (possibles == null) return null;
             if (parent == null){
                 if (possibles.size() != 1) return null;
@@ -389,16 +374,16 @@ public final class TotoMemoryDB {
 
     }
 
-    public Set<Name> getNamesWithAttributeContaining(String attributeName, String attributeValue){
+    public Set<Name> getNamesWithAttributeContaining(final String attributeName, final String attributeValue){
         return getNamesByAttributeValueWildcards(attributeName,attributeValue, true, true);
     }
 
     // cet names containing an attribute using wildcards, start end both
 
-    private Set<Name> getNamesByAttributeValueWildcards(String attributeName, String attributeValueSearch, boolean startsWith, boolean endsWith){
-        String  lctAttributeName = attributeName.toLowerCase().trim();
-        String  lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
-        Set<Name> names = new HashSet<Name>();
+    private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith){
+        final String  lctAttributeName = attributeName.toLowerCase().trim();
+        final String  lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
+        final Set<Name> names = new HashSet<Name>();
         for (String attributeValue : nameByAttributeMap.get(lctAttributeName).keySet()){
             if (startsWith && endsWith){
                 if (attributeValue.toLowerCase().contains(lctAttributeValueSearch.toLowerCase())){
@@ -418,7 +403,7 @@ public final class TotoMemoryDB {
         return names;
     }
 
-    public boolean isInParentTreeOf(Name child, Name testParent){
+    public boolean isInParentTreeOf(final Name child, final Name testParent){
         for (Name parent:child.getParents()){
             if (testParent == parent || isInParentTreeOf(parent, testParent)){
                 return true;
@@ -430,9 +415,7 @@ public final class TotoMemoryDB {
 
 
     public List<Name> findTopNames() {
-        long track = System.currentTimeMillis();
         final List<Name> toReturn = new ArrayList<Name>();
-        System.out.println("top name : " + (System.currentTimeMillis() - track));
         for (Name name : nameByIdMap.values()){
             if (name.getParents().size() == 0){
                 toReturn.add(name);
@@ -442,7 +425,7 @@ public final class TotoMemoryDB {
     }
 
 
-    public List<Name> searchNames(String attribute, String search) {
+    public List<Name> searchNames(final String attribute, String search) {
         long track = System.currentTimeMillis();
         search = search.trim().toLowerCase();
         boolean wildCardAtBeginning = false;
@@ -477,13 +460,13 @@ public final class TotoMemoryDB {
         return valueByIdMap.get(id);
     }*/
 
-    public Provenance getProvenanceById(int id) {
+    public Provenance getProvenanceById(final int id) {
         return provenanceByIdMap.get(id);
     }
 
     // synchronised?
 
-    protected void addNameToDb(Name newName) throws Exception {
+    protected void addNameToDb(final Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         if (nameByIdMap.get(newName.getId()) != null) {
@@ -496,16 +479,16 @@ public final class TotoMemoryDB {
     // ok I'd have liked this to be part of the above function but the name won't have been initialised, has to be called in the name constructor
     // custom maps here need to be dealt with in the constructors I think
 
-    protected void addNameToAttributeNameMap(Name newName) throws Exception {
+    protected void addNameToAttributeNameMap(final Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
-        Map<String, String> attributes = newName.getAttributes();
+        final Map<String, String> attributes = newName.getAttributes();
 
         for (String attributeName : attributes.keySet()){
             if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) == null){ // make a new map for the attributes
                 nameByAttributeMap.put(attributeName.toLowerCase().trim(), new HashMap<String, Set<Name>>());
             }
-            Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
-            String attributeValue = attributes.get(attributeName).toLowerCase().trim();
+            final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+            final String attributeValue = attributes.get(attributeName).toLowerCase().trim();
             if (attributeValue.contains("`")){
                 String error = "has quotes";
                 throw new Exception(error);
@@ -513,7 +496,7 @@ public final class TotoMemoryDB {
             if (namesForThisAttribute.get(attributeValue) != null) {
                 namesForThisAttribute.get(attributeValue).add(newName);
             } else {
-                Set<Name> possibles = new HashSet<Name>();
+                final Set<Name> possibles = new HashSet<Name>();
                 possibles.add(newName);
                 namesForThisAttribute.put(attributeValue, possibles);
             }
@@ -521,12 +504,12 @@ public final class TotoMemoryDB {
 
     }
 
-    protected void removeAttributeFromNameInAttributeNameMap(String attributeName, String attributeValue, Name name) throws Exception {
+    protected void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
         name.checkDatabaseMatches(this);
 
             if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null){// the map we care about
-                Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
-                Set<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase().trim());
+                final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+                final Set<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase().trim());
                 if (namesForThatAttributeAndAttributeValue != null){
                     namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the set . . .
                 }
@@ -550,15 +533,15 @@ public final class TotoMemoryDB {
         }
     }*/
 
-    protected void setNameNeedsPersisting(Name name) {
+    protected void setNameNeedsPersisting(final Name name) {
         namesNeedPersisting.add(name);
     }
 
-    protected void removeNameNeedsPersisting(Name name) {
+    protected void removeNameNeedsPersisting(final Name name) {
         namesNeedPersisting.remove(name);
     }
 
-    protected void addValueToDb(Value newValue) throws Exception {
+    protected void addValueToDb(final Value newValue) throws Exception {
         newValue.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         if (valueByIdMap.get(newValue.getId()) != null) {
@@ -568,15 +551,15 @@ public final class TotoMemoryDB {
         }
     }
 
-    protected void setValueNeedsPersisting(Value value) {
+    protected void setValueNeedsPersisting(final Value value) {
         valuesNeedPersisting.add(value);
     }
 
-    protected void removeValueNeedsPersisting(Value value) {
+    protected void removeValueNeedsPersisting(final Value value) {
         valuesNeedPersisting.remove(value);
     }
 
-    protected void addProvenanceToDb(Provenance newProvenance) throws Exception {
+    protected void addProvenanceToDb(final Provenance newProvenance) throws Exception {
         newProvenance.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         if (provenanceByIdMap.get(newProvenance.getId()) != null) {
@@ -586,11 +569,11 @@ public final class TotoMemoryDB {
         }
     }
 
-    protected void setProvenanceNeedsPersisting(Provenance provenance) {
+    protected void setProvenanceNeedsPersisting(final Provenance provenance) {
         provenanceNeedsPersisting.add(provenance);
     }
 
-    protected void removeProvenanceNeedsPersisting(Provenance provenance) {
+    protected void removeProvenanceNeedsPersisting(final Provenance provenance) {
         provenanceNeedsPersisting.remove(provenance);
     }
 }

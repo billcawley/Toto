@@ -20,12 +20,14 @@ public final class Provenance extends TotoMemoryDBEntity {
     private final String columnHeadings;
     private final String context;
 
-    public Provenance(TotoMemoryDB totoMemoryDB, String user, Date timeStamp, String method, String name, String rowHeadings, String columnHeadings, String context) throws Exception {
+    public Provenance(final TotoMemoryDB totoMemoryDB, final String user, final Date timeStamp, final String method, final String name, final String rowHeadings,
+                      final String columnHeadings, final String context) throws Exception {
         this(totoMemoryDB, 0,user, timeStamp, method, name, rowHeadings, columnHeadings, context);
     }
 
 
-    public Provenance(TotoMemoryDB totoMemoryDB, int id, String user, Date timeStamp, String method, String name, String rowHeadings, String columnHeadings, String context) throws Exception {
+    public Provenance(final TotoMemoryDB totoMemoryDB, final int id, final String user, final Date timeStamp, final String method, final String name,
+                      final String rowHeadings, final String columnHeadings, final String context) throws Exception {
         super(totoMemoryDB, id);
         this.user = user;
         this.timeStamp = timeStamp;

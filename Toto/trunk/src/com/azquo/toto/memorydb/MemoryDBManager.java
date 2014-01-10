@@ -17,19 +17,7 @@ public final class MemoryDBManager {
 
     private final HashMap<String, TotoMemoryDB> memoryDatabaseMap;
 
-    private final DatabaseDAO databaseDAO;
-
-
-    private final ValueDAO valueDAO;
-    private final NameDAO nameDAO;
-    private final ProvenanceDAO provenanceDAO;
-
-
     public MemoryDBManager(DatabaseDAO databaseDAO, ValueDAO valueDAO, NameDAO nameDAO, ProvenanceDAO provenanceDAO) throws Exception {
-        this.databaseDAO = databaseDAO;
-        this.valueDAO = valueDAO;
-        this.nameDAO = nameDAO;
-        this.provenanceDAO = provenanceDAO;
         memoryDatabaseMap = new HashMap<String, TotoMemoryDB>(); // by ID I think
         List<Database> databases = databaseDAO.findAll();
         for (Database database : databases){
