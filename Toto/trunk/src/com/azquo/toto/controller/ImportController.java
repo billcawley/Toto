@@ -32,9 +32,9 @@ public class ImportController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "filename", required = false) String fileName,
-                                @RequestParam(value = "language", required = false) String language, @RequestParam(value = "filetype", required = false) String fileType,
-                                @RequestParam(value = "separator", required = false) String separator,@RequestParam(value = "create", required = false) String create ) throws Exception {
+    public String handleRequest(@RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "filename", required = false) final String fileName,
+                                @RequestParam(value = "language", required = false) final String language, @RequestParam(value = "filetype", required = false) final String fileType,
+                                @RequestParam(value = "separator", required = false) final String separator,@RequestParam(value = "create", required = false) final String create ) throws Exception {
 
         /*
        'filename' is the name of a file that has been FTP uploaded

@@ -2,6 +2,7 @@ package com.azquo.toto.service;
 
 import com.azquo.toto.adminentities.User;
 import com.azquo.toto.memorydb.Name;
+import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import com.azquo.toto.memorydb.Value;
 
@@ -202,4 +203,17 @@ public final class LoggedInConnection {
         }
     }
 
+    // very basic, needs to be improved
+
+    private Provenance provenance = null;
+
+    public Provenance getProvenance() {
+        if (provenance == null){
+            try{
+                provenance = new Provenance(getTotoMemoryDB(),user.getEmail(), new Date(),"method", "spreadsheet name?", "row heading", "column headings", "context");
+            } catch (Exception e){
+            }
+        }
+        return provenance;
+    }
 }

@@ -11,11 +11,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
- * Created with IntelliJ IDEA.
  * User: cawley
- * Date: 31/10/13
- * Time: 19:45
- * For logging in, should verify against a DB then return a connection id which expires if the credentials check out.
+ * Created 7th or 8th jan, that's what I get for pasting a whole file as a start
+ * Admin. Resiter users, verify them,
  */
 @Controller
 @RequestMapping("/Maintain")

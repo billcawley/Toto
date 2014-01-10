@@ -68,8 +68,10 @@ public class LoginService {
                 }
 
 
+                System.out.println("ok databases size " + okDatabases.size());
                 TotoMemoryDB memoryDB = null;
                 if (okDatabases.size() == 1){
+                    System.out.println("1 database, use that");
                     memoryDB = memoryDBManager.getTotoMemoryDB(okDatabases.values().iterator().next());
                 } else {
                     Database database = okDatabases.get(databaseName);

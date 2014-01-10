@@ -39,7 +39,7 @@ public final class ImportService {
 
         //String filePath = "/home/bill/Downloads/exportcodes.csv";
         //TODO  set correct filepath
-        String filePath = "/home/bill/Downloads/" + fileName;
+        String filePath = "/home/cawley/Downloads/" + fileName;
         if (filePath.endsWith(".zip")) {
             filePath = unzip(filePath);
         }
@@ -78,7 +78,7 @@ public final class ImportService {
 
 
 
-        Provenance provenance = provenanceService.getTestProvenance();
+        Provenance provenance = loggedInConnection.getProvenance();
         int valuecount = 0;
         HashMap<String, Name> namesFound = new HashMap<String, Name>();
         while (csvReader.readRecord()){
@@ -135,7 +135,7 @@ public final class ImportService {
 
     //String filePath = "/home/bill/Downloads/exportcodes.csv";
     //TODO  set correct filepath
-    String filePath = "/home/bill/Downloads/" + fileName;
+    String filePath = "/home/cawley/Downloads/" + fileName;
     if (filePath.endsWith(".zip")) {
         filePath = unzip(filePath);
     }

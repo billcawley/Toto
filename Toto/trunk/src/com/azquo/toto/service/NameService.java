@@ -193,9 +193,7 @@ public final class NameService {
             }
             return existing;
         } else {
-            //Provenance(TotoMemoryDB totoMemoryDB, String user, Date timeStamp, String method, String name, String rowHeadings, String columnHeadings, String context)
-            //TODO : make provenance come from somewhere else e.g. get it from the logged in connection?? DEFINITELY!
-            Provenance provenance = new Provenance(loggedInConnection.getTotoMemoryDB(),loggedInConnection.getUser().getName(), new Date(), "method", "name", "rows", "cols", "context");
+            Provenance provenance = loggedInConnection.getProvenance();
             Name newName =  new Name(loggedInConnection.getTotoMemoryDB(),provenance, true); // default additive to true
             newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName);
             if (newparent!=null) {
