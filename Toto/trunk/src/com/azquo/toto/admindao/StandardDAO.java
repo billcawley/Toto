@@ -13,11 +13,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * Created by cawley on 07/01/14.
- * like the one for totomemorydb. There are many similarities but I'm not sure if one could factor them.
+ * Created 07/01/14 by edd
+ * like the one for totomemorydb.
+ * There are many similarities but I'm not sure if one could factor them.
  */
 public abstract class StandardDAO<EntityType extends StandardEntity> {
 
@@ -110,10 +110,6 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         return results.get(0);
     }
 
-
-    // TODO add code for single? Necessary?
-
-    // Assume not by id, adding wouldn't be difficult. A by table name one could be added later.
 
     public final List<EntityType> findAll() throws DataAccessException {
         return findListWithWhereSQLAndParameters(null, null, false);

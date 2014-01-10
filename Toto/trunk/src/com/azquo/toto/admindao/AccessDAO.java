@@ -1,7 +1,6 @@
 package com.azquo.toto.admindao;
 
 import com.azquo.toto.adminentities.Access;
-import com.azquo.toto.adminentities.User;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -13,8 +12,9 @@ import java.util.Map;
 
 /**
  * Created by cawley on 07/01/14.
+ * User access datails
  */
-public class AccessDAO extends StandardDAO<Access>{
+public final class AccessDAO extends StandardDAO<Access>{
 
     // the default table name for this data.
     @Override
@@ -30,7 +30,7 @@ public class AccessDAO extends StandardDAO<Access>{
     public static final String WRITELIST = "write_list";
 
     @Override
-    public Map<String, Object> getColumnNameValueMap(Access access){
+    public Map<String, Object> getColumnNameValueMap(final Access access){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, access.getId());
         toReturn.put(ACTIVE, access.getActive());
@@ -62,7 +62,7 @@ public class AccessDAO extends StandardDAO<Access>{
         return new AccessRowMapper();
     }
 
-    public List<Access> findForUserId(int userId){
+    public List<Access> findForUserId(final int userId){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
         return findListWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID, namedParams, false);

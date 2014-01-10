@@ -7,15 +7,14 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
  * Created by cawley on 07/01/14.
+ * Like vendor from Feefo I suppose
  */
-public class BusinessDAO extends StandardDAO<Business>{
+public final class BusinessDAO extends StandardDAO<Business>{
 
     static final Gson gson = new Gson();
 
@@ -34,7 +33,7 @@ public class BusinessDAO extends StandardDAO<Business>{
     public static final String BUSINESSDETAILS = "business_details";
 
     @Override
-    public Map<String, Object> getColumnNameValueMap(Business business){
+    public Map<String, Object> getColumnNameValueMap(final Business business){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, business.getId());
         toReturn.put(ACTIVE, business.getActive());
@@ -65,7 +64,7 @@ public class BusinessDAO extends StandardDAO<Business>{
         return new BusinessRowMapper();
     }
 
-    public Business findByName(String businessName){
+    public Business findByName(final String businessName){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSNAME, businessName);
         return findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSNAME + "` = :" + BUSINESSNAME, namedParams);

@@ -6,15 +6,15 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Created by cawley on 07/01/14.
+ * Details on each database
  */
-public class DatabaseDAO extends StandardDAO<Database>{
+public final class DatabaseDAO extends StandardDAO<Database>{
 
     // the default table name for this data.
     @Override
@@ -64,7 +64,7 @@ public class DatabaseDAO extends StandardDAO<Database>{
         return new DatabaseRowMapper();
     }
 
-    public List<Database> findForBusinessId(int businessId){
+    public List<Database> findForBusinessId(final int businessId){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         return findListWithWhereSQLAndParameters("WHERE `" + BUSINESSID + "` = :" + BUSINESSID, namedParams, false);

@@ -1,7 +1,5 @@
 package com.azquo.toto.admindao;
 
-import com.azquo.toto.adminentities.Business;
-import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.User;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -14,6 +12,7 @@ import java.util.Map;
 
 /**
  * Created by cawley on 07/01/14.
+ * Users as in those who login
  */
 public class UserDAO extends StandardDAO<User>{
 
@@ -33,7 +32,7 @@ public class UserDAO extends StandardDAO<User>{
     public static final String SALT = "salt";
 
     @Override
-    public Map<String, Object> getColumnNameValueMap(User user){
+    public Map<String, Object> getColumnNameValueMap(final User user){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, user.getId());
         toReturn.put(ACTIVE, user.getActive());
@@ -67,13 +66,13 @@ public class UserDAO extends StandardDAO<User>{
         return new UserRowMapper();
     }
 
-    public User findByEmail(String email){
+    public User findByEmail(final String email){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(EMAIL, email);
         return findOneWithWhereSQLAndParameters(" WHERE `" + EMAIL + "` = :" + EMAIL, namedParams);
     }
 
-    public List<User> findForBusinessId(int businessId){
+    public List<User> findForBusinessId(final int businessId){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);

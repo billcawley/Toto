@@ -12,7 +12,7 @@ import java.util.Map;
  * Created by cawley on 07/01/14.
  * record of uploaded files :P
  */
-public class UploadRecordDAO extends StandardDAO<UploadRecord>{
+public final class UploadRecordDAO extends StandardDAO<UploadRecord>{
 
     // the default table name for this data.
     @Override
@@ -30,7 +30,7 @@ public class UploadRecordDAO extends StandardDAO<UploadRecord>{
     public static final String COMMENTS = "comments";
 
     @Override
-    public Map<String, Object> getColumnNameValueMap(UploadRecord uploadRecord){
+    public Map<String, Object> getColumnNameValueMap(final UploadRecord uploadRecord){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, uploadRecord.getId());
         toReturn.put(DATE, uploadRecord.getDate());
