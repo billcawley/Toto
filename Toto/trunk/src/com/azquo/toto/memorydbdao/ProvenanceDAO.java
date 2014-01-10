@@ -35,7 +35,7 @@ public final class ProvenanceDAO extends StandardDAO<Provenance>{
     public static final String CONTEXT = "context";
 
     @Override
-    public Map<String, Object> getColumnNameValueMap(Provenance provenance){
+    public Map<String, Object> getColumnNameValueMap(final Provenance provenance){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, provenance.getId());
         toReturn.put(USER, provenance.getUser());
@@ -52,7 +52,7 @@ public final class ProvenanceDAO extends StandardDAO<Provenance>{
 
         TotoMemoryDB totoMemoryDB;
 
-        public ProvenanceRowMapper(TotoMemoryDB totoMemoryDB){
+        public ProvenanceRowMapper(final TotoMemoryDB totoMemoryDB){
             this.totoMemoryDB = totoMemoryDB;
         }
         @Override
@@ -69,7 +69,7 @@ public final class ProvenanceDAO extends StandardDAO<Provenance>{
     }
 
     @Override
-    public RowMapper<Provenance> getRowMapper(TotoMemoryDB TotoMemoryDB) {
+    public RowMapper<Provenance> getRowMapper(final TotoMemoryDB TotoMemoryDB) {
         return new ProvenanceRowMapper(TotoMemoryDB);
     }
 

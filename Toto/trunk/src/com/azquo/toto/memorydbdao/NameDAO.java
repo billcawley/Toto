@@ -8,9 +8,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -80,13 +78,24 @@ public final class NameDAO extends StandardDAO<Name> {
         }
     }
 
-    private static class CommaSeparatedParentNameIdsRowMapper implements RowMapper<String> {
+    // immutable. I see no point in getters.
+
+    public static class ParentIdNameId{
+        public final int parentId;
+        public final int nameId;
+        public ParentIdNameId(int parentId, int nameId) {
+            this.parentId = parentId;
+            this.nameId = nameId;
+        }
+    }
+
+    private static class ParentIdNameIdRowMapper implements RowMapper<ParentIdNameId> {
 
         @Override
-        public final String mapRow(final ResultSet rs, final int row) throws SQLException {
+        public final ParentIdNameId mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return rs.getInt(PARENTID) + "," + rs.getInt(CHILDID);
+                return new ParentIdNameId(rs.getInt(PARENTID),rs.getInt(CHILDID));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -94,13 +103,25 @@ public final class NameDAO extends StandardDAO<Name> {
         }
     }
 
-    private static class CommaSeparatedNamePeerIdsRowMapper implements RowMapper<String> {
+    public static class NameIdPeerIdAdditive{
+        public final int nameId;
+        public final int peerId;
+        public final boolean additive;
+
+        public NameIdPeerIdAdditive(int nameId, int peerId, boolean additive) {
+            this.nameId = nameId;
+            this.peerId = peerId;
+            this.additive = additive;
+        }
+    }
+
+    private static class NameIdPeerIdAdditiveRowMapper implements RowMapper<NameIdPeerIdAdditive> {
 
         @Override
-        public final String mapRow(final ResultSet rs, final int row) throws SQLException {
+        public final NameIdPeerIdAdditive mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return rs.getInt(NAMEID) + "," + rs.getInt(PEERID) + "," + rs.getBoolean(ADDITIVE);
+                return new NameIdPeerIdAdditive(rs.getInt(NAMEID), rs.getInt(PEERID), rs.getBoolean(ADDITIVE));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -109,14 +130,26 @@ public final class NameDAO extends StandardDAO<Name> {
     }
 
 
+    public static class NameIdAttributeValue{
+        public final int nameId;
+        public final String attribute;
+        public final String value;
 
-    private static class CommaSeparatedNameAttribute implements RowMapper<String> {
+        public NameIdAttributeValue(int nameId, String attribute, String value) {
+            this.nameId = nameId;
+            this.attribute = attribute;
+            this.value = value;
+        }
+    }
+
+
+    private static class NameIdAttributeValueRowMapper implements RowMapper<NameIdAttributeValue> {
 
         @Override
-        public final String mapRow(final ResultSet rs, final int row) throws SQLException {
+        public final NameIdAttributeValue mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return rs.getInt(NAMEID) + "," + rs.getString(ATTRIBUTENAME) + "," + rs.getString(ATTRIBUTEVALUE);
+                return new NameIdAttributeValue(rs.getInt(NAMEID), rs.getString(ATTRIBUTENAME), rs.getString(ATTRIBUTEVALUE));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -127,7 +160,7 @@ public final class NameDAO extends StandardDAO<Name> {
 
 
     @Override
-    public RowMapper<Name> getRowMapper(TotoMemoryDB totoMemoryDB) {
+    public RowMapper<Name> getRowMapper(final TotoMemoryDB totoMemoryDB) {
         return new NameRowMapper(totoMemoryDB);
     }
 
@@ -145,7 +178,7 @@ public final class NameDAO extends StandardDAO<Name> {
     }
 
 
-    public boolean linkNameAndAttribute(final TotoMemoryDB totoMemoryDB, final Name name, final String attributeName, String attributeValue) throws DataAccessException {
+    public boolean linkNameAndAttribute(final TotoMemoryDB totoMemoryDB, final Name name, final String attributeName, final String attributeValue) throws DataAccessException {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(NAMEID, name.getId());
         namedParams.addValue(ATTRIBUTENAME, attributeName);
@@ -199,26 +232,23 @@ public final class NameDAO extends StandardDAO<Name> {
     /*SELECT *
 FROM `name_set_definition`
 ORDER BY parent_id, position*/
-    public List<String> findAllParentChildLinksOrderByParentIdPosition(final TotoMemoryDB totoMemoryDB) {
+    public List<ParentIdNameId> findAllParentChildLinksOrderByParentIdPosition(final TotoMemoryDB totoMemoryDB) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         final String FIND_EXISTING_LINK = "Select `" + PARENTID + "`,`" + CHILDID + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + NAMESETDEFINTION + "` order by `" + PARENTID + "`,`" + POSITION + "`";
-        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedParentNameIdsRowMapper());
+        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new ParentIdNameIdRowMapper());
 
     }
 
-    public List<String> findAllPeerLinksOrderByNameIdPosition(final TotoMemoryDB totoMemoryDB) {
+    public List<NameIdPeerIdAdditive> findAllPeerLinksOrderByNameIdPosition(final TotoMemoryDB totoMemoryDB) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         final String FIND_EXISTING_LINK = "Select `" + NAMEID + "`,`" + PEERID + "`,`" + ADDITIVE + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + PEERSETDEFINTION + "` order by `" + NAMEID + "`,`" + POSITION + "`";
-        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedNamePeerIdsRowMapper());
+        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new NameIdPeerIdAdditiveRowMapper());
 
     }
-    public List<String> findAllAttributeLinksOrderByNameId(final TotoMemoryDB totoMemoryDB) {
+
+    public List<NameIdAttributeValue> findAllAttributeLinksOrderByNameId(final TotoMemoryDB totoMemoryDB) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         final String FIND_EXISTING_LINK = "Select `" + NAMEID + "`,`" + ATTRIBUTENAME + "`,`" + ATTRIBUTEVALUE + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + NAMEATTRIBUTE + "` order by `" + NAMEID + "`";
-        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedNameAttribute());
-
+        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new NameIdAttributeValueRowMapper());
     }
-
-
-
 }

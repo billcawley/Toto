@@ -69,13 +69,23 @@ public final class ValueDAO extends StandardDAO<Value> {
         }
     }
 
-    private static final class CommaSeparatedIdsRowMapper implements RowMapper<String> {
+    public static class ValueIdNameId{
+        public final int valueId;
+        public final int nameId;
+
+        public ValueIdNameId(int valueId, int nameId) {
+            this.valueId = valueId;
+            this.nameId = nameId;
+        }
+    }
+
+    private static final class ValueIdNameIdRowMapper implements RowMapper<ValueIdNameId> {
 
         @Override
-        public String mapRow(final ResultSet rs, final int row) throws SQLException {
+        public ValueIdNameId mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return rs.getInt(VALUEID) + "," + rs.getInt(NAMEID);
+                return new ValueIdNameId(rs.getInt(VALUEID), rs.getInt(NAMEID));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -171,11 +181,11 @@ public final class ValueDAO extends StandardDAO<Value> {
 
     }*/
 
-    public List<String> findAllValueNameLinksOrderByValue(final TotoMemoryDB totoMemoryDB) {
+    public List<ValueIdNameId> findAllValueNameLinksOrderByValue(final TotoMemoryDB totoMemoryDB) {
 
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         final String FIND_EXISTING_LINK = "Select `" + VALUEID + "`,`" + NAMEID + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + VALUENAME + "` order by `" + VALUEID + "`";
-        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new CommaSeparatedIdsRowMapper());
+        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new ValueIdNameIdRowMapper());
 
     }
 
