@@ -5,7 +5,7 @@ import java.util.Date;
 /**
  * Representing access a user can have
  */
-public class Access extends StandardEntity{
+public final class Access extends StandardEntity{
 
     private boolean active;
     Date startDate;

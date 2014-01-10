@@ -5,7 +5,7 @@ import java.util.Date;
 /**
  * Created by cawley on 07/01/14.
  */
-public class Business extends StandardEntity{
+public final class Business extends StandardEntity{
 
     private boolean active;
     Date startDate;

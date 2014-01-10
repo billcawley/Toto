@@ -5,7 +5,7 @@ import java.util.Date;
 /**
  * Representing a user who can log in
  */
-public class User extends StandardEntity{
+public final class User extends StandardEntity{
 
     public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
 

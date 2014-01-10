@@ -12,7 +12,7 @@ Name
 Name count
 Value count
  */
-public class Database extends StandardEntity {
+public final class Database extends StandardEntity {
 
     boolean active;
     Date startDate;

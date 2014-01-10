@@ -5,7 +5,7 @@ import java.util.Date;
 /**
  * Created by cawley on 09/01/14.
  */
-public class UploadRecord extends StandardEntity{
+public final class UploadRecord extends StandardEntity{
 
     private Date date;
     private int businnessId;
