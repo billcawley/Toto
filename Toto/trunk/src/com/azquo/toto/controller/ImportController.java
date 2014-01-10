@@ -25,6 +25,9 @@ public class ImportController {
     @Autowired
     private LoginService loginService;
 
+    @Autowired
+    private NameService nameService;
+
 //    private static final Logger logger = Logger.getLogger(TestController.class);
 
     @RequestMapping
@@ -78,8 +81,6 @@ public class ImportController {
 
     public String handleRequest(LoggedInConnection loggedInConnection, String fileName, String language, String fileType, String separator, String strCreate)
             throws Exception{
-
-        NameService nameService = new NameService();
 
         if (separator == null || separator.length() == 0) separator = "\t";
         if (separator.equals("comma")) separator = ",";
