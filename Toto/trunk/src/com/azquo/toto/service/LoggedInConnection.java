@@ -67,7 +67,7 @@ public final class LoggedInConnection {
         return totoMemoryDB;
     }
 
-    protected void setTotoMemoryDB(TotoMemoryDB totoMemoryDB) {
+    protected void setTotoMemoryDB(final TotoMemoryDB totoMemoryDB) {
         this.totoMemoryDB = totoMemoryDB;
     }
 

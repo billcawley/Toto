@@ -36,7 +36,7 @@ public class LoginService {
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
 
 
-    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, int timeOutInMinutes){
+    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes){
 
         // right, need an actual login process here!
 
@@ -48,8 +48,8 @@ public class LoginService {
         if (user != null){
             if (AdminService.encrypt(password, user.getSalt()).equals(user.getPassword())){
                 // ok user should be ok :)
-                List<Access> userAccess = accessDao.findForUserId(user.getId());
-                Map<String, Database> okDatabases = new HashMap<String, Database>();
+                final List<Access> userAccess = accessDao.findForUserId(user.getId());
+                final Map<String, Database> okDatabases = new HashMap<String, Database>();
                 if (user.isAdministrator()){ // automatically has all dbs regardless of access
                     for (Database database : databaseDao.findForBusinessId(user.getBusinessId())){
                         if (database.getActive()){
@@ -94,7 +94,7 @@ public class LoginService {
         return null;
     }
 
-    public LoggedInConnection getConnection(String connectionId){
+    public LoggedInConnection getConnection(final String connectionId){
 
         final LoggedInConnection lic = connections.get(connectionId);
         if (lic != null){
