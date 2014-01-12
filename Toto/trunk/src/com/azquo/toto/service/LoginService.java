@@ -80,6 +80,7 @@ public class LoginService {
                     }
                 }
                 // could be a null memory db . . .
+                //TODO : ask tomcat for a session id . . .
                 final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "" , memoryDB, user, timeOutInMinutes * 60 * 1000);
                 connections.put(lic.getConnectionId(), lic);
                 return lic;

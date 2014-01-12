@@ -368,12 +368,11 @@ public final class ValueService {
         return toReturn;
     }
 
+    // ok I see, switching the lists around, the following function does the same but the objects at the end aren't lists of names, they're just names
+    // should this be for sets at the end? Suppose it's just headings, there should be duplicates, there's no data restriction
 
-    // edd got to here . . .
-
-
-    public List<List<List<Name>>> transposeHeadingLists(List<List<List<Name>>> headingLists) {
-        List<List<List<Name>>> flipped = new ArrayList<List<List<Name>>>();
+    public List<List<List<Name>>> transposeHeadingLists(final List<List<List<Name>>> headingLists) {
+        final List<List<List<Name>>> flipped = new ArrayList<List<List<Name>>>();
         final int N = headingLists.get(0).size();
         for (int i = 0; i < N; i++) {
             List<List<Name>> col = new ArrayList<List<Name>>();
@@ -385,8 +384,8 @@ public final class ValueService {
         return flipped;
     }
 
-    public List<List<Name>> transposeHeadings(List<List<Name>> headings) {
-        List<List<Name>> flipped = new ArrayList<List<Name>>();
+    public List<List<Name>> transposeHeadings(final List<List<Name>> headings) {
+        final List<List<Name>> flipped = new ArrayList<List<Name>>();
         final int N = headings.get(0).size();
         for (int i = 0; i < N; i++) {
             List<Name> col = new ArrayList<Name>();
@@ -398,7 +397,7 @@ public final class ValueService {
         return flipped;
     }
 
-    public String outputHeadings(List<List<Name>> headings) {
+    public String outputHeadings(final List<List<Name>> headings) {
         final StringBuilder sb = new StringBuilder();
         List<Name> lastxNames = null;
         for (int x = 0; x < headings.size(); x++) {
@@ -421,7 +420,9 @@ public final class ValueService {
         return null;
     }
 
-    public List<List<List<Name>>> interpretHeadings(LoggedInConnection loggedInConnection, String headingsSent) throws Exception {
+    // should we be using CSV reader??
+
+    public List<List<List<Name>>> interpretHeadings(final LoggedInConnection loggedInConnection, final String headingsSent) throws Exception {
 
         int maxx = 1;
         int y = 0;
@@ -440,7 +441,7 @@ public final class ValueService {
             lineend = (headingsSent + "\n").indexOf("\n", pos);
         }
         pos = 0;
-        List<List<List<Name>>> headingNames = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
+        final List<List<List<Name>>> headingNames = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
         lineend = (headingsSent + "\n").indexOf("\n", pos);
         while (lineend > 0) {
             List<List<Name>> lineNames = new ArrayList<List<Name>>();
@@ -475,7 +476,9 @@ public final class ValueService {
         return true;
     }
 
-    private List<List<Name>> permuteRowList(List<List<Name>> collist) {
+    // Called by expand headings, need to get my head round this
+
+    private List<List<Name>> permuteRowList(final List<List<Name>> collist) {
 
         //this will return only up to three levels.  I tried a recursive routine, but the arrays, though created correctly (see below) did not return correctly
         List<List<Name>> output = new ArrayList<List<Name>>();
@@ -525,7 +528,7 @@ public final class ValueService {
 */
 
 
-    public List<List<Name>> expandHeadings(List<List<List<Name>>> headingLists) {
+    public List<List<Name>> expandHeadings(final List<List<List<Name>>> headingLists) {
           /*
           e.g.                      null    1,2,3,         null     4,5
                                      a        b     c,d,e   f        g   h
@@ -556,20 +559,20 @@ public final class ValueService {
     }
 
 
-    public String getRowHeadings(LoggedInConnection loggedInConnection, String region, String headingsSent) throws Exception {
+    public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<Name>>> rowHeadingLists = transposeHeadingLists(interpretHeadings(loggedInConnection, headingsSent));
         loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
         return outputHeadings(loggedInConnection.getRowHeadings(region));
     }
 
-    public String getColumnHeadings(LoggedInConnection loggedInConnection, String region, String headingsSent) throws Exception {
+    public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<Name>>> columnHeadingLists = (interpretHeadings(loggedInConnection, headingsSent));
         loggedInConnection.setColumnHeadings(region, expandHeadings(columnHeadingLists));
         return outputHeadings(transposeHeadings(loggedInConnection.getColumnHeadings(region)));
     }
 
 
-    public String getExcelDataForNamesSearch(Set<Name> searchNames) throws Exception {
+    public String getExcelDataForNamesSearch(final Set<Name> searchNames) throws Exception {
         final StringBuilder sb = new StringBuilder();
         List<Value> values = findForNamesIncludeChildren(searchNames, false);
         Set<String> headings = new LinkedHashSet<String>();
@@ -619,7 +622,7 @@ public final class ValueService {
     }
 
 
-    public String getExcelDataForColumnsRowsAndContext(LoggedInConnection loggedInConnection, List<Name> contextNames, String region) throws Exception {
+    public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region) throws Exception {
         loggedInConnection.setContext(region, contextNames); // needed for provenance
         long track = System.currentTimeMillis();
         final StringBuilder sb = new StringBuilder();
