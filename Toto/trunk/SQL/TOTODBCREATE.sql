@@ -28,49 +28,9 @@ SET time_zone = "+00:00";
 
 CREATE TABLE IF NOT EXISTS `name` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `provenance_id` int(11) NOT NULL,
-  `additive` tinyint(1) NOT NULL DEFAULT '1',
+  `json` text NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `name_attribute`
---
-
-CREATE TABLE IF NOT EXISTS `name_attribute` (
-  `name_id` int(11) NOT NULL,
-  `attribute_name` varchar(40) COLLATE utf8_unicode_ci NOT NULL,
-  `attribute_value` varchar(255) COLLATE utf8_unicode_ci NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `name_set_definition`
---
-
-CREATE TABLE IF NOT EXISTS `name_set_definition` (
-  `parent_id` int(11) NOT NULL,
-  `child_id` int(11) NOT NULL,
-  `position` smallint(5) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`parent_id`,`child_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `peer_set_definition`
---
-
-CREATE TABLE IF NOT EXISTS `peer_set_definition` (
-  `name_id` int(11) NOT NULL,
-  `peer_id` int(11) NOT NULL,
-  `position` smallint(5) NOT NULL DEFAULT '0',
-  `additive` tinyint(1) NOT NULL DEFAULT '1',
-  PRIMARY KEY (`name_id`,`peer_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 

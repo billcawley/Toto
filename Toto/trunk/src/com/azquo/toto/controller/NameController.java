@@ -56,6 +56,7 @@ public class NameController {
             if (loggedInConnection == null) {
                 return "error:invalid or expired connection id";
             }
+            System.out.println("json test : " + nameService.findById(loggedInConnection, 12).getAsJson());
             result = nameService.handleRequest(loggedInConnection, instructions);
         }catch(Exception e){
             e.printStackTrace();

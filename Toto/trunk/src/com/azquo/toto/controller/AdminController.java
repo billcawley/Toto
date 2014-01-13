@@ -91,7 +91,7 @@ public class AdminController {
             }
             if(op.equalsIgnoreCase(ACCESSLIST)){
                 if (email != null && email.length() > 0){
-                    return jacksonMapper.writeValueAsString(adminService.getAccessList(loggedInConnection,email));
+                    return jacksonMapper.writeValueAsString(adminService.getAccessList(loggedInConnection, email));
                 }
             }
 

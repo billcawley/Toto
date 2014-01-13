@@ -100,7 +100,7 @@ public final class TotoMemoryDB {
             // going to speed things up by selecting the lot like we do with value
 
 
-            int currentParentId = -1;
+            /*int currentParentId = -1;
             LinkedHashSet<Name> childSet = new LinkedHashSet<Name>();
             for (NameDAO.ParentIdNameId parentIdChildId : nameDAO.findAllParentChildLinksOrderByParentIdPosition(this)) {
                 final int parentId = parentIdChildId.parentId;
@@ -190,8 +190,8 @@ public final class TotoMemoryDB {
             System.out.println(linkCounter + " attribute names links created in " + (System.currentTimeMillis() - track) + "ms");
             track = System.currentTimeMillis();
 
-
-            initAttributeNameMap();
+            */
+            initNames();
 
             //END ATTRIBUTES
 
@@ -264,7 +264,7 @@ public final class TotoMemoryDB {
                 nameDAO.store(this, name);
             }
             int links = 0;
-            if (name.getChildrenChanged()) { // then add to a sat to be passed to a faster function??
+            /*if (name.getChildrenChanged()) { // then add to a sat to be passed to a faster function??
                 nameDAO.unlinkAllChildrenForParent(this, name);
                 nameDAO.linkParentAndChildren(this, name);
                 links += name.getChildren().size();
@@ -287,7 +287,7 @@ public final class TotoMemoryDB {
                         nameDAO.linkNameAndAttribute(this, name, attribute, name.getAttributes().get(attribute));
                     }
                 }
-            }
+            }*/
             name.setAsPersisted(); // is this dangerous here???
             // going to save value label links by value to label rather than label to value as the lists on the latter will be big. Change to one value may cause much relinking
             // we don't deal with parents, they're just convenience lookup lists
@@ -517,10 +517,11 @@ public final class TotoMemoryDB {
 
     }
 
-    // to be called after loading extracts attributes to useful maps
+    // to be called after loading moves the json and extracts attributes to useful maps here
 
-    protected void initAttributeNameMap() throws Exception {
+    protected void initNames() throws Exception {
         for (Name name : nameByIdMap.values()){
+            name.populateFromJson();
             addNameToAttributeNameMap(name);
         }
     }

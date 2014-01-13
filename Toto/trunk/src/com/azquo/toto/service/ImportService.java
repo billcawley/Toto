@@ -154,7 +154,6 @@ public final class ImportService {
                             } else {
                                 name.setAttributeWillBePersisted(header, getFirstName(newName));
                             }
-                            name.setEntityColumnsChanged();// may be overdoing it if the attributes do not affect the current name
                         }
                     }
                 }

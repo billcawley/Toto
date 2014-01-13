@@ -1,5 +1,10 @@
 package com.azquo.toto.memorydb;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -15,15 +20,14 @@ import java.util.*;
  */
 public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
-
     public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
 
     // leaving here as a reminder to consider proper logging
     //private static final Logger logger = Logger.getLogger(Name.class.getName());
     // data fields
-    private final Provenance provenance;
+    private Provenance provenance;
     private boolean additive;
-    private LinkedHashMap<String, String> attributes;
+    private Map<String, String> attributes;
 
     // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
 
@@ -39,29 +43,26 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     private LinkedHashSet<Name> children;
     private LinkedHashMap<Name, Boolean> peers;
 
-    private boolean childrenChanged;
-    private boolean peersChanged;
-    private boolean attributesChanged;
-
     // parents is maintained according to children, it isn't persisted in the same way
     // ok no longer dealing with a name check here, it's all done through attributes
 
-    public Name(final TotoMemoryDB totoMemoryDB, final Provenance provenance, final boolean additive) throws Exception {
-        this(totoMemoryDB, 0, provenance, additive);
+    public Name(final TotoMemoryDB totoMemoryDB, final Provenance provenance, boolean additive) throws Exception {
+        this(totoMemoryDB, 0, null);
+        setProvenanceWillBePersisted(provenance);
+        setAdditiveWillBePersisted(additive);
     }
 
-    public Name(final TotoMemoryDB totoMemoryDB, int id, final Provenance provenance, final boolean additive) throws Exception {
+    // for the
+
+    public Name(final TotoMemoryDB totoMemoryDB,int id, String jsonFromDB) throws Exception {
         super(totoMemoryDB, id);
-        this.provenance = provenance;
-        this.additive = additive;
+        this.setJsonCache(jsonFromDB);
+        additive = true; // by default
         values = new HashSet<Value>();
         parents = new HashSet<Name>();
         children = new LinkedHashSet<Name>();
         peers = new LinkedHashMap<Name, Boolean>();
         attributes = new LinkedHashMap<String, String>();
-        childrenChanged = false;
-        peersChanged = false;
-        attributesChanged = false;
         // it annoys me that this can't be folded into addToDb but I can't see how it would as the name won't be initialised when that is called
         // we could pull a trick above as in they have to override "assign variables" or something . . .not sure
     }
@@ -78,23 +79,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     @Override
     protected void classSpecificSetAsPersisted() {
-        childrenChanged = false;
-        peersChanged = false;
-        attributesChanged = false;
-
         getTotoMemoryDB().removeNameNeedsPersisting(this);
-    }
-
-    protected boolean getChildrenChanged() {
-        return childrenChanged;
-    }
-
-    protected boolean getPeersChanged() {
-        return peersChanged;
-    }
-
-    protected boolean getAttributesChanged() {
-        return attributesChanged;
     }
 
     // for convenience but be careful where it is used . . .
@@ -102,6 +87,8 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     public String getDefaultDisplayName() {
         return getAttribute(DEFAULT_DISPLAY_NAME);
     }
+
+    // should I be cloning provenance???
 
     public Provenance getProvenance() {
         return provenance;
@@ -111,15 +98,19 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         return additive;
     }
 
-    public synchronized void setEntityColumnsChanged() throws Exception{
-        entityColumnsChanged = true;
-    }
-
     // needs the db to check the name is not there
 
     public synchronized void setAdditiveWillBePersisted(final boolean additive) throws Exception {
         if (this.additive != additive){
             this.additive = additive;
+            entityColumnsChanged = true;
+            setNeedsPersisting();
+        }
+    }
+
+    public synchronized void setProvenanceWillBePersisted(final Provenance provenance) throws Exception {
+        if (this.provenance == null || !this.provenance.equals(provenance)){
+            this.provenance = provenance;
             entityColumnsChanged = true;
             setNeedsPersisting();
         }
@@ -294,7 +285,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         }
 
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            childrenChanged = true;
+            entityColumnsChanged = true;
             setNeedsPersisting();
         }
 
@@ -318,7 +309,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             findAllChildrenCache = null;
             child.parents.add(this);
             if(!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-                childrenChanged = true;
+                entityColumnsChanged = true;
                 setNeedsPersisting();
             }
         }
@@ -333,7 +324,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         name.parents.remove(this);
         if (children.remove(name) && !getTotoMemoryDB().getNeedsLoading()) { // it changed the set and we're not loading
             findAllChildrenCache = null;
-            childrenChanged = true;
+            entityColumnsChanged = true;
             setNeedsPersisting();
         }
     }
@@ -355,7 +346,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         }
         this.peers = peers;
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            peersChanged = true;
+            entityColumnsChanged = true;
             setNeedsPersisting();
         }
 
@@ -367,7 +358,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     protected synchronized void setAttributesWillBePersisted(LinkedHashMap<String,String> attributes) throws Exception {
         this.attributes = attributes;
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            attributesChanged = true;
+            entityColumnsChanged = true;
             setNeedsPersisting();
         }
 
@@ -387,7 +378,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         // now deal with the DB maps!
         getTotoMemoryDB().addNameToAttributeNameMap(this); // will overwrite but that's fine
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            attributesChanged = true;
+            entityColumnsChanged = true;
             setNeedsPersisting();
         }
     }
@@ -397,7 +388,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             getTotoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, attributes.remove(attributeName), this);
         }
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            attributesChanged = true;
+            entityColumnsChanged = true;
             setNeedsPersisting();
         }
     }
@@ -411,7 +402,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     public synchronized void removeFromPeersWillBePersisted(Name name) throws Exception {
         checkDatabaseMatches(name);// even if not needed throw the damn exception!
         if (peers.remove(name) && !getTotoMemoryDB().getNeedsLoading()) { // it changed the set
-            peersChanged = true;
+            entityColumnsChanged = true;
             setNeedsPersisting();
         }
     }
@@ -421,6 +412,67 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     @Override
     public int compareTo(Name n) {
         return getDefaultDisplayName().toLowerCase().compareTo(getDefaultDisplayName().toLowerCase()); // think that will give us a case insensitive sort!
+    }
+
+    // for Jackson mapping, trying to attach to actual fields would be a pain I think. Possibly do it annotating getters??
+    // think important to use a linked hash map to preserve order.
+    private static class JsonTransport{
+        public int provenanceId;
+        public boolean additive;
+        public Map<String, String> attributes;
+        public LinkedHashMap<Integer, Boolean> peerIds;
+        public LinkedHashSet<Integer> childrenIds;
+
+        @JsonCreator
+        public JsonTransport(@JsonProperty("provenanceId") int provenanceId, @JsonProperty("additive") boolean additive, @JsonProperty("attributes") Map<String, String> attributes, @JsonProperty("peerIds") LinkedHashMap<Integer, Boolean> peerIds, @JsonProperty("childrenIds") LinkedHashSet<Integer> childrenIds) {
+            this.provenanceId = provenanceId;
+            this.additive = additive;
+            this.attributes = attributes;
+            this.peerIds = peerIds;
+            this.childrenIds = childrenIds;
+        }
+    }
+
+    public String getAsJson() {
+        LinkedHashMap<Integer, Boolean> peerIds = new LinkedHashMap<Integer, Boolean>();
+        for (Name peer : peers.keySet()){
+            peerIds.put(peer.getId(), peers.get(peer));
+        }
+        // yes could probably use list but lets match collection types . . .
+        LinkedHashSet<Integer> childrenIds = new LinkedHashSet<Integer>();
+        for (Name child : children){
+            childrenIds.add(child.getId());
+        }
+        try {
+            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(),additive,attributes,peerIds,childrenIds));
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    // must be called after the memory db id maps have been populated
+
+    public void populateFromJson() throws Exception {
+        try {
+            JsonTransport transport = jacksonMapper.readValue(getJsonCache(), JsonTransport.class);
+            this.provenance = getTotoMemoryDB().getProvenanceById(transport.provenanceId);
+            this.additive = transport.additive;
+            this.attributes = transport.attributes;
+            LinkedHashMap<Integer, Boolean> peerIds = transport.peerIds;
+            for (Integer peerId : peerIds.keySet()){
+                peers.put(getTotoMemoryDB().getNameById(peerId), peerIds.get(peerId));
+            }
+            LinkedHashSet<Name> children = new LinkedHashSet<Name>();
+            LinkedHashSet<Integer> childrenIds = transport.childrenIds;
+            for (Integer childId : childrenIds){
+                children.add(getTotoMemoryDB().getNameById(childId));
+            }
+            // need to do it this way to sort out the parents
+            setChildrenWillBePersisted(children);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

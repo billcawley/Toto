@@ -19,6 +19,9 @@ import java.util.*;
  */
 public final class NameDAO extends StandardDAO<Name> {
 
+    public static final String JSON = "json";
+
+
     // the default table name for this data.
     @Override
     public String getTableName() {
@@ -27,14 +30,14 @@ public final class NameDAO extends StandardDAO<Name> {
 
     // column names (except ID)
 
-    public static final String PROVENANCEID = "provenance_id";
+    //public static final String PROVENANCEID = "provenance_id";
 
 
 
     // associated table names, currently think here is a good place to put them. Where they're used.
     // used to be the same structure on teh two tables but peer needed additive
 
-    public static final String NAMESETDEFINTION = "name_set_definition";
+/*    public static final String NAMESETDEFINTION = "name_set_definition";
     public static final String PEERSETDEFINTION = "peer_set_definition";
     public static final String NAMEATTRIBUTE = "name_attribute";
     //public static final String ATTRIBUTE = "attribute";
@@ -46,7 +49,7 @@ public final class NameDAO extends StandardDAO<Name> {
     public static final String PEERID = "peer_id";
     public static final String ADDITIVE = "additive";
     public static final String ATTRIBUTENAME = "attribute_name";
-    public static final String ATTRIBUTEVALUE = "attribute_value";
+    public static final String ATTRIBUTEVALUE = "attribute_value";*/
 
     //public static final String JSON = "json";
 
@@ -56,8 +59,9 @@ public final class NameDAO extends StandardDAO<Name> {
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, name.getId());
         // should we allow null provenance??
-        toReturn.put(PROVENANCEID, (name.getProvenance() != null ? name.getProvenance().getId(): 0));
-        toReturn.put(ADDITIVE, name.getAdditive());
+        //toReturn.put(PROVENANCEID, (name.getProvenance() != null ? name.getProvenance().getId(): 0));
+        //toReturn.put(ADDITIVE, name.getAdditive());
+        toReturn.put(JSON, name.getAsJson());
         return toReturn;
     }
 
@@ -72,7 +76,7 @@ public final class NameDAO extends StandardDAO<Name> {
         public final Name mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Name(totoMemoryDB, rs.getInt(ID), totoMemoryDB.getProvenanceById(rs.getInt(PROVENANCEID)), rs.getBoolean(ADDITIVE));
+                return new Name(totoMemoryDB, rs.getInt(ID), rs.getString(JSON));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -80,7 +84,7 @@ public final class NameDAO extends StandardDAO<Name> {
         }
     }
 
-    // immutable. I see no point in getters.
+/*    // immutable. I see no point in getters.
 
     public static class ParentIdNameId{
         public final int parentId;
@@ -159,13 +163,13 @@ public final class NameDAO extends StandardDAO<Name> {
         }
     }
 
-
+*/
 
     @Override
     public RowMapper<Name> getRowMapper(final TotoMemoryDB totoMemoryDB) {
         return new NameRowMapper(totoMemoryDB);
     }
-
+  /*
     // these functions used to have some complexity to do with data integrity, now they are simple as the memory db should take care of that
 
     public boolean linkNameAndPeer(final TotoMemoryDB totoMemoryDB, final Name name, final Name peer, int position, boolean additive) throws DataAccessException {
@@ -231,9 +235,6 @@ public final class NameDAO extends StandardDAO<Name> {
         return jdbcTemplate.update(updateSql, namedParams);
     }
 
-    /*SELECT *
-FROM `name_set_definition`
-ORDER BY parent_id, position*/
     public List<ParentIdNameId> findAllParentChildLinksOrderByParentIdPosition(final TotoMemoryDB totoMemoryDB) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         final String FIND_EXISTING_LINK = "Select `" + PARENTID + "`,`" + CHILDID + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + NAMESETDEFINTION + "` order by `" + PARENTID + "`,`" + POSITION + "`";
@@ -252,5 +253,5 @@ ORDER BY parent_id, position*/
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         final String FIND_EXISTING_LINK = "Select `" + NAMEID + "`,`" + ATTRIBUTENAME + "`,`" + ATTRIBUTEVALUE + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + NAMEATTRIBUTE + "` order by `" + NAMEID + "`";
         return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new NameIdAttributeValueRowMapper());
-    }
+    }*/
 }
