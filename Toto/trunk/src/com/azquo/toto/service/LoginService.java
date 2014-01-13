@@ -52,15 +52,15 @@ public class LoginService {
                 final Map<String, Database> okDatabases = new HashMap<String, Database>();
                 if (user.isAdministrator()){ // automatically has all dbs regardless of access
                     for (Database database : databaseDao.findForBusinessId(user.getBusinessId())){
-                        if (database.getActive()){
+                        if (database.getEndDate().after(new Date())){
                             okDatabases.put(database.getName(), database);
                         }
                     }
                 } else {
                     for (Access access : userAccess){
-                        if (access.getActive()){
+                        if (access.getEndDate().after(new Date())){
                             Database database = databaseDao.findById(access.getDatabaseId());
-                            if (database.getActive()){
+                            if (database.getEndDate().after(new Date())){
                                 okDatabases.put(database.getName(), database);
                             }
                         }

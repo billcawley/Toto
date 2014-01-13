@@ -14,31 +14,23 @@ Value count
  */
 public final class Database extends StandardEntity {
 
-    boolean active;
     Date startDate;
+    Date endDate;
     int businessId;
     String name;
     String mySQLName;
     int nameCount;
     int valueCount;
 
-    public Database(int id, boolean active, Date startDate, int businessId, String name, String mySQLName, int nameCount, int valueCount) {
+    public Database(int id, Date startDate, Date endDate, int businessId, String name, String mySQLName, int nameCount, int valueCount) {
         this.id = id;
-        this.active = active;
         this.startDate = startDate;
+        this.endDate = endDate;
         this.businessId = businessId;
         this.name = name;
         this.mySQLName = mySQLName;
         this.nameCount = nameCount;
         this.valueCount = valueCount;
-    }
-
-    public boolean getActive() {
-        return active;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
     }
 
     public Date getStartDate() {
@@ -47,6 +39,14 @@ public final class Database extends StandardEntity {
 
     public void setStartDate(Date startDate) {
         this.startDate = startDate;
+    }
+
+    public Date getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
     }
 
     public int getBusinessId() {
@@ -93,8 +93,8 @@ public final class Database extends StandardEntity {
     public String toString() {
         return "Database{" +
                 "id=" + id +
-                ", active=" + active +
                 ", startDate=" + startDate +
+                ", endDate=" + endDate +
                 ", businessId=" + businessId +
                 ", name='" + name + '\'' +
                 ", mySQLName='" + mySQLName + '\'' +

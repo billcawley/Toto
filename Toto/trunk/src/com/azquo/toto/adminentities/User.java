@@ -9,8 +9,8 @@ public final class User extends StandardEntity{
 
     public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
 
-    private boolean active;
     private Date startDate;
+    private Date endDate;
     private int businessId;
     private String email;
     private String name;
@@ -18,10 +18,10 @@ public final class User extends StandardEntity{
     private String password;
     private String salt;
 
-    public User(int id, boolean active, Date startDate, int businessId, String email, String name, String status, String password, String salt) {
+    public User(int id, Date startDate, Date endDate, int businessId, String email, String name, String status, String password, String salt) {
         this.id = id;
-        this.active = active;
         this.startDate = startDate;
+        this.endDate = endDate;
         this.businessId = businessId;
         this.email = email;
         this.name = name;
@@ -34,16 +34,16 @@ public final class User extends StandardEntity{
         return status.equalsIgnoreCase(STATUS_ADMINISTRATOR);
     }
 
-    public boolean getActive() {
-        return active;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
-    }
-
     public Date getStartDate() {
         return startDate;
+    }
+
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
+    }
+
+    public Date getEndDate() {
+        return endDate;
     }
 
     public void setStartDate(Date startDate) {
@@ -102,8 +102,8 @@ public final class User extends StandardEntity{
     public String toString() {
         return "User{" +
                 "id=" + id +
-                ", active=" + active +
                 ", startDate=" + startDate +
+                ", endDate=" + endDate +
                 ", businessId=" + businessId +
                 ", email='" + email + '\'' +
                 ", name='" + name + '\'' +

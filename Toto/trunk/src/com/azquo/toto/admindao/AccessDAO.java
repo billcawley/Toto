@@ -22,8 +22,8 @@ public final class AccessDAO extends StandardDAO<Access>{
         return "access";
     }
 
-    public static final String ACTIVE = "active";
     public static final String STARTDATE = "start_date";
+    public static final String ENDDATE = "end_date";
     public static final String USERID = "user_id";
     public static final String DATABASEID = "database_id";
     public static final String READLIST = "read_list";
@@ -33,8 +33,8 @@ public final class AccessDAO extends StandardDAO<Access>{
     public Map<String, Object> getColumnNameValueMap(final Access access){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, access.getId());
-        toReturn.put(ACTIVE, access.getActive());
         toReturn.put(STARTDATE, access.getStartDate());
+        toReturn.put(ENDDATE, access.getEndDate());
         toReturn.put(USERID, access.getUserId());
         toReturn.put(DATABASEID, access.getDatabaseId());
         toReturn.put(READLIST, access.getReadList());
@@ -48,7 +48,7 @@ public final class AccessDAO extends StandardDAO<Access>{
         public Access mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Access(rs.getInt(ID), rs.getBoolean(ACTIVE),rs.getDate(STARTDATE)
+                return new Access(rs.getInt(ID), rs.getDate(STARTDATE), rs.getDate(ENDDATE)
                         ,rs.getInt(USERID),rs.getInt(DATABASEID), rs.getString(READLIST), rs.getString(WRITELIST));
             } catch (Exception e) {
                 e.printStackTrace();

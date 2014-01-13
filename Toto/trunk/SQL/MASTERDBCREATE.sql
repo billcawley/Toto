@@ -3,8 +3,8 @@
 
 CREATE TABLE IF NOT EXISTS `business` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `active` boolean NOT NULL,
   `start_date` timestamp NOT NULL,
+  `end_date` timestamp NOT NULL,
   `business_name` varchar(255) NOT NULL,
   `parent_id` int(11) NOT NULL,
   `business_details` text NOT NULL,
@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS `business` (
 
 CREATE TABLE IF NOT EXISTS `user` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `active` boolean NOT NULL,
   `start_date` timestamp NOT NULL,
+  `end_date` timestamp NOT NULL,
   `business_id` int(11) NOT NULL,
   `email` varchar(255) NOT NULL,
   `name` varchar(255) NOT NULL,
@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS `user` (
 
 CREATE TABLE IF NOT EXISTS `database` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `active` boolean NOT NULL,
   `start_date` timestamp NOT NULL,
+  `end_date` timestamp NOT NULL,
   `business_id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
   `mysql_name` varchar(255) NOT NULL,
@@ -40,8 +40,8 @@ CREATE TABLE IF NOT EXISTS `database` (
 
 CREATE TABLE IF NOT EXISTS `access` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `active` boolean NOT NULL,
   `start_date` timestamp NOT NULL,
+  `end_date` timestamp NOT NULL,
   `user_id` int(11) NOT NULL,
   `database_id` int(11) NOT NULL,
   `read_list` text NOT NULL,

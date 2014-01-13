@@ -22,8 +22,8 @@ public final class DatabaseDAO extends StandardDAO<Database>{
         return "database";
     }
 
-    public static final String ACTIVE = "active";
     public static final String STARTDATE = "start_date";
+    public static final String ENDDATE = "end_date";
     public static final String BUSINESSID = "business_id";
     public static final String NAME = "name";
     public static final String MYSQLNAME = "mysql_name";
@@ -34,8 +34,8 @@ public final class DatabaseDAO extends StandardDAO<Database>{
     public Map<String, Object> getColumnNameValueMap(Database database){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, database.getId());
-        toReturn.put(ACTIVE, database.getActive());
         toReturn.put(STARTDATE, database.getStartDate());
+        toReturn.put(ENDDATE, database.getStartDate());
         toReturn.put(BUSINESSID, database.getBusinessId());
         toReturn.put(NAME, database.getName());
         toReturn.put(MYSQLNAME, database.getMySQLName());
@@ -50,7 +50,7 @@ public final class DatabaseDAO extends StandardDAO<Database>{
         public Database mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Database(rs.getInt(ID), rs.getBoolean(ACTIVE),rs.getDate(STARTDATE)
+                return new Database(rs.getInt(ID), rs.getDate(STARTDATE), rs.getDate(ENDDATE)
                         ,rs.getInt(BUSINESSID),rs.getString(NAME),rs.getString(MYSQLNAME),rs.getInt(NAMECOUNT), rs.getInt(VALUECOUNT));
             } catch (Exception e) {
                 e.printStackTrace();

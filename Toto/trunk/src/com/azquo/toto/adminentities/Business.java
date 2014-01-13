@@ -7,27 +7,19 @@ import java.util.Date;
  */
 public final class Business extends StandardEntity{
 
-    private boolean active;
     Date startDate;
+    Date endDate;
     String businessName;
     int parentId;
     BusinessDetails businessDetails;
 
-    public Business(int id, boolean active, Date startDate, String businessName, int parentId, BusinessDetails businessDetails) {
+    public Business(int id, Date startDate, Date endDate, String businessName, int parentId, BusinessDetails businessDetails) {
         this.id = id;
-        this.active = active;
         this.startDate = startDate;
+        this.endDate = endDate;
         this.businessName = businessName;
         this.parentId = parentId;
         this.businessDetails = businessDetails;
-    }
-
-    public boolean getActive() {
-        return active;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
     }
 
     public Date getStartDate() {
@@ -36,6 +28,14 @@ public final class Business extends StandardEntity{
 
     public void setStartDate(Date startDate) {
         this.startDate = startDate;
+    }
+
+    public Date getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
     }
 
     public String getBusinessName() {
@@ -66,8 +66,8 @@ public final class Business extends StandardEntity{
     public String toString() {
         return "Business{" +
                 "id=" + id +
-                ", active=" + active +
                 ", startDate=" + startDate +
+                ", endDate=" + endDate +
                 ", businessName='" + businessName + '\'' +
                 ", parentId=" + parentId +
                 ", businessDetails=" + businessDetails +

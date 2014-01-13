@@ -22,8 +22,8 @@ public class UserDAO extends StandardDAO<User>{
         return "user";
     }
 
-    public static final String ACTIVE = "active";
     public static final String STARTDATE = "start_date";
+    public static final String ENDDATE = "end_date";
     public static final String BUSINESSID = "business_id";
     public static final String EMAIL = "email";
     public static final String NAME = "name";
@@ -35,8 +35,8 @@ public class UserDAO extends StandardDAO<User>{
     public Map<String, Object> getColumnNameValueMap(final User user){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, user.getId());
-        toReturn.put(ACTIVE, user.getActive());
         toReturn.put(STARTDATE, user.getStartDate());
+        toReturn.put(ENDDATE, user.getEndDate());
         toReturn.put(BUSINESSID, user.getBusinessId());
         toReturn.put(EMAIL, user.getEmail());
         toReturn.put(NAME, user.getName());
@@ -52,7 +52,7 @@ public class UserDAO extends StandardDAO<User>{
         public User mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new User(rs.getInt(ID), rs.getBoolean(ACTIVE),rs.getDate(STARTDATE),rs.getInt(BUSINESSID)
+                return new User(rs.getInt(ID), rs.getDate(STARTDATE),rs.getDate(ENDDATE),rs.getInt(BUSINESSID)
                         ,rs.getString(EMAIL),rs.getString(NAME), rs.getString(STATUS), rs.getString(PASSWORD), rs.getString(SALT));
             } catch (Exception e) {
                 e.printStackTrace();

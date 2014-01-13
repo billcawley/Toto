@@ -25,7 +25,7 @@ public class BusinessDAOTest {
     @Test
     public void testBasics() throws Exception {
 
-        Business b = new Business(0, true, new Date(),"a new business", 0, new Business.BusinessDetails("address line 1","address line 2","address line 3","address line 4","here is a postcode","76897896","www.azquo.com","key"));
+        Business b = new Business(0, new Date(),new Date(),"a new business", 0, new Business.BusinessDetails("address line 1","address line 2","address line 3","address line 4","here is a postcode","76897896","www.azquo.com","key"));
         System.out.println("id before insert : " + b.getId());
         businessDAO.store(b);
         System.out.println("id after insert : " + b.getId());

@@ -7,8 +7,8 @@ import java.util.Date;
  */
 public final class Access extends StandardEntity{
 
-    private boolean active;
     Date startDate;
+    Date endDate;
     int userId;
     int databaseId;
 
@@ -17,22 +17,14 @@ public final class Access extends StandardEntity{
     String readList;
     String writeList;
 
-    public Access(int id, boolean active, Date startDate, int userId, int databaseId, String readList, String writeList) {
+    public Access(int id, Date startDate, Date endDate, int userId, int databaseId, String readList, String writeList) {
         this.id = id;
-        this.active = active;
         this.startDate = startDate;
+        this.endDate = endDate;
         this.userId = userId;
         this.databaseId = databaseId;
         this.readList = readList;
         this.writeList = writeList;
-    }
-
-    public boolean getActive() {
-        return active;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
     }
 
     public Date getStartDate() {
@@ -41,6 +33,14 @@ public final class Access extends StandardEntity{
 
     public void setStartDate(Date startDate) {
         this.startDate = startDate;
+    }
+
+    public Date getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
     }
 
     public int getUserId() {
@@ -79,7 +79,7 @@ public final class Access extends StandardEntity{
     public String toString() {
         return "Access{" +
                 "id=" + id +
-                ", active=" + active +
+                ", endDate=" + endDate +
                 ", startDate=" + startDate +
                 ", userId=" + userId +
                 ", databaseId=" + databaseId +

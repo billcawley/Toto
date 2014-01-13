@@ -26,8 +26,8 @@ public final class BusinessDAO extends StandardDAO<Business>{
 
     // column names (except ID)
 
-    public static final String ACTIVE = "active";
     public static final String STARTDATE = "start_date";
+    public static final String ENDDATE = "end_date";
     public static final String BUSINESSNAME = "business_name";
     public static final String PARENTID = "parent_id";
     public static final String BUSINESSDETAILS = "business_details";
@@ -36,8 +36,8 @@ public final class BusinessDAO extends StandardDAO<Business>{
     public Map<String, Object> getColumnNameValueMap(final Business business){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, business.getId());
-        toReturn.put(ACTIVE, business.getActive());
         toReturn.put(STARTDATE, business.getStartDate());
+        toReturn.put(ENDDATE, business.getEndDate());
         toReturn.put(BUSINESSNAME, business.getBusinessName());
         toReturn.put(PARENTID, business.getParentId());
         toReturn.put(BUSINESSDETAILS, gson.toJson(business.getBusinessDetails()));
@@ -50,7 +50,7 @@ public final class BusinessDAO extends StandardDAO<Business>{
         public Business mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Business(rs.getInt(ID), rs.getBoolean(ACTIVE),rs.getDate(STARTDATE)
+                return new Business(rs.getInt(ID), rs.getDate(STARTDATE), rs.getDate(ENDDATE)
                         ,rs.getString(BUSINESSNAME),rs.getInt(PARENTID), gson.fromJson(rs.getString(BUSINESSDETAILS), Business.BusinessDetails.class));
             } catch (Exception e) {
                 e.printStackTrace();
