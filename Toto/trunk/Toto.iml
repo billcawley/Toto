@@ -42,7 +42,7 @@
     <orderEntry type="library" name="org.apache.xmlgraphics:fop:1.1" level="project" />
     <orderEntry type="library" name="org.apache.directory.studio:org.apache.commons.lang:2.6" level="project" />
     <orderEntry type="library" name="apache-avalon:avalon-framework:4.1.5" level="project" />
-    <orderEntry type="library" name="gson-2.2.4" level="project" />
+    <orderEntry type="library" name="com.fasterxml.jackson.core:jackson-databind:2.1.0" level="project" />
   </component>
 </module>
 

@@ -1,7 +1,7 @@
 package com.azquo.toto.admindao;
 
 import com.azquo.toto.adminentities.Business;
-import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -16,7 +16,7 @@ import java.util.Map;
  */
 public final class BusinessDAO extends StandardDAO<Business>{
 
-    static final Gson gson = new Gson();
+    private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
     // the default table name for this data.
     @Override
@@ -40,7 +40,11 @@ public final class BusinessDAO extends StandardDAO<Business>{
         toReturn.put(ENDDATE, business.getEndDate());
         toReturn.put(BUSINESSNAME, business.getBusinessName());
         toReturn.put(PARENTID, business.getParentId());
-        toReturn.put(BUSINESSDETAILS, gson.toJson(business.getBusinessDetails()));
+        try{
+            toReturn.put(BUSINESSDETAILS, jacksonMapper.writeValueAsString(business.getBusinessDetails()));
+        } catch (Exception e){
+            e.printStackTrace();
+        }
         return toReturn;
     }
 
@@ -51,7 +55,7 @@ public final class BusinessDAO extends StandardDAO<Business>{
             // not pretty, just make it work for the moment
             try {
                 return new Business(rs.getInt(ID), rs.getDate(STARTDATE), rs.getDate(ENDDATE)
-                        ,rs.getString(BUSINESSNAME),rs.getInt(PARENTID), gson.fromJson(rs.getString(BUSINESSDETAILS), Business.BusinessDetails.class));
+                        ,rs.getString(BUSINESSNAME),rs.getInt(PARENTID), jacksonMapper.readValue(rs.getString(BUSINESSDETAILS), Business.BusinessDetails.class));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

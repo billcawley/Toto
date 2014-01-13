@@ -3,7 +3,7 @@ package com.azquo.toto.controller;
 import com.azquo.toto.service.AdminService;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
-import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 public class AdminController {
 
-    private static Gson gson = new Gson();
+    private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
     @Autowired
     private AdminService adminService;
@@ -84,14 +84,14 @@ public class AdminController {
                 }
             }
             if(op.equalsIgnoreCase(DATABASELIST)){
-                    return gson.toJson(adminService.getDatabaseListForBusiness(loggedInConnection));
+                    return jacksonMapper.writeValueAsString(adminService.getDatabaseListForBusiness(loggedInConnection));
             }
             if(op.equalsIgnoreCase(USERLIST)){
-                    return gson.toJson(adminService.getUserListForBusiness(loggedInConnection));
+                    return jacksonMapper.writeValueAsString(adminService.getUserListForBusiness(loggedInConnection));
             }
             if(op.equalsIgnoreCase(ACCESSLIST)){
                 if (email != null && email.length() > 0){
-                    return gson.toJson(adminService.getAccessList(loggedInConnection,email));
+                    return jacksonMapper.writeValueAsString(adminService.getAccessList(loggedInConnection,email));
                 }
             }
 

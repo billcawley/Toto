@@ -48,6 +48,8 @@ public final class NameDAO extends StandardDAO<Name> {
     public static final String ATTRIBUTENAME = "attribute_name";
     public static final String ATTRIBUTEVALUE = "attribute_value";
 
+    //public static final String JSON = "json";
+
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final Name name){

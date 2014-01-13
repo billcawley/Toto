@@ -74,8 +74,7 @@ public final class Business extends StandardEntity{
                 '}';
     }
 
-    // for Gson mapping, these bits of data will be as gson in the DB. Hence if you want a new one you should just be able to add it here :)
-    // Note gson does not need getters and setters, it just goes straight for the fields.
+    // for Jackson mapping, these bits of data will be as json in the DB. Hence if you want a new one you should just be able to add it here :)
     public static class BusinessDetails{
         String address1;
         String address2;
