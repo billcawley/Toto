@@ -35,7 +35,7 @@ public final class DatabaseDAO extends StandardDAO<Database>{
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, database.getId());
         toReturn.put(STARTDATE, database.getStartDate());
-        toReturn.put(ENDDATE, database.getStartDate());
+        toReturn.put(ENDDATE, database.getEndDate());
         toReturn.put(BUSINESSID, database.getBusinessId());
         toReturn.put(NAME, database.getName());
         toReturn.put(MYSQLNAME, database.getMySQLName());

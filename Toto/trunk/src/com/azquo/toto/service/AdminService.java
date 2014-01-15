@@ -74,7 +74,7 @@ public class AdminService {
         if (loggedInConnection.getUser().isAdministrator()){
             final String mysqlName = getSQLDatabaseName(loggedInConnection,databaseName);
             final Business b = businessDao.findById(loggedInConnection.getUser().getBusinessId());
-            final Database database = new Database(0,new Date(200,1,1), new Date(), b.getId(), databaseName,mysqlName,0,0);
+            final Database database = new Database(0,new Date(), new Date(150,1,1), b.getId(), databaseName,mysqlName,0,0);
             mySQLDatabaseManager.createNewDatabase(mysqlName);
             databaseDao.store(database);
             return true;
