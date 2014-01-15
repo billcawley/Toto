@@ -1069,17 +1069,48 @@ public final class NameService {
         return values;
     }
 
+
+
+
     private String getChildStructureFormattedForOutput(final Name name) {
+        //SHOULD USE GSON HERE!
         int totalValues = getTotalValues(name);
         if (totalValues > 0) {
             StringBuilder sb = new StringBuilder();
             sb.append("{\"name\":");
             sb.append("\"").append(name.getDefaultDisplayName()).append("\"");
+            sb.append(", \"id\":\"" + name.getId() + "\"");
+
             if (totalValues > name.getValues().size()) {
                 sb.append(", \"dataitems\":\"" + totalValues + "\"");
             }
             if (name.getValues().size() > 0) {
                 sb.append(", \"mydataitems\":\"" + name.getValues().size() + "\"");
+            }
+            //putputs the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
+            if (name.getAttributes().size() > 0 || name.getPeers().size() > 0){
+                sb.append(",\"attributes\":{");
+                if (name.getPeers().size() > 0){
+                    String peerList = "";
+                    for (Name peer : name.getPeers().keySet()) {
+                        if (peerList.length() >0) {
+                            peerList += ", ";
+                        }
+                        peerList += peer.getDefaultDisplayName();
+                        if (!name.getPeers().get(peer)){
+                           peerList+="--";
+                        }
+                    }
+                    sb.append("\"peers\":\"" + peerList + "\"");
+
+                }
+                int count = 0;
+                for (String attName:name.getAttributes().keySet()){
+                    if (count > 0) sb.append(",");
+                    sb.append("\"" + attName + "\":\"" + name.getAttributes().get(attName) + "\"");
+                    count++;
+                }
+                sb.append("}");
             }
             final Set<Name> children = name.getChildren();
             if (!children.isEmpty()) {
