@@ -203,7 +203,7 @@ public class ValueServiceTest {
         csvReader = new CsvReader(new InputStreamReader(new FileInputStream(filePath), "8859_1"), '\t');
         csvReader.readHeaders(); // might be necessary for init
 
-        Provenance provenance = provenanceService.getTestProvenance();
+        Provenance provenance = provenanceService.getTestProvenance(loggedInConnection);
         int valuecount = 0;
         while (csvReader.readRecord()){
             Set<String> names = new HashSet<String>();

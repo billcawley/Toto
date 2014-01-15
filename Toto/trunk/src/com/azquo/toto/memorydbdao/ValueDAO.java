@@ -30,25 +30,11 @@ public final class ValueDAO extends StandardDAO<Value> {
 
     // column names (except ID)
 
-    public static final String PROVENANCEID = "provenance_id";
-    public static final String DOUBLE = "double";
-    public static final String TEXT = "text";
-    public static final String DELETEDINFO = "deleted_info";
-
-    // related table and column names
-
-    public static final String VALUENAME = "value_name";
-    public static final String VALUEID = "value_id";
-    public static final String NAMEID = "name_id";
-
     @Override
     protected Map<String, Object> getColumnNameValueMap(Value value) {
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, value.getId());
-        toReturn.put(PROVENANCEID, value.getProvenance().getId());
-        toReturn.put(DOUBLE, value.getDoubleValue());
-        toReturn.put(TEXT, value.getText());
-        toReturn.put(DELETEDINFO, value.getDeletedInfo());
+        toReturn.put(JSON, value.getAsJson());
         return toReturn;
     }
 
@@ -61,7 +47,7 @@ public final class ValueDAO extends StandardDAO<Value> {
         public Value mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Value(totoMemoryDB,rs.getInt(ID), totoMemoryDB.getProvenanceById(rs.getInt(PROVENANCEID)),rs.getInt(DOUBLE),rs.getString(TEXT),rs.getString(DELETEDINFO));
+                return new Value(totoMemoryDB,rs.getInt(ID), rs.getString(JSON));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -79,114 +65,9 @@ public final class ValueDAO extends StandardDAO<Value> {
         }
     }
 
-    private static final class ValueIdNameIdRowMapper implements RowMapper<ValueIdNameId> {
-
-        @Override
-        public ValueIdNameId mapRow(final ResultSet rs, final int row) throws SQLException {
-            // not pretty, just make it work for the moment
-            try {
-                return new ValueIdNameId(rs.getInt(VALUEID), rs.getInt(NAMEID));
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
-            }
-        }
-    }
-
     @Override
     public RowMapper<Value> getRowMapper(TotoMemoryDB totoMemoryDB) {
         return new ValueRowMapper(totoMemoryDB);
-    }
-
-    // for speed
-/*    public boolean linkValueToNames(final TotoMemoryDB totoMemoryDB, final Value value) throws DataAccessException {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        String updateSql = "INSERT INTO `" + totoMemoryDB.getMySQLName() + "`.`" + VALUENAME + "` (`" + VALUEID + "`,`" + NAMEID + "`) VALUES ";
-        int count = 1;
-        for (Name name : value.getNames()) {
-            // I'm taking off the check - I think it's so rare we'll just let the DB complain
-            updateSql += "(:" + VALUEID + count + ",:" + NAMEID + count + "),";
-            namedParams.addValue(VALUEID + count, value.getId());
-            namedParams.addValue(NAMEID + count, name.getId());
-            count++;
-        }
-        updateSql = updateSql.substring(0, updateSql.length() - 1);
-        long track = System.currentTimeMillis();
-        jdbcTemplate.update(updateSql, namedParams);
-        System.out.println("value name link time : " + (System.currentTimeMillis() - track) + " for " + (count - 1) + " labels");
-        return true;
-    }*/
-
-    // for greater speed, groups of values and names
-    public boolean linkValuesToNames(final TotoMemoryDB totoMemoryDB, final Set<Value> values) throws DataAccessException {
-        long track = System.currentTimeMillis();
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        final StringBuilder updateSql = new StringBuilder();
-        updateSql.append("INSERT INTO `").append(totoMemoryDB.getMySQLName()).append("`.`").append(VALUENAME).append("` (`").append(VALUEID).append("`,`").append(NAMEID).append("`) VALUES ");
-        int count = 1;
-        for(Value value : values){
-            for (Name name : value.getNames()) {
-                // I'm taking off the check - I think it's so rare we'll just let the DB complain
-                updateSql.append("(:").append(VALUEID).append(count).append(",:").append(NAMEID).append(count).append("),");
-                namedParams.addValue(VALUEID + count, value.getId());
-                namedParams.addValue(NAMEID + count, name.getId());
-                count++;
-            }
-        }
-        updateSql.delete(updateSql.length() - 1, updateSql.length());
-        jdbcTemplate.update(updateSql.toString(), namedParams);
-        System.out.println("value name link time : " + (System.currentTimeMillis() - track) + " for " + (count - 1) + " labels");
-        return true;
-    }
-
-/*    public boolean unlinkValueFromNames(final TotoMemoryDB totoMemoryDB, final Value value) throws DataAccessException {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(VALUEID, value.getId());
-        String updateSql = "Delete from `" + totoMemoryDB.getMySQLName() + "`.`" + VALUENAME + "` where `" + VALUEID + "` = :" + VALUEID;
-        jdbcTemplate.update(updateSql, namedParams);
-        return true;
-    }*/
-
-    public boolean unlinkValuesFromNames(final TotoMemoryDB totoMemoryDB, final Set<Value> values) throws DataAccessException {
-        long track = System.currentTimeMillis();
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        final StringBuilder updateSql = new StringBuilder();
-        updateSql.append("Delete from `").append(totoMemoryDB.getMySQLName()).append("`.`").append(VALUENAME).append("` where ");
-        int count = 1;
-        for (Value value : values) {
-            // I'm taking off the check - I think it's so rare we'll just let the DB complain
-            updateSql.append("`").append(VALUEID).append("`=:").append(VALUEID).append(count).append(" or ");
-            namedParams.addValue(VALUEID + count, value.getId());
-            count++;
-        }
-        updateSql.delete(updateSql.length() - 4, updateSql.length());
-        jdbcTemplate.update(updateSql.toString(), namedParams);
-        System.out.println("value name unlink time : " + (System.currentTimeMillis() - track) + " for " + (count - 1) + " values");
-        return true;
-    }
-
-/*    public void setDeleted(String totoMemoryDB.getMySQLName(), Value value) {
-        value.setDeleted(true);
-        store(totoMemoryDB.getMySQLName(), value);
-    }*/
-
-   // for loading into the memory db
-
-/*    public List<Integer> findNameIdsForValue(final TotoMemoryDB totoMemoryDB, final Value value) {
-
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(VALUEID, value.getId());
-        final String FIND_EXISTING_LINK = "Select `" + NAMEID + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + VALUENAME + "` where `" + VALUEID + "` = :" + VALUEID;
-        return jdbcTemplate.queryForList(FIND_EXISTING_LINK, namedParams, Integer.class);
-
-    }*/
-
-    public List<ValueIdNameId> findAllValueNameLinksOrderByValue(final TotoMemoryDB totoMemoryDB) {
-
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        final String FIND_EXISTING_LINK = "Select `" + VALUEID + "`,`" + NAMEID + "` from `" + totoMemoryDB.getMySQLName() + "`.`" + VALUENAME + "` order by `" + VALUEID + "`";
-        return jdbcTemplate.query(FIND_EXISTING_LINK, namedParams, new ValueIdNameIdRowMapper());
-
     }
 
 }

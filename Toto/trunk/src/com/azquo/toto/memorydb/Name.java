@@ -22,6 +22,10 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
 
+    // name needs this as it links to itself hence have to load all names THEN parse the json, other objects do not hence it's in here not the memory db entity
+
+    private String jsonCache;
+
     // leaving here as a reminder to consider proper logging
     //private static final Logger logger = Logger.getLogger(Name.class.getName());
     // data fields
@@ -52,19 +56,15 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         setAdditiveWillBePersisted(additive);
     }
 
-    // for the
-
     public Name(final TotoMemoryDB totoMemoryDB,int id, String jsonFromDB) throws Exception {
         super(totoMemoryDB, id);
-        this.setJsonCache(jsonFromDB);
+        jsonCache = jsonFromDB;
         additive = true; // by default
         values = new HashSet<Value>();
         parents = new HashSet<Name>();
         children = new LinkedHashSet<Name>();
         peers = new LinkedHashMap<Name, Boolean>();
         attributes = new LinkedHashMap<String, String>();
-        // it annoys me that this can't be folded into addToDb but I can't see how it would as the name won't be initialised when that is called
-        // we could pull a trick above as in they have to override "assign variables" or something . . .not sure
     }
 
     @Override
@@ -414,7 +414,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         return getDefaultDisplayName().toLowerCase().compareTo(getDefaultDisplayName().toLowerCase()); // think that will give us a case insensitive sort!
     }
 
-    // for Jackson mapping, trying to attach to actual fields would be a pain I think. Possibly do it annotating getters??
+    // for Jackson mapping, trying to attach to actual fields would be dangerous in terms of allowing unsafe access
     // think important to use a linked hash map to preserve order.
     private static class JsonTransport{
         public int provenanceId;
@@ -432,6 +432,8 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             this.childrenIds = childrenIds;
         }
     }
+
+    // suppose no harm in being public
 
     public String getAsJson() {
         LinkedHashMap<Integer, Boolean> peerIds = new LinkedHashMap<Integer, Boolean>();
@@ -451,27 +453,30 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         return "";
     }
 
-    // must be called after the memory db id maps have been populated
+    // protected to only be used by the database loading, can't be called in the constructor as name by id maps may not be populated
 
-    public void populateFromJson() throws Exception {
-        try {
-            JsonTransport transport = jacksonMapper.readValue(getJsonCache(), JsonTransport.class);
-            this.provenance = getTotoMemoryDB().getProvenanceById(transport.provenanceId);
-            this.additive = transport.additive;
-            this.attributes = transport.attributes;
-            LinkedHashMap<Integer, Boolean> peerIds = transport.peerIds;
-            for (Integer peerId : peerIds.keySet()){
-                peers.put(getTotoMemoryDB().getNameById(peerId), peerIds.get(peerId));
+    protected void populateFromJson() throws Exception {
+        if (getTotoMemoryDB().getNeedsLoading() || jsonCache != null){ // only acceptable if we have json and it's during the loading process
+            try {
+                JsonTransport transport = jacksonMapper.readValue(jsonCache, JsonTransport.class);
+                jsonCache = null;// free the memory
+                this.provenance = getTotoMemoryDB().getProvenanceById(transport.provenanceId);
+                this.additive = transport.additive;
+                this.attributes = transport.attributes;
+                LinkedHashMap<Integer, Boolean> peerIds = transport.peerIds;
+                for (Integer peerId : peerIds.keySet()){
+                    peers.put(getTotoMemoryDB().getNameById(peerId), peerIds.get(peerId));
+                }
+                LinkedHashSet<Name> children = new LinkedHashSet<Name>();
+                LinkedHashSet<Integer> childrenIds = transport.childrenIds;
+                for (Integer childId : childrenIds){
+                    children.add(getTotoMemoryDB().getNameById(childId));
+                }
+                // need to do it this way to sort out the parents
+                setChildrenWillBePersisted(children);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            LinkedHashSet<Name> children = new LinkedHashSet<Name>();
-            LinkedHashSet<Integer> childrenIds = transport.childrenIds;
-            for (Integer childId : childrenIds){
-                children.add(getTotoMemoryDB().getNameById(childId));
-            }
-            // need to do it this way to sort out the parents
-            setChildrenWillBePersisted(children);
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 

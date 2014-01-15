@@ -4,6 +4,7 @@ import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.jdbc.core.RowMapper;
 
+import javax.swing.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -26,25 +27,11 @@ public final class ProvenanceDAO extends StandardDAO<Provenance>{
 
     // column names (except ID)
 
-    public static final String USER = "user";
-    public static final String TIMESTAMP = "timestamp";
-    public static final String METHOD = "method";
-    public static final String NAME = "name";
-    public static final String ROWHEADINGS = "row_headings";
-    public static final String COLUMNHEADINGS = "column_headings";
-    public static final String CONTEXT = "context";
-
     @Override
     public Map<String, Object> getColumnNameValueMap(final Provenance provenance){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, provenance.getId());
-        toReturn.put(USER, provenance.getUser());
-        toReturn.put(TIMESTAMP, provenance.getTimeStamp());
-        toReturn.put(METHOD, provenance.getMethod());
-        toReturn.put(NAME, provenance.getName());
-        toReturn.put(ROWHEADINGS, provenance.getRowHeadings());
-        toReturn.put(COLUMNHEADINGS, provenance.getColumnHeadings());
-        toReturn.put(CONTEXT, provenance.getContext());
+        toReturn.put(JSON, provenance.getUser());
         return toReturn;
     }
 
@@ -59,8 +46,7 @@ public final class ProvenanceDAO extends StandardDAO<Provenance>{
         public Provenance mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Provenance(totoMemoryDB, rs.getInt(ID), rs.getString(USER),rs.getDate(TIMESTAMP)
-                        ,rs.getString(METHOD),rs.getString(NAME),rs.getString(ROWHEADINGS),rs.getString(COLUMNHEADINGS),rs.getString(CONTEXT));
+                return new Provenance(totoMemoryDB, rs.getInt(ID), rs.getString(JSON));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

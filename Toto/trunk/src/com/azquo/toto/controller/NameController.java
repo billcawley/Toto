@@ -12,6 +12,7 @@ package com.azquo.toto.controller;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
+import com.azquo.toto.service.ProvenanceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,6 +31,8 @@ public class NameController {
 
     @Autowired
     private NameService nameService;
+    @Autowired
+    private ProvenanceService provenanceService;
 
     @Autowired
     private LoginService loginService;
@@ -56,7 +59,7 @@ public class NameController {
             if (loggedInConnection == null) {
                 return "error:invalid or expired connection id";
             }
-            System.out.println("json test : " + nameService.findById(loggedInConnection, 12).getAsJson());
+            System.out.println("json test : " + provenanceService.getTestProvenance(loggedInConnection).getAsJson());
             result = nameService.handleRequest(loggedInConnection, instructions);
         }catch(Exception e){
             e.printStackTrace();

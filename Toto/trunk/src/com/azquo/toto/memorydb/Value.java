@@ -1,5 +1,8 @@
 package com.azquo.toto.memorydb;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.*;
 
 /**
@@ -25,21 +28,30 @@ public final class Value extends TotoMemoryDBEntity {
 
     private Set<Name> names;
 
-    private boolean namesChanged;
 
 
     public Value(final TotoMemoryDB totoMemoryDB, final Provenance provenance, final double doubleValue, final String text, final String deletedInfo) throws Exception {
-        this(totoMemoryDB,0,provenance,doubleValue,text,deletedInfo);
-    }
-
-    public Value(final TotoMemoryDB totoMemoryDB, final int id, final Provenance provenance, final double doubleValue, final String text, final String deletedInfo) throws Exception {
-        super(totoMemoryDB, id);
+        super(totoMemoryDB, 0);
         this.provenance = provenance;
         this.doubleValue = doubleValue;
         this.text = text;
         this.deletedInfo = deletedInfo;
         names = new HashSet<Name>();
-        namesChanged = false;
+    }
+
+    public Value(final TotoMemoryDB totoMemoryDB, final int id, final String jsonFromDB) throws Exception {
+        super(totoMemoryDB, id);
+        JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
+        this.provenance = getTotoMemoryDB().getProvenanceById(transport.provenanceId);
+        this.doubleValue = transport.doubleValue;
+        this.text = transport.text;
+        this.deletedInfo = transport.deletedInfo;
+        Set<Integer> nameIds = transport.nameIds;
+        HashSet<Name> names = new HashSet<Name>();
+        for (Integer nameId : nameIds){
+            names.add(getTotoMemoryDB().getNameById(nameId));
+        }
+        setNamesWillBePersisted(names);
     }
 
     @Override
@@ -54,12 +66,7 @@ public final class Value extends TotoMemoryDBEntity {
 
     @Override
     protected void classSpecificSetAsPersisted(){
-        namesChanged = false;
         getTotoMemoryDB().removeValueNeedsPersisting(this);
-    }
-
-    public boolean getNamesChanged() {
-        return namesChanged;
     }
 
     public Provenance getProvenance() {
@@ -117,8 +124,47 @@ public final class Value extends TotoMemoryDBEntity {
         }
 
         if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            namesChanged = true;
+            entityColumnsChanged = true;
             setNeedsPersisting();
         }
     }
+
+
+    // for Jackson mapping, trying to attach to actual fields would be dangerous in terms of allowing unsafe access
+    // think important to use a linked hash map to preserve order.
+    private static class JsonTransport{
+        public int provenanceId;
+        public double doubleValue;
+        public String text;
+        public String deletedInfo;
+        public Set<Integer> nameIds;
+
+        @JsonCreator
+        private JsonTransport(@JsonProperty("provenanceId") int provenanceId, @JsonProperty("doubleValue") double doubleValue, @JsonProperty("text") String text
+                , @JsonProperty("deletedInfo") String deletedInfo, @JsonProperty("namesIds") Set<Integer> nameIds) {
+            this.provenanceId = provenanceId;
+            this.doubleValue = doubleValue;
+            this.text = text;
+            this.deletedInfo = deletedInfo;
+            this.nameIds = nameIds;
+        }
+    }
+
+    // suppose no harm in being public
+
+    public String getAsJson() {
+        // yes could probably use list but lets match collection types . . .
+        Set<Integer> nameIds = new LinkedHashSet<Integer>();
+        for (Name name : names){
+            nameIds.add(name.getId());
+        }
+        try {
+            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(),doubleValue,text,deletedInfo,nameIds));
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+
 }

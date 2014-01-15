@@ -36,8 +36,6 @@ public abstract class TotoMemoryDBEntity {
 
     protected static final ObjectMapper jacksonMapper = new ObjectMapper();
 
-    private String jsonCache; // used when loading
-
     // I am going to hold a reference here, then we simply compare objects by == to check that objects are in their created databases
     // ok this was private but I'm going to make it protected, I think the entity implementations need it.
 
@@ -151,11 +149,4 @@ public abstract class TotoMemoryDBEntity {
         return entityColumnsChanged;
     }
 
-    public String getJsonCache() {
-        return jsonCache;
-    }
-
-    public void setJsonCache(String jsonCache) {
-        this.jsonCache = jsonCache;
-    }
 }

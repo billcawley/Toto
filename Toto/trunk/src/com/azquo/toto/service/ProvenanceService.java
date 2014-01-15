@@ -12,11 +12,11 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 public final class ProvenanceService {
 
-    @Autowired
 
-    public Provenance getTestProvenance() throws Exception {
+
+    public Provenance getTestProvenance(LoggedInConnection loggedInConnection) throws Exception {
         //return new Provenance(totoMemoryDB, "testuser", new java.util.Date(),"testimport", "testuser","rowheadings", "columnheadings", "context");
-        return null;
+        return loggedInConnection.getTotoMemoryDB().getProvenanceById(1);
     }
 
 }

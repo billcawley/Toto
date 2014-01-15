@@ -32,51 +32,20 @@ CREATE TABLE IF NOT EXISTS `name` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `provenance`
---
-
-CREATE TABLE IF NOT EXISTS `provenance` (
-  `id` int(11) NOT NULL,
-  `user` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `method` varchar(40) COLLATE utf8_unicode_ci NOT NULL,
-  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `row_headings` text COLLATE utf8_unicode_ci,
-  `column_headings` text COLLATE utf8_unicode_ci,
-  `context` text COLLATE utf8_unicode_ci,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `value`
---
 
 CREATE TABLE IF NOT EXISTS `value` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `provenance_id` int(11) NOT NULL,
-  `double` double DEFAULT NULL,
-  `text` text COLLATE utf8_unicode_ci,
-  `deleted_info` text COLLATE utf8_unicode_ci,
+  `json` text NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `value_name`
---
+CREATE TABLE IF NOT EXISTS `provenance` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `json` text NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
-CREATE TABLE IF NOT EXISTS `value_name` (
-  `value_id` int(11) NOT NULL,
-  `name_id` int(11) NOT NULL,
-  PRIMARY KEY (`name_id`,`value_id`),
-  KEY `value_id` (`value_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

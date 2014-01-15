@@ -197,7 +197,7 @@ public final class TotoMemoryDB {
 
             // ok this was taking a while so let's try a new idea where we select the whole lot ordering by value id
             // might be a bit hacky but should massively speed loading
-
+            /*
             linkCounter = 0;
             int currentValueId = -1;
             Set<Name> nameSet = new HashSet<Name>();
@@ -225,7 +225,7 @@ public final class TotoMemoryDB {
                 final Value value = valueByIdMap.get(currentValueId);
                 value.setNamesWillBePersisted(nameSet);
             }
-
+*/
             System.out.println(linkCounter + " values name links created in " + (System.currentTimeMillis() - track) + "ms");
             //track = System.currentTimeMillis();
 
@@ -294,7 +294,7 @@ public final class TotoMemoryDB {
         }
         System.out.println("vnp size : " + valuesNeedPersisting.size());
 
-        Set<Value> upTo500toLink = new HashSet<Value>();
+        //Set<Value> upTo500toLink = new HashSet<Value>();
         Set<Value> upTo500toInsert = new HashSet<Value>();
 
         for (Value value : new ArrayList<Value>(valuesNeedPersisting)) {
@@ -310,24 +310,24 @@ public final class TotoMemoryDB {
 
             // ok going to go in groups of 500 here for linking. May need to do the same for store also
 
-            if (value.getNamesChanged()) {
+            /*if (value.getNamesChanged()) {
                 upTo500toLink.add(value);
             }
             if (upTo500toLink.size() == 500) {
                 valueDAO.unlinkValuesFromNames(this, upTo500toLink);
                 valueDAO.linkValuesToNames(this, upTo500toLink);
                 upTo500toLink = new HashSet<Value>();
-            }
+            }*/
             if (upTo500toInsert.size() == 500) {
                 valueDAO.bulkInsert(this, upTo500toInsert);
                 upTo500toInsert = new HashSet<Value>();
             }
             value.setAsPersisted();
         }
-        if (!upTo500toLink.isEmpty()) {
+        /*if (!upTo500toLink.isEmpty()) {
             valueDAO.unlinkValuesFromNames(this, upTo500toLink);
             valueDAO.linkValuesToNames(this, upTo500toLink);
-        }
+        }*/
         if (!upTo500toInsert.isEmpty()) {
             valueDAO.bulkInsert(this, upTo500toInsert);
         }

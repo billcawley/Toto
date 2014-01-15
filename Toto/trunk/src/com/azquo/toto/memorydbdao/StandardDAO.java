@@ -43,6 +43,8 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
 
     protected static final String ID = "id";
 
+    protected static final String JSON = "json";
+
     protected abstract String getTableName();
 
     protected abstract Map<String, Object> getColumnNameValueMap(EntityType entity);
