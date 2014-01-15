@@ -31,7 +31,7 @@ public final class ProvenanceDAO extends StandardDAO<Provenance>{
     public Map<String, Object> getColumnNameValueMap(final Provenance provenance){
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, provenance.getId());
-        toReturn.put(JSON, provenance.getUser());
+        toReturn.put(JSON, provenance.getAsJson());
         return toReturn;
     }
 
