@@ -49,10 +49,10 @@ public class AdminService {
     public boolean confirmKey(final String businessName, final String key){
         final Business business = businessDao.findByName(businessName);
         if (business != null && business.getBusinessDetails().validationKey.equals(key)){
-            business.setEndDate(new Date(200,1,1));
+            business.setEndDate(new Date(130,1,1));
             businessDao.store(business);
             User user = userDao.findForBusinessId(business.getId()).get(0);
-            user.setEndDate(new Date(200,1,1));
+            user.setEndDate(new Date(130,1,1));
             user.setStatus(User.STATUS_ADMINISTRATOR);
             userDao.store(user);
             return true;
@@ -74,7 +74,7 @@ public class AdminService {
         if (loggedInConnection.getUser().isAdministrator()){
             final String mysqlName = getSQLDatabaseName(loggedInConnection,databaseName);
             final Business b = businessDao.findById(loggedInConnection.getUser().getBusinessId());
-            final Database database = new Database(0,new Date(), new Date(150,1,1), b.getId(), databaseName,mysqlName,0,0);
+            final Database database = new Database(0,new Date(), new Date(130,1,1), b.getId(), databaseName,mysqlName,0,0);
             mySQLDatabaseManager.createNewDatabase(mysqlName);
             databaseDao.store(database);
             return true;
@@ -87,7 +87,7 @@ public class AdminService {
 
         if (loggedInConnection.getUser().isAdministrator()){
             final String salt = shaHash(System.currentTimeMillis() + "salt");
-            final User user = new User(0, new Date(), new Date(200,1,1),loggedInConnection.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt);
+            final User user = new User(0, new Date(), new Date(130,1,1),loggedInConnection.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt);
             userDao.store(user);
             return true;
         }
@@ -96,7 +96,7 @@ public class AdminService {
 
     public boolean createUserAccess(final String email, final String readList, final String writeList, final LoggedInConnection loggedInConnection) throws IOException {
         if (loggedInConnection.getUser().isAdministrator() && loggedInConnection.getTotoMemoryDB() != null){ // actually have a DB selected
-            final Access access = new Access(0, new Date(), new Date(200,1,1), userDao.findByEmail(email).getId(), loggedInConnection.getTotoMemoryDB().getDatabase().getId(), readList,writeList);
+            final Access access = new Access(0, new Date(), new Date(130,1,1), userDao.findByEmail(email).getId(), loggedInConnection.getTotoMemoryDB().getDatabase().getId(), readList,writeList);
             accessDao.store(access);
             return true;
         }
