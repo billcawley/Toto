@@ -88,7 +88,7 @@ public class ImportController {
         if (separator.equals("pipe")) separator = "|";
 
         boolean create = false;
-        if (strCreate.equals("true")){
+        if (strCreate != null && strCreate.equals("true")){
             create = true;
         }
 
