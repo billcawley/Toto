@@ -48,7 +48,7 @@ public class AdminService {
 
     public boolean confirmKey(final String businessName, final String key){
         final Business business = businessDao.findByName(businessName);
-        if (business != null && business.getBusinessDetails().getValidationKey().equals(key)){
+        if (business != null && business.getBusinessDetails().validationKey.equals(key)){
             business.setEndDate(new Date(200,1,1));
             businessDao.store(business);
             User user = userDao.findForBusinessId(business.getId()).get(0);

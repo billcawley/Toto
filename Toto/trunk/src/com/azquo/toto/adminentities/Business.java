@@ -80,13 +80,13 @@ public final class Business extends StandardEntity{
     // for Jackson mapping, these bits of data will be as json in the DB. Hence if you want a new one you should just be able to add it here :)
     public static class BusinessDetails{
         public String address1;
-        String address2;
-        String address3;
-        String address4;
-        String postcode;
-        String telephone;
-        String website;
-        String validationKey; // temporary place to store validation key
+        public String address2;
+        public String address3;
+        public String address4;
+        public String postcode;
+        public String telephone;
+        public String website;
+        public String validationKey; // temporary place to store validation key
 
         @JsonCreator
         public BusinessDetails(@JsonProperty("address1") String address1, @JsonProperty("address2") String address2, @JsonProperty("address3") String address3
