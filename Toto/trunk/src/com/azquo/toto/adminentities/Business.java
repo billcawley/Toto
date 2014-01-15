@@ -1,5 +1,8 @@
 package com.azquo.toto.adminentities;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Date;
 
 /**
@@ -76,7 +79,7 @@ public final class Business extends StandardEntity{
 
     // for Jackson mapping, these bits of data will be as json in the DB. Hence if you want a new one you should just be able to add it here :)
     public static class BusinessDetails{
-        String address1;
+        public String address1;
         String address2;
         String address3;
         String address4;
@@ -85,7 +88,10 @@ public final class Business extends StandardEntity{
         String website;
         String validationKey; // temporary place to store validation key
 
-        public BusinessDetails(String address1, String address2, String address3, String address4, String postcode, String telephone, String website, String validationKey) {
+        @JsonCreator
+        public BusinessDetails(@JsonProperty("address1") String address1, @JsonProperty("address2") String address2, @JsonProperty("address3") String address3
+                , @JsonProperty("address4") String address4, @JsonProperty("postcode") String postcode, @JsonProperty("telephone") String telephone
+                , @JsonProperty("website") String website, @JsonProperty("validationKey") String validationKey) {
             this.address1 = address1;
             this.address2 = address2;
             this.address3 = address3;
@@ -96,69 +102,6 @@ public final class Business extends StandardEntity{
             this.validationKey = validationKey;
         }
 
-        public String getAddress1() {
-            return address1;
-        }
-
-        public void setAddress1(String address1) {
-            this.address1 = address1;
-        }
-
-        public String getAddress2() {
-            return address2;
-        }
-
-        public void setAddress2(String address2) {
-            this.address2 = address2;
-        }
-
-        public String getAddress3() {
-            return address3;
-        }
-
-        public void setAddress3(String address3) {
-            this.address3 = address3;
-        }
-
-        public String getAddress4() {
-            return address4;
-        }
-
-        public void setAddress4(String address4) {
-            this.address4 = address4;
-        }
-
-        public String getPostcode() {
-            return postcode;
-        }
-
-        public void setPostcode(String postcode) {
-            this.postcode = postcode;
-        }
-
-        public String getTelephone() {
-            return telephone;
-        }
-
-        public void setTelephone(String telephone) {
-            this.telephone = telephone;
-        }
-
-        public String getWebsite() {
-            return website;
-        }
-
-        public void setWebsite(String website) {
-            this.website = website;
-        }
-
-        public String getValidationKey() {
-            return validationKey;
-        }
-
-        public void setValidationKey(String validationKey) {
-            this.validationKey = validationKey;
-        }
         @Override
         public String toString() {
             return "BusinessDetails{" +
