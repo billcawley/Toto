@@ -62,8 +62,9 @@ public class AdminService {
 
     public String getSQLDatabaseName(final LoggedInConnection loggedInConnection, final String databaseName) {
         Business b = businessDao.findById(loggedInConnection.getUser().getBusinessId());
-        String mysqlName = b.getBusinessName().substring(0,5) + "_" + databaseName;
-        return mysqlName.replaceAll("[^A-Za-z0-9]", "");
+        //TODO  Check name below is unique.
+        String mysqlName = b.getBusinessName()+ "     ".substring(0,5).trim() + "_" + databaseName;
+        return mysqlName.replaceAll("[^A-Za-z0-9_]", "");
 
 
     }
