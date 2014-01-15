@@ -55,16 +55,6 @@ public final class ValueDAO extends StandardDAO<Value> {
         }
     }
 
-    public static class ValueIdNameId{
-        public final int valueId;
-        public final int nameId;
-
-        public ValueIdNameId(int valueId, int nameId) {
-            this.valueId = valueId;
-            this.nameId = nameId;
-        }
-    }
-
     @Override
     public RowMapper<Value> getRowMapper(TotoMemoryDB totoMemoryDB) {
         return new ValueRowMapper(totoMemoryDB);

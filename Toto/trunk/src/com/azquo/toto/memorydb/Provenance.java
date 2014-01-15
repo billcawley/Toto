@@ -116,7 +116,7 @@ public final class Provenance extends TotoMemoryDBEntity {
         public final String columnHeadings;
         public final String context;
         @JsonCreator
-        private JsonTransport(@JsonProperty("user") String user, @JsonProperty("timeStamp") Date timeStamp, @JsonProperty("method") String method, String name,
+        private JsonTransport(@JsonProperty("user") String user, @JsonProperty("timeStamp") Date timeStamp, @JsonProperty("method") String method, @JsonProperty("name") String name,
                               @JsonProperty("rowHeadings") String rowHeadings, @JsonProperty("columnHeadings") String columnHeadings, @JsonProperty("context") String context) {
             this.user = user;
             this.timeStamp = timeStamp;

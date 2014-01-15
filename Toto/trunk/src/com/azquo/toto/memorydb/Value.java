@@ -46,9 +46,9 @@ public final class Value extends TotoMemoryDBEntity {
         this.doubleValue = transport.doubleValue;
         this.text = transport.text;
         this.deletedInfo = transport.deletedInfo;
-        Set<Integer> nameIds = transport.nameIds;
-        HashSet<Name> names = new HashSet<Name>();
-        for (Integer nameId : nameIds){
+        names = new HashSet<Name>();
+        //System.out.println("name ids" + transport.nameIds);
+        for (Integer nameId : transport.nameIds){
             names.add(getTotoMemoryDB().getNameById(nameId));
         }
         setNamesWillBePersisted(names);
@@ -141,7 +141,7 @@ public final class Value extends TotoMemoryDBEntity {
 
         @JsonCreator
         private JsonTransport(@JsonProperty("provenanceId") int provenanceId, @JsonProperty("doubleValue") double doubleValue, @JsonProperty("text") String text
-                , @JsonProperty("deletedInfo") String deletedInfo, @JsonProperty("namesIds") Set<Integer> nameIds) {
+                , @JsonProperty("deletedInfo") String deletedInfo, @JsonProperty("nameIds") Set<Integer> nameIds) {
             this.provenanceId = provenanceId;
             this.doubleValue = doubleValue;
             this.text = text;
