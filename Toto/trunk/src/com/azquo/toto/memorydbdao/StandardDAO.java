@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,7 +48,14 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
 
     protected abstract String getTableName();
 
-    protected abstract Map<String, Object> getColumnNameValueMap(EntityType entity);
+    // same for them all now . . .
+
+    private Map<String, Object> getColumnNameValueMap(final EntityType et){
+        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        toReturn.put(ID, et.getId());
+        toReturn.put(JSON, et.getAsJson());
+        return toReturn;
+    }
 
     protected abstract RowMapper<EntityType> getRowMapper(TotoMemoryDB totoMemoryDB);
 

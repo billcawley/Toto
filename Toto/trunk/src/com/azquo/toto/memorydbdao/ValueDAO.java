@@ -1,18 +1,11 @@
 package com.azquo.toto.memorydbdao;
 
-import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Value;
 import com.azquo.toto.memorydb.TotoMemoryDB;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Created with IntelliJ IDEA.
@@ -29,14 +22,6 @@ public final class ValueDAO extends StandardDAO<Value> {
     }
 
     // column names (except ID)
-
-    @Override
-    protected Map<String, Object> getColumnNameValueMap(Value value) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
-        toReturn.put(ID, value.getId());
-        toReturn.put(JSON, value.getAsJson());
-        return toReturn;
-    }
 
     private static final class ValueRowMapper implements RowMapper<Value> {
         final TotoMemoryDB totoMemoryDB;

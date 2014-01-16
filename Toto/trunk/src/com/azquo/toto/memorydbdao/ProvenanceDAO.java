@@ -4,11 +4,8 @@ import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.jdbc.core.RowMapper;
 
-import javax.swing.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Created with IntelliJ IDEA.
@@ -26,14 +23,6 @@ public final class ProvenanceDAO extends StandardDAO<Provenance>{
     }
 
     // column names (except ID)
-
-    @Override
-    public Map<String, Object> getColumnNameValueMap(final Provenance provenance){
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
-        toReturn.put(ID, provenance.getId());
-        toReturn.put(JSON, provenance.getAsJson());
-        return toReturn;
-    }
 
     public static final class ProvenanceRowMapper implements RowMapper<Provenance> {
 

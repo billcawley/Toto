@@ -149,4 +149,6 @@ public abstract class TotoMemoryDBEntity {
         return entityColumnsChanged;
     }
 
+    public abstract String getAsJson();
+
 }

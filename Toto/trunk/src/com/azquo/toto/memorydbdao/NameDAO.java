@@ -6,7 +6,6 @@ import org.springframework.jdbc.core.RowMapper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -25,17 +24,6 @@ public final class NameDAO extends StandardDAO<Name> {
     @Override
     public String getTableName() {
         return "name";
-    }
-
-    @Override
-    public Map<String, Object> getColumnNameValueMap(final Name name){
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
-        toReturn.put(ID, name.getId());
-        // should we allow null provenance??
-        //toReturn.put(PROVENANCEID, (name.getProvenance() != null ? name.getProvenance().getId(): 0));
-        //toReturn.put(ADDITIVE, name.getAdditive());
-        toReturn.put(JSON, name.getAsJson());
-        return toReturn;
     }
 
     public static class NameRowMapper implements RowMapper<Name> {
