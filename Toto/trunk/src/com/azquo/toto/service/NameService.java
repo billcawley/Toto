@@ -1088,6 +1088,7 @@ public final class NameService {
                 sb.append(", \"mydataitems\":\"" + name.getValues().size() + "\"");
             }
             //putputs the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
+            int count = 0;
             if (name.getAttributes().size() > 0 || name.getPeers().size() > 0){
                 sb.append(",\"attributes\":{");
                 if (name.getPeers().size() > 0){
@@ -1102,10 +1103,10 @@ public final class NameService {
                         }
                     }
                     sb.append("\"peers\":\"" + peerList + "\"");
+                    count++;
 
                 }
-                int count = 0;
-                for (String attName:name.getAttributes().keySet()){
+                 for (String attName:name.getAttributes().keySet()){
                     if (count > 0) sb.append(",");
                     sb.append("\"" + attName + "\":\"" + name.getAttributes().get(attName) + "\"");
                     count++;
@@ -1116,7 +1117,7 @@ public final class NameService {
             if (!children.isEmpty()) {
                 sb.append(", \"elements\":\"" + children.size() + "\"");
                 sb.append(", \"children\":[");
-                int count = 0;
+                count = 0;
                 for (Name child : children) {
                     String childData = getChildStructureFormattedForOutput(child);
                     if (childData.length() > 0) {
