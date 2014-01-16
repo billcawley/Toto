@@ -41,7 +41,7 @@ public class AdminService {
         final Business business = new Business(0,new Date(),new Date(), businessName,0, bd);
         businessDao.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
-        final User user = new User(0, new Date(),new Date(),business.getId(), email, userName, "registered", encrypt(password, salt), salt);
+        final User user = new User(0, new Date(),new Date(),business.getId(), email, userName, "administrator", encrypt(password, salt), salt);
         userDao.store(user);
         return key;
     }
