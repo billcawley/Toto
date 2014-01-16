@@ -3,6 +3,7 @@ package com.azquo.toto.controller;
 import com.azquo.toto.service.AdminService;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
+import com.azquo.toto.util.AzquoMailer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -26,7 +27,6 @@ public class AdminController {
     private AdminService adminService;
     @Autowired
     private LoginService loginService;
-
 //    private static final Logger logger = Logger.getLogger(TestController.class);
 
     private static final String SIGNON = "signon";
@@ -57,6 +57,7 @@ public class AdminController {
                         address3 != null ? address3 : "", address4 != null ? address4 : "",postcode != null ? postcode : "",telephone != null ? telephone : "");
             }
         } else {
+
             if (connectionId == null) {
                 return "error:no connection id";
             }

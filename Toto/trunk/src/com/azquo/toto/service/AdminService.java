@@ -5,6 +5,7 @@ import com.azquo.toto.adminentities.Access;
 import com.azquo.toto.adminentities.Business;
 import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.User;
+import com.azquo.toto.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
@@ -33,17 +34,27 @@ public class AdminService {
     private AccessDAO accessDao;
     @Autowired
     MySQLDatabaseManager mySQLDatabaseManager;
+    @Autowired
+    private AzquoMailer azquoMailer;
 
     public String registerBusiness(final String email, final String userName, final String password, final String businessName, final String address1
             , final String address2, final String address3, final String address4, final String postcode, final String telephone){
+        // we need to check for existing businesses
         final String key = shaHash(System.currentTimeMillis() + "");
         final Business.BusinessDetails bd = new Business.BusinessDetails(address1,address2,address3,address4,postcode, telephone,"website???", key);
         final Business business = new Business(0,new Date(),new Date(), businessName,0, bd);
+        if (businessDao.findByName(businessName) != null){
+            return "error : " + businessName + " already registerd";
+        }
+        if (userDao.findByEmail(email) != null){
+            return "error : " + email + " already registerd";
+        }
         businessDao.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
         final User user = new User(0, new Date(),new Date(),business.getId(), email, userName, "administrator", encrypt(password, salt), salt);
         userDao.store(user);
-        return key;
+        azquoMailer.sendEMail(user.getEmail(), user.getName(),"Azquo account activation for " + businessName,"<html>Welcome to Azquo!<br/><br/>Your account key is : " + key + "</html>");
+        return "true";
     }
 
     public boolean confirmKey(final String businessName, final String key){

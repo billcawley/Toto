@@ -30,6 +30,7 @@
     <bean id="jdbcTemplate" class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
+    <bean name="azquoMailer" class="com.azquo.toto.util.AzquoMailer"/>
     <bean name="mySQLDatabaseManager" class="com.azquo.toto.admindao.MySQLDatabaseManager"/>
     <bean name="uploadRecordDao" class="com.azquo.toto.admindao.UploadRecordDAO"/>
     <bean name="businessDao" class="com.azquo.toto.admindao.BusinessDAO"/>
