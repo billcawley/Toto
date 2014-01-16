@@ -27,7 +27,7 @@ public final class ImportService {
         final HashMap<Name, String> nameImportHeadingMap = new HashMap<Name, String>();
         //String filePath = "/home/bill/Downloads/exportcodes.csv";
         //TODO  set correct filepath
-        String filePath = "/home/cawley/Downloads/" + fileName;
+        String filePath = "/home/bill/Downloads/" + fileName;
         if (filePath.endsWith(".zip")) {
             filePath = unzip(filePath);
         }
@@ -121,7 +121,7 @@ public final class ImportService {
 
         //String filePath = "/home/bill/Downloads/exportcodes.csv";
         //TODO  set correct filepath
-        String filePath = "/home/cawley/Downloads/" + fileName;
+        String filePath = "/home/bill/Downloads/" + fileName;
         if (filePath.endsWith(".zip")) {
             filePath = unzip(filePath);
         }
@@ -146,13 +146,17 @@ public final class ImportService {
             if (name != null) {
                 for (String header : headers) {
                     if (header.length() > 0) {
+                        String attName = header;
+                        if (header.toLowerCase().equals("name")){
+                            attName = name.DEFAULT_DISPLAY_NAME;
+                        }
                         final String newName = getFirstName(csvReader.get(header));
-                        final String oldName = name.getAttribute(header);
-                        if ((oldName == null && newName.length() > 0) || (oldName != null && !newName.equals(oldName))) {
-                            if (newName.length() == 0) {
-                                name.removeAttributeWillBePersisted(header);
-                            } else {
-                                name.setAttributeWillBePersisted(header, getFirstName(newName));
+                        final String oldName = name.getAttribute(attName);
+                        if ((oldName == null && newName.length() > 0) || (oldName != null && !newName.equals(oldName))){
+                            if (newName.length()==0){
+                                name.removeAttributeWillBePersisted(attName);
+                            }else{
+                                name.setAttributeWillBePersisted(attName, getFirstName(newName));
                             }
                         }
                     }
