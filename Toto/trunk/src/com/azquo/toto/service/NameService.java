@@ -772,10 +772,10 @@ public final class NameService {
         return "";
     }
 
-    public String processJsonRequest(LoggedInConnection loggedInConnection, NameJsonRequest nameJsonRequest){
+    public String processJsonRequest(LoggedInConnection loggedInConnection, NameJsonRequest nameJsonRequest) throws Exception{
         String toReturn = "";
         if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)){
-            toReturn = getStructureForNameSearch(loggedInConnection, nameJsonRequest.name);
+            toReturn = handleRequest(loggedInConnection, nameJsonRequest.name);
         }
 /*
         testjson.jsonFunction = "here is the json function";
