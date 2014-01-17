@@ -44,10 +44,10 @@ public class AdminService {
         final Business.BusinessDetails bd = new Business.BusinessDetails(address1,address2,address3,address4,postcode, telephone,"website???", key);
         final Business business = new Business(0,new Date(),new Date(), businessName,0, bd);
         if (businessDao.findByName(businessName) != null){
-            return "error : " + businessName + " already registerd";
+            return "error: " + businessName + " already registerd";
         }
         if (userDao.findByEmail(email) != null){
-            return "error : " + email + " already registerd";
+            return "error: " + email + " already registerd";
         }
         businessDao.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");

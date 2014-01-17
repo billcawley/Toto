@@ -1,5 +1,6 @@
 package com.azquo.toto.service;
 
+import com.azquo.toto.jsonrequestentities.NameJsonRequest;
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Provenance;
 
@@ -771,9 +772,25 @@ public final class NameService {
         return "";
     }
 
-    // ok this was moved in from teh controller. Probably need to factor some of it out later.
+    public String processJsonRequest(LoggedInConnection loggedInConnection, NameJsonRequest nameJsonRequest){
+        String toReturn = "";
+        if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)){
+            toReturn = getStructureForNameSearch(loggedInConnection, nameJsonRequest.name);
+        }
+/*
+        testjson.jsonFunction = "here is the json function";
+        testjson.name = "here is a name";
+        testjson.oldParent = 1;
+        testjson.newParent = 2;
+        testjson.newPosition = 4;
+        testjson.attributes = "here are some attributes, how to represent, maybe JSON key/pair?";
+        testjson.withData = true;*/
+        return toReturn;
+    }
+
+
+    // ok this was moved in from the controller. Probably need to factor some of it out later.
     // much of the stuff in here was to implement the very first set of functions required by the software.
-    // now returns Json, probably should convert to Gson
 
     public String handleRequest(LoggedInConnection loggedInConnection, String instructions)
             throws Exception {
@@ -814,33 +831,7 @@ public final class NameService {
                 // since children can be part of structure definition we do structure first
                 if (structure != null) {
                     // New logic.  If name is not found, then first find names containing the name sent.  If none are found, return top names in structure
-                    final Name name = findByName(loggedInConnection, nameString);
-                    if (name != null) {
-                        //return getParentStructureFormattedForOutput(name, true) + getChildStructureFormattedForOutput(name, false, json);
-                        return "{\"names\":[" + getChildStructureFormattedForOutput(name) + "]}";
-                    } else {
-                        ArrayList<Name> names = findContainingName(loggedInConnection, nameString);
-                        if (names.size() == 0) {
-                            names = (ArrayList<Name>) findTopNames(loggedInConnection);
-                            names = sortNames(names);
-                        }
-                        StringBuilder sb = new StringBuilder();
-                        sb.append("{\"names\":[");
-                        int count = 0;
-                        for (Name outputName : names) {
-                            String nameJson = getChildStructureFormattedForOutput(outputName);
-                            if (nameJson.length() > 0) {
-                                if (count > 0) sb.append(",");
-                                sb.append(nameJson);
-                                count++;
-                            }
-                        }
-                        sb.append("]}");
-                        return sb.toString();
-
-
-                    }
-
+                    return getStructureForNameSearch(loggedInConnection, nameString);
                 } else if (children != null) {
 
                     if (children.length() > 0) { // we want to affect the structure, add, remove, create
@@ -1040,27 +1031,6 @@ public final class NameService {
         return sb.toString();
     }
 
-/*    private String getParentStructureFormattedForOutput(final Name name, final boolean showParent) {
-        StringBuilder sb = new StringBuilder();
-        if (showParent) {
-            sb.append("`").append(name.getDisplayName()).append("`");
-        }
-        Set<Name> parents = name.getParents();
-        if (!parents.isEmpty()) {
-            sb.append("; parents {");
-            int count = 1;
-            for (Name parent : parents) {
-                sb.append(getParentStructureFormattedForOutput(parent, true));
-                if (count < parents.size()) {
-                    sb.append(",");
-                }
-                count++;
-            }
-            sb.append("}");
-        }
-        return sb.toString();
-    }*/
-
     private int getTotalValues(Name name) {
         int values = name.getValues().size();
         for (Name child : name.getChildren()) {
@@ -1069,8 +1039,31 @@ public final class NameService {
         return values;
     }
 
-
-
+    private String getStructureForNameSearch(LoggedInConnection loggedInConnection, String nameSearch){
+        final Name name = findByName(loggedInConnection, nameSearch);
+        if (name != null) {
+            return "{\"names\":[" + getChildStructureFormattedForOutput(name) + "]}";
+        } else {
+            ArrayList<Name> names = findContainingName(loggedInConnection, nameSearch);
+            if (names.size() == 0) {
+                names = (ArrayList<Name>) findTopNames(loggedInConnection);
+                names = sortNames(names);
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.append("{\"names\":[");
+            int count = 0;
+            for (Name outputName : names) {
+                String nameJson = getChildStructureFormattedForOutput(outputName);
+                if (nameJson.length() > 0) {
+                    if (count > 0) sb.append(",");
+                    sb.append(nameJson);
+                    count++;
+                }
+            }
+            sb.append("]}");
+            return sb.toString();
+        }
+    }
 
     private String getChildStructureFormattedForOutput(final Name name) {
         //SHOULD USE GSON HERE!

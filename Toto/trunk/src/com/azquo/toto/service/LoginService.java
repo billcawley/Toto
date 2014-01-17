@@ -6,6 +6,7 @@ import com.azquo.toto.admindao.UserDAO;
 import com.azquo.toto.adminentities.Access;
 import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.User;
+import com.azquo.toto.jsonrequestentities.StandardJsonRequest;
 import com.azquo.toto.memorydb.MemoryDBManager;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,6 +110,16 @@ public class LoginService {
         }
         return lic;
 
+    }
+
+    public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest){
+        if (standardJsonRequest.user != null && standardJsonRequest.user.length() > 0 &&
+                standardJsonRequest.password != null && standardJsonRequest.password.length() > 0){
+            return login(standardJsonRequest.database == null ? "" : standardJsonRequest.database, standardJsonRequest.user, standardJsonRequest.password, 60);
+        } else if(standardJsonRequest.connectionId != null && standardJsonRequest.connectionId.length() > 0){
+            return getConnection(standardJsonRequest.connectionId);
+        }
+        return null;
     }
 
 }

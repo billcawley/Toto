@@ -9,10 +9,12 @@ package com.azquo.toto.controller;
  * For the moment it parses instructions for manipulating the name set and calls the name service if the instructions seem correctly formed.
  */
 
+import com.azquo.toto.jsonrequestentities.NameJsonRequest;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
 import com.azquo.toto.service.ProvenanceService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,6 +24,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @Controller
 @RequestMapping("/Name")
 public class NameController {
+
+    private static final ObjectMapper jacksonMapper = new ObjectMapper();
+
 
     /*public static final String LEVEL = "level";
     public static final String FROM = "from";
@@ -42,37 +47,55 @@ public class NameController {
     @ResponseBody
     public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId, @RequestParam(value = "instructions", required = false) String instructions,
                                 @RequestParam(value = "jsonfunction", required = false) String jsonfunction, @RequestParam(value = "user", required = false) String user,
-                                @RequestParam(value = "password", required = false) String password, @RequestParam(value = "database", required = false) String database) throws Exception {
-        String result;
+                                @RequestParam(value = "password", required = false) String password, @RequestParam(value = "database", required = false) String database,
+                                @RequestParam(value = "json", required = false) String json) throws Exception {
+/*        NameJsonRequest testjson = new NameJsonRequest();
+        testjson.user = "username";
+        testjson.password = "password34234";
+        testjson.database = "database4343";
+        testjson.operation = "operation13544235";
+        testjson.connectionId = 2;
+        testjson.jsonFunction = "here is the json function";
+        testjson.name = "here is a name";
+        testjson.oldParent = 1;
+        testjson.newParent = 2;
+        testjson.newPosition = 4;
+        testjson.attributes = "here are some attributes, how to represent, maybe JSON key/pair?";
+        testjson.withData = true;
+        System.out.println("json test : " + jacksonMapper.writeValueAsString(testjson));
+        System.out.println("json back : " + jacksonMapper.writeValueAsString(jacksonMapper.readValue(jacksonMapper.writeValueAsString(testjson), NameJsonRequest.class)));*/
         try {
-
-            if (connectionId == null) {
-                LoggedInConnection loggedInConnection = loginService.login(database,user, password,0);
-                 if (loggedInConnection == null){
-                     return "error:no connection id";
-                 }
-                 connectionId = loggedInConnection.getConnectionId();
+            if (json != null && json.length() > 0){ // new style paramters sent as json
+                NameJsonRequest nameJsonRequest;
+                try{
+                    nameJsonRequest = jacksonMapper.readValue(json, NameJsonRequest.class);
+                } catch (Exception e){
+                    return "error:badly formed json " + e.getMessage();
+                }
+                LoggedInConnection loggedInConnection = loginService.getConnectionFromJsonRequest(nameJsonRequest);
+                if (loggedInConnection == null){
+                    return "error:invalid connection id or login credentials";
+                }
+                String result = nameService.processJsonRequest(loggedInConnection, nameJsonRequest);
+                return nameJsonRequest.jsonFunction != null && nameJsonRequest.jsonFunction.length() > 0 ? nameJsonRequest.jsonFunction + "(" + result + ")" : result;
+            } else { // old style
+                if (connectionId == null) {
+                    LoggedInConnection loggedInConnection = loginService.login(database,user, password,0);
+                    if (loggedInConnection == null){
+                        return "error:no connection id";
+                    }
+                    connectionId = loggedInConnection.getConnectionId();
+                }
+                final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
+                if (loggedInConnection == null) {
+                    return "error:invalid or expired connection id";
+                }
+                String result = nameService.handleRequest(loggedInConnection, instructions);
+                return jsonfunction != null && jsonfunction.length() > 0 ? jsonfunction + "(" + result + ")" : result;
             }
-
-            final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
-
-            if (loggedInConnection == null) {
-                return "error:invalid or expired connection id";
-            }
-            //system.out.println("json test : " + provenanceService.getTestProvenance(loggedInConnection).getAsJson());
-            result = nameService.handleRequest(loggedInConnection, instructions);
         }catch(Exception e){
             e.printStackTrace();
             return "error:" + e.getMessage();
         }
-        if (jsonfunction != null && jsonfunction.length() > 0){
-            return jsonfunction + "(" + result + ")";
-        }
-        else {
-            return result;
-        }
     }
-
-
-
 }
