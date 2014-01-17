@@ -17,8 +17,12 @@ function zapParam(params, tozap){
 
 
 function azquojson(functionName, params){
-    //TODO SET ACCESS CORRECTLY
-    params +="&user=edd&password=edd123&database=totoexport";
+
+    if (functionName == "Name"){
+        params = "json={\"user\":\"demo@user.com\",\"password\":\"password\",\"database\":\"Demo_export\",\"operation\":\"structure\"," + params + "}";
+    }else{
+        params +="&user=demo@user.com&password=password&database=Demo_export";
+    }
     var htmlText = "http://www.bomorgan.co.uk:8080/api/" + functionName + "?" + params;
     var script = document.createElement('script'),
         head = document.getElementsByTagName('head')[0] || document.documentElement;
