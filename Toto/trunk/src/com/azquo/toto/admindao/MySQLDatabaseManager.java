@@ -21,17 +21,17 @@ public class MySQLDatabaseManager {
 
         // ok balls to trying to load the file, let's just have the strings here
         jdbcTemplate.update("create database `" + databaseName + "`;", new HashMap<String, Object>()); // check for "database exists" in message?
-        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `name` (\n" +
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`name` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` text NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;", new HashMap<String, Object>());
-        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `value` (\n" +
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`value` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` text NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;", new HashMap<String, Object>());
-        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `provenance` (\n" +
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`provenance` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` text NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
