@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.HashMap;
+
 @Controller
 @RequestMapping("/Name")
 public class NameController {
@@ -54,13 +56,17 @@ public class NameController {
         testjson.password = "password34234";
         testjson.database = "database4343";
         testjson.operation = "operation13544235";
-        testjson.connectionId = 2;
+        testjson.connectionId = "2";
         testjson.jsonFunction = "here is the json function";
         testjson.name = "here is a name";
         testjson.oldParent = 1;
         testjson.newParent = 2;
         testjson.newPosition = 4;
-        testjson.attributes = "here are some attributes, how to represent, maybe JSON key/pair?";
+        HashMap<String, String> test = new HashMap<String, String>();
+        test.put("attribute 1", "attribute 1 value");
+        test.put("attribute 2", "attribute 2 value");
+        test.put("attribute 3", "attribute 3 value");
+        testjson.attributes = test;
         testjson.withData = true;
         System.out.println("json test : " + jacksonMapper.writeValueAsString(testjson));
         System.out.println("json back : " + jacksonMapper.writeValueAsString(jacksonMapper.readValue(jacksonMapper.writeValueAsString(testjson), NameJsonRequest.class)));*/
