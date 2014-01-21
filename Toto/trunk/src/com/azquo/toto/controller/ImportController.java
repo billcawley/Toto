@@ -1,11 +1,23 @@
 package com.azquo.toto.controller;
 
 import com.azquo.toto.service.*;
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileItemFactory;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.beans.factory.annotation.Autowired;
+
+
+
+i
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.util.List;
 
 
 /**
@@ -32,7 +44,7 @@ public class ImportController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "filename", required = false) final String fileName,
+    public String handleRequest(HttpServletRequest request, @RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "filename", required = false) final String fileName,
                                 @RequestParam(value = "language", required = false) final String language, @RequestParam(value = "filetype", required = false) final String fileType,
                                 @RequestParam(value = "separator", required = false) final String separator,@RequestParam(value = "create", required = false) final String create ) throws Exception {
 
@@ -57,7 +69,18 @@ public class ImportController {
 
          */
 
+       FileItemFactory factory = new DiskFileItemFactory();
 
+// Configure a repository (to ensure a secure temp location is used)
+        ServletContext servletContext = this.getServletConfig().getServletContext();
+        File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
+        factory.setRepository(repository);
+
+// Create a new file upload handler
+        ServletFileUpload upload = new ServletFileUpload(factory);
+
+// Parse the request
+        List<FileItem> items = upload.parseRequest(request);
         String result;
         String origLanguage = "";
         if (connectionId == null) {
