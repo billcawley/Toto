@@ -27,6 +27,7 @@ public final class LoggedInConnection {
     private Date loginTime;
     private Date lastAccessed;
     private long timeOut;
+    private String language;
 
     private final Map<String, List<List<Name>>> rowHeadings;
     private final Map<String, List<List<Name>>> columnHeadings;
@@ -44,6 +45,7 @@ public final class LoggedInConnection {
         this.user = user;
         loginTime = new Date();
         lastAccessed = new Date();
+        language = Name.DEFAULT_DISPLAY_NAME;
         rowHeadings = new HashMap<String, List<List<Name>>>();
         columnHeadings = new HashMap<String, List<List<Name>>>();
         contexts = new HashMap<String, List<Name>>();
@@ -83,6 +85,8 @@ public final class LoggedInConnection {
         return lastAccessed;
     }
 
+    public String getLanguage() {return language; }
+
     public long getTimeOut() {
         return timeOut;
     }
@@ -90,6 +94,8 @@ public final class LoggedInConnection {
     public void setLastAccessed(final Date lastAccessed) {
         this.lastAccessed = lastAccessed;
     }
+
+    public void setLanguage(final String language)  {this.language = language; }
 
     public List<List<Name>> getRowHeadings(final String region) {
         if (region == null || region.isEmpty()){
