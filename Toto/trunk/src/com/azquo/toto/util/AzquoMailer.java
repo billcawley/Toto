@@ -3,13 +3,11 @@ package com.azquo.toto.util;
 import org.apache.commons.mail.DefaultAuthenticator;
 import org.apache.commons.mail.HtmlEmail;
 
-import java.net.PasswordAuthentication;
-import java.net.URL;
-import java.util.List;
-import java.util.Properties;
 
 /**
  * Created by cawley on 16/01/14.
+ * Quick google showed the apache libraries to be a pretty easy way to do things. Email so unimportant compared to Feefo.
+ *
  */
 public class AzquoMailer {
 

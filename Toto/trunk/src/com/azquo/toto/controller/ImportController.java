@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 
 
-i
+
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
@@ -69,10 +69,10 @@ public class ImportController {
 
          */
 
-       FileItemFactory factory = new DiskFileItemFactory();
+       DiskFileItemFactory factory = new DiskFileItemFactory();
 
 // Configure a repository (to ensure a secure temp location is used)
-        ServletContext servletContext = this.getServletConfig().getServletContext();
+        ServletContext servletContext = request.getServletContext();
         File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
         factory.setRepository(repository);
 
