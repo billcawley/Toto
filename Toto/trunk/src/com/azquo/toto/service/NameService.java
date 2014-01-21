@@ -33,7 +33,6 @@ public final class NameService {
     public static final String STRUCTURE = "structure";
     public static final String CREATE = "create";
     public static final String REMOVE = "remove";
-    public static final String SEARCH = "search";
     public static final String AFTER = "after";
     public static final String RENAMEAS = "rename as";
 
@@ -117,6 +116,7 @@ public final class NameService {
     }
 
 
+
     public Name findByName(final LoggedInConnection loggedInConnection, final String name) {
 
      /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
@@ -126,12 +126,16 @@ public final class NameService {
         It should also recognise ""    "London, North", "Ontario", "Place"     should recognise that the 'North' is part of 'London, North'
         */
 
+
+         String language = loggedInConnection.getLanguage();
+
+
         String parentName = findParentFromList(name);
         if (parentName == null) {
             // just a simple name passed, no structure
-            return loggedInConnection.getTotoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, name, null);
+            return loggedInConnection.getTotoMemoryDB().getNameByAttribute(language, name, null);
         }
-        Name parent = loggedInConnection.getTotoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, parentName, null);
+        Name parent = loggedInConnection.getTotoMemoryDB().getNameByAttribute(language, parentName, null);
         if (parent == null) { // parent was null, since we're just trying to find that stops us right here
             return null;
         }
@@ -139,14 +143,15 @@ public final class NameService {
         // remainder is the rest of the string, could be Ontario, Place
         parentName = findParentFromList(remainder);
         // keep chopping away at the string until we find the closest parent we can
-        // TODO : what if parent is null? Would the search then happen against a nul parent?
-        // while (parentName != null && parent != null){ // maybe that instead??
         while (parentName != null) {
-            parent = loggedInConnection.getTotoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, parentName, null);
+            parent = loggedInConnection.getTotoMemoryDB().getNameByAttribute(language, parentName, null);
+            if (parent == null) {
+                return null;
+            }
             remainder = name.substring(0, remainder.lastIndexOf(",", name.length() - parentName.length()));
             parentName = findParentFromList(remainder);
         }
-        return loggedInConnection.getTotoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, remainder, parent);
+        return loggedInConnection.getTotoMemoryDB().getNameByAttribute(language, remainder, parent);
     }
 
     public List<Name> searchNames(final LoggedInConnection loggedInConnection, final String search) {
@@ -157,12 +162,18 @@ public final class NameService {
         return loggedInConnection.getTotoMemoryDB().findTopNames();
     }
 
+ 
+
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
         if (name.toLowerCase().endsWith(";unique")) {
             return findOrCreateName(loggedInConnection, name.substring(0, name.length() - 7), true);
         }
         return findOrCreateName(loggedInConnection, name, false);
     }
+
+
+
+
 
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, boolean unique) throws Exception {
 
@@ -177,11 +188,12 @@ public final class NameService {
 
          */
 
+
         // as I (Edd) understand this will be the top parent
-        String parentName = findParentFromList(name);
+          String parentName = findParentFromList(name);
 
         if (parentName == null) {
-            return findOrCreateName(loggedInConnection, name, null, null);
+            return findOrCreateName(loggedInConnection, name,null, null);
         }
         Name parent = findOrCreateName(loggedInConnection, parentName, null, null);
         Name topParent = parent;
@@ -207,14 +219,18 @@ public final class NameService {
 
     }
 
-
+  
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, final Name parent, final Name newparent) throws Exception {
 
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import,and insert a structure into it
         the 'parent' will usually be the top of the tree, and the new parent will be a name created as a branch.  */
 
+
+
+
+
         String storeName = name.replace("\"", "");
-        final Name existing = loggedInConnection.getTotoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, storeName, parent);
+        final Name existing = loggedInConnection.getTotoMemoryDB().getNameByAttribute(loggedInConnection.getLanguage(), storeName, parent);
         if (existing != null) {
             // I think this is in the case of unique = true, the name to be created is in fact being moved down the hierachy
             if (newparent != null && newparent != parent) {
@@ -226,8 +242,15 @@ public final class NameService {
             // actually creating a new one
             Provenance provenance = loggedInConnection.getProvenance();
             Name newName = new Name(loggedInConnection.getTotoMemoryDB(), provenance, true); // default additive to true
-            newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName);
-            // TODO the remove here makes no sense, names are equal by ID, it will never match. Check with dad . . .
+            newName.setAttributeWillBePersisted(loggedInConnection.getLanguage(), storeName);
+            if (!loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME)){
+                String displayName = newName.getAttribute(Name.DEFAULT_DISPLAY_NAME);
+                if (displayName==null || displayName.length()==0){
+                    newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName);
+                }
+            }
+            //  the remove here makes no sense, names are equal by ID, it will never match. Check with dad . . .
+            //  the 'parent' in this case may be the top parent, while the new parent may be next up the hierarchy.
             if (newparent != null) {
                 if (newparent != parent) {
                     parent.removeFromChildrenWillBePersisted(newName);
@@ -814,7 +837,6 @@ public final class NameService {
             instructions = instructions.trim();
             // typically a command will start with a name
 
-            String search = getInstruction(instructions, SEARCH);
             if (instructions.indexOf(';') > 0) {
                 nameString = instructions.substring(0, instructions.indexOf(';')).trim();
                 // now we have it strip off the name, use getInstruction to see what we want to do with the name
@@ -997,12 +1019,7 @@ public final class NameService {
                 } else if (renameas != null) { // not specific to peers or children
                     renameName(loggedInConnection, nameString, renameas);
                     return "rename " + nameString + " to " + renameas;
-                } else if (search != null) { // search
-                    return getNamesFormattedForOutput(searchNames(loggedInConnection, nameString));
                 }
-            }
-            if (search != null) { // blank search
-                return getNamesFormattedForOutput(findTopNames(loggedInConnection));
             }
             return nameString;
         } catch (Exception e) {
@@ -1068,7 +1085,7 @@ public final class NameService {
     private String getChildStructureFormattedForOutput(final Name name) {
         //SHOULD USE GSON HERE!
         int totalValues = getTotalValues(name);
-        if (totalValues > 0) {
+        //if (totalValues > 0) {
             StringBuilder sb = new StringBuilder();
             sb.append("{\"name\":");
             sb.append("\"").append(name.getDefaultDisplayName()).append("\"");
@@ -1123,8 +1140,8 @@ public final class NameService {
             }
             sb.append("}");
             return sb.toString();
-        }
-        return "";
+        //}
+        //return "";
     }
 
 
