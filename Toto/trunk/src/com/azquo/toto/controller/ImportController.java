@@ -59,27 +59,34 @@ public class ImportController {
 
 
         String result;
+        String origLanguage = "";
+        if (connectionId == null) {
+            return "error:no connection id";
+        }
+
+        final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
+
+        if (loggedInConnection == null) {
+            return "error:invalid or expired connection id";
+        }
+        origLanguage = loggedInConnection.getLanguage();
+        loggedInConnection.setLanguage(language);
         try {
 
-            if (connectionId == null) {
-                return "error:no connection id";
-            }
-
-            final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
-
-            if (loggedInConnection == null) {
-                return "error:invalid or expired connection id";
-            }
-            result = handleRequest(loggedInConnection, fileName, language, fileType, separator, create);
+             result = handleRequest(loggedInConnection, fileName, fileType, separator, create);
+            loggedInConnection.setLanguage(origLanguage);
         }catch(Exception e){
             e.printStackTrace();
+            if (origLanguage.length() > 0){
+                loggedInConnection.setLanguage(origLanguage);
+            }
             return "error:" + e.getMessage();
         }
         return result;
     }
 
 
-    public String handleRequest(final LoggedInConnection loggedInConnection, final String fileName, final String language, final String fileType, String separator, final String strCreate)
+    public String handleRequest(final LoggedInConnection loggedInConnection, final String fileName, String fileType, String separator, final String strCreate)
             throws Exception{
 
         if (separator == null || separator.length() == 0) separator = "\t";
@@ -96,11 +103,11 @@ public class ImportController {
         // ok the data import actually ignores names for the moment
         String result = "";
         if (fileType.toLowerCase().equals("values")){
-            result =  importService.dataImport(loggedInConnection, fileName, language, create);
+            result =  importService.dataImport(loggedInConnection, fileName, create);
         }
         // we will pay attention onn the attribute import and replicate
         if (fileType.toLowerCase().equals("names")){
-            result = importService.attributeImport(loggedInConnection,fileName,language,create);
+            result = importService.attributeImport(loggedInConnection,fileName,create);
 
         }
 
