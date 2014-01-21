@@ -339,8 +339,6 @@ public final class ValueService {
                     sumValue += Double.parseDouble(value.getText());
                 } catch (Exception ignored) {
                 }
-            } else {
-                sumValue += value.getDoubleValue();
             }
         }
         if (values.size() > 1) {

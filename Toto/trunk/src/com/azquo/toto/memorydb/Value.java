@@ -22,7 +22,6 @@ public final class Value extends TotoMemoryDBEntity {
     //private static final Logger logger = Logger.getLogger(Value.class.getName());
 
     private final Provenance provenance;
-    private final double doubleValue;
     private final String text;
     private String deletedInfo;
 
@@ -33,7 +32,6 @@ public final class Value extends TotoMemoryDBEntity {
     public Value(final TotoMemoryDB totoMemoryDB, final Provenance provenance, final double doubleValue, final String text, final String deletedInfo) throws Exception {
         super(totoMemoryDB, 0);
         this.provenance = provenance;
-        this.doubleValue = doubleValue;
         this.text = text;
         this.deletedInfo = deletedInfo;
         names = new HashSet<Name>();
@@ -43,7 +41,6 @@ public final class Value extends TotoMemoryDBEntity {
         super(totoMemoryDB, id);
         JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
         this.provenance = getTotoMemoryDB().getProvenanceById(transport.provenanceId);
-        this.doubleValue = transport.doubleValue;
         this.text = transport.text;
         this.deletedInfo = transport.deletedInfo;
         names = new HashSet<Name>();
@@ -73,10 +70,6 @@ public final class Value extends TotoMemoryDBEntity {
         return provenance;
     }
 
-    public double getDoubleValue() {
-        return doubleValue;
-    }
-
     public String getText() {
         return text;
     }
@@ -98,7 +91,6 @@ public final class Value extends TotoMemoryDBEntity {
         return "Value{" +
                 "id=" + getId() +
                 ", provenance=" + provenance +
-                ", doubleValue=" + doubleValue +
                 ", text='" + text + '\'' +
                 ", deleted=" + deletedInfo+
                 '}';
@@ -134,16 +126,14 @@ public final class Value extends TotoMemoryDBEntity {
     // think important to use a linked hash map to preserve order.
     private static class JsonTransport{
         public int provenanceId;
-        public double doubleValue;
         public String text;
         public String deletedInfo;
         public Set<Integer> nameIds;
 
         @JsonCreator
-        private JsonTransport(@JsonProperty("provenanceId") int provenanceId, @JsonProperty("doubleValue") double doubleValue, @JsonProperty("text") String text
+        private JsonTransport(@JsonProperty("provenanceId") int provenanceId, @JsonProperty("text") String text
                 , @JsonProperty("deletedInfo") String deletedInfo, @JsonProperty("nameIds") Set<Integer> nameIds) {
             this.provenanceId = provenanceId;
-            this.doubleValue = doubleValue;
             this.text = text;
             this.deletedInfo = deletedInfo;
             this.nameIds = nameIds;
@@ -159,7 +149,7 @@ public final class Value extends TotoMemoryDBEntity {
             nameIds.add(name.getId());
         }
         try {
-            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(),doubleValue,text,deletedInfo,nameIds));
+            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(),text,deletedInfo,nameIds));
         } catch (Exception e){
             e.printStackTrace();
         }
