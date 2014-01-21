@@ -32,6 +32,7 @@ public final class NameService {
     public static final String PEERS = "peers";
     public static final String STRUCTURE = "structure";
     public static final String CREATE = "create";
+    public static final String EDIT = "edit";
     public static final String REMOVE = "remove";
     public static final String AFTER = "after";
     public static final String RENAMEAS = "rename as";
@@ -800,14 +801,91 @@ public final class NameService {
         if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)){
             toReturn = handleRequest(loggedInConnection, nameJsonRequest.name);
         }
-/*
-        testjson.jsonFunction = "here is the json function";
-        testjson.name = "here is a name";
-        testjson.oldParent = 1;
-        testjson.newParent = 2;
-        testjson.newPosition = 4;
-        testjson.attributes = "here are some attributes, how to represent, maybe JSON key/pair?";
-        testjson.withData = true;*/
+        if (nameJsonRequest.operation.equalsIgnoreCase(EDIT)){
+            if (nameJsonRequest.id == 0){
+                return "error: id not passed for edit";
+            } else {
+                Name name = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.id);
+                if (name == null){
+                    return "error: name for id not found : " + nameJsonRequest.id;
+                }
+                Name newParent = null;
+                Name oldParent = null;
+                if (nameJsonRequest.newParent > 0){
+                    newParent = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.newParent);
+                    if (newParent == null){
+                        return "error: new parent for id not found : " + nameJsonRequest.newParent;
+                    }
+                }
+                if (nameJsonRequest.oldParent > 0){
+                    newParent = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.oldParent);
+                    if (oldParent == null){
+                        return "error: old parent for id not found : " + nameJsonRequest.oldParent;
+                    }
+                }
+                if (newParent != null){
+                    newParent.addChildWillBePersisted(name);
+                }
+                if (oldParent != null){
+                    oldParent.removeFromChildrenWillBePersisted(name);
+                }
+                boolean foundPeers = false;
+                int position = 0;
+                name.clearAttributes(); // and just re set them below
+                for (String key : nameJsonRequest.attributes.keySet()){
+                    position++;
+                    if (key.equalsIgnoreCase(PEERS) || (position == nameJsonRequest.attributes.keySet().size() && !foundPeers)){ // the second means run this if we hit the end having not run it
+                        foundPeers = true;
+                        boolean editingPeers = false;
+                        LinkedHashMap<Name,Boolean> peers = new LinkedHashMap<Name, Boolean>();
+                        if (key.equalsIgnoreCase(PEERS)){ // if it's not then we're in here because no peers were sent so leave the peer list blank
+                            StringTokenizer st = new StringTokenizer(nameJsonRequest.attributes.get(key), ",");
+                            while (st.hasMoreTokens()){
+                                String peerName = st.nextToken().trim();
+                                Name peer = loggedInConnection.getTotoMemoryDB().getNameByAttribute(loggedInConnection.getLanguage(), peerName, null);
+                                if (peer == null){
+                                    return "error: cannot find peer : " + peerName;
+                                } else {
+                                    peers.put(peer, true);
+                                }
+                            }
+                        }
+
+                        // ok need to to see if what was passed was different
+
+                        if (peers.keySet().size() != name.getPeers().keySet().size()){
+                            editingPeers = true;
+                        } else { // same size, check the elements . . .
+                            for (Name peer : name.getPeers().keySet()){
+                                if (peers.get(peer) == null ){ // mismatch, old peers has something the new one does not
+                                    editingPeers = true;
+                                }
+                            }
+                        }
+
+                        if (editingPeers){
+                            if (name.getParents().size() == 0){ // top level, we can edit
+                                name.setPeersWillBePersisted(peers);
+                            } else {
+                                if (getPeersIncludeParents(name).size() == 0){ // no peers on the aprent
+                                    return "error: cannot edit peers, this is not a top level name and there is no peer set for  this name or it's parents, name id " + nameJsonRequest.id;
+                                }
+                                if (name.getValues().size() > 0){
+                                    return "error: cannot edit peers, this is not a top level name and there is data assigned to this name " + nameJsonRequest.id;
+                                }
+                                name.setPeersWillBePersisted(peers);
+                            }
+                        }
+
+                    } else {
+                        name.setAttributeWillBePersisted(key,nameJsonRequest.attributes.get(key));
+                    }
+                }
+                // re set attributes, use single functions so checks happen
+            }
+            toReturn = handleRequest(loggedInConnection, nameJsonRequest.name);
+        }
+
         return toReturn;
     }
 

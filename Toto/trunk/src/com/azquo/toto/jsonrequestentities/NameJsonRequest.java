@@ -8,6 +8,7 @@ import java.util.Map;
  */
 public class NameJsonRequest extends StandardJsonRequest {
     public String name;
+    public int id = 0;
     public int newParent = 0;
     public int oldParent = 0;
     public int newPosition = 0;

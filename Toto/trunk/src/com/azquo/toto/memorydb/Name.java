@@ -392,6 +392,12 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             setNeedsPersisting();
         }
     }
+    // convenience
+    public synchronized void clearAttributes() throws Exception {
+        for (String attribute : attributes.keySet()){
+            removeAttributeWillBePersisted(attribute);
+        }
+    }
 
     public String getAttribute(String attributeName){
         return attributes.get(attributeName);
