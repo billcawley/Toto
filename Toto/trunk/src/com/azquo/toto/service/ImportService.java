@@ -22,7 +22,7 @@ public final class ImportService {
     @Autowired
     private NameService nameService;
 
-    public String dataImport(final LoggedInConnection loggedInConnection, final String fileName, final String language, final boolean create) throws Exception {
+    public String dataImport(final LoggedInConnection loggedInConnection, final String fileName, final boolean create) throws Exception {
         // OK I think I'm supposed to use language in here but how??? Will go to default name for the moment
         final HashMap<Name, String> nameImportHeadingMap = new HashMap<Name, String>();
         //String filePath = "/home/bill/Downloads/exportcodes.csv";
@@ -117,7 +117,7 @@ public final class ImportService {
     }
 
 
-    public String attributeImport(final LoggedInConnection loggedInConnection, final String fileName, final String language, final boolean create) throws Exception {
+    public String attributeImport(final LoggedInConnection loggedInConnection, final String fileName, final boolean create) throws Exception {
 
         //String filePath = "/home/bill/Downloads/exportcodes.csv";
         //TODO  set correct filepath
@@ -131,7 +131,7 @@ public final class ImportService {
 
 
         while (csvReader.readRecord()) {
-            final String searchName = csvReader.get(language);
+            final String searchName = csvReader.get(loggedInConnection.getLanguage());
             Name name = null;
 
             // ok this is going to search for things in the language column with the default name . . doesn't really make sense!
