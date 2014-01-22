@@ -1,7 +1,5 @@
 package com.azquo.toto.service;
 
-import com.azquo.toto.memorydb.TotoMemoryDB;
-import com.azquo.toto.memorydbdao.NameDAO;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,11 +19,7 @@ public class NameServiceTest {
 
     @Autowired
     NameService nameService;
-    @Autowired
-    NameDAO nameDao;
 
-    @Autowired
-    private TotoMemoryDB totoMemoryDB;
     @Before
     public void setUp() throws Exception {
     }

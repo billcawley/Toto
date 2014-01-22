@@ -14,7 +14,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 /**
  * User: cawley
  * Created 7th or 8th jan, that's what I get for pasting a whole file as a start
- * Admin. Resiter users, verify them,
+ * Admin. Register users, verify them,
+ * Fairly vanilla stuff
  */
 @Controller
 @RequestMapping("/Maintain")

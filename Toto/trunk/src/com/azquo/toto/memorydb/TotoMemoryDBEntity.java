@@ -69,13 +69,9 @@ public abstract class TotoMemoryDBEntity {
             needsInserting = true;
         }
         needsDeleting = false;
-        addToDb();
     }
 
-    // this is where each subclass should make sure that it is added to the appropriate map in the totodb. Unfortunately this in practice will just be the id map for that object but hey ho
-    protected abstract void addToDb() throws Exception;
-
-    // this is where each subclass should make sure that it is added to the appropriate modified list in the
+    // this is where each subclass should make sure that it is added to the appropriate modified list in the memorydb
     // not doing this in here as I'd like it class specific ad there may be quirks
     // issue of inserting/updating/deleting dealt with by the DAO
     protected abstract void setNeedsPersisting();

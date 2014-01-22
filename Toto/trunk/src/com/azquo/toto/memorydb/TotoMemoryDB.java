@@ -1,9 +1,8 @@
 package com.azquo.toto.memorydb;
 
 import com.azquo.toto.adminentities.Database;
-import com.azquo.toto.memorydbdao.NameDAO;
-import com.azquo.toto.memorydbdao.ProvenanceDAO;
-import com.azquo.toto.memorydbdao.ValueDAO;
+import com.azquo.toto.memorydbdao.JsonRecordTransport;
+import com.azquo.toto.memorydbdao.StandardDAO;
 
 import java.util.*;
 
@@ -17,13 +16,11 @@ import java.util.*;
  */
 public final class TotoMemoryDB {
 
-    /* damn, I don't think I can auto wire these as I can't guarantee they'll be
+    /* damn, I don't think I can auto wire this as I can't guarantee it will be
        ready for the constructor
      */
 
-    private final ValueDAO valueDAO;
-    private final NameDAO nameDAO;
-    private final ProvenanceDAO provenanceDAO;
+    private final StandardDAO standardDAO;
 
 
     private final Map<String, Map<String, Set<Name>>> nameByAttributeMap; // a map of maps of sets of names. Fun!
@@ -44,11 +41,9 @@ public final class TotoMemoryDB {
     private final Set<Value> valuesNeedPersisting;
     private final Set<Provenance> provenanceNeedsPersisting;
 
-    public TotoMemoryDB(Database database, NameDAO nameDAO, ValueDAO valueDAO, ProvenanceDAO provenanceDAO) throws Exception {
+    public TotoMemoryDB(Database database, StandardDAO standardDAO) throws Exception {
         this.database = database;
-        this.nameDAO = nameDAO;
-        this.valueDAO = valueDAO;
-        this.provenanceDAO = provenanceDAO;
+        this.standardDAO = standardDAO;
          needsLoading = true;
         maxIdAtLoad = 0;
         nameByAttributeMap = new HashMap<String, Map<String, Set<Name>>>();
@@ -85,10 +80,27 @@ public final class TotoMemoryDB {
 
             // Must load provenance first as used by the other two!
 
-            final List<Provenance> allProvenance = provenanceDAO.findAll(this);
-
-            final List<Name> allNames = nameDAO.findAll(this);
-            final List<Value> allValues = valueDAO.findAll(this);
+            final List<JsonRecordTransport> allProvenance = standardDAO.findFromTable(this, StandardDAO.PROVENANCE);
+            for (JsonRecordTransport provenanceRecord : allProvenance){
+                if (provenanceRecord.id > maxIdAtLoad) {
+                    maxIdAtLoad = provenanceRecord.id;
+                }
+                new Provenance(this,provenanceRecord.id,provenanceRecord.json);
+            }
+            final List<JsonRecordTransport> allNames = standardDAO.findFromTable(this, StandardDAO.NAME);
+            for (JsonRecordTransport nameRecord : allNames){
+                if (nameRecord.id > maxIdAtLoad) {
+                    maxIdAtLoad = nameRecord.id;
+                }
+                new Name(this,nameRecord.id,nameRecord.json);
+            }
+            final List<JsonRecordTransport> allValues = standardDAO.findFromTable(this, StandardDAO.VALUE);
+            for (JsonRecordTransport valueRecord : allValues){
+                if (valueRecord.id > maxIdAtLoad) {
+                    maxIdAtLoad = valueRecord.id;
+                }
+                new Value(this,valueRecord.id,valueRecord.json);
+            }
 
             System.out.println(allNames.size() + allValues.size() + allProvenance.size() + " unlinked entities loaded in " + (System.currentTimeMillis() - track) + "ms");
 
@@ -101,23 +113,6 @@ public final class TotoMemoryDB {
             System.out.println(linkCounter + " values name links created in " + (System.currentTimeMillis() - track) + "ms");
             //track = System.currentTimeMillis();
 
-            // check ids for max, a bit hacky
-
-            for (Provenance provenance : allProvenance) {
-                if (provenance.getId() > maxIdAtLoad) {
-                    maxIdAtLoad = provenance.getId();
-                }
-            }
-            for (Value value : allValues) {
-                if (value.getId() > maxIdAtLoad) {
-                    maxIdAtLoad = value.getId();
-                }
-            }
-            for (Name name : allNames) {
-                if (name.getId() > maxIdAtLoad) {
-                    maxIdAtLoad = name.getId();
-                }
-            }
             needsLoading = false;
         }
     }
@@ -130,36 +125,53 @@ public final class TotoMemoryDB {
         // this is where I need to think carefully about concurrency, totodb has the last say when the maps are modified although the flags are another point
         // for the moment just make it work.
         System.out.println("nnp size : " + namesNeedPersisting.size());
+        List<JsonRecordTransport> nameRecordsToStore = new ArrayList<JsonRecordTransport>();
         for (Name name : new ArrayList<Name>(namesNeedPersisting)) {
-            nameDAO.store(this, name);
+            JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
+            if (name.getNeedsDeleting()){
+                state = JsonRecordTransport.State.DELETE;
+            }
+            if (name.getNeedsInserting()){
+                state = JsonRecordTransport.State.INSERT;
+            }
+            nameRecordsToStore.add(new JsonRecordTransport(name.getId(), name.getAsJson(), state));
             name.setAsPersisted(); // is this dangerous here???
         }
+        standardDAO.persistJsonRecords(this, StandardDAO.NAME, nameRecordsToStore);
+        
+        
         System.out.println("vnp size : " + valuesNeedPersisting.size());
 
-        Set<Value> upTo500toInsert = new HashSet<Value>();
-
+        List<JsonRecordTransport> valueRecordsToStore = new ArrayList<JsonRecordTransport>();
         for (Value value : new ArrayList<Value>(valuesNeedPersisting)) {
-                if (value.getNeedsInserting()) {
-                    upTo500toInsert.add(value);
-                } else { // this really means update then
-                    System.out.println("value needed updating : " + value);
-                    valueDAO.store(this, value);
-                }
-
-            if (upTo500toInsert.size() == 500) {
-                valueDAO.bulkInsert(this, upTo500toInsert);
-                upTo500toInsert = new HashSet<Value>();
+            JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
+            if (value.getNeedsDeleting()){
+                state = JsonRecordTransport.State.DELETE;
             }
-            value.setAsPersisted();
+            if (value.getNeedsInserting()){
+                state = JsonRecordTransport.State.INSERT;
+            }
+            valueRecordsToStore.add(new JsonRecordTransport(value.getId(), value.getAsJson(), state));
+            value.setAsPersisted(); // is this dangerous here???
         }
-        if (!upTo500toInsert.isEmpty()) {
-            valueDAO.bulkInsert(this, upTo500toInsert);
-        }
+        standardDAO.persistJsonRecords(this, StandardDAO.VALUE, valueRecordsToStore);
+        
+        
         System.out.println("pnp size : " + provenanceNeedsPersisting.size());
+        List<JsonRecordTransport> provenanceRecordsToStore = new ArrayList<JsonRecordTransport>();
         for (Provenance provenance : new ArrayList<Provenance>(provenanceNeedsPersisting)) {
-                provenanceDAO.store(this, provenance);
-            provenance.setAsPersisted();
+            JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
+            if (provenance.getNeedsDeleting()){
+                state = JsonRecordTransport.State.DELETE;
+            }
+            if (provenance.getNeedsInserting()){
+                state = JsonRecordTransport.State.INSERT;
+            }
+            provenanceRecordsToStore.add(new JsonRecordTransport(provenance.getId(), provenance.getAsJson(), state));
+            provenance.setAsPersisted(); // is this dangerous here???
         }
+        standardDAO.persistJsonRecords(this, StandardDAO.PROVENANCE, provenanceRecordsToStore);
+
     }
 
     protected synchronized int getNextId() {

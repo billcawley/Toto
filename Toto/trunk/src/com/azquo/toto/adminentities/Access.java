@@ -4,6 +4,7 @@ import java.util.Date;
 
 /**
  * Representing access a user can have
+ * should the object be immutable?
  */
 public final class Access extends StandardEntity{
 

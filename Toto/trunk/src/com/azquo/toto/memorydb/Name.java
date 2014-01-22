@@ -68,10 +68,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         children = new LinkedHashSet<Name>();
         peers = new LinkedHashMap<Name, Boolean>();
         attributes = new LinkedHashMap<String, String>();
-    }
-
-    @Override
-    protected void addToDb() throws Exception {
         getTotoMemoryDB().addNameToDb(this);
     }
 

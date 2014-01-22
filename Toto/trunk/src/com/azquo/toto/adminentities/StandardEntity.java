@@ -10,7 +10,6 @@ package com.azquo.toto.adminentities;
 public abstract class StandardEntity {
 
     protected int id;
-    // no setter for id, that should only be done by the constructor
 
     public final int getId() {
         return id;

@@ -37,11 +37,9 @@
     <bean name="userDao" class="com.azquo.toto.admindao.UserDAO"/>
     <bean name="databaseDao" class="com.azquo.toto.admindao.DatabaseDAO"/>
     <bean name="accessDao" class="com.azquo.toto.admindao.AccessDAO"/>
-    <bean name="nameDao" class="com.azquo.toto.memorydbdao.NameDAO"/>
     <bean name="nameService" class="com.azquo.toto.service.NameService"/>
-    <bean name="valueDao" class="com.azquo.toto.memorydbdao.ValueDAO"/>
     <bean name="valueService" class="com.azquo.toto.service.ValueService"/>
-    <bean name="provenanceDao" class="com.azquo.toto.memorydbdao.ProvenanceDAO"/>
+    <bean name="standardDao" class="com.azquo.toto.memorydbdao.StandardDAO"/>
     <bean name="provenanceService" class="com.azquo.toto.service.ProvenanceService"/>
     <bean name="loginService" class="com.azquo.toto.service.LoginService"/>
     <bean name="importService" class="com.azquo.toto.service.ImportService"/>
@@ -49,8 +47,6 @@
     <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
     <bean name="memoryDBManager" class="com.azquo.toto.memorydb.MemoryDBManager">
         <constructor-arg type="com.azquo.toto.admindao.DatabaseDAO" ref="databaseDao"/>
-        <constructor-arg type="com.azquo.toto.memorydbdao.NameDAO" ref="nameDao"/>
-        <constructor-arg type="com.azquo.toto.memorydbdao.ValueDAO" ref="valueDao"/>
-        <constructor-arg type="com.azquo.toto.memorydbdao.ProvenanceDAO" ref="provenanceDao"/>
+        <constructor-arg type="com.azquo.toto.memorydbdao.StandardDAO" ref="standardDao"/>
     </bean>
 </beans>

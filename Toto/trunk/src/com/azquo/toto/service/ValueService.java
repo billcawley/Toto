@@ -34,8 +34,8 @@ public final class ValueService {
         value.setNamesWillBePersisted(new HashSet<Name>());
     }
 
-    public Value createValue(final LoggedInConnection loggedInConnection, final Provenance provenance, final double doubleValue, final String text) throws Exception {
-        return new Value(loggedInConnection.getTotoMemoryDB(), provenance, doubleValue, text, null);
+    public Value createValue(final LoggedInConnection loggedInConnection, final Provenance provenance, final String text) throws Exception {
+        return new Value(loggedInConnection.getTotoMemoryDB(), provenance, text, null);
     }
 
     public void linkValueToNames(final Value value, final Set<Name> names) throws Exception {
@@ -68,7 +68,7 @@ public final class ValueService {
             }
         }
         if (!alreadyInDatabase) {
-            Value value = createValue(loggedInConnection, provenance, 0, valueString);
+            Value value = createValue(loggedInConnection, provenance, valueString);
             toReturn += "  stored";
             // and link to names
             linkValueToNames(value, validNames);
@@ -98,7 +98,7 @@ public final class ValueService {
             contextString.append(",");
         }
 
-        Value newValue = new Value(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getProvenance(), 0, newValueString, null);
+        Value newValue = new Value(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getProvenance(), newValueString, null);
         newValue.setNamesWillBePersisted(existingValue.getNames());
         deleteValue(existingValue);
         return true;

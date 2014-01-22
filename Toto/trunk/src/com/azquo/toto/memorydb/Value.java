@@ -29,7 +29,7 @@ public final class Value extends TotoMemoryDBEntity {
 
 
 
-    public Value(final TotoMemoryDB totoMemoryDB, final Provenance provenance, final double doubleValue, final String text, final String deletedInfo) throws Exception {
+    public Value(final TotoMemoryDB totoMemoryDB, final Provenance provenance, final String text, final String deletedInfo) throws Exception {
         super(totoMemoryDB, 0);
         this.provenance = provenance;
         this.text = text;
@@ -49,10 +49,6 @@ public final class Value extends TotoMemoryDBEntity {
             names.add(getTotoMemoryDB().getNameById(nameId));
         }
         setNamesWillBePersisted(names);
-    }
-
-    @Override
-    protected void addToDb() throws Exception {
         getTotoMemoryDB().addValueToDb(this);
     }
 

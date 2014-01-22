@@ -1,6 +1,5 @@
 package com.azquo.toto.service;
 
-import com.azquo.toto.memorydbdao.ValueDAO;
 import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.Name;
 import com.csvreader.CsvReader;
@@ -36,8 +35,6 @@ public class ValueServiceTest {
     NameService nameService;
     @Autowired
     ProvenanceService provenanceService;
-    @Autowired
-    ValueDAO valueDao;
     @Autowired
     LoginService loginService;
 

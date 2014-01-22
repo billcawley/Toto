@@ -48,10 +48,6 @@ public final class Provenance extends TotoMemoryDBEntity {
         this.rowHeadings = transport.rowHeadings;
         this.columnHeadings = transport.columnHeadings;
         this.context = transport.context;
-    }
-
-    @Override
-    public void addToDb() throws Exception {
         getTotoMemoryDB().addProvenanceToDb(this);
     }
 
