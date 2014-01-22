@@ -130,7 +130,7 @@ public final class TotoMemoryDB {
         // this is where I need to think carefully about concurrency, totodb has the last say when the maps are modified although the flags are another point
         // for the moment just make it work.
         System.out.println("nnp size : " + namesNeedPersisting.size());
-        for (Name name : namesNeedPersisting) {
+        for (Name name : new ArrayList<Name>(namesNeedPersisting)) {
             nameDAO.store(this, name);
             name.setAsPersisted(); // is this dangerous here???
         }
