@@ -6,6 +6,9 @@ import com.csvreader.CsvReader;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -22,22 +25,18 @@ public final class ImportService {
     @Autowired
     private NameService nameService;
 
-    public String dataImport(final LoggedInConnection loggedInConnection, final String fileName, final boolean create) throws Exception {
+    public String dataImport(final LoggedInConnection loggedInConnection, final  InputStream uploadFile, final boolean create) throws Exception {
         // OK I think I'm supposed to use language in here but how??? Will go to default name for the moment
         final HashMap<Name, String> nameImportHeadingMap = new HashMap<Name, String>();
         //String filePath = "/home/bill/Downloads/exportcodes.csv";
         //TODO  set correct filepath
-        String filePath = "/home/bill/Downloads/" + fileName;
-        if (filePath.endsWith(".zip")) {
-            filePath = unzip(filePath);
-        }
+       InputStream is = null;
 
         long track = System.currentTimeMillis();
         String strCreate = "";
         if (create) strCreate = ";create";
 
-
-        final CsvReader csvReader = new CsvReader(new InputStreamReader(new FileInputStream(filePath), "utf-8"), '\t');
+         final CsvReader csvReader = new CsvReader(uploadFile,'\t',  Charset.forName("UTF-8"));
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
         // are the following few lines necessary??
@@ -117,15 +116,10 @@ public final class ImportService {
     }
 
 
-    public String attributeImport(final LoggedInConnection loggedInConnection, final String fileName, final boolean create) throws Exception {
+    public String attributeImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
 
         //String filePath = "/home/bill/Downloads/exportcodes.csv";
-        //TODO  set correct filepath
-        String filePath = "/home/bill/Downloads/" + fileName;
-        if (filePath.endsWith(".zip")) {
-            filePath = unzip(filePath);
-        }
-        final CsvReader csvReader = new CsvReader(new InputStreamReader(new FileInputStream(filePath), "utf-8"), '\t');
+         final CsvReader csvReader = new CsvReader(uploadFile,'\t',  Charset.forName("UTF-8"));
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
 
@@ -169,40 +163,6 @@ public final class ImportService {
 
     // I'm guessing from the internet?
 
-    public String unzip(final String zipFile) {
-
-        byte[] buffer = new byte[1024];
-        File newFile = null;
-        try {
-            final String outputFolder = zipFile.substring(0, zipFile.lastIndexOf(File.separator));
-            //get the zip file content
-            final ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile));
-            //get the zipped file list entry
-            ZipEntry ze = zis.getNextEntry();
-
-            while (ze != null) {
-                final String fileName = ze.getName();
-                newFile = new File(outputFolder + File.separator + fileName);
-                System.out.println("file unzip : " + newFile.getAbsoluteFile());
-                //create all non exists folders
-                //else you will hit FileNotFoundException for compressed folder
-                new File(newFile.getParent()).mkdirs();
-                final FileOutputStream fos = new FileOutputStream(newFile);
-                int len;
-                while ((len = zis.read(buffer)) > 0) {
-                    fos.write(buffer, 0, len);
-                }
-                fos.close();
-                ze = zis.getNextEntry();
-            }
-            zis.closeEntry();
-            zis.close();
-            System.out.println(zipFile + " Unzipped to " + newFile.getName());
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        return newFile.getPath();
-    }
 
 
     private String getFirstName(final String nameGiven) {
