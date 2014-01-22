@@ -16,8 +16,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Iterator;
 import java.util.List;
+import java.util.StringTokenizer;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 
 /**
@@ -44,9 +51,7 @@ public class ImportController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(HttpServletRequest request, @RequestParam(value = "connectionid", required = false) final String connectionId, @RequestParam(value = "filename", required = false) final String fileName,
-                                @RequestParam(value = "language", required = false) final String language, @RequestParam(value = "filetype", required = false) final String fileType,
-                                @RequestParam(value = "separator", required = false) final String separator,@RequestParam(value = "create", required = false) final String create ) throws Exception {
+    public String handleRequest(HttpServletRequest request) throws Exception {
 
         /*
        'filename' is the name of a file that has been FTP uploaded
@@ -68,36 +73,70 @@ public class ImportController {
          'create' will indicate if new names are to be created.  If 'create' is not specified, any name that is not understood will be rejected
 
          */
-
-       DiskFileItemFactory factory = new DiskFileItemFactory();
+        String origLanguage = "";
+        String fileName = "";
+        String fileType = "";
+        String language = "";
+        String separator = "\t";
+        String create = "";
+        LoggedInConnection loggedInConnection = null;
+        try{
+            DiskFileItemFactory factory = new DiskFileItemFactory();
 
 // Configure a repository (to ensure a secure temp location is used)
-        ServletContext servletContext = request.getServletContext();
-        File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
-        factory.setRepository(repository);
+            ServletContext servletContext = request.getServletContext();
+            File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
+            factory.setRepository(repository);
 
 // Create a new file upload handler
-        ServletFileUpload upload = new ServletFileUpload(factory);
+            ServletFileUpload upload = new ServletFileUpload(factory);
 
 // Parse the request
-        List<FileItem> items = upload.parseRequest(request);
-        String result;
-        String origLanguage = "";
-        if (connectionId == null) {
-            return "error:no connection id";
-        }
+            List<FileItem> items = upload.parseRequest(request);
+            Iterator it = items.iterator();
+            FileItem item = (FileItem) it.next();
+            if (!item.getFieldName().equals("parameters")){
+                return "error: expecting parameters";
+            }
+            String parameters = item.getString();
+            StringTokenizer st = new StringTokenizer(parameters,"&");
+            while (st.hasMoreTokens()){
+                String parameter = st.nextToken();
+                StringTokenizer st2 = new StringTokenizer(parameter,"=");
+                String parameterName = st2.nextToken();
+                if (parameterName.equals("connectionid")){
+                    loggedInConnection = loginService.getConnection(st2.nextToken());
+                }
+                if (parameterName.equals("filename")){
+                    fileName = st2.nextToken();
+                }
+                if (parameterName.equals("filetype")){
+                    fileType = st2.nextToken();
+                }
+                if (parameterName.equals("language")){
+                    language = st2.nextToken();
+                }
+                if (parameterName.equals("separator")){
+                    separator = st2.nextToken();
+                }
+                if (parameterName.equals("create")){
+                    create = st2.nextToken();
+                }
+            }
 
-        final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
+            String result;
+             if (loggedInConnection == null) {
+                   return "error:invalid or expired connection id";
+             }
+            item = (FileItem) it.next();
+            InputStream uploadFile = item.getInputStream();
+            origLanguage = loggedInConnection.getLanguage();
+            loggedInConnection.setLanguage(language);
 
-        if (loggedInConnection == null) {
-            return "error:invalid or expired connection id";
-        }
-        origLanguage = loggedInConnection.getLanguage();
-        loggedInConnection.setLanguage(language);
-        try {
-
-             result = handleRequest(loggedInConnection, fileName, fileType, separator, create);
+             result = handleRequest(loggedInConnection, fileName,  uploadFile, fileType, separator, create);
             loggedInConnection.setLanguage(origLanguage);
+            //return result;
+            return null;
         }catch(Exception e){
             e.printStackTrace();
             if (origLanguage.length() > 0){
@@ -105,11 +144,10 @@ public class ImportController {
             }
             return "error:" + e.getMessage();
         }
-        return result;
-    }
+     }
 
 
-    public String handleRequest(final LoggedInConnection loggedInConnection, final String fileName, String fileType, String separator, final String strCreate)
+    public String handleRequest(final LoggedInConnection loggedInConnection, final String fileName, InputStream uploadFile, String fileType, String separator, final String strCreate)
             throws Exception{
 
         if (separator == null || separator.length() == 0) separator = "\t";
@@ -121,16 +159,20 @@ public class ImportController {
         if (strCreate != null && strCreate.equals("true")){
             create = true;
         }
+        if (fileName.endsWith(".zip")) {
+            uploadFile =new ByteArrayInputStream(unzip((ZipInputStream) uploadFile).toString().getBytes());
+        }
+
 
         // there was a translate service thing before and after but now we need to do it internally
         // ok the data import actually ignores names for the moment
         String result = "";
         if (fileType.toLowerCase().equals("values")){
-            result =  importService.dataImport(loggedInConnection, fileName, create);
+            result =  importService.dataImport(loggedInConnection,  uploadFile, create);
         }
         // we will pay attention onn the attribute import and replicate
         if (fileType.toLowerCase().equals("names")){
-            result = importService.attributeImport(loggedInConnection,fileName,create);
+            result = importService.attributeImport(loggedInConnection,uploadFile, create);
 
         }
 
@@ -140,5 +182,31 @@ public class ImportController {
         return result;
     }
 
+
+
+    public StringBuffer unzip(ZipInputStream zis) {
+        //shouldn't really do this in memory, but then, these files are not VERY large.
+
+        byte[] buffer = new byte[1024];
+        File newFile = null;
+        StringBuffer  fos = new StringBuffer();
+        try {
+            //get the zip file content
+            //get the zipped file list entry - there should only be one
+            ZipEntry ze = zis.getNextEntry();
+
+            while (ze != null) {
+                int len;
+                while ((len = zis.read(buffer)) > 0) {
+                    fos.append(buffer.toString().substring(0, len));
+                }
+            }
+            zis.closeEntry();
+            zis.close();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return fos;
+    }
 
 }
