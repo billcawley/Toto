@@ -37,26 +37,25 @@ public abstract class TotoMemoryDBEntity {
     protected static final ObjectMapper jacksonMapper = new ObjectMapper();
 
     // I am going to hold a reference here, then we simply compare objects by == to check that objects are in their created databases
-    // ok this was private but I'm going to make it protected, I think the entity implementations need it.
 
     private final TotoMemoryDB totoMemoryDB;
 
     private final int id;
     // it's a new object, this is private as all dealt with here
     private boolean needsInserting;
-    // the columns for the entity were changed (as opposed to lists for example), sublasses will change this
-    protected boolean entityColumnsChanged;
+    // flag for deletion, to be picked up by the persistence
+    protected boolean needsDeleting;
+
     // I think protected is right here, while the class may be referenced externally (for generics) this makes it difficult to be subclassed externally?
-    //key with this is it makes the setting of an In only in context of a memory db
+    //key with this is it makes the setting of an Id only in context of a memory db
     protected TotoMemoryDBEntity(final TotoMemoryDB totoMemoryDB, final int id) throws Exception {
         this.totoMemoryDB = totoMemoryDB;
         // This getNeedsLoading is important, an instance of TotoMemoryDB should only be in needsloading during the constructor and hence it will stop
         // other bits of code overriding the entities ID
         if (totoMemoryDB.getNeedsLoading()){ // building objects from the disk store, rules are different, we can set the id as a parameter
             this.id = id;
-            // and say that it's in sync
+            // does not need inserting, do not say it needs persisting
             needsInserting = false;
-            entityColumnsChanged = false;
         } else { // normal create
             if (id != 0){
                 throw new Exception("id is trying to be assigned to an entity after the database is loaded!");
@@ -66,11 +65,10 @@ public abstract class TotoMemoryDBEntity {
             // memory database and fair game for persistence
             // if it's not been built with an assigned ID then it needs to be persisted
             setNeedsPersisting();
-            // set them both true by default, if created by loading then the flags will be sorted after.
+            // we assume new, inserting true
             needsInserting = true;
-            entityColumnsChanged = true;
-
         }
+        needsDeleting = false;
         addToDb();
     }
 
@@ -79,7 +77,7 @@ public abstract class TotoMemoryDBEntity {
 
     // this is where each subclass should make sure that it is added to the appropriate modified list in the
     // not doing this in here as I'd like it class specific ad there may be quirks
-    // and we're not going to make a removed, that will be dealt with by totomemorydb object
+    // issue of inserting/updating/deleting dealt with by the DAO
     protected abstract void setNeedsPersisting();
 
     //force implementing classes to add functions for their fields when setting persisted
@@ -137,16 +135,15 @@ public abstract class TotoMemoryDBEntity {
 
     protected final void setAsPersisted(){
         needsInserting = false;
-        entityColumnsChanged = false;
         classSpecificSetAsPersisted();
     }
     // public for the DAOs
     public final boolean getNeedsInserting() {
         return needsInserting;
     }
-
-    protected final boolean getEntityColumnsChanged() {
-        return entityColumnsChanged;
+    // public for the DAOs
+    public final boolean getNeedsDeleting() {
+        return needsDeleting;
     }
 
     public abstract String getAsJson();

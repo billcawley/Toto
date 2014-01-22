@@ -81,7 +81,6 @@ public final class Value extends TotoMemoryDBEntity {
     public synchronized void setDeletedInfoWillBePersisted(final String deletedInfo) throws Exception {
         if (!deletedInfo.equals(this.deletedInfo)){
             this.deletedInfo = deletedInfo;
-            entityColumnsChanged = true;
             setNeedsPersisting();
         }
     }
@@ -114,11 +113,7 @@ public final class Value extends TotoMemoryDBEntity {
         for (Name newName : this.names){
             newName.addToValues(this);
         }
-
-        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            entityColumnsChanged = true;
-            setNeedsPersisting();
-        }
+        setNeedsPersisting();
     }
 
 

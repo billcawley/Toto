@@ -89,6 +89,13 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
         jdbcTemplate.update(updateSql, namedParams);
     }
 
+    public final void deleteById(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        String updateSql = "delete from `" + totoMemoryDB.getMySQLName() + "`.`" + getTableName() + "` where " + ID + " = :" + ID;
+        namedParams.addValue("id", entity.getId());
+        jdbcTemplate.update(updateSql, namedParams);
+    }
+
     // now always assumes it's been passed an ID
 
     public final void insert(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
@@ -154,6 +161,8 @@ public abstract class StandardDAO<EntityType extends TotoMemoryDBEntity> {
     public final void store(final TotoMemoryDB totoMemoryDB, final EntityType entity) throws DataAccessException {
         if (entity.getNeedsInserting()) {
             insert(totoMemoryDB, entity);
+        } else if (entity.getNeedsDeleting()) {
+            deleteById(totoMemoryDB, entity);
         } else {
             updateById(totoMemoryDB, entity);
         }

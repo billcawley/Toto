@@ -3,6 +3,7 @@ package com.azquo.toto.service;
 import com.azquo.toto.jsonrequestentities.NameJsonRequest;
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Provenance;
+import com.azquo.toto.memorydb.Value;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -33,6 +34,8 @@ public final class NameService {
     public static final String STRUCTURE = "structure";
     public static final String CREATE = "create";
     public static final String EDIT = "edit";
+    public static final String NEW = "new";
+    public static final String DELETE = "delete";
     public static final String REMOVE = "remove";
     public static final String AFTER = "after";
     public static final String RENAMEAS = "rename as";
@@ -801,11 +804,35 @@ public final class NameService {
         if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)){
             toReturn = handleRequest(loggedInConnection, nameJsonRequest.name);
         }
-        if (nameJsonRequest.operation.equalsIgnoreCase(EDIT)){
+
+        if (nameJsonRequest.operation.equalsIgnoreCase(DELETE)){
             if (nameJsonRequest.id == 0){
-                return "error: id not passed for edit";
+                return "error: id not passed for delete";
             } else {
                 Name name = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.id);
+                if (name == null){
+                    return "error: name for id not found : " + nameJsonRequest.id;
+                }
+                if (name.getValues().size() > 0 && !nameJsonRequest.withData){
+                    return "error: cannot delete name with data : " + nameJsonRequest.id;
+                } else {
+                    name.delete();
+                }
+            }
+        }
+
+
+        if (nameJsonRequest.operation.equalsIgnoreCase(EDIT) || nameJsonRequest.operation.equalsIgnoreCase(NEW)){
+            if (nameJsonRequest.id == 0 && nameJsonRequest.operation.equalsIgnoreCase(EDIT)){
+                return "error: id not passed for edit";
+            } else {
+                Name name;
+                if (nameJsonRequest.operation.equalsIgnoreCase(EDIT)){
+                    name = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.id);
+                } else {
+                    // new name . . .
+                    name = new Name(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getProvenance(), true);
+                }
                 if (name == null){
                     return "error: name for id not found : " + nameJsonRequest.id;
                 }
@@ -824,7 +851,7 @@ public final class NameService {
                     }
                 }
                 if (newParent != null){
-                    newParent.addChildWillBePersisted(name);
+                    newParent.addChildWillBePersisted(name, nameJsonRequest.newPosition);
                 }
                 if (oldParent != null){
                     oldParent.removeFromChildrenWillBePersisted(name);

@@ -38,6 +38,8 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     // ok they're all sets, but some need ordering :)
     private Set<Value> values;
     private Set<Name> parents;
+    // trying to think of a better way to put it . . .
+    private Set<Name> peerParents;
     /* these two have position which we'll reflect by the place in the list. WHen modifying these sets one has to recreate teh set anyway
     and when doing so changes to the order are taken into account.
 
@@ -62,6 +64,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         additive = true; // by default
         values = new HashSet<Value>();
         parents = new HashSet<Name>();
+        peerParents = new HashSet<Name>();
         children = new LinkedHashSet<Name>();
         peers = new LinkedHashMap<Name, Boolean>();
         attributes = new LinkedHashMap<String, String>();
@@ -103,7 +106,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     public synchronized void setAdditiveWillBePersisted(final boolean additive) throws Exception {
         if (this.additive != additive){
             this.additive = additive;
-            entityColumnsChanged = true;
             setNeedsPersisting();
         }
     }
@@ -111,7 +113,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
     public synchronized void setProvenanceWillBePersisted(final Provenance provenance) throws Exception {
         if (this.provenance == null || !this.provenance.equals(provenance)){
             this.provenance = provenance;
-            entityColumnsChanged = true;
             setNeedsPersisting();
         }
     }
@@ -147,6 +148,10 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public Set<Name> getParents() {
         return Collections.unmodifiableSet(parents);
+    }
+
+    public Set<Name> getPeerParents() {
+        return Collections.unmodifiableSet(peerParents);
     }
 
 
@@ -284,16 +289,18 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             newChild.parents.add(this);
         }
 
-        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            entityColumnsChanged = true;
-            setNeedsPersisting();
-        }
+        setNeedsPersisting();
 
     }
 
-    // more efficient if just building the set by adding
+    public void addChildWillBePersisted(Name child) throws Exception {
+        addChildWillBePersisted(child, 0);
+    }
 
-    public synchronized void addChildWillBePersisted(Name child) throws Exception {
+    // with position, will just add if none passed
+    // note : this sees position as starting at 1!
+
+    public synchronized void addChildWillBePersisted(Name child, int position) throws Exception {
         checkDatabaseMatches(child);
         if (child.equals(this) || findAllParents().contains(child)){
             throw new Exception("error cannot assign child due to circular reference, " + child + " cannot be added to " + this);
@@ -305,15 +312,32 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
             }
         }
 
-        if (children.add(child)){ // something actually changed :)
+        if (position == 0 || (position > children.size() && !children.contains(child))){ // no position or it's off the end and the child isn't in there already
+            if (children.add(child)){ // something actually changed :)
+                findAllChildrenCache = null;
+                child.parents.add(this);
+                    setNeedsPersisting();
+            }
+        } else { //deal with the position
+            // won't get clever here, remove the child if it's in there and rebuild the map with it
+            children.remove(child);
+            final LinkedHashSet<Name> withNewChild = new LinkedHashSet<Name>();
+            int counter = 1;
+            for (Name existingChild : children) {
+                if (position == counter){
+                    withNewChild.add(child);
+                }
+                withNewChild.add(existingChild);
+                counter++;
+            }
+            if (position >= counter){ // off the end, add it now.
+                withNewChild.add(child);
+            }
+            children = withNewChild;
             findAllChildrenCache = null;
             child.parents.add(this);
-            if(!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-                entityColumnsChanged = true;
                 setNeedsPersisting();
-            }
         }
-
     }
 
     // removal ok on linked lists
@@ -322,9 +346,8 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         checkDatabaseMatches(name);// even if not needed throw the damn exception!
         // no need for the top parent check
         name.parents.remove(this);
-        if (children.remove(name) && !getTotoMemoryDB().getNeedsLoading()) { // it changed the set and we're not loading
+        if (children.remove(name)) { // it changed the set
             findAllChildrenCache = null;
-            entityColumnsChanged = true;
             setNeedsPersisting();
         }
     }
@@ -344,12 +367,17 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
                 throw new Exception("error name cannot be a peer of itself " + this);
             }
         }
-        this.peers = peers;
-        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            entityColumnsChanged = true;
-            setNeedsPersisting();
-        }
 
+        // we're ok, now before assigning remove this name form the member of peers look ups map
+        for (Name existingPeer : this.peers.keySet()){
+            existingPeer.peerParents.remove(this);
+        }
+        this.peers = peers;
+        // add the adjusted back in back in :)
+        for (Name existingPeer : this.peers.keySet()){
+            existingPeer.peerParents.add(this);
+        }
+        setNeedsPersisting();
     }
 
     // think I'm only going to allow bulk attribute settings in this package as it won't do the checks the single below will
@@ -357,12 +385,9 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     protected synchronized void setAttributesWillBePersisted(LinkedHashMap<String,String> attributes) throws Exception {
         this.attributes = attributes;
-        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            entityColumnsChanged = true;
-            setNeedsPersisting();
-        }
-
+        setNeedsPersisting();
     }
+
     public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
 
         // important, manage persistence, allowed name rules, db look ups
@@ -377,20 +402,14 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
         attributes.put(attributeName, attributeValue);
         // now deal with the DB maps!
         getTotoMemoryDB().addNameToAttributeNameMap(this); // will overwrite but that's fine
-        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            entityColumnsChanged = true;
-            setNeedsPersisting();
-        }
+        setNeedsPersisting();
     }
 
     public synchronized void removeAttributeWillBePersisted(String attributeName) throws Exception {
         if (attributes.containsKey(attributeName)){
             getTotoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, attributes.remove(attributeName), this);
         }
-        if (!getTotoMemoryDB().getNeedsLoading()){ // while loading we don't want to set any persistence flags
-            entityColumnsChanged = true;
-            setNeedsPersisting();
-        }
+        setNeedsPersisting();
     }
     // convenience
     public synchronized void clearAttributes() throws Exception {
@@ -407,10 +426,8 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
 
     public synchronized void removeFromPeersWillBePersisted(Name name) throws Exception {
         checkDatabaseMatches(name);// even if not needed throw the damn exception!
-        if (peers.remove(name) && !getTotoMemoryDB().getNeedsLoading()) { // it changed the set
-            entityColumnsChanged = true;
-            setNeedsPersisting();
-        }
+        name.peerParents.remove(this);
+        setNeedsPersisting();
     }
 
     // assign a comparator if wanted for a specific language!
@@ -484,6 +501,32 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name>{
                 e.printStackTrace();
             }
         }
+    }
+
+    // first of its kind. Try to be comprehensive
+
+    public void delete() throws Exception {
+        // remove from values
+        for (Value v : values){
+            Set<Name> namesForValue = v.getNames();
+            namesForValue.remove(this);
+            v.setNamesWillBePersisted(namesForValue);
+        }
+        // remove children
+        for (Name child : children){
+            removeFromChildrenWillBePersisted(child);
+        }
+        // remove from parents
+        for (Name parent : parents){
+            parent.removeFromChildrenWillBePersisted(this);
+        }
+        // peers - new lookup to use
+        for (Name peerParent : peerParents){
+            peerParent.removeFromPeersWillBePersisted(this);
+        }
+        getTotoMemoryDB().removeNameFromDb(this);
+        needsDeleting = true;
+        setNeedsPersisting();
     }
 
 }
