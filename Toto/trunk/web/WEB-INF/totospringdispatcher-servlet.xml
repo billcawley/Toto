@@ -45,8 +45,5 @@
     <bean name="importService" class="com.azquo.toto.service.ImportService"/>
     <bean name="businessService" class="com.azquo.toto.service.AdminService"/>
     <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
-    <bean name="memoryDBManager" class="com.azquo.toto.memorydb.MemoryDBManager">
-        <constructor-arg type="com.azquo.toto.admindao.DatabaseDAO" ref="databaseDao"/>
-        <constructor-arg type="com.azquo.toto.memorydbdao.StandardDAO" ref="standardDao"/>
-    </bean>
+    <bean name="memoryDBManager" class="com.azquo.toto.memorydb.MemoryDBManager"/>
 </beans>

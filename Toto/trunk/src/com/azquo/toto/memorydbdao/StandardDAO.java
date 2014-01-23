@@ -1,10 +1,8 @@
 package com.azquo.toto.memorydbdao;
 
-import com.azquo.toto.memorydb.TotoMemoryDBEntity;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -23,6 +21,7 @@ import java.util.*;
  *
  * Note : for building SQL I'm veering away from stringbuilder as IntelliJ complains about it and string concantation etc is heavily optimised by the compiler
  *
+ * This used to be an abstract class with classes for each entity extending it. Now after full json it's just used for moving the very standard json records about
  *
  */
 public class StandardDAO {
@@ -33,6 +32,8 @@ public class StandardDAO {
     // 10 million select limit for the moment . . .
 
     public static final int SELECTLIMIT = 10000000;
+
+    // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
     public static final int UPDATELIMIT = 5000;
 

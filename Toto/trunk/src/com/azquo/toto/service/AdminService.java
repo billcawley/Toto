@@ -5,6 +5,7 @@ import com.azquo.toto.adminentities.Access;
 import com.azquo.toto.adminentities.Business;
 import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.User;
+import com.azquo.toto.memorydb.MemoryDBManager;
 import com.azquo.toto.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
@@ -36,6 +37,8 @@ public class AdminService {
     MySQLDatabaseManager mySQLDatabaseManager;
     @Autowired
     private AzquoMailer azquoMailer;
+    @Autowired
+    private MemoryDBManager memoryDBManager;
 
     public String registerBusiness(final String email, final String userName, final String password, final String businessName, final String address1
             , final String address2, final String address3, final String address4, final String postcode, final String telephone){
@@ -80,7 +83,7 @@ public class AdminService {
 
     }
 
-    public boolean createDatabase(final String databaseName, final LoggedInConnection loggedInConnection) throws IOException {
+    public boolean createDatabase(final String databaseName, final LoggedInConnection loggedInConnection) throws Exception {
 
         if (loggedInConnection.getUser().isAdministrator()){
             final String mysqlName = getSQLDatabaseName(loggedInConnection,databaseName);
@@ -88,6 +91,7 @@ public class AdminService {
             final Database database = new Database(0,new Date(), new Date(130,1,1), b.getId(), databaseName,mysqlName,0,0);
             mySQLDatabaseManager.createNewDatabase(mysqlName);
             databaseDao.store(database);
+            memoryDBManager.updateMemoryDBMap();
             return true;
 
         }

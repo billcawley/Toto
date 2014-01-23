@@ -104,11 +104,10 @@ public final class TotoMemoryDB {
 
             System.out.println(allNames.size() + allValues.size() + allProvenance.size() + " unlinked entities loaded in " + (System.currentTimeMillis() - track) + "ms");
 
-            // now gotta link 'em
-
             track = System.currentTimeMillis();
 
             int linkCounter = 0;
+            // sort out the maps in names, they couldn't be fixed on load as names link to themselves
             initNames();
             System.out.println(linkCounter + " values name links created in " + (System.currentTimeMillis() - track) + "ms");
             //track = System.currentTimeMillis();
@@ -120,8 +119,6 @@ public final class TotoMemoryDB {
     // reads from a list of changed objects
 
     public synchronized void saveDataToMySQL() {
-        // need to go through each object and links I guess!
-
         // this is where I need to think carefully about concurrency, totodb has the last say when the maps are modified although the flags are another point
         // for the moment just make it work.
         System.out.println("nnp size : " + namesNeedPersisting.size());
@@ -139,9 +136,7 @@ public final class TotoMemoryDB {
         }
         standardDAO.persistJsonRecords(this, StandardDAO.NAME, nameRecordsToStore);
         
-        
         System.out.println("vnp size : " + valuesNeedPersisting.size());
-
         List<JsonRecordTransport> valueRecordsToStore = new ArrayList<JsonRecordTransport>();
         for (Value value : new ArrayList<Value>(valuesNeedPersisting)) {
             JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
@@ -155,7 +150,6 @@ public final class TotoMemoryDB {
             value.setAsPersisted(); // is this dangerous here???
         }
         standardDAO.persistJsonRecords(this, StandardDAO.VALUE, valueRecordsToStore);
-        
         
         System.out.println("pnp size : " + provenanceNeedsPersisting.size());
         List<JsonRecordTransport> provenanceRecordsToStore = new ArrayList<JsonRecordTransport>();
@@ -171,7 +165,6 @@ public final class TotoMemoryDB {
             provenance.setAsPersisted(); // is this dangerous here???
         }
         standardDAO.persistJsonRecords(this, StandardDAO.PROVENANCE, provenanceRecordsToStore);
-
     }
 
     protected synchronized int getNextId() {
