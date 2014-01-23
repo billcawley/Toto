@@ -16,14 +16,13 @@ import java.util.List;
 public final class MemoryDBManager {
 
     private final HashMap<String, TotoMemoryDB> memoryDatabaseMap;
-
-    @Autowired
     private DatabaseDAO databaseDAO;
-    @Autowired
     private StandardDAO standardDAO;
 
 
-    public MemoryDBManager() throws Exception {
+    public MemoryDBManager(DatabaseDAO databaseDAO, StandardDAO standardDAO) throws Exception {
+        this.databaseDAO = databaseDAO;
+        this.standardDAO = standardDAO;
         memoryDatabaseMap = new HashMap<String, TotoMemoryDB>(); // by ID I think
         updateMemoryDBMap();
     }
