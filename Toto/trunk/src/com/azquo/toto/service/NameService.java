@@ -936,13 +936,20 @@ public final class NameService {
                 nameString = instructions.substring(0, instructions.indexOf(';')).trim();
                 instructions = instructions.substring(instructions.indexOf(';') + 1).trim();
                 String peers = getInstruction(instructions, PEERS);
+                String create = getInstruction(instructions, CREATE);
                 if (peers != null) {
                     System.out.println("peers : |" + peers + "|");
                     if (peers.length() > 0) { // ok, add the peers. No create, just from existing
-                            Name name = findByName(loggedInConnection, nameString);
+                            Name name;
+                            if (create != null) {
+                                name = findOrCreateName(loggedInConnection, nameString);
+                            } else {
+                                name = findByName(loggedInConnection, nameString);
                                 if (name == null) {
                                     return "error:name not found:`" + nameString + "`";
                                 }
+                            }
+                            // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
                             if (peers.startsWith("{")) { // array, typically when creating in the first place, the service call will insert after any existing
                                 if (peers.contains("}")) {
                                     peers = peers.substring(1, peers.indexOf("}"));
@@ -954,7 +961,7 @@ public final class NameService {
                                         if (peerName.startsWith("`")) {
                                             peerName = peerName.substring(1, peerName.length() - 1); // trim escape chars
                                         }
-                                        if (findByName(loggedInConnection, peerName) == null) {
+                                        if (create == null && findByName(loggedInConnection, peerName) == null) {
                                             if (notFoundError.isEmpty()) {
                                                 notFoundError = peerName;
                                             } else {
