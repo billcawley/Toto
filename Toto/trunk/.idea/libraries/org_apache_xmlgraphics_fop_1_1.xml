@@ -4,8 +4,6 @@
     <CLASSES>
       <root url="jar://$PROJECT_DIR$/lib/fop-1.1.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/xmlgraphics-commons-1.5.jar!/" />
-      <root url="jar://$PROJECT_DIR$/lib/commons-io-1.3.1.jar!/" />
-      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.0.4.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/batik-svg-dom-1.7.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/batik-anim-1.7.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/batik-awt-util-1.7.jar!/" />
@@ -24,7 +22,6 @@
       <root url="jar://$PROJECT_DIR$/lib/batik-transcoder-1.7.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/batik-svggen-1.7.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/batik-extension-1.7.jar!/" />
-      <root url="jar://$PROJECT_DIR$/lib/servlet-api-2.2.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />
