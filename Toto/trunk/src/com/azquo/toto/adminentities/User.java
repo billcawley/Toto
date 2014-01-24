@@ -5,7 +5,7 @@ import java.util.Date;
 /**
  * Representing a user who can log in
  */
-public final class User extends StandardEntity{
+public final class User extends StandardEntity {
 
     public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
 
@@ -30,7 +30,7 @@ public final class User extends StandardEntity{
         this.salt = salt;
     }
 
-    public boolean isAdministrator(){
+    public boolean isAdministrator() {
         return status.equalsIgnoreCase(STATUS_ADMINISTRATOR);
     }
 
@@ -95,7 +95,7 @@ public final class User extends StandardEntity{
     }
 
     public void setSalt(String salt) {
-        this.salt= salt;
+        this.salt = salt;
     }
 
     @Override

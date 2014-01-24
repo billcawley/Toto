@@ -6,7 +6,7 @@ import java.util.Date;
  * Created by cawley on 09/01/14
  * An entry for each uploaded file
  */
-public final class UploadRecord extends StandardEntity{
+public final class UploadRecord extends StandardEntity {
 
     private Date date;
     private int businessId;
@@ -99,7 +99,7 @@ public final class UploadRecord extends StandardEntity{
 
     // convenience object for returning JSON to Excel, one can build a list of these and let Jackson take care of it
 
-    public static class UploadRecordForDisplay{
+    public static class UploadRecordForDisplay {
         public final Date date;
         public final String businessName;
         public final String databaseName;
@@ -107,7 +107,8 @@ public final class UploadRecord extends StandardEntity{
         public final String fileName;
         public final String fileType;
         public final String comments;
-        public UploadRecordForDisplay(UploadRecord ur, String businessName, String databaseName, String userName){
+
+        public UploadRecordForDisplay(UploadRecord ur, String businessName, String databaseName, String userName) {
             date = ur.date;
             this.businessName = businessName;
             this.databaseName = databaseName;

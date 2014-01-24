@@ -6,7 +6,7 @@ import java.util.Date;
  * Representing access a user can have
  * Considered immutability but things like dates may be adjusted
  */
-public final class Access extends StandardEntity{
+public final class Access extends StandardEntity {
 
     private Date startDate;
     private Date endDate;

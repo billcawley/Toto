@@ -4,8 +4,8 @@ import java.util.Date;
 
 /**
  * Created by Cawley on 08/01/14.
- *
- *  Representing an Azquo memory database. These records are scanned on startup and teh databases loaded into memory
+ * <p/>
+ * Representing an Azquo memory database. These records are scanned on startup and teh databases loaded into memory
  */
 public final class Database extends StandardEntity {
 

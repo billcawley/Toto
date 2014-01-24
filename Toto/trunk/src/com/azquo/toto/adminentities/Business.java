@@ -9,7 +9,7 @@ import java.util.Date;
  * Created by cawley on 07/01/14.
  * Details of an Azquo customer, mutable as almost certainly will be updated
  */
-public final class Business extends StandardEntity{
+public final class Business extends StandardEntity {
 
     Date startDate;
     Date endDate;
@@ -79,7 +79,7 @@ public final class Business extends StandardEntity{
     }
 
     // for Jackson mapping, these bits of data will be as json in the DB. Hence if you want a new one you should just be able to add it here :)
-    public static class BusinessDetails{
+    public static class BusinessDetails {
         public String address1;
         public String address2;
         public String address3;
