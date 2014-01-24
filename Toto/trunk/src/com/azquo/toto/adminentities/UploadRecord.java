@@ -1,5 +1,8 @@
 package com.azquo.toto.adminentities;
 
+import com.azquo.toto.admindao.BusinessDAO;
+import com.azquo.toto.admindao.DatabaseDAO;
+
 import java.util.Date;
 
 /**
@@ -94,5 +97,24 @@ public final class UploadRecord extends StandardEntity{
                 ", fileType='" + fileType + '\'' +
                 ", comments='" + comments + '\'' +
                 '}';
+    }
+
+    public static class UploadRecordForDisplay{
+        public final Date date;
+        public final String businessName;
+        public final String databaseName;
+        public final String userName;
+        public final String fileName;
+        public final String fileType;
+        public final String comments;
+        public UploadRecordForDisplay(UploadRecord ur, String businessName, String databaseName, String userName){
+            date = ur.date;
+            this.businessName = businessName;
+            this.databaseName = databaseName;
+            this.userName = userName;
+            fileName = ur.fileName;
+            fileType = ur.fileType;
+            comments = ur.comments;
+        }
     }
 }

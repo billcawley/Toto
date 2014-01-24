@@ -1,10 +1,7 @@
 package com.azquo.toto.service;
 
 import com.azquo.toto.admindao.*;
-import com.azquo.toto.adminentities.Access;
-import com.azquo.toto.adminentities.Business;
-import com.azquo.toto.adminentities.Database;
-import com.azquo.toto.adminentities.User;
+import com.azquo.toto.adminentities.*;
 import com.azquo.toto.memorydb.MemoryDBManager;
 import com.azquo.toto.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +9,7 @@ import sun.misc.BASE64Encoder;
 
 import java.io.IOException;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Formatter;
 import java.util.List;
@@ -33,6 +31,8 @@ public class AdminService {
     private UserDAO userDao;
     @Autowired
     private AccessDAO accessDao;
+    @Autowired
+    private UploadRecordDAO uploadRecordDAO;
     @Autowired
     MySQLDatabaseManager mySQLDatabaseManager;
     @Autowired
@@ -177,6 +177,18 @@ public class AdminService {
     public List<User> getUserListForBusiness(final LoggedInConnection loggedInConnection) {
         if (loggedInConnection.getUser().isAdministrator()){
             return userDao.findForBusinessId(loggedInConnection.getUser().getBusinessId());
+        }
+        return null;
+    }
+
+    public List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInConnection loggedInConnection) {
+        if (loggedInConnection.getUser().isAdministrator()){
+            List<UploadRecord> uploadRecords = uploadRecordDAO.findForBusinessId(loggedInConnection.getUser().getBusinessId());
+            List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<UploadRecord.UploadRecordForDisplay>();
+            for (UploadRecord uploadRecord : uploadRecords){
+                uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, businessDao.findById(uploadRecord.getBusinessId()).getBusinessName(), databaseDao.findById(uploadRecord.getDatabaseId()).getName(), userDao.findById(uploadRecord.getUserId()).getName()));
+            }
+            return uploadRecordsForDisplay;
         }
         return null;
     }

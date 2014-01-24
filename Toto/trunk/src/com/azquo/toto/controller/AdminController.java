@@ -37,6 +37,7 @@ public class AdminController {
     private static final String DATABASELIST = "databaselist";
     private static final String USERLIST = "userlist";
     private static final String ACCESSLIST = "accesslist";
+    private static final String UPLOADSLIST = "uploadslist";
 
     @RequestMapping
     @ResponseBody
@@ -95,6 +96,9 @@ public class AdminController {
                 if (email != null && email.length() > 0){
                     return jacksonMapper.writeValueAsString(adminService.getAccessList(loggedInConnection, email));
                 }
+            }
+            if(op.equalsIgnoreCase(UPLOADSLIST)){
+                return jacksonMapper.writeValueAsString(adminService.getUploadRecordsForDisplayForBusiness(loggedInConnection));
             }
 
         }

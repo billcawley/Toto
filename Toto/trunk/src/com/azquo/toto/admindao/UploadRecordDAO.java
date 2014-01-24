@@ -1,5 +1,6 @@
 package com.azquo.toto.admindao;
 
+import com.azquo.toto.adminentities.Access;
 import com.azquo.toto.adminentities.UploadRecord;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -66,16 +67,10 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord>{
     }
 
     public List<UploadRecord> findForBusinessId(final int businessId){
-
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-
-        final String SQL_SELECT = "Select id,`date`, business_id, d.name, u.name, file_name, file_type, comments from `" + MASTER_DB + "`.`upload_record` as ur, database as d, user as u where ur.database_id = d.id and ur.user_id = u.id and ur.business_id = " + businessId;
-        return jdbcTemplate.query(SQL_SELECT, namedParams, getRowMapper());
-
-
+        return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
-
 
 
 
