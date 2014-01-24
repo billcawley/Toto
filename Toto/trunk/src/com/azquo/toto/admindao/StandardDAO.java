@@ -37,7 +37,6 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
     protected abstract RowMapper<EntityType> getRowMapper();
 
     private final class StandardEntityByIdRowMapper implements RowMapper<EntityType> {
-
         @Override
         public EntityType mapRow(final ResultSet rs, final int row) throws SQLException {
             return findById(rs.getInt(ID));
