@@ -1047,9 +1047,7 @@ public final class NameService {
             sb.append("\"").append(name.getDefaultDisplayName()).append("\"");
             sb.append(", \"id\":\"" + name.getId() + "\"");
 
-            if (totalValues > name.getValues().size()) {
-                sb.append(", \"dataitems\":\"" + totalValues + "\"");
-            }
+            sb.append(", \"dataitems\":\"" + totalValues + "\"");
             if (name.getValues().size() > 0) {
                 sb.append(", \"mydataitems\":\"" + name.getValues().size() + "\"");
             }
@@ -1080,8 +1078,8 @@ public final class NameService {
                 sb.append("}");
             }
             final Set<Name> children = name.getChildren();
+            sb.append(", \"elements\":\"" + children.size() + "\"");
             if (!children.isEmpty()) {
-                sb.append(", \"elements\":\"" + children.size() + "\"");
                 sb.append(", \"children\":[");
                 count = 0;
                 for (Name child : children) {
