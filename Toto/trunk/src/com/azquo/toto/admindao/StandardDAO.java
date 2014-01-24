@@ -16,8 +16,7 @@ import java.util.Map;
 
 /**
  * Created 07/01/14 by edd
- * like the one for totomemorydb.
- * There are many similarities but I'm not sure if one could factor them.
+ * to factor off common bits on vanilla db access
  */
 public abstract class StandardDAO<EntityType extends StandardEntity> {
 
