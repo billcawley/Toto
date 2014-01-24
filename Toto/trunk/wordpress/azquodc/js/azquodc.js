@@ -17,12 +17,8 @@ function zapParam(params, tozap){
 
 
 function azquojson(functionName, params){
-
-    if (functionName == "Name"){
-        params = "json={\"user\":\"demo@user.com\",\"password\":\"password\",\"database\":\"Demo_export\",\"operation\":\"structure\"," + params + "}";
-    }else{
-        params +="&user=demo@user.com&password=password&database=Demo_export";
-    }
+    //TODO SET ACCESS CORRECTLY
+    params +="&user=demo@user.com&password=password&database=Demo_export";
     var htmlText = "http://www.bomorgan.co.uk:8080/api/" + functionName + "?" + params;
     var script = document.createElement('script'),
         head = document.getElementsByTagName('head')[0] || document.documentElement;
@@ -90,9 +86,9 @@ function showLegend(){
 
 function showDetails(nameFound){
     if (nameFound.mydataitems != null){
-        return "<b> <span  style=\"color:#222222;\" ondblclick=\"az_getdata(this)\">" + nameFound.name + "</span></b> (" + nameFound.mydataitems  + ")";
+        return "<span class='item-expandable' onclick=\"az_getdata(this)\"><i class='icon-external-link'></i>" + nameFound.name + "(" + nameFound.mydataitems  + ")</span>";
     }else{
-        return  nameFound.name + " (" + nameFound.dataitems + " in " + nameFound.elements + " subsets)";
+        return "<i class='icon-circle-arrow-down'></i>" + nameFound.name + " (" + nameFound.dataitems + " in " + nameFound.elements + " subsets)";
     }
 
 }
@@ -105,13 +101,14 @@ function  az_showSet(namesFound, style){
     // All dirs
     var count = 0
     while (count < namesFound.length){
-        if (namesFound[count].children != null){
+        if (namesFound[count].dataitems != "0"){
+            if (namesFound[count].children != null){
 
-            htmlText +="<li onclick=\"az_click(this)\">"+ showDetails(namesFound[count]) + "</li>";
-            htmlText += az_showSet(namesFound[count].children, " style=\"display:none;\"");
-        }else{
-            htmlText += "<li class=\"name\">"  + showDetails(namesFound[count]) + "</li>";
-
+                htmlText +="<li onclick=\"az_click(this)\">"+ showDetails(namesFound[count]) + "</li>";
+                htmlText += az_showSet(namesFound[count].children, " style=\"display:none;\"");
+            }else{
+                htmlText += "<li class=\"name\">"  + showDetails(namesFound[count]) + "</li>";
+            }
         }
         count++;
     }
@@ -152,13 +149,16 @@ function az_click(e){
 
 function az_getdata(e){
     e = e || window.event;
+    // amended - could be cumulative...
+    az_chosen = "\"" + e.textContent + "\"";
+    //remove final brackets
+    var bracketPos = 0;
+    while (az_chosen.indexOf("(", bracketPos) > 0){
+        bracketPos = az_chosen.indexOf("(", bracketPos) + 1;
 
-    if (az_chosen.length > 0){
-        az_chosen += "\"" + e.innerHTML + "\"";
-
-    }else{
-        az_chosen = "\"" + e.innerHTML + "\"";
-
+    }
+    if (bracketPos > 0){
+        az_chosen = az_chosen.substring(0, bracketPos - 1);
     }
     document.getElementById("az_search_set").innerHTML = az_chosen;
     document.getElementById("az_Select").style.display = "none";
