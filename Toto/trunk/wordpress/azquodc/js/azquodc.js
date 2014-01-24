@@ -17,8 +17,11 @@ function zapParam(params, tozap){
 
 
 function azquojson(functionName, params){
-    //TODO SET ACCESS CORRECTLY
-    params +="&user=demo@user.com&password=password&database=Demo_export";
+    if (functionName == "Name"){
+        params = "json={" + params + ",\"user\":\"demo@user.com\",\"password\":\"password\",\"database\":\"Demo_export\",\"jsonFunction\":\"azquojsonfeed\"}";
+    }else{
+        params +="&user=demo@user.com&password=password&database=Demo_export";
+    }
     var htmlText = "http://www.bomorgan.co.uk:8080/api/" + functionName + "?" + params;
     var script = document.createElement('script'),
         head = document.getElementsByTagName('head')[0] || document.documentElement;
@@ -130,7 +133,7 @@ function az_showProvenance(provenance){
 function az_inputChanged(){
     document.getElementById("az_Data").style.display = "none";
     var newname = document.getElementById("az_InputName").value
-    azquojson("Name","instructions=" + escape(newname) + ";structure&jsonfunction=azquojsonfeed")
+    azquojson("Name","\"operation\":\"structure\",\"name\":\"" + escape(newname) + "\"");
 }
 
 
