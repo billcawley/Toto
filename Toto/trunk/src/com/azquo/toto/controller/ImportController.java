@@ -1,5 +1,6 @@
 package com.azquo.toto.controller;
 
+import com.azquo.toto.adminentities.UploadRecord;
 import com.azquo.toto.service.*;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileItemFactory;
@@ -20,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -133,10 +135,9 @@ public class ImportController {
             origLanguage = loggedInConnection.getLanguage();
             loggedInConnection.setLanguage(language);
 
-             result = handleRequest(loggedInConnection, fileName,  uploadFile, fileType, separator, create);
+             result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, separator, create);
             loggedInConnection.setLanguage(origLanguage);
-            //return result;
-            return null;
+             return result;
         }catch(Exception e){
             e.printStackTrace();
             if (origLanguage.length() > 0){
@@ -147,66 +148,8 @@ public class ImportController {
      }
 
 
-    public String handleRequest(final LoggedInConnection loggedInConnection, final String fileName, InputStream uploadFile, String fileType, String separator, final String strCreate)
-            throws Exception{
-
-        if (separator == null || separator.length() == 0) separator = "\t";
-        if (separator.equals("comma")) separator = ",";
-        // separator not used??
-        if (separator.equals("pipe")) separator = "|";
-
-        boolean create = false;
-        if (strCreate != null && strCreate.equals("true")){
-            create = true;
-        }
-        if (fileName.endsWith(".zip")) {
-            uploadFile =new ByteArrayInputStream(unzip((ZipInputStream) uploadFile).toString().getBytes());
-        }
-
-
-        // there was a translate service thing before and after but now we need to do it internally
-        // ok the data import actually ignores names for the moment
-        String result = "";
-        if (fileType.toLowerCase().equals("values")){
-            result =  importService.dataImport(loggedInConnection,  uploadFile, create);
-        }
-        // we will pay attention onn the attribute import and replicate
-        if (fileType.toLowerCase().equals("names")){
-            result = importService.attributeImport(loggedInConnection,uploadFile, create);
-
-        }
-
-        nameService.persist(loggedInConnection);
-
-
-        return result;
-    }
 
 
 
-    public StringBuffer unzip(ZipInputStream zis) {
-        //shouldn't really do this in memory, but then, these files are not VERY large.
-
-        byte[] buffer = new byte[1024];
-        File newFile = null;
-        StringBuffer  fos = new StringBuffer();
-        try {
-            //get the zip file content
-            //get the zipped file list entry - there should only be one
-            ZipEntry ze = zis.getNextEntry();
-
-            while (ze != null) {
-                int len;
-                while ((len = zis.read(buffer)) > 0) {
-                    fos.append(buffer.toString().substring(0, len));
-                }
-            }
-            zis.closeEntry();
-            zis.close();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        return fos;
-    }
 
 }
