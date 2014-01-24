@@ -8,17 +8,17 @@ import java.util.Date;
 public final class UploadRecord extends StandardEntity{
 
     private Date date;
-    private int businnessId;
+    private int businessId;
     private int databaseId;
     private int userId;
     private String fileName;
     private String fileType;
     private String comments;
 
-    public UploadRecord(int id, Date date, int businnessId, int databaseId, int userId, String fileName, String fileType, String comments) {
+    public UploadRecord(int id, Date date, int businessId, int databaseId, int userId, String fileName, String fileType, String comments) {
         this.id = id;
         this.date = date;
-        this.businnessId = businnessId;
+        this.businessId = businessId;
         this.databaseId = databaseId;
         this.userId = userId;
         this.fileName = fileName;
@@ -34,12 +34,12 @@ public final class UploadRecord extends StandardEntity{
         this.date = date;
     }
 
-    public int getBusinnessId() {
-        return businnessId;
+    public int getBusinessId() {
+        return businessId;
     }
 
-    public void setBusinnessId(int businnessId) {
-        this.businnessId = businnessId;
+    public void setBusinessId(int businessId) {
+        this.businessId = businessId;
     }
 
     public int getDatabaseId() {
@@ -87,7 +87,7 @@ public final class UploadRecord extends StandardEntity{
         return "UploadRecord{" +
                 "id=" + id +
                 ", date=" + date +
-                ", businnessId=" + businnessId +
+                ", businessId=" + businessId +
                 ", databaseId=" + databaseId +
                 ", userId=" + userId +
                 ", fileName='" + fileName + '\'' +
