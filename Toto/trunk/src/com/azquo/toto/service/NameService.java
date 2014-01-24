@@ -31,13 +31,11 @@ public final class NameService {
     public static final String NAMEMARKER = "!";
     public static final String PEERS = "peers";
     public static final String STRUCTURE = "structure";
+    public static final String NAMELIST = "namelist";
     public static final String CREATE = "create";
     public static final String EDIT = "edit";
     public static final String NEW = "new";
     public static final String DELETE = "delete";
-    public static final String REMOVE = "remove";
-    public static final String AFTER = "after";
-    public static final String RENAMEAS = "rename as";
 
 
     // hacky but testing for the moment
@@ -806,6 +804,9 @@ public final class NameService {
         // type; elements level 1; from a to b
         if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)){
             return getStructureForNameSearch(loggedInConnection, nameJsonRequest.name);
+        }
+        if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)){
+            return getNamesFormattedForOutput(interpretName(loggedInConnection, nameJsonRequest.name));
         }
 
         if (nameJsonRequest.operation.equalsIgnoreCase(DELETE)){
