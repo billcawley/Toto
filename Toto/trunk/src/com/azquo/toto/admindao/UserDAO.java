@@ -14,7 +14,7 @@ import java.util.Map;
  * Created by cawley on 07/01/14.
  * Users as in those who login
  */
-public class UserDAO extends StandardDAO<User>{
+public class UserDAO extends StandardDAO<User> {
 
     // the default table name for this data.
     @Override
@@ -32,7 +32,7 @@ public class UserDAO extends StandardDAO<User>{
     public static final String SALT = "salt";
 
     @Override
-    public Map<String, Object> getColumnNameValueMap(final User user){
+    public Map<String, Object> getColumnNameValueMap(final User user) {
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, user.getId());
         toReturn.put(STARTDATE, user.getStartDate());
@@ -52,8 +52,8 @@ public class UserDAO extends StandardDAO<User>{
         public User mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new User(rs.getInt(ID), rs.getDate(STARTDATE),rs.getDate(ENDDATE),rs.getInt(BUSINESSID)
-                        ,rs.getString(EMAIL),rs.getString(NAME), rs.getString(STATUS), rs.getString(PASSWORD), rs.getString(SALT));
+                return new User(rs.getInt(ID), rs.getDate(STARTDATE), rs.getDate(ENDDATE), rs.getInt(BUSINESSID)
+                        , rs.getString(EMAIL), rs.getString(NAME), rs.getString(STATUS), rs.getString(PASSWORD), rs.getString(SALT));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -66,13 +66,13 @@ public class UserDAO extends StandardDAO<User>{
         return new UserRowMapper();
     }
 
-    public User findByEmail(final String email){
+    public User findByEmail(final String email) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(EMAIL, email);
         return findOneWithWhereSQLAndParameters(" WHERE `" + EMAIL + "` = :" + EMAIL, namedParams);
     }
 
-    public List<User> findForBusinessId(final int businessId){
+    public List<User> findForBusinessId(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);

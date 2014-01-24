@@ -14,7 +14,7 @@ import java.util.Map;
  * Created by cawley on 07/01/14.
  * Details on each database
  */
-public final class DatabaseDAO extends StandardDAO<Database>{
+public final class DatabaseDAO extends StandardDAO<Database> {
 
     // the default table name for this data.
     @Override
@@ -31,7 +31,7 @@ public final class DatabaseDAO extends StandardDAO<Database>{
     public static final String VALUECOUNT = "value_count";
 
     @Override
-    public Map<String, Object> getColumnNameValueMap(Database database){
+    public Map<String, Object> getColumnNameValueMap(Database database) {
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, database.getId());
         toReturn.put(STARTDATE, database.getStartDate());
@@ -51,7 +51,7 @@ public final class DatabaseDAO extends StandardDAO<Database>{
             // not pretty, just make it work for the moment
             try {
                 return new Database(rs.getInt(ID), rs.getDate(STARTDATE), rs.getDate(ENDDATE)
-                        ,rs.getInt(BUSINESSID),rs.getString(NAME),rs.getString(MYSQLNAME),rs.getInt(NAMECOUNT), rs.getInt(VALUECOUNT));
+                        , rs.getInt(BUSINESSID), rs.getString(NAME), rs.getString(MYSQLNAME), rs.getInt(NAMECOUNT), rs.getInt(VALUECOUNT));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -64,7 +64,7 @@ public final class DatabaseDAO extends StandardDAO<Database>{
         return new DatabaseRowMapper();
     }
 
-    public List<Database> findForBusinessId(final int businessId){
+    public List<Database> findForBusinessId(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         return findListWithWhereSQLAndParameters("WHERE `" + BUSINESSID + "` = :" + BUSINESSID, namedParams, false);

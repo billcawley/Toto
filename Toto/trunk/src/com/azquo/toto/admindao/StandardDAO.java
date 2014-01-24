@@ -23,9 +23,7 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
     @Autowired
     protected NamedParameterJdbcTemplate jdbcTemplate;
 
-    // call it 100000, might as well go for big selects to populate the memory DB
-
-    private static final int SELECTLIMIT = 100000;
+    private static final int SELECTLIMIT = 10000;
 
     protected static final String ID = "id";
     protected static final String MASTER_DB = "master_db";
@@ -81,7 +79,7 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
     }
 
     public final void store(final EntityType entity) throws DataAccessException {
-        if (entity.getId() == 0)  {
+        if (entity.getId() == 0) {
             insert(entity);
         } else {
             updateById(entity);
@@ -131,12 +129,12 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
     }
 
     public final EntityType findOneWithWhereSQLAndParameters(final String whereCondition, final MapSqlParameterSource namedParams) throws DataAccessException {
-            final String SQL_SELECT_ALL = "Select `" + MASTER_DB + "`.`" + getTableName() + "`.* from `" + MASTER_DB + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
-            final List<EntityType> results = jdbcTemplate.query(SQL_SELECT_ALL, namedParams, getRowMapper());
-            if (results.size() == 0) {
-                return null;
-            }
-            return results.get(0);
+        final String SQL_SELECT_ALL = "Select `" + MASTER_DB + "`.`" + getTableName() + "`.* from `" + MASTER_DB + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
+        final List<EntityType> results = jdbcTemplate.query(SQL_SELECT_ALL, namedParams, getRowMapper());
+        if (results.size() == 0) {
+            return null;
+        }
+        return results.get(0);
     }
 
 }

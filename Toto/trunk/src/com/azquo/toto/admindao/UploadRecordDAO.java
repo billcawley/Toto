@@ -14,7 +14,7 @@ import java.util.Map;
  * Created by cawley on 07/01/14.
  * record of uploaded files :P
  */
-public final class UploadRecordDAO extends StandardDAO<UploadRecord>{
+public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
 
     // the default table name for this data.
     @Override
@@ -32,7 +32,7 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord>{
     public static final String COMMENTS = "comments";
 
     @Override
-    public Map<String, Object> getColumnNameValueMap(final UploadRecord uploadRecord){
+    public Map<String, Object> getColumnNameValueMap(final UploadRecord uploadRecord) {
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, uploadRecord.getId());
         toReturn.put(DATE, uploadRecord.getDate());
@@ -51,8 +51,8 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord>{
         public UploadRecord mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new UploadRecord(rs.getInt(ID), rs.getDate(DATE),rs.getInt(BUSINESSID)
-                        ,rs.getInt(DATABASEID),rs.getInt(USERID), rs.getString(FILENAME), rs.getString(FILETYPE), rs.getString(COMMENTS));
+                return new UploadRecord(rs.getInt(ID), rs.getDate(DATE), rs.getInt(BUSINESSID)
+                        , rs.getInt(DATABASEID), rs.getInt(USERID), rs.getString(FILENAME), rs.getString(FILETYPE), rs.getString(COMMENTS));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -65,13 +65,11 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord>{
         return new UploadRecordRowMapper();
     }
 
-    public List<UploadRecord> findForBusinessId(final int businessId){
+    public List<UploadRecord> findForBusinessId(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
-
-
 
 
 }

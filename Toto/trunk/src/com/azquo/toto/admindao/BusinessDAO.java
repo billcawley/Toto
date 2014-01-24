@@ -14,7 +14,7 @@ import java.util.Map;
  * Created by cawley on 07/01/14.
  * Like vendor from Feefo I suppose
  */
-public final class BusinessDAO extends StandardDAO<Business>{
+public final class BusinessDAO extends StandardDAO<Business> {
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
@@ -33,16 +33,16 @@ public final class BusinessDAO extends StandardDAO<Business>{
     public static final String BUSINESSDETAILS = "business_details";
 
     @Override
-    public Map<String, Object> getColumnNameValueMap(final Business business){
+    public Map<String, Object> getColumnNameValueMap(final Business business) {
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, business.getId());
         toReturn.put(STARTDATE, business.getStartDate());
         toReturn.put(ENDDATE, business.getEndDate());
         toReturn.put(BUSINESSNAME, business.getBusinessName());
         toReturn.put(PARENTID, business.getParentId());
-        try{
+        try {
             toReturn.put(BUSINESSDETAILS, jacksonMapper.writeValueAsString(business.getBusinessDetails()));
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return toReturn;
@@ -55,7 +55,7 @@ public final class BusinessDAO extends StandardDAO<Business>{
             // not pretty, just make it work for the moment
             try {
                 return new Business(rs.getInt(ID), rs.getDate(STARTDATE), rs.getDate(ENDDATE)
-                        ,rs.getString(BUSINESSNAME),rs.getInt(PARENTID), jacksonMapper.readValue(rs.getString(BUSINESSDETAILS), Business.BusinessDetails.class));
+                        , rs.getString(BUSINESSNAME), rs.getInt(PARENTID), jacksonMapper.readValue(rs.getString(BUSINESSDETAILS), Business.BusinessDetails.class));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -68,7 +68,7 @@ public final class BusinessDAO extends StandardDAO<Business>{
         return new BusinessRowMapper();
     }
 
-    public Business findByName(final String businessName){
+    public Business findByName(final String businessName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSNAME, businessName);
         return findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSNAME + "` = :" + BUSINESSNAME, namedParams);
