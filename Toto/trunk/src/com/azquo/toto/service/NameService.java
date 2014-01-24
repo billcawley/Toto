@@ -607,6 +607,8 @@ public final class NameService {
 
     // to find a set of names
 
+    // TODO add count
+
     public List<Name> interpretName(final LoggedInConnection loggedInConnection, final String instructions) throws Exception {
 
         final String levelString = getInstruction(instructions, LEVEL);
@@ -801,10 +803,9 @@ public final class NameService {
     public String processJsonRequest(LoggedInConnection loggedInConnection, NameJsonRequest nameJsonRequest) throws Exception{
         String toReturn = "";
 
-        // hang on a minute, how exactly does strcuture work? What might be passsed?
+        // type; elements level 1; from a to b
         if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)){
             return getStructureForNameSearch(loggedInConnection, nameJsonRequest.name);
-
         }
 
         if (nameJsonRequest.operation.equalsIgnoreCase(DELETE)){
@@ -918,10 +919,9 @@ public final class NameService {
     }
 
 
-    // ok this was moved in from the controller. Probably need to factor some of it out later.
-    // much of the stuff in here was to implement the very first set of functions required by the software.
+    // right now ONLY called for the column heading in uploads, set peers on existing names
 
-    public String handleRequest(LoggedInConnection loggedInConnection, String instructions)
+    public String setPeersForImportHeading(LoggedInConnection loggedInConnection, String instructions)
             throws Exception {
         try {
             String nameString = instructions;
@@ -931,40 +931,17 @@ public final class NameService {
             System.out.println("instructions : |" + instructions + "|");
             instructions = instructions.trim();
             // typically a command will start with a name
-
-            if (instructions.indexOf(';') > 0) {
+            if (instructions.indexOf(';') > 0) { // actually something to do
                 nameString = instructions.substring(0, instructions.indexOf(';')).trim();
-                // now we have it strip off the name, use getInstruction to see what we want to do with the name
-                String origInstructions = instructions;
                 instructions = instructions.substring(instructions.indexOf(';') + 1).trim();
-                // children just reads
-                String children = getInstruction(instructions, CHILDREN);
-                // is peers just read too?
                 String peers = getInstruction(instructions, PEERS);
-                String structure = getInstruction(instructions, STRUCTURE);
-                // if peers is just read then can I zap create also?
-                String create = getInstruction(instructions, CREATE);
-                // since children can be part of structure definition we do structure first
-                if (children != null) {
-                        List<Name> names = interpretName(loggedInConnection, origInstructions);
-                        if (names != null) {
-                            return getNamesFormattedForOutput(names);
-                        } else {
-                            return "error:name not found:`" + nameString + "`";
-                        }
-                } else if (peers != null) {
+                if (peers != null) {
                     System.out.println("peers : |" + peers + "|");
-                    if (peers.length() > 0) { // we want to affect the structure, add, remove, create
-                            Name name;
-                            if (create != null) {
-                                name = findOrCreateName(loggedInConnection, nameString);
-                            } else {
-                                name = findByName(loggedInConnection, nameString);
+                    if (peers.length() > 0) { // ok, add the peers. No create, just from existing
+                            Name name = findByName(loggedInConnection, nameString);
                                 if (name == null) {
                                     return "error:name not found:`" + nameString + "`";
                                 }
-                            }
-                            // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
                             if (peers.startsWith("{")) { // array, typically when creating in the first place, the service call will insert after any existing
                                 if (peers.contains("}")) {
                                     peers = peers.substring(1, peers.indexOf("}"));
@@ -976,7 +953,7 @@ public final class NameService {
                                         if (peerName.startsWith("`")) {
                                             peerName = peerName.substring(1, peerName.length() - 1); // trim escape chars
                                         }
-                                        if (create == null && findByName(loggedInConnection, peerName) == null) {
+                                        if (findByName(loggedInConnection, peerName) == null) {
                                             if (notFoundError.isEmpty()) {
                                                 notFoundError = peerName;
                                             } else {
@@ -996,16 +973,6 @@ public final class NameService {
                                 }
                             }
                             // taken away support for inserting/removing a single peer
-
-                    } else {// they want to read data
-                        final Name name = findByName(loggedInConnection, nameString);
-                        if (name != null) {
-                            //  Fees; peers {Period, Analysis, Merchant};create;
-                            // TODO, how to deal with additive?
-                            return getNamesFormattedForOutput(getPeersIncludeParents(name).keySet());
-                        } else {
-                            return "error:name not found:`" + nameString + "`";
-                        }
                     }
                 }
             }

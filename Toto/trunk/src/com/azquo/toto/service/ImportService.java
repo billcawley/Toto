@@ -44,7 +44,7 @@ public final class ImportService {
 
         for (String header : headers) {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
-                final String result = nameService.handleRequest(loggedInConnection, header + strCreate);
+                final String result = nameService.setPeersForImportHeading(loggedInConnection, header + strCreate);
                 if (result.startsWith("error:")) {
                     throw new Exception("unable to understand " + header + " - " + result);
                 }
