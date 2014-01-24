@@ -7,11 +7,9 @@ import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import com.csvreader.CsvReader;
-import org.apache.poi.hssf.usermodel.HSSFCell;
-import org.apache.poi.hssf.usermodel.HSSFRow;
-import org.apache.poi.hssf.usermodel.HSSFSheet;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.apache.poi.ss.usermodel.Cell;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
@@ -52,7 +50,7 @@ public final class ImportService {
         if (strCreate != null && strCreate.equals("true")){
             create = true;
         }
-        if (fileName.endsWith(".xsl")){
+        if (fileName.endsWith(".xls")){
             tempFile = decode64(uploadFile,fileName);
         }
         if (fileName.endsWith(".zip")) {
@@ -63,28 +61,35 @@ public final class ImportService {
 
 
         }
-        if (fileName.contains(".xls")) {
-            readExcel(fileName);
+         if (fileName.contains(".xls")) {
+            readExcel(loggedInConnection, tempFile, create);
 
         }else{
-            if (tempFile.length() > 0){
-               uploadFile = new FileInputStream(tempFile);
-            }
-            if (fileType.toLowerCase().equals("values")){
-                result =  dataImport(loggedInConnection,  uploadFile, create);
-            }
-            // we will pay attention onn the attribute import and replicate
-            if (fileType.toLowerCase().equals("names")){
-                result = attributeImport(loggedInConnection,uploadFile, create);
-
-            }
+             if (tempFile.length() > 0){
+                 uploadFile = new FileInputStream(tempFile);
+             }
+            readPreparedFile(loggedInConnection, uploadFile, fileType, create);
         }
-        nameService.persist(loggedInConnection);
+         nameService.persist(loggedInConnection);
         Database db = loggedInConnection.getTotoMemoryDB().getDatabase();
         UploadRecord uploadRecord = new UploadRecord(0,new Date(),db.getBusinessId(), db.getId(), loggedInConnection.getUser().getId(),fileName, fileType, result);
         uploadRecordDAO.store(uploadRecord);
 
         return result;
+    }
+
+    private String readPreparedFile(LoggedInConnection loggedInConnection, InputStream uploadFile, String fileType, boolean create) throws Exception{
+
+        if (fileType.toLowerCase().equals("values")){
+            return dataImport(loggedInConnection,  uploadFile, create);
+        }
+        // we will pay attention onn the attribute import and replicate
+        if (fileType.toLowerCase().equals("names")){
+            return attributeImport(loggedInConnection,uploadFile, create);
+
+        }
+        return "error: unknown file type " + fileType;
+
     }
 
 
@@ -239,11 +244,65 @@ public final class ImportService {
         }
         return nameGiven.substring(0, commaPos);
     }
-    public String unzip(String fileName, String fileSuffix) {
+
+
+    private String unzip(String fileName, String suffix){
+
+        String outputFile = fileName.substring(0, fileName.length() - 4);
+        try {
+            byte[] data = new byte[1000];
+            int byteRead;
+
+
+             ZipInputStream  zin = new ZipInputStream(new BufferedInputStream(new FileInputStream(fileName)));
+           // while((zin.getNextEntry()) != null){
+           //READ ONE ENTRY ONLY...
+                zin.getNextEntry();
+                data = new byte[1000];
+                File tmpOutput = File.createTempFile(outputFile,suffix);
+                tmpOutput.deleteOnExit();
+                BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(tmpOutput),1000);
+                while ((byteRead = zin.read(data,0,1000)) != -1)
+                {
+                    bout.write(data,0,byteRead);
+                }
+                bout.flush();
+                bout.close();
+                return tmpOutput.getPath();
+           // }
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+
+
+
+    /*
+    public void unzip(String fileName, String fileSuffix) {
+
+        String password = ""; //may be used in future
+
+        try {
+            ZipFile zipFile = new ZipFile(fileName);
+            if (zipFile.isEncrypted()) {
+                zipFile.setPassword(password);
+            }
+            zipFile.extractAll(System.getProperty("java.io.tmpdir"));
+        } catch (ZipException e) {
+            e.printStackTrace();
+        }
+    }
+    */
+
+            /*
         String outputFile = "";
         byte[] buffer = new byte[1024];
         try {
-            ZipInputStream zis = new ZipInputStream(new FileInputStream(fileName));
+           ZipInputStream zis = new ZipInputStream(new FileInputStream(fileName));
             outputFile = fileName.substring(0, fileName.length() - 4);
                 //get the zip file content
             //get the zipped file list entry - there should only be one
@@ -264,8 +323,11 @@ public final class ImportService {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+
         return outputFile;
-      }
+       }
+        */
+
 
 
 
@@ -339,48 +401,67 @@ public final class ImportService {
         return tempName;
      }
 
-    private void readExcel(final String fileName){
+    private void readExcel(final LoggedInConnection loggedInConnection,final String fileName, boolean create){
 
 
         try {
             POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(fileName));
             HSSFWorkbook wb = new HSSFWorkbook(fs);
-            HSSFSheet sheet = wb.getSheetAt(0);
             HSSFRow row;
             HSSFCell cell;
+            HSSFDataFormatter formatter = new HSSFDataFormatter();
+            int sheetNo = 0;
 
-            int rows; // No of rows
-            rows = sheet.getPhysicalNumberOfRows();
+            HSSFSheet sheet = wb.getSheetAt(0);
+            while (sheet != null){
+                String fileType = sheet.getSheetName();
 
-            int cols = 0; // No of columns
-            int tmp = 0;
+                int rows; // No of rows
+                rows = sheet.getPhysicalNumberOfRows();
 
-            // This trick ensures that we get the data properly even if it doesn't start from first few rows
-            for(int i = 0; i < 10 || i < rows; i++) {
-                row = sheet.getRow(i);
-                if(row != null) {
-                    tmp = sheet.getRow(i).getPhysicalNumberOfCells();
-                    if(tmp > cols) cols = tmp;
-                }
-            }
+                int cols = 0; // No of columns
+                int tmp = 0;
 
-            for(int r = 0; r < rows; r++) {
-                row = sheet.getRow(r);
-                if(row != null) {
-                    for(int c = 0; c < cols; c++) {
-                        cell = row.getCell((short)c);
-                        if(cell != null) {
-                            // Your code here
-                        }
+                // This trick ensures that we get the data properly even if it doesn't start from first few rows
+                for(int i = 0; i < 10 || i < rows; i++) {
+                    row = sheet.getRow(i);
+                    if(row != null) {
+                        tmp = sheet.getRow(i).getPhysicalNumberOfCells();
+                        if(tmp > cols) cols = tmp;
                     }
                 }
+                File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4), "." + fileType);
+                String tempName = temp.getPath();
+
+                temp.deleteOnExit();
+                FileWriter fw = new FileWriter(tempName);
+                BufferedWriter bw = new BufferedWriter(fw);
+
+                for(int r = 0; r < rows; r++) {
+                    row = sheet.getRow(r);
+                    if(row != null) {
+                        int colCount = 0;
+                        for(int c = 0; c < cols; c++) {
+                            cell = row.getCell((short)c);
+                            if (colCount++ > 0) bw.write('\t');
+                            if(cell != null) {
+                                bw.write(formatter.formatCellValue(cell));
+                                // Your code here
+                            }
+                        }
+                        bw.write('\n');
+                    }
+                }
+                bw.close();
+                InputStream uploadFile = new FileInputStream(tempName);
+                readPreparedFile(loggedInConnection,uploadFile,fileType,create);
+                sheet = wb.getSheetAt(++sheetNo);
             }
         } catch(Exception ioe) {
             ioe.printStackTrace();
         }
 
     }
-
 
 
 }
