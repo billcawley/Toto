@@ -3,7 +3,6 @@ package com.azquo.toto.service;
 import com.azquo.toto.jsonrequestentities.NameJsonRequest;
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Provenance;
-import com.azquo.toto.memorydb.Value;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -801,8 +800,11 @@ public final class NameService {
 
     public String processJsonRequest(LoggedInConnection loggedInConnection, NameJsonRequest nameJsonRequest) throws Exception{
         String toReturn = "";
+
+        // hang on a minute, how exactly does strcuture work? What might be passsed?
         if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)){
-            toReturn = handleRequest(loggedInConnection, nameJsonRequest.name);
+            return getStructureForNameSearch(loggedInConnection, nameJsonRequest.name);
+
         }
 
         if (nameJsonRequest.operation.equalsIgnoreCase(DELETE)){
@@ -910,7 +912,6 @@ public final class NameService {
                 }
                 // re set attributes, use single functions so checks happen
             }
-            toReturn = handleRequest(loggedInConnection, nameJsonRequest.name);
         }
 
         return toReturn;
@@ -927,18 +928,7 @@ public final class NameService {
             if (instructions == null) {
                 return "error:no instructions passed";
             }
-
             System.out.println("instructions : |" + instructions + "|");
-            if (instructions.equals("lognames")) {
-                for (Name topName : findTopNames(loggedInConnection)) {
-                    logNameHierarchy(topName, 0);
-                }
-            }
-
-            // this certainly will NOT stay here :)
-            if (instructions.equals("persist")) {
-                persist(loggedInConnection);
-            }
             instructions = instructions.trim();
             // typically a command will start with a name
 
@@ -947,113 +937,24 @@ public final class NameService {
                 // now we have it strip off the name, use getInstruction to see what we want to do with the name
                 String origInstructions = instructions;
                 instructions = instructions.substring(instructions.indexOf(';') + 1).trim();
-
+                // children just reads
                 String children = getInstruction(instructions, CHILDREN);
+                // is peers just read too?
                 String peers = getInstruction(instructions, PEERS);
                 String structure = getInstruction(instructions, STRUCTURE);
+                // if peers is just read then can I zap create also?
                 String create = getInstruction(instructions, CREATE);
-                String afterString = getInstruction(instructions, AFTER);
-                String remove = getInstruction(instructions, REMOVE);
-                String renameas = getInstruction(instructions, RENAMEAS);
                 // since children can be part of structure definition we do structure first
-                if (structure != null) {
-                    // New logic.  If name is not found, then first find names containing the name sent.  If none are found, return top names in structure
-                    return getStructureForNameSearch(loggedInConnection, nameString);
-                } else if (children != null) {
-
-                    if (children.length() > 0) { // we want to affect the structure, add, remove, create
-                        if (remove != null) { // remove a child form the set
-                            final Name name = findByName(loggedInConnection, nameString);
-                            if (name != null) {
-                                if (removeChild(loggedInConnection, name, children)) {
-                                    return children + " removed";
-                                } else {
-                                    return "error:name not found:`" + children + "`";
-                                }
-                            } else {
-                                return "error:name not found:`" + nameString + "`";
-                            }
-                        } else { // some kind of create or set add
-                            Name name;
-                            String notFoundError = "";
-                            if (create != null) {
-                                name = findOrCreateName(loggedInConnection, nameString);
-                            } else {
-                                name = findByName(loggedInConnection, nameString);
-                                if (name == null) {
-                                    notFoundError = "error:name not found:`" + nameString + "`";
-                                }
-                            }
-                            // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
-                            if (children.startsWith("{")) { // array, typically when creating in the first place, the service call will insert after any existing
-                                // EXAMPLE : 2013;children {jan 2013,`feb 2013`,mar 2013, apr 2013, may 2013, jun 2013, jul 2013, aug 2013, sep 2013, oct 2013, nov 2013, dec 2013};create
-                                if (children.contains("}")) {
-                                    children = children.substring(1, children.indexOf("}"));
-                                    final StringTokenizer st = new StringTokenizer(children, ",");
-                                    final List<String> namesToAdd = new ArrayList<String>();
-                                    while (st.hasMoreTokens()) {
-                                        String childName = st.nextToken().trim();
-                                        if (childName.startsWith("`")) {
-                                            childName = childName.substring(1, childName.length() - 1); // trim escape chars
-                                        }
-                                        if (create == null && findByName(loggedInConnection, childName) == null) {
-                                            if (notFoundError.isEmpty()) {
-                                                notFoundError = childName;
-                                            } else {
-                                                notFoundError += (", `" + childName + "`");
-                                            }
-                                        }
-                                        namesToAdd.add(childName);
-                                    }
-                                    if (notFoundError.isEmpty()) {
-                                        createChildren(loggedInConnection, name, namesToAdd);
-                                        System.out.println("created children : " + name + " " + namesToAdd);
-                                    } else {
-                                        return "error:name not found:`" + notFoundError + "`";
-                                    }
-                                    return "array saved " + namesToAdd.size() + " names";
-                                } else {
-                                    return "error:Unclosed }";
-                                }
-                            } else { // insert after a certain position
-                                // currently won't support before and after on create arrays, probably could later
-                                int after = -1;
-                                try {
-                                    after = Integer.parseInt(afterString);
-                                } catch (NumberFormatException ignored) {
-                                }
-                                if (create == null && findByName(loggedInConnection, children) == null) {
-                                    return "error:name not found:`" + children + "`";
-                                }
-                                createChild(loggedInConnection, name, children, afterString, after);
-                                assert name != null; // just to shut intellij up
-                                return children + " added to " + name.getDefaultDisplayName();
-                            }
-
-                        }
-
-                    } else {// they want to read data
-
+                if (children != null) {
                         List<Name> names = interpretName(loggedInConnection, origInstructions);
                         if (names != null) {
                             return getNamesFormattedForOutput(names);
                         } else {
                             return "error:name not found:`" + nameString + "`";
                         }
-                    }
                 } else if (peers != null) {
                     System.out.println("peers : |" + peers + "|");
                     if (peers.length() > 0) { // we want to affect the structure, add, remove, create
-                        if (remove != null) { // remove a peer form the set
-                            final Name name = findByName(loggedInConnection, nameString);
-                            if (name != null) {
-                                if (removePeer(loggedInConnection, name, peers)) {
-                                    return peers + " removed";
-                                } else {
-                                    return "error:name not found:`" + peers + "`";
-                                }
-                            }
-                        } else { // copied from above but for peers, probably should factor at some point
                             Name name;
                             if (create != null) {
                                 name = findOrCreateName(loggedInConnection, nameString);
@@ -1093,21 +994,8 @@ public final class NameService {
                                 } else {
                                     return "error:Unclosed }";
                                 }
-                            } else { // insert after a certain position
-                                // currently won't support before and after on create arrays, probably could later
-                                int after = -1;
-                                try {
-                                    after = Integer.parseInt(afterString);
-                                } catch (NumberFormatException ignored) {
-                                }
-                                if (create == null && findByName(loggedInConnection, peers) == null) {
-                                    return "error:name not found:`" + nameString + "`";
-                                }
-                                createPeer(loggedInConnection, name, peers, afterString, after);
-                                return peers + " added to " + name.getDefaultDisplayName();
                             }
-
-                        }
+                            // taken away support for inserting/removing a single peer
 
                     } else {// they want to read data
                         final Name name = findByName(loggedInConnection, nameString);
@@ -1119,11 +1007,6 @@ public final class NameService {
                             return "error:name not found:`" + nameString + "`";
                         }
                     }
-
-
-                } else if (renameas != null) { // not specific to peers or children
-                    renameName(loggedInConnection, nameString, renameas);
-                    return "rename " + nameString + " to " + renameas;
                 }
             }
             return nameString;
