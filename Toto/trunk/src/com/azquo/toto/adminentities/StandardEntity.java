@@ -2,9 +2,7 @@ package com.azquo.toto.adminentities;
 
 /**
  * Created by cawley on 07/01/14.
- * <p/>
- * like the totmemory db one but more vanilla like ol feefo
- * <p/>
+ * the objects relating to the master db extend this
  * currently just defines id but I think that's fine, will still be useful for abstraction
  */
 public abstract class StandardEntity {

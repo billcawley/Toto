@@ -1,12 +1,10 @@
 package com.azquo.toto.adminentities;
 
-import com.azquo.toto.admindao.BusinessDAO;
-import com.azquo.toto.admindao.DatabaseDAO;
-
 import java.util.Date;
 
 /**
- * Created by cawley on 09/01/14.
+ * Created by cawley on 09/01/14
+ * An entry for each uploaded file
  */
 public final class UploadRecord extends StandardEntity{
 
@@ -98,6 +96,8 @@ public final class UploadRecord extends StandardEntity{
                 ", comments='" + comments + '\'' +
                 '}';
     }
+
+    // convenience object for returning JSON to Excel, one can build a list of these and let Jackson take care of it
 
     public static class UploadRecordForDisplay{
         public final Date date;

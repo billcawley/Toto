@@ -7,6 +7,7 @@ import java.util.Date;
 
 /**
  * Created by cawley on 07/01/14.
+ * Details of an Azquo customer, mutable as almost certainly will be updated
  */
 public final class Business extends StandardEntity{
 
@@ -115,5 +116,4 @@ public final class Business extends StandardEntity{
                     '}';
         }
     }
-
 }

@@ -4,13 +4,13 @@ import java.util.Date;
 
 /**
  * Representing access a user can have
- * should the object be immutable?
+ * Considered immutability but things like dates may be adjusted
  */
 public final class Access extends StandardEntity{
 
-    Date startDate;
-    Date endDate;
-    int userId;
+    private Date startDate;
+    private Date endDate;
+    private int userId;
     int databaseId;
 
     // these two may become arrays later

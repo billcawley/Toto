@@ -3,14 +3,9 @@ package com.azquo.toto.adminentities;
 import java.util.Date;
 
 /**
- * Created by cawley on 08/01/14.
+ * Created by Cawley on 08/01/14.
  *
- *   Active (boolean)
-Start date
-Business Id
-Name
-Name count
-Value count
+ *  Representing an Azquo memory database. These records are scanned on startup and teh databases loaded into memory
  */
 public final class Database extends StandardEntity {
 
