@@ -8,8 +8,8 @@ import java.io.*;
  */
 public class CommandLineCalls {
 
-    // to GPG I think we'd still need to command line. Handling zip can be by command line or java streams.
-    // For the moment need neither
+    // to GPG I think we'd still need to command line but not yet
+    // we may not actually need the FTP in the end either
 
     public boolean runCommand(String command, boolean systemCopy)
             throws Exception {
@@ -17,8 +17,7 @@ public class CommandLineCalls {
     }
 
     public boolean runCommand(String command, boolean systemCopy, String input)
-            throws Exception
-    {
+            throws Exception {
         return runCommand(command, null, systemCopy, input);
     }
 
@@ -27,7 +26,7 @@ public class CommandLineCalls {
             throws Exception {
         Runtime rt = Runtime.getRuntime();
         Process proc;
-        if (commandArray != null){
+        if (commandArray != null) {
             proc = rt.exec(commandArray);
         } else {
             proc = rt.exec(command);
@@ -74,7 +73,7 @@ public class CommandLineCalls {
     public boolean addFTPAccount(String accountName, String password)
             throws Exception {
         if (accountName != null && accountName.length() > 5
-         && password != null && password.length() > 5 && password.length() <= 25) {
+                && password != null && password.length() > 5 && password.length() <= 25) {
             // I don't think we need to sudo? Tomcat running as root.
             //return runCommand("/usr/local/bin/add-ftp-user.sh " + getAccountNameForFTP(accountName) + " " + password, true);
             return runCommand("add-ftp-user.sh " + getAccountNameForFTP(accountName) + " " + password, true);
@@ -82,10 +81,10 @@ public class CommandLineCalls {
         return false;
     }
 
-    public String getAccountNameForFTP(String accountName){
+    public String getAccountNameForFTP(String accountName) {
         String toReturn = accountName.replace('.', '-').replace('/', '-').trim();
-        if (toReturn.length() > 25){
-            return toReturn.substring(0,25);
+        if (toReturn.length() > 25) {
+            return toReturn.substring(0, 25);
         } else {
             return toReturn;
         }

@@ -6,8 +6,7 @@ import org.apache.commons.mail.HtmlEmail;
 
 /**
  * Created by cawley on 16/01/14.
- * Quick google showed the apache libraries to be a pretty easy way to do things. Email so unimportant compared to Feefo.
- *
+ * Quick google showed the apache libraries to be a pretty easy way to do things. Email so unimportant compared to Feefo
  */
 public class AzquoMailer {
 
