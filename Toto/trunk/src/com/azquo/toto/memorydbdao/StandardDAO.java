@@ -18,11 +18,10 @@ import java.util.*;
  * Time: 09:18
  * Most data tables in the database have common features such as an id and a simple place that they're stored which means we can,
  * factor things off here
- *
+ * <p/>
  * Note : for building SQL I'm veering away from stringbuilder as IntelliJ complains about it and string concantation etc is heavily optimised by the compiler
- *
+ * <p/>
  * This used to be an abstract class with classes for each entity extending it. Now after full json it's just used for moving the very standard json records about
- *
  */
 public class StandardDAO {
 
@@ -53,8 +52,8 @@ public class StandardDAO {
         }
     }
 
-    private final void bulkInsert(final TotoMemoryDB totoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
-        if (!records.isEmpty()){
+    private void bulkInsert(final TotoMemoryDB totoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
+        if (!records.isEmpty()) {
             long track = System.currentTimeMillis();
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
             final StringBuilder insertSql = new StringBuilder();
@@ -63,7 +62,7 @@ public class StandardDAO {
 
             int count = 1;
 
-            for(JsonRecordTransport record : records){
+            for (JsonRecordTransport record : records) {
                 insertSql.append("(:" + ID + count + ",:" + JSON + count + "), ");
                 namedParams.addValue(JSON + count, record.json);
                 namedParams.addValue(ID + count, record.id);
@@ -88,8 +87,8 @@ WHERE id IN (1,2,3)
 
      */
 
-    private final void bulkUpdate(final TotoMemoryDB totoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
-        if (!records.isEmpty()){
+    private void bulkUpdate(final TotoMemoryDB totoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
+        if (!records.isEmpty()) {
             long track = System.currentTimeMillis();
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
             final StringBuilder updateSql = new StringBuilder();
@@ -98,7 +97,7 @@ WHERE id IN (1,2,3)
 
             int count = 1;
 
-            for(JsonRecordTransport record : records){
+            for (JsonRecordTransport record : records) {
                 updateSql.append(" when :" + ID + count + " then :" + JSON + count + " ");
                 namedParams.addValue(ID + count, record.id);
                 namedParams.addValue(JSON + count, record.json);
@@ -106,8 +105,8 @@ WHERE id IN (1,2,3)
             }
             updateSql.append(" END where " + ID + " in (");
             count = 1;
-            for(JsonRecordTransport record : records){
-                if (count == 1){
+            for (JsonRecordTransport record : records) {
+                if (count == 1) {
                     updateSql.append(record.id);
                 } else {
                     updateSql.append("," + record.id);
@@ -121,16 +120,16 @@ WHERE id IN (1,2,3)
         }
     }
 
-    private final void bulkDelete(final TotoMemoryDB totoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
-        if (!records.isEmpty()){
+    private void bulkDelete(final TotoMemoryDB totoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
+        if (!records.isEmpty()) {
             long track = System.currentTimeMillis();
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
             final StringBuilder updateSql = new StringBuilder();
 
             updateSql.append("delete from `" + totoMemoryDB.getMySQLName() + "`.`" + tableName + "` where " + ID + " in (");
             int count = 1;
-            for(JsonRecordTransport record : records){
-                if (count == 1){
+            for (JsonRecordTransport record : records) {
+                if (count == 1) {
                     updateSql.append(record.id);
                 } else {
                     updateSql.append("," + record.id);
@@ -144,41 +143,41 @@ WHERE id IN (1,2,3)
         }
     }
 
-    public final void persistJsonRecords(final TotoMemoryDB totoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
+    public void persistJsonRecords(final TotoMemoryDB totoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
         List<JsonRecordTransport> toDelete = new ArrayList<JsonRecordTransport>();
         List<JsonRecordTransport> toInsert = new ArrayList<JsonRecordTransport>();
         List<JsonRecordTransport> toUpdate = new ArrayList<JsonRecordTransport>();
 
-        for (JsonRecordTransport record : records){
-            if (record.state == JsonRecordTransport.State.DELETE){
+        for (JsonRecordTransport record : records) {
+            if (record.state == JsonRecordTransport.State.DELETE) {
                 toDelete.add(record);
-                if (toDelete.size() == UPDATELIMIT){
-                    bulkDelete(totoMemoryDB,tableName,toDelete);
+                if (toDelete.size() == UPDATELIMIT) {
+                    bulkDelete(totoMemoryDB, tableName, toDelete);
                     toDelete = new ArrayList<JsonRecordTransport>();
                 }
             }
-            if (record.state == JsonRecordTransport.State.INSERT){
+            if (record.state == JsonRecordTransport.State.INSERT) {
                 toInsert.add(record);
-                if (toInsert.size() == UPDATELIMIT){
+                if (toInsert.size() == UPDATELIMIT) {
                     bulkInsert(totoMemoryDB, tableName, toInsert);
                     toInsert = new ArrayList<JsonRecordTransport>();
                 }
             }
-            if (record.state == JsonRecordTransport.State.UPDATE){
+            if (record.state == JsonRecordTransport.State.UPDATE) {
                 toUpdate.add(record);
-                if (toUpdate.size() == UPDATELIMIT){
+                if (toUpdate.size() == UPDATELIMIT) {
                     bulkUpdate(totoMemoryDB, tableName, toUpdate);
                     toUpdate = new ArrayList<JsonRecordTransport>();
                 }
             }
         }
-        bulkDelete(totoMemoryDB,tableName,toDelete);
+        bulkDelete(totoMemoryDB, tableName, toDelete);
         bulkInsert(totoMemoryDB, tableName, toInsert);
-        bulkUpdate(totoMemoryDB,tableName,toUpdate);
+        bulkUpdate(totoMemoryDB, tableName, toUpdate);
     }
 
     public final List<JsonRecordTransport> findFromTable(final TotoMemoryDB totoMemoryDB, final String tableName) throws DataAccessException {
-            final String SQL_SELECT_ALL = "Select `" + totoMemoryDB.getMySQLName() + "`.`" + tableName + "`.* from `" + totoMemoryDB.getMySQLName() + "`.`" + tableName + "` LIMIT 0," + SELECTLIMIT;
-            return jdbcTemplate.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
+        final String SQL_SELECT_ALL = "Select `" + totoMemoryDB.getMySQLName() + "`.`" + tableName + "`.* from `" + totoMemoryDB.getMySQLName() + "`.`" + tableName + "` LIMIT 0," + SELECTLIMIT;
+        return jdbcTemplate.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
     }
 }

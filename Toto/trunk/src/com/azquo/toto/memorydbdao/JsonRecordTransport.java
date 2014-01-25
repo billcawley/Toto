@@ -5,7 +5,7 @@ package com.azquo.toto.memorydbdao;
  */
 public class JsonRecordTransport {
 
-    public enum State{LOADED,DELETE,UPDATE,INSERT}
+    public enum State {LOADED, DELETE, UPDATE, INSERT}
 
     public final int id;
     public final String json;
