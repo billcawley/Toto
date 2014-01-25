@@ -51,12 +51,12 @@ public class AdminController {
                                 @RequestParam(value = "readlist", required = false) final String readList, @RequestParam(value = "writelist", required = false) final String writeList,
                                 @RequestParam(value = "connectionid", required = false) final String connectionId) throws Exception {
 
-        if(op.equalsIgnoreCase(SIGNON)){
-            if (key != null && key.length() > 0 && businessName != null && businessName.length() > 0){
-                return adminService.confirmKey(businessName,key) + "";
-            } else if (email != null && email.length() > 0 && userName != null && userName.length() > 0 && businessName != null && businessName.length() > 0 && password != null && password.length() > 0){
-                return adminService.registerBusiness(email,businessName,password,businessName,address1 != null ? address1 : "", address2 != null ? address2 : "",
-                        address3 != null ? address3 : "", address4 != null ? address4 : "",postcode != null ? postcode : "",telephone != null ? telephone : "");
+        if (op.equalsIgnoreCase(SIGNON)) {
+            if (key != null && key.length() > 0 && businessName != null && businessName.length() > 0) {
+                return adminService.confirmKey(businessName, key) + "";
+            } else if (email != null && email.length() > 0 && userName != null && userName.length() > 0 && businessName != null && businessName.length() > 0 && password != null && password.length() > 0) {
+                return adminService.registerBusiness(email, businessName, password, businessName, address1 != null ? address1 : "", address2 != null ? address2 : "",
+                        address3 != null ? address3 : "", address4 != null ? address4 : "", postcode != null ? postcode : "", telephone != null ? telephone : "");
             }
         } else {
 
@@ -69,35 +69,35 @@ public class AdminController {
             if (loggedInConnection == null) {
                 return "error:invalid or expired connection id";
             }
-            if(op.equalsIgnoreCase(NEWDATABASE)){
-                    if (database != null && database.length() > 0){
-                        return adminService.createDatabase(database, loggedInConnection) + "";
-                    }
+            if (op.equalsIgnoreCase(NEWDATABASE)) {
+                if (database != null && database.length() > 0) {
+                    return adminService.createDatabase(database, loggedInConnection) + "";
+                }
             }
-            if(op.equalsIgnoreCase(NEWUSER)){
+            if (op.equalsIgnoreCase(NEWUSER)) {
                 if (email != null && email.length() > 0 && userName != null && userName.length() > 0
-                        && status != null && status.length() > 0 && password != null && password.length() > 0){
+                        && status != null && status.length() > 0 && password != null && password.length() > 0) {
                     return adminService.createUser(email, userName, status, password, loggedInConnection) + "";
                 }
             }
-            if(op.equalsIgnoreCase(USERACCESS)){
+            if (op.equalsIgnoreCase(USERACCESS)) {
                 if (email != null && email.length() > 0 && readList != null && readList.length() > 0
-                        && writeList != null && writeList.length() > 0 ){
+                        && writeList != null && writeList.length() > 0) {
                     return adminService.createUserAccess(email, readList, writeList, loggedInConnection) + "";
                 }
             }
-            if(op.equalsIgnoreCase(DATABASELIST)){
-                    return jacksonMapper.writeValueAsString(adminService.getDatabaseListForBusiness(loggedInConnection));
+            if (op.equalsIgnoreCase(DATABASELIST)) {
+                return jacksonMapper.writeValueAsString(adminService.getDatabaseListForBusiness(loggedInConnection));
             }
-            if(op.equalsIgnoreCase(USERLIST)){
-                    return jacksonMapper.writeValueAsString(adminService.getUserListForBusiness(loggedInConnection));
+            if (op.equalsIgnoreCase(USERLIST)) {
+                return jacksonMapper.writeValueAsString(adminService.getUserListForBusiness(loggedInConnection));
             }
-            if(op.equalsIgnoreCase(ACCESSLIST)){
-                if (email != null && email.length() > 0){
+            if (op.equalsIgnoreCase(ACCESSLIST)) {
+                if (email != null && email.length() > 0) {
                     return jacksonMapper.writeValueAsString(adminService.getAccessList(loggedInConnection, email));
                 }
             }
-            if(op.equalsIgnoreCase(UPLOADSLIST)){
+            if (op.equalsIgnoreCase(UPLOADSLIST)) {
                 return jacksonMapper.writeValueAsString(adminService.getUploadRecordsForDisplayForBusiness(loggedInConnection));
             }
 

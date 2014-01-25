@@ -6,15 +6,9 @@ package com.azquo.toto.controller;
  * Date: 17/10/13
  * Time: 11:41
  * We're going to try for spring annotation based controllers. Might look into some rest specific spring stuff later.
- * For the moment it parses instructions for manipulating the name set and calls the name service if the instructions seem correctly formed.
  *
- * OK, 23rd Jan here are the calls the main excel sheet is currently doing:
- *
- * All Json!
- * structure
- * edit
- *
- *
+ * for reading and manipulating names. Uses only Json, the controller will sort the login but will leave the rest to the name service
+ * Maybe later deal with JSON parse errors here?
  *
  */
 
@@ -22,7 +16,6 @@ import com.azquo.toto.jsonrequestentities.NameJsonRequest;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
-import com.azquo.toto.service.ProvenanceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -36,12 +29,8 @@ public class NameController {
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
-
     @Autowired
     private NameService nameService;
-    @Autowired
-    private ProvenanceService provenanceService;
-
     @Autowired
     private LoginService loginService;
 //    private static final Logger logger = Logger.getLogger(TestController.class);
@@ -50,15 +39,15 @@ public class NameController {
     @ResponseBody
     public String handleRequest(@RequestParam(value = "json", required = true) String json) throws Exception {
         try {
-            if (json.length() > 0){ // new style paramters sent as json
+            if (json.length() > 0) {
                 NameJsonRequest nameJsonRequest;
-                try{
+                try {
                     nameJsonRequest = jacksonMapper.readValue(json, NameJsonRequest.class);
-                } catch (Exception e){
+                } catch (Exception e) {
                     return "error:badly formed json " + e.getMessage();
                 }
                 LoggedInConnection loggedInConnection = loginService.getConnectionFromJsonRequest(nameJsonRequest);
-                if (loggedInConnection == null){
+                if (loggedInConnection == null) {
                     return "error:invalid connection id or login credentials";
                 }
                 String result = nameService.processJsonRequest(loggedInConnection, nameJsonRequest);
@@ -66,7 +55,7 @@ public class NameController {
             } else {
                 return "error: empty json string passed";
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return "error:" + e.getMessage();
         }

@@ -2,7 +2,6 @@ package com.azquo.toto.controller;
 
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
-import com.azquo.toto.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,25 +26,28 @@ public class LoginController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "database", required = false) final String database, @RequestParam(value = "useremail", required = false) final String userEmail, @RequestParam(value = "password", required = false) final String password,
-                                @RequestParam(value = "timeout", required = false) final String timeout, @RequestParam(value = "checkconnectionid", required = false) final String checkConnectionId) throws Exception {
+    public String handleRequest(@RequestParam(value = "database", required = false) final String database,
+                                @RequestParam(value = "useremail", required = false) final String userEmail,
+                                @RequestParam(value = "password", required = false) final String password,
+                                @RequestParam(value = "timeout", required = false) final String timeout,
+                                @RequestParam(value = "checkconnectionid", required = false) final String checkConnectionId) throws Exception {
 
-
-        if (database != null && database.length() > 0 && userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0){
+        if (database != null && database.length() > 0 && userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
             int minutesTimeout = 0;
-            if (timeout != null && timeout.length() > 0){
-                try{
+            if (timeout != null && timeout.length() > 0) {
+                try {
                     minutesTimeout = Integer.parseInt(timeout);
-                } catch (Exception ignored){
+                } catch (Exception ignored) {
+                    return "error:timeout is not an integer";
                 }
             }
-            final LoggedInConnection loggedInConnection = loginService.login(database,userEmail,password, minutesTimeout);
-            if (loggedInConnection != null){
+            final LoggedInConnection loggedInConnection = loginService.login(database, userEmail, password, minutesTimeout);
+            if (loggedInConnection != null) {
                 return loggedInConnection.getConnectionId();
             }
         }
-        if (checkConnectionId != null && checkConnectionId.length() > 0){
-            if (loginService.getConnection(checkConnectionId) != null){
+        if (checkConnectionId != null && checkConnectionId.length() > 0) {
+            if (loginService.getConnection(checkConnectionId) != null) {
                 return "ok";
             } else {
                 return "error:expired or incorrect connection id";

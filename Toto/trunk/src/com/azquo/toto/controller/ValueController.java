@@ -19,7 +19,8 @@ import java.util.*;
  * Date: 24/10/13
  * Time: 13:46
  * <p/>
- * instructions to manipulate the data itself, will become more complex and deal with a connection to instructions can be in state
+ * instructions to manipulate the data itself. Getting data and row/column heading here is pretty simple
+ * It does currently parse the incoming data with CSV readers . . .should this be moved to the service??
  */
 @Controller
 @RequestMapping("/Value")
@@ -39,7 +40,7 @@ public class ValueController {
     @RequestMapping
     @ResponseBody
     public String handleRequest(@RequestParam(value = "rowheadings", required = false) final String rowheadings, @RequestParam(value = "columnheadings", required = false) final String columnheadings,
-                                @RequestParam(value = "context", required = false) final String context, @RequestParam(value = "connectionid", required = false)  String connectionId,
+                                @RequestParam(value = "context", required = false) final String context, @RequestParam(value = "connectionid", required = false) String connectionId,
                                 @RequestParam(value = "region", required = false) String region, @RequestParam(value = "lockmap", required = false) final String lockMap,
                                 @RequestParam(value = "editeddata", required = false) final String editedData, @RequestParam(value = "searchbynames", required = false) final String searchByNames,
                                 @RequestParam(value = "jsonfunction", required = false) final String jsonfunction, @RequestParam(value = "user", required = false) final String user,
@@ -47,15 +48,15 @@ public class ValueController {
 
         // these 3 statements copied, should factor
 
-        if (region != null && region.length() == 0){
+        if (region != null && region.length() == 0) {
             region = null; // make region null and blank the same . . .   , maybe change later???
         }
 
         try {
 
             if (connectionId == null) {
-                LoggedInConnection loggedInConnection = loginService.login(database,user, password,0);
-                if (loggedInConnection == null){
+                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0);
+                if (loggedInConnection == null) {
                     return "error:no connection id";
                 }
                 connectionId = loggedInConnection.getConnectionId();
@@ -68,18 +69,18 @@ public class ValueController {
             }
 
             if (rowheadings != null && rowheadings.length() > 0) {
-                 return valueService.getRowHeadings(loggedInConnection, region, rowheadings);
-             }
+                return valueService.getRowHeadings(loggedInConnection, region, rowheadings);
+            }
 
             if (columnheadings != null && columnheadings.length() > 0) {
-               return valueService.getColumnHeadings(loggedInConnection, region, columnheadings);
+                return valueService.getColumnHeadings(loggedInConnection, region, columnheadings);
             }
 
             if (context != null && context.length() > 0) {
                 //System.out.println("passed context : " + context);
                 final StringTokenizer st = new StringTokenizer(context, "\n");
                 final List<Name> contextNames = new ArrayList<Name>();
-                while (st.hasMoreTokens()){
+                while (st.hasMoreTokens()) {
                     final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim());
                     if (contextName == null) {
                         return "error:I can't find a name for the context : " + context;
@@ -169,11 +170,11 @@ public class ValueController {
                 System.out.println("search by names : " + searchByNames);
 
                 final Set<Name> names = nameService.decodeString(loggedInConnection, searchByNames);
-                if (!names.isEmpty()){
+                if (!names.isEmpty()) {
                     final String result = valueService.getExcelDataForNamesSearch(names);
-                    if (jsonfunction!=null && jsonfunction.length() > 0){
-                        return jsonfunction + "({\"data\": [[\"" + result.replace("\t","\",\"").replace("\n","\"],[\"") + "\"]]})";
-                    }else{
+                    if (jsonfunction != null && jsonfunction.length() > 0) {
+                        return jsonfunction + "({\"data\": [[\"" + result.replace("\t", "\",\"").replace("\n", "\"],[\"") + "\"]]})";
+                    } else {
                         return result;
                     }
                 }

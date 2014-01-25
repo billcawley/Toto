@@ -36,16 +36,21 @@ public class ProvenanceController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId, @RequestParam(value = "name", required = false) final String name,
-              @RequestParam(value = "region", required = false) final String region, @RequestParam(value = "col", required = false) String col, @RequestParam(value = "row", required = false) final String row,
-              @RequestParam(value = "searchnames", required = false) final String searchnames,
-              @RequestParam(value = "jsonfunction", required = false) final String jsonfunction, @RequestParam(value = "user", required = false) final String user,
-              @RequestParam(value = "password", required = false) final String password, @RequestParam(value = "database", required = false) final String database) throws Exception {
+    public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId,
+                                @RequestParam(value = "name", required = false) final String name,
+                                @RequestParam(value = "region", required = false) final String region,
+                                @RequestParam(value = "col", required = false) String col,
+                                @RequestParam(value = "row", required = false) final String row,
+                                @RequestParam(value = "searchnames", required = false) final String searchNames,
+                                @RequestParam(value = "jsonfunction", required = false) final String jsonFunction,
+                                @RequestParam(value = "user", required = false) final String user,
+                                @RequestParam(value = "password", required = false) final String password,
+                                @RequestParam(value = "database", required = false) final String database) throws Exception {
         try {
 
             if (connectionId == null) {
-                LoggedInConnection loggedInConnection = loginService.login(database,user, password,0);
-                if (loggedInConnection == null){
+                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0);
+                if (loggedInConnection == null) {
                     return "error:no connection id";
                 }
                 connectionId = loggedInConnection.getConnectionId();
@@ -58,51 +63,51 @@ public class ProvenanceController {
             }
 
 
-            if (name != null && name.length() > 0){
+            if (name != null && name.length() > 0) {
                 Name theName = nameService.findByName(loggedInConnection, name);
-                if (theName != null){
-                    System.out.println("In provenance controller name found : " + name);
-                    return formatProvenanceForOutput(theName.getProvenance(), jsonfunction);
+                if (theName != null) {
+                    //System.out.println("In provenance controller name found : " + name);
+                    return formatProvenanceForOutput(theName.getProvenance(), jsonFunction);
                 } else {
                     return "error:name not found :" + name;
                 }
             }
-            if (searchnames != null && searchnames.length() > 0){
-                final Set<Name> names = nameService.decodeString(loggedInConnection, searchnames);
-                if (!names.isEmpty()){
-                    if (names.size() == 1){
-                            return formatProvenanceForOutput(names.iterator().next().getProvenance(), jsonfunction);
-                    }else{
-                        final List<Value> values =valueService.findForNamesIncludeChildren(names, false);
-                        if (values.size() == 1){
-                            return formatProvenanceForOutput(values.get(0).getProvenance(), jsonfunction);
+            if (searchNames != null && searchNames.length() > 0) {
+                final Set<Name> names = nameService.decodeString(loggedInConnection, searchNames);
+                if (!names.isEmpty()) {
+                    if (names.size() == 1) {
+                        return formatProvenanceForOutput(names.iterator().next().getProvenance(), jsonFunction);
+                    } else {
+                        final List<Value> values = valueService.findForNamesIncludeChildren(names, false);
+                        if (values.size() == 1) {
+                            return formatProvenanceForOutput(values.get(0).getProvenance(), jsonFunction);
                         }
                     }
                 }
-                return formatProvenanceForOutput(null, jsonfunction);
+                return formatProvenanceForOutput(null, jsonFunction);
             }
 
-            if (row != null && row.length() > 0 && col != null && col.length() > 0){
+            if (row != null && row.length() > 0 && col != null && col.length() > 0) {
                 int rowInt;
                 int colInt;
-                try{
+                try {
                     rowInt = Integer.parseInt(row);
                     colInt = Integer.parseInt(col);
-                } catch (Exception e){
+                } catch (Exception e) {
                     return "error: row/col must be integers";
                 }
                 final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
 
                 // going to assume row and col start at 1 hence for index bits on here need to decrement
-                if (dataValueMap != null){
-                    if (dataValueMap.get(rowInt) != null){
+                if (dataValueMap != null) {
+                    if (dataValueMap.get(rowInt) != null) {
                         final List<List<Value>> rowValues = dataValueMap.get(rowInt);
-                        if (rowValues.get(colInt) != null){
+                        if (rowValues.get(colInt) != null) {
                             final List<Value> valuesForCell = rowValues.get(colInt);
-                            if (valuesForCell.size() == 1){
-                                return formatProvenanceForOutput(valuesForCell.get(0).getProvenance(), jsonfunction);
+                            if (valuesForCell.size() == 1) {
+                                return formatProvenanceForOutput(valuesForCell.get(0).getProvenance(), jsonFunction);
                             }
-                                // TODO : deal with provanence on a cell where there were mulitple values to make that cell's value
+                            // TODO : deal with provanence on a cell where there were mulitple values to make that cell's value
 
                             // TODO : the cell was made from no values? error or message
                             return "error: no values and hence provenance for : " + col + ", " + row;
@@ -124,19 +129,21 @@ public class ProvenanceController {
         return "no action taken";
     }
 
-    public String formatProvenanceForOutput(Provenance provenance, String jsonFunction){
+    // should jackson take care of this??
 
-        if (jsonFunction != null && jsonFunction.length() > 0){
+    public String formatProvenanceForOutput(Provenance provenance, String jsonFunction) {
 
-            if (provenance == null){
+        if (jsonFunction != null && jsonFunction.length() > 0) {
+
+            if (provenance == null) {
                 return jsonFunction + "({provenance:{\"who\":\"no provenance\"}})";
-            }else{
-                return  jsonFunction + "({provenance:{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}})";
+            } else {
+                return jsonFunction + "({provenance:{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}})";
             }
-        }else{
-            if (provenance == null){
+        } else {
+            if (provenance == null) {
                 return "error: no provenance";
-            }else{
+            } else {
                 return provenance.getUser() + "\r" + provenance.getTimeStamp() + "\r" + provenance.getMethod() + "\r" + provenance.getName() + "\r" + provenance.getColumnHeadings() + "\r" + provenance.getRowHeadings() + "\r" + provenance.getContext();
             }
         }
