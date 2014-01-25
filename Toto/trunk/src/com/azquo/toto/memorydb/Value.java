@@ -13,7 +13,7 @@ import java.util.*;
  * To reflect a fundamental Toto idea : a piece of data which has names attached
  * Delete solution is to unlink and jam the old links in delete_info.
  * Can worry about how to restore later.
- *
+ * Notable that the names list object here is what defines the relationship between values and names, what is in names is just a lookup
  */
 public final class Value extends TotoMemoryDBEntity {
 
@@ -27,7 +27,7 @@ public final class Value extends TotoMemoryDBEntity {
 
     private Set<Name> names;
 
-
+    // to be used by the code when creating a new value
 
     public Value(final TotoMemoryDB totoMemoryDB, final Provenance provenance, final String text, final String deletedInfo) throws Exception {
         super(totoMemoryDB, 0);
@@ -37,7 +37,9 @@ public final class Value extends TotoMemoryDBEntity {
         names = new HashSet<Name>();
     }
 
-    public Value(final TotoMemoryDB totoMemoryDB, final int id, final String jsonFromDB) throws Exception {
+    // only to be used by totomemory db, hence protected. What is notable is the setting of the id from the record in mysql
+
+    protected Value(final TotoMemoryDB totoMemoryDB, final int id, final String jsonFromDB) throws Exception {
         super(totoMemoryDB, id);
         JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
         this.provenance = getTotoMemoryDB().getProvenanceById(transport.provenanceId);
@@ -45,12 +47,15 @@ public final class Value extends TotoMemoryDBEntity {
         this.deletedInfo = transport.deletedInfo;
         names = new HashSet<Name>();
         //System.out.println("name ids" + transport.nameIds);
-        for (Integer nameId : transport.nameIds){
+        for (Integer nameId : transport.nameIds) {
             names.add(getTotoMemoryDB().getNameById(nameId));
         }
         setNamesWillBePersisted(names);
         getTotoMemoryDB().addValueToDb(this);
     }
+
+    // these functions pretty much just proxy through to the memory db maps. But need to override so the superclass can call if it needs to
+    // this one is called in the constructor
 
     @Override
     protected void setNeedsPersisting() {
@@ -58,7 +63,7 @@ public final class Value extends TotoMemoryDBEntity {
     }
 
     @Override
-    protected void classSpecificSetAsPersisted(){
+    protected void classSpecificSetAsPersisted() {
         getTotoMemoryDB().removeValueNeedsPersisting(this);
     }
 
@@ -75,7 +80,7 @@ public final class Value extends TotoMemoryDBEntity {
     }
 
     public synchronized void setDeletedInfoWillBePersisted(final String deletedInfo) throws Exception {
-        if (!deletedInfo.equals(this.deletedInfo)){
+        if (!deletedInfo.equals(this.deletedInfo)) {
             this.deletedInfo = deletedInfo;
             setNeedsPersisting();
         }
@@ -87,7 +92,7 @@ public final class Value extends TotoMemoryDBEntity {
                 "id=" + getId() +
                 ", provenance=" + provenance +
                 ", text='" + text + '\'' +
-                ", deleted=" + deletedInfo+
+                ", deleted=" + deletedInfo +
                 '}';
     }
 
@@ -95,18 +100,18 @@ public final class Value extends TotoMemoryDBEntity {
         return Collections.unmodifiableSet(names);
     }
 
+    // make sure to adjust the name objects :)
+    // syncronised but I'm not sure if this is good enough? Certainly better then nothing
+
     public synchronized void setNamesWillBePersisted(final Set<Name> names) throws Exception {
         checkDatabaseForSet(names);
-
-
-        for (Name oldName : this.names){
+        // remove from where it is right now
+        for (Name oldName : this.names) {
             oldName.removeFromValues(this);
         }
-
         this.names = names;
-
-        // set all parents on the new list
-        for (Name newName : this.names){
+        // set this against names on the new list
+        for (Name newName : this.names) {
             newName.addToValues(this);
         }
         setNeedsPersisting();
@@ -115,7 +120,7 @@ public final class Value extends TotoMemoryDBEntity {
 
     // for Jackson mapping, trying to attach to actual fields would be dangerous in terms of allowing unsafe access
     // think important to use a linked hash map to preserve order.
-    private static class JsonTransport{
+    private static class JsonTransport {
         public int provenanceId;
         public String text;
         public String deletedInfo;
@@ -136,12 +141,12 @@ public final class Value extends TotoMemoryDBEntity {
     public String getAsJson() {
         // yes could probably use list but lets match collection types . . .
         Set<Integer> nameIds = new LinkedHashSet<Integer>();
-        for (Name name : names){
+        for (Name name : names) {
             nameIds.add(name.getId());
         }
         try {
-            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(),text,deletedInfo,nameIds));
-        } catch (Exception e){
+            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(), text, deletedInfo, nameIds));
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return "";

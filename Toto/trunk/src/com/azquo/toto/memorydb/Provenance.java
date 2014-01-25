@@ -2,6 +2,7 @@ package com.azquo.toto.memorydb;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Date;
 
 /**
@@ -36,8 +37,9 @@ public final class Provenance extends TotoMemoryDBEntity {
         this.context = context;
     }
 
+    // protected as only to be called by Totomemorydb
 
-    public Provenance(final TotoMemoryDB totoMemoryDB, final int id, String jsonFromDB) throws Exception {
+    protected Provenance(final TotoMemoryDB totoMemoryDB, final int id, String jsonFromDB) throws Exception {
         super(totoMemoryDB, id);
         JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
 
@@ -103,7 +105,7 @@ public final class Provenance extends TotoMemoryDBEntity {
     This would mean json using the constructor and given things like the totomemorydb in there this is
     just not going to be elegant, best to just hive the json off to here to be called in the constructor
      */
-    private static class JsonTransport{
+    private static class JsonTransport {
         public final String user;
         public final Date timeStamp;
         public final String method;
@@ -111,6 +113,7 @@ public final class Provenance extends TotoMemoryDBEntity {
         public final String rowHeadings;
         public final String columnHeadings;
         public final String context;
+
         @JsonCreator
         private JsonTransport(@JsonProperty("user") String user, @JsonProperty("timeStamp") Date timeStamp, @JsonProperty("method") String method, @JsonProperty("name") String name,
                               @JsonProperty("rowHeadings") String rowHeadings, @JsonProperty("columnHeadings") String columnHeadings, @JsonProperty("context") String context) {
@@ -126,13 +129,12 @@ public final class Provenance extends TotoMemoryDBEntity {
 
     public String getAsJson() {
         try {
-            return jacksonMapper.writeValueAsString(new JsonTransport(user,timeStamp,method,name,rowHeadings,columnHeadings,context));
-        } catch (Exception e){
+            return jacksonMapper.writeValueAsString(new JsonTransport(user, timeStamp, method, name, rowHeadings, columnHeadings, context));
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return "";
     }
-
 
 
 }

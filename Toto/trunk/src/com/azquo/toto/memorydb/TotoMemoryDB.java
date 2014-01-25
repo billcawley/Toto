@@ -5,6 +5,7 @@ import com.azquo.toto.memorydbdao.JsonRecordTransport;
 import com.azquo.toto.memorydbdao.StandardDAO;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created with IntelliJ IDEA.
@@ -44,18 +45,19 @@ public final class TotoMemoryDB {
     public TotoMemoryDB(Database database, StandardDAO standardDAO) throws Exception {
         this.database = database;
         this.standardDAO = standardDAO;
-         needsLoading = true;
+        needsLoading = true;
         maxIdAtLoad = 0;
-        nameByAttributeMap = new HashMap<String, Map<String, Set<Name>>>();
-        nameByIdMap = new HashMap<Integer, Name>();
-        valueByIdMap = new HashMap<Integer, Value>();
-        provenanceByIdMap = new HashMap<Integer, Provenance>();
-         namesNeedPersisting = new HashSet<Name>();
+        nameByAttributeMap = new ConcurrentHashMap<String, Map<String, Set<Name>>>();
+        nameByIdMap = new ConcurrentHashMap<Integer, Name>();
+        valueByIdMap = new ConcurrentHashMap<Integer, Value>();
+        provenanceByIdMap = new ConcurrentHashMap<Integer, Provenance>();
+        namesNeedPersisting = new HashSet<Name>();
         valuesNeedPersisting = new HashSet<Value>();
         provenanceNeedsPersisting = new HashSet<Provenance>();
         loadData();
         nextId = maxIdAtLoad + 1;
     }
+
     // convenience
     public String getMySQLName() {
         return database.getMySQLName();
@@ -69,8 +71,6 @@ public final class TotoMemoryDB {
         return needsLoading;
     }
 
-    // right now this will not run properly!
-
     synchronized private void loadData() throws Exception {
         if (needsLoading) { // only allow it once!
             // here we'll populate the memory DB from the database
@@ -81,25 +81,25 @@ public final class TotoMemoryDB {
             // Must load provenance first as used by the other two!
 
             final List<JsonRecordTransport> allProvenance = standardDAO.findFromTable(this, StandardDAO.PROVENANCE);
-            for (JsonRecordTransport provenanceRecord : allProvenance){
+            for (JsonRecordTransport provenanceRecord : allProvenance) {
                 if (provenanceRecord.id > maxIdAtLoad) {
                     maxIdAtLoad = provenanceRecord.id;
                 }
-                new Provenance(this,provenanceRecord.id,provenanceRecord.json);
+                new Provenance(this, provenanceRecord.id, provenanceRecord.json);
             }
             final List<JsonRecordTransport> allNames = standardDAO.findFromTable(this, StandardDAO.NAME);
-            for (JsonRecordTransport nameRecord : allNames){
+            for (JsonRecordTransport nameRecord : allNames) {
                 if (nameRecord.id > maxIdAtLoad) {
                     maxIdAtLoad = nameRecord.id;
                 }
-                new Name(this,nameRecord.id,nameRecord.json);
+                new Name(this, nameRecord.id, nameRecord.json);
             }
             final List<JsonRecordTransport> allValues = standardDAO.findFromTable(this, StandardDAO.VALUE);
-            for (JsonRecordTransport valueRecord : allValues){
+            for (JsonRecordTransport valueRecord : allValues) {
                 if (valueRecord.id > maxIdAtLoad) {
                     maxIdAtLoad = valueRecord.id;
                 }
-                new Value(this,valueRecord.id,valueRecord.json);
+                new Value(this, valueRecord.id, valueRecord.json);
             }
 
             System.out.println(allNames.size() + allValues.size() + allProvenance.size() + " unlinked entities loaded in " + (System.currentTimeMillis() - track) + "ms");
@@ -125,40 +125,40 @@ public final class TotoMemoryDB {
         List<JsonRecordTransport> nameRecordsToStore = new ArrayList<JsonRecordTransport>();
         for (Name name : new ArrayList<Name>(namesNeedPersisting)) {
             JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
-            if (name.getNeedsDeleting()){
+            if (name.getNeedsDeleting()) {
                 state = JsonRecordTransport.State.DELETE;
             }
-            if (name.getNeedsInserting()){
+            if (name.getNeedsInserting()) {
                 state = JsonRecordTransport.State.INSERT;
             }
             nameRecordsToStore.add(new JsonRecordTransport(name.getId(), name.getAsJson(), state));
             name.setAsPersisted(); // is this dangerous here???
         }
         standardDAO.persistJsonRecords(this, StandardDAO.NAME, nameRecordsToStore);
-        
+
         System.out.println("vnp size : " + valuesNeedPersisting.size());
         List<JsonRecordTransport> valueRecordsToStore = new ArrayList<JsonRecordTransport>();
         for (Value value : new ArrayList<Value>(valuesNeedPersisting)) {
             JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
-            if (value.getNeedsDeleting()){
+            if (value.getNeedsDeleting()) {
                 state = JsonRecordTransport.State.DELETE;
             }
-            if (value.getNeedsInserting()){
+            if (value.getNeedsInserting()) {
                 state = JsonRecordTransport.State.INSERT;
             }
             valueRecordsToStore.add(new JsonRecordTransport(value.getId(), value.getAsJson(), state));
             value.setAsPersisted(); // is this dangerous here???
         }
         standardDAO.persistJsonRecords(this, StandardDAO.VALUE, valueRecordsToStore);
-        
+
         System.out.println("pnp size : " + provenanceNeedsPersisting.size());
         List<JsonRecordTransport> provenanceRecordsToStore = new ArrayList<JsonRecordTransport>();
         for (Provenance provenance : new ArrayList<Provenance>(provenanceNeedsPersisting)) {
             JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
-            if (provenance.getNeedsDeleting()){
+            if (provenance.getNeedsDeleting()) {
                 state = JsonRecordTransport.State.DELETE;
             }
-            if (provenance.getNeedsInserting()){
+            if (provenance.getNeedsInserting()) {
                 state = JsonRecordTransport.State.INSERT;
             }
             provenanceRecordsToStore.add(new JsonRecordTransport(provenance.getId(), provenance.getAsJson(), state));
@@ -167,6 +167,8 @@ public final class TotoMemoryDB {
         standardDAO.persistJsonRecords(this, StandardDAO.PROVENANCE, provenanceRecordsToStore);
     }
 
+    // will block currently!
+
     protected synchronized int getNextId() {
         nextId++; // increment but return what it was . . .a little messy but I want tat value in memory to be what it says
         return nextId - 1;
@@ -174,21 +176,21 @@ public final class TotoMemoryDB {
 
     // for search purposes probably should trim
 
-    public Name getNameById(final int id){
+    public Name getNameById(final int id) {
         return nameByIdMap.get(id);
 
     }
 
-    public Name getNameByAttribute(final String attributeName, final String attributeValue, final Name parent){
-        if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null){// there is an attribute with that name in the whole db . . .
+    public Name getNameByAttribute(final String attributeName, final String attributeValue, final Name parent) {
+        if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null) {// there is an attribute with that name in the whole db . . .
             final Set<Name> possibles = nameByAttributeMap.get(attributeName.toLowerCase().trim()).get(attributeValue.toLowerCase().trim());
             if (possibles == null) return null;
-            if (parent == null){
+            if (parent == null) {
                 if (possibles.size() != 1) return null;
                 return possibles.iterator().next();
-            }else{
-                for (Name possible:possibles){
-                    if(isInParentTreeOf(possible, parent)){
+            } else {
+                for (Name possible : possibles) {
+                    if (isInParentTreeOf(possible, parent)) {
                         return possible;
                     }
                 }
@@ -198,27 +200,27 @@ public final class TotoMemoryDB {
 
     }
 
-    public Set<Name> getNamesWithAttributeContaining(final String attributeName, final String attributeValue){
-        return getNamesByAttributeValueWildcards(attributeName,attributeValue, true, true);
+    public Set<Name> getNamesWithAttributeContaining(final String attributeName, final String attributeValue) {
+        return getNamesByAttributeValueWildcards(attributeName, attributeValue, true, true);
     }
 
     // cet names containing an attribute using wildcards, start end both
 
-    private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith){
-        final String  lctAttributeName = attributeName.toLowerCase().trim();
-        final String  lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
+    private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
+        final String lctAttributeName = attributeName.toLowerCase().trim();
+        final String lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
         final Set<Name> names = new HashSet<Name>();
-        for (String attributeValue : nameByAttributeMap.get(lctAttributeName).keySet()){
-            if (startsWith && endsWith){
-                if (attributeValue.toLowerCase().contains(lctAttributeValueSearch.toLowerCase())){
+        for (String attributeValue : nameByAttributeMap.get(lctAttributeName).keySet()) {
+            if (startsWith && endsWith) {
+                if (attributeValue.toLowerCase().contains(lctAttributeValueSearch.toLowerCase())) {
                     names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
                 }
-            } else if(startsWith){
-                if (attributeValue.toLowerCase().startsWith(lctAttributeValueSearch.toLowerCase())){
+            } else if (startsWith) {
+                if (attributeValue.toLowerCase().startsWith(lctAttributeValueSearch.toLowerCase())) {
                     names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
                 }
-            } else if(endsWith){
-                if (attributeValue.toLowerCase().endsWith(lctAttributeValueSearch.toLowerCase())){
+            } else if (endsWith) {
+                if (attributeValue.toLowerCase().endsWith(lctAttributeValueSearch.toLowerCase())) {
                     names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
                 }
             }
@@ -227,9 +229,9 @@ public final class TotoMemoryDB {
         return names;
     }
 
-    public boolean isInParentTreeOf(final Name child, final Name testParent){
-        for (Name parent:child.getParents()){
-            if (testParent == parent || isInParentTreeOf(parent, testParent)){
+    public boolean isInParentTreeOf(final Name child, final Name testParent) {
+        for (Name parent : child.getParents()) {
+            if (testParent == parent || isInParentTreeOf(parent, testParent)) {
                 return true;
             }
         }
@@ -237,11 +239,10 @@ public final class TotoMemoryDB {
     }
 
 
-
     public List<Name> findTopNames() {
         final List<Name> toReturn = new ArrayList<Name>();
-        for (Name name : nameByIdMap.values()){
-            if (name.getParents().size() == 0){
+        for (Name name : nameByIdMap.values()) {
+            if (name.getParents().size() == 0) {
                 toReturn.add(name);
             }
         }
@@ -254,23 +255,23 @@ public final class TotoMemoryDB {
         search = search.trim().toLowerCase();
         boolean wildCardAtBeginning = false;
         boolean wildCardAtEnd = false;
-        if (search.startsWith("*")){
+        if (search.startsWith("*")) {
             wildCardAtBeginning = true;
             search = search.substring(1);
         }
-        if (search.endsWith("*")){
+        if (search.endsWith("*")) {
             wildCardAtEnd = true;
-            search = search.substring(0,search.length() - 1);
+            search = search.substring(0, search.length() - 1);
         }
         final List<Name> toReturn = new ArrayList<Name>();
-        if (!wildCardAtBeginning && !wildCardAtEnd){
+        if (!wildCardAtBeginning && !wildCardAtEnd) {
             Name check = getNameByAttribute(attribute, search, null);
-            if (check != null){
+            if (check != null) {
                 toReturn.add(check);
             }
         } else {
             // use new function, remember booleans are swapped
-            toReturn.addAll(getNamesByAttributeValueWildcards(attribute,search,wildCardAtEnd, wildCardAtBeginning));
+            toReturn.addAll(getNamesByAttributeValueWildcards(attribute, search, wildCardAtEnd, wildCardAtBeginning));
         }
         System.out.println("search time : " + (System.currentTimeMillis() - track));
         return toReturn;
@@ -288,69 +289,74 @@ public final class TotoMemoryDB {
         return provenanceByIdMap.get(id);
     }
 
-    // synchronised?
+    // synchronise against the map for the moment, I'm worried about all this!
 
     protected void addNameToDb(final Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
-        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (nameByIdMap.get(newName.getId()) != null) {
-            throw new Exception("tried to add a name to the database with an existing id! new id = " + newName.getId());
-        } else {
-            nameByIdMap.put(newName.getId(), newName);
+        synchronized (nameByIdMap){
+            // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
+            if (nameByIdMap.get(newName.getId()) != null) {
+                throw new Exception("tried to add a name to the database with an existing id! new id = " + newName.getId());
+            } else {
+                nameByIdMap.put(newName.getId(), newName);
+            }
         }
     }
 
     protected void removeNameFromDb(final Name toRemove) throws Exception {
         toRemove.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        nameByIdMap.remove(toRemove.getId());
+        synchronized (nameByIdMap){
+            nameByIdMap.remove(toRemove.getId());
+        }
     }
 
     // ok I'd have liked this to be part of the above function but the name won't have been initialised, has to be called in the name constructor
     // custom maps here need to be dealt with in the constructors I think
 
     protected void addNameToAttributeNameMap(final Name newName) throws Exception {
-        newName.checkDatabaseMatches(this);
-        final Map<String, String> attributes = newName.getAttributes();
+        synchronized (nameByAttributeMap){
+            newName.checkDatabaseMatches(this);
+            final Map<String, String> attributes = newName.getAttributes();
 
-        for (String attributeName : attributes.keySet()){
-            if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) == null){ // make a new map for the attributes
-                nameByAttributeMap.put(attributeName.toLowerCase().trim(), new HashMap<String, Set<Name>>());
-            }
-            final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
-            final String attributeValue = attributes.get(attributeName).toLowerCase().trim();
-            if (attributeValue.contains("`")){
-                String error = "has quotes";
-                throw new Exception(error);
-            }
-            if (namesForThisAttribute.get(attributeValue) != null) {
-                namesForThisAttribute.get(attributeValue).add(newName);
-            } else {
-                final Set<Name> possibles = new HashSet<Name>();
-                possibles.add(newName);
-                namesForThisAttribute.put(attributeValue, possibles);
+            for (String attributeName : attributes.keySet()) {
+                if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) == null) { // make a new map for the attributes
+                    nameByAttributeMap.put(attributeName.toLowerCase().trim(), new HashMap<String, Set<Name>>());
+                }
+                final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+                final String attributeValue = attributes.get(attributeName).toLowerCase().trim();
+                if (attributeValue.contains("`")) {
+                    String error = "has quotes";
+                    throw new Exception(error);
+                }
+                if (namesForThisAttribute.get(attributeValue) != null) {
+                    namesForThisAttribute.get(attributeValue).add(newName);
+                } else {
+                    final Set<Name> possibles = new HashSet<Name>();
+                    possibles.add(newName);
+                    namesForThisAttribute.put(attributeValue, possibles);
+                }
             }
         }
-
     }
 
     protected void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
         name.checkDatabaseMatches(this);
-
-            if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null){// the map we care about
+        synchronized (nameByAttributeMap){
+            if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null) {// the map we care about
                 final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
                 final Set<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase().trim());
-                if (namesForThatAttributeAndAttributeValue != null){
+                if (namesForThatAttributeAndAttributeValue != null) {
                     namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the set . . .
                 }
             }
-
+        }
     }
 
     // to be called after loading moves the json and extracts attributes to useful maps here
 
-    protected void initNames() throws Exception {
-        for (Name name : nameByIdMap.values()){
+    private synchronized void initNames() throws Exception {
+        for (Name name : nameByIdMap.values()) {
             name.populateFromJson();
             addNameToAttributeNameMap(name);
         }
@@ -364,53 +370,71 @@ public final class TotoMemoryDB {
         }
     }*/
 
+    // hmmm syncronizing by the map objects. USe concurrent hashmaps???
+
     protected void setNameNeedsPersisting(final Name name) {
-        if (!needsLoading){
-            namesNeedPersisting.add(name);
+        if (!needsLoading) {
+            synchronized (namesNeedPersisting){
+                namesNeedPersisting.add(name);
+            }
         }
     }
 
     protected void removeNameNeedsPersisting(final Name name) {
+        synchronized (namesNeedPersisting){
         namesNeedPersisting.remove(name);
+        }
     }
 
     protected void addValueToDb(final Value newValue) throws Exception {
         newValue.checkDatabaseMatches(this);
-        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (valueByIdMap.get(newValue.getId()) != null) {
-            throw new Exception("tried to add a value to the database with an existing id!");
-        } else {
-            valueByIdMap.put(newValue.getId(), newValue);
+        synchronized (valueByIdMap){
+            // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
+            if (valueByIdMap.get(newValue.getId()) != null) {
+                throw new Exception("tried to add a value to the database with an existing id!");
+            } else {
+                valueByIdMap.put(newValue.getId(), newValue);
+            }
         }
     }
 
     protected void setValueNeedsPersisting(final Value value) {
-        if (!needsLoading){
-            valuesNeedPersisting.add(value);
+        synchronized (valuesNeedPersisting){
+            if (!needsLoading) {
+                valuesNeedPersisting.add(value);
+            }
         }
     }
 
     protected void removeValueNeedsPersisting(final Value value) {
-        valuesNeedPersisting.remove(value);
+        synchronized (valuesNeedPersisting){
+            valuesNeedPersisting.remove(value);
+        }
     }
 
     protected void addProvenanceToDb(final Provenance newProvenance) throws Exception {
         newProvenance.checkDatabaseMatches(this);
-        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (provenanceByIdMap.get(newProvenance.getId()) != null) {
-            throw new Exception("tried to add a value to the database with an existing id!");
-        } else {
-            provenanceByIdMap.put(newProvenance.getId(), newProvenance);
+        synchronized (provenanceByIdMap){
+            // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
+            if (provenanceByIdMap.get(newProvenance.getId()) != null) {
+                throw new Exception("tried to add a value to the database with an existing id!");
+            } else {
+                provenanceByIdMap.put(newProvenance.getId(), newProvenance);
+            }
         }
     }
 
     protected void setProvenanceNeedsPersisting(final Provenance provenance) {
-        if (!needsLoading){
-            provenanceNeedsPersisting.add(provenance);
+        if (!needsLoading) {
+            synchronized (provenanceNeedsPersisting){
+                provenanceNeedsPersisting.add(provenance);
+            }
         }
     }
 
     protected void removeProvenanceNeedsPersisting(final Provenance provenance) {
-        provenanceNeedsPersisting.remove(provenance);
+        synchronized (provenanceNeedsPersisting){
+            provenanceNeedsPersisting.remove(provenance);
+        }
     }
 }

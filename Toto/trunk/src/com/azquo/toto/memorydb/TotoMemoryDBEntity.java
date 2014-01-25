@@ -9,27 +9,26 @@ import java.util.Set;
  * User: cawley
  * Date: 17/10/13
  * Time: 09:23
- *
+ * <p/>
  * After some thinking and learning about generics : entity objects should have as little reference to Mysql as possible.
  * Hence I'm going to move the row mapper, table name and column name value map out of here
- *
+  * <p/>
  * OK with the new in memory DB thing these objects form the in memory database - it would be awkward to make them immutable
  * as I'd kind of like to so instead we want to make it so that it's very clear that modification after creation will
  * AUTOMATICALLY be reflected in MySQL as it catches up . . .
  * TODO : how to lock an object while it's being persisted??? Note time of modification?
- *
+ * <p/>
  * Also, these objects act as data objects hence each object SHOULD only exist in context of a toto memory db
  * Writing the code to check this may be a pain and have some performance hits but the idea that changes to the
  * memory database are not checked by DB id worries me so much I'm going to try now.
- *
+ * <p/>
  * in summary : id and database id need to be rigidly controlled in this object or all hell could break loose
- *
+ * <p/>
  * I think I may even go so far as actually holding the object reference to the database as opposed to a database id.
- *
+ * <p/>
  * If there is a way I don't yet know about for a constructor to only be called by another class this could be simplified
- *
+ * <p/>
  * So far have seen no performance hits from constraining objects by DB
- *
  */
 
 public abstract class TotoMemoryDBEntity {
@@ -52,12 +51,12 @@ public abstract class TotoMemoryDBEntity {
         this.totoMemoryDB = totoMemoryDB;
         // This getNeedsLoading is important, an instance of TotoMemoryDB should only be in needsloading during the constructor and hence it will stop
         // other bits of code overriding the entities ID
-        if (totoMemoryDB.getNeedsLoading()){ // building objects from the disk store, rules are different, we can set the id as a parameter
+        if (totoMemoryDB.getNeedsLoading()) { // building objects from persistence (Mysql currently) store, rules are different, we can set the id as a parameter
             this.id = id;
-            // does not need inserting, do not say it needs persisting
+            // does not need inserting
             needsInserting = false;
-        } else { // normal create
-            if (id != 0){
+        } else { // normal create - as in a service has made a new one
+            if (id != 0) {
                 throw new Exception("id is trying to be assigned to an entity after the database is loaded!");
             }
             this.id = totoMemoryDB.getNextId();
@@ -80,9 +79,9 @@ public abstract class TotoMemoryDBEntity {
 
     protected abstract void classSpecificSetAsPersisted();
 
-    // this seems to be the best way too constrain, others in teh package can get the class but not reset it's value
+    // this seems to be the best way too constrain, others in teh package can get the instance but not reset it's value
 
-    protected final TotoMemoryDB getTotoMemoryDB(){
+    protected final TotoMemoryDB getTotoMemoryDB() {
         return totoMemoryDB;
     }
 
@@ -104,7 +103,7 @@ public abstract class TotoMemoryDBEntity {
 
     @Override
     public final boolean equals(Object o) {
-        if (this == o) return true; // this should do the job fo much of the memory db matching
+        if (this == o) return true; // this should do the job for much of the memory db matching
 
         if (o == null || getClass() != o.getClass()) return false;
 
@@ -112,36 +111,40 @@ public abstract class TotoMemoryDBEntity {
         return getId() == totoMemoryDBEntity.getId();
     }
 
+    // should be called pretty much wwherever objects are going to be added to each others maps/sets/lists
 
     protected final void checkDatabaseMatches(final TotoMemoryDB totoMemoryDB) throws Exception {
-        if (this.totoMemoryDB != totoMemoryDB){
+        if (this.totoMemoryDB != totoMemoryDB) {
             throw new Exception("Error, objects from different databases interacting!");
         }
     }
 
-    protected final void checkDatabaseMatches(final TotoMemoryDBEntity totoMemoryDBEntity) throws Exception{
+    protected final void checkDatabaseMatches(final TotoMemoryDBEntity totoMemoryDBEntity) throws Exception {
         checkDatabaseMatches(totoMemoryDBEntity.totoMemoryDB);
     }
 
     protected final void checkDatabaseForSet(final Set<? extends TotoMemoryDBEntity> entities) throws Exception {
-        for (TotoMemoryDBEntity toCheck : entities){
+        for (TotoMemoryDBEntity toCheck : entities) {
             checkDatabaseMatches(toCheck);
         }
     }
 
-    protected final void setAsPersisted(){
+    protected final void setAsPersisted() {
         needsInserting = false;
         classSpecificSetAsPersisted();
     }
+
     // public for the DAOs
     public final boolean getNeedsInserting() {
         return needsInserting;
     }
+
     // public for the DAOs
     public final boolean getNeedsDeleting() {
         return needsDeleting;
     }
 
+    // all entities need this to save in the key/pair store
     public abstract String getAsJson();
 
 }
