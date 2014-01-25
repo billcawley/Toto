@@ -1,7 +1,8 @@
 package com.azquo.toto.jsonrequestentities;
 
 /**
- * Created by cawley on 17/01/14.
+ * Created by cawley on 17/01/14
+ * All json requests will have at leas these fields
  */
 public abstract class StandardJsonRequest {
 
