@@ -213,6 +213,7 @@ public final class LoggedInConnection {
 
     private Provenance provenance = null;
 
+
     public Provenance getProvenance() {
         if (provenance == null){
             try{
@@ -221,5 +222,13 @@ public final class LoggedInConnection {
             }
         }
         return provenance;
+    }
+
+    public void setNewProvenance(String provenanceMethod, String provenanceName){
+       try{
+           provenance = new Provenance(getTotoMemoryDB(),user.getEmail(), new Date(),provenanceMethod, provenanceName, "", "", "");
+       }catch (Exception e){
+
+       }
     }
 }
