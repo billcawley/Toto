@@ -4,22 +4,14 @@ import com.azquo.toto.admindao.UploadRecordDAO;
 import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.UploadRecord;
 import com.azquo.toto.memorydb.Name;
-import com.azquo.toto.memorydb.Provenance;
-import com.azquo.toto.memorydb.TotoMemoryDB;
 import com.csvreader.CsvReader;
 import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
-import org.apache.poi.ss.usermodel.Cell;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharsetEncoder;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
-import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
@@ -36,9 +28,10 @@ public final class ImportService {
     @Autowired
     private UploadRecordDAO uploadRecordDAO;
 
+    // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
 
     public String importTheFile(final LoggedInConnection loggedInConnection, String fileName, InputStream uploadFile, String fileType, String separator, final String strCreate)
-            throws Exception{
+            throws Exception {
 
         loggedInConnection.setNewProvenance("import", fileName);
         if (separator == null || separator.length() == 0) separator = "\t";
@@ -48,11 +41,11 @@ public final class ImportService {
         String result = "";
         String tempFile = "";
         boolean create = false;
-        if (strCreate != null && strCreate.equals("true")){
+        if (strCreate != null && strCreate.equals("true")) {
             create = true;
         }
-        if (fileName.endsWith(".xls")){
-            tempFile = decode64(uploadFile,fileName);
+        if (fileName.endsWith(".xls")) {
+            tempFile = decode64(uploadFile, fileName);
         }
         if (fileName.endsWith(".zip")) {
             tempFile = decode64(uploadFile, fileName);
@@ -62,34 +55,34 @@ public final class ImportService {
 
 
         }
-         if (fileName.contains(".xls")) {
+        if (fileName.contains(".xls")) {
             readExcel(loggedInConnection, tempFile, create);
 
-        }else{
-             if (tempFile.length() > 0){
-                 uploadFile = new FileInputStream(tempFile);
-             }
+        } else {
+            if (tempFile.length() > 0) {
+                uploadFile = new FileInputStream(tempFile);
+            }
             readPreparedFile(loggedInConnection, uploadFile, fileType, create);
         }
-         nameService.persist(loggedInConnection);
+        nameService.persist(loggedInConnection);
         Database db = loggedInConnection.getTotoMemoryDB().getDatabase();
-        UploadRecord uploadRecord = new UploadRecord(0,new Date(),db.getBusinessId(), db.getId(), loggedInConnection.getUser().getId(),fileName, fileType, result);
+        UploadRecord uploadRecord = new UploadRecord(0, new Date(), db.getBusinessId(), db.getId(), loggedInConnection.getUser().getId(), fileName, fileType, result);
         uploadRecordDAO.store(uploadRecord);
 
         return result;
     }
 
-    private String readPreparedFile(LoggedInConnection loggedInConnection, InputStream uploadFile, String fileType, boolean create) throws Exception{
+    private String readPreparedFile(LoggedInConnection loggedInConnection, InputStream uploadFile, String fileType, boolean create) throws Exception {
 
-        if (fileType.toLowerCase().equals("values")){
-            return valuesImport(loggedInConnection,  uploadFile, create);
+        if (fileType.toLowerCase().equals("values")) {
+            return valuesImport(loggedInConnection, uploadFile, create);
         }
         // we will pay attention onn the attribute import and replicate
-        if (fileType.toLowerCase().equals("names")){
-            return namesImport(loggedInConnection,uploadFile, create);
+        if (fileType.toLowerCase().equals("names")) {
+            return namesImport(loggedInConnection, uploadFile, create);
 
         }
-        if (fileType.toLowerCase().equals("structure")){
+        if (fileType.toLowerCase().equals("structure")) {
             return structureImport(loggedInConnection, uploadFile, create);
 
         }
@@ -98,25 +91,18 @@ public final class ImportService {
     }
 
 
-
-
-    public String valuesImport(final LoggedInConnection loggedInConnection, final  InputStream uploadFile, final boolean create) throws Exception {
-        // OK I think I'm supposed to use language in here but how??? Will go to default name for the moment
-        final HashMap<Name, String> nameImportHeadingMap = new HashMap<Name, String>();
-        //String filePath = "/home/bill/Downloads/exportcodes.csv";
-        //TODO  set correct filepath
-       InputStream is = null;
-
+    public String valuesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
         long track = System.currentTimeMillis();
         String strCreate = "";
         if (create) strCreate = ";create";
 
-         final CsvReader csvReader = new CsvReader(uploadFile,'\t',  Charset.forName("UTF-8"));
+        final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
-        // are the following few lines necessary??
-        final ArrayList<Name> headerNames = new ArrayList<Name>();
-
+        // what we're doing here is going through the headers, First thing to do is to set up the peers if defined for a header
+        // then we find or create each header as a name in the database. If the name has peers it's added to the nameimportheading map, a way to find the header for that name with peers
+        // namesWithPeersHeaderMap is a map of the names which have peers, colums headed by such names will have the value in them, hence why we need to hold the header so we cna get the value
+        final HashMap<Name, String> namesWithPeersHeaderMap = new HashMap<Name, String>();
         for (String header : headers) {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 final String result = nameService.setPeersForImportHeading(loggedInConnection, header + strCreate);
@@ -127,31 +113,36 @@ public final class ImportService {
                 if (header.contains(";")) nameToFind = header.substring(0, header.indexOf(";"));
                 final Name name = nameService.findOrCreateName(loggedInConnection, nameToFind);
                 if (name.getPeers().size() > 0) {
-                    nameImportHeadingMap.put(name, header);
-                    headerNames.add(name);
+                    namesWithPeersHeaderMap.put(name, header);
                 }
             }
         }
 
-        if (headerNames.size() == 0) {
+        if (namesWithPeersHeaderMap.keySet().isEmpty()) {
             throw new Exception("unable to find any name with peers");
         }
 
 
-         int valuecount = 0;
+        int valuecount = 0; // purely for logging
+        // little local cache just to speed things up
         final HashMap<String, Name> namesFound = new HashMap<String, Name>();
+        // having read the headers go through each record
         while (csvReader.readRecord()) {
             String value;
-            for (Name headerName : headerNames) {
-                final Set<Name> namesForValue = new HashSet<Name>();
-                namesForValue.add(headerName);
-                for (Name peer : headerName.getPeers().keySet()) {
+            // for each record we want to find value name sets, most of the time there's only one but they are defined in namesWithPeersHeaderMap
+            for (Name headerName : namesWithPeersHeaderMap.keySet()) {
+                final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
+                namesForValue.add(headerName); // the one at the top of this column, the name with peers.
+                for (Name peer : headerName.getPeers().keySet()) { // go looking for the peers
                     final String peerVal = csvReader.get(peer.getDefaultDisplayName());
-                    if (peerVal == null || peerVal.length() == 0) {
-                        //throw new Exception("unable to find " + peer.getName() + " for " + headerName.getName());
+                    if (peerVal == null || peerVal.length() == 0) { // the file specified
+                        throw new Exception("unable to find " + peer.getDefaultDisplayName() + " for " + headerName.getDefaultDisplayName());
                     } else {
                         //storeStructuredName(peer,peerVal, loggedInConnection);
+                        // lower level names first so the syntax is something like Knightsbridge, London, UK
+                        // hence we're passing a multi level name lookup to the name service, whatever is in that column with the header on the end
                         final String nameToFind = peerVal + "," + peer.getDefaultDisplayName();
+                        // check the local cache first
                         Name nameFound = namesFound.get(nameToFind);
                         if (nameFound == null) {
                             if (create) {
@@ -163,17 +154,18 @@ public final class ImportService {
                                 namesFound.put(nameToFind, nameFound);
                             }
                         }
+                        // add to the set of names we're going to store against this value
                         if (nameFound != null) {
                             namesForValue.add(nameFound);
                         }
                     }
-
                     //namesForValue.add(nameService.findOrCreateName(loggedInConnection,peerVal + "," + peer.getName())) ;
-
                 }
-                value = csvReader.get(nameImportHeadingMap.get(headerName));
+                // now we have the set of names for that name with peers get the value from that column it's a header for
+                value = csvReader.get(namesWithPeersHeaderMap.get(headerName));
                 if (value.trim().length() > 0) { // no point storing if there's no value!
                     valuecount++;
+                    // finally store our value and names for it
                     valueService.storeValueWithProvenanceAndNames(loggedInConnection, value, namesForValue);
                     if (valuecount % 5000 == 0) {
                         System.out.println("storing value " + valuecount);
@@ -193,7 +185,7 @@ public final class ImportService {
     public String namesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
 
         //String filePath = "/home/bill/Downloads/exportcodes.csv";
-         final CsvReader csvReader = new CsvReader(uploadFile,'\t',  Charset.forName("UTF-8"));
+        final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
 
@@ -215,15 +207,15 @@ public final class ImportService {
                 for (String header : headers) {
                     if (header.length() > 0) {
                         String attName = header;
-                        if (header.toLowerCase().equals("name")){
+                        if (header.toLowerCase().equals("name")) {
                             attName = name.DEFAULT_DISPLAY_NAME;
                         }
                         final String newName = getFirstName(csvReader.get(header));
                         final String oldName = name.getAttribute(attName);
-                        if ((oldName == null && newName.length() > 0) || (oldName != null && !newName.equals(oldName))){
-                            if (newName.length()==0){
+                        if ((oldName == null && newName.length() > 0) || (oldName != null && !newName.equals(oldName))) {
+                            if (newName.length() == 0) {
                                 name.removeAttributeWillBePersisted(attName);
-                            }else{
+                            } else {
                                 name.setAttributeWillBePersisted(attName, getFirstName(newName));
                             }
                         }
@@ -234,7 +226,6 @@ public final class ImportService {
         }
         return "";
     }
-
 
 
     private String getFirstName(final String nameGiven) {
@@ -250,9 +241,8 @@ public final class ImportService {
     }
 
 
-
     private String structureImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
-        final CsvReader csvReader = new CsvReader(uploadFile,'\t',  Charset.forName("UTF-8"));
+        final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
         String topName = headers[0];
@@ -265,23 +255,25 @@ public final class ImportService {
 
         while (csvReader.readRecord()) {
             String itemName = "";
-            for (String headerName: headers){
-                 String category = csvReader.get(headerName);
-                if (headerName.equals(headers[0])){
+            for (String headerName : headers) {
+                String category = csvReader.get(headerName);
+                if (headerName.equals(headers[0])) {
                     itemName = category;
-                }else{
+                } else {
                     //create the name and structure
-                    Name name = nameService.findOrCreateName(loggedInConnection,itemName + "," + category + " " + plural + "," + plural + " by " + headerName + "," + topName + ";unique");
+                    Name name = nameService.findOrCreateName(loggedInConnection, itemName + "," + category + " " + plural + "," + plural + " by " + headerName + "," + topName + ";unique");
                     //and put the category in its set.
-                    Name name2 = nameService.findOrCreateName(loggedInConnection,category + "," + headerName + ";unique");
+                    Name name2 = nameService.findOrCreateName(loggedInConnection, category + "," + headerName + ";unique");
                 }
             }
         }
         return "";
     }
 
+    // File pre processing functions. SHould maybe be hived off into utils?
 
-    private String unzip(String fileName, String suffix){
+
+    private String unzip(String fileName, String suffix) {
 
         String outputFile = fileName.substring(0, fileName.length() - 4);
         try {
@@ -289,25 +281,22 @@ public final class ImportService {
             int byteRead;
 
 
-             ZipInputStream  zin = new ZipInputStream(new BufferedInputStream(new FileInputStream(fileName)));
-           // while((zin.getNextEntry()) != null){
-           //READ ONE ENTRY ONLY...
-                zin.getNextEntry();
-                data = new byte[1000];
-                File tmpOutput = File.createTempFile(outputFile,suffix);
-                tmpOutput.deleteOnExit();
-                BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(tmpOutput),1000);
-                while ((byteRead = zin.read(data,0,1000)) != -1)
-                {
-                    bout.write(data,0,byteRead);
-                }
-                bout.flush();
-                bout.close();
-                return tmpOutput.getPath();
-           // }
-        }
-        catch(Exception e)
-        {
+            ZipInputStream zin = new ZipInputStream(new BufferedInputStream(new FileInputStream(fileName)));
+            // while((zin.getNextEntry()) != null){
+            //READ ONE ENTRY ONLY...
+            zin.getNextEntry();
+            data = new byte[1000];
+            File tmpOutput = File.createTempFile(outputFile, suffix);
+            tmpOutput.deleteOnExit();
+            BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(tmpOutput), 1000);
+            while ((byteRead = zin.read(data, 0, 1000)) != -1) {
+                bout.write(data, 0, byteRead);
+            }
+            bout.flush();
+            bout.close();
+            return tmpOutput.getPath();
+            // }
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return "";
@@ -364,33 +353,30 @@ public final class ImportService {
         */
 
 
-
-
     private static byte[] codes = new byte[256];
 
-                 static {
-                 for (int i = 0; i < 256; i++) {
-                         codes[i] = -1;
-                     }
-                 for (int i = 'A'; i <= 'Z'; i++) {
-                         codes[i] = (byte) (i - 'A');
-                     }
-                 for (int i = 'a'; i <= 'z'; i++) {
-                         codes[i] = (byte) (26 + i - 'a');
-                     }
-                 for (int i = '0'; i <= '9'; i++) {
-                         codes[i] = (byte) (52 + i - '0');
-                     }
-                 codes['+'] = 62;
-                 codes['/'] = 63;
-             }
-
+    static {
+        for (int i = 0; i < 256; i++) {
+            codes[i] = -1;
+        }
+        for (int i = 'A'; i <= 'Z'; i++) {
+            codes[i] = (byte) (i - 'A');
+        }
+        for (int i = 'a'; i <= 'z'; i++) {
+            codes[i] = (byte) (26 + i - 'a');
+        }
+        for (int i = '0'; i <= '9'; i++) {
+            codes[i] = (byte) (52 + i - '0');
+        }
+        codes['+'] = 62;
+        codes['/'] = 63;
+    }
 
 
     private static String decode64(final InputStream data, final String fileName) {
 
-         String tempName = "";
-         try{
+        String tempName = "";
+        try {
 
             String fileSuffix = fileName.substring(fileName.length() - 4);
 
@@ -400,12 +386,12 @@ public final class ImportService {
             temp.deleteOnExit();
             FileOutputStream fos = new FileOutputStream(tempName);
             byte b[] = new byte[1];
-             int shift = 0;   // # of excess bits stored in accum
-             int accum = 0;   // excess bits
-             int count = data.read(b);
-             while (count > 0 ){
-                 if (codes[b[0]] >= 0){
-                     accum <<= 6;            // bits shift up by 6 each time thru
+            int shift = 0;   // # of excess bits stored in accum
+            int accum = 0;   // excess bits
+            int count = data.read(b);
+            while (count > 0) {
+                if (codes[b[0]] >= 0) {
+                    accum <<= 6;            // bits shift up by 6 each time thru
                     shift += 6;             // loop, with new bits being put in
 
                     accum |= codes[b[0]];         // at the bottom.
@@ -415,8 +401,8 @@ public final class ImportService {
                     }
                 }
                 count = data.read(b);
-                if (count<= 0){
-                    if (shift > 0){
+                if (count <= 0) {
+                    if (shift > 0) {
                         //not sure here....
                         b[0] = ' ';
                     }
@@ -430,13 +416,13 @@ public final class ImportService {
             System.out.println("Done");
 
 
-        }catch (Exception e){
+        } catch (Exception e) {
             System.out.println(e.getStackTrace());
-         }
+        }
         return tempName;
-     }
+    }
 
-    private void readExcel(final LoggedInConnection loggedInConnection,final String fileName, boolean create){
+    private void readExcel(final LoggedInConnection loggedInConnection, final String fileName, boolean create) {
 
 
         try {
@@ -448,7 +434,7 @@ public final class ImportService {
             int sheetNo = 0;
 
             HSSFSheet sheet = wb.getSheetAt(0);
-            while (sheet != null){
+            while (sheet != null) {
                 String fileType = sheet.getSheetName();
 
                 int rows; // No of rows
@@ -458,11 +444,11 @@ public final class ImportService {
                 int tmp = 0;
 
                 // This trick ensures that we get the data properly even if it doesn't start from first few rows
-                for(int i = 0; i < 10 || i < rows; i++) {
+                for (int i = 0; i < 10 || i < rows; i++) {
                     row = sheet.getRow(i);
-                    if(row != null) {
+                    if (row != null) {
                         tmp = sheet.getRow(i).getPhysicalNumberOfCells();
-                        if(tmp > cols) cols = tmp;
+                        if (tmp > cols) cols = tmp;
                     }
                 }
                 File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4), "." + fileType);
@@ -472,14 +458,14 @@ public final class ImportService {
                 FileWriter fw = new FileWriter(tempName);
                 BufferedWriter bw = new BufferedWriter(fw);
 
-                for(int r = 0; r < rows; r++) {
+                for (int r = 0; r < rows; r++) {
                     row = sheet.getRow(r);
-                    if(row != null) {
+                    if (row != null) {
                         int colCount = 0;
-                        for(int c = 0; c < cols; c++) {
-                            cell = row.getCell((short)c);
+                        for (int c = 0; c < cols; c++) {
+                            cell = row.getCell((short) c);
                             if (colCount++ > 0) bw.write('\t');
-                            if(cell != null) {
+                            if (cell != null) {
                                 bw.write(formatter.formatCellValue(cell));
                                 // Your code here
                             }
@@ -489,10 +475,10 @@ public final class ImportService {
                 }
                 bw.close();
                 InputStream uploadFile = new FileInputStream(tempName);
-                readPreparedFile(loggedInConnection,uploadFile,fileType,create);
+                readPreparedFile(loggedInConnection, uploadFile, fileType, create);
                 sheet = wb.getSheetAt(++sheetNo);
             }
-        } catch(Exception ioe) {
+        } catch (Exception ioe) {
             ioe.printStackTrace();
         }
 
