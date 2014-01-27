@@ -22,7 +22,7 @@ public class UploadRecordDAOTest {
     @Test
     public void testBasics() throws Exception {
 
-        UploadRecord ur = new UploadRecord(0,new Date(),1,2,3,"thing1", "thing2", "thing3");
+        UploadRecord ur = new UploadRecord(0, new Date(), 1, 2, 3, "thing1", "thing2", "thing3");
 
         System.out.println("id before insert : " + ur.getId());
         uploadRecordDAO.store(ur);

@@ -30,10 +30,11 @@ public class TotoMemoryDBTest {
     ValueService valueService;
     @Autowired
     LoginService loginService;
+
     @Test
     public void testLoadData() throws Exception {
 
-        LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password",0);
+        LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password", 0);
 
         Name test1 = nameService.findByName(loggedInConnection, "www.examplesupplier.com");
         Name test2 = nameService.findByName(loggedInConnection, "S++");
@@ -47,7 +48,7 @@ public class TotoMemoryDBTest {
 //        searchCriteria.add(test4);
         long track = System.nanoTime();
         int count = 10000;
-        for (int i = 0; i < count; i++){
+        for (int i = 0; i < count; i++) {
             List<Value> searchResults = valueService.findForNamesIncludeChildren(searchCriteria, false);
 /*            for (Value v : searchResults){
                 System.out.print("value ");

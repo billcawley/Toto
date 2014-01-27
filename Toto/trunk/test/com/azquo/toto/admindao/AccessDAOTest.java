@@ -22,7 +22,7 @@ public class AccessDAOTest {
     @Test
     public void testBasics() throws Exception {
 
-        Access a = new Access(0, new Date(), new Date(),2, 3,"read list", "write list");
+        Access a = new Access(0, new Date(), new Date(), 2, 3, "read list", "write list");
         System.out.println("id before insert : " + a.getId());
         accessDAO.store(a);
         System.out.println("id after insert : " + a.getId());
