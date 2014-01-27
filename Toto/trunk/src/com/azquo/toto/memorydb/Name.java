@@ -436,7 +436,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name> {
 
     // convenience
     public synchronized void clearAttributes() throws Exception {
-        for (String attribute : attributes.keySet()) {
+        for (String attribute : new ArrayList<String>(attributes.keySet())) { // need to wrap the keyset in an arraylist as removeAttributeWillBePersisted will modify the keyset
             removeAttributeWillBePersisted(attribute);
         }
     }
