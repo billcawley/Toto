@@ -129,25 +129,20 @@ public class ProvenanceController {
         return "no action taken";
     }
 
-    // should jackson take care of this??
+    public String formatProvenanceForOutput(Provenance provenance, String jsonFunction){
 
-    public String formatProvenanceForOutput(Provenance provenance, String jsonFunction) {
-
-        if (jsonFunction != null && jsonFunction.length() > 0) {
-
-            if (provenance == null) {
-                return jsonFunction + "({provenance:{\"who\":\"no provenance\"}})";
-            } else {
-                return jsonFunction + "({provenance:{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}})";
+           String output;
+           if (provenance == null){
+                output = "{provenance:{\"who\":\"no provenance\"}}";
+            }else{
+                output = "{\"provenance\":{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}}";
             }
-        } else {
-            if (provenance == null) {
-                return "error: no provenance";
-            } else {
-                return provenance.getUser() + "\r" + provenance.getTimeStamp() + "\r" + provenance.getMethod() + "\r" + provenance.getName() + "\r" + provenance.getColumnHeadings() + "\r" + provenance.getRowHeadings() + "\r" + provenance.getContext();
-            }
-        }
-    }
+           if (jsonFunction != null && jsonFunction.length() > 0){
+               return jsonFunction + "(" + output + ")";
+           }else{
+               return output;
+           }
+       }
 
 
 }
