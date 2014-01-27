@@ -44,7 +44,7 @@ public final class ValueService {
 
     // this is passed a string for the value, not sure if that is the best practice, need to think on it.
 
-    public String storeValueWithProvenanceAndNames(final LoggedInConnection loggedInConnection, final String valueString, final Provenance provenance, final Set<Name> names) throws Exception {
+    public String storeValueWithProvenanceAndNames(final LoggedInConnection loggedInConnection, final String valueString, final Set<Name> names) throws Exception {
         String toReturn = "";
         final Set<Name> validNames = new HashSet<Name>();
         final Map<String, String> nameCheckResult = nameService.isAValidNameSet(names, validNames);
@@ -68,7 +68,7 @@ public final class ValueService {
             }
         }
         if (!alreadyInDatabase) {
-            Value value = createValue(loggedInConnection, provenance, valueString);
+            Value value = createValue(loggedInConnection, loggedInConnection.getProvenance(), valueString);
             toReturn += "  stored";
             // and link to names
             linkValueToNames(value, validNames);
@@ -126,7 +126,7 @@ public final class ValueService {
             contextString.append(",");
         }
 
-        storeValueWithProvenanceAndNames(loggedInConnection, newValueString, loggedInConnection.getProvenance(), names);
+        storeValueWithProvenanceAndNames(loggedInConnection, newValueString, names);
         return true;
     }
 
