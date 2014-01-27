@@ -217,7 +217,7 @@ public final class ImportService {
                             if (newAttributeValue.length() == 0) { // blank means we remove
                                 name.removeAttributeWillBePersisted(attName);
                             } else {
-                                name.setAttributeWillBePersisted(attName, getFirstName(newAttributeValue));
+                                name.setAttributeWillBePersisted(attName, newAttributeValue);
                             }
                         }
                     }
@@ -227,20 +227,6 @@ public final class ImportService {
         }
         return "";
     }
-
-
-    private String getFirstName(final String nameGiven) {
-        if (nameGiven == null) return null;
-        int commaPos = nameGiven.indexOf(",");
-        if (commaPos < 0) return nameGiven;
-        int quotePos = nameGiven.indexOf("`");
-        if (quotePos < commaPos && quotePos >= 0) {
-            int endQuote = nameGiven.indexOf("`", quotePos + 1);
-            return nameGiven.substring(quotePos + 1, endQuote);
-        }
-        return nameGiven.substring(0, commaPos);
-    }
-
 
     private String structureImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
