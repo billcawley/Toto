@@ -183,19 +183,16 @@ public final class ImportService {
 
 
     public String namesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
-
-        //String filePath = "/home/bill/Downloads/exportcodes.csv";
+        // should we have encoding options?? Leave for the mo . . .
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
 
-
         while (csvReader.readRecord()) {
+            // the language may have been adjusted by the import controller
             final String searchName = csvReader.get(loggedInConnection.getLanguage());
             Name name = null;
-
-            // ok this is going to search for things in the language column with the default name . . doesn't really make sense!
-
+            // so we try to find or create (depending on parameters) that name in the current language
             if (searchName != null) {
                 if (create) {
                     name = nameService.findOrCreateName(loggedInConnection, searchName);
@@ -203,20 +200,24 @@ public final class ImportService {
                     name = nameService.findByName(loggedInConnection, searchName);
                 }
             }
+            // if we found or created that name we run through all the other names in the row setting as attributes against the name
             if (name != null) {
                 for (String header : headers) {
-                    if (header.length() > 0) {
+                    if (header.length() > 0 && !header.equalsIgnoreCase(loggedInConnection.getLanguage())) { // ignore the column used for lookup and structure definitionn
                         String attName = header;
+                        // name we see as equivalent to the display name. Could cause a mishap if language were passed as "name"
                         if (header.toLowerCase().equals("name")) {
                             attName = name.DEFAULT_DISPLAY_NAME;
                         }
-                        final String newName = getFirstName(csvReader.get(header));
-                        final String oldName = name.getAttribute(attName);
-                        if ((oldName == null && newName.length() > 0) || (oldName != null && !newName.equals(oldName))) {
-                            if (newName.length() == 0) {
+                        // we need to do this to theh attribute value if it was the one in
+                        final String newAttributeValue = csvReader.get(header);
+                        final String existingAttributeValue = name.getAttribute(attName); // existing
+                        if ((existingAttributeValue == null && newAttributeValue.length() > 0)
+                                || (existingAttributeValue != null && !newAttributeValue.equals(existingAttributeValue))) {
+                            if (newAttributeValue.length() == 0) { // blank means we remove
                                 name.removeAttributeWillBePersisted(attName);
                             } else {
-                                name.setAttributeWillBePersisted(attName, getFirstName(newName));
+                                name.setAttributeWillBePersisted(attName, getFirstName(newAttributeValue));
                             }
                         }
                     }
