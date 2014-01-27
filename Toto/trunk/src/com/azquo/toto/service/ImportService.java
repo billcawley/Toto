@@ -228,6 +228,8 @@ public final class ImportService {
         return "";
     }
 
+    // TODO : Edd understand what this does!
+
     private String structureImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
         csvReader.readHeaders();
