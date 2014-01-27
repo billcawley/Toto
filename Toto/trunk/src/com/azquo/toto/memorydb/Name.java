@@ -521,6 +521,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name> {
                 }
 
                 // what we're doign here is the same as setchildrenwillbepersisted but without checks as during loading conditions may not be met
+                // TODO : add a flag to setchildrenwill be persisted
 
                 this.children = children;
                 // need to sort out the parents
