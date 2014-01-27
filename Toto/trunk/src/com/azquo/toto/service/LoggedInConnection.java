@@ -14,9 +14,13 @@ import java.util.*;
  * Date: 31/10/13
  * Time: 19:25
  * To change this template use File | Settings | File Templates.
- *
+ * <p/>
  * ok here I'm pretty much making it up. I would use spring for session management but we can't use cookies here, it's requests from Excel
  * just make it work for the moment, worry about making it neater later. I've moved it to the service package as I want to protect calls to get the database object
+ * Has become more complex but still fairly simple, useful session stuff is more basic things like the connection id and database and timeout
+ * A little more complex ins things like row headings. Used to just be a list but now it's maps (due to multiple regions on the excel sheet)
+ * of lists of lists of names. Lists of lists due to mult level headings, e.g. London by container as two column headings above each other (the next one being london not by container)
+ * Lockmaps and sent data maps are maps of the actual data sent to excel, this generally is read back by the csv reader
  */
 public final class LoggedInConnection {
 
@@ -39,7 +43,7 @@ public final class LoggedInConnection {
 
     private static final String defaultRegion = "default-region";
 
-    public LoggedInConnection(final String connectionId, final TotoMemoryDB totoMemoryDB, final User user, final long timeOut){
+    public LoggedInConnection(final String connectionId, final TotoMemoryDB totoMemoryDB, final User user, final long timeOut) {
         this.connectionId = connectionId;
         this.totoMemoryDB = totoMemoryDB;
         this.user = user;
@@ -53,10 +57,10 @@ public final class LoggedInConnection {
         sentDataMaps = new HashMap<String, String>();
         sentDataValuesMaps = new HashMap<String, List<List<List<Value>>>>();
         sentDataNamesMaps = new HashMap<String, List<List<Set<Name>>>>();
-        if (timeOut > 0){
+        if (timeOut > 0) {
             this.timeOut = timeOut;
         } else {
-            this.timeOut = 1000 *60 * 120;
+            this.timeOut = 1000 * 60 * 120;
         }
     }
 
@@ -85,7 +89,9 @@ public final class LoggedInConnection {
         return lastAccessed;
     }
 
-    public String getLanguage() {return language; }
+    public String getLanguage() {
+        return language;
+    }
 
     public long getTimeOut() {
         return timeOut;
@@ -95,18 +101,20 @@ public final class LoggedInConnection {
         this.lastAccessed = lastAccessed;
     }
 
-    public void setLanguage(final String language)  {this.language = language; }
+    public void setLanguage(final String language) {
+        this.language = language;
+    }
 
     public List<List<Name>> getRowHeadings(final String region) {
-        if (region == null || region.isEmpty()){
+        if (region == null || region.isEmpty()) {
             return rowHeadings.get(defaultRegion);
         } else {
             return rowHeadings.get(region);
         }
     }
 
-    public void setRowHeadings(final String region,  final List<List<Name>> rowHeadings) {
-        if (region == null || region.isEmpty()){
+    public void setRowHeadings(final String region, final List<List<Name>> rowHeadings) {
+        if (region == null || region.isEmpty()) {
             this.rowHeadings.put(defaultRegion, rowHeadings);
         } else {
             this.rowHeadings.put(region, rowHeadings);
@@ -114,15 +122,15 @@ public final class LoggedInConnection {
     }
 
     public List<List<Name>> getColumnHeadings(final String region) {
-        if (region == null || region.isEmpty()){
+        if (region == null || region.isEmpty()) {
             return columnHeadings.get(defaultRegion);
         } else {
             return columnHeadings.get(region);
         }
     }
 
-    public void setColumnHeadings(final String region,  final List<List<Name>> columnHeadings) {
-        if (region == null || region.isEmpty()){
+    public void setColumnHeadings(final String region, final List<List<Name>> columnHeadings) {
+        if (region == null || region.isEmpty()) {
             this.columnHeadings.put(defaultRegion, columnHeadings);
         } else {
             this.columnHeadings.put(region, columnHeadings);
@@ -130,15 +138,15 @@ public final class LoggedInConnection {
     }
 
     public List<Name> getContext(final String region) {
-        if (region == null || region.isEmpty()){
+        if (region == null || region.isEmpty()) {
             return contexts.get(defaultRegion);
         } else {
             return contexts.get(region);
         }
     }
 
-    public void setContext(final String region,  final List<Name> contexts) {
-        if (region == null || region.isEmpty()){
+    public void setContext(final String region, final List<Name> contexts) {
+        if (region == null || region.isEmpty()) {
             this.contexts.put(defaultRegion, contexts);
         } else {
             this.contexts.put(region, contexts);
@@ -146,15 +154,15 @@ public final class LoggedInConnection {
     }
 
     public String getLockMap(final String region) {
-        if (region == null || region.isEmpty()){
+        if (region == null || region.isEmpty()) {
             return lockMaps.get(defaultRegion);
         } else {
             return lockMaps.get(region);
         }
     }
 
-    public void setLockMap(final String region,  final String lockMap) {
-        if (region == null || region.isEmpty()){
+    public void setLockMap(final String region, final String lockMap) {
+        if (region == null || region.isEmpty()) {
             this.lockMaps.put(defaultRegion, lockMap);
         } else {
             this.lockMaps.put(region, lockMap);
@@ -162,15 +170,15 @@ public final class LoggedInConnection {
     }
 
     public String getSentDataMap(final String region) {
-        if (region == null || region.isEmpty()){
+        if (region == null || region.isEmpty()) {
             return sentDataMaps.get(defaultRegion);
         } else {
             return sentDataMaps.get(region);
         }
     }
 
-    public void setSentDataMap(final String region,  final String sentDataMap) {
-        if (region == null || region.isEmpty()){
+    public void setSentDataMap(final String region, final String sentDataMap) {
+        if (region == null || region.isEmpty()) {
             this.sentDataMaps.put(defaultRegion, sentDataMap);
         } else {
             this.sentDataMaps.put(region, sentDataMap);
@@ -178,15 +186,15 @@ public final class LoggedInConnection {
     }
 
     public List<List<List<Value>>> getDataValueMap(final String region) {
-        if (region == null || region.isEmpty()){
+        if (region == null || region.isEmpty()) {
             return sentDataValuesMaps.get(defaultRegion);
         } else {
             return sentDataValuesMaps.get(region);
         }
     }
 
-    public void setDataValueMap(final String region,  final List<List<List<Value>>> sentDataValuesMap) {
-        if (region == null || region.isEmpty()){
+    public void setDataValueMap(final String region, final List<List<List<Value>>> sentDataValuesMap) {
+        if (region == null || region.isEmpty()) {
             this.sentDataValuesMaps.put(defaultRegion, sentDataValuesMap);
         } else {
             this.sentDataValuesMaps.put(region, sentDataValuesMap);
@@ -194,15 +202,15 @@ public final class LoggedInConnection {
     }
 
     public List<List<Set<Name>>> getDataNamesMap(final String region) {
-        if (region == null || region.isEmpty()){
+        if (region == null || region.isEmpty()) {
             return sentDataNamesMaps.get(defaultRegion);
         } else {
             return sentDataNamesMaps.get(region);
         }
     }
 
-    public void setDataNamesMap(final String region,  final List<List<Set<Name>>> sentDataNamesMap) {
-        if (region == null || region.isEmpty()){
+    public void setDataNamesMap(final String region, final List<List<Set<Name>>> sentDataNamesMap) {
+        if (region == null || region.isEmpty()) {
             this.sentDataNamesMaps.put(defaultRegion, sentDataNamesMap);
         } else {
             this.sentDataNamesMaps.put(region, sentDataNamesMap);
@@ -215,10 +223,10 @@ public final class LoggedInConnection {
 
 
     public Provenance getProvenance() {
-        if (provenance == null){
-            try{
-                provenance = new Provenance(getTotoMemoryDB(),user.getEmail(), new Date(),"method", "spreadsheet name?", "row heading", "column headings", "context");
-            } catch (Exception e){
+        if (provenance == null) {
+            try {
+                provenance = new Provenance(getTotoMemoryDB(), user.getEmail(), new Date(), "method", "spreadsheet name?", "row heading", "column headings", "context");
+            } catch (Exception e) {
             }
         }
         return provenance;

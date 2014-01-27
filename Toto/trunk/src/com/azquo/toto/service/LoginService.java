@@ -21,7 +21,7 @@ import java.util.Map;
  * User: cawley
  * Date: 31/10/13
  * Time: 19:31
- * Will be used to validate credentials and to track the sessions
+ * Currently fairly simple login functions
  */
 public class LoginService {
 
@@ -37,7 +37,7 @@ public class LoginService {
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
 
 
-    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes){
+    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes) {
 
         // right, need an actual login process here!
 
@@ -46,62 +46,54 @@ public class LoginService {
     v.setPassword(PasswordUtils.encrypt(password, salt)); // new better encryption . . .*/
 
         User user = userDao.findByEmail(userEmail);
-        if (user != null){
-            if (AdminService.encrypt(password, user.getSalt()).equals(user.getPassword())){
+        if (user != null) {
+            if (AdminService.encrypt(password, user.getSalt()).equals(user.getPassword())) {
                 // ok user should be ok :)
                 final List<Access> userAccess = accessDao.findForUserId(user.getId());
                 final Map<String, Database> okDatabases = new HashMap<String, Database>();
-                if (user.isAdministrator()){ // automatically has all dbs regardless of access
-                    for (Database database : databaseDao.findForBusinessId(user.getBusinessId())){
-                        if (database.getEndDate().after(new Date())){
+                if (user.isAdministrator()) { // automatically has all dbs regardless of access
+                    for (Database database : databaseDao.findForBusinessId(user.getBusinessId())) {
+                        if (database.getEndDate().after(new Date())) {
                             okDatabases.put(database.getName(), database);
                         }
                     }
                 } else {
-                    for (Access access : userAccess){
-                        if (access.getEndDate().after(new Date())){
+                    for (Access access : userAccess) {
+                        if (access.getEndDate().after(new Date())) {
                             Database database = databaseDao.findById(access.getDatabaseId());
-                            if (database.getEndDate().after(new Date())){
+                            if (database.getEndDate().after(new Date())) {
                                 okDatabases.put(database.getName(), database);
                             }
                         }
                     }
                 }
-
-
                 System.out.println("ok databases size " + okDatabases.size());
                 TotoMemoryDB memoryDB = null;
-                if (okDatabases.size() == 1){
+                if (okDatabases.size() == 1) {
                     System.out.println("1 database, use that");
                     memoryDB = memoryDBManager.getTotoMemoryDB(okDatabases.values().iterator().next());
                 } else {
                     Database database = okDatabases.get(databaseName);
-                    if (database != null){
+                    if (database != null) {
                         memoryDB = memoryDBManager.getTotoMemoryDB(database);
                     }
                 }
                 // could be a null memory db . . .
                 //TODO : ask tomcat for a session id . . .
-                final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "" , memoryDB, user, timeOutInMinutes * 60 * 1000);
+                final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000);
                 connections.put(lic.getConnectionId(), lic);
                 return lic;
-
-            } else {
-                // say wrong password??
-            }
-
-        } else {
-            // tell them email not found???
-        }
+            } // else would be wrong password
+        } // else would be email not found
         return null;
     }
 
-    public LoggedInConnection getConnection(final String connectionId){
+    public LoggedInConnection getConnection(final String connectionId) {
 
         final LoggedInConnection lic = connections.get(connectionId);
-        if (lic != null){
+        if (lic != null) {
             System.out.println("last accessed : " + lic.getLastAccessed() + " timeout " + lic.getTimeOut());
-            if ((System.currentTimeMillis() - lic.getLastAccessed().getTime()) > lic.getTimeOut()){
+            if ((System.currentTimeMillis() - lic.getLastAccessed().getTime()) > lic.getTimeOut()) {
                 // connection timed out
                 connections.remove(lic.getConnectionId());
                 return null;
@@ -112,11 +104,11 @@ public class LoginService {
 
     }
 
-    public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest){
+    public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest) {
         if (standardJsonRequest.user != null && standardJsonRequest.user.length() > 0 &&
-                standardJsonRequest.password != null && standardJsonRequest.password.length() > 0){
+                standardJsonRequest.password != null && standardJsonRequest.password.length() > 0) {
             return login(standardJsonRequest.database == null ? "" : standardJsonRequest.database, standardJsonRequest.user, standardJsonRequest.password, 60);
-        } else if(standardJsonRequest.connectionId != null && standardJsonRequest.connectionId.length() > 0){
+        } else if (standardJsonRequest.connectionId != null && standardJsonRequest.connectionId.length() > 0) {
             return getConnection(standardJsonRequest.connectionId);
         }
         return null;
