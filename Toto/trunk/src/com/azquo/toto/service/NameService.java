@@ -44,10 +44,11 @@ public final class NameService {
         loggedInConnection.getTotoMemoryDB().saveDataToMySQL();
     }
 
-    // wonder if this can be done more clearly?
+    // when passed a name tries to find the last in the list e.g. london, ontario, canada gets canada
+    // TODO : understand what the quote handling is doing
 
     private String findParentFromList(final String name) {
-        if (name.lastIndexOf(",") < 0) return null;
+        if (!name.contains(",")) return null;
         int nStartPos = name.indexOf("\"");
         int commaPos = name.lastIndexOf(",");
         if (nStartPos > 0 && nStartPos < commaPos) {
@@ -58,14 +59,9 @@ public final class NameService {
         return name.substring(commaPos + 1).trim();
     }
 
+    // without language uses the default display name
 
     public ArrayList<Name> sortNames(final ArrayList<Name> namesList) {
-        /*Comparator<Name> compareName = new Comparator<Name>() {
-            public int compare(Name n1, Name n2) {
-                return n1.getName().compareTo(n2.getName());
-            }
-        };*/
-
         Collections.sort(namesList);
         return namesList;
 
@@ -76,13 +72,11 @@ public final class NameService {
     public ArrayList<Name> sortNames(final ArrayList<Name> namesList, final String language) {
         Comparator<Name> compareName = new Comparator<Name>() {
             public int compare(Name n1, Name n2) {
-                return n1.getAttribute(language).compareTo(n1.getAttribute(language));
+            return n1.getAttribute(language).compareTo(n1.getAttribute(language));
             }
         };
-
         Collections.sort(namesList, compareName);
         return namesList;
-
     }
 
     // get names from a comma separated list
@@ -116,7 +110,7 @@ public final class NameService {
         return loggedInConnection.getTotoMemoryDB().getNameById(id);
     }
 
-
+    // TODO : find out what's going on with teh remainder
 
     public Name findByName(final LoggedInConnection loggedInConnection, final String name) {
 
@@ -127,8 +121,8 @@ public final class NameService {
         It should also recognise ""    "London, North", "Ontario", "Place"     should recognise that the 'North' is part of 'London, North'
         */
 
-
-         String language = loggedInConnection.getLanguage();
+        // language effectively being the attribute name
+        String language = loggedInConnection.getLanguage();
 
 
         String parentName = findParentFromList(name);
@@ -163,7 +157,6 @@ public final class NameService {
         return loggedInConnection.getTotoMemoryDB().findTopNames();
     }
 
- 
 
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
         if (name.toLowerCase().endsWith(";unique")) {
@@ -171,9 +164,6 @@ public final class NameService {
         }
         return findOrCreateName(loggedInConnection, name, false);
     }
-
-
-
 
 
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, boolean unique) throws Exception {
@@ -191,10 +181,10 @@ public final class NameService {
 
 
         // as I (Edd) understand this will be the top parent
-          String parentName = findParentFromList(name);
+        String parentName = findParentFromList(name);
 
         if (parentName == null) {
-            return findOrCreateName(loggedInConnection, name,null, null);
+            return findOrCreateName(loggedInConnection, name, null, null);
         }
         Name parent = findOrCreateName(loggedInConnection, parentName, null, null);
         Name topParent = parent;
@@ -220,14 +210,11 @@ public final class NameService {
 
     }
 
-  
+
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, final Name parent, final Name newparent) throws Exception {
 
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import,and insert a structure into it
         the 'parent' will usually be the top of the tree, and the new parent will be a name created as a branch.  */
-
-
-
 
 
         String storeName = name.replace("\"", "");
@@ -244,9 +231,9 @@ public final class NameService {
             Provenance provenance = loggedInConnection.getProvenance();
             Name newName = new Name(loggedInConnection.getTotoMemoryDB(), provenance, true); // default additive to true
             newName.setAttributeWillBePersisted(loggedInConnection.getLanguage(), storeName);
-            if (!loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME)){
+            if (!loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME)) {
                 String displayName = newName.getAttribute(Name.DEFAULT_DISPLAY_NAME);
-                if (displayName==null || displayName.length()==0){
+                if (displayName == null || displayName.length() == 0) {
                     newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName);
                 }
             }
@@ -329,46 +316,6 @@ public final class NameService {
 
 
     // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
-    // also use an add peer type thing as below? what about blank, throw an exception here?
-
-    public void createPeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName) throws Exception {
-        final Name peer = findOrCreateName(loggedInConnection, peerName);
-        if (!parentName.getPeers().keySet().contains(peer)) { // it doesn't already have the peer
-            LinkedHashMap<Name, Boolean> withNewPeer = new LinkedHashMap<Name, Boolean>(parentName.getPeers());
-            withNewPeer.put(peer, true); // default to additive for the mo
-            parentName.setPeersWillBePersisted(withNewPeer);
-        }
-    }
-
-    public Name addOrCreateChild(final LoggedInConnection loggedInConnection, final Name parentName, final String nameName) throws Exception {
-        final Name name = findOrCreateName(loggedInConnection, nameName);
-        // TODO : check peers here?
-        parentName.addChildWillBePersisted(name);
-        return name;
-    }
-
-    // copied from the one below but for peers. Probably scope for some factoring
-    public void createPeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName, final String afterString, final int after) throws Exception {
-        final Name newPeer = findOrCreateName(loggedInConnection, peerName);
-        if (!parentName.getPeers().keySet().contains(newPeer)) { // it doesn't already have the peer
-            LinkedHashMap<Name, Boolean> withNewPeer = new LinkedHashMap<Name, Boolean>();
-            int position = 1;
-            for (Name peer : parentName.getPeers().keySet()) {
-                withNewPeer.put(peer, true); // additive by default
-                if (afterString != null) {
-                    if (peer.getDefaultDisplayName().equalsIgnoreCase(afterString)) {
-                        withNewPeer.put(newPeer, true);// additive by default
-                        // no backward link like with normal children
-                    }
-                } else if (after == position) { // only check the numeric position if there's no string passed
-                    withNewPeer.put(newPeer, true); // additive by default
-                }
-                position++;
-            }
-            parentName.setPeersWillBePersisted(withNewPeer);
-        }
-    }
-
     public void createPeers(final LoggedInConnection loggedInConnection, final Name parentName, final List<String> peerNames) throws Exception {
         // in this we're going assume that we overwrite existing name links, the single one can be used for adding
         final LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>(peerNames.size());
@@ -378,15 +325,6 @@ public final class NameService {
             }
         }
         parentName.setPeersWillBePersisted(peers);
-    }
-
-    public boolean removePeer(final LoggedInConnection loggedInConnection, final Name parentName, final String peerName) throws Exception {
-        Name existingPeer = findByName(loggedInConnection, peerName);
-        if (existingPeer != null) {
-            parentName.removeFromPeersWillBePersisted(existingPeer);
-            return true;
-        }
-        return false;
     }
 
     public Map<Name, Boolean> getPeersIncludeParents(final Name name) throws Exception {
@@ -402,74 +340,6 @@ public final class NameService {
         return new LinkedHashMap<Name, Boolean>();
     }
 
-
-    public void createChild(final LoggedInConnection loggedInConnection, final Name parentName, final String childName, final String afterString, final int after) throws Exception {
-        final Name newChild = findOrCreateName(loggedInConnection, childName);
-        if (!parentName.getChildren().contains(newChild)) { // it doesn't already have the child
-            final LinkedHashSet<Name> withNewChild = new LinkedHashSet<Name>();
-            int position = 1;
-            for (Name child : parentName.getChildren()) {
-                withNewChild.add(child);
-                // try for the string and number,whichever is hit first will be the position
-                if (after != -1 && after == position) {
-                    withNewChild.add(newChild);
-                }
-                if (afterString != null) {
-                    if (child.getDefaultDisplayName().equalsIgnoreCase(afterString)) {
-                        withNewChild.add(newChild);
-                    }
-                }
-                position++;
-            }
-            parentName.setChildrenWillBePersisted(withNewChild);
-        }
-    }
-
-    public void createChildren(LoggedInConnection loggedInConnection, final Name parentName, final List<String> childNameStrings) throws Exception {
-        // in this we're going assume that we overwrite existing name links, the single one can be used for adding
-        final LinkedHashSet<Name> childNames = new LinkedHashSet<Name>(childNameStrings.size());
-        for (String childNameString : childNameStrings) {
-            if (childNameString.trim().length() > 0) {
-                Name child = findOrCreateName(loggedInConnection, childNameString);
-                // here we need to check the peer status.
-                childNames.add(child);
-            }
-        }
-        System.out.println("names to add : " + childNames);
-        parentName.setChildrenWillBePersisted(childNames);
-    }
-
-    public boolean removeChild(LoggedInConnection loggedInConnection, final Name parentName, final String childName) throws Exception {
-        final Name existingChild = findByName(loggedInConnection, childName);
-        if (existingChild != null) {
-            parentName.removeFromChildrenWillBePersisted(existingChild);
-            return true;
-        }
-        return false;
-    }
-
-    public void renameName(LoggedInConnection loggedInConnection, String name, String renameAs) throws Exception {
-        final Name existing = findByName(loggedInConnection, name);
-        if (existing != null) {
-            // internally this does check duplicate rules
-            existing.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, renameAs);
-        }
-    }
-
-    // this expects valid names really, used by things like import routines
-
-    public Set<Name> getNameSetForStrings(final LoggedInConnection loggedInConnection, final Set<String> nameStrings) throws Exception {
-        Set<Name> toReturn = new HashSet<Name>();
-        for (String nameString : nameStrings) {
-            Name name = findByName(loggedInConnection, nameString);
-            if (name == null) {
-                throw new Exception("  I can't find the name : " + nameString);
-            } else {
-                toReturn.add(name);
-            }
-        }
-        return toReturn;
-    }
 
     // these should probably live somewhere more global
     public static final String ERROR = "ERROR";
@@ -571,6 +441,8 @@ public final class NameService {
         return toReturn;
     }
 
+    // not used but I'll leave it here, could be good for debugging
+
     public void logNameHierarchy(final Name name, int level) {
         for (int i = 1; i <= level; i++) {
             System.out.print("- ");
@@ -603,7 +475,7 @@ public final class NameService {
         return toReturn;
     }
 
-    // to find a set of names
+    // to find a set of names, a few bits that were part of the original set of functions
 
     // TODO add count
 
@@ -700,6 +572,8 @@ public final class NameService {
 
     }
 
+
+    // TODO Edd try to understand
 
     private String shuntingYardAlgorithm(LoggedInConnection loggedInConnection, Name name) throws Exception {
 /*   TODO SORT OUT ACTION ON ERROR
@@ -798,26 +672,26 @@ public final class NameService {
         return "";
     }
 
-    public String processJsonRequest(LoggedInConnection loggedInConnection, NameJsonRequest nameJsonRequest) throws Exception{
+    public String processJsonRequest(LoggedInConnection loggedInConnection, NameJsonRequest nameJsonRequest) throws Exception {
         String toReturn = "";
 
         // type; elements level 1; from a to b
-        if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)){
+        if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)) {
             return getStructureForNameSearch(loggedInConnection, nameJsonRequest.name);
         }
-        if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)){
+        if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)) {
             return getNamesFormattedForOutput(interpretName(loggedInConnection, nameJsonRequest.name));
         }
 
-        if (nameJsonRequest.operation.equalsIgnoreCase(DELETE)){
-            if (nameJsonRequest.id == 0){
+        if (nameJsonRequest.operation.equalsIgnoreCase(DELETE)) {
+            if (nameJsonRequest.id == 0) {
                 return "error: id not passed for delete";
             } else {
                 Name name = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.id);
-                if (name == null){
+                if (name == null) {
                     return "error: name for id not found : " + nameJsonRequest.id;
                 }
-                if (name.getValues().size() > 0 && !nameJsonRequest.withData){
+                if (name.getValues().size() > 0 && !nameJsonRequest.withData) {
                     return "error: cannot delete name with data : " + nameJsonRequest.id;
                 } else {
                     name.delete();
@@ -826,55 +700,55 @@ public final class NameService {
         }
 
 
-        if (nameJsonRequest.operation.equalsIgnoreCase(EDIT) || nameJsonRequest.operation.equalsIgnoreCase(NEW)){
-            if (nameJsonRequest.id == 0 && nameJsonRequest.operation.equalsIgnoreCase(EDIT)){
+        if (nameJsonRequest.operation.equalsIgnoreCase(EDIT) || nameJsonRequest.operation.equalsIgnoreCase(NEW)) {
+            if (nameJsonRequest.id == 0 && nameJsonRequest.operation.equalsIgnoreCase(EDIT)) {
                 return "error: id not passed for edit";
             } else {
                 Name name;
-                if (nameJsonRequest.operation.equalsIgnoreCase(EDIT)){
+                if (nameJsonRequest.operation.equalsIgnoreCase(EDIT)) {
                     name = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.id);
                 } else {
                     // new name . . .
                     name = new Name(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getProvenance(), true);
                 }
-                if (name == null){
+                if (name == null) {
                     return "error: name for id not found : " + nameJsonRequest.id;
                 }
                 Name newParent = null;
                 Name oldParent = null;
-                if (nameJsonRequest.newParent > 0){
+                if (nameJsonRequest.newParent > 0) {
                     newParent = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.newParent);
-                    if (newParent == null){
+                    if (newParent == null) {
                         return "error: new parent for id not found : " + nameJsonRequest.newParent;
                     }
                 }
-                if (nameJsonRequest.oldParent > 0){
+                if (nameJsonRequest.oldParent > 0) {
                     newParent = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.oldParent);
-                    if (oldParent == null){
+                    if (oldParent == null) {
                         return "error: old parent for id not found : " + nameJsonRequest.oldParent;
                     }
                 }
-                if (newParent != null){
+                if (newParent != null) {
                     newParent.addChildWillBePersisted(name, nameJsonRequest.newPosition);
                 }
-                if (oldParent != null){
+                if (oldParent != null) {
                     oldParent.removeFromChildrenWillBePersisted(name);
                 }
                 boolean foundPeers = false;
                 int position = 0;
                 name.clearAttributes(); // and just re set them below
-                for (String key : nameJsonRequest.attributes.keySet()){
+                for (String key : nameJsonRequest.attributes.keySet()) {
                     position++;
-                    if (key.equalsIgnoreCase(PEERS) || (position == nameJsonRequest.attributes.keySet().size() && !foundPeers)){ // the second means run this if we hit the end having not run it
+                    if (key.equalsIgnoreCase(PEERS) || (position == nameJsonRequest.attributes.keySet().size() && !foundPeers)) { // the second means run this if we hit the end having not run it
                         foundPeers = true;
                         boolean editingPeers = false;
-                        LinkedHashMap<Name,Boolean> peers = new LinkedHashMap<Name, Boolean>();
-                        if (key.equalsIgnoreCase(PEERS)){ // if it's not then we're in here because no peers were sent so leave the peer list blank
+                        LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>();
+                        if (key.equalsIgnoreCase(PEERS)) { // if it's not then we're in here because no peers were sent so leave the peer list blank
                             StringTokenizer st = new StringTokenizer(nameJsonRequest.attributes.get(key), ",");
-                            while (st.hasMoreTokens()){
+                            while (st.hasMoreTokens()) {
                                 String peerName = st.nextToken().trim();
                                 Name peer = loggedInConnection.getTotoMemoryDB().getNameByAttribute(loggedInConnection.getLanguage(), peerName, null);
-                                if (peer == null){
+                                if (peer == null) {
                                     return "error: cannot find peer : " + peerName;
                                 } else {
                                     peers.put(peer, true);
@@ -884,24 +758,24 @@ public final class NameService {
 
                         // ok need to to see if what was passed was different
 
-                        if (peers.keySet().size() != name.getPeers().keySet().size()){
+                        if (peers.keySet().size() != name.getPeers().keySet().size()) {
                             editingPeers = true;
                         } else { // same size, check the elements . . .
-                            for (Name peer : name.getPeers().keySet()){
-                                if (peers.get(peer) == null ){ // mismatch, old peers has something the new one does not
+                            for (Name peer : name.getPeers().keySet()) {
+                                if (peers.get(peer) == null) { // mismatch, old peers has something the new one does not
                                     editingPeers = true;
                                 }
                             }
                         }
 
-                        if (editingPeers){
-                            if (name.getParents().size() == 0){ // top level, we can edit
+                        if (editingPeers) {
+                            if (name.getParents().size() == 0) { // top level, we can edit
                                 name.setPeersWillBePersisted(peers);
                             } else {
-                                if (getPeersIncludeParents(name).size() == 0){ // no peers on the aprent
+                                if (getPeersIncludeParents(name).size() == 0) { // no peers on the aprent
                                     return "error: cannot edit peers, this is not a top level name and there is no peer set for  this name or it's parents, name id " + nameJsonRequest.id;
                                 }
-                                if (name.getValues().size() > 0){
+                                if (name.getValues().size() > 0) {
                                     return "error: cannot edit peers, this is not a top level name and there is data assigned to this name " + nameJsonRequest.id;
                                 }
                                 name.setPeersWillBePersisted(peers);
@@ -909,7 +783,7 @@ public final class NameService {
                         }
 
                     } else {
-                        name.setAttributeWillBePersisted(key,nameJsonRequest.attributes.get(key));
+                        name.setAttributeWillBePersisted(key, nameJsonRequest.attributes.get(key));
                     }
                 }
                 // re set attributes, use single functions so checks happen
@@ -940,47 +814,47 @@ public final class NameService {
                 if (peers != null) {
                     System.out.println("peers : |" + peers + "|");
                     if (peers.length() > 0) { // ok, add the peers. No create, just from existing
-                            Name name;
-                            if (create != null) {
-                                name = findOrCreateName(loggedInConnection, nameString);
-                            } else {
-                                name = findByName(loggedInConnection, nameString);
-                                if (name == null) {
-                                    return "error:name not found:`" + nameString + "`";
-                                }
+                        Name name;
+                        if (create != null) {
+                            name = findOrCreateName(loggedInConnection, nameString);
+                        } else {
+                            name = findByName(loggedInConnection, nameString);
+                            if (name == null) {
+                                return "error:name not found:`" + nameString + "`";
                             }
-                            // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
-                            if (peers.startsWith("{")) { // array, typically when creating in the first place, the service call will insert after any existing
-                                if (peers.contains("}")) {
-                                    peers = peers.substring(1, peers.indexOf("}"));
-                                    final StringTokenizer st = new StringTokenizer(peers, ",");
-                                    final List<String> peersToAdd = new ArrayList<String>();
-                                    String notFoundError = "";
-                                    while (st.hasMoreTokens()) {
-                                        String peerName = st.nextToken().trim();
-                                        if (peerName.startsWith("`")) {
-                                            peerName = peerName.substring(1, peerName.length() - 1); // trim escape chars
-                                        }
-                                        if (create == null && findByName(loggedInConnection, peerName) == null) {
-                                            if (notFoundError.isEmpty()) {
-                                                notFoundError = peerName;
-                                            } else {
-                                                notFoundError += (",`" + peerName + "`");
-                                            }
-                                        }
-                                        peersToAdd.add(peerName);
+                        }
+                        // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
+                        if (peers.startsWith("{")) { // array, typically when creating in the first place, the service call will insert after any existing
+                            if (peers.contains("}")) {
+                                peers = peers.substring(1, peers.indexOf("}"));
+                                final StringTokenizer st = new StringTokenizer(peers, ",");
+                                final List<String> peersToAdd = new ArrayList<String>();
+                                String notFoundError = "";
+                                while (st.hasMoreTokens()) {
+                                    String peerName = st.nextToken().trim();
+                                    if (peerName.startsWith("`")) {
+                                        peerName = peerName.substring(1, peerName.length() - 1); // trim escape chars
                                     }
-                                    if (notFoundError.isEmpty()) {
-                                        createPeers(loggedInConnection, name, peersToAdd);
-                                    } else {
-                                        return "error:name not found:`" + notFoundError + "`";
+                                    if (create == null && findByName(loggedInConnection, peerName) == null) {
+                                        if (notFoundError.isEmpty()) {
+                                            notFoundError = peerName;
+                                        } else {
+                                            notFoundError += (",`" + peerName + "`");
+                                        }
                                     }
-                                    return "array saved " + peersToAdd.size() + " names";
+                                    peersToAdd.add(peerName);
+                                }
+                                if (notFoundError.isEmpty()) {
+                                    createPeers(loggedInConnection, name, peersToAdd);
                                 } else {
-                                    return "error:Unclosed }";
+                                    return "error:name not found:`" + notFoundError + "`";
                                 }
+                                return "array saved " + peersToAdd.size() + " names";
+                            } else {
+                                return "error:Unclosed }";
                             }
-                            // taken away support for inserting/removing a single peer
+                        }
+                        // taken away support for inserting/removing a single peer
                     }
                 }
             }
@@ -992,6 +866,7 @@ public final class NameService {
 
     }
 
+    // should use jackson??
 
     private String getNamesFormattedForOutput(final Collection<Name> names) {
         // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
@@ -1019,7 +894,9 @@ public final class NameService {
         return values;
     }
 
-    private String getStructureForNameSearch(LoggedInConnection loggedInConnection, String nameSearch){
+    // use jackson?
+
+    private String getStructureForNameSearch(LoggedInConnection loggedInConnection, String nameSearch) {
         final Name name = findByName(loggedInConnection, nameSearch);
         if (name != null) {
             return "{\"names\":[" + getChildStructureFormattedForOutput(name) + "]}";
@@ -1045,62 +922,64 @@ public final class NameService {
         }
     }
 
+    // again should use jackson?
+
     private String getChildStructureFormattedForOutput(final Name name) {
         //SHOULD USE GSON HERE!
         int totalValues = getTotalValues(name);
         //if (totalValues > 0) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("{\"name\":");
-            sb.append("\"").append(name.getDefaultDisplayName()).append("\"");
-            sb.append(", \"id\":\"" + name.getId() + "\"");
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"name\":");
+        sb.append("\"").append(name.getDefaultDisplayName()).append("\"");
+        sb.append(", \"id\":\"" + name.getId() + "\"");
 
-            sb.append(", \"dataitems\":\"" + totalValues + "\"");
-            if (name.getValues().size() > 0) {
-                sb.append(", \"mydataitems\":\"" + name.getValues().size() + "\"");
-            }
-            //putputs the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
-            int count = 0;
-            if (name.getAttributes().size() > 0 || name.getPeers().size() > 0){
-                sb.append(",\"attributes\":{");
-                if (name.getPeers().size() > 0){
-                    String peerList = "";
-                    for (Name peer : name.getPeers().keySet()) {
-                        if (peerList.length() >0) {
-                            peerList += ", ";
-                        }
-                        peerList += peer.getDefaultDisplayName();
-                        if (!name.getPeers().get(peer)){
-                           peerList+="--";
-                        }
+        sb.append(", \"dataitems\":\"" + totalValues + "\"");
+        if (name.getValues().size() > 0) {
+            sb.append(", \"mydataitems\":\"" + name.getValues().size() + "\"");
+        }
+        //putputs the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
+        int count = 0;
+        if (name.getAttributes().size() > 0 || name.getPeers().size() > 0) {
+            sb.append(",\"attributes\":{");
+            if (name.getPeers().size() > 0) {
+                String peerList = "";
+                for (Name peer : name.getPeers().keySet()) {
+                    if (peerList.length() > 0) {
+                        peerList += ", ";
                     }
-                    sb.append("\"peers\":\"" + peerList + "\"");
-                    count++;
-
-                }
-                 for (String attName:name.getAttributes().keySet()){
-                    if (count > 0) sb.append(",");
-                    sb.append("\"" + attName + "\":\"" + name.getAttributes().get(attName) + "\"");
-                    count++;
-                }
-                sb.append("}");
-            }
-            final Set<Name> children = name.getChildren();
-            sb.append(", \"elements\":\"" + children.size() + "\"");
-            if (!children.isEmpty()) {
-                sb.append(", \"children\":[");
-                count = 0;
-                for (Name child : children) {
-                    String childData = getChildStructureFormattedForOutput(child);
-                    if (childData.length() > 0) {
-                        if (count > 0) sb.append(",");
-                        sb.append(childData);
-                        count++;
+                    peerList += peer.getDefaultDisplayName();
+                    if (!name.getPeers().get(peer)) {
+                        peerList += "--";
                     }
                 }
-                sb.append("]");
+                sb.append("\"peers\":\"" + peerList + "\"");
+                count++;
+
+            }
+            for (String attName : name.getAttributes().keySet()) {
+                if (count > 0) sb.append(",");
+                sb.append("\"" + attName + "\":\"" + name.getAttributes().get(attName) + "\"");
+                count++;
             }
             sb.append("}");
-            return sb.toString();
+        }
+        final Set<Name> children = name.getChildren();
+        sb.append(", \"elements\":\"" + children.size() + "\"");
+        if (!children.isEmpty()) {
+            sb.append(", \"children\":[");
+            count = 0;
+            for (Name child : children) {
+                String childData = getChildStructureFormattedForOutput(child);
+                if (childData.length() > 0) {
+                    if (count > 0) sb.append(",");
+                    sb.append(childData);
+                    count++;
+                }
+            }
+            sb.append("]");
+        }
+        sb.append("}");
+        return sb.toString();
         //}
         //return "";
     }

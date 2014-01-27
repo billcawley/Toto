@@ -16,12 +16,11 @@ import java.util.*;
  */
 public final class ValueService {
 
-    public final static String VALUE = "VALUE";
-
     @Autowired
     private NameService nameService;
 
     // set the names in delete info and unlink - best I can come up with at the moment
+    // unlike Name I don't think we're actually going to delete it - though whether the current name behavior is correct is another thing
     public void deleteValue(final Value value) throws Exception {
         String names = "";
         for (Name n : value.getNames()) {
@@ -36,10 +35,6 @@ public final class ValueService {
 
     public Value createValue(final LoggedInConnection loggedInConnection, final Provenance provenance, final String text) throws Exception {
         return new Value(loggedInConnection.getTotoMemoryDB(), provenance, text, null);
-    }
-
-    public void linkValueToNames(final Value value, final Set<Name> names) throws Exception {
-        value.setNamesWillBePersisted(names);
     }
 
     // this is passed a string for the value, not sure if that is the best practice, need to think on it.
@@ -68,67 +63,28 @@ public final class ValueService {
             }
         }
         if (!alreadyInDatabase) {
+            // create
             Value value = createValue(loggedInConnection, loggedInConnection.getProvenance(), valueString);
             toReturn += "  stored";
             // and link to names
-            linkValueToNames(value, validNames);
+            value.setNamesWillBePersisted(validNames);
         }
         return toReturn;
     }
 
-    public boolean overWriteExistingValue(final LoggedInConnection loggedInConnection, final String region, final Value existingValue, final String newValueString) throws Exception {
-        StringBuilder rowsString = new StringBuilder();
-        for (List<Name> rowNames : loggedInConnection.getRowHeadings(region)) {
-            for (Name name : rowNames) {
-                rowsString.append(name.getDefaultDisplayName());
-                rowsString.append(",");
-            }
-        }
-        StringBuilder columnsString = new StringBuilder();
-        for (List<Name> colName : loggedInConnection.getColumnHeadings(region)) {
-            for (Name name : colName) {
-                columnsString.append(name.getDefaultDisplayName());
-                columnsString.append(",");
-            }
-        }
-
-        StringBuilder contextString = new StringBuilder();
-        for (Name name : loggedInConnection.getContext(region)) {
-            contextString.append(name.getDefaultDisplayName());
-            contextString.append(",");
-        }
-
+    public boolean overWriteExistingValue(final LoggedInConnection loggedInConnection, final Value existingValue, final String newValueString) throws Exception {
         Value newValue = new Value(loggedInConnection.getTotoMemoryDB(), loggedInConnection.getProvenance(), newValueString, null);
         newValue.setNamesWillBePersisted(existingValue.getNames());
         deleteValue(existingValue);
         return true;
     }
 
-    public boolean storeNewValueFromEdit(final LoggedInConnection loggedInConnection, String region, final Set<Name> names, final String newValueString) throws Exception {
-        StringBuilder rowsString = new StringBuilder();
-        for (List<Name> rowNames : loggedInConnection.getRowHeadings(region)) {
-            for (Name name : rowNames) {
-                rowsString.append(name.getDefaultDisplayName());
-                rowsString.append(",");
-            }
-        }
-        StringBuilder columnsString = new StringBuilder();
-        for (List<Name> colNames : loggedInConnection.getColumnHeadings(region)) {
-            for (Name name : colNames) {
-                columnsString.append(name.getDefaultDisplayName());
-                columnsString.append(",");
-            }
-        }
-
-        StringBuilder contextString = new StringBuilder();
-        for (Name name : loggedInConnection.getContext(region)) {
-            contextString.append(name.getDefaultDisplayName());
-            contextString.append(",");
-        }
-
+    public boolean storeNewValueFromEdit(final LoggedInConnection loggedInConnection, final Set<Name> names, final String newValueString) throws Exception {
         storeValueWithProvenanceAndNames(loggedInConnection, newValueString, names);
         return true;
     }
+
+    // doesn't work down the name children
 
     public List<Value> findForNames(final Set<Name> names) {
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
@@ -173,8 +129,8 @@ public final class ValueService {
         return values;
     }
 
-    // while the above is what would be used to check if data exists for a specific label combination (e.g. when inserting data) this will navigate down through the labels
-    // I'm going to try for similar logic but using the lists of children for each label rather than just the label if that makes sense
+    // while the above is what would be used to check if data exists for a specific name combination (e.g. when inserting data) this will navigate down through the names
+    // I'm going to try for similar logic but using the lists of children for each name rather than just the name if that makes sense
     // I wonder if it should be a list or set returned?
 
     // this is slow relatively speaking
@@ -255,7 +211,8 @@ public final class ValueService {
     long part2NanoCallTime = 0;
     int numberOfTimesCalled = 0;
 
-    // RPCALC will have been set byt he shunting yard algorithm earlier
+    // RPCALC will have been set by the shunting yard algorithm earlier
+    // TODO : Edd try to understand, have neatened the code a little though
 
     public double findValueForNames(final LoggedInConnection loggedInConnection, final Set<Name> names, final boolean[] locklist, final boolean payAttentionToAdditive) {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
@@ -290,20 +247,14 @@ public final class ValueService {
                     char charTerm = term.charAt(0);
                     if (charTerm == '+') {
                         values[valNo - 1] += values[valNo];
-                    } else {
-                        if (charTerm == '-') {
+                    } else if (charTerm == '-') {
                             values[valNo - 1] -= values[valNo];
-                        } else {
-                            if (charTerm == '*') {
-                                values[valNo - 1] *= values[valNo];
-                            } else {
-                                if (values[valNo] == 0) {
-                                    values[valNo - 1] = 0;
-                                } else {
-                                    values[valNo - 1] /= values[valNo];
-                                }
-                            }
-                        }
+                    } else if (charTerm == '*') {
+                        values[valNo - 1] *= values[valNo];
+                    } else if (values[valNo] == 0) {
+                        values[valNo - 1] = 0;
+                    } else {
+                        values[valNo - 1] /= values[valNo];
                     }
                 } else {
                     try {
@@ -317,7 +268,6 @@ public final class ValueService {
                         values[valNo++] = findSumForNamesIncludeChildren(new HashSet<Name>(calcnames), locklist, payAttentionToAdditive);
                         calcnames.remove(calcnames.size() - 1);
                     }
-
                 }
                 pos = spacepos + 1;
             }
@@ -368,6 +318,7 @@ public final class ValueService {
 
     // ok I see, switching the lists around, the following function does the same but the objects at the end aren't lists of names, they're just names
     // should this be for sets at the end? Suppose it's just headings, there should be duplicates, there's no data restriction
+    // TODO : edd try to understand properly
 
     public List<List<List<Name>>> transposeHeadingLists(final List<List<List<Name>>> headingLists) {
         final List<List<List<Name>>> flipped = new ArrayList<List<List<Name>>>();
@@ -417,6 +368,8 @@ public final class ValueService {
         //todo  - item should be a string, but potentially include ;children; level x; from a; to b; from n; to n;
         return null;
     }
+
+    // TODO edd try to understand
 
     // should we be using CSV reader??
 
@@ -475,6 +428,7 @@ public final class ValueService {
     }
 
     // Called by expand headings, need to get my head round this
+    // TODO edd understand
 
     private List<List<Name>> permuteRowList(final List<List<Name>> collist) {
 
@@ -524,6 +478,8 @@ public final class ValueService {
 
 }
 */
+
+    // TODO again edd understand
 
 
     public List<List<Name>> expandHeadings(final List<List<List<Name>>> headingLists) {

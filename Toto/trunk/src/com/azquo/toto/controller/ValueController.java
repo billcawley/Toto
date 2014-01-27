@@ -140,14 +140,15 @@ public class ValueController {
 
                                     final List<Value> valuesForCell = rowValues.get(columnCounter);
                                     final Set<Name> namesForCell = rowNames.get(columnCounter);
+                                    // one thing about these store functions to the value service, they expect the provenance on the logged in connection to be appropriate
                                     if (valuesForCell.size() == 1) {
                                         final Value theValue = valuesForCell.get(0);
                                         System.out.println("trying to overwrite");
-                                        valueService.overWriteExistingValue(loggedInConnection, region, theValue, editedValues[columnCounter]);
+                                        valueService.overWriteExistingValue(loggedInConnection, theValue, editedValues[columnCounter]);
                                         numberOfValuesModified++;
                                     } else if (valuesForCell.isEmpty()) {
                                         System.out.println("storing new value here . . .");
-                                        valueService.storeNewValueFromEdit(loggedInConnection, region, namesForCell, editedValues[columnCounter]);
+                                        valueService.storeNewValueFromEdit(loggedInConnection, namesForCell, editedValues[columnCounter]);
                                     }
                                 } else {
                                     // should this add on for a list???
