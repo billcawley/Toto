@@ -40,6 +40,7 @@ public final class ImportService {
     public String importTheFile(final LoggedInConnection loggedInConnection, String fileName, InputStream uploadFile, String fileType, String separator, final String strCreate)
             throws Exception{
 
+        loggedInConnection.setNewProvenance("import", fileName);
         if (separator == null || separator.length() == 0) separator = "\t";
         if (separator.equals("comma")) separator = ",";
         // separator not used??
@@ -81,11 +82,15 @@ public final class ImportService {
     private String readPreparedFile(LoggedInConnection loggedInConnection, InputStream uploadFile, String fileType, boolean create) throws Exception{
 
         if (fileType.toLowerCase().equals("values")){
-            return dataImport(loggedInConnection,  uploadFile, create);
+            return valuesImport(loggedInConnection,  uploadFile, create);
         }
         // we will pay attention onn the attribute import and replicate
         if (fileType.toLowerCase().equals("names")){
-            return attributeImport(loggedInConnection,uploadFile, create);
+            return namesImport(loggedInConnection,uploadFile, create);
+
+        }
+        if (fileType.toLowerCase().equals("structure")){
+            return structureImport(loggedInConnection, uploadFile, create);
 
         }
         return "error: unknown file type " + fileType;
@@ -95,7 +100,7 @@ public final class ImportService {
 
 
 
-    public String dataImport(final LoggedInConnection loggedInConnection, final  InputStream uploadFile, final boolean create) throws Exception {
+    public String valuesImport(final LoggedInConnection loggedInConnection, final  InputStream uploadFile, final boolean create) throws Exception {
         // OK I think I'm supposed to use language in here but how??? Will go to default name for the moment
         final HashMap<Name, String> nameImportHeadingMap = new HashMap<Name, String>();
         //String filePath = "/home/bill/Downloads/exportcodes.csv";
@@ -133,8 +138,7 @@ public final class ImportService {
         }
 
 
-        final Provenance provenance = loggedInConnection.getProvenance();
-        int valuecount = 0;
+         int valuecount = 0;
         final HashMap<String, Name> namesFound = new HashMap<String, Name>();
         while (csvReader.readRecord()) {
             String value;
@@ -170,7 +174,7 @@ public final class ImportService {
                 value = csvReader.get(nameImportHeadingMap.get(headerName));
                 if (value.trim().length() > 0) { // no point storing if there's no value!
                     valuecount++;
-                    valueService.storeValueWithProvenanceAndNames(loggedInConnection, value, provenance, namesForValue);
+                    valueService.storeValueWithProvenanceAndNames(loggedInConnection, value, namesForValue);
                     if (valuecount % 5000 == 0) {
                         System.out.println("storing value " + valuecount);
                     }
@@ -186,7 +190,7 @@ public final class ImportService {
     }
 
 
-    public String attributeImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
+    public String namesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
 
         //String filePath = "/home/bill/Downloads/exportcodes.csv";
          final CsvReader csvReader = new CsvReader(uploadFile,'\t',  Charset.forName("UTF-8"));
@@ -243,6 +247,37 @@ public final class ImportService {
             return nameGiven.substring(quotePos + 1, endQuote);
         }
         return nameGiven.substring(0, commaPos);
+    }
+
+
+
+    private String structureImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
+        final CsvReader csvReader = new CsvReader(uploadFile,'\t',  Charset.forName("UTF-8"));
+        csvReader.readHeaders();
+        final String[] headers = csvReader.getHeaders();
+        String topName = headers[0];
+        String plural = topName;
+        if (topName.endsWith(")")) {
+            int openBracket = topName.lastIndexOf('(');
+            plural = topName.substring(openBracket + 1, topName.length() - 1);
+            topName = topName.substring(0, openBracket).trim();
+        }
+
+        while (csvReader.readRecord()) {
+            String itemName = "";
+            for (String headerName: headers){
+                 String category = csvReader.get(headerName);
+                if (headerName.equals(headers[0])){
+                    itemName = category;
+                }else{
+                    //create the name and structure
+                    Name name = nameService.findOrCreateName(loggedInConnection,itemName + "," + category + " " + plural + "," + plural + " by " + headerName + "," + topName + ";unique");
+                    //and put the category in its set.
+                    Name name2 = nameService.findOrCreateName(loggedInConnection,category + "," + headerName + ";unique");
+                }
+            }
+        }
+        return "";
     }
 
 
