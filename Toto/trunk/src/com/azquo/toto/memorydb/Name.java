@@ -519,8 +519,10 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name> {
                 for (Integer childId : childrenIds) {
                     children.add(getTotoMemoryDB().getNameById(childId));
                 }
-                // need to do it this way to sort out the parents
-                setChildrenWillBePersisted(children);
+                // need to sort out the parents
+                for (Name newChild : children){
+                    newChild.parents.add(this);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
