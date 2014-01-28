@@ -815,7 +815,7 @@ public final class NameService {
                 // re set attributes, use single functions so checks happen
             }
         }
-
+        persist(loggedInConnection);
         return toReturn;
     }
 
