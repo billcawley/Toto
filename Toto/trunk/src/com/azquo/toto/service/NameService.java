@@ -125,8 +125,6 @@ public final class NameService {
         return loggedInConnection.getTotoMemoryDB().getNameById(id);
     }
 
-    // TODO : find out what's going on with teh remainder
-
     public Name findByName(final LoggedInConnection loggedInConnection, final String name) {
 
      /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
@@ -233,6 +231,7 @@ public final class NameService {
 
     }
 
+    // TODO : address the two parents passed through in this function and how it interacts with the above function.
 
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, final Name parent, final Name newparent) throws Exception {
 
@@ -574,7 +573,7 @@ public final class NameService {
         return names;
     }
 
-    // Edd guessing this to find either a number or a name in a formula
+    // TODO Edd try to understand  - a number or a pointer to a name?
 
     private String interpretTerm(final LoggedInConnection loggedInConnection, final Name name, final String term) {
 
