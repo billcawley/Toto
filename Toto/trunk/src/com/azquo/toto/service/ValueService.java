@@ -512,6 +512,7 @@ public final class ValueService {
         return output;
     }
 
+    //todo edd try to understand
 
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<Name>>> rowHeadingLists = transposeHeadingLists(interpretHeadings(loggedInConnection, headingsSent));
