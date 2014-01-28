@@ -138,7 +138,6 @@ public final class NameService {
 
         // language effectively being the attribute name
         String language = loggedInConnection.getLanguage();
-
         // so london, ontario, canada
         // parent name would be canada
         String parentName = findParentFromList(name);
@@ -151,10 +150,10 @@ public final class NameService {
             return null;
         }
 
-        // so chop off the name, lastindex of moves backwards from the index
+        // so chop off the last name, lastindex of moves backwards from the index
         // the reason for this is to deal with quotes, we could have said simply the substring take off the parent name length but we don't know about quotes or spaces after the comma
         String remainder = name.substring(0, name.lastIndexOf(",", name.length() - parentName.length()));
-        // remainder is the rest of the string, could be london, ontario, Canada was takenn off
+        // remainder is the rest of the string, could be london, ontario - Canada was taken off
         parentName = findParentFromList(remainder);
         // keep chopping away at the string until we find the closest parent we can
         while (parentName != null) {
@@ -170,9 +169,9 @@ public final class NameService {
         return loggedInConnection.getTotoMemoryDB().getNameByAttribute(language, remainder, parent);
     }
 
-    public List<Name> searchNames(final LoggedInConnection loggedInConnection, final String search) {
+/*    public List<Name> searchNames(final LoggedInConnection loggedInConnection, final String search) {
         return loggedInConnection.getTotoMemoryDB().searchNames(Name.DEFAULT_DISPLAY_NAME, search);
-    }
+    }*/
 
     public List<Name> findTopNames(final LoggedInConnection loggedInConnection) {
         return loggedInConnection.getTotoMemoryDB().findTopNames();
@@ -212,10 +211,13 @@ public final class NameService {
         String remainder = name.substring(0, name.lastIndexOf(",", name.length() - parentName.length()));
         parentName = findParentFromList(remainder);
 
-        // ok teh key here is to step through the parent -> child list as defined in the name string creating teh hierachy as you go along
-        // the top parent is the context in which names should be searched for and created if not existing, the parent name and parent is the direct parent we may have just created
-        // so what unique is saying is : ok we have the parent we want to add a name to : the question is do we search under that parent to find or create or under the top parent?
-        // I thikn maybe the names of varables could be clearer here!, maybe look into on second pass
+        /*
+        ok teh key here is to step through the parent -> child list as defined in the name string creating teh hierarchy as you go along
+        the top parent is the context in which names should be searched for and created if not existing, the parent name and parent is the direct parent we may have just created
+        so what unique is saying is : ok we have the parent we want to add a name to : the question is do we search under that parent to find or create or under the top parent?
+        More specifically : if it is unique check for the name anywhere under the top parent to find it and then move it if necessary, if not unique then it could, for example, be another name called London
+        I think maybe the names of variables could be clearer here!, maybe look into on second pass
+        */
         while (parentName != null) {
             if (!unique) {
                 topParent = parent;
