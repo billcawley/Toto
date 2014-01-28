@@ -44,18 +44,33 @@ public final class NameService {
         loggedInConnection.getTotoMemoryDB().saveDataToMySQL();
     }
 
-    // when passed a name tries to find the last in the list e.g. london, ontario, canada gets canada
-    // TODO : ignore commas in quotes
+    // replaces commas in quotes (e.g. "shop", "location", "region with a , in it's name" should become "shop", "location", "region with a - in it's name")  with -, useful for parsing name lists
 
-    private String findParentFromList(final String name) {
-        if (!name.contains(",")) return null;
-        int nStartPos = name.indexOf("\"");
-        int commaPos = name.lastIndexOf(",");
-        if (nStartPos != -1 && nStartPos < commaPos) {
-            int nEndPos = name.indexOf("\"", nStartPos);
-            if (nEndPos < 0) return null;
-            return findParentFromList(name.substring(nEndPos + 1));
+    public String replaceCommasInQuotes(String s){
+        boolean inQuotes = false;
+        StringBuilder withoutCommasInQuotes = new StringBuilder();
+        char[] charactersString = s.toCharArray();
+        for (char c : charactersString){
+            if (c == '\"'){
+                inQuotes = !inQuotes;
+            }
+            if (c == ','){
+                withoutCommasInQuotes.append(inQuotes ? '-' : ',');
+            } else {
+                withoutCommasInQuotes.append(c);
+            }
         }
+        return withoutCommasInQuotes.toString();
+    }
+
+    // when passed a name tries to find the last in the list e.g. london, ontario, canada gets canada
+    private String findParentFromList(final String name) {
+        // ok preprocess to remove commas in quotes, easiest way.
+        String nameWithoutCommasInQuotes = replaceCommasInQuotes(name);
+        if (!nameWithoutCommasInQuotes.contains(",")) return null;
+        // get the position from the string with commas in quotes removed
+        int commaPos = nameWithoutCommasInQuotes.lastIndexOf(",");
+        // but return from the unmodified string
         return name.substring(commaPos + 1).trim();
     }
 
