@@ -45,14 +45,14 @@ public final class NameService {
     }
 
     // when passed a name tries to find the last in the list e.g. london, ontario, canada gets canada
-    // TODO : understand what the quote handling is doing
+    // TODO : ignore commas in quotes
 
     private String findParentFromList(final String name) {
         if (!name.contains(",")) return null;
         int nStartPos = name.indexOf("\"");
         int commaPos = name.lastIndexOf(",");
-        if (nStartPos >= 0 && nStartPos < commaPos) {
-            int nEndPos = name.indexOf("\"", nStartPos+1);
+        if (nStartPos != -1 && nStartPos < commaPos) {
+            int nEndPos = name.indexOf("\"", nStartPos);
             if (nEndPos < 0) return null;
             return findParentFromList(name.substring(nEndPos + 1));
         }
@@ -124,7 +124,8 @@ public final class NameService {
         // language effectively being the attribute name
         String language = loggedInConnection.getLanguage();
 
-
+        // so london, ontario, canada
+        // parent name would be canada
         String parentName = findParentFromList(name);
         if (parentName == null) {
             // just a simple name passed, no structure
@@ -134,8 +135,11 @@ public final class NameService {
         if (parent == null) { // parent was null, since we're just trying to find that stops us right here
             return null;
         }
+
+        // so chop off the name, lastindex of moves backwards from the index
+        // the reason for this is to deal with quotes, we could have said simply the substring take off the parent name length but we don't know about quotes or spaces after the comma
         String remainder = name.substring(0, name.lastIndexOf(",", name.length() - parentName.length()));
-        // remainder is the rest of the string, could be Ontario, Place
+        // remainder is the rest of the string, could be london, ontario, Canada was takenn off
         parentName = findParentFromList(remainder);
         // keep chopping away at the string until we find the closest parent we can
         while (parentName != null) {
@@ -146,6 +150,8 @@ public final class NameService {
             remainder = name.substring(0, remainder.lastIndexOf(",", name.length() - parentName.length()));
             parentName = findParentFromList(remainder);
         }
+        // the point of all of this is to be able to ask for a name with the nearest parent but we can't just try and get it from the string directly e.g. get me WHsmiths on High street
+        // we need to look from the top to distinguish high street in different towns
         return loggedInConnection.getTotoMemoryDB().getNameByAttribute(language, remainder, parent);
     }
 
@@ -574,6 +580,8 @@ public final class NameService {
 
 
     // TODO Edd try to understand
+    // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
+    // it's a list of values and operations
 
     private String shuntingYardAlgorithm(LoggedInConnection loggedInConnection, Name name) throws Exception {
 /*   TODO SORT OUT ACTION ON ERROR
@@ -736,11 +744,12 @@ public final class NameService {
                 }
                 boolean foundPeers = false;
                 int position = 0;
+                // only clear and re set if attributes passed!
                 if (!nameJsonRequest.attributes.isEmpty()){
                     name.clearAttributes(); // and just re set them below
                     for (String key : nameJsonRequest.attributes.keySet()) {
                         position++;
-                        if (!key.equalsIgnoreCase(PEERS)){
+                          if (!key.equalsIgnoreCase(PEERS)){
                             name.setAttributeWillBePersisted(key, nameJsonRequest.attributes.get(key));
                         }
                         if (key.equalsIgnoreCase(PEERS) || (position == nameJsonRequest.attributes.keySet().size() && !foundPeers)) { // the second means run this if we hit the end having not run it
@@ -785,7 +794,6 @@ public final class NameService {
                                     name.setPeersWillBePersisted(peers);
                                 }
                             }
-
                         }
                     }
                 }
