@@ -748,7 +748,7 @@ public final class NameService {
                     }
                 }
                 if (nameJsonRequest.oldParent > 0) {
-                    newParent = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.oldParent);
+                    oldParent = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.oldParent);
                     if (oldParent == null) {
                         return "error: old parent for id not found : " + nameJsonRequest.oldParent;
                     }
@@ -762,7 +762,7 @@ public final class NameService {
                 boolean foundPeers = false;
                 int position = 0;
                 // only clear and re set if attributes passed!
-                if (!nameJsonRequest.attributes.isEmpty()){
+                if (nameJsonRequest.attributes != null && !nameJsonRequest.attributes.isEmpty()){
                     name.clearAttributes(); // and just re set them below
                     for (String key : nameJsonRequest.attributes.keySet()) {
                         position++;
@@ -929,8 +929,11 @@ public final class NameService {
         if (name != null) {
             return "{\"names\":[" + getChildStructureFormattedForOutput(name) + "]}";
         } else {
-            ArrayList<Name> names = findContainingName(loggedInConnection, nameSearch);
-            if (names.size() == 0) {
+             ArrayList<Name> names = new ArrayList<Name>();
+             if (nameSearch.length() > 0){
+               names = findContainingName(loggedInConnection, nameSearch);
+             }
+             if (names.size() == 0) {
                 names = (ArrayList<Name>) findTopNames(loggedInConnection);
                 names = sortNames(names);
             }
