@@ -385,47 +385,40 @@ public final class ValueService {
 
     /*
 
-    ok the headings sent is what is passed from excel, goes via the controller and get row/column headings
-    It is in excel format and can be explicit rows e.g.
+    Ok, select a region of names in excel and paste and this function will build a multidimentional array of name objects from that paste
 
-    location 1   by container
-                 not by container
-    location 2   by container
-                 not by container
+    more specifically : the outermost list is of rows, the second list is each cell in that row and the final list is a list not a name
+    because there could be multiple names in a cell if the cell has something like container;children. Interpretnames is what does this
 
-    AND/OR
+hence
 
-    it can feature instructions
+seaports;children   container;children
 
-    seaports;children   container;children
-
-    which will be expanded into a whole bunch of stuff like the above using interpretname
-
-
+ for example returns a list of 1 as there's only 1 row passed, with a list of 2 as there's two cells in that row with lists of something like 90 and 3 names in the two cell list items
 
      */
 
 
-    public List<List<List<Name>>> interpretHeadings(final LoggedInConnection loggedInConnection, final String headingsSent) throws Exception {
+    public List<List<List<Name>>> createNameListsFromExcelRegion(final LoggedInConnection loggedInConnection, final String excelRegionPasted) throws Exception {
         int maxColCount = 1;
-        CsvReader headerReader = new CsvReader(new StringReader(headingsSent), '\t');
-        while (headerReader.readRecord()){
-            if (headerReader.getColumnCount() > maxColCount){
-                maxColCount = headerReader.getColumnCount();
+        CsvReader pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t');
+        while (pastedDataReader.readRecord()){
+            if (pastedDataReader.getColumnCount() > maxColCount){
+                maxColCount = pastedDataReader.getColumnCount();
             }
         }
-        final List<List<List<Name>>> headingNames = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
-        headerReader = new CsvReader(new StringReader(headingsSent), '\t'); // reset the CSV reader
-        while (headerReader.readRecord()) {
-            List<List<Name>> lineNames = new ArrayList<List<Name>>();
-            for (int column = 0; column < headerReader.getColumnCount(); column++){
-                String item = headerReader.get(column);
-                lineNames.add(nameService.interpretName(loggedInConnection, item));
+        final List<List<List<Name>>> nameLists = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
+        pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t'); // reset the CSV reader
+        while (pastedDataReader.readRecord()) {
+            List<List<Name>> row = new ArrayList<List<Name>>();
+            for (int column = 0; column < pastedDataReader.getColumnCount(); column++){
+                String cellString = pastedDataReader.get(column);
+                row.add(nameService.interpretName(loggedInConnection, cellString));
             }
-            while (lineNames.size() < maxColCount) lineNames.add(null);
-            headingNames.add(lineNames);
+            while (row.size() < maxColCount) row.add(null);
+            nameLists.add(row);
         }
-        return headingNames;
+        return nameLists;
     }
 
     private boolean blankCol(List<List<List<Name>>> headingLists, int i) {
@@ -529,13 +522,13 @@ public final class ValueService {
                   */
 
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        List<List<List<Name>>> rowHeadingLists = transposeHeadingLists(interpretHeadings(loggedInConnection, headingsSent));
+        List<List<List<Name>>> rowHeadingLists = transposeHeadingLists(createNameListsFromExcelRegion(loggedInConnection, headingsSent));
         loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
         return outputHeadings(loggedInConnection.getRowHeadings(region));
     }
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        List<List<List<Name>>> columnHeadingLists = interpretHeadings(loggedInConnection, headingsSent);
+        List<List<List<Name>>> columnHeadingLists = createNameListsFromExcelRegion(loggedInConnection, headingsSent);
         loggedInConnection.setColumnHeadings(region, expandHeadings(columnHeadingLists));
         return outputHeadings(transposeHeadings(loggedInConnection.getColumnHeadings(region)));
     }
