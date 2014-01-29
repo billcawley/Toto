@@ -218,7 +218,7 @@ public final class ValueService {
     There may be name references in there, by !nameid
     */
 
-    public double findValueForNames(final LoggedInConnection loggedInConnection, final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive) {
+    public double findValueForNames(final LoggedInConnection loggedInConnection, final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value>valuesFound) {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
         String calcString = "";
@@ -238,7 +238,7 @@ public final class ValueService {
         }
         // no reverse polish converted formula, just sum
         if (!hasCalc) {
-            return findSumForNamesIncludeChildren(names, locked, payAttentionToAdditive);
+              return findSumForNamesIncludeChildren(names, locked, payAttentionToAdditive, valuesFound);
         } else {
             // ok I think I know why an array was used, to easily reference the entry before
             double[] values = new double[20];//should be enough!!
@@ -274,7 +274,7 @@ public final class ValueService {
                         calcnames.add(name);
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
-                        values[valNo++] = findValueForNames(loggedInConnection, new HashSet<Name>(calcnames), locked, payAttentionToAdditive);
+                        values[valNo++] = findValueForNames(loggedInConnection, new HashSet<Name>(calcnames), locked, payAttentionToAdditive, valuesFound);
                         calcnames.remove(calcnames.size() - 1);
                     }
                 }
@@ -283,7 +283,7 @@ public final class ValueService {
         }
     }
 
-    public double findSumForNamesIncludeChildren(final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive) {
+      public double findSumForNamesIncludeChildren(final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound) {
         //System.out.println("findSumForNamesIncludeChildren");
         long start = System.nanoTime();
 
@@ -302,7 +302,11 @@ public final class ValueService {
         if (values.size() > 1) {
             locked.setValue(true);
         }
-        part2NanoCallTime += (System.nanoTime() - point);
+        if (valuesFound != null){
+            valuesFound.addAll(values);
+        }
+
+            part2NanoCallTime += (System.nanoTime() - point);
         totalNanoCallTime += (System.nanoTime() - start);
         numberOfTimesCalled++;
         return sumValue;
@@ -618,7 +622,7 @@ public final class ValueService {
                 thisRowNames.add(namesForThisCell);
                 MutableBoolean locked = new MutableBoolean(false); // we can pass a mutable boolean in and have the function set it
                 // TODO - peer additive check. If using peers and not additive, don't include children
-                sb.append(findValueForNames(loggedInConnection, namesForThisCell, locked, true)); // true = pay attention to names additive flag
+                sb.append(findValueForNames(loggedInConnection, namesForThisCell, locked, true, values)); // true = pay attention to names additive flag
                 if (locked.isTrue()) {
                     lockMapsb.append("LOCKED");
                 }
