@@ -4,14 +4,22 @@ import com.azquo.toto.admindao.UploadRecordDAO;
 import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.UploadRecord;
 import com.azquo.toto.memorydb.Name;
+import com.azquo.toto.memorydb.Provenance;
+import com.azquo.toto.memorydb.TotoMemoryDB;
 import com.csvreader.CsvReader;
 import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.apache.poi.ss.usermodel.Cell;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
@@ -364,8 +372,8 @@ public final class ImportService {
 
     private static String decode64(final InputStream data, final String fileName) {
 
-        String tempName = "";
-        try {
+         String tempName = "";
+         try{
 
             String fileSuffix = fileName.substring(fileName.length() - 4);
 
@@ -422,8 +430,8 @@ public final class ImportService {
             HSSFDataFormatter formatter = new HSSFDataFormatter();
             int sheetNo = 0;
 
-            HSSFSheet sheet = wb.getSheetAt(0);
-            while (sheet != null) {
+            while (sheetNo < wb.getNumberOfSheets()){
+                HSSFSheet sheet = wb.getSheetAt(sheetNo);
                 String fileType = sheet.getSheetName();
 
                 int rows; // No of rows
@@ -464,10 +472,10 @@ public final class ImportService {
                 }
                 bw.close();
                 InputStream uploadFile = new FileInputStream(tempName);
-                readPreparedFile(loggedInConnection, uploadFile, fileType, create);
-                sheet = wb.getSheetAt(++sheetNo);
-            }
-        } catch (Exception ioe) {
+                readPreparedFile(loggedInConnection,uploadFile,fileType,create);
+                sheetNo++;
+             }
+        } catch(Exception ioe) {
             ioe.printStackTrace();
         }
 
