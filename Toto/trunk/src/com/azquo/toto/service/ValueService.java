@@ -3,9 +3,11 @@ package com.azquo.toto.service;
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.Value;
+import com.csvreader.CsvReader;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.io.StringReader;
 import java.util.*;
 
 /**
@@ -381,50 +383,47 @@ public final class ValueService {
         return null;
     }
 
-    // TODO edd try to understand
+    /*
 
-    // should we be using CSV reader??
+    ok the headings sent is what is passed from excel, goes via the controller and get row/column headings
+    It is in excel format and can be explicit rows e.g.
+
+    location 1   by container
+                 not by container
+    location 2   by container
+                 not by container
+
+    AND/OR
+
+    it can feature instructions
+
+    seaports;children   container;children
+
+    which will be expanded into a whole bunch of stuff like the above using interpretname
+
+
+
+     */
+
 
     public List<List<List<Name>>> interpretHeadings(final LoggedInConnection loggedInConnection, final String headingsSent) throws Exception {
-
-        int maxx = 1;
-        int y = 0;
-        int pos = 0;
-        int lineend = (headingsSent + "\n").indexOf("\n", pos);
-        while (lineend > 0) {
-            int x = 1;
-            int tabPos = headingsSent.indexOf("\t", pos);
-            while (tabPos > 0 && tabPos < lineend) {
-                if (++x > maxx) maxx = x;
-                pos = tabPos + 1;
-                tabPos = headingsSent.indexOf("\t", pos);
+        int maxColCount = 1;
+        CsvReader headerReader = new CsvReader(new StringReader(headingsSent), '\t');
+        while (headerReader.readRecord()){
+            if (headerReader.getColumnCount() > maxColCount){
+                maxColCount = headerReader.getColumnCount();
             }
-            y++;
-            pos = lineend + 1;
-            lineend = (headingsSent + "\n").indexOf("\n", pos);
         }
-        pos = 0;
         final List<List<List<Name>>> headingNames = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
-        lineend = (headingsSent + "\n").indexOf("\n", pos);
-        while (lineend > 0) {
+        headerReader = new CsvReader(new StringReader(headingsSent), '\t'); // reset the CSV reader
+        while (headerReader.readRecord()) {
             List<List<Name>> lineNames = new ArrayList<List<Name>>();
-            int x = 0;
-            int tabPos = headingsSent.indexOf("\t", pos);
-            while (tabPos > 0 && tabPos < lineend) {
-                x++;
-                String item = headingsSent.substring(pos, tabPos);
+            for (int column = 0; column < headerReader.getColumnCount(); column++){
+                String item = headerReader.get(column);
                 lineNames.add(nameService.interpretName(loggedInConnection, item));
-                pos = tabPos + 1;
-                tabPos = headingsSent.indexOf("\t", pos);
             }
-            String item = headingsSent.substring(pos, lineend);
-            lineNames.add(nameService.interpretName(loggedInConnection, item));
-
-            while (++x < maxx) lineNames.add(null);
-            y++;
+            while (lineNames.size() < maxColCount) lineNames.add(null);
             headingNames.add(lineNames);
-            pos = lineend + 1;
-            lineend = (headingsSent + "\n").indexOf("\n", pos);
         }
         return headingNames;
     }
@@ -524,8 +523,10 @@ public final class ValueService {
         return output;
     }
 
-    //todo edd try to understand
-    // notable that these two are the same except one transposes before setting to the logged in connection and one does after
+    /*todo edd try to understand
+    notable that these two are the same except one transposes before setting to the logged in connection and one does after
+    no there is another difference one is transposing lists the other is not
+                  */
 
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<Name>>> rowHeadingLists = transposeHeadingLists(interpretHeadings(loggedInConnection, headingsSent));
