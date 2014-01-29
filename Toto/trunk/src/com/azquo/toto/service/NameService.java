@@ -25,6 +25,7 @@ public final class NameService {
     public static final String LEVEL = "level";
     public static final String FROM = "from";
     public static final String TO = "to";
+    public static final String COUNT = "count";
     public static final String SORTED = "sorted";
     public static final String CHILDREN = "children";
     public static final String LOWEST = "lowest";
@@ -499,14 +500,13 @@ public final class NameService {
 
     // to find a set of names, a few bits that were part of the original set of functions
 
-    // TODO add count
-
     public List<Name> interpretName(final LoggedInConnection loggedInConnection, final String instructions) throws Exception {
 
         final String levelString = getInstruction(instructions, LEVEL);
         final String fromString = getInstruction(instructions, FROM);
         final String childrenString = getInstruction(instructions, CHILDREN);
         final String toString = getInstruction(instructions, TO);
+        final String countString = getInstruction(instructions, COUNT);
 
         List<Name> names = new ArrayList<Name>();
         String nameString = instructions;
@@ -541,6 +541,7 @@ public final class NameService {
 
         int from = -1;
         int to = -1;
+        int count = -1;
         if (fromString != null) {
             try {
                 from = Integer.parseInt(fromString);
@@ -555,6 +556,16 @@ public final class NameService {
             }
 
         }
+
+        if (countString != null) {
+            try {
+                count = Integer.parseInt(countString);
+            } catch (NumberFormatException nfe) {
+
+                // should I actually throw an exception as count should really just work?
+            }
+        }
+
         if (from != -1 || to != -1) { // numeric, I won't allow mixed for the moment
             names = findChildrenFromTo(name, from, to);
         } else if (fromString != null || toString != null) {
@@ -567,19 +578,29 @@ public final class NameService {
                 names = findChildrenAtLevel(name, level);
             }
         }
+
+        // deal with count, easier to do this here than in the functions above. If there's a performance issue can move it later
+        if (count != -1 && names.size() > count){
+            names = names.subList(0, count);
+        }
+
         for (Name name2 : names) {
             shuntingYardAlgorithm(loggedInConnection, name2);
         }
         return names;
     }
 
-    // TODO Edd try to understand  - a number or a pointer to a name?
+    // ok it seems the name is passed purely for debugging purposes
+    // called from shuntingyardalgorithm 3 times, think not on operations
+    // it seems the term can be one of two things, a double value or a name.
+    // first tries to parse the double value and then returns it with a space, just confirming what
+    // otherwise it tries to find by name and if it finds it jams in the name ID after NAMEMARKER
+    // but NAMEMARKER is only used here so what's going on there??
 
     private String interpretTerm(final LoggedInConnection loggedInConnection, final Name name, final String term) {
 
 
         if (term.startsWith(NAMEMARKER)) return term + " ";
-        Name nameFound = findByName(loggedInConnection, term);
         try {
             double d = Double.parseDouble(term);
             return d + " ";
@@ -587,6 +608,7 @@ public final class NameService {
 
         }
 
+        Name nameFound = findByName(loggedInConnection, term);
         if (nameFound == null) {
             return "error: formula for " + name.getDefaultDisplayName() + " not understood: " + term;
         }

@@ -3,6 +3,7 @@ package com.azquo.toto.service;
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Provenance;
 import com.azquo.toto.memorydb.Value;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
@@ -211,14 +212,18 @@ public final class ValueService {
     long part2NanoCallTime = 0;
     int numberOfTimesCalled = 0;
 
-    // RPCALC will have been set by the shunting yard algorithm earlier
-    // TODO : Edd try to understand, have neatened the code a little though
+    /* RPCALC will have been set by the shunting yard algorithm earlier
+    names referenced as id to stop operators in names
+    RPcalc will be a list of values and operations e.g. 5*(2+3) converted to 5.0 2.1 + 3.0 * !76 +
+    There may be name references in there, by !nameid
+    */
 
-    public double findValueForNames(final LoggedInConnection loggedInConnection, final Set<Name> names, final boolean[] locklist, final boolean payAttentionToAdditive) {
+    public double findValueForNames(final LoggedInConnection loggedInConnection, final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive) {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
         String calcString = "";
         boolean hasCalc = false;
+        // add all names to calcnames except the the one with RPCALC
         for (Name name : names) {
             if (!hasCalc) {
                 calcString = name.getAttribute("RPCALC");
@@ -231,16 +236,16 @@ public final class ValueService {
                 calcnames.add(name);
             }
         }
+        // no reverse polish converted formula, just sum
         if (!hasCalc) {
-            return findSumForNamesIncludeChildren(names, locklist, payAttentionToAdditive);
+            return findSumForNamesIncludeChildren(names, locked, payAttentionToAdditive);
         } else {
+            // ok I think I know why an array was used, to easily reference the entry before
             double[] values = new double[20];//should be enough!!
             int valNo = 0;
-            int pos = 0;
-            while (pos < calcString.length()) {
-                int spacepos = (calcString + " ").indexOf(" ", pos);
-                String term = calcString.substring(pos, spacepos);
-                pos = spacepos + 1;
+            StringTokenizer st = new StringTokenizer(calcString, " ");
+            while (st.hasMoreTokens()) {
+                String term = st.nextToken();
                 double calcedVal = 0.0;
                 if (term.length() == 1) { // operation
                     valNo--;
@@ -256,26 +261,29 @@ public final class ValueService {
                     } else {
                         values[valNo - 1] /= values[valNo];
                     }
-                } else {
+                } else { // a value, not in the Azquo sense, a number or reference to a name
                     try {
+                        // try to parse the value, if it parses then add it to wherever we are in the values array and increment the pointer.
                         calcedVal = Double.parseDouble(term);
                         values[valNo++] = calcedVal;
                     } catch (Exception e) {
+                        // we assume it's a name id
                         int id = Integer.parseInt(term.substring(1));
+                        // so get the name and add it to the other names
                         Name name = nameService.findById(loggedInConnection, id);
                         calcnames.add(name);
+                        // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
-                        values[valNo++] = findSumForNamesIncludeChildren(new HashSet<Name>(calcnames), locklist, payAttentionToAdditive);
+                        values[valNo++] = findValueForNames(loggedInConnection, new HashSet<Name>(calcnames), locked, payAttentionToAdditive);
                         calcnames.remove(calcnames.size() - 1);
                     }
                 }
-                pos = spacepos + 1;
             }
             return values[0];
         }
     }
 
-    public double findSumForNamesIncludeChildren(final Set<Name> names, final boolean[] locklist, final boolean payAttentionToAdditive) {
+    public double findSumForNamesIncludeChildren(final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive) {
         //System.out.println("findSumForNamesIncludeChildren");
         long start = System.nanoTime();
 
@@ -292,7 +300,7 @@ public final class ValueService {
             }
         }
         if (values.size() > 1) {
-            locklist[0] = true;
+            locked.setValue(true);
         }
         part2NanoCallTime += (System.nanoTime() - point);
         totalNanoCallTime += (System.nanoTime() - start);
@@ -513,6 +521,7 @@ public final class ValueService {
     }
 
     //todo edd try to understand
+    // notable that these two are the same except one transposes before setting to the logged in connection and one does after
 
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<Name>>> rowHeadingLists = transposeHeadingLists(interpretHeadings(loggedInConnection, headingsSent));
@@ -521,7 +530,7 @@ public final class ValueService {
     }
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        List<List<List<Name>>> columnHeadingLists = (interpretHeadings(loggedInConnection, headingsSent));
+        List<List<List<Name>>> columnHeadingLists = interpretHeadings(loggedInConnection, headingsSent);
         loggedInConnection.setColumnHeadings(region, expandHeadings(columnHeadingLists));
         return outputHeadings(transposeHeadings(loggedInConnection.getColumnHeadings(region)));
     }
@@ -607,11 +616,10 @@ public final class ValueService {
                 List<Value> values = new ArrayList<Value>();
                 thisRowValues.add(values);
                 thisRowNames.add(namesForThisCell);
-                boolean[] locklist = new boolean[1]; // needs an array so that the function can set it
-                locklist[0] = false;
+                MutableBoolean locked = new MutableBoolean(false); // we can pass a mutable boolean in and have the function set it
                 // TODO - peer additive check. If using peers and not additive, don't include children
-                sb.append(findValueForNames(loggedInConnection, namesForThisCell, locklist, true)); // true = pay attention to names additive flag
-                if (locklist[0]) {
+                sb.append(findValueForNames(loggedInConnection, namesForThisCell, locked, true)); // true = pay attention to names additive flag
+                if (locked.isTrue()) {
                     lockMapsb.append("LOCKED");
                 }
                 // if it's 1 then saving is easy, overwrite the old value. If not then since it's valid peer set I guess we add the new value?
