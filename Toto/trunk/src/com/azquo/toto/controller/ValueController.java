@@ -133,33 +133,31 @@ public class ValueController {
                         for (String locked : lockMapReader.getValues()) {
                             //System.out.println("on " + columnCounter + ", " + rowCounter + " locked : " + locked);
                             // and here we get to the crux, the values do NOT match
-                            if (!originalValues[columnCounter].trim().equals(editedValues[columnCounter])) {
+                            // ok assign these two then deal with doubvle formatting stuff that can trip things up
+                            String orig = originalValues[columnCounter].trim();
+                            String edited = editedValues[columnCounter].trim();
+                            if (orig.endsWith(".0")){
+                                orig = orig.substring(0, orig.length() - 2);
+                            }
+                            if (edited.endsWith(".0")){
+                                edited = edited.substring(0, edited.length() - 2);
+                            }
+                            if (!orig.equals(edited)) {
                                 if (!locked.equalsIgnoreCase("locked")) { // it wasn't locked, good to go, check inside the different values bit to error if the excel tries something it should not
-                                   // check for same values differently expressed (e.g. 0.0 and 0)
-                                    Double oldVal = 0.0;
-                                    Double newVal = 0.0;
-                                    try{
-                                        oldVal = Double.parseDouble(originalValues[columnCounter].trim());
-                                        newVal = Double.parseDouble(editedValues[columnCounter]);
-                                    }catch (Exception e){
+                                    System.out.println(columnCounter + ", " + rowCounter + " not locked and modified");
+                                    System.out.println(orig + "|" + edited + "|");
 
-                                    }
-                                    if (oldVal == 0.0 || oldVal != newVal){
-                                        System.out.println(columnCounter + ", " + rowCounter + " not locked and modified");
-                                        System.out.println(originalValues[columnCounter].trim() + "|" + editedValues[columnCounter] + "|");
-
-                                        final List<Value> valuesForCell = rowValues.get(columnCounter);
-                                        final Set<Name> namesForCell = rowNames.get(columnCounter);
-                                        // one thing about these store functions to the value service, they expect the provenance on the logged in connection to be appropriate
-                                        if (valuesForCell.size() == 1) {
-                                            final Value theValue = valuesForCell.get(0);
-                                            System.out.println("trying to overwrite");
-                                            valueService.overWriteExistingValue(loggedInConnection, theValue, editedValues[columnCounter]);
-                                            numberOfValuesModified++;
-                                        } else if (valuesForCell.isEmpty()) {
-                                            System.out.println("storing new value here . . .");
-                                            valueService.storeNewValueFromEdit(loggedInConnection, namesForCell, editedValues[columnCounter]);
-                                        }
+                                    final List<Value> valuesForCell = rowValues.get(columnCounter);
+                                    final Set<Name> namesForCell = rowNames.get(columnCounter);
+                                    // one thing about these store functions to the value service, they expect the provenance on the logged in connection to be appropriate
+                                    if (valuesForCell.size() == 1) {
+                                        final Value theValue = valuesForCell.get(0);
+                                        System.out.println("trying to overwrite");
+                                        valueService.overWriteExistingValue(loggedInConnection, theValue, edited);
+                                        numberOfValuesModified++;
+                                    } else if (valuesForCell.isEmpty()) {
+                                        System.out.println("storing new value here . . .");
+                                        valueService.storeNewValueFromEdit(loggedInConnection, namesForCell, edited);
                                     }
                                 } else {
                                     // should this add on for a list???
