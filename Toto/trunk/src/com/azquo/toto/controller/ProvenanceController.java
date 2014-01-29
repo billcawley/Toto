@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -75,6 +78,7 @@ public class ProvenanceController {
             if (searchNames != null && searchNames.length() > 0) {
                 final Set<Name> names = nameService.decodeString(loggedInConnection, searchNames);
                 if (!names.isEmpty()) {
+
                     if (names.size() == 1) {
                         return formatProvenanceForOutput(names.iterator().next().getProvenance(), jsonFunction);
                     } else {
@@ -102,15 +106,18 @@ public class ProvenanceController {
                 if (dataValueMap != null) {
                     if (dataValueMap.get(rowInt) != null) {
                         final List<List<Value>> rowValues = dataValueMap.get(rowInt);
+
                         if (rowValues.get(colInt) != null) {
                             final List<Value> valuesForCell = rowValues.get(colInt);
-                            if (valuesForCell.size() == 1) {
-                                return formatProvenanceForOutput(valuesForCell.get(0).getProvenance(), jsonFunction);
-                            }
-                            // TODO : deal with provanence on a cell where there were mulitple values to make that cell's value
+                            final Set<Name> originalCellNames = new HashSet<Name>();
+                            //Need to find the difference between this value and the visible value.  First find the visible names on the cell
+                            originalCellNames.addAll(loggedInConnection.getContext(region));
+                            originalCellNames.addAll(loggedInConnection.getRowHeadings(region).get(rowInt));
+                            originalCellNames.addAll(loggedInConnection.getColumnHeadings(region).get(colInt));
+                            Set<Name> specialForProvenance = new HashSet<Name>();
 
-                            // TODO : the cell was made from no values? error or message
-                            return "error: no values and hence provenance for : " + col + ", " + row;
+
+                            return formatCellProvenanceForOutput(originalCellNames, valuesForCell, jsonFunction);
                         } else {
                             return "error: col out of range : " + col;
                         }
@@ -129,12 +136,50 @@ public class ProvenanceController {
         return "no action taken";
     }
 
+    private Set<Name> listDiff(Set<Name> list1, Set <Name> list2){
+        Set<Name> diff = new HashSet<Name>();
+        diff.addAll(list1);
+        diff.removeAll(list2);
+        return diff;
+    }
+
+    public String formatCellProvenanceForOutput(Set <Name> origNames, List<Value> values, String jsonFunction){
+
+        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
+        String output = "{provenance:[";
+        int count = 0;
+        for (Value value:values){
+            Provenance provenance = value.getProvenance();
+            if (count++ > 0) output +=",";
+              Set<Name> diffNames = new HashSet<Name>();
+              diffNames.addAll(listDiff(value.getNames(), origNames));
+              output += "{\"value\":\"" + value.getText() + "\",\"names\":[";
+              int nameCount = 0;
+              for (Name name:diffNames){
+                if (nameCount++ > 0) output += ",";
+                output +="\"" + name.getDefaultDisplayName() + "\"";
+              }
+              output +=  "],\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + df.format(provenance.getTimeStamp()) + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}";
+        }
+        output += "]}";
+        if (jsonFunction != null && jsonFunction.length() > 0){
+            return jsonFunction + "(" + output + ")";
+        }else{
+            return output;
+        }
+
+
+
+    }
+
+
     public String formatProvenanceForOutput(Provenance provenance, String jsonFunction){
 
            String output;
            if (provenance == null){
                 output = "{provenance:{\"who\":\"no provenance\"}}";
             }else{
+                String user = provenance.getUser();
                 output = "{\"provenance\":{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}}";
             }
            if (jsonFunction != null && jsonFunction.length() > 0){
