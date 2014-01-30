@@ -330,36 +330,6 @@ public final class ValueService {
         return toReturn;
     }
 
-    // ok I see, switching the lists around, the following function does the same but the objects at the end aren't lists of names, they're just names
-    // should this be for sets at the end? Suppose it's just headings, there should be duplicates, there's no data restriction
-    // TODO : edd try to understand properly
-
-    public List<List<List<Name>>> transposeHeadingLists(final List<List<List<Name>>> headingLists) {
-        final List<List<List<Name>>> flipped = new ArrayList<List<List<Name>>>();
-        final int N = headingLists.get(0).size();
-        for (int i = 0; i < N; i++) {
-            List<List<Name>> col = new ArrayList<List<Name>>();
-            for (List<List<Name>> row : headingLists) {
-                col.add(row.get(i));
-            }
-            flipped.add(col);
-        }
-        return flipped;
-    }
-
-    public List<List<Name>> transposeHeadings(final List<List<Name>> headings) {
-        final List<List<Name>> flipped = new ArrayList<List<Name>>();
-        final int N = headings.get(0).size();
-        for (int i = 0; i < N; i++) {
-            List<Name> col = new ArrayList<Name>();
-            for (List<Name> row : headings) {
-                col.add(row.get(i));
-            }
-            flipped.add(col);
-        }
-        return flipped;
-    }
-
     public String outputHeadings(final List<List<Name>> headings) {
         final StringBuilder sb = new StringBuilder();
         List<Name> lastxNames = null;
@@ -518,11 +488,11 @@ seaports;children   container;children
 
     /*todo edd try to understand
     notable that these two are the same except one transposes before setting to the logged in connection and one does after
-    no there is another difference one is transposing lists the other is not
+    one is transposing lists the other is not, based on whether the transposing happens before or after expand headings
                   */
 
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        List<List<List<Name>>> rowHeadingLists = transposeHeadingLists(createNameListsFromExcelRegion(loggedInConnection, headingsSent));
+        List<List<List<Name>>> rowHeadingLists = transpose2DList(createNameListsFromExcelRegion(loggedInConnection, headingsSent));
         loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
         return outputHeadings(loggedInConnection.getRowHeadings(region));
     }
@@ -530,7 +500,32 @@ seaports;children   container;children
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<Name>>> columnHeadingLists = createNameListsFromExcelRegion(loggedInConnection, headingsSent);
         loggedInConnection.setColumnHeadings(region, expandHeadings(columnHeadingLists));
-        return outputHeadings(transposeHeadings(loggedInConnection.getColumnHeadings(region)));
+        return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)));
+    }
+
+    /*
+
+    OK, having generified the function we should only need one function. The list could be anything, names, list of names, hashmaps whatever
+    generics ensure that the return type will match the sent type
+    now rather similar to the stacktrace example :)
+
+    Variable names assume first list is of columns and the second is each column. Right then down.
+    So the size of the first list is the xsize (number of columns/row width) and the size of the nested list the ysize (number of rows/column height)
+
+    */
+
+    public <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
+        final List<List<T>> flipped = new ArrayList<List<T>>();
+        final int oldYMax = source2Dlist.get(0).size(); // size of nested list, as described above
+        for (int newX = 0; newX < oldYMax; newX++) {
+            List<T> newColumn = new ArrayList<T>(); // make a new column
+            for (List<T> oldColumn : source2Dlist) { // and step across each of the old columns
+                newColumn.add(oldColumn.get(newX));//so as we're moving down the new column we're moving right across the old ones
+                // the transposing is happening as a list which represents a column would typically be accessed by a y value but instead it's being accessed by an x value
+            }
+            flipped.add(newColumn);
+        }
+        return flipped;
     }
 
 
