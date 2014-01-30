@@ -53,7 +53,7 @@ public class AdminController {
 
         if (op.equalsIgnoreCase(SIGNON)) {
             if (key != null && key.length() > 0 && businessName != null && businessName.length() > 0) {
-                return adminService.confirmKey(businessName, key) + "";
+                return adminService.confirmKey(businessName, email, password, key) + "";
             } else if (email != null && email.length() > 0 && userName != null && userName.length() > 0 && businessName != null && businessName.length() > 0 && password != null && password.length() > 0) {
                 return adminService.registerBusiness(email, businessName, password, businessName, address1 != null ? address1 : "", address2 != null ? address2 : "",
                         address3 != null ? address3 : "", address4 != null ? address4 : "", postcode != null ? postcode : "", telephone != null ? telephone : "");
