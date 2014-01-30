@@ -509,21 +509,24 @@ seaports;children   container;children
     generics ensure that the return type will match the sent type
     now rather similar to the stacktrace example :)
 
-    Variable names assume first list is of columns and the second is each column. Right then down.
-    So the size of the first list is the xsize (number of columns/row width) and the size of the nested list the ysize (number of rows/column height)
+    Variable names assume first list is of rows and the second is each row. down then across.
+    So the size of the first list is the ysize (number of rows) and the size of the nested list the xsize (number of columns)
+    I'm going to model it that way round as when reading data from excel that's the default (we go line by line through each row, that's how the data is delivered), the rows is the outside list
+    of course could reverse all descriptions and teh function could still work
 
     */
 
     public <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
         final List<List<T>> flipped = new ArrayList<List<T>>();
-        final int oldYMax = source2Dlist.get(0).size(); // size of nested list, as described above
-        for (int newX = 0; newX < oldYMax; newX++) {
-            List<T> newColumn = new ArrayList<T>(); // make a new column
-            for (List<T> oldColumn : source2Dlist) { // and step across each of the old columns
-                newColumn.add(oldColumn.get(newX));//so as we're moving down the new column we're moving right across the old ones
-                // the transposing is happening as a list which represents a column would typically be accessed by a y value but instead it's being accessed by an x value
+        final int oldXMax = source2Dlist.get(0).size(); // size of nested list, as described above (that is to say get the length of one row)
+        for (int newY = 0; newY < oldXMax; newY++) {
+            List<T> newRow = new ArrayList<T>(); // make a new row
+            for (List<T> oldRow : source2Dlist) { // and step down each of the old rows
+                newRow.add(oldRow.get(newY));//so as we're moving across the new row we're moving down the old rows on a fixed column
+                // the transposing is happening as a list which represents a row would typically be accessed by an x value but instead it's being accessed by an y value
+                // in this loop the row being read from changes but the cell in that row does not
             }
-            flipped.add(newColumn);
+            flipped.add(newRow);
         }
         return flipped;
     }
