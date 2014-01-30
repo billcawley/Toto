@@ -530,12 +530,14 @@ seaports;children   container;children
     }
 
     // todo edd understand
+    // is the column blank except the bottom row?
 
-    private boolean blankCol(List<List<List<Name>>> headingLists, int i) {
-        int N = headingLists.size();
-        if (N == 1) return false;
-        for (int j = 0; j < N - 1; j++) {
-            if (headingLists.get(j).get(i) != null) return false;
+    private boolean blankCol(List<List<List<Name>>> headingLists, int columnIndex) {
+        int numberOfRows = headingLists.size(); // number of rows
+        if (numberOfRows == 1) return false; // if one row return false because there's no rows to check
+        // check all rows except the bottom row
+        for (int rowIndex = 0; rowIndex < numberOfRows - 1; rowIndex++) {
+            if (headingLists.get(rowIndex).get(columnIndex) != null) return false; // if we find anything in that column it's not blank
 
         }
         return true;
