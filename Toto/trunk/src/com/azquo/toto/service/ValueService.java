@@ -391,18 +391,8 @@ seaports;children   container;children
         return nameLists;
     }
 
-    private boolean blankCol(List<List<List<Name>>> headingLists, int i) {
-        int N = headingLists.size();
-        if (N == 1) return false;
-        for (int j = 0; j < N - 1; j++) {
-            if (headingLists.get(j).get(i) != null) return false;
-
-        }
-        return true;
-    }
-
     /* ok we're passed a list of lists
-    what is returned is a list of lists where featuring every possible variation I think
+    what is returned is a 2d array (also a list of lists) featuring every possible variation in order
     so if the initial lists passed were
     A,B
     1,2,3,4
@@ -432,7 +422,8 @@ seaports;children   container;children
 
     etc.
 
-    Row/column reference below is based off the above example
+    Row/column reference below is based off the above example - in toReturn the index of the outside list is y and the the inside list x
+
     */
 
     public <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
@@ -489,11 +480,27 @@ seaports;children   container;children
     }
 
     // TODO again edd understand
+    /*
+
+    This is called after the names are loaded by createNameListsFromExcelRegion. in the case of rows it is transposed first.
+
+    Therefore we expect the 2d array to be set up for column headings, the top of the excel sheet
+
+    The dynamic name calls e.g. Seaports; children; have their lists populated but they have not been expanded out into the 2d set itself
+
+    That is what this does. Following the convention of down then right as in outer list os the rows and teh inner the cells in teh rows
+    one would not expect the outer list to be bigger than 3 or 4 though the inner list may be more, 20-30 or more in the case that the user has specified many column or row headings manually
+
+
+
+     */
 
 
     public List<List<Name>> expandHeadings(final List<List<List<Name>>> headingLists) {
           /*
-          e.g.                      null    1,2,3,         null     4,5
+
+
+          e.g.                      null    1,2,3         null     4,5
                                      a        b     c,d,e   f        g   h
                           this should expand to
                                     null   1  1  1  1  1  2  2  2   2  2  3  3   3   3   3  4  4   5   5
@@ -504,22 +511,36 @@ seaports;children   container;children
 
         //Note that this routine transposes the list while expanding!
         List<List<Name>> output = new ArrayList<List<Name>>();
-        final int rowCount = headingLists.size() - 1;
-        final int N = headingLists.get(0).size();
-        for (int i = 0; i < N; i++) {
+        final int lastRowIndex = headingLists.size() - 1;
+        final int rowLength = headingLists.get(0).size(); // the size of the first row
+        for (int columnIndex = 0; columnIndex < rowLength; columnIndex++) {
             List<List<Name>> col = new ArrayList<List<Name>>();
 
-            for (List<List<Name>> row : headingLists) {
-                col.add(row.get(i));
+            for (List<List<Name>> row : headingLists) { // go down each row adding to a column object
+                col.add(row.get(columnIndex));
             }
-            while (i < N && blankCol(headingLists, i)) {
-                col.get(rowCount).addAll(headingLists.get(rowCount).get(++i));
+            // ok so while the column index is less than the row length and there's more than one row and
+            while (columnIndex < rowLength && blankCol(headingLists, columnIndex)) {
+                col.get(lastRowIndex).addAll(headingLists.get(lastRowIndex).get(++columnIndex));
             }
             List<List<Name>> permuted = get2DPermutationOfLists(col);
             output.addAll(permuted);
         }
         return output;
     }
+
+    // todo edd understand
+
+    private boolean blankCol(List<List<List<Name>>> headingLists, int i) {
+        int N = headingLists.size();
+        if (N == 1) return false;
+        for (int j = 0; j < N - 1; j++) {
+            if (headingLists.get(j).get(i) != null) return false;
+
+        }
+        return true;
+    }
+
 
     /*todo edd try to understand
     notable that these two are the same except one transposes before setting to the logged in connection and one does after
