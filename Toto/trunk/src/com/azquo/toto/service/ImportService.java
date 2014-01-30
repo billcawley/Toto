@@ -111,6 +111,8 @@ public final class ImportService {
         // then we find or create each header as a name in the database. If the name has peers it's added to the nameimportheading map, a way to find the header for that name with peers
         // namesWithPeersHeaderMap is a map of the names which have peers, colums headed by such names will have the value in them, hence why we need to hold the header so we cna get the value
         final HashMap<Name, String> namesWithPeersHeaderMap = new HashMap<Name, String>();
+        final HashMap<Name, Integer> headings = new HashMap<Name, Integer>();
+        int col = 0;
         for (String header : headers) {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 final String result = nameService.setPeersForImportHeading(loggedInConnection, header + strCreate);
@@ -123,6 +125,8 @@ public final class ImportService {
                 if (name.getPeers().size() > 0) {
                     namesWithPeersHeaderMap.put(name, header);
                 }
+                headings.put(name,col);
+                col++;
             }
         }
 
@@ -142,7 +146,7 @@ public final class ImportService {
                 final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
                 namesForValue.add(headerName); // the one at the top of this column, the name with peers.
                 for (Name peer : headerName.getPeers().keySet()) { // go looking for the peers
-                    final String peerVal = csvReader.get(peer.getDefaultDisplayName());
+                    final String peerVal = csvReader.get(headings.get(peer));
                     if (peerVal == null || peerVal.length() == 0) { // the file specified
                         throw new Exception("unable to find " + peer.getDefaultDisplayName() + " for " + headerName.getDefaultDisplayName());
                     } else {
@@ -463,7 +467,18 @@ public final class ImportService {
                             cell = row.getCell((short) c);
                             if (colCount++ > 0) bw.write('\t');
                             if (cell != null) {
-                                bw.write(formatter.formatCellValue(cell));
+                                String cellFormat = formatter.formatCellValue(cell);
+                                //Integers seem to have '.0' appended, so this is a manual chop.  It might cause problems if someone wanted to import a version '1.0'
+                                try {
+                                    double d = Double.parseDouble(cellFormat);
+                                    if (cellFormat.endsWith(".0")){
+                                        cellFormat = cellFormat.substring(0,cellFormat.length() - 2);
+                                    }
+                                }catch(Exception e){
+                                    //don't chop if this is not a number
+                                }
+
+                                bw.write(cellFormat);
                                 // Your code here
                             }
                         }
