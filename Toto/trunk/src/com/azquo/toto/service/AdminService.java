@@ -40,6 +40,9 @@ public class AdminService {
     private AzquoMailer azquoMailer;
     @Autowired
     private MemoryDBManager memoryDBManager;
+    @Autowired
+    private LoginService loginService;
+
 
     public String registerBusiness(final String email, final String userName, final String password, final String businessName, final String address1
             , final String address2, final String address3, final String address4, final String postcode, final String telephone) {
@@ -61,7 +64,7 @@ public class AdminService {
         return "true";
     }
 
-    public boolean confirmKey(final String businessName, final String key) {
+    public String confirmKey(final String businessName, final String email, final String password, final String key) {
         final Business business = businessDao.findByName(businessName);
         if (business != null && business.getBusinessDetails().validationKey.equals(key)) {
             business.setEndDate(new Date(130, 1, 1));
@@ -70,9 +73,13 @@ public class AdminService {
             user.setEndDate(new Date(130, 1, 1));
             user.setStatus(User.STATUS_ADMINISTRATOR);
             userDao.store(user);
-            return true;
+            LoggedInConnection loggedInConnection = loginService.login("unknown", email, password, 0);
+            if (loggedInConnection == null) {
+                return "error:no connection id";
+            }
+            return loggedInConnection.getConnectionId();
         }
-        return false;
+        return "error:  incorrect key";
     }
 
     public String getSQLDatabaseName(final LoggedInConnection loggedInConnection, final String databaseName) {
