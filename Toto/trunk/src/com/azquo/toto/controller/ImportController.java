@@ -103,25 +103,27 @@ public class ImportController {
             StringTokenizer st = new StringTokenizer(parameters, "&");
             while (st.hasMoreTokens()) {
                 String parameter = st.nextToken();
-                StringTokenizer st2 = new StringTokenizer(parameter, "=");
-                String parameterName = st2.nextToken();
-                if (parameterName.equals("connectionid")) {
-                    loggedInConnection = loginService.getConnection(st2.nextToken());
-                }
-                if (parameterName.equals("filename")) {
-                    fileName = st2.nextToken();
-                }
-                if (parameterName.equals("filetype")) {
-                    fileType = st2.nextToken();
-                }
-                if (parameterName.equals("language")) {
-                    language = st2.nextToken();
-                }
-                if (parameterName.equals("separator")) {
-                    separator = st2.nextToken();
-                }
-                if (parameterName.equals("create")) {
-                    create = st2.nextToken();
+                if (!parameter.endsWith("=")){
+                    StringTokenizer st2 = new StringTokenizer(parameter, "=");
+                    String parameterName = st2.nextToken();
+                    if (parameterName.equals("connectionid")) {
+                        loggedInConnection = loginService.getConnection(st2.nextToken());
+                    }
+                    if (parameterName.equals("filename")) {
+                        fileName = st2.nextToken();
+                    }
+                    if (parameterName.equals("filetype")) {
+                        fileType = st2.nextToken();
+                    }
+                    if (parameterName.equals("language")) {
+                       language = st2.nextToken();
+                    }
+                    if (parameterName.equals("separator")) {
+                        separator = st2.nextToken();
+                    }
+                    if (parameterName.equals("create")) {
+                        create = st2.nextToken();
+                    }
                 }
             }
 
@@ -132,6 +134,9 @@ public class ImportController {
             item = (FileItem) it.next();
             InputStream uploadFile = item.getInputStream();
             origLanguage = loggedInConnection.getLanguage();
+            if (language==null || language.length()==0 || language.equalsIgnoreCase("name")){
+                language="DEFAULT_DISPLAY_NAME";
+            }
             loggedInConnection.setLanguage(language);
 
             result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, separator, create);
