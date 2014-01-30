@@ -100,6 +100,10 @@ public class AdminService {
             mySQLDatabaseManager.createNewDatabase(mysqlName);
             databaseDao.store(database);
             memoryDBManager.updateMemoryDBMap();
+            if (loggedInConnection.getTotoMemoryDB() == null){ // creating their first db I guess?
+                loggedInConnection.setTotoMemoryDB(memoryDBManager.getTotoMemoryDB(database));
+            }
+
             return true;
 
         }
