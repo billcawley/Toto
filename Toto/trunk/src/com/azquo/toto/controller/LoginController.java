@@ -26,13 +26,16 @@ public class LoginController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "database", required = false) final String database,
+    public String handleRequest(@RequestParam(value = "database", required = false)  String database,
                                 @RequestParam(value = "useremail", required = false) final String userEmail,
                                 @RequestParam(value = "password", required = false) final String password,
                                 @RequestParam(value = "timeout", required = false) final String timeout,
                                 @RequestParam(value = "checkconnectionid", required = false) final String checkConnectionId) throws Exception {
 
-        if (database != null && database.length() > 0 && userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
+        if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
+            if (database == null || database.length()== 0){
+                database="unknown";
+            }
             int minutesTimeout = 0;
             if (timeout != null && timeout.length() > 0) {
                 try {
