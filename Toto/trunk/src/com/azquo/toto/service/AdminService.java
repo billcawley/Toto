@@ -133,7 +133,7 @@ public class AdminService {
     v.setPassword(PasswordUtils.encrypt(password, salt)); // new better encryption . . .*/
 
 
-    public static String encrypt(final String password, String salt) {
+    public String encrypt(final String password, String salt) {
         try {
             // WARNING! DO NOT MODIFY THE reference to "scapbadopbebedop"  bit in the code below or it will stop working! This is the extra bit on the salt or the number of hash cycles! stay at 3296
             salt += "scapbadopbebedop";
@@ -157,7 +157,7 @@ public class AdminService {
         return "fail . . .";
     }
 
-    public static String shaHash(final String toHash) {   // for making a password salt
+    public String shaHash(final String toHash) {   // for making a password salt
         try {
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1");
             byte[] hash = md.digest(toHash.getBytes());

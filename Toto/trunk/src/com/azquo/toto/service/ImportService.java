@@ -370,7 +370,7 @@ public final class ImportService {
     }
 
 
-    private static String decode64(final InputStream data, final String fileName) {
+    private String decode64(final InputStream data, final String fileName) {
 
          String tempName = "";
          try{

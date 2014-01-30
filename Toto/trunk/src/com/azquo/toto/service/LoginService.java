@@ -33,6 +33,8 @@ public class LoginService {
     private AccessDAO accessDao;
     @Autowired
     private DatabaseDAO databaseDao;
+    @Autowired
+    private AdminService adminService;
 
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
 
@@ -47,7 +49,7 @@ public class LoginService {
 
         User user = userDao.findByEmail(userEmail);
         if (user != null) {
-            if (AdminService.encrypt(password, user.getSalt()).equals(user.getPassword())) {
+            if (adminService.encrypt(password, user.getSalt()).equals(user.getPassword())) {
                 // ok user should be ok :)
                 final List<Access> userAccess = accessDao.findForUserId(user.getId());
                 final Map<String, Database> okDatabases = new HashMap<String, Database>();

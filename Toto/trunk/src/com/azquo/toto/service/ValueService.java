@@ -401,57 +401,92 @@ seaports;children   container;children
         return true;
     }
 
-    // Called by expand headings, need to get my head round this
-    // TODO edd understand
+    /* ok we're passed a list of lists
+    what is returned is a list of lists where featuring every possible variation I think
+    so if the initial lists passed were
+    A,B
+    1,2,3,4
+    One, Two, Three
 
-    private List<List<Name>> permuteRowList(final List<List<Name>> collist) {
+    The returned list will be the size of each passed list multiplied together (on that case 2*4*3 so 24)
+    and each entry on that list will be the size of the number of passed lists, in this case 3
+    so
+
+    A, 1, ONE
+    A, 1, TWO
+    A, 1, THREE
+    A, 2, ONE
+    A, 2, TWO
+    A, 2, THREE
+    A, 3, ONE
+    A, 3, TWO
+    A, 3, THREE
+    A, 4, ONE
+    A, 4, TWO
+    A, 4, THREE
+    B, 1, ONE
+    B, 1, TWO
+    B, 1, THREE
+    B, 2, ONE
+    B, 2, TWO
+
+    etc.
+
+    Row/column reference below is based off the above example
+    */
+
+    public <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
 
         //this will return only up to three levels.  I tried a recursive routine, but the arrays, though created correctly (see below) did not return correctly
-        List<List<Name>> output = new ArrayList<List<Name>>();
-        int n = collist.size();
-        for (Name name : collist.get(0)) {
-            if (n == 1) {
-                List<Name> nameList = new ArrayList<Name>();
-                nameList.add(name);
-                output.add(nameList);
-            } else {
-                for (Name name2 : collist.get(1)) {
-                    if (n == 2) {
-                        List<Name> nameList = new ArrayList<Name>();
-                        nameList.add(name);
-                        nameList.add(name2);
-                        output.add(nameList);
-                    } else {
-                        for (Name name3 : collist.get(2)) {
-                            List<Name> nameList = new ArrayList<Name>();
-                            nameList.add(name);
-                            nameList.add(name2);
-                            nameList.add(name3);
-                            output.add(nameList);
-                        }
-                    }
+        List<List<T>> toReturn = null;
+        for (List<T> permutationDimension : listsToPermute){
+            if (toReturn == null){ // first one, just assign the single column
+                toReturn = new ArrayList<List<T>>();
+                for (T item : permutationDimension){
+                    List<T> createdRow = new ArrayList<T>();
+                    createdRow.add(item);
+                    toReturn.add(createdRow);
                 }
+            } else {
+                // this is better as a different function as internally it created a new 2d array which we can then assign back to this one
+                toReturn = get2DArrayWithAddedPermutation(toReturn,permutationDimension);
             }
         }
-        return output;
+        return toReturn;
     }
 
-        /*tried a recursive routine here, but became muddled in parameter passing - it created the correct list, then lost it in passing the parameters
-        for (Name name:collist.get(cellNo)){
-            input.add(name);
-            if (++cellNo == collist.size()){
-                output.add(input);
+    /* so say we already have
+    a,1
+    a,2
+    a,3
+    a,4
+    b,1
+    b,2
+    b,3
+    b,4
 
-            }else{
-                output = permuteRow(input, output, collist, cellNo);
+    for example
+
+    and want to add the permutation ONE, TWO, THREE onto it.
+
+    The returned list of lists will be the size of the list of lists passed * the size of teh passed new dimension
+    and the nested lists in teh returned list will be one bigger, featuring the new dimension
+
+    if we looked at the above as a reference it would be 3 times as high and 1 column wider
+     */
+
+
+    public <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
+        List<List<T>> toReturn = new ArrayList<List<T>>();
+        for (List<T> existingRow : existing2DArray){
+            for (T elementWeWantToAdd : permutationWeWantToAdd){ // for each new element
+                List<T> newRow = new ArrayList<T>(existingRow); // copy the existing row
+                newRow.add(elementWeWantToAdd);// add the extra element
+                toReturn.add(newRow);
             }
-            input.remove(input.size()-1);
-            cellNo--;
         }
-     return output;
-
-}
-*/
+        return toReturn;
+    }
 
     // TODO again edd understand
 
@@ -480,7 +515,7 @@ seaports;children   container;children
             while (i < N && blankCol(headingLists, i)) {
                 col.get(rowCount).addAll(headingLists.get(rowCount).get(++i));
             }
-            List<List<Name>> permuted = permuteRowList(col);
+            List<List<Name>> permuted = get2DPermutationOfLists(col);
             output.addAll(permuted);
         }
         return output;
