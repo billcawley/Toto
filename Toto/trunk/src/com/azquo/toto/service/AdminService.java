@@ -60,7 +60,9 @@ public class AdminService {
         final String salt = shaHash(System.currentTimeMillis() + "salt");
         final User user = new User(0, new Date(), new Date(), business.getId(), email, userName, "administrator", encrypt(password, salt), salt);
         userDao.store(user);
-        azquoMailer.sendEMail(user.getEmail(), user.getName(), "Azquo account activation for " + businessName, "<html>Welcome to Azquo!<br/><br/>Your account key is : " + key + "</html>");
+        azquoMailer.sendEMail(user.getEmail(), user.getName(), "Azquo account activation for " + businessName, "<html>Dear " + user.getName() + "<br/><br/>Welcome to Azquo!<br/><br/>Your account key is : " + key + "</html>");
+        // copy for us
+        azquoMailer.sendEMail("info@azquo.com", "Azquo Support", "Azquo account activation for " + businessName, "<html>Dear " + user.getName() + "<br/><br/>Welcome to Azquo!<br/><br/>Your account key is : " + key + "</html>");
         return "true";
     }
 
