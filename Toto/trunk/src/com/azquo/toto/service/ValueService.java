@@ -509,21 +509,20 @@ seaports;children   container;children
                                      the rows are permuted as far as the next item on the same line
            */
 
-        //Note that this routine transposes the list while expanding!
-        List<List<Name>> output = new ArrayList<List<Name>>();
-        final int lastRowIndex = headingLists.size() - 1;
-        final int rowLength = headingLists.get(0).size(); // the size of the first row
-        for (int columnIndex = 0; columnIndex < rowLength; columnIndex++) {
-            List<List<Name>> col = new ArrayList<List<Name>>();
+         List<List<Name>> output = new ArrayList<List<Name>>();
+        final int noCols = headingLists.size();
 
-            for (List<List<Name>> row : headingLists) { // go down each row adding to a column object
-                col.add(row.get(columnIndex));
+        final int lastRowIndex = headingLists.get(0).size() - 1; // the size of the first row
+        for (int columnIndex = 0; columnIndex < noCols; columnIndex++) {
+            List<List<Name>> partheadings = headingLists.get(columnIndex);
+
+              // ok so while the column index is less than the row length and there's more than one row and
+            while (columnIndex < noCols - 1 && blankCol(headingLists.get(columnIndex + 1))) {
+                if (headingLists.get(++columnIndex).get(lastRowIndex) != null){
+                    partheadings.get(lastRowIndex).addAll(headingLists.get(columnIndex).get(lastRowIndex));
+                }
             }
-            // ok so while the column index is less than the row length and there's more than one row and
-            while (columnIndex < rowLength && blankCol(headingLists, columnIndex)) {
-                col.get(lastRowIndex).addAll(headingLists.get(lastRowIndex).get(++columnIndex));
-            }
-            List<List<Name>> permuted = get2DPermutationOfLists(col);
+            List<List<Name>> permuted = get2DPermutationOfLists(partheadings);
             output.addAll(permuted);
         }
         return output;
@@ -532,12 +531,12 @@ seaports;children   container;children
     // todo edd understand
     // is the column blank except the bottom row?
 
-    private boolean blankCol(List<List<List<Name>>> headingLists, int columnIndex) {
+    private boolean blankCol(List<List<Name>> headingLists) {
         int numberOfRows = headingLists.size(); // number of rows
         if (numberOfRows == 1) return false; // if one row return false because there's no rows to check
         // check all rows except the bottom row
         for (int rowIndex = 0; rowIndex < numberOfRows - 1; rowIndex++) {
-            if (headingLists.get(rowIndex).get(columnIndex) != null) return false; // if we find anything in that column it's not blank
+            if (headingLists.get(rowIndex) != null) return false; // if we find anything in that column it's not blank
 
         }
         return true;
