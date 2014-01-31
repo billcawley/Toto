@@ -486,7 +486,7 @@ seaports;children   container;children
 
     Therefore we expect the 2d array to be set up for column headings, the top of the excel sheet
 
-    The dynamic name calls e.g. Seaports; children; have their lists populated but they have not been expanded out into the 2d set itself
+    The dynamic namecalls e.g. Seaports; children; have their lists populated but they have not been expanded out into the 2d set itself
 
     That is what this does. Following the convention of down then right as in outer list os the rows and teh inner the cells in teh rows
     one would not expect the outer list to be bigger than 3 or 4 though the inner list may be more, 20-30 or more in the case that the user has specified many column or row headings manually
@@ -549,14 +549,14 @@ seaports;children   container;children
                   */
 
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        List<List<List<Name>>> rowHeadingLists = transpose2DList(createNameListsFromExcelRegion(loggedInConnection, headingsSent));
+        List<List<List<Name>>> rowHeadingLists = createNameListsFromExcelRegion(loggedInConnection, headingsSent);
         loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
         return outputHeadings(loggedInConnection.getRowHeadings(region));
     }
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<Name>>> columnHeadingLists = createNameListsFromExcelRegion(loggedInConnection, headingsSent);
-        loggedInConnection.setColumnHeadings(region, expandHeadings(columnHeadingLists));
+        loggedInConnection.setColumnHeadings(region, (expandHeadings(transpose2DList(columnHeadingLists))));
         return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)));
     }
 
