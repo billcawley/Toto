@@ -225,7 +225,7 @@ public final class LoggedInConnection {
     public Provenance getProvenance() {
         if (provenance == null) {
             try {
-                provenance = new Provenance(getTotoMemoryDB(), user.getEmail(), new Date(), "method", "spreadsheet name?", "row heading", "column headings", "context");
+                provenance = new Provenance(getTotoMemoryDB(), user.getName(), new Date(), "method", "spreadsheet name?", "row heading", "column headings", "context");
             } catch (Exception e) {
             }
         }
@@ -234,7 +234,7 @@ public final class LoggedInConnection {
 
     public void setNewProvenance(String provenanceMethod, String provenanceName){
        try{
-           provenance = new Provenance(getTotoMemoryDB(),user.getEmail(), new Date(),provenanceMethod, provenanceName, "", "", "");
+           provenance = new Provenance(getTotoMemoryDB(),user.getName(), new Date(),provenanceMethod, provenanceName, "", "", "");
        }catch (Exception e){
 
        }
