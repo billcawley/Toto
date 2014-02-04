@@ -16,9 +16,11 @@ public class AzquoMailer {
             // Create the email message
             HtmlEmail email = new HtmlEmail();
 
-            email.setAuthenticator(new DefaultAuthenticator("bill@azquo.com", "Yd44d8R4!"));
-            email.setHostName("smtp.easily.co.uk");
-            email.setSmtpPort(587);
+            //email.setDebug(true);
+            email.setSSLOnConnect(true);
+            email.setAuthenticator(new DefaultAuthenticator("bill@azquo.com", "afo822"));
+            email.setHostName("logichound.servers.eqx.misp.co.uk");
+            email.setSmtpPort(465);
             email.addTo(toEmail, toName);
             email.setFrom("info@azquo.com", "Azquo Support");
             email.setSubject(subject);
