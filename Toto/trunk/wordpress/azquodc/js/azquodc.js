@@ -22,7 +22,7 @@ function azquojson(functionName, params){
     }else{
         params +="&user=demo@user.com&password=password&database=Demo_export";
     }
-    var htmlText = "http://www.bomorgan.co.uk:8080/api/" + functionName + "?" + params;
+    var htmlText = "https://data.azquo.com:8443/api/" + functionName + "?" + params;
     var script = document.createElement('script'),
         head = document.getElementsByTagName('head')[0] || document.documentElement;
     script.src = htmlText;
@@ -56,7 +56,7 @@ function azquojsonfeed(obj) {
                         datalabel = "";
                     }
                 }
-                htmlText += "<td ondblclick=\"az_provenance(this,'" + escape(datalabel) + "')\">" + data[i][j] + "</td>";
+                htmlText += "<td onclick=\"az_provenance(this,'" + escape(datalabel) + "')\">" + data[i][j] + "</td>";
             }
             htmlText += "</tr>";
         }
