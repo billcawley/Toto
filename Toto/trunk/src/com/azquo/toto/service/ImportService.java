@@ -153,7 +153,7 @@ public final class ImportService {
                         //storeStructuredName(peer,peerVal, loggedInConnection);
                         // lower level names first so the syntax is something like Knightsbridge, London, UK
                         // hence we're passing a multi level name lookup to the name service, whatever is in that column with the header on the end
-                        final String nameToFind = peerVal + "," + peer.getDefaultDisplayName();
+                        final String nameToFind = "\"" + peerVal + "\",\"" + peer.getDefaultDisplayName() + "\"";
                         // check the local cache first
                         Name nameFound = namesFound.get(nameToFind);
                         if (nameFound == null) {
@@ -197,15 +197,25 @@ public final class ImportService {
     public String namesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
         // should we have encoding options?? Leave for the mo . . .
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
+        csvReader.setUseTextQualifier(false);
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
+        String importLanguage = loggedInConnection.getLanguage();
+        //if no name has been specified, then 'name' (case insensitive) should work
 
+        if (importLanguage.equals("DEFAULT_DISPLAY_NAME")){
+            for (String header:headers){
+                if (header.equalsIgnoreCase("name")){
+                    importLanguage = header;
+                }
+            }
+         }
         while (csvReader.readRecord()) {
             // the language may have been adjusted by the import controller
-            final String searchName = csvReader.get(loggedInConnection.getLanguage());
+            final String searchName = csvReader.get(importLanguage);
             Name name = null;
             // so we try to find or create (depending on parameters) that name in the current language
-            if (searchName != null) {
+            if (searchName != null && searchName.length() > 0) {
                 if (create) {
                     name = nameService.findOrCreateName(loggedInConnection, searchName);
                 } else {
@@ -215,7 +225,7 @@ public final class ImportService {
             // if we found or created that name we run through all the other names in the row setting as attributes against the name
             if (name != null) {
                 for (String header : headers) {
-                    if (header.length() > 0 && !header.equalsIgnoreCase(loggedInConnection.getLanguage())) { // ignore the column used for lookup and structure definitionn
+                    if (header.length() > 0 && !header.equalsIgnoreCase(importLanguage)) { // ignore the column used for lookup and structure definitionn
                         String attName = header;
                         // name we see as equivalent to the display name. Could cause a mishap if language were passed as "name"
                         if (header.toLowerCase().equals("name")) {
@@ -257,14 +267,16 @@ public final class ImportService {
         while (csvReader.readRecord()) {
             String itemName = "";
             for (String headerName : headers) {
-                String category = csvReader.get(headerName);
-                if (headerName.equals(headers[0])) {
-                    itemName = category;
-                } else {
-                    //create the name and structure
-                    Name name = nameService.findOrCreateName(loggedInConnection, itemName + "," + category + " " + plural + "," + plural + " by " + headerName + "," + topName + ";unique");
-                    //and put the category in its set.
-                    Name name2 = nameService.findOrCreateName(loggedInConnection, category + "," + headerName + ";unique");
+                if (headerName.length() > 0){
+                    String category = csvReader.get(headerName);
+                    if (headerName.equals(headers[0])) {
+                        itemName = category;
+                    } else {
+                        //create the name and structure
+                        Name name = nameService.findOrCreateName(loggedInConnection, itemName + "," + category + " " + plural + "," + plural + " by " + headerName + "," + topName + ";unique");
+                        //and put the category in its set.
+                        Name name2 = nameService.findOrCreateName(loggedInConnection, category + "," + headerName + ";unique");
+                    }
                 }
             }
         }
