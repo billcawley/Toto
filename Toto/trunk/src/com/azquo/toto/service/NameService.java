@@ -200,15 +200,13 @@ public final class NameService {
 
 
         // as I (Edd) understand this will be the top parent
+        Name topParent = null;
         String parentName = findParentFromList(name);
-
+        String remainder = name;
         if (parentName == null) {
             return findOrCreateName(loggedInConnection, name, null, null);
         }
-        Name parent = findOrCreateName(loggedInConnection, parentName, null, null);
-        Name topParent = parent;
-        String remainder = name.substring(0, name.lastIndexOf(",", name.length() - parentName.length()));
-        parentName = findParentFromList(remainder);
+
 
         /*
         ok teh key here is to step through the parent -> child list as defined in the name string creating teh hierarchy as you go along
@@ -217,17 +215,19 @@ public final class NameService {
         More specifically : if it is unique check for the name anywhere under the top parent to find it and then move it if necessary, if not unique then it could, for example, be another name called London
         I think maybe the names of variables could be clearer here!, maybe look into on second pass
         */
+        Name parent = null;
         while (parentName != null) {
-            if (!unique) {
-                topParent = parent;
+            remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length()- 1));
+            //if two commas in succession occur, ignore the blank parent
+            if (parentName.length() > 0){
+                parent = findOrCreateName(loggedInConnection, parentName, topParent, parent);
+                if (parent != null && (topParent == null || !unique)){
+                    topParent = parent;
+                }
             }
-            parent = findOrCreateName(loggedInConnection, parentName, topParent, parent);
-            remainder = name.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length()));
             parentName = findParentFromList(remainder);
         }
-        if (!unique) {
-            topParent = parent;
-        }
+
         return findOrCreateName(loggedInConnection, remainder, topParent, parent);
 
     }
@@ -241,10 +241,11 @@ public final class NameService {
 
 
         String storeName = name.replace("\"", "");
+
         final Name existing = loggedInConnection.getTotoMemoryDB().getNameByAttribute(loggedInConnection.getLanguage(), storeName, parent);
         if (existing != null) {
             // I think this is in the case of unique = true, the name to be created is in fact being moved down the hierachy
-            if (newparent != null && newparent != parent) {
+            if (newparent != null && newparent != parent && existing != newparent) {
                 parent.removeFromChildrenWillBePersisted(existing);
                 newparent.addChildWillBePersisted(existing);
             }
