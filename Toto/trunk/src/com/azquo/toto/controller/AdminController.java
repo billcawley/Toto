@@ -99,6 +99,7 @@ public class AdminController {
             }
             if (op.equalsIgnoreCase(SAVEUSERS) ) {
                 List<User> usersFromJson = jacksonMapper.readValue(userList, new TypeReference<List<User>>(){});
+                adminService.setUserListForBusiness(loggedInConnection, usersFromJson);
             }
             if (op.equalsIgnoreCase(ACCESSLIST)) {
                 if (email != null && email.length() > 0) {
