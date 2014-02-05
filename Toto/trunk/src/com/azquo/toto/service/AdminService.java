@@ -50,11 +50,21 @@ public class AdminService {
         final String key = shaHash(System.currentTimeMillis() + "");
         final Business.BusinessDetails bd = new Business.BusinessDetails(address1, address2, address3, address4, postcode, telephone, "website???", key);
         final Business business = new Business(0, new Date(), new Date(), businessName, 0, bd);
-        if (businessDao.findByName(businessName) != null) {
-            return "error: " + businessName + " already registerd";
+        Business existing = businessDao.findByName(businessName);
+        if (existing != null) { // ok new criteria, overwrite if the business was not already key validated
+            if (existing.getEndDate().after(new Date())){
+                return "error: " + businessName + " already registered";
+            } else {
+                businessDao.removeById(existing); // it will be created again
+            }
         }
-        if (userDao.findByEmail(email) != null) {
-            return "error: " + email + " already registerd";
+        User existingUser = userDao.findByEmail(email);
+        if (existingUser != null) {
+            if (existingUser.getEndDate().after(new Date())){ // active user
+                return "error: " + email + " already registered";
+            } else {
+                userDao.removeById(existingUser); // it will be created again
+            }
         }
         businessDao.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
