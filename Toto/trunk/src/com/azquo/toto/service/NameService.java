@@ -29,7 +29,8 @@ public final class NameService {
     public static final String SORTED = "sorted";
     public static final String CHILDREN = "children";
     public static final String LOWEST = "lowest";
-    public static final String NAMEMARKER = "!";
+    public static final String ALL = "all";
+    public static final char NAMEMARKER = '!';
     public static final String PEERS = "peers";
     public static final String STRUCTURE = "structure";
     public static final String NAMELIST = "namelist";
@@ -126,6 +127,19 @@ public final class NameService {
         return loggedInConnection.getTotoMemoryDB().getNameById(id);
     }
 
+    private Name getNameByAttribute(LoggedInConnection loggedInConnection, String name, Name parent){
+        if (name.startsWith("!")) {
+            try {
+                int nameId = Integer.parseInt(name.substring(1));
+                return findById(loggedInConnection, nameId);
+            }catch(Exception e){
+                return null;
+            }
+        }
+        return loggedInConnection.getTotoMemoryDB().getNameByAttribute(loggedInConnection.getLanguage(), name.replace("\"",""), parent);
+
+    }
+
     public Name findByName(final LoggedInConnection loggedInConnection, final String name) {
 
      /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
@@ -133,39 +147,32 @@ public final class NameService {
         e.g.  if 'London, place' is sent, then the system will look for any 'London' that is ultimately in the set 'Place', whether through direct parent, or parent of parents.
         It can accept multiple layers - ' London, Ontario, Place' would find   Place/Canada/Ontario/London
         It should also recognise ""    "London, North", "Ontario", "Place"     should recognise that the 'North' is part of 'London, North'
+
+        It will also recognise an interim substitution starting '!'
         */
 
         // language effectively being the attribute name
-        String language = loggedInConnection.getLanguage();
         // so london, ontario, canada
         // parent name would be canada
-        String parentName = findParentFromList(name);
-        if (parentName == null) {
-            // just a simple name passed, no structure
-            return loggedInConnection.getTotoMemoryDB().getNameByAttribute(language, name, null);
-        }
-        Name parent = loggedInConnection.getTotoMemoryDB().getNameByAttribute(language, parentName, null);
-        if (parent == null) { // parent was null, since we're just trying to find that stops us right here
-            return null;
-        }
-
-        // so chop off the last name, lastindex of moves backwards from the index
-        // the reason for this is to deal with quotes, we could have said simply the substring take off the parent name length but we don't know about quotes or spaces after the comma
-        String remainder = name.substring(0, name.lastIndexOf(",", name.length() - parentName.length()));
-        // remainder is the rest of the string, could be london, ontario - Canada was taken off
-        parentName = findParentFromList(remainder);
+       String parentName = findParentFromList(name);
+       String remainder = name;
+        Name parent = null;
         // keep chopping away at the string until we find the closest parent we can
-        while (parentName != null) {
-            parent = loggedInConnection.getTotoMemoryDB().getNameByAttribute(language, parentName, null);
-            if (parent == null) {
-                return null;
-            }
-            remainder = name.substring(0, remainder.lastIndexOf(",", name.length() - parentName.length()));
-            parentName = findParentFromList(remainder);
-        }
         // the point of all of this is to be able to ask for a name with the nearest parent but we can't just try and get it from the string directly e.g. get me WHsmiths on High street
         // we need to look from the top to distinguish high street in different towns
-        return loggedInConnection.getTotoMemoryDB().getNameByAttribute(language, remainder, parent);
+        while (parentName != null) {
+            parent = getNameByAttribute(loggedInConnection, parentName, parent);
+            if (parent == null) { // parent was null, since we're just trying to find that stops us right here
+                return null;
+            }
+            // so chop off the last name, lastindex of moves backwards from the index
+            // the reason for this is to deal with quotes, we could have said simply the substring take off the parent name length but we don't know about quotes or spaces after the comma
+            // remainder is the rest of the string, could be london, ontario - Canada was taken off
+            remainder = name.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length()));
+            parentName = findParentFromList(remainder);
+        }
+
+        return getNameByAttribute(loggedInConnection, remainder, parent);
     }
 
 /*    public List<Name> searchNames(final LoggedInConnection loggedInConnection, final String search) {
@@ -273,26 +280,37 @@ public final class NameService {
         }
     }
 
-    // needs to be a list to preserve order when adding. Or could use a linked set, don't see much advantage
+    public void  addNames(final Name name, List<Name> namesFound, final int currentLevel, final int level) throws Exception {
+        if (currentLevel == level || level == -2){
+            namesFound.add(name);
+        }
+        if (currentLevel == level){
+            return;
+        }
+        if (name.getChildren()==null){
+            if (level == -1){
+                namesFound.add(name);
+            }
+            return;
+        }
+        for (Name child:name.getChildren()){
+            addNames(child, namesFound,currentLevel + 1, level);
+        }
+
+    }
+
+
+        // needs to be a list to preserve order when adding. Or could use a linked set, don't see much advantage
 
     public List<Name> findChildrenAtLevel(final Name name, final int level) throws Exception {
         // level -1 means get me the lowest
+        // level -2 means 'ALL' (including the top level
         // notable that with current logic asking for a level with no data returns no data not the nearest it can get. Would be simple to change this
-        int currentLevel = 1;
-        List<Name> foundAtCurrentLevel = new ArrayList<Name>(name.getChildren());
-        while ((currentLevel < level || level == -1) && !foundAtCurrentLevel.isEmpty()) {
-            // we can't loop over foundAtCurrentLevel and modify it at the same time, this asks for trouble
-            List<Name> nextLevelSet = new ArrayList<Name>();
-            for (Name n : foundAtCurrentLevel) {
-                nextLevelSet.addAll(n.getChildren());
-            }
-            if (nextLevelSet.isEmpty() && level == -1) { // wanted the lowest, we've hit a level with none so don't go further
-                break;
-            }
-            foundAtCurrentLevel = nextLevelSet;
-            currentLevel++;
-        }
-        return foundAtCurrentLevel;
+
+
+        List<Name> namesFound = new ArrayList<Name>();
+        addNames(name, namesFound, 0, level);
+        return namesFound;
     }
 
     // since we need different from the standard set ordering use a list, I see no real harm in that in these functions
@@ -323,7 +341,9 @@ public final class NameService {
         if (from == null) {
             okByFrom = true;
         }
-        for (Name child : findChildrenSortedAlphabetically(name)) {
+        //THIS SHOULD NOT BE A SORTED LIST (e.g.  Months;from May;to September)
+        //for (Name child : findChildrenSortedAlphabetically(name)) {
+        for (Name child : name.getChildren()){
             System.out.println("child \"" + child.getDefaultDisplayName() + "\"");
             if (!okByFrom && child.getDefaultDisplayName().equalsIgnoreCase(from)) {
                 okByFrom = true;
@@ -337,6 +357,28 @@ public final class NameService {
         }
         return toReturn;
     }
+
+    public List<Name> findChildrenFromCount(final Name name, final String from, int count) throws Exception {
+        final List<Name> toReturn = new ArrayList<Name>();
+        boolean okByFrom = false;
+        if (from == null) {
+            okByFrom = true;
+        }
+        for (Name child : name.getChildren()) {
+            System.out.println("child \"" + child.getDefaultDisplayName() + "\"");
+            if (!okByFrom && child.getDefaultDisplayName().equalsIgnoreCase(from)) {
+                okByFrom = true;
+            }
+            if (okByFrom) {
+                toReturn.add(child);
+                if(count-- == 0){
+                    break;
+                }
+            }
+         }
+        return toReturn;
+    }
+
 
 
     // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
@@ -465,22 +507,6 @@ public final class NameService {
         return toReturn;
     }
 
-    // not used but I'll leave it here, could be good for debugging
-
-    public void logNameHierarchy(final Name name, int level) {
-        for (int i = 1; i <= level; i++) {
-            System.out.print("- ");
-        }
-        System.out.println(name.getDefaultDisplayName());
-        final Set<Name> children = name.getChildren();
-        if (!children.isEmpty()) {
-            level++;
-            for (Name child : children) {
-                logNameHierarchy(child, level);
-            }
-        }
-    }
-
     // used to be in the controller, should it be back there???
 
     public String getInstruction(final String instructions, final String instructionName) {
@@ -492,27 +518,100 @@ public final class NameService {
             } else {
                 toReturn = instructions.substring(commandStart).trim();
             }
-            if (toReturn.startsWith("`")) {
-                toReturn = toReturn.substring(1, toReturn.length() - 1); // trim escape chars
+            if (toReturn.startsWith("\"")) {
+                toReturn = toReturn.substring(1, toReturn.length() - 1); // trim quotes
             }
         }
         return toReturn;
     }
 
+
+    private String stripQuotes(LoggedInConnection loggedInConnection, String instructions) throws Exception{
+        int lastQuoteEnd = instructions.lastIndexOf("\"");
+        while (lastQuoteEnd >= 0){
+            int  lastQuoteStart = instructions.lastIndexOf("\"",lastQuoteEnd - 1);
+            //find the parents - if they exist
+            String nameToFind = instructions.substring(lastQuoteStart);
+            Pattern p =  Pattern.compile("[ ;\\+\\*]");
+            Matcher m =  p.matcher(instructions.substring(lastQuoteEnd));
+            if (m.find()){
+                lastQuoteEnd += m.start();
+                nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd);
+            }
+            Name quoteName = findByName(loggedInConnection, nameToFind);
+            if (quoteName!=null){
+                instructions = instructions.substring(0,lastQuoteStart) + NAMEMARKER + quoteName.getId()  + " " + instructions.substring(lastQuoteEnd);
+                lastQuoteEnd = instructions.lastIndexOf("\"");
+            }else{
+                lastQuoteEnd = -1;
+            }
+
+        }
+        return instructions;
+    }
+
     // to find a set of names, a few bits that were part of the original set of functions
 
-    public List<Name> interpretName(final LoggedInConnection loggedInConnection, final String instructions) throws Exception {
+    public String interpretName(final LoggedInConnection loggedInConnection, final List<Name> nameList, String setFormula) throws Exception {
 
-        final String levelString = getInstruction(instructions, LEVEL);
-        final String fromString = getInstruction(instructions, FROM);
-        final String childrenString = getInstruction(instructions, CHILDREN);
-        final String toString = getInstruction(instructions, TO);
-        final String countString = getInstruction(instructions, COUNT);
 
+        /*
+        * This routine now amended to allow for union (+) and intersection (*) of sets.
+        *
+        * This entails first sorting out the names in quotes (which may contain the reserved characters),
+        * starting from the end (there may be "name","parent" in the list)
+        *
+        * These will be replaced by !<id>   e.g. !1234
+        *
+        *
+        * */
+        List<List<Name>> nameStack = new ArrayList<List<Name>>();
+        setFormula = shuntingYardAlgorithm(loggedInConnection,  setFormula);
+        if (setFormula.startsWith("error:")){
+             return setFormula;
+        }
+
+
+        Pattern p = Pattern.compile("[\\+-/\\*\\(\\)" + NAMEMARKER + "]"); // only simple maths allowed at present
+        int pos = 0;
+        int stackCount = 0;
+        while (pos < setFormula.length()){
+            Matcher m = p.matcher(setFormula.substring(pos+2));
+            // HANDLE SET INTERSECTIONS UNIONS AND EXCLUSIONS (* + - )
+            char op = setFormula.charAt(pos);
+            int nextTerm = setFormula.length() + 1;
+            if (m.find()){
+                nextTerm = m.start() + pos + 2;
+            }
+            if (op == NAMEMARKER){
+                stackCount++;
+                nameStack.add(interpretSetTerm(loggedInConnection,setFormula.substring(pos, nextTerm - 1)));
+            }else if (op=='+'){
+
+                nameStack.get(--stackCount-1).addAll(nameStack.get(stackCount));
+            }else if (op=='*'){
+                nameStack.get(--stackCount-1).retainAll(nameStack.get(stackCount));
+            }else if (op=='-'){
+                nameStack.get(--stackCount-1).removeAll(nameStack.get(stackCount));
+            }
+            pos = nextTerm;
+        }
+        nameList.addAll(nameStack.get(0));
+        return "";
+    }
+
+    private List<Name> interpretSetTerm(LoggedInConnection loggedInConnection, String setTerm) throws Exception{
+
+        final String levelString = getInstruction(setTerm, LEVEL);
+        final String fromString = getInstruction(setTerm, FROM);
+        final String childrenString = getInstruction(setTerm, CHILDREN);
+        final String toString = getInstruction(setTerm, TO);
+        final String countString = getInstruction(setTerm, COUNT);
         List<Name> names = new ArrayList<Name>();
-        String nameString = instructions;
-        if (instructions.indexOf(';') > 0) {
-            nameString = instructions.substring(0, instructions.indexOf(';')).trim();
+
+        String nameString = setTerm;
+        if (setTerm.indexOf(';') > 0) {
+            nameString = setTerm.substring(0, setTerm.indexOf(';')).trim();
         }
         final Name name = findByName(loggedInConnection, nameString);
         if (name == null) {
@@ -531,7 +630,9 @@ public final class NameService {
             if (levelString.equalsIgnoreCase(LOWEST)) {
                 System.out.println("lowest");
                 level = -1;
-            } else {
+            }if (levelString.equalsIgnoreCase(ALL)){
+                level = -2;
+            }else{
                 try {
                     level = Integer.parseInt(levelString);
                 } catch (NumberFormatException nfe) {
@@ -569,11 +670,11 @@ public final class NameService {
 
         if (from != -1 || to != -1) { // numeric, I won't allow mixed for the moment
             names = findChildrenFromTo(name, from, to);
-        } else if (fromString != null || toString != null) {
+        } else if (fromString != null || toString != null && count==-1) {
             names = findChildrenFromTo(name, fromString, toString);
         } else { // also won't allow from/to/level mixes either
             // sorted means level won't work
-            if (getInstruction(instructions, SORTED) != null) {
+            if (getInstruction(setTerm, SORTED) != null) {
                 names = findChildrenSortedAlphabetically(name);
             } else {
                 names = findChildrenAtLevel(name, level);
@@ -581,12 +682,27 @@ public final class NameService {
         }
 
         // deal with count, easier to do this here than in the functions above. If there's a performance issue can move it later
-        if (count != -1 && names.size() > count){
-            names = names.subList(0, count);
+
+        if (count != -1){
+            names = findChildrenFromCount(name, fromString, count);
         }
 
         for (Name name2 : names) {
-            shuntingYardAlgorithm(loggedInConnection, name2);
+            String calc = name2.getAttribute("CALCULATION");
+            if (calc != null && calc.length() > 0){
+               String result = shuntingYardAlgorithm(loggedInConnection, calc);
+               if (result != null && result.length() > 0){
+                   if (result.startsWith("error:")){
+                       //handle error!
+                   }else{
+                       if (name2.getAttribute("RPCALC") == null || name2.getAttribute("RPCALC") != result) {
+                            name2.setAttributeWillBePersisted("RPCALC", result);
+                       }
+                   }
+
+                   name2.setAttributeWillBePersisted("RPCALC", result);
+               }
+            }
         }
         return names;
     }
@@ -595,34 +711,39 @@ public final class NameService {
     // called from shuntingyardalgorithm 3 times, think not on operations
     // it seems the term can be one of two things, a double value or a name.
     // first tries to parse the double value and then returns it with a space, just confirming what
-    // otherwise it tries to find by name and if it finds it jams in the name ID after NAMEMARKER
+    // otherwise it tries to find by name and if it finds it jams in the name ID between NAMEMARKER
     // but NAMEMARKER is only used here so what's going on there??
 
-    private String interpretTerm(final LoggedInConnection loggedInConnection, final Name name, final String term) {
+    //  NAMEMARKER is used to remove any contentious characters from expressions (e.g. operators that should not be there)
+
+    private String interpretTerm(final LoggedInConnection loggedInConnection, final String term) {
 
 
-        if (term.startsWith(NAMEMARKER)) return term + " ";
+        if (term.charAt(0) ==NAMEMARKER) return term + " ";
         try {
             double d = Double.parseDouble(term);
             return d + " ";
         } catch (Exception e) {
 
         }
-
-        Name nameFound = findByName(loggedInConnection, term);
-        if (nameFound == null) {
-            return "error: formula for " + name.getDefaultDisplayName() + " not understood: " + term;
+        // this routine must interpret set formulae as well as calc formulae, hence the need to look for semicolons
+         int nameEnd = term.indexOf(";");
+         if (nameEnd < 0){
+             nameEnd = term.length();
         }
-        return (NAMEMARKER + nameFound.getId() + " ");
+        Name nameFound = findByName(loggedInConnection, term.substring(0,nameEnd));
+        if (nameFound == null) {
+            return "error: formula not understood: " + term;
+        }
+        return ("" + NAMEMARKER + nameFound.getId() + term.substring(nameEnd) + " ");
 
     }
-
 
     // TODO Edd try to understand
     // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
     // it's a list of values and operations
 
-    private String shuntingYardAlgorithm(LoggedInConnection loggedInConnection, Name name) throws Exception {
+    private String shuntingYardAlgorithm(LoggedInConnection loggedInConnection, String calc) throws Exception {
 /*   TODO SORT OUT ACTION ON ERROR
         Routine to convert a formula (if it exists) to reverse polish.
 
@@ -649,24 +770,14 @@ public final class NameService {
         Pop the operator onto the output queue.
                 Exit.
 */
-        String calc = name.getAttribute("CALCULATION");
-        if (calc == null || calc.length() == 0) return "";
 
-        Pattern p = Pattern.compile("\"[^\"]+\"");//sort out variables in quotes first
+        //start by replacing names in quotes (which may contain operators) with '!<name id>   - e.g.  '!1000'
+        calc = stripQuotes(loggedInConnection, calc);
 
-        Matcher m = p.matcher(calc);
-        while (m.find()) {
-            String nameString = m.group();
-            String result = interpretTerm(loggedInConnection, name, nameString.substring(1, nameString.length() - 1));
-            if (result.startsWith("error:")) {
-                return result;
-            }
-            calc = calc.replace(nameString, result);
-        }
-        p = Pattern.compile("[\\+-/\\*\\(\\)]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[\\+-/\\*\\(\\)]"); // only simple maths allowed at present
         StringBuffer sb = new StringBuffer();
         String stack = "";
-        m = p.matcher(calc);
+        Matcher m = p.matcher(calc);
         String origCalc = calc;
         int startPos = 0;
         while (m.find()) {
@@ -675,7 +786,7 @@ public final class NameService {
             int pos = m.start();
             String namefound = calc.substring(startPos, pos).trim();
             if (namefound.length() > 0) {
-                String result = interpretTerm(loggedInConnection, name, namefound);
+                String result = interpretTerm(loggedInConnection, namefound);
                 if (result.startsWith("error:")) {
                     return result;
                 }
@@ -699,24 +810,24 @@ public final class NameService {
             startPos = m.end();
 
         }
+        // the last term...
 
         if (calc.substring(startPos).trim().length() > 0) {
-            String result = interpretTerm(loggedInConnection, name, calc.substring(startPos).trim());
+            String result = interpretTerm(loggedInConnection, calc.substring(startPos).trim());
             if (result.startsWith("error:")) {
                 return result;
             }
             sb.append(result);
         }
+
+        //.. and clear the stack
         while (stack.length() > 0) {
             sb.append(stack.charAt(0) + " ");
             stack = stack.substring(1);
         }
 
-        if (name.getAttribute("RPCALC") == null || name.getAttribute("RPCALC") != sb.toString()) {
-            name.setAttributeWillBePersisted("RPCALC", sb.toString());
-        }
 
-        return "";
+        return sb.toString();
     }
 
     public String processJsonRequest(LoggedInConnection loggedInConnection, NameJsonRequest nameJsonRequest) throws Exception {
@@ -727,7 +838,12 @@ public final class NameService {
             return getStructureForNameSearch(loggedInConnection, nameJsonRequest.name);
         }
         if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)) {
-            return getNamesFormattedForOutput(interpretName(loggedInConnection, nameJsonRequest.name));
+            List<Name> nameList = new ArrayList<Name>();
+            String error = interpretName(loggedInConnection, nameList, nameJsonRequest.name);
+            if (error.length() > 0){
+                return error;
+            }
+            return getNamesFormattedForOutput(nameList);
         }
 
         if (nameJsonRequest.operation.equalsIgnoreCase(DELETE)) {
