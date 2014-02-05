@@ -1,15 +1,19 @@
 package com.azquo.toto.controller;
 
+import com.azquo.toto.adminentities.User;
 import com.azquo.toto.service.AdminService;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
 import com.azquo.toto.util.AzquoMailer;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.List;
 
 /**
  * User: cawley
@@ -36,6 +40,7 @@ public class AdminController {
     private static final String USERACCESS = "useraccess";
     private static final String DATABASELIST = "databaselist";
     private static final String USERLIST = "userlist";
+    private static final String SAVEUSERS = "saveusers";
     private static final String ACCESSLIST = "accesslist";
     private static final String UPLOADSLIST = "uploadslist";
 
@@ -49,7 +54,7 @@ public class AdminController {
                                 @RequestParam(value = "telephone", required = false) final String telephone, @RequestParam(value = "key", required = false) final String key,
                                 @RequestParam(value = "database", required = false) final String database, @RequestParam(value = "status", required = false) final String status,
                                 @RequestParam(value = "readlist", required = false) final String readList, @RequestParam(value = "writelist", required = false) final String writeList,
-                                @RequestParam(value = "connectionid", required = false) final String connectionId) throws Exception {
+                                @RequestParam(value = "userlist", required = false) final String userList,@RequestParam(value = "connectionid", required = false) final String connectionId) throws Exception {
 
         if (op.equalsIgnoreCase(SIGNON)) {
             if (key != null && key.length() > 0 && businessName != null && businessName.length() > 0) {
@@ -91,6 +96,9 @@ public class AdminController {
             }
             if (op.equalsIgnoreCase(USERLIST)) {
                 return jacksonMapper.writeValueAsString(adminService.getUserListForBusiness(loggedInConnection));
+            }
+            if (op.equalsIgnoreCase(SAVEUSERS) ) {
+                List<User> usersFromJson = jacksonMapper.readValue(userList, new TypeReference<List<User>>(){});
             }
             if (op.equalsIgnoreCase(ACCESSLIST)) {
                 if (email != null && email.length() > 0) {

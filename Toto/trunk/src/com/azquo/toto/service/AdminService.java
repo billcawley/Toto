@@ -203,6 +203,52 @@ public class AdminService {
         return null;
     }
 
+    // note, this takes users populated from the json, hence the reloading by ID
+
+    public String setUserListForBusiness(final LoggedInConnection loggedInConnection, List<User> userList) {
+        for (User user : userList){
+            if (user.getId() > 0){
+                User existingUser = userDao.findById(user.getId());
+                if (existingUser == null){
+                    return "error: passed used with an Id I can't find";
+                } else {
+                    if (user.getStartDate() != null){
+                        existingUser.setStartDate(user.getStartDate());
+                    }
+                    if (user.getEndDate() != null){
+                        existingUser.setEndDate(user.getEndDate());
+                    }
+                    if (user.getBusinessId() > 0){
+                        existingUser.setBusinessId(user.getBusinessId());
+                    }
+                    if (user.getEmail() != null){
+                        existingUser.setEmail(user.getEmail());
+                    }
+                    if (user.getName() != null){
+                        existingUser.setName(user.getName());
+                    }
+                    if (user.getStatus() != null){
+                        existingUser.setStatus(user.getStatus());
+                    }
+                    if (user.getPassword() != null){
+                        final String salt = shaHash(System.currentTimeMillis() + "salt");
+                        existingUser.setSalt(salt);
+                        existingUser.setPassword(encrypt(user.getPassword(), salt));
+                    }
+                    userDao.store(existingUser);
+                }
+            } else { // a new one. Possibly need checks on required fields but for the moment just sort the password and store.
+                if (user.getPassword() != null){
+                    final String salt = shaHash(System.currentTimeMillis() + "salt");
+                    user.setSalt(salt);
+                    user.setPassword(encrypt(user.getPassword(), salt));
+                }
+                userDao.store(user);
+            }
+        }
+        return "";
+    }
+
     public List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInConnection loggedInConnection) {
         if (loggedInConnection.getUser().isAdministrator()) {
             List<UploadRecord> uploadRecords = uploadRecordDAO.findForBusinessId(loggedInConnection.getUser().getBusinessId());

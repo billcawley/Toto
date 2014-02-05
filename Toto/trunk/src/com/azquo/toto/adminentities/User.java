@@ -1,5 +1,10 @@
 package com.azquo.toto.adminentities;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Date;
 
 /**
@@ -18,7 +23,9 @@ public final class User extends StandardEntity {
     private String password;
     private String salt;
 
-    public User(int id, Date startDate, Date endDate, int businessId, String email, String name, String status, String password, String salt) {
+    // salt will probably never be passed
+    @JsonCreator
+    public User(@JsonProperty("id") int id, @JsonProperty("startDate") Date startDate, @JsonProperty("endDate") Date endDate, @JsonProperty("businessId") int businessId, @JsonProperty("email") String email, @JsonProperty("name") String name, @JsonProperty("status") String status, @JsonProperty("password") String password, @JsonProperty("salt") String salt) {
         this.id = id;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -30,6 +37,7 @@ public final class User extends StandardEntity {
         this.salt = salt;
     }
 
+    @JsonIgnore
     public boolean isAdministrator() {
         return status.equalsIgnoreCase(STATUS_ADMINISTRATOR);
     }
@@ -82,6 +90,7 @@ public final class User extends StandardEntity {
         this.status = status;
     }
 
+    @JsonIgnore
     public String getPassword() {
         return password;
     }
@@ -90,6 +99,7 @@ public final class User extends StandardEntity {
         this.password = password;
     }
 
+    @JsonIgnore
     public String getSalt() {
         return salt;
     }
