@@ -269,7 +269,7 @@ public final class ValueService {
                         calcedVal = Double.parseDouble(term);
                         values[valNo++] = calcedVal;
                     } catch (Exception e) {
-                        // we assume it's a name id
+                        // we assume it's a name id starting with NAMEMARKER
                         int id = Integer.parseInt(term.substring(1));
                         // so get the name and add it to the other names
                         Name name = nameService.findById(loggedInConnection, id);
@@ -369,7 +369,7 @@ seaports;children   container;children
      */
 
 
-    public List<List<List<Name>>> createNameListsFromExcelRegion(final LoggedInConnection loggedInConnection, final String excelRegionPasted) throws Exception {
+    public String createNameListsFromExcelRegion(final LoggedInConnection loggedInConnection, List<List<List<Name>>> nameLists, final String excelRegionPasted) throws Exception {
         int maxColCount = 1;
         CsvReader pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t');
         while (pastedDataReader.readRecord()){
@@ -377,18 +377,22 @@ seaports;children   container;children
                 maxColCount = pastedDataReader.getColumnCount();
             }
         }
-        final List<List<List<Name>>> nameLists = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
         pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t'); // reset the CSV reader
         while (pastedDataReader.readRecord()) {
             List<List<Name>> row = new ArrayList<List<Name>>();
             for (int column = 0; column < pastedDataReader.getColumnCount(); column++){
                 String cellString = pastedDataReader.get(column);
-                row.add(nameService.interpretName(loggedInConnection, cellString));
+                List<Name> nameList = new ArrayList<Name>();
+                String error = nameService.interpretName(loggedInConnection, nameList, cellString);
+                if (error.length() > 0){
+                    //TODO HANDLE ERROR
+                }
+                row.add(nameList);
             }
             while (row.size() < maxColCount) row.add(null);
             nameLists.add(row);
         }
-        return nameLists;
+        return "";
     }
 
     /* ok we're passed a list of lists
@@ -549,13 +553,21 @@ seaports;children   container;children
                   */
 
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        List<List<List<Name>>> rowHeadingLists = createNameListsFromExcelRegion(loggedInConnection, headingsSent);
+        final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
+        String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, headingsSent);
+        if (error.length() > 0){
+            return error;
+        }
         loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
         return outputHeadings(loggedInConnection.getRowHeadings(region));
     }
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        List<List<List<Name>>> columnHeadingLists = createNameListsFromExcelRegion(loggedInConnection, headingsSent);
+        List<List<List<Name>>> columnHeadingLists = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
+        String error =  createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, headingsSent);
+        if (error.length() > 0){
+            return error;
+        }
         loggedInConnection.setColumnHeadings(region, (expandHeadings(transpose2DList(columnHeadingLists))));
         return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)));
     }
