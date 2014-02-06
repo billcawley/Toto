@@ -128,15 +128,15 @@ public final class NameService {
     }
 
     private Name getNameByAttribute(LoggedInConnection loggedInConnection, String name, Name parent){
-        if (name.startsWith("!")) {
+        if (name.charAt(0) ==NAMEMARKER) {
             try {
-                int nameId = Integer.parseInt(name.substring(1));
+                int nameId = Integer.parseInt(name.substring(1).trim());
                 return findById(loggedInConnection, nameId);
             }catch(Exception e){
                 return null;
             }
         }
-        return loggedInConnection.getTotoMemoryDB().getNameByAttribute(loggedInConnection.getLanguage(), name.replace("\"",""), parent);
+        return loggedInConnection.getTotoMemoryDB().getNameByAttribute(loggedInConnection, name.replace("\"",""), parent);
 
     }
 
@@ -154,7 +154,8 @@ public final class NameService {
         // language effectively being the attribute name
         // so london, ontario, canada
         // parent name would be canada
-       String parentName = findParentFromList(name);
+       if (name == null || name.length()== 0) return null;
+        String parentName = findParentFromList(name);
        String remainder = name;
         Name parent = null;
         // keep chopping away at the string until we find the closest parent we can
@@ -249,7 +250,7 @@ public final class NameService {
 
         String storeName = name.replace("\"", "");
 
-        final Name existing = loggedInConnection.getTotoMemoryDB().getNameByAttribute(loggedInConnection.getLanguage(), storeName, parent);
+        final Name existing = loggedInConnection.getTotoMemoryDB().getNameByAttribute(loggedInConnection, storeName, parent);
         if (existing != null) {
             // I think this is in the case of unique = true, the name to be created is in fact being moved down the hierachy
             if (newparent != null && newparent != parent && existing != newparent) {
@@ -302,10 +303,26 @@ public final class NameService {
 
         // needs to be a list to preserve order when adding. Or could use a linked set, don't see much advantage
 
-    public List<Name> findChildrenAtLevel(final Name name, final int level) throws Exception {
+    public List<Name> findChildrenAtLevel(final Name name, final String levelString) throws Exception {
         // level -1 means get me the lowest
         // level -2 means 'ALL' (including the top level
         // notable that with current logic asking for a level with no data returns no data not the nearest it can get. Would be simple to change this
+
+        int level = 1;
+        if (levelString != null) {
+            if (levelString.equalsIgnoreCase(LOWEST)) {
+                System.out.println("lowest");
+                level = -1;
+            }if (levelString.equalsIgnoreCase(ALL)){
+                level = -2;
+            }else{
+                try {
+                    level = Integer.parseInt(levelString);
+                } catch (NumberFormatException nfe) {
+                    //carry on regardless!
+                }
+            }
+        }
 
 
         List<Name> namesFound = new ArrayList<Name>();
@@ -316,68 +333,77 @@ public final class NameService {
     // since we need different from the standard set ordering use a list, I see no real harm in that in these functions
     // note : in default language!
 
-    public List<Name> findChildrenSortedAlphabetically(final Name name) throws Exception {
-        List<Name> childList = new ArrayList<Name>(name.getChildren());
-        Collections.sort(childList);
-        return childList;
-    }
 
-    public List<Name> findChildrenFromTo(final Name name, final int from, final int to) throws Exception {
+    public List<Name> findChildrenFromToCount(final LoggedInConnection loggedInConnection, final List<Name> names, String fromString, String toString, final String countString) throws Exception {
         final ArrayList<Name> toReturn = new ArrayList<Name>();
-        // internally we know the children are ordered, so iterate over the set adding those in teh positions we care about
-        int position = 1;
-        for (Name child : name.getChildren()) {
-            if ((position >= from || from == -1) && (position <= to || to == -1)) {
-                toReturn.add(child);
+        int to = -10000;
+        int from = 1;
+        int count = -1;
+
+        //first look for integers and encoded names...
+
+        if (fromString.length() > 0) {
+            from = -1;
+            try {
+                from = Integer.parseInt(fromString);
+            } catch (NumberFormatException nfe) {// may be a number, may not . . .
+                if (fromString.charAt(0)== NAMEMARKER){
+                    Name fromName = findByName(loggedInConnection,fromString);
+                    fromString = fromName.getDefaultDisplayName();
+                }
             }
+
+        }
+        if (toString.length() > 0) {
+            boolean fromEnd = false;
+            if (toString.toLowerCase().endsWith("from end")){
+                fromEnd = true;
+                toString = toString.substring(0, toString.length() - 9);
+            }
+            try {
+                to = Integer.parseInt(toString);
+                if (fromEnd) to = names.size() -to;
+            } catch (NumberFormatException nfe) {// may be a number, may not . . .
+                if (toString.charAt(0)== NAMEMARKER){
+                    Name toName = findByName(loggedInConnection,toString);
+                    toString = toName.getDefaultDisplayName();
+                }
+            }
+
+        }
+
+        if (countString.length() > 0) {
+            try {
+                count = Integer.parseInt(countString);
+            } catch (NumberFormatException nfe) {
+
+                // should I actually throw an exception as count should really just work?
+            }
+
+        }
+
+
+        int position = 1;
+        boolean inSet = false;
+        if (to != -1000 && to < 0){
+            to = names.size() + to;
+        }
+
+
+        int added = 0;
+
+         for (Name name : names) {
+            if (position == from || name.getDefaultDisplayName().equals(fromString)) inSet = true;
+            if (inSet){
+                toReturn.add(name);
+                added++;
+            }
+            if (position == to || name.getDefaultDisplayName().equals(toString) || added == count) inSet = false;
             position++;
         }
         return toReturn;
     }
 
-    public List<Name> findChildrenFromTo(final Name name, final String from, final String to) throws Exception {
-        final List<Name> toReturn = new ArrayList<Name>();
-        boolean okByFrom = false;
-        if (from == null) {
-            okByFrom = true;
-        }
-        //THIS SHOULD NOT BE A SORTED LIST (e.g.  Months;from May;to September)
-        //for (Name child : findChildrenSortedAlphabetically(name)) {
-        for (Name child : name.getChildren()){
-            System.out.println("child \"" + child.getDefaultDisplayName() + "\"");
-            if (!okByFrom && child.getDefaultDisplayName().equalsIgnoreCase(from)) {
-                okByFrom = true;
-            }
-            if (okByFrom) {
-                toReturn.add(child);
-            }
-            if (to != null && child.getDefaultDisplayName().equalsIgnoreCase(to)) { // we just hit the last one
-                break;
-            }
-        }
-        return toReturn;
-    }
-
-    public List<Name> findChildrenFromCount(final Name name, final String from, int count) throws Exception {
-        final List<Name> toReturn = new ArrayList<Name>();
-        boolean okByFrom = false;
-        if (from == null) {
-            okByFrom = true;
-        }
-        for (Name child : name.getChildren()) {
-            System.out.println("child \"" + child.getDefaultDisplayName() + "\"");
-            if (!okByFrom && child.getDefaultDisplayName().equalsIgnoreCase(from)) {
-                okByFrom = true;
-            }
-            if (okByFrom) {
-                toReturn.add(child);
-                if(count-- == 0){
-                    break;
-                }
-            }
-         }
-        return toReturn;
-    }
 
 
 
@@ -511,7 +537,14 @@ public final class NameService {
 
     public String getInstruction(final String instructions, final String instructionName) {
         String toReturn = null;
-        if (instructions.toLowerCase().contains(instructionName.toLowerCase())) {
+        //needs to detect that e.g. 'from' is an instruction, and not contained in a word
+        int iPos=instructions.toLowerCase().indexOf(instructionName.toLowerCase());
+        if (iPos >= 0) {
+            while (iPos>0 && instructions.charAt(iPos-1) != ';'){
+              iPos = instructions.toLowerCase().indexOf(instructionName.toLowerCase(), iPos + 1);
+            }
+        }
+        if (iPos >= 0){
             int commandStart = instructions.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length();
             if (instructions.indexOf(";", commandStart) != -1) {
                 toReturn = instructions.substring(commandStart, instructions.indexOf(";", commandStart)).trim();
@@ -540,7 +573,7 @@ public final class NameService {
             }
             Name quoteName = findByName(loggedInConnection, nameToFind);
             if (quoteName!=null){
-                instructions = instructions.substring(0,lastQuoteStart) + NAMEMARKER + quoteName.getId()  + " " + instructions.substring(lastQuoteEnd);
+                instructions = instructions.substring(0,lastQuoteStart) + NAMEMARKER + quoteName.getId()  + " " + instructions.substring(lastQuoteEnd + 1);
                 lastQuoteEnd = instructions.lastIndexOf("\"");
             }else{
                 lastQuoteEnd = -1;
@@ -582,17 +615,34 @@ public final class NameService {
             int nextTerm = setFormula.length() + 1;
             if (m.find()){
                 nextTerm = m.start() + pos + 2;
+                //PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
+                //  neet to check for this....
+                while (nextTerm > 5 && nextTerm < setFormula.length() && (setFormula.substring(nextTerm - 5,nextTerm).equalsIgnoreCase("from ") || setFormula.substring(nextTerm - 3,nextTerm).equalsIgnoreCase("to "))){
+                    int startPos = nextTerm + 1;
+                    nextTerm = setFormula.length() + 1;
+                    m = p.matcher(setFormula.substring(startPos));
+                    if (m.find()){
+                        nextTerm = m.start() + startPos;
+                    }
+                }
             }
             if (op == NAMEMARKER){
                 stackCount++;
-                nameStack.add(interpretSetTerm(loggedInConnection,setFormula.substring(pos, nextTerm - 1)));
-            }else if (op=='+'){
+                List<Name> nextNames = new ArrayList<Name>();
+                String error = interpretSetTerm(loggedInConnection,nextNames, setFormula.substring(pos, nextTerm - 1));
+                if (error.length() > 0 ) {
+                    return error;
+                }
+                nameStack.add(nextNames);
+            }else if (stackCount-- < 2){
+                return "error: not understood:  " + setFormula;
 
-                nameStack.get(--stackCount-1).addAll(nameStack.get(stackCount));
             }else if (op=='*'){
-                nameStack.get(--stackCount-1).retainAll(nameStack.get(stackCount));
+                nameStack.get(stackCount-1).retainAll(nameStack.get(stackCount));
             }else if (op=='-'){
-                nameStack.get(--stackCount-1).removeAll(nameStack.get(stackCount));
+                nameStack.get(stackCount-1).removeAll(nameStack.get(stackCount));
+            }else if (op=='+'){
+                nameStack.get(stackCount-1).addAll(nameStack.get(stackCount));
             }
             pos = nextTerm;
         }
@@ -600,13 +650,13 @@ public final class NameService {
         return "";
     }
 
-    private List<Name> interpretSetTerm(LoggedInConnection loggedInConnection, String setTerm) throws Exception{
+    private String interpretSetTerm(LoggedInConnection loggedInConnection, List<Name> namesFound, String setTerm) throws Exception{
 
         final String levelString = getInstruction(setTerm, LEVEL);
-        final String fromString = getInstruction(setTerm, FROM);
+        String fromString = getInstruction(setTerm, FROM);
         final String childrenString = getInstruction(setTerm, CHILDREN);
-        final String toString = getInstruction(setTerm, TO);
-        final String countString = getInstruction(setTerm, COUNT);
+        String toString = getInstruction(setTerm, TO);
+        String countString = getInstruction(setTerm, COUNT);
         List<Name> names = new ArrayList<Name>();
 
         String nameString = setTerm;
@@ -615,97 +665,45 @@ public final class NameService {
         }
         final Name name = findByName(loggedInConnection, nameString);
         if (name == null) {
-            return null;
+            return "error:  not understood: " + nameString;
         }
-
-        if (childrenString == null) {
+        if (childrenString == null){
             names.add(name);
-            // what was this for? Not used . . .
-            //String reversePolish = shuntingYardAlgorithm(loggedInConnection, name);
-            return names;
-        }
+        }else{
+            // FIRST - get the set of names given the level
+            names = findChildrenAtLevel(name, levelString);
+            if (fromString==null) fromString = "";
+            if (toString == null) toString = "";
+            if (countString == null) countString = "";
 
-        int level = 1;
-        if (levelString != null) {
-            if (levelString.equalsIgnoreCase(LOWEST)) {
-                System.out.println("lowest");
-                level = -1;
-            }if (levelString.equalsIgnoreCase(ALL)){
-                level = -2;
-            }else{
-                try {
-                    level = Integer.parseInt(levelString);
-                } catch (NumberFormatException nfe) {
-                    //carry on regardless!
-                }
+            //SECOND  trim that down to the subset defined by from, to, count
+            if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
+                names = findChildrenFromToCount (loggedInConnection, names, fromString, toString, countString);
             }
-        }
-
-        int from = -1;
-        int to = -1;
-        int count = -1;
-        if (fromString != null) {
-            try {
-                from = Integer.parseInt(fromString);
-            } catch (NumberFormatException nfe) {// may be a number, may not . . .
-            }
-
-        }
-        if (toString != null) {
-            try {
-                to = Integer.parseInt(toString);
-            } catch (NumberFormatException nfe) {// may be a number, may not . . .
-            }
-
-        }
-
-        if (countString != null) {
-            try {
-                count = Integer.parseInt(countString);
-            } catch (NumberFormatException nfe) {
-
-                // should I actually throw an exception as count should really just work?
-            }
-        }
-
-        if (from != -1 || to != -1) { // numeric, I won't allow mixed for the moment
-            names = findChildrenFromTo(name, from, to);
-        } else if (fromString != null || toString != null && count==-1) {
-            names = findChildrenFromTo(name, fromString, toString);
-        } else { // also won't allow from/to/level mixes either
-            // sorted means level won't work
+            // THIRD   Sort if necessary
             if (getInstruction(setTerm, SORTED) != null) {
-                names = findChildrenSortedAlphabetically(name);
-            } else {
-                names = findChildrenAtLevel(name, level);
+                Collections.sort(names);
             }
         }
-
-        // deal with count, easier to do this here than in the functions above. If there's a performance issue can move it later
-
-        if (count != -1){
-            names = findChildrenFromCount(name, fromString, count);
-        }
-
+        // LAST  see if any are calculated fields
         for (Name name2 : names) {
             String calc = name2.getAttribute("CALCULATION");
             if (calc != null && calc.length() > 0){
-               String result = shuntingYardAlgorithm(loggedInConnection, calc);
-               if (result != null && result.length() > 0){
-                   if (result.startsWith("error:")){
-                       //handle error!
-                   }else{
-                       if (name2.getAttribute("RPCALC") == null || name2.getAttribute("RPCALC") != result) {
+                String result = shuntingYardAlgorithm(loggedInConnection, calc);
+                if (result != null && result.length() > 0){
+                    if (result.startsWith("error:")){
+                       return result;
+                    }else{
+                        if (name2.getAttribute("RPCALC") == null || name2.getAttribute("RPCALC") != result) {
                             name2.setAttributeWillBePersisted("RPCALC", result);
-                       }
-                   }
-
-                   name2.setAttributeWillBePersisted("RPCALC", result);
-               }
+                        }
+                    }
+                }
             }
         }
-        return names;
-    }
+        namesFound.addAll(names);
+        return "";
+   }
 
     // ok it seems the name is passed purely for debugging purposes
     // called from shuntingyardalgorithm 3 times, think not on operations
@@ -915,7 +913,7 @@ public final class NameService {
                                 StringTokenizer st = new StringTokenizer(nameJsonRequest.attributes.get(key), ",");
                                 while (st.hasMoreTokens()) {
                                     String peerName = st.nextToken().trim();
-                                    Name peer = loggedInConnection.getTotoMemoryDB().getNameByAttribute(loggedInConnection.getLanguage(), peerName, null);
+                                    Name peer = loggedInConnection.getTotoMemoryDB().getNameByAttribute(loggedInConnection, peerName, null);
                                     if (peer == null) {
                                         return "error: cannot find peer : " + peerName;
                                     } else {
