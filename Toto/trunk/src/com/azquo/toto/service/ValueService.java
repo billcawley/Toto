@@ -385,7 +385,7 @@ seaports;children   container;children
                 List<Name> nameList = new ArrayList<Name>();
                 String error = nameService.interpretName(loggedInConnection, nameList, cellString);
                 if (error.length() > 0){
-                    //TODO HANDLE ERROR
+                    return error;
                 }
                 row.add(nameList);
             }
@@ -650,6 +650,49 @@ seaports;children   container;children
         return sb.toString();
     }
 
+    private boolean isInPeers(Name name, Map<Name, Boolean> peers){
+        for (Name peer:peers.keySet()){
+            if (peer == name) return true;
+
+        }
+        for (Name parent:name.getParents()){
+          if (isInPeers(parent, peers)){
+              return true;
+          }
+        }
+        return false;
+    }
+
+    private void createCellNameList(final Set<Name> namesForThisCell, final List<Name> rowName, final List<Name> columnName, final List<Name> contextNames){
+        namesForThisCell.addAll(contextNames);
+        namesForThisCell.addAll(columnName);
+        namesForThisCell.addAll(rowName);
+        //now check that all names are needed
+
+        Map<Name, Boolean>  peers = new LinkedHashMap<Name, Boolean>();
+        for (Name peerCell: columnName){
+            if (peerCell.getPeers().size() > 0){
+                peers = peerCell.getPeers();
+            }
+        }
+        if (peers.size()==0){
+            for (Name peerCell:rowName){
+                if (peerCell.getPeers().size() > 0){
+                    peers = peerCell.getPeers();
+                }
+            }
+        }
+        if (peers.size() > 0 && peers.size()!=namesForThisCell.size()){
+            // we must discard some names
+            List<Name> surplusNames = new ArrayList<Name>();
+            for (Name name:namesForThisCell){
+                if (name.getPeers().size() == 0 && !isInPeers(name, peers)){
+                    surplusNames.add(name);
+                 }
+            }
+            namesForThisCell.removeAll(surplusNames);
+        }
+    }
 
     public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region) throws Exception {
         loggedInConnection.setContext(region, contextNames); // needed for provenance
@@ -668,11 +711,8 @@ seaports;children   container;children
             int count = 1;
             for (List<Name> columnName : loggedInConnection.getColumnHeadings(region)) {
                 final Set<Name> namesForThisCell = new HashSet<Name>();
-                namesForThisCell.addAll(contextNames);
-                namesForThisCell.addAll(columnName);
-                namesForThisCell.addAll(rowName);
-
-                // edd putting in peer check stuff here, should I not???
+                createCellNameList(namesForThisCell, rowName, columnName, contextNames);
+                  // edd putting in peer check stuff here, should I not???
                 Map<String, String> result = nameService.isAValidNameSet(namesForThisCell, new HashSet<Name>());
                 if (result.get(NameService.ERROR) != null) { // not a valid peer set? must say something useful to the user!
                     return result.get(NameService.ERROR);
