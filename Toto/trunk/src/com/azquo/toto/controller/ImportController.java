@@ -134,9 +134,14 @@ public class ImportController {
             item = (FileItem) it.next();
             InputStream uploadFile = item.getInputStream();
             origLanguage = loggedInConnection.getLanguage();
+            if (language.toLowerCase().endsWith("loose")){
+                loggedInConnection.setLoose(true);
+                language = language.substring(0, language.length()-5).trim();
+            }
             if (language==null || language.length()==0 || language.equalsIgnoreCase("name")){
                 language="DEFAULT_DISPLAY_NAME";
             }
+
             loggedInConnection.setLanguage(language);
 
             result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, separator, create);
