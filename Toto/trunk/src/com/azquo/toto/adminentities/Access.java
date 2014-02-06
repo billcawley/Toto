@@ -1,5 +1,8 @@
 package com.azquo.toto.adminentities;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Date;
 
 /**
@@ -18,7 +21,9 @@ public final class Access extends StandardEntity {
     String readList;
     String writeList;
 
-    public Access(int id, Date startDate, Date endDate, int userId, int databaseId, String readList, String writeList) {
+    @JsonCreator
+    public Access(@JsonProperty("id") int id, @JsonProperty("startDate") Date startDate, @JsonProperty("endDate") Date endDate, @JsonProperty("userId") int userId,
+                  @JsonProperty("databaseId") int databaseId, @JsonProperty("readList") String readList, @JsonProperty("writeList") String writeList) {
         this.id = id;
         this.startDate = startDate;
         this.endDate = endDate;

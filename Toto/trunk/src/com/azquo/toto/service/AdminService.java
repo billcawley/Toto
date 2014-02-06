@@ -270,4 +270,20 @@ public class AdminService {
         }
         return null;
     }
+
+    // there is a constraint on here,only allow relevant user or database ids! Otherwise could cause all sort of trouble
+    public String setAccessListForBusiness(LoggedInConnection loggedInConnection, List<Access> accessList) {
+        for (Access access : accessList){
+            Database d = databaseDao.findById(access.getDatabaseId());
+            if (d == null || d.getBusinessId() != loggedInConnection.getUser().getBusinessId()){
+                return "error: database id " + access.getDatabaseId() + " is invalid";
+            }
+            User u = userDao.findById(access.getUserId());
+            if (u == null || u.getBusinessId() != loggedInConnection.getUser().getBusinessId()){
+                return "error: user id " + access.getUserId() + " is invalid";
+            }
+            accessDao.store(access);
+        }
+        return "";
+    }
 }
