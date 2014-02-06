@@ -82,15 +82,23 @@ public final class ImportService {
 
     private String readPreparedFile(LoggedInConnection loggedInConnection, InputStream uploadFile, String fileType, boolean create) throws Exception {
 
-        if (fileType.toLowerCase().equals("values")) {
+        if (fileType.toLowerCase().startsWith("values")) {
+            if  (fileType.length() > 7){
+                String language = fileType.substring(7).trim();
+                String origLanguage = loggedInConnection.getLanguage();
+                loggedInConnection.setLanguage(language);
+                String result = valuesImport(loggedInConnection,uploadFile,create);
+                loggedInConnection.setLanguage(origLanguage);
+                return result;
+            }
             return valuesImport(loggedInConnection, uploadFile, create);
         }
         // we will pay attention onn the attribute import and replicate
-        if (fileType.toLowerCase().equals("names")) {
+        if (fileType.toLowerCase().startsWith("names")) {
             return namesImport(loggedInConnection, uploadFile, create);
 
         }
-        if (fileType.toLowerCase().equals("structure")) {
+        if (fileType.toLowerCase().startsWith("structure")) {
             return structureImport(loggedInConnection, uploadFile, create);
 
         }
@@ -142,13 +150,14 @@ public final class ImportService {
         while (csvReader.readRecord()) {
             String value;
             // for each record we want to find value name sets, most of the time there's only one but they are defined in namesWithPeersHeaderMap
-            for (Name headerName : namesWithPeersHeaderMap.keySet()) {
-                final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
+             for (Name headerName : namesWithPeersHeaderMap.keySet()) {
+                 boolean hasRequiredPeers = true;
+                 final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
                 namesForValue.add(headerName); // the one at the top of this column, the name with peers.
                 for (Name peer : headerName.getPeers().keySet()) { // go looking for the peers
                     final String peerVal = csvReader.get(headings.get(peer));
                     if (peerVal == null || peerVal.length() == 0) { // the file specified
-                        throw new Exception("unable to find " + peer.getDefaultDisplayName() + " for " + headerName.getDefaultDisplayName());
+                        hasRequiredPeers = false;
                     } else {
                         //storeStructuredName(peer,peerVal, loggedInConnection);
                         // lower level names first so the syntax is something like Knightsbridge, London, UK
@@ -173,10 +182,14 @@ public final class ImportService {
                     }
                     //namesForValue.add(nameService.findOrCreateName(loggedInConnection,peerVal + "," + peer.getName())) ;
                 }
+                if (hasRequiredPeers){
                 // now we have the set of names for that name with peers get the value from that column it's a header for
-                value = csvReader.get(namesWithPeersHeaderMap.get(headerName));
+                    value = csvReader.get(namesWithPeersHeaderMap.get(headerName));
+                }else{
+                    value = "";
+                }
                 if (value.trim().length() > 0) { // no point storing if there's no value!
-                    valuecount++;
+                     valuecount++;
                     // finally store our value and names for it
                     valueService.storeValueWithProvenanceAndNames(loggedInConnection, value, namesForValue);
                     if (valuecount % 5000 == 0) {
