@@ -32,6 +32,7 @@ public final class LoggedInConnection {
     private Date lastAccessed;
     private long timeOut;
     private String language;
+    private boolean loose;  // this flag is used to say whether names can be searched in other languages than the current default
 
     private final Map<String, List<List<Name>>> rowHeadings;
     private final Map<String, List<List<Name>>> columnHeadings;
@@ -50,6 +51,7 @@ public final class LoggedInConnection {
         loginTime = new Date();
         lastAccessed = new Date();
         language = Name.DEFAULT_DISPLAY_NAME;
+        loose = false;
         rowHeadings = new HashMap<String, List<List<Name>>>();
         columnHeadings = new HashMap<String, List<List<Name>>>();
         contexts = new HashMap<String, List<Name>>();
@@ -93,6 +95,8 @@ public final class LoggedInConnection {
         return language;
     }
 
+    public boolean getLoose() {return loose; }
+
     public long getTimeOut() {
         return timeOut;
     }
@@ -104,6 +108,8 @@ public final class LoggedInConnection {
     public void setLanguage(final String language) {
         this.language = language;
     }
+
+    public void setLoose(final boolean loose) {this.loose = loose; }
 
     public List<List<Name>> getRowHeadings(final String region) {
         if (region == null || region.isEmpty()) {
