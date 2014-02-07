@@ -3,6 +3,7 @@ package com.azquo.toto.memorydb;
 import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.memorydbdao.JsonRecordTransport;
 import com.azquo.toto.memorydbdao.StandardDAO;
+import com.azquo.toto.service.LoggedInConnection;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -181,10 +182,20 @@ public final class TotoMemoryDB {
 
     }
 
-    public Name getNameByAttribute(final String attributeName, final String attributeValue, final Name parent) {
+    public Name getNameByAttribute(final LoggedInConnection loggedInConnection, final String attributeValue, final Name parent) {
+        String attributeName = loggedInConnection.getLanguage();
         if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null) {// there is an attribute with that name in the whole db . . .
-            final Set<Name> possibles = nameByAttributeMap.get(attributeName.toLowerCase().trim()).get(attributeValue.toLowerCase().trim());
-            if (possibles == null) return null;
+            Set<Name> possibles = nameByAttributeMap.get(attributeName.toLowerCase().trim()).get(attributeValue.toLowerCase().trim());
+            if (possibles == null){
+                if (!loggedInConnection.getLoose()){
+                    return null;
+                }
+                //maybe if 'loose' we should look at ALL languages, but here will look at default language.
+                possibles = nameByAttributeMap.get(Name.DEFAULT_DISPLAY_NAME.toLowerCase()).get(attributeValue.toLowerCase().trim());
+                if (possibles == null){
+                    return null;
+                }
+            }
             if (parent == null) {
                 if (possibles.size() != 1) return null;
                 return possibles.iterator().next();
@@ -249,7 +260,7 @@ public final class TotoMemoryDB {
         return toReturn;
     }
 
-
+/*
     public List<Name> searchNames(final String attribute, String search) {
         long track = System.currentTimeMillis();
         search = search.trim().toLowerCase();
@@ -276,7 +287,7 @@ public final class TotoMemoryDB {
         System.out.println("search time : " + (System.currentTimeMillis() - track));
         return toReturn;
     }
-
+*/
 /*    public Name getNameById(int id) {
         return nameByIdMap.get(id);
     }
