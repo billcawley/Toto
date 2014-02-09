@@ -252,7 +252,8 @@ public final class ImportService {
                             if (newAttributeValue.length() == 0) { // blank means we remove
                                 name.removeAttributeWillBePersisted(attName);
                             } else {
-                                name.setAttributeWillBePersisted(attName, newAttributeValue);
+                                String error = name.setAttributeWillBePersisted(attName, newAttributeValue);
+                                if (error.length() > 0) return error;
                             }
                         }
                     }
