@@ -410,14 +410,14 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name> {
         setNeedsPersisting();
     }
 
-    public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
+    public synchronized String setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
 
         // important, manage persistence, allowed name rules, db look ups
         // only care about ones in this set
         for (Name parent : parents) {
             for (Name fellowChild : parent.getChildren()) {
                 if (fellowChild.getId() != getId() && fellowChild.getAttribute(attributeName) != null && fellowChild.getAttribute(attributeName).equalsIgnoreCase(attributeValue)) {
-                    throw new Exception(attributeName + " value : " + attributeValue + " already exists among siblings of " + getAttribute(DEFAULT_DISPLAY_NAME));
+                    return "error: value : " + attributeValue + " already exists among siblings of " + getAttribute(DEFAULT_DISPLAY_NAME);
                 }
             }
         }
@@ -425,6 +425,7 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name> {
         // now deal with the DB maps!
         getTotoMemoryDB().addNameToAttributeNameMap(this); // will overwrite but that's fine
         setNeedsPersisting();
+        return "";
     }
 
     public synchronized void removeAttributeWillBePersisted(String attributeName) throws Exception {
