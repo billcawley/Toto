@@ -338,12 +338,13 @@ public final class ValueService {
             if (x > 0) sb.append("\n");
             for (int y = 0; y < xNames.size(); y++) {
                 if (y > 0) sb.append("\t");
+                //NOW - LEAVE THE PRUNING OF NAMES TO EXCEL - MAYBE THE LIST WILL BE SORTED.
                 //don't show repeating names in the headings - leave blank.
-                if ((x == 0 || !lastxNames.get(y).equals(xNames.get(y))) && (y == 0 || !xNames.get(y - 1).equals(xNames.get(y)))) {
+                //if ((x == 0 || !lastxNames.get(y).equals(xNames.get(y))) && (y == 0 || !xNames.get(y - 1).equals(xNames.get(y)))) {
                     sb.append(xNames.get(y).getDefaultDisplayName());
-                }
+                //}
             }
-            lastxNames = xNames;
+           // lastxNames = xNames;
         }
         return sb.toString();
     }
