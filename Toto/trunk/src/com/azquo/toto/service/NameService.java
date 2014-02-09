@@ -4,6 +4,7 @@ import com.azquo.toto.jsonrequestentities.NameJsonRequest;
 import com.azquo.toto.memorydb.Name;
 import com.azquo.toto.memorydb.Provenance;
 
+import java.net.URLEncoder;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -288,7 +289,7 @@ public final class NameService {
         if (currentLevel == level){
             return;
         }
-        if (name.getChildren()==null){
+        if (name.getChildren().size() ==0){
             if (level == -1){
                 namesFound.add(name);
             }
@@ -313,7 +314,7 @@ public final class NameService {
             if (levelString.equalsIgnoreCase(LOWEST)) {
                 System.out.println("lowest");
                 level = -1;
-            }if (levelString.equalsIgnoreCase(ALL)){
+            }else if (levelString.equalsIgnoreCase(ALL)){
                 level = -2;
             }else{
                 try {
@@ -564,12 +565,14 @@ public final class NameService {
         while (lastQuoteEnd >= 0){
             int  lastQuoteStart = instructions.lastIndexOf("\"",lastQuoteEnd - 1);
             //find the parents - if they exist
-            String nameToFind = instructions.substring(lastQuoteStart);
-            Pattern p =  Pattern.compile("[ ;\\+\\*]");
-            Matcher m =  p.matcher(instructions.substring(lastQuoteEnd));
-            if (m.find()){
-                lastQuoteEnd += m.start();
-                nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd);
+            String nameToFind = instructions.substring(lastQuoteStart + 1, lastQuoteEnd);
+            if (lastQuoteEnd < instructions.length() - 1 && instructions.charAt(lastQuoteEnd + 1)==','){
+               Pattern p =  Pattern.compile("[ ;\\+\\*]");
+               Matcher m =  p.matcher(instructions.substring(lastQuoteEnd + 1));
+               if (m.find()){
+                  lastQuoteEnd += m.start();
+                  nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd);
+               }
             }
             Name quoteName = findByName(loggedInConnection, nameToFind);
             if (quoteName!=null){
@@ -772,7 +775,7 @@ public final class NameService {
         //start by replacing names in quotes (which may contain operators) with '!<name id>   - e.g.  '!1000'
         calc = stripQuotes(loggedInConnection, calc);
 
-        Pattern p = Pattern.compile("[\\+-/\\*\\(\\)]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[\\+\\-/\\*\\(\\)]"); // only simple maths allowed at present
         StringBuffer sb = new StringBuffer();
         String stack = "";
         Matcher m = p.matcher(calc);
@@ -1125,7 +1128,7 @@ public final class NameService {
             }
             for (String attName : name.getAttributes().keySet()) {
                 if (count > 0) sb.append(",");
-                sb.append("\"" + attName + "\":\"" + name.getAttributes().get(attName) + "\"");
+                sb.append("\"" + attName + "\":\"" + URLEncoder.encode(name.getAttributes().get(attName)) + "\"");
                 count++;
             }
             sb.append("}");
@@ -1146,6 +1149,8 @@ public final class NameService {
             sb.append("]");
         }
         sb.append("}");
+
+
         return sb.toString();
         //}
         //return "";
