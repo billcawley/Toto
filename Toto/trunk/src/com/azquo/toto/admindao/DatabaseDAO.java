@@ -67,6 +67,12 @@ public final class DatabaseDAO extends StandardDAO<Database> {
     public List<Database> findForBusinessId(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        return findListWithWhereSQLAndParameters("WHERE `" + BUSINESSID + "` = :" + BUSINESSID, namedParams, false);
+        return findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID, namedParams, false);
+    }
+
+    public Database findForName(final String name) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(NAME, name);
+        return findOneWithWhereSQLAndParameters(" WHERE `" + NAME + "` = :" + NAME, namedParams);
     }
 }

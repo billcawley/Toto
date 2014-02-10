@@ -21,9 +21,18 @@ public final class Access extends StandardEntity {
     String readList;
     String writeList;
 
+    // used by the excel not the database. Easiest to put here
+    String database;
+    String email;
+
+    public Access(int id, Date startDate, Date endDate, int userId, int databaseId, String readList, String writeList) {
+        this(id, startDate, endDate, userId, databaseId, readList, writeList,null,null);
+    }
+
     @JsonCreator
     public Access(@JsonProperty("id") int id, @JsonProperty("startDate") Date startDate, @JsonProperty("endDate") Date endDate, @JsonProperty("userId") int userId,
-                  @JsonProperty("databaseId") int databaseId, @JsonProperty("readList") String readList, @JsonProperty("writeList") String writeList) {
+                  @JsonProperty("databaseId") int databaseId, @JsonProperty("readList") String readList, @JsonProperty("writeList") String writeList,
+                  @JsonProperty("database") String database, @JsonProperty("email") String email) {
         this.id = id;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -31,6 +40,8 @@ public final class Access extends StandardEntity {
         this.databaseId = databaseId;
         this.readList = readList;
         this.writeList = writeList;
+        this.database = database;
+        this.email = email;
     }
 
     public Date getStartDate() {
@@ -81,6 +92,22 @@ public final class Access extends StandardEntity {
         this.writeList = writeList;
     }
 
+    public String getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(String database) {
+        this.database = database;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     @Override
     public String toString() {
         return "Access{" +
@@ -93,4 +120,6 @@ public final class Access extends StandardEntity {
                 ", writeList='" + writeList + '\'' +
                 '}';
     }
+
+
 }

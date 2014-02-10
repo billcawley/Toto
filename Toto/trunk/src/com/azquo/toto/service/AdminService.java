@@ -261,12 +261,9 @@ public class AdminService {
         return null;
     }
 
-    public List<Access> getAccessList(final LoggedInConnection loggedInConnection, String userEmail) {
+    public List<Access> getAccessList(final LoggedInConnection loggedInConnection) {
         if (loggedInConnection.getUser().isAdministrator()) {
-            User user = userDao.findByEmail(userEmail);
-            if (user != null && user.getBusinessId() == loggedInConnection.getUser().getBusinessId()) { // we can show access for that user
-                return accessDao.findForUserId(user.getId());
-            }
+            return accessDao.findByBusinessId(loggedInConnection.getUser().getBusinessId());
         }
         return null;
     }
@@ -274,14 +271,16 @@ public class AdminService {
     // there is a constraint on here,only allow relevant user or database ids! Otherwise could cause all sort of trouble
     public String setAccessListForBusiness(LoggedInConnection loggedInConnection, List<Access> accessList) {
         for (Access access : accessList){
-            Database d = databaseDao.findById(access.getDatabaseId());
+            Database d = databaseDao.findForName(access.getDatabase());
             if (d == null || d.getBusinessId() != loggedInConnection.getUser().getBusinessId()){
-                return "error: database id " + access.getDatabaseId() + " is invalid";
+                return "error: database name " + access.getDatabase() + " is invalid";
             }
-            User u = userDao.findById(access.getUserId());
+            access.setDatabaseId(d.getId());
+            User u = userDao.findByEmail(access.getEmail());
             if (u == null || u.getBusinessId() != loggedInConnection.getUser().getBusinessId()){
-                return "error: user id " + access.getUserId() + " is invalid";
+                return "error: user email " + access.getEmail() + " is invalid";
             }
+            access.setUserId(u.getId());
             accessDao.store(access);
         }
         return "";

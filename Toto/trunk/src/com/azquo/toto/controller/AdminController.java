@@ -59,6 +59,7 @@ public class AdminController {
                                 @RequestParam(value = "userlist", required = false) final String userList, @RequestParam(value = "accesslist", required = false) final String accessList,
                                 @RequestParam(value = "connectionid", required = false) final String connectionId) throws Exception {
 
+        System.out.println("request to admin controller : " + op);
         if (op.equalsIgnoreCase(SIGNON)) {
             if (key != null && key.length() > 0 && businessName != null && businessName.length() > 0) {
                 return adminService.confirmKey(businessName, email, password, key) + "";
@@ -107,9 +108,10 @@ public class AdminController {
                 }
             }
             if (op.equalsIgnoreCase(ACCESSLIST)) {
-                if (email != null && email.length() > 0) {
-                    return jacksonMapper.writeValueAsString(adminService.getAccessList(loggedInConnection, email));
-                }
+                // ok needs to work without email . .
+                String toReturn =jacksonMapper.writeValueAsString(adminService.getAccessList(loggedInConnection));
+                System.out.println("returned access list : " + toReturn);
+               return toReturn;
             }
             if (op.equalsIgnoreCase(SAVEACCESS) ) {
                 if (accessList != null && accessList.length() > 0) {

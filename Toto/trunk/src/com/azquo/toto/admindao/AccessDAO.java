@@ -1,6 +1,7 @@
 package com.azquo.toto.admindao;
 
 import com.azquo.toto.adminentities.Access;
+import com.azquo.toto.adminentities.User;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -40,6 +41,14 @@ public final class AccessDAO extends StandardDAO<Access> {
         toReturn.put(READLIST, access.getReadList());
         toReturn.put(WRITELIST, access.getWriteList());
         return toReturn;
+    }
+
+    // ok need a bit of heavier sql here, probably need to reference some fields and
+
+    public List<Access> findByBusinessId(int businessId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DatabaseDAO.BUSINESSID, businessId);
+        return findListWithWhereSQLAndParameters(", `master_db`.`database`  WHERE `master_db`.`database`.id = `master_db`.`access`.`database_id` and  `master_db`.`database`.`" + DatabaseDAO.BUSINESSID + "` = :" + DatabaseDAO.BUSINESSID, namedParams, false);
     }
 
     public static final class AccessRowMapper implements RowMapper<Access> {
