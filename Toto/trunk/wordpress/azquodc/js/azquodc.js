@@ -153,8 +153,12 @@ function az_click(e){
 function az_getdata(e){
     e = e || window.event;
     // amended - could be cumulative...
-    az_chosen = "\"" + e.textContent + "\"";
+     az_chosen =  e.textContent;
+    if (az_chosen.substring(0,1) == "\"") {
+        az_chosen = az_chosen.substring(1);
+    }
     //remove final brackets
+
     var bracketPos = 0;
     while (az_chosen.indexOf("(", bracketPos) > 0){
         bracketPos = az_chosen.indexOf("(", bracketPos) + 1;
@@ -165,7 +169,7 @@ function az_getdata(e){
     }
     document.getElementById("az_search_set").innerHTML = az_chosen;
     document.getElementById("az_Select").style.display = "none";
-    azquojson("Value","searchbynames=" + escape(az_chosen) + "&jsonfunction=azquojsonfeed");
+    azquojson("Value","searchbynames=" + escape("\"" + az_chosen + "\"") + "&jsonfunction=azquojsonfeed");
 
 
 }
