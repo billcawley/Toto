@@ -48,7 +48,12 @@ public final class Value extends TotoMemoryDBEntity {
         names = new HashSet<Name>();
         //System.out.println("name ids" + transport.nameIds);
         for (Integer nameId : transport.nameIds) {
-            names.add(getTotoMemoryDB().getNameById(nameId));
+            Name name =getTotoMemoryDB().getNameById(nameId);
+            if (name != null){
+                names.add(name);
+            } else {
+                System.out.println("Value referenced a name id that did not exist : " + nameId + " skipping");
+            }
         }
         setNamesWillBePersisted(names);
         getTotoMemoryDB().addValueToDb(this);

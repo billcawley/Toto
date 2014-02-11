@@ -72,47 +72,56 @@ public final class TotoMemoryDB {
         return needsLoading;
     }
 
-    synchronized private void loadData() throws Exception {
+    synchronized private void loadData() {
         if (needsLoading) { // only allow it once!
-            // here we'll populate the memory DB from the database
-            long track = System.currentTimeMillis();
+            System.out.println("loading data for "  + getMySQLName());
 
-            // these 3 commands will automatically load teh data into the memory DB set as persisted
+            try{
+                // here we'll populate the memory DB from the database
+                long track = System.currentTimeMillis();
 
-            // Must load provenance first as used by the other two!
+                // these 3 commands will automatically load teh data into the memory DB set as persisted
 
-            final List<JsonRecordTransport> allProvenance = standardDAO.findFromTable(this, StandardDAO.PROVENANCE);
-            for (JsonRecordTransport provenanceRecord : allProvenance) {
-                if (provenanceRecord.id > maxIdAtLoad) {
-                    maxIdAtLoad = provenanceRecord.id;
+                // Must load provenance first as used by the other two!
+
+                final List<JsonRecordTransport> allProvenance = standardDAO.findFromTable(this, StandardDAO.PROVENANCE);
+                for (JsonRecordTransport provenanceRecord : allProvenance) {
+                    if (provenanceRecord.id > maxIdAtLoad) {
+                        maxIdAtLoad = provenanceRecord.id;
+                    }
+                    new Provenance(this, provenanceRecord.id, provenanceRecord.json);
                 }
-                new Provenance(this, provenanceRecord.id, provenanceRecord.json);
-            }
-            final List<JsonRecordTransport> allNames = standardDAO.findFromTable(this, StandardDAO.NAME);
-            for (JsonRecordTransport nameRecord : allNames) {
-                if (nameRecord.id > maxIdAtLoad) {
-                    maxIdAtLoad = nameRecord.id;
+                final List<JsonRecordTransport> allNames = standardDAO.findFromTable(this, StandardDAO.NAME);
+                for (JsonRecordTransport nameRecord : allNames) {
+                    if (nameRecord.id > maxIdAtLoad) {
+                        maxIdAtLoad = nameRecord.id;
+                    }
+                    new Name(this, nameRecord.id, nameRecord.json);
                 }
-                new Name(this, nameRecord.id, nameRecord.json);
-            }
-            final List<JsonRecordTransport> allValues = standardDAO.findFromTable(this, StandardDAO.VALUE);
-            for (JsonRecordTransport valueRecord : allValues) {
-                if (valueRecord.id > maxIdAtLoad) {
-                    maxIdAtLoad = valueRecord.id;
+                final List<JsonRecordTransport> allValues = standardDAO.findFromTable(this, StandardDAO.VALUE);
+                for (JsonRecordTransport valueRecord : allValues) {
+                    if (valueRecord.id > maxIdAtLoad) {
+                        maxIdAtLoad = valueRecord.id;
+                    }
+                    new Value(this, valueRecord.id, valueRecord.json);
                 }
-                new Value(this, valueRecord.id, valueRecord.json);
+
+                System.out.println(allNames.size() + allValues.size() + allProvenance.size() + " unlinked entities loaded in " + (System.currentTimeMillis() - track) + "ms");
+
+                track = System.currentTimeMillis();
+
+                int linkCounter = 0;
+                // sort out the maps in names, they couldn't be fixed on load as names link to themselves
+                initNames();
+                System.out.println(linkCounter + " values name links created in " + (System.currentTimeMillis() - track) + "ms");
+                //track = System.currentTimeMillis();
+
+                System.out.println("loaded data for "  + getMySQLName());
+
+            } catch (Exception e){
+                System.out.println("could not load data for " + getMySQLName() + "! Stacktrace to follow");
+                e.printStackTrace();
             }
-
-            System.out.println(allNames.size() + allValues.size() + allProvenance.size() + " unlinked entities loaded in " + (System.currentTimeMillis() - track) + "ms");
-
-            track = System.currentTimeMillis();
-
-            int linkCounter = 0;
-            // sort out the maps in names, they couldn't be fixed on load as names link to themselves
-            initNames();
-            System.out.println(linkCounter + " values name links created in " + (System.currentTimeMillis() - track) + "ms");
-            //track = System.currentTimeMillis();
-
             needsLoading = false;
         }
     }
