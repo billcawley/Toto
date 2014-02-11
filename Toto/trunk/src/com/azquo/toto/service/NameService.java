@@ -555,8 +555,11 @@ public final class NameService {
             if (toReturn.startsWith("\"")) {
                 toReturn = toReturn.substring(1, toReturn.length() - 1); // trim quotes
             }
+            if (toReturn.length() > 0 && toReturn.charAt(0) == '='){
+                toReturn = toReturn.substring(1).trim();
+            }
         }
-        return toReturn;
+         return toReturn;
     }
 
 
@@ -653,6 +656,22 @@ public final class NameService {
         return "";
     }
 
+    public String calcReversePolish(LoggedInConnection loggedInConnection, Name name) throws Exception{
+        String calc = name.getAttribute("CALCULATION");
+        if (calc != null && calc.length() > 0){
+            String result = shuntingYardAlgorithm(loggedInConnection, calc);
+            if (result != null && result.length() > 0){
+                if (result.startsWith("error:")){
+                    return result;
+                }else{
+                    if (name.getAttribute("RPCALC") == null || name.getAttribute("RPCALC") != result) {
+                        name.setAttributeWillBePersisted("RPCALC", result);
+                    }
+                }
+            }
+        }
+        return "";
+    }
     private String interpretSetTerm(LoggedInConnection loggedInConnection, List<Name> namesFound, String setTerm) throws Exception{
 
         final String levelString = getInstruction(setTerm, LEVEL);
@@ -690,19 +709,8 @@ public final class NameService {
         }
         // LAST  see if any are calculated fields
         for (Name name2 : names) {
-            String calc = name2.getAttribute("CALCULATION");
-            if (calc != null && calc.length() > 0){
-                String result = shuntingYardAlgorithm(loggedInConnection, calc);
-                if (result != null && result.length() > 0){
-                    if (result.startsWith("error:")){
-                       return result;
-                    }else{
-                        if (name2.getAttribute("RPCALC") == null || name2.getAttribute("RPCALC") != result) {
-                            name2.setAttributeWillBePersisted("RPCALC", result);
-                        }
-                    }
-                }
-            }
+            String result = calcReversePolish(loggedInConnection, name2);
+            if (result.startsWith("error:")) return result;
         }
         namesFound.addAll(names);
         return "";
