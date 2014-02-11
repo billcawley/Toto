@@ -47,7 +47,7 @@ public class ValueController {
                                 @RequestParam(value = "password", required = false) final String password, @RequestParam(value = "database", required = false) final String database) throws Exception {
 
         // these 3 statements copied, should factor
-
+        long startTime = System.currentTimeMillis();
         if (region != null && region.length() == 0) {
             region = null; // make region null and blank the same . . .   , maybe change later???
         }
@@ -67,35 +67,43 @@ public class ValueController {
             if (loggedInConnection == null) {
                 return "error:invalid or expired connection id";
             }
+             String result = "error: no action taken";
 
-            if (rowheadings != null && rowheadings.length() > 0) {
-                return valueService.getRowHeadings(loggedInConnection, region, rowheadings);
-            }
+             if (rowheadings != null && rowheadings.length() > 0) {
+                result =  valueService.getRowHeadings(loggedInConnection, region, rowheadings);
+                System.out.println("time for row headings in region " + region + " is " + (System.currentTimeMillis() - startTime) );
+              }
 
             if (columnheadings != null && columnheadings.length() > 0) {
-                return valueService.getColumnHeadings(loggedInConnection, region, columnheadings);
+                result =  valueService.getColumnHeadings(loggedInConnection, region, columnheadings);
+                System.out.println("time for column headings in region " + region + " is " + (System.currentTimeMillis() - startTime) );
             }
-
-            if (context != null && context.length() > 0) {
+             if (context != null && context.length() > 0) {
                 //System.out.println("passed context : " + context);
                 final StringTokenizer st = new StringTokenizer(context, "\n");
                 final List<Name> contextNames = new ArrayList<Name>();
                 while (st.hasMoreTokens()) {
                     final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim());
-                    if (contextName == null) {
-                        return "error:I can't find a name for the context : " + context;
+                     if (contextName == null) {
+                        result =  "error:I can't find a name for the context : " + context;
+                        return result;
                     }
                     contextNames.add(contextName);
+                    result = nameService.calcReversePolish(loggedInConnection, contextName);
+                    if (result.startsWith("error:")){
+                        return result;
+                    }
                 }
                 if (loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0 && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0) {
-                    return valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region);
-                } else {
-                    return "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
+                    result =  valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region);
+                    System.out.println("time for data in region " + region + " is " + (System.currentTimeMillis() - startTime) );
+                 } else {
+                    result = "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
                 }
             }
 
             if (lockMap != null) {
-                return loggedInConnection.getLockMap(region);
+                result = loggedInConnection.getLockMap(region);
             }
 
             System.out.println("edited data " + editedData);
@@ -161,16 +169,16 @@ public class ValueController {
                                     }
                                 } else {
                                     // should this add on for a list???
-                                    return "error:cannot edit locked cell " + columnCounter + ", " + rowCounter + " in region " + region;
+                                    result = "error:cannot edit locked cell " + columnCounter + ", " + rowCounter + " in region " + region;
                                 }
                             }
                             columnCounter++;
                         }
                         rowCounter++;
                     }
-                    return numberOfValuesModified + " values modified";
+                    result =  numberOfValuesModified + " values modified";
                 } else {
-                    return "error:cannot deal with edited data as there is no sent data/rows/columns/context";
+                    result =  "error:cannot deal with edited data as there is no sent data/rows/columns/context";
                 }
             }
 
@@ -181,17 +189,14 @@ public class ValueController {
 
                 final Set<Name> names = nameService.decodeString(loggedInConnection, searchByNames);
                 if (!names.isEmpty()) {
-                    final String result = valueService.getExcelDataForNamesSearch(names);
+                    result = valueService.getExcelDataForNamesSearch(names);
                     if (jsonfunction != null && jsonfunction.length() > 0) {
-                        return jsonfunction + "({\"data\": [[\"" + result.replace("\t", "\",\"").replace("\n", "\"],[\"") + "\"]]})";
-                    } else {
-                        return result;
+                        result = jsonfunction + "({\"data\": [[\"" + result.replace("\t", "\",\"").replace("\n", "\"],[\"") + "\"]]})";
                     }
                 }
             }
 
-
-            return "no action taken";
+             return result;
         } catch (Exception e) {
             e.printStackTrace();
             return "error:" + e.getMessage();
