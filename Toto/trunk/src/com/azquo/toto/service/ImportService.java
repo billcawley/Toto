@@ -55,12 +55,13 @@ public final class ImportService {
         if (fileName.endsWith(".xls")) {
             tempFile = decode64(uploadFile, fileName);
         }
-        if (fileName.endsWith(".zip")) {
-            tempFile = decode64(uploadFile, fileName);
-            fileName = fileName.substring(0, fileName.length() - 4);
+        else{
+            if (fileName.endsWith(".zip")) {
+                tempFile = decode64(uploadFile, fileName);
+                fileName = fileName.substring(0, fileName.length() - 4);
 
-            tempFile = unzip(tempFile, fileName.substring(fileName.length() - 4));
-
+                tempFile = unzip(tempFile, fileName.substring(fileName.length() - 4));
+            }
 
         }
         if (fileName.contains(".xls")) {
@@ -440,7 +441,7 @@ public final class ImportService {
             //write it
             fos.close();
 
-            System.out.println("Done");
+            System.out.println("Decode 64 Done");
 
 
         } catch (Exception e) {
