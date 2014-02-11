@@ -99,14 +99,9 @@ public final class NameService {
 
     // get names from a comma separated list
 
-    public Set<Name> decodeString(LoggedInConnection loggedInConnection, String searchByNames) {
-        if (searchByNames.startsWith("\"")) {
-            searchByNames = searchByNames.substring(1);
-        }
-        if (searchByNames.endsWith("\"")) {
-            searchByNames = searchByNames.substring(0, searchByNames.length() - 1);
-        }
-        StringTokenizer st = new StringTokenizer(searchByNames, "\",\"");
+    public Set<Name> decodeString(LoggedInConnection loggedInConnection, String searchByNames) throws  Exception{
+        searchByNames = stripQuotes(loggedInConnection, searchByNames);
+        StringTokenizer st = new StringTokenizer(searchByNames, ",");
         Set<Name> names = new HashSet<Name>();
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
@@ -568,7 +563,7 @@ public final class NameService {
         while (lastQuoteEnd >= 0){
             int  lastQuoteStart = instructions.lastIndexOf("\"",lastQuoteEnd - 1);
             //find the parents - if they exist
-            String nameToFind = instructions.substring(lastQuoteStart + 1, lastQuoteEnd);
+            String nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd + 1);
             if (lastQuoteEnd < instructions.length() - 1 && instructions.charAt(lastQuoteEnd + 1)==','){
                Pattern p =  Pattern.compile("[ ;\\+\\*]");
                Matcher m =  p.matcher(instructions.substring(lastQuoteEnd + 1));
@@ -1078,7 +1073,7 @@ public final class NameService {
         } else {
              ArrayList<Name> names = new ArrayList<Name>();
              if (nameSearch.length() > 0){
-               names = findContainingName(loggedInConnection, nameSearch);
+               names = findContainingName(loggedInConnection, nameSearch.replace("\"",""));
              }
              if (names.size() == 0) {
                 names = (ArrayList<Name>) findTopNames(loggedInConnection);
