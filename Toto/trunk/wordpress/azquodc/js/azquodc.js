@@ -18,9 +18,9 @@ function zapParam(params, tozap){
 
 function azquojson(functionName, params){
     if (functionName == "Name"){
-        params = "json={" + params + ",\"user\":\"demo@user.com\",\"password\":\"password\",\"database\":\"Demo_export\",\"jsonFunction\":\"azquojsonfeed\"}";
+        params = "json={" + params + ",\"user\":\"demo@user.com\",\"password\":\"password\",\"database\":\"export\",\"jsonFunction\":\"azquojsonfeed\"}";
     }else{
-        params +="&user=demo@user.com&password=password&database=Demo_export";
+        params +="&user=demo@user.com&password=password&database=export";
     }
     var htmlText = "https://data.azquo.com:8443/api/" + functionName + "?" + params;
     var script = document.createElement('script'),
@@ -133,7 +133,7 @@ function az_showProvenance(provenance){
 function az_inputChanged(){
     document.getElementById("az_Data").style.display = "none";
     var newname = document.getElementById("az_InputName").value
-    azquojson("Name","\"operation\":\"structure\",\"name\":\"" + escape(newname) + "\"");
+    azquojson("Name","\"operation\":\"structure\",\"name\":\"\\\"" + escape(newname) + "\\\"\"");
 }
 
 
