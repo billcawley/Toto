@@ -330,8 +330,11 @@ public final class ValueService {
         return toReturn;
     }
 
-    public String outputHeadings(final List<List<Name>> headings) {
+    public String outputHeadings(final List<List<Name>> headings, String language) {
+
         final StringBuilder sb = new StringBuilder();
+
+        if (language==null || language.length() == 0) language = Name.DEFAULT_DISPLAY_NAME;
         List<Name> lastxNames = null;
         for (int x = 0; x < headings.size(); x++) {
             List<Name> xNames = headings.get(x);
@@ -341,7 +344,7 @@ public final class ValueService {
                 //NOW - LEAVE THE PRUNING OF NAMES TO EXCEL - MAYBE THE LIST WILL BE SORTED.
                 //don't show repeating names in the headings - leave blank.
                 //if ((x == 0 || !lastxNames.get(y).equals(xNames.get(y))) && (y == 0 || !xNames.get(y - 1).equals(xNames.get(y)))) {
-                    sb.append(xNames.get(y).getDefaultDisplayName());
+                    sb.append(xNames.get(y).getAttribute(language));
                 //}
             }
            // lastxNames = xNames;
@@ -560,8 +563,10 @@ seaports;children   container;children
             return error;
         }
         loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
-        return outputHeadings(loggedInConnection.getRowHeadings(region));
+        String language = nameService.getInstruction(headingsSent, "language");
+        return outputHeadings(loggedInConnection.getRowHeadings(region), language);
     }
+
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<Name>>> columnHeadingLists = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
@@ -570,7 +575,8 @@ seaports;children   container;children
             return error;
         }
         loggedInConnection.setColumnHeadings(region, (expandHeadings(transpose2DList(columnHeadingLists))));
-        return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)));
+        String language = nameService.getInstruction(headingsSent, "language");
+        return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)), language);
     }
 
     /*
