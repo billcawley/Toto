@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `database` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
-CREATE TABLE IF NOT EXISTS `access` (
+CREATE TABLE IF NOT EXISTS `permission` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `start_date` timestamp NOT NULL,
   `end_date` timestamp NOT NULL,

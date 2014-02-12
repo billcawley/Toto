@@ -1,11 +1,10 @@
 package com.azquo.toto.controller;
 
-import com.azquo.toto.adminentities.Access;
+import com.azquo.toto.adminentities.Permission;
 import com.azquo.toto.adminentities.User;
 import com.azquo.toto.service.AdminService;
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
-import com.azquo.toto.util.AzquoMailer;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,8 +41,8 @@ public class AdminController {
     private static final String DATABASELIST = "databaselist";
     private static final String USERLIST = "userlist";
     private static final String SAVEUSERS = "saveusers";
-    private static final String ACCESSLIST = "accesslist";
-    private static final String SAVEACCESS = "saveaccess";
+    private static final String PERMISSIONLIST = "permissionlist";
+    private static final String SAVEPERMISSIONS = "savepermissions";
     private static final String UPLOADSLIST = "uploadslist";
 
     @RequestMapping
@@ -56,7 +55,7 @@ public class AdminController {
                                 @RequestParam(value = "telephone", required = false) final String telephone, @RequestParam(value = "key", required = false) final String key,
                                 @RequestParam(value = "database", required = false) final String database, @RequestParam(value = "status", required = false) final String status,
                                 @RequestParam(value = "readlist", required = false) final String readList, @RequestParam(value = "writelist", required = false) final String writeList,
-                                @RequestParam(value = "userlist", required = false) final String userList, @RequestParam(value = "accesslist", required = false) final String accessList,
+                                @RequestParam(value = "json", required = false) final String json,
                                 @RequestParam(value = "connectionid", required = false) final String connectionId) throws Exception {
 
         System.out.println("request to admin controller : " + op);
@@ -68,7 +67,7 @@ public class AdminController {
                         address3 != null ? address3 : "", address4 != null ? address4 : "", postcode != null ? postcode : "", telephone != null ? telephone : "");
             }
         } else {
-
+            System.out.println("conneciton id : " + connectionId);
             if (connectionId == null) {
                 return "error:no connection id";
             }
@@ -102,21 +101,26 @@ public class AdminController {
                 return jacksonMapper.writeValueAsString(adminService.getUserListForBusiness(loggedInConnection));
             }
             if (op.equalsIgnoreCase(SAVEUSERS) ) {
-                if (userList != null && userList.length() > 0) {
-                    List<User> usersFromJson = jacksonMapper.readValue(userList, new TypeReference<List<User>>(){});
+                if (json != null && json.length() > 0) {
+                    List<User> usersFromJson = jacksonMapper.readValue(json, new TypeReference<List<User>>(){});
                     adminService.setUserListForBusiness(loggedInConnection, usersFromJson);
                 }
             }
-            if (op.equalsIgnoreCase(ACCESSLIST)) {
+            if (op.equalsIgnoreCase(PERMISSIONLIST)) {
                 // ok needs to work without email . .
-                String toReturn =jacksonMapper.writeValueAsString(adminService.getAccessList(loggedInConnection));
+                String toReturn =jacksonMapper.writeValueAsString(adminService.getPermissionList(loggedInConnection));
                 System.out.println("returned access list : " + toReturn);
                return toReturn;
             }
-            if (op.equalsIgnoreCase(SAVEACCESS) ) {
-                if (accessList != null && accessList.length() > 0) {
-                    List<Access> accessFromJson = jacksonMapper.readValue(accessList, new TypeReference<List<Access>>(){});
-                    adminService.setAccessListForBusiness(loggedInConnection, accessFromJson);
+            if (op.equalsIgnoreCase(SAVEPERMISSIONS) ) {
+                System.out.println("save permissions json " + json);
+                if (json != null && json.length() > 0) {
+                    try{
+                        List<Permission> permissionFromJson = jacksonMapper.readValue(json, new TypeReference<List<Permission>>(){});
+                        return adminService.setPermissionListForBusiness(loggedInConnection, permissionFromJson);
+                    } catch (Exception e){
+                        e.printStackTrace();
+                    }
                 }
             }
             if (op.equalsIgnoreCase(UPLOADSLIST)) {

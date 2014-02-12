@@ -31,7 +31,7 @@ public class AdminService {
     @Autowired
     private UserDAO userDao;
     @Autowired
-    private AccessDAO accessDao;
+    private PermissionDAO permissionDao;
     @Autowired
     private UploadRecordDAO uploadRecordDAO;
     @Autowired
@@ -135,8 +135,8 @@ public class AdminService {
 
     public boolean createUserAccess(final String email, final String readList, final String writeList, final LoggedInConnection loggedInConnection) throws IOException {
         if (loggedInConnection.getUser().isAdministrator() && loggedInConnection.getTotoMemoryDB() != null) { // actually have a DB selected
-            final Access access = new Access(0, new Date(), new Date(130, 1, 1), userDao.findByEmail(email).getId(), loggedInConnection.getTotoMemoryDB().getDatabase().getId(), readList, writeList);
-            accessDao.store(access);
+            final Permission permission = new Permission(0, new Date(), new Date(130, 1, 1), userDao.findByEmail(email).getId(), loggedInConnection.getTotoMemoryDB().getDatabase().getId(), readList, writeList);
+            permissionDao.store(permission);
             return true;
         }
         return false;
@@ -261,27 +261,32 @@ public class AdminService {
         return null;
     }
 
-    public List<Access> getAccessList(final LoggedInConnection loggedInConnection) {
+    public List<Permission> getPermissionList(final LoggedInConnection loggedInConnection) {
         if (loggedInConnection.getUser().isAdministrator()) {
-            return accessDao.findByBusinessId(loggedInConnection.getUser().getBusinessId());
+            List<Permission> permissionsList = permissionDao.findByBusinessId(loggedInConnection.getUser().getBusinessId());
+            for (Permission p : permissionsList){
+                p.setEmail(userDao.findById(p.getUserId()).getEmail());
+                p.setDatabase(databaseDao.findById(p.getDatabaseId()).getName());
+            }
+            return permissionsList;
         }
         return null;
     }
 
     // there is a constraint on here,only allow relevant user or database ids! Otherwise could cause all sort of trouble
-    public String setAccessListForBusiness(LoggedInConnection loggedInConnection, List<Access> accessList) {
-        for (Access access : accessList){
-            Database d = databaseDao.findForName(access.getDatabase());
+    public String setPermissionListForBusiness(LoggedInConnection loggedInConnection, List<Permission> permissionList) {
+        for (Permission permission : permissionList){
+            Database d = databaseDao.findForName(permission.getDatabase());
             if (d == null || d.getBusinessId() != loggedInConnection.getUser().getBusinessId()){
-                return "error: database name " + access.getDatabase() + " is invalid";
+                return "error: database name " + permission.getDatabase() + " is invalid";
             }
-            access.setDatabaseId(d.getId());
-            User u = userDao.findByEmail(access.getEmail());
+            permission.setDatabaseId(d.getId());
+            User u = userDao.findByEmail(permission.getEmail());
             if (u == null || u.getBusinessId() != loggedInConnection.getUser().getBusinessId()){
-                return "error: user email " + access.getEmail() + " is invalid";
+                return "error: user email " + permission.getEmail() + " is invalid";
             }
-            access.setUserId(u.getId());
-            accessDao.store(access);
+            permission.setUserId(u.getId());
+            permissionDao.store(permission);
         }
         return "";
     }

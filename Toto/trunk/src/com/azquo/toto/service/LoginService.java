@@ -1,9 +1,9 @@
 package com.azquo.toto.service;
 
-import com.azquo.toto.admindao.AccessDAO;
+import com.azquo.toto.admindao.PermissionDAO;
 import com.azquo.toto.admindao.DatabaseDAO;
 import com.azquo.toto.admindao.UserDAO;
-import com.azquo.toto.adminentities.Access;
+import com.azquo.toto.adminentities.Permission;
 import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.User;
 import com.azquo.toto.jsonrequestentities.StandardJsonRequest;
@@ -30,7 +30,7 @@ public class LoginService {
     @Autowired
     private UserDAO userDao;
     @Autowired
-    private AccessDAO accessDao;
+    private PermissionDAO permissionDao;
     @Autowired
     private DatabaseDAO databaseDao;
     @Autowired
@@ -51,18 +51,18 @@ public class LoginService {
         if (user != null) {
             if (adminService.encrypt(password, user.getSalt()).equals(user.getPassword())) {
                 // ok user should be ok :)
-                final List<Access> userAccess = accessDao.findForUserId(user.getId());
+                final List<Permission> userAcceses = permissionDao.findForUserId(user.getId());
                 final Map<String, Database> okDatabases = new HashMap<String, Database>();
-                if (user.isAdministrator()) { // automatically has all dbs regardless of access
+                if (user.isAdministrator()) { // automatically has all dbs regardless of permission
                     for (Database database : databaseDao.findForBusinessId(user.getBusinessId())) {
                         if (database.getEndDate().after(new Date())) {
                             okDatabases.put(database.getName(), database);
                         }
                     }
                 } else {
-                    for (Access access : userAccess) {
-                        if (access.getEndDate().after(new Date())) {
-                            Database database = databaseDao.findById(access.getDatabaseId());
+                    for (Permission permission : userAcceses) {
+                        if (permission.getEndDate().after(new Date())) {
+                            Database database = databaseDao.findById(permission.getDatabaseId());
                             if (database.getEndDate().after(new Date())) {
                                 okDatabases.put(database.getName(), database);
                             }

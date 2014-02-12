@@ -9,7 +9,7 @@ import java.util.Date;
  * Representing access a user can have
  * Considered immutability but things like dates may be adjusted
  */
-public final class Access extends StandardEntity {
+public final class Permission extends StandardEntity {
 
     private Date startDate;
     private Date endDate;
@@ -25,12 +25,12 @@ public final class Access extends StandardEntity {
     String database;
     String email;
 
-    public Access(int id, Date startDate, Date endDate, int userId, int databaseId, String readList, String writeList) {
+    public Permission(int id, Date startDate, Date endDate, int userId, int databaseId, String readList, String writeList) {
         this(id, startDate, endDate, userId, databaseId, readList, writeList,null,null);
     }
 
     @JsonCreator
-    public Access(@JsonProperty("id") int id, @JsonProperty("startDate") Date startDate, @JsonProperty("endDate") Date endDate, @JsonProperty("userId") int userId,
+    public Permission(@JsonProperty("id") int id, @JsonProperty("startDate") Date startDate, @JsonProperty("endDate") Date endDate, @JsonProperty("userId") int userId,
                   @JsonProperty("databaseId") int databaseId, @JsonProperty("readList") String readList, @JsonProperty("writeList") String writeList,
                   @JsonProperty("database") String database, @JsonProperty("email") String email) {
         this.id = id;
@@ -110,7 +110,7 @@ public final class Access extends StandardEntity {
 
     @Override
     public String toString() {
-        return "Access{" +
+        return "Permission{" +
                 "id=" + id +
                 ", endDate=" + endDate +
                 ", startDate=" + startDate +
