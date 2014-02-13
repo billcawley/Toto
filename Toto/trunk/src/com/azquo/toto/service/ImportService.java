@@ -11,6 +11,7 @@ import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.Cell;
 import org.springframework.beans.factory.annotation.Autowired;
+import sun.misc.IOUtils;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -37,8 +38,11 @@ public final class ImportService {
     private UploadRecordDAO uploadRecordDAO;
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
+    public String importTheFile(final LoggedInConnection loggedInConnection, String fileName, InputStream uploadFile, String fileType, String separator, final String strCreate) throws Exception {
+        return importTheFile(loggedInConnection, fileName, uploadFile, fileType, separator, strCreate,false);
+    }
 
-    public String importTheFile(final LoggedInConnection loggedInConnection, String fileName, InputStream uploadFile, String fileType, String separator, final String strCreate)
+    public String importTheFile(final LoggedInConnection loggedInConnection, String fileName, InputStream uploadFile, String fileType, String separator, final String strCreate, boolean skipBase64)
             throws Exception {
 
         loggedInConnection.setNewProvenance("import", fileName);
@@ -53,11 +57,19 @@ public final class ImportService {
             create = true;
         }
         if (fileName.endsWith(".xls")) {
-            tempFile = decode64(uploadFile, fileName);
+            if (skipBase64){
+                tempFile = tempFileWithoutDecoding(uploadFile, fileName);
+            } else {
+                tempFile = decode64(uploadFile, fileName);
+            }
         }
         else{
             if (fileName.endsWith(".zip")) {
-                tempFile = decode64(uploadFile, fileName);
+                if (skipBase64){
+                    tempFile = tempFileWithoutDecoding(uploadFile, fileName);
+                } else {
+                    tempFile = decode64(uploadFile, fileName);
+                }
                 fileName = fileName.substring(0, fileName.length() - 4);
 
                 tempFile = unzip(tempFile, fileName.substring(fileName.length() - 4));
@@ -399,6 +411,25 @@ public final class ImportService {
         codes['+'] = 62;
         codes['/'] = 63;
     }
+
+    private String tempFileWithoutDecoding(final InputStream data, final String fileName) {
+        try{
+            File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4), fileName.substring(fileName.length() - 4));
+            String tempFile = temp.getPath();
+            temp.deleteOnExit();
+            FileOutputStream fos = new FileOutputStream(tempFile);
+            org.apache.commons.io.IOUtils.copy(data,fos);
+            fos.close();
+            return tempFile;
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+
+
+
 
 
     private String decode64(final InputStream data, final String fileName) {

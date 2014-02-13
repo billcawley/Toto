@@ -96,42 +96,67 @@ public class ImportController {
             List<FileItem> items = upload.parseRequest(request);
             Iterator it = items.iterator();
             FileItem item = (FileItem) it.next();
-            if (!item.getFieldName().equals("parameters")) {
-                return "error: expecting parameters";
-            }
-            String parameters = item.getString();
-            StringTokenizer st = new StringTokenizer(parameters, "&");
-            while (st.hasMoreTokens()) {
-                String parameter = st.nextToken();
-                if (!parameter.endsWith("=")){
-                    StringTokenizer st2 = new StringTokenizer(parameter, "=");
-                    String parameterName = st2.nextToken();
-                    if (parameterName.equals("connectionid")) {
-                        loggedInConnection = loginService.getConnection(st2.nextToken());
+            boolean macMode = false;
+            if (!item.getFieldName().equals("parameters")) { // no parameters file passed, used to be a plain error but mac may have other ideas - parameters sent via curl
+                while (it.hasNext()){
+                    if (item.getFieldName().equals("connectionid")) {
+                        macMode = true;
+                        loggedInConnection = loginService.getConnection(item.getString());
+                    } else if (item.getFieldName().equals("filename")) {
+                        fileName = item.getString();
+                    } else if (item.getFieldName().equals("filetype")) {
+                        fileType = item.getString();
+                    } else if (item.getFieldName().equals("language")) {
+                        language = item.getString();
+                    } else if (item.getFieldName().equals("separator")) {
+                        separator = item.getString();
+                    } else if (item.getFieldName().equals("create")) {
+                        create = item.getString();
                     }
-                    if (parameterName.equals("filename")) {
-                        fileName = st2.nextToken();
-                    }
-                    if (parameterName.equals("filetype")) {
-                        fileType = st2.nextToken();
-                    }
-                    if (parameterName.equals("language")) {
-                       language = st2.nextToken();
-                    }
-                    if (parameterName.equals("separator")) {
-                        separator = st2.nextToken();
-                    }
-                    if (parameterName.equals("create")) {
-                        create = st2.nextToken();
+                    // ok this is a bit hacky but we assume the last item is the file and let the code below deal with it
+                    item = (FileItem) it.next();
+                }
+
+                if (!macMode){ // either mac or windows not sending what we want
+                    return "error: expecting parameters";
+                }
+            } else { // parameters file built on windows
+                String parameters = item.getString();
+                StringTokenizer st = new StringTokenizer(parameters, "&");
+                while (st.hasMoreTokens()) {
+                    String parameter = st.nextToken();
+                    if (!parameter.endsWith("=")){
+                        StringTokenizer st2 = new StringTokenizer(parameter, "=");
+                        String parameterName = st2.nextToken();
+                        if (parameterName.equals("connectionid")) {
+                            loggedInConnection = loginService.getConnection(st2.nextToken());
+                        }
+                        if (parameterName.equals("filename")) {
+                            fileName = st2.nextToken();
+                        }
+                        if (parameterName.equals("filetype")) {
+                            fileType = st2.nextToken();
+                        }
+                        if (parameterName.equals("language")) {
+                            language = st2.nextToken();
+                        }
+                        if (parameterName.equals("separator")) {
+                            separator = st2.nextToken();
+                        }
+                        if (parameterName.equals("create")) {
+                            create = st2.nextToken();
+                        }
                     }
                 }
-            }
 
-            String result;
-            if (loggedInConnection == null) {
-                return "error:invalid or expired connection id";
+                if (loggedInConnection == null) {
+                    return "error:invalid or expired connection id";
+                }
+                item = (FileItem) it.next();
             }
-            item = (FileItem) it.next();
+            String result;
+            System.out.println("upload file : " + item.getName());
+            System.out.println("upload file size : " + item.getSize());
             InputStream uploadFile = item.getInputStream();
             origLanguage = loggedInConnection.getLanguage();
             if (language.toLowerCase().endsWith("loose")){
@@ -144,7 +169,7 @@ public class ImportController {
 
             loggedInConnection.setLanguage(language);
 
-            result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, separator, create);
+            result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, separator, create, macMode);
             loggedInConnection.setLanguage(origLanguage);
             return result;
         } catch (Exception e) {
