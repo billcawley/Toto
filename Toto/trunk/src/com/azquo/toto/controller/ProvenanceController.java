@@ -148,18 +148,22 @@ public class ProvenanceController {
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
         String output = "{provenance:[";
         int count = 0;
+
         for (Value value:values){
-            Provenance provenance = value.getProvenance();
-            if (count++ > 0) output +=",";
-              Set<Name> diffNames = new HashSet<Name>();
-              diffNames.addAll(listDiff(value.getNames(), origNames));
-              output += "{\"value\":\"" + value.getText() + "\",\"names\":[";
-              int nameCount = 0;
-              for (Name name:diffNames){
-                if (nameCount++ > 0) output += ",";
-                output +="\"" + name.getDefaultDisplayName() + "\"";
-              }
-              output +=  "],\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + df.format(provenance.getTimeStamp()) + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}";
+            if (count < 6){
+                Provenance provenance = value.getProvenance();
+                if (count++ > 0) output +=",";
+                Set<Name> diffNames = new HashSet<Name>();
+                diffNames.addAll(listDiff(value.getNames(), origNames));
+                output += "{\"value\":\"" + value.getText() + "\",\"names\":[";
+                int nameCount = 0;
+                for (Name name:diffNames){
+                    if (nameCount++ > 0) output += ",";
+                    output +="\"" + name.getDefaultDisplayName() + "\"";
+                }
+                output +=  "],\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + df.format(provenance.getTimeStamp()) + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}";
+
+            }
         }
         output += "]}";
         if (jsonFunction != null && jsonFunction.length() > 0){
