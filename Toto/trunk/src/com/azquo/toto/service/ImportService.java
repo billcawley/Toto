@@ -46,6 +46,9 @@ public final class ImportService {
             throws Exception {
 
         loggedInConnection.setNewProvenance("import", fileName);
+        if (loggedInConnection.getTotoMemoryDB() == null){
+            return "error: no database set";
+        }
         if (separator == null || separator.length() == 0) separator = "\t";
         if (separator.equals("comma")) separator = ",";
         // separator not used??
@@ -228,7 +231,8 @@ public final class ImportService {
         final String[] headers = csvReader.getHeaders();
         String importLanguage = loggedInConnection.getLanguage();
         //if no name has been specified, then 'name' (case insensitive) should work
-
+        String strCreate = "";
+        if (create) strCreate = ";create";
         if (importLanguage.equals("DEFAULT_DISPLAY_NAME")){
             for (String header:headers){
                 if (header.equalsIgnoreCase("name")){
@@ -238,10 +242,12 @@ public final class ImportService {
          }
         while (csvReader.readRecord()) {
             // the language may have been adjusted by the import controller
-            final String searchName = csvReader.get(importLanguage);
+            String searchName = csvReader.get(importLanguage);
             Name name = null;
             // so we try to find or create (depending on parameters) that name in the current language
             if (searchName != null && searchName.length() > 0) {
+                searchName = nameService.setPeersForImportHeading(loggedInConnection,searchName + strCreate);
+                if (searchName.startsWith("error:")) return searchName;
                 if (create) {
                     name = nameService.findOrCreateName(loggedInConnection, searchName);
                 } else {
@@ -284,7 +290,7 @@ public final class ImportService {
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
         String topName = headers[0];
-        String plural = topName;
+        String plural = topName +"s";
         if (topName.endsWith(")")) {
             int openBracket = topName.lastIndexOf('(');
             plural = topName.substring(openBracket + 1, topName.length() - 1);
@@ -296,13 +302,15 @@ public final class ImportService {
             for (String headerName : headers) {
                 if (headerName.length() > 0){
                     String category = csvReader.get(headerName);
-                    if (headerName.equals(headers[0])) {
-                        itemName = category;
-                    } else {
-                        //create the name and structure
-                        Name name = nameService.findOrCreateName(loggedInConnection, itemName + "," + category + " " + plural + "," + plural + " by " + headerName + "," + topName + ";unique");
-                        //and put the category in its set.
-                        Name name2 = nameService.findOrCreateName(loggedInConnection, category + "," + headerName + ";unique");
+                    if (category.length() > 0){
+                        if (headerName.equals(headers[0])) {
+                            itemName = category;
+                        } else {
+                            //create the name and structure
+                            Name name = nameService.findOrCreateName(loggedInConnection, itemName + "," + category + " " + plural + "," + plural + " by " + headerName + "," + topName);
+                            //and put the category in its set.
+                            Name name2 = nameService.findOrCreateName(loggedInConnection, category + "," + headerName);
+                        }
                     }
                 }
             }
@@ -520,13 +528,15 @@ public final class ImportService {
                 for (int r = 0; r < rows; r++) {
                     row = sheet.getRow(r);
                     if (row != null) {
+                        //System.out.println("Excel row " + r);
                         int colCount = 0;
                         for (int c = 0; c < cols; c++) {
                             cell = row.getCell((short) c);
                             if (colCount++ > 0) bw.write('\t');
                             if (cell != null) {
+
                                 String cellFormat = formatter.formatCellValue(cell);
-                                //Integers seem to have '.0' appended, so this is a manual chop.  It might cause problems if someone wanted to import a version '1.0'
+                                    //Integers seem to have '.0' appended, so this is a manual chop.  It might cause problems if someone wanted to import a version '1.0'
                                 try {
                                     double d = Double.parseDouble(cellFormat);
                                     if (cellFormat.endsWith(".0")){
