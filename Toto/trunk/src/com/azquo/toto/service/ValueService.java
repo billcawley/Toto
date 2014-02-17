@@ -382,6 +382,7 @@ seaports;children   container;children
             }
         }
         pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t'); // reset the CSV reader
+        pastedDataReader.setUseTextQualifier(false);
         while (pastedDataReader.readRecord()) {
             List<List<Name>> row = new ArrayList<List<Name>>();
             for (int column = 0; column < pastedDataReader.getColumnCount(); column++){
