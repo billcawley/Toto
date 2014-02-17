@@ -182,10 +182,10 @@ public final class NameService {
 
 
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
-        if (name.toLowerCase().endsWith(";unique")) {
-            return findOrCreateName(loggedInConnection, name.substring(0, name.length() - 7), true);
+        if(name.toLowerCase().endsWith(";plural")) {
+            return findOrCreateName(loggedInConnection, name.substring(0, name.length() - 7), false);
         }
-        return findOrCreateName(loggedInConnection, name, false);
+        return findOrCreateName(loggedInConnection, name, true);
     }
 
 
@@ -1019,7 +1019,7 @@ public final class NameService {
                                 } else {
                                     return "error:name not found:`" + notFoundError + "`";
                                 }
-                                return "array saved " + peersToAdd.size() + " names";
+                                return nameString;
                             } else {
                                 return "error:Unclosed }";
                             }
