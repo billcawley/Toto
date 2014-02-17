@@ -12,5 +12,6 @@ public abstract class StandardJsonRequest {
     public String connectionId;
     public String operation;
     public String jsonFunction;
+    public String spreadsheetName;
 
 }

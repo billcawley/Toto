@@ -44,7 +44,7 @@ public class ValueController {
                                 @RequestParam(value = "region", required = false) String region, @RequestParam(value = "lockmap", required = false) final String lockMap,
                                 @RequestParam(value = "editeddata", required = false) final String editedData, @RequestParam(value = "searchbynames", required = false) final String searchByNames,
                                 @RequestParam(value = "jsonfunction", required = false) final String jsonfunction, @RequestParam(value = "user", required = false) final String user,
-                                @RequestParam(value = "password", required = false) final String password, @RequestParam(value = "database", required = false) final String database) throws Exception {
+                                @RequestParam(value = "password", required = false) final String password, @RequestParam(value = "spreadsheetName", required = false) final String spreadsheetName, @RequestParam(value = "database", required = false) final String database) throws Exception {
 
         // these 3 statements copied, should factor
         long startTime = System.currentTimeMillis();
@@ -55,7 +55,7 @@ public class ValueController {
         try {
 
             if (connectionId == null) {
-                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0);
+                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, spreadsheetName);
                 if (loggedInConnection == null) {
                     return "error:no connection id";
                 }

@@ -29,10 +29,12 @@ public class LoginController {
     public String handleRequest(@RequestParam(value = "database", required = false)  String database,
                                 @RequestParam(value = "useremail", required = false) final String userEmail,
                                 @RequestParam(value = "password", required = false) final String password,
+                                @RequestParam(value = "spreadsheetname", required = false) final String spreadsheetName,
                                 @RequestParam(value = "timeout", required = false) final String timeout,
                                 @RequestParam(value = "checkconnectionid", required = false) final String checkConnectionId) throws Exception {
 
         if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
+            //System.out.println("spreadsheetname " + spreadsheetName);
             if (database == null || database.length()== 0){
                 database="unknown";
             }
@@ -44,7 +46,8 @@ public class LoginController {
                     return "error:timeout is not an integer";
                 }
             }
-            final LoggedInConnection loggedInConnection = loginService.login(database, userEmail, password, minutesTimeout);
+
+            final LoggedInConnection loggedInConnection = loginService.login(database, userEmail, password, minutesTimeout,spreadsheetName);
             if (loggedInConnection != null) {
                 return loggedInConnection.getConnectionId();
             }

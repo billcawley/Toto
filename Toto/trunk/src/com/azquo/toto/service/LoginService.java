@@ -39,7 +39,11 @@ public class LoginService {
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
 
 
-    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes) {
+    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName) {
+
+        if (spreadsheetName == null){
+            spreadsheetName = "unknown";
+        }
 
         // right, need an actual login process here!
 
@@ -82,7 +86,7 @@ public class LoginService {
                 }
                 // could be a null memory db . . .
                 //TODO : ask tomcat for a session id . . .
-                final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000);
+                final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
                 connections.put(lic.getConnectionId(), lic);
                 return lic;
             } // else would be wrong password
@@ -109,7 +113,7 @@ public class LoginService {
     public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest) {
         if (standardJsonRequest.user != null && standardJsonRequest.user.length() > 0 &&
                 standardJsonRequest.password != null && standardJsonRequest.password.length() > 0) {
-            return login(standardJsonRequest.database == null ? "" : standardJsonRequest.database, standardJsonRequest.user, standardJsonRequest.password, 60);
+            return login(standardJsonRequest.database == null ? "" : standardJsonRequest.database, standardJsonRequest.user, standardJsonRequest.password, 60, standardJsonRequest.spreadsheetName);
         } else if (standardJsonRequest.connectionId != null && standardJsonRequest.connectionId.length() > 0) {
             return getConnection(standardJsonRequest.connectionId);
         }

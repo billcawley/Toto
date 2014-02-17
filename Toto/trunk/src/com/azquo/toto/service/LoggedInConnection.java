@@ -32,6 +32,7 @@ public final class LoggedInConnection {
     private Date lastAccessed;
     private long timeOut;
     private String language;
+    private String spreadsheetName;
     private boolean loose;  // this flag is used to say whether names can be searched in other languages than the current default
 
     private final Map<String, List<List<Name>>> rowHeadings;
@@ -44,9 +45,10 @@ public final class LoggedInConnection {
 
     private static final String defaultRegion = "default-region";
 
-    public LoggedInConnection(final String connectionId, final TotoMemoryDB totoMemoryDB, final User user, final long timeOut) {
+    public LoggedInConnection(final String connectionId, final TotoMemoryDB totoMemoryDB, final User user, final long timeOut, String spreadsheetName) {
         this.connectionId = connectionId;
         this.totoMemoryDB = totoMemoryDB;
+        this.spreadsheetName = spreadsheetName;
         this.user = user;
         loginTime = new Date();
         lastAccessed = new Date();
@@ -231,7 +233,7 @@ public final class LoggedInConnection {
     public Provenance getProvenance() {
         if (provenance == null) {
             try {
-                provenance = new Provenance(getTotoMemoryDB(), user.getName(), new Date(), "method", "spreadsheet name?", "row heading", "column headings", "context");
+                provenance = new Provenance(getTotoMemoryDB(), user.getName(), new Date(), "method", spreadsheetName, "row heading", "column headings", "context");
             } catch (Exception e) {
             }
         }

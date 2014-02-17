@@ -34,7 +34,7 @@ public class TotoMemoryDBTest {
     @Test
     public void testLoadData() throws Exception {
 
-        LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password", 0);
+        LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password", 0, null);
 
         Name test1 = nameService.findByName(loggedInConnection, "www.examplesupplier.com");
         Name test2 = nameService.findByName(loggedInConnection, "S++");

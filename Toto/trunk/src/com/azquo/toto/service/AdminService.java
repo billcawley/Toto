@@ -76,7 +76,7 @@ public class AdminService {
         return "true";
     }
 
-    public String confirmKey(final String businessName, final String email, final String password, final String key) {
+    public String confirmKey(final String businessName, final String email, final String password, final String key, String spreadsheetName) {
         final Business business = businessDao.findByName(businessName);
         if (business != null && business.getBusinessDetails().validationKey.equals(key)) {
             business.setEndDate(new Date(130, 1, 1));
@@ -85,7 +85,7 @@ public class AdminService {
             user.setEndDate(new Date(130, 1, 1));
             user.setStatus(User.STATUS_ADMINISTRATOR);
             userDao.store(user);
-            LoggedInConnection loggedInConnection = loginService.login("unknown", email, password, 0);
+            LoggedInConnection loggedInConnection = loginService.login("unknown", email, password, 0, spreadsheetName);
             if (loggedInConnection == null) {
                 return "error:no connection id";
             }
