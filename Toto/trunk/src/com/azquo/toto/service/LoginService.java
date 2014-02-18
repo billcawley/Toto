@@ -1,14 +1,17 @@
 package com.azquo.toto.service;
 
+import com.azquo.toto.admindao.LoginRecordDAO;
 import com.azquo.toto.admindao.PermissionDAO;
 import com.azquo.toto.admindao.DatabaseDAO;
 import com.azquo.toto.admindao.UserDAO;
+import com.azquo.toto.adminentities.LoginRecord;
 import com.azquo.toto.adminentities.Permission;
 import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.User;
 import com.azquo.toto.jsonrequestentities.StandardJsonRequest;
 import com.azquo.toto.memorydb.MemoryDBManager;
 import com.azquo.toto.memorydb.TotoMemoryDB;
+import com.azquo.toto.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
@@ -30,11 +33,15 @@ public class LoginService {
     @Autowired
     private UserDAO userDao;
     @Autowired
+    private LoginRecordDAO loginRecordDAO;
+    @Autowired
     private PermissionDAO permissionDao;
     @Autowired
     private DatabaseDAO databaseDao;
     @Autowired
     private AdminService adminService;
+    @Autowired
+    private AzquoMailer azquoMailer;
 
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
 
@@ -87,6 +94,8 @@ public class LoginService {
                 // could be a null memory db . . .
                 //TODO : ask tomcat for a session id . . .
                 final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
+                loginRecordDAO.store(new LoginRecord(0,user.getId(), memoryDB.getDatabase().getId(), new Date()));
+                azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
                 connections.put(lic.getConnectionId(), lic);
                 return lic;
             } // else would be wrong password
