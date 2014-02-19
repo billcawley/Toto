@@ -78,7 +78,7 @@ public class ValueController {
                 result =  valueService.getColumnHeadings(loggedInConnection, region, columnheadings);
                 System.out.println("time for column headings in region " + region + " is " + (System.currentTimeMillis() - startTime) );
             }
-             if (context != null && context.length() > 0) {
+             if (context != null) {
                 //System.out.println("passed context : " + context);
                 final StringTokenizer st = new StringTokenizer(context, "\n");
                 final List<Name> contextNames = new ArrayList<Name>();
