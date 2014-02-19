@@ -91,6 +91,16 @@ public class LoginService {
                 // could be a null memory db . . .
                 //TODO : ask tomcat for a session id . . .
                 final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
+                int databaseId  = 0;
+                if (memoryDB != null){
+                    databaseId = memoryDB.getDatabase().getId();
+                }
+
+
+                loginRecordDAO.store(new LoginRecord(0,user.getId(),databaseId, new Date()));
+                if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
+                    azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
+                }
                 loginRecordDAO.store(new LoginRecord(0, user.getId(), memoryDB.getDatabase().getId(), new Date()));
                 if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")) {
                     azquoMailer.sendEMail(user.getEmail(), user.getName(), "Login to Azquo", "You have logged into Azquo.");
