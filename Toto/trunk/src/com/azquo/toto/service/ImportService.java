@@ -118,6 +118,10 @@ public final class ImportService {
             return structureImport(loggedInConnection, uploadFile, create);
 
         }
+        if (fileType.toLowerCase().startsWith("sets")) {
+            return setsImport(loggedInConnection, uploadFile, create);
+
+        }
         return "error: unknown file type " + fileType;
 
     }
@@ -223,6 +227,7 @@ public final class ImportService {
     }
 
 
+
     public String namesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
         // should we have encoding options?? Leave for the mo . . .
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
@@ -317,6 +322,27 @@ public final class ImportService {
         }
         return "";
     }
+
+
+    public String setsImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
+        String line;
+        System.out.println("input");
+        while ((line = br.readLine()) != null) {
+            StringTokenizer st = new StringTokenizer(line,"\t");
+            String setName = st.nextToken();
+            while (st.hasMoreTokens()){
+                if (create){
+                    Name name = nameService.findOrCreateName(loggedInConnection,st.nextToken() + "," + setName);
+                }else{
+                    Name name = nameService.findByName(loggedInConnection,st.nextToken() + "," + setName);
+                }
+            }
+         }
+        return "";
+     }
+
 
     // File pre processing functions. SHould maybe be hived off into utils?
 
