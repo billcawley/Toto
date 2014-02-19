@@ -12,6 +12,7 @@ import com.azquo.toto.jsonrequestentities.StandardJsonRequest;
 import com.azquo.toto.memorydb.MemoryDBManager;
 import com.azquo.toto.memorydb.TotoMemoryDB;
 import com.azquo.toto.util.AzquoMailer;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
@@ -27,6 +28,8 @@ import java.util.Map;
  * Currently fairly simple login functions
  */
 public class LoginService {
+
+    private static final Logger logger = Logger.getLogger(LoginService.class);
 
     @Autowired
     private MemoryDBManager memoryDBManager;
@@ -48,15 +51,9 @@ public class LoginService {
 
     public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName) {
 
-        if (spreadsheetName == null){
+        if (spreadsheetName == null) {
             spreadsheetName = "unknown";
         }
-
-        // right, need an actual login process here!
-
-    /*                String salt = PasswordUtils.shaHash(System.currentTimeMillis() + "salt");
-    v.setPasswordSalt(salt);
-    v.setPassword(PasswordUtils.encrypt(password, salt)); // new better encryption . . .*/
 
         User user = userDao.findByEmail(userEmail);
         if (user != null) {
@@ -80,10 +77,10 @@ public class LoginService {
                         }
                     }
                 }
-                System.out.println("ok databases size " + okDatabases.size());
+                logger.info("ok databases size " + okDatabases.size());
                 TotoMemoryDB memoryDB = null;
                 if (okDatabases.size() == 1) {
-                    System.out.println("1 database, use that");
+                    logger.info("1 database, use that");
                     memoryDB = memoryDBManager.getTotoMemoryDB(okDatabases.values().iterator().next());
                 } else {
                     Database database = okDatabases.get(databaseName);
@@ -94,9 +91,9 @@ public class LoginService {
                 // could be a null memory db . . .
                 //TODO : ask tomcat for a session id . . .
                 final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
-                loginRecordDAO.store(new LoginRecord(0,user.getId(), memoryDB.getDatabase().getId(), new Date()));
-                if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
-                    azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
+                loginRecordDAO.store(new LoginRecord(0, user.getId(), memoryDB.getDatabase().getId(), new Date()));
+                if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")) {
+                    azquoMailer.sendEMail(user.getEmail(), user.getName(), "Login to Azquo", "You have logged into Azquo.");
                 }
                 connections.put(lic.getConnectionId(), lic);
                 return lic;
@@ -109,7 +106,7 @@ public class LoginService {
 
         final LoggedInConnection lic = connections.get(connectionId);
         if (lic != null) {
-            System.out.println("last accessed : " + lic.getLastAccessed() + " timeout " + lic.getTimeOut());
+            logger.info("last accessed : " + lic.getLastAccessed() + " timeout " + lic.getTimeOut());
             if ((System.currentTimeMillis() - lic.getLastAccessed().getTime()) > lic.getTimeOut()) {
                 // connection timed out
                 connections.remove(lic.getConnectionId());
