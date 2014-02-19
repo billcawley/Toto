@@ -19,31 +19,30 @@ import java.util.*;
  * Most data tables in the database have common features such as an id and a simple place that they're stored which means we can,
  * factor things off here
  * <p/>
- * Note : for building SQL I'm veering away from stringbuilder as IntelliJ complains about it and string concantation etc is heavily optimised by the compiler
+ * Note : for building SQL I'm veering away from StringBuilder as IntelliJ complains about it and string concatenation etc is heavily optimised by the compiler
  * <p/>
- * This used to be an abstract class with classes for each entity extending it. Now after full json it's just used for moving the very standard json records about
+ * This used to be an abstract class with classes for each entity extending it. Now after full json it's just used for moving the very standard json records about.
  */
 public class StandardDAO {
 
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
-    // 10 million select limit for the moment . . .
-
+    // 10 million select limit for the moment, this class is used for bulk loading and saving.
     public static final int SELECTLIMIT = 10000000;
 
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
     public static final int UPDATELIMIT = 5000;
 
+    // the basic data persistence tables have but two columns, these two :)
     private static final String ID = "id";
-
     private static final String JSON = "json";
 
+    // put the table names in here, seems as good a place as any
     public static final String PROVENANCE = "provenance";
     public static final String NAME = "name";
     public static final String VALUE = "value";
-
 
     private final class JsonRecordTransportRowMapper implements RowMapper<JsonRecordTransport> {
         @Override
@@ -75,7 +74,7 @@ public class StandardDAO {
         }
     }
 
-    /*
+    /* example of the sql to do bulk updates.
 
      UPDATE categories
     SET display_order = CASE id
@@ -147,7 +146,6 @@ WHERE id IN (1,2,3)
         List<JsonRecordTransport> toDelete = new ArrayList<JsonRecordTransport>();
         List<JsonRecordTransport> toInsert = new ArrayList<JsonRecordTransport>();
         List<JsonRecordTransport> toUpdate = new ArrayList<JsonRecordTransport>();
-
         for (JsonRecordTransport record : records) {
             if (record.state == JsonRecordTransport.State.DELETE) {
                 toDelete.add(record);

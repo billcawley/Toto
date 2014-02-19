@@ -1,7 +1,7 @@
 package com.azquo.toto.memorydbdao;
 
 /**
- * now we've simplfied the way records are persisted we need to be able to move them around
+ * now we've simplified the way records are persisted we need to be able to move them around
  */
 public class JsonRecordTransport {
 

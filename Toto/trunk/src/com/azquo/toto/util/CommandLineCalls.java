@@ -5,6 +5,7 @@ import java.io.*;
 /**
  * Created by cawley on 21/01/14.
  * Bit like ftpaccount tools in Feefo
+ * OK, as it stands Bill found a way to upload from Excel, hence we may not need this code but leave it here for the moment
  */
 public class CommandLineCalls {
 
