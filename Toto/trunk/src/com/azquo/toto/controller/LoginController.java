@@ -2,6 +2,7 @@ package com.azquo.toto.controller;
 
 import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,14 +20,14 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @RequestMapping("/Login")
 
 public class LoginController {
+
+    private static final Logger logger = Logger.getLogger(LoginController.class);
     @Autowired
     private LoginService loginService;
 
-//    private static final Logger logger = Logger.getLogger(TestController.class);
-
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "database", required = false)  String database,
+    public String handleRequest(@RequestParam(value = "database", required = false) String database,
                                 @RequestParam(value = "useremail", required = false) final String userEmail,
                                 @RequestParam(value = "password", required = false) final String password,
                                 @RequestParam(value = "spreadsheetname", required = false) final String spreadsheetName,
@@ -34,9 +35,9 @@ public class LoginController {
                                 @RequestParam(value = "checkconnectionid", required = false) final String checkConnectionId) throws Exception {
 
         if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
-            //System.out.println("spreadsheetname " + spreadsheetName);
-            if (database == null || database.length()== 0){
-                database="unknown";
+            logger.info("spreadsheet name " + spreadsheetName);
+            if (database == null || database.length() == 0) {
+                database = "unknown";
             }
             int minutesTimeout = 0;
             if (timeout != null && timeout.length() > 0) {
@@ -47,7 +48,7 @@ public class LoginController {
                 }
             }
 
-            final LoggedInConnection loggedInConnection = loginService.login(database, userEmail, password, minutesTimeout,spreadsheetName);
+            final LoggedInConnection loggedInConnection = loginService.login(database, userEmail, password, minutesTimeout, spreadsheetName);
             if (loggedInConnection != null) {
                 return loggedInConnection.getConnectionId();
             }
