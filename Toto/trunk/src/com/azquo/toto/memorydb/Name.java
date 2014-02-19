@@ -1,5 +1,6 @@
 package com.azquo.toto.memorydb;
 
+import com.azquo.toto.memorydbdao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -76,16 +77,6 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name> {
         peers = new LinkedHashMap<Name, Boolean>();
         attributes = new LinkedHashMap<String, String>();
         getTotoMemoryDB().addNameToDb(this);
-    }
-
-    @Override
-    protected void setNeedsPersisting() {
-        getTotoMemoryDB().setNameNeedsPersisting(this);
-    }
-
-    @Override
-    protected void classSpecificSetAsPersisted() {
-        getTotoMemoryDB().removeNameNeedsPersisting(this);
     }
 
     // for convenience but be careful where it is used . . .
@@ -481,8 +472,12 @@ public final class Name extends TotoMemoryDBEntity implements Comparable<Name> {
         }
     }
 
-    // suppose no harm in being public
+    @Override
+    protected StandardDAO.PersistedTable getPersistTable() {
+        return StandardDAO.PersistedTable.name;
+    }
 
+    @Override
     public String getAsJson() {
         LinkedHashMap<Integer, Boolean> peerIds = new LinkedHashMap<Integer, Boolean>();
         for (Name peer : peers.keySet()) {

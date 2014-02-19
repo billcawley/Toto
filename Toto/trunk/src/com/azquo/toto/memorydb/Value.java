@@ -1,5 +1,6 @@
 package com.azquo.toto.memorydb;
 
+import com.azquo.toto.memorydbdao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -48,7 +49,7 @@ public final class Value extends TotoMemoryDBEntity {
         names = new HashSet<Name>();
         //System.out.println("name ids" + transport.nameIds);
         for (Integer nameId : transport.nameIds) {
-            Name name =getTotoMemoryDB().getNameById(nameId);
+            Name name = getTotoMemoryDB().getNameById(nameId);
             if (name != null){
                 names.add(name);
             } else {
@@ -61,16 +62,6 @@ public final class Value extends TotoMemoryDBEntity {
 
     // these functions pretty much just proxy through to the memory db maps. But need to override so the superclass can call if it needs to
     // this one is called in the constructor
-
-    @Override
-    protected void setNeedsPersisting() {
-        getTotoMemoryDB().setValueNeedsPersisting(this);
-    }
-
-    @Override
-    protected void classSpecificSetAsPersisted() {
-        getTotoMemoryDB().removeValueNeedsPersisting(this);
-    }
 
     public Provenance getProvenance() {
         return provenance;
@@ -141,8 +132,12 @@ public final class Value extends TotoMemoryDBEntity {
         }
     }
 
-    // suppose no harm in being public
+    @Override
+    protected StandardDAO.PersistedTable getPersistTable() {
+        return StandardDAO.PersistedTable.name;
+    }
 
+    @Override
     public String getAsJson() {
         // yes could probably use list but lets match collection types . . .
         Set<Integer> nameIds = new LinkedHashSet<Integer>();

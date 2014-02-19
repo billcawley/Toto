@@ -4,6 +4,7 @@ import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.memorydbdao.JsonRecordTransport;
 import com.azquo.toto.memorydbdao.StandardDAO;
 import com.azquo.toto.service.LoggedInConnection;
+import org.apache.log4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,6 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * As soon as this starts to be  used in anger there must be a db to file dump in case it goes out of sync with MySQL
  */
 public final class TotoMemoryDB {
+
+    private static final Logger logger = Logger.getLogger(TotoMemoryDB.class);
 
     /* damn, I don't think I can auto wire this as I can't guarantee it will be
        ready for the constructor
@@ -39,9 +42,7 @@ public final class TotoMemoryDB {
 
     // when objects are modified they are added to these lists
 
-    private final Set<Name> namesNeedPersisting;
-    private final Set<Value> valuesNeedPersisting;
-    private final Set<Provenance> provenanceNeedsPersisting;
+    private final Map<StandardDAO.PersistedTable, Set<TotoMemoryDBEntity>> entitiesToPersist;
 
     public TotoMemoryDB(Database database, StandardDAO standardDAO) throws Exception {
         this.database = database;
@@ -52,9 +53,12 @@ public final class TotoMemoryDB {
         nameByIdMap = new ConcurrentHashMap<Integer, Name>();
         valueByIdMap = new ConcurrentHashMap<Integer, Value>();
         provenanceByIdMap = new ConcurrentHashMap<Integer, Provenance>();
-        namesNeedPersisting = new HashSet<Name>();
-        valuesNeedPersisting = new HashSet<Value>();
-        provenanceNeedsPersisting = new HashSet<Provenance>();
+        entitiesToPersist = new ConcurrentHashMap<StandardDAO.PersistedTable, Set<TotoMemoryDBEntity>>();
+        // loop over the possible persisted tables making the empty sets, cunning
+        for (StandardDAO.PersistedTable persistedTable : StandardDAO.PersistedTable.values()) {
+            entitiesToPersist.put(persistedTable, new HashSet<TotoMemoryDBEntity>());
+        }
+
         loadData();
         nextId = maxIdAtLoad + 1;
     }
@@ -74,31 +78,33 @@ public final class TotoMemoryDB {
 
     synchronized private void loadData() {
         if (needsLoading) { // only allow it once!
-            System.out.println("loading data for "  + getMySQLName());
+            System.out.println("loading data for " + getMySQLName());
 
-            try{
+            try {
                 // here we'll populate the memory DB from the database
                 long track = System.currentTimeMillis();
 
-                // these 3 commands will automatically load teh data into the memory DB set as persisted
-
-                // Must load provenance first as used by the other two!
-
-                final List<JsonRecordTransport> allProvenance = standardDAO.findFromTable(this, StandardDAO.PROVENANCE);
+                /* ok this code is a bit annoying, one could run through the table names from the outside but then you need to switch on it for the constructor
+                one could use TotomemoryDBEntity if having some kind of init from Json function but this makes the objects more mutable than I'd like
+                so we stay with this for the moment
+                these 3 commands will automatically load the data into the memory DB set as persisted
+                Load order is important as value and name use provenance and value uses names. Names uses itself hence all names need initialisation finished after the id map is sorted
+                */
+                final List<JsonRecordTransport> allProvenance = standardDAO.findFromTable(this, StandardDAO.PersistedTable.provenance.name());
                 for (JsonRecordTransport provenanceRecord : allProvenance) {
                     if (provenanceRecord.id > maxIdAtLoad) {
                         maxIdAtLoad = provenanceRecord.id;
                     }
                     new Provenance(this, provenanceRecord.id, provenanceRecord.json);
                 }
-                final List<JsonRecordTransport> allNames = standardDAO.findFromTable(this, StandardDAO.NAME);
+                final List<JsonRecordTransport> allNames = standardDAO.findFromTable(this, StandardDAO.PersistedTable.name.name());
                 for (JsonRecordTransport nameRecord : allNames) {
                     if (nameRecord.id > maxIdAtLoad) {
                         maxIdAtLoad = nameRecord.id;
                     }
                     new Name(this, nameRecord.id, nameRecord.json);
                 }
-                final List<JsonRecordTransport> allValues = standardDAO.findFromTable(this, StandardDAO.VALUE);
+                final List<JsonRecordTransport> allValues = standardDAO.findFromTable(this, StandardDAO.PersistedTable.value.name());
                 for (JsonRecordTransport valueRecord : allValues) {
                     if (valueRecord.id > maxIdAtLoad) {
                         maxIdAtLoad = valueRecord.id;
@@ -110,17 +116,15 @@ public final class TotoMemoryDB {
 
                 track = System.currentTimeMillis();
 
-                int linkCounter = 0;
                 // sort out the maps in names, they couldn't be fixed on load as names link to themselves
                 initNames();
-                System.out.println(linkCounter + " values name links created in " + (System.currentTimeMillis() - track) + "ms");
+                System.out.println("names init in " + (System.currentTimeMillis() - track) + "ms");
                 //track = System.currentTimeMillis();
 
-                System.out.println("loaded data for "  + getMySQLName());
+                System.out.println("loaded data for " + getMySQLName());
 
-            } catch (Exception e){
-                System.out.println("could not load data for " + getMySQLName() + "! Stacktrace to follow");
-                e.printStackTrace();
+            } catch (Exception e) {
+                logger.error("could not load data for " + getMySQLName() + "!", e);
             }
             needsLoading = false;
         }
@@ -131,50 +135,26 @@ public final class TotoMemoryDB {
     public synchronized void saveDataToMySQL() {
         // this is where I need to think carefully about concurrency, totodb has the last say when the maps are modified although the flags are another point
         // for the moment just make it work.
-        System.out.println("nnp size : " + namesNeedPersisting.size());
-        List<JsonRecordTransport> nameRecordsToStore = new ArrayList<JsonRecordTransport>();
-        for (Name name : new ArrayList<Name>(namesNeedPersisting)) {
-            JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
-            if (name.getNeedsDeleting()) {
-                state = JsonRecordTransport.State.DELETE;
+        // new code that doesn't repeat nearly as much,
+        for (StandardDAO.PersistedTable tableToStoreIn : StandardDAO.PersistedTable.values()) { // run through 'em. Worth remembering this enum syntax
+            Set<TotoMemoryDBEntity> entities = entitiesToPersist.get(tableToStoreIn);
+            if (!entitiesToPersist.isEmpty()) {
+                System.out.println("entities to put in " + tableToStoreIn.name() + " : " + entities.size());
+                List<JsonRecordTransport> recordsToStore = new ArrayList<JsonRecordTransport>();
+                for (TotoMemoryDBEntity entity : new ArrayList<TotoMemoryDBEntity>(entities)) { // we're taking a copy of the set before running through it.
+                    JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
+                    if (entity.getNeedsDeleting()) {
+                        state = JsonRecordTransport.State.DELETE;
+                    }
+                    if (entity.getNeedsInserting()) {
+                        state = JsonRecordTransport.State.INSERT;
+                    }
+                    recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state));
+                    entity.setAsPersisted(); // is this dangerous here???
+                }
+                standardDAO.persistJsonRecords(this, tableToStoreIn.name(), recordsToStore);
             }
-            if (name.getNeedsInserting()) {
-                state = JsonRecordTransport.State.INSERT;
-            }
-            nameRecordsToStore.add(new JsonRecordTransport(name.getId(), name.getAsJson(), state));
-            name.setAsPersisted(); // is this dangerous here???
         }
-        standardDAO.persistJsonRecords(this, StandardDAO.NAME, nameRecordsToStore);
-
-        System.out.println("vnp size : " + valuesNeedPersisting.size());
-        List<JsonRecordTransport> valueRecordsToStore = new ArrayList<JsonRecordTransport>();
-        for (Value value : new ArrayList<Value>(valuesNeedPersisting)) {
-            JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
-            if (value.getNeedsDeleting()) {
-                state = JsonRecordTransport.State.DELETE;
-            }
-            if (value.getNeedsInserting()) {
-                state = JsonRecordTransport.State.INSERT;
-            }
-            valueRecordsToStore.add(new JsonRecordTransport(value.getId(), value.getAsJson(), state));
-            value.setAsPersisted(); // is this dangerous here???
-        }
-        standardDAO.persistJsonRecords(this, StandardDAO.VALUE, valueRecordsToStore);
-
-        System.out.println("pnp size : " + provenanceNeedsPersisting.size());
-        List<JsonRecordTransport> provenanceRecordsToStore = new ArrayList<JsonRecordTransport>();
-        for (Provenance provenance : new ArrayList<Provenance>(provenanceNeedsPersisting)) {
-            JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
-            if (provenance.getNeedsDeleting()) {
-                state = JsonRecordTransport.State.DELETE;
-            }
-            if (provenance.getNeedsInserting()) {
-                state = JsonRecordTransport.State.INSERT;
-            }
-            provenanceRecordsToStore.add(new JsonRecordTransport(provenance.getId(), provenance.getAsJson(), state));
-            provenance.setAsPersisted(); // is this dangerous here???
-        }
-        standardDAO.persistJsonRecords(this, StandardDAO.PROVENANCE, provenanceRecordsToStore);
     }
 
     // will block currently!
@@ -184,29 +164,28 @@ public final class TotoMemoryDB {
         return nextId - 1;
     }
 
-    // for search purposes probably should trim
-
     public Name getNameById(final int id) {
         return nameByIdMap.get(id);
-
     }
 
     public Name getNameByAttribute(final LoggedInConnection loggedInConnection, final String attributeValue, final Name parent) {
         String attributeName = loggedInConnection.getLanguage();
         if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null) {// there is an attribute with that name in the whole db . . .
             Set<Name> possibles = nameByAttributeMap.get(attributeName.toLowerCase().trim()).get(attributeValue.toLowerCase().trim());
-            if (possibles == null){
-                if (!loggedInConnection.getLoose()){
+            if (possibles == null) {
+                if (!loggedInConnection.getLoose()) {
                     return null;
                 }
                 //maybe if 'loose' we should look at ALL languages, but here will look at default language.
                 possibles = nameByAttributeMap.get(Name.DEFAULT_DISPLAY_NAME.toLowerCase()).get(attributeValue.toLowerCase().trim());
-                if (possibles == null){
+                if (possibles == null) {
                     return null;
                 }
             }
             if (parent == null) {
-                if (possibles.size() != 1) return null;
+                if (possibles.size() != 1) {
+                    return null;
+                }
                 return possibles.iterator().next();
             } else {
                 for (Name possible : possibles) {
@@ -217,14 +196,13 @@ public final class TotoMemoryDB {
             }
         }
         return null;
-
     }
 
     public Set<Name> getNamesWithAttributeContaining(final String attributeName, final String attributeValue) {
         return getNamesByAttributeValueWildcards(attributeName, attributeValue, true, true);
     }
 
-    // cet names containing an attribute using wildcards, start end both
+    // get names containing an attribute using wildcards, start end both
 
     private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
         final String lctAttributeName = attributeName.toLowerCase().trim();
@@ -258,27 +236,27 @@ public final class TotoMemoryDB {
         return false;
     }
 
-    private Name getTopParent(final Name name){
-        for (Name parent:name.getParents()){
-           return getTopParent(parent);
-         }
+    private Name getTopParent(final Name name) {
+        for (Name parent : name.getParents()) {
+            return getTopParent(parent);
+        }
         return name;
     }
 
-    public void zapUnusedNames() throws Exception{
-        for (Name name:nameByIdMap.values()){
+    public void zapUnusedNames() throws Exception {
+        for (Name name : nameByIdMap.values()) {
             // remove everything except top layer and names with values.   Change parents to top layer where sets deleted
-            if (name.getParents().size() > 0 && name.getValues().size()==0){
+            if (name.getParents().size() > 0 && name.getValues().size() == 0) {
                 Name topParent = getTopParent(name);
-                for (Name child:name.getChildren()){
-                     topParent.addChildWillBePersisted(child);
+                for (Name child : name.getChildren()) {
+                    topParent.addChildWillBePersisted(child);
                 }
                 name.delete();
-
             }
         }
-        for (Name name:nameByIdMap.values()){
-            if (name.getParents().size() == 0 && name.getChildren().size() == 0 && name.getValues().size() == 0){
+
+        for (Name name : nameByIdMap.values()) {
+            if (name.getParents().size() == 0 && name.getChildren().size() == 0 && name.getValues().size() == 0) {
                 name.delete();
             }
         }
@@ -322,13 +300,6 @@ public final class TotoMemoryDB {
         return toReturn;
     }
 */
-/*    public Name getNameById(int id) {
-        return nameByIdMap.get(id);
-    }
-
-    public Value getValueById(int id) {
-        return valueByIdMap.get(id);
-    }*/
 
     public Provenance getProvenanceById(final int id) {
         return provenanceByIdMap.get(id);
@@ -338,7 +309,7 @@ public final class TotoMemoryDB {
 
     protected void addNameToDb(final Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
-        synchronized (nameByIdMap){
+        synchronized (nameByIdMap) {
             // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
             if (nameByIdMap.get(newName.getId()) != null) {
                 throw new Exception("tried to add a name to the database with an existing id! new id = " + newName.getId());
@@ -350,8 +321,7 @@ public final class TotoMemoryDB {
 
     protected void removeNameFromDb(final Name toRemove) throws Exception {
         toRemove.checkDatabaseMatches(this);
-        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        synchronized (nameByIdMap){
+        synchronized (nameByIdMap) {
             nameByIdMap.remove(toRemove.getId());
         }
     }
@@ -360,7 +330,7 @@ public final class TotoMemoryDB {
     // custom maps here need to be dealt with in the constructors I think
 
     protected void addNameToAttributeNameMap(final Name newName) throws Exception {
-        synchronized (nameByAttributeMap){
+        synchronized (nameByAttributeMap) {
             newName.checkDatabaseMatches(this);
             final Map<String, String> attributes = newName.getAttributes();
 
@@ -387,7 +357,7 @@ public final class TotoMemoryDB {
 
     protected void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
         name.checkDatabaseMatches(this);
-        synchronized (nameByAttributeMap){
+        synchronized (nameByAttributeMap) {
             if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null) {// the map we care about
                 final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
                 final Set<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase().trim());
@@ -415,25 +385,24 @@ public final class TotoMemoryDB {
         }
     }*/
 
-    // hmmm syncronizing by the map objects. USe concurrent hashmaps???
+    // trying for new more simplifies persistence - make functions not linked to classes
+    // maps will be set up in the constructor. Think about any concurrency issues here???
 
-    protected void setNameNeedsPersisting(final Name name) {
+    protected void setEntityNeedsPersisting(StandardDAO.PersistedTable tableToPersistIn, TotoMemoryDBEntity totoMemoryDBEntity) {
         if (!needsLoading) {
-            synchronized (namesNeedPersisting){
-                namesNeedPersisting.add(name);
-            }
+            entitiesToPersist.get(tableToPersistIn).add(totoMemoryDBEntity);
         }
     }
 
-    protected void removeNameNeedsPersisting(final Name name) {
-        synchronized (namesNeedPersisting){
-        namesNeedPersisting.remove(name);
+    protected void removeEntityNeedsPersisting(StandardDAO.PersistedTable tableToPersistIn, TotoMemoryDBEntity totoMemoryDBEntity) {
+        if (!needsLoading) {
+            entitiesToPersist.get(tableToPersistIn).remove(totoMemoryDBEntity);
         }
     }
 
     protected void addValueToDb(final Value newValue) throws Exception {
         newValue.checkDatabaseMatches(this);
-        synchronized (valueByIdMap){
+        synchronized (valueByIdMap) {
             // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
             if (valueByIdMap.get(newValue.getId()) != null) {
                 throw new Exception("tried to add a value to the database with an existing id!");
@@ -443,43 +412,15 @@ public final class TotoMemoryDB {
         }
     }
 
-    protected void setValueNeedsPersisting(final Value value) {
-        synchronized (valuesNeedPersisting){
-            if (!needsLoading) {
-                valuesNeedPersisting.add(value);
-            }
-        }
-    }
-
-    protected void removeValueNeedsPersisting(final Value value) {
-        synchronized (valuesNeedPersisting){
-            valuesNeedPersisting.remove(value);
-        }
-    }
-
     protected void addProvenanceToDb(final Provenance newProvenance) throws Exception {
         newProvenance.checkDatabaseMatches(this);
-        synchronized (provenanceByIdMap){
+        synchronized (provenanceByIdMap) {
             // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
             if (provenanceByIdMap.get(newProvenance.getId()) != null) {
                 throw new Exception("tried to add a value to the database with an existing id!");
             } else {
                 provenanceByIdMap.put(newProvenance.getId(), newProvenance);
             }
-        }
-    }
-
-    protected void setProvenanceNeedsPersisting(final Provenance provenance) {
-        if (!needsLoading) {
-            synchronized (provenanceNeedsPersisting){
-                provenanceNeedsPersisting.add(provenance);
-            }
-        }
-    }
-
-    protected void removeProvenanceNeedsPersisting(final Provenance provenance) {
-        synchronized (provenanceNeedsPersisting){
-            provenanceNeedsPersisting.remove(provenance);
         }
     }
 }

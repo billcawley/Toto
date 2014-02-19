@@ -1,5 +1,6 @@
 package com.azquo.toto.memorydb;
 
+import com.azquo.toto.memorydbdao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.log4j.Logger;
@@ -61,16 +62,6 @@ public final class Provenance extends TotoMemoryDBEntity {
         this.columnHeadings = transport.columnHeadings;
         this.context = transport.context;
         getTotoMemoryDB().addProvenanceToDb(this);
-    }
-
-    @Override
-    protected void setNeedsPersisting() {
-        getTotoMemoryDB().setProvenanceNeedsPersisting(this);
-    }
-
-    @Override
-    protected void classSpecificSetAsPersisted() {
-        getTotoMemoryDB().removeProvenanceNeedsPersisting(this);
     }
 
     public String getUser() {
@@ -145,6 +136,12 @@ public final class Provenance extends TotoMemoryDBEntity {
         }
     }
 
+    @Override
+    protected StandardDAO.PersistedTable getPersistTable() {
+        return StandardDAO.PersistedTable.name;
+    }
+
+    @Override
     public String getAsJson() {
         try {
             return jacksonMapper.writeValueAsString(new JsonTransport(user, timeStamp, method, name, rowHeadings, columnHeadings, context));

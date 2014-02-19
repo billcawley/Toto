@@ -1,5 +1,6 @@
 package com.azquo.toto.memorydb;
 
+import com.azquo.toto.memorydbdao.StandardDAO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Set;
@@ -70,17 +71,13 @@ public abstract class TotoMemoryDBEntity {
         needsDeleting = false;
     }
 
-    // this is where each subclass should make sure that it is added to the appropriate modified list in the memorydb
-    // not doing this in here as I'd like it class specific ad there may be quirks
-    // issue of inserting/updating/deleting dealt with by the DAO
-    protected abstract void setNeedsPersisting();
+    // each class will say where it's persisted
+    protected abstract StandardDAO.PersistedTable getPersistTable();
 
-    //force implementing classes to add functions for their fields when setting persisted
-
-    protected abstract void classSpecificSetAsPersisted();
+    // all entities need this to save in the key/pair store
+    public abstract String getAsJson();
 
     // this seems to be the best way too constrain, others in teh package can get the instance but not reset it's value
-
     protected final TotoMemoryDB getTotoMemoryDB() {
         return totoMemoryDB;
     }
@@ -131,7 +128,11 @@ public abstract class TotoMemoryDBEntity {
 
     protected final void setAsPersisted() {
         needsInserting = false;
-        classSpecificSetAsPersisted();
+        totoMemoryDB.removeEntityNeedsPersisting(getPersistTable(),this);
+    }
+
+    protected final void setNeedsPersisting() {
+        totoMemoryDB.setEntityNeedsPersisting(getPersistTable(), this);
     }
 
     // public for the DAOs
@@ -144,7 +145,5 @@ public abstract class TotoMemoryDBEntity {
         return needsDeleting;
     }
 
-    // all entities need this to save in the key/pair store
-    public abstract String getAsJson();
 
 }

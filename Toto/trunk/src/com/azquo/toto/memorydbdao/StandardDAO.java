@@ -39,10 +39,7 @@ public class StandardDAO {
     private static final String ID = "id";
     private static final String JSON = "json";
 
-    // put the table names in here, seems as good a place as any
-    public static final String PROVENANCE = "provenance";
-    public static final String NAME = "name";
-    public static final String VALUE = "value";
+    public enum PersistedTable {provenance, name, value}
 
     private final class JsonRecordTransportRowMapper implements RowMapper<JsonRecordTransport> {
         @Override
