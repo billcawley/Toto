@@ -258,6 +258,31 @@ public final class TotoMemoryDB {
         return false;
     }
 
+    private Name getTopParent(final Name name){
+        for (Name parent:name.getParents()){
+           return getTopParent(parent);
+         }
+        return name;
+    }
+
+    public void zapUnusedNames() throws Exception{
+        for (Name name:nameByIdMap.values()){
+            // remove everything except top layer and names with values.   Change parents to top layer where sets deleted
+            if (name.getParents().size() > 0 && name.getValues().size()==0){
+                Name topParent = getTopParent(name);
+                for (Name child:name.getChildren()){
+                     topParent.addChildWillBePersisted(child);
+                }
+                name.delete();
+
+            }
+        }
+        for (Name name:nameByIdMap.values()){
+            if (name.getParents().size() == 0 && name.getChildren().size() == 0 && name.getValues().size() == 0){
+                name.delete();
+            }
+        }
+    }
 
     public List<Name> findTopNames() {
         final List<Name> toReturn = new ArrayList<Name>();
