@@ -5,7 +5,6 @@ package com.azquo.toto.controller;
  * User: cawley
  * Date: 17/10/13
  * Time: 11:41
- * We're going to try for spring annotation based controllers. Might look into some rest specific spring stuff later.
  *
  * for reading and manipulating names. Uses only Json, the controller will sort the login but will leave the rest to the name service
  * Maybe later deal with JSON parse errors here?
@@ -17,6 +16,7 @@ import com.azquo.toto.service.LoggedInConnection;
 import com.azquo.toto.service.LoginService;
 import com.azquo.toto.service.NameService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,6 +26,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @Controller
 @RequestMapping("/Name")
 public class NameController {
+
+    private static final Logger logger = Logger.getLogger(NameController.class);
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
@@ -44,6 +46,7 @@ public class NameController {
                 try {
                     nameJsonRequest = jacksonMapper.readValue(json, NameJsonRequest.class);
                 } catch (Exception e) {
+                    logger.error("name json parse problem", e);
                     return "error:badly formed json " + e.getMessage();
                 }
                 LoggedInConnection loggedInConnection = loginService.getConnectionFromJsonRequest(nameJsonRequest);
@@ -56,7 +59,7 @@ public class NameController {
                 return "error: empty json string passed";
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("name controller error", e);
             return "error:" + e.getMessage();
         }
     }
