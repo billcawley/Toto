@@ -95,7 +95,9 @@ public class LoginService {
                 //TODO : ask tomcat for a session id . . .
                 final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
                 loginRecordDAO.store(new LoginRecord(0,user.getId(), memoryDB.getDatabase().getId(), new Date()));
-                azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
+                if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
+                    azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
+                }
                 connections.put(lic.getConnectionId(), lic);
                 return lic;
             } // else would be wrong password
