@@ -49,13 +49,16 @@ public final class BusinessDAO extends StandardDAO<Business> {
     }
 
     public static final class BusinessRowMapper implements RowMapper<Business> {
-
         @Override
         public Business mapRow(final ResultSet rs, final int row) throws SQLException {
-            // not pretty, just make it work for the moment
             try {
-                return new Business(rs.getInt(ID), rs.getDate(STARTDATE), rs.getDate(ENDDATE)
-                        , rs.getString(BUSINESSNAME), rs.getInt(PARENTID), jacksonMapper.readValue(rs.getString(BUSINESSDETAILS), Business.BusinessDetails.class));
+                return new Business(rs.getInt(ID)
+                        , rs.getDate(STARTDATE)
+                        , rs.getDate(ENDDATE)
+                        , rs.getString(BUSINESSNAME)
+                        , rs.getInt(PARENTID)
+                        , jacksonMapper.readValue(rs.getString(BUSINESSDETAILS)
+                        , Business.BusinessDetails.class));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

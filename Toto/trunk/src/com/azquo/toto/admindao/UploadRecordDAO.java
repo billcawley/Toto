@@ -22,6 +22,7 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
         return "upload_record";
     }
 
+    // column names except ID which is in the superclass
 
     public static final String DATE = "date";
     public static final String BUSINESSID = "business_id";
@@ -51,8 +52,14 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
         public UploadRecord mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new UploadRecord(rs.getInt(ID), rs.getDate(DATE), rs.getInt(BUSINESSID)
-                        , rs.getInt(DATABASEID), rs.getInt(USERID), rs.getString(FILENAME), rs.getString(FILETYPE), rs.getString(COMMENTS));
+                return new UploadRecord(rs.getInt(ID)
+                        , rs.getDate(DATE)
+                        , rs.getInt(BUSINESSID)
+                        , rs.getInt(DATABASEID)
+                        , rs.getInt(USERID)
+                        , rs.getString(FILENAME)
+                        , rs.getString(FILETYPE)
+                        , rs.getString(COMMENTS));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

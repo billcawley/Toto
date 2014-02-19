@@ -22,6 +22,8 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         return "permission";
     }
 
+    // column names except ID which is in the superclass
+
     public static final String STARTDATE = "start_date";
     public static final String ENDDATE = "end_date";
     public static final String USERID = "user_id";
@@ -43,6 +45,7 @@ public final class PermissionDAO extends StandardDAO<Permission> {
     }
 
     // ok need a bit of heavier sql here, probably need to reference some fields and
+    // TODO : sort out hard coded field names
 
     public List<Permission> findByBusinessId(int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -56,8 +59,13 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         public Permission mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Permission(rs.getInt(ID), rs.getDate(STARTDATE), rs.getDate(ENDDATE)
-                        , rs.getInt(USERID), rs.getInt(DATABASEID), rs.getString(READLIST), rs.getString(WRITELIST));
+                return new Permission(rs.getInt(ID)
+                        , rs.getDate(STARTDATE)
+                        , rs.getDate(ENDDATE)
+                        , rs.getInt(USERID)
+                        , rs.getInt(DATABASEID)
+                        , rs.getString(READLIST)
+                        , rs.getString(WRITELIST));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

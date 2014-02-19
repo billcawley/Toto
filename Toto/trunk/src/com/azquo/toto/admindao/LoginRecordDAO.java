@@ -1,6 +1,5 @@
 package com.azquo.toto.admindao;
 
-import com.azquo.toto.adminentities.Database;
 import com.azquo.toto.adminentities.LoginRecord;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -23,6 +22,8 @@ public final class LoginRecordDAO extends StandardDAO<LoginRecord> {
         return "login_record";
     }
 
+    // column names except ID which is in the superclass
+
     public static final String USERID = "user_id";
     public static final String DATABASEID = "database_id";
     public static final String TIME = "time";
@@ -42,7 +43,10 @@ public final class LoginRecordDAO extends StandardDAO<LoginRecord> {
         @Override
         public LoginRecord mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new LoginRecord(rs.getInt(ID), rs.getInt(USERID), rs.getInt(DATABASEID), rs.getDate(TIME));
+                return new LoginRecord(rs.getInt(ID)
+                        , rs.getInt(USERID)
+                        , rs.getInt(DATABASEID)
+                        , rs.getDate(TIME));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

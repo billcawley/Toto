@@ -22,6 +22,8 @@ public final class DatabaseDAO extends StandardDAO<Database> {
         return "database";
     }
 
+    // column names except ID which is in the superclass
+
     public static final String STARTDATE = "start_date";
     public static final String ENDDATE = "end_date";
     public static final String BUSINESSID = "business_id";
@@ -50,8 +52,14 @@ public final class DatabaseDAO extends StandardDAO<Database> {
         public Database mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Database(rs.getInt(ID), rs.getDate(STARTDATE), rs.getDate(ENDDATE)
-                        , rs.getInt(BUSINESSID), rs.getString(NAME), rs.getString(MYSQLNAME), rs.getInt(NAMECOUNT), rs.getInt(VALUECOUNT));
+                return new Database(rs.getInt(ID)
+                        , rs.getDate(STARTDATE)
+                        , rs.getDate(ENDDATE)
+                        , rs.getInt(BUSINESSID)
+                        , rs.getString(NAME)
+                        , rs.getString(MYSQLNAME)
+                        , rs.getInt(NAMECOUNT)
+                        , rs.getInt(VALUECOUNT));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

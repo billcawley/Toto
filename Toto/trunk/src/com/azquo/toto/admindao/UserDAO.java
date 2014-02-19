@@ -22,6 +22,8 @@ public class UserDAO extends StandardDAO<User> {
         return "user";
     }
 
+    // column names except ID which is in the superclass
+
     public static final String STARTDATE = "start_date";
     public static final String ENDDATE = "end_date";
     public static final String BUSINESSID = "business_id";
@@ -50,10 +52,16 @@ public class UserDAO extends StandardDAO<User> {
 
         @Override
         public User mapRow(final ResultSet rs, final int row) throws SQLException {
-            // not pretty, just make it work for the moment
             try {
-                return new User(rs.getInt(ID), rs.getDate(STARTDATE), rs.getDate(ENDDATE), rs.getInt(BUSINESSID)
-                        , rs.getString(EMAIL), rs.getString(NAME), rs.getString(STATUS), rs.getString(PASSWORD), rs.getString(SALT));
+                return new User(rs.getInt(ID)
+                        , rs.getDate(STARTDATE)
+                        , rs.getDate(ENDDATE)
+                        , rs.getInt(BUSINESSID)
+                        , rs.getString(EMAIL)
+                        , rs.getString(NAME)
+                        , rs.getString(STATUS)
+                        , rs.getString(PASSWORD)
+                        , rs.getString(SALT));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
