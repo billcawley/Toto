@@ -15,24 +15,29 @@ public final class Permission extends StandardEntity {
     private Date endDate;
     private int userId;
     int databaseId;
-
     // these two may become arrays later
-
     String readList;
     String writeList;
-
     // used by the excel not the database. Easiest to put here
     String database;
     String email;
 
+    // the normal use constructor, does not use the database and email fields which are there for the excel and are not persisted
+
     public Permission(int id, Date startDate, Date endDate, int userId, int databaseId, String readList, String writeList) {
-        this(id, startDate, endDate, userId, databaseId, readList, writeList,null,null);
+        this(id, startDate, endDate, userId, databaseId, readList, writeList, null, null);
     }
 
     @JsonCreator
-    public Permission(@JsonProperty("id") int id, @JsonProperty("startDate") Date startDate, @JsonProperty("endDate") Date endDate, @JsonProperty("userId") int userId,
-                  @JsonProperty("databaseId") int databaseId, @JsonProperty("readList") String readList, @JsonProperty("writeList") String writeList,
-                  @JsonProperty("database") String database, @JsonProperty("email") String email) {
+    public Permission(@JsonProperty("id") int id
+            , @JsonProperty("startDate") Date startDate
+            , @JsonProperty("endDate") Date endDate
+            , @JsonProperty("userId") int userId
+            , @JsonProperty("databaseId") int databaseId
+            , @JsonProperty("readList") String readList
+            , @JsonProperty("writeList") String writeList
+            , @JsonProperty("database") String database
+            , @JsonProperty("email") String email) {
         this.id = id;
         this.startDate = startDate;
         this.endDate = endDate;

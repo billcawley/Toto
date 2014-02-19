@@ -17,7 +17,12 @@ public final class Business extends StandardEntity {
     int parentId;
     BusinessDetails businessDetails;
 
-    public Business(int id, Date startDate, Date endDate, String businessName, int parentId, BusinessDetails businessDetails) {
+    public Business(int id
+            , Date startDate
+            , Date endDate
+            , String businessName
+            , int parentId
+            , BusinessDetails businessDetails) {
         this.id = id;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -90,9 +95,14 @@ public final class Business extends StandardEntity {
         public String validationKey; // temporary place to store validation key
 
         @JsonCreator
-        public BusinessDetails(@JsonProperty("address1") String address1, @JsonProperty("address2") String address2, @JsonProperty("address3") String address3
-                , @JsonProperty("address4") String address4, @JsonProperty("postcode") String postcode, @JsonProperty("telephone") String telephone
-                , @JsonProperty("website") String website, @JsonProperty("validationKey") String validationKey) {
+        public BusinessDetails(@JsonProperty("address1") String address1
+                , @JsonProperty("address2") String address2
+                , @JsonProperty("address3") String address3
+                , @JsonProperty("address4") String address4
+                , @JsonProperty("postcode") String postcode
+                , @JsonProperty("telephone") String telephone
+                , @JsonProperty("website") String website
+                , @JsonProperty("validationKey") String validationKey) {
             this.address1 = address1;
             this.address2 = address2;
             this.address3 = address3;

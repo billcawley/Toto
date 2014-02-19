@@ -4,8 +4,9 @@ import java.util.Date;
 
 /**
  * Created by cawley on 18/02/14.
+ * have made immutable which simplifies the code
  */
-public class LoginRecord extends StandardEntity {
+public final class LoginRecord extends StandardEntity {
     // name user time db, email user when logged in
 
     final int userId;

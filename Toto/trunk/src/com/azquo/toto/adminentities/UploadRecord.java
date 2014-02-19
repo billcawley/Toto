@@ -5,18 +5,26 @@ import java.util.Date;
 /**
  * Created by cawley on 09/01/14
  * An entry for each uploaded file
+ * Going to make immutable
  */
 public final class UploadRecord extends StandardEntity {
 
-    private Date date;
-    private int businessId;
-    private int databaseId;
-    private int userId;
-    private String fileName;
-    private String fileType;
-    private String comments;
+    final private Date date;
+    final private int businessId;
+    final private int databaseId;
+    final private int userId;
+    final private String fileName;
+    final private String fileType;
+    final private String comments;
 
-    public UploadRecord(int id, Date date, int businessId, int databaseId, int userId, String fileName, String fileType, String comments) {
+    public UploadRecord(int id
+            , Date date
+            , int businessId
+            , int databaseId
+            , int userId
+            , String fileName
+            , String fileType
+            , String comments) {
         this.id = id;
         this.date = date;
         this.businessId = businessId;
@@ -31,56 +39,28 @@ public final class UploadRecord extends StandardEntity {
         return date;
     }
 
-    public void setDate(Date date) {
-        this.date = date;
-    }
-
     public int getBusinessId() {
         return businessId;
-    }
-
-    public void setBusinessId(int businessId) {
-        this.businessId = businessId;
     }
 
     public int getDatabaseId() {
         return databaseId;
     }
 
-    public void setDatabaseId(int databaseId) {
-        this.databaseId = databaseId;
-    }
-
     public int getUserId() {
         return userId;
-    }
-
-    public void setUserId(int userId) {
-        this.userId = userId;
     }
 
     public String getFileName() {
         return fileName;
     }
 
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
     public String getFileType() {
         return fileType;
     }
 
-    public void setFileType(String fileType) {
-        this.fileType = fileType;
-    }
-
     public String getComments() {
         return comments;
-    }
-
-    public void setComments(String comments) {
-        this.comments = comments;
     }
 
     @Override
@@ -97,7 +77,7 @@ public final class UploadRecord extends StandardEntity {
                 '}';
     }
 
-    // convenience object for returning JSON to Excel, one can build a list of these and let Jackson take care of it
+    // convenience object for returning JSON to Excel, one can build a list of these and let Jackson serialise it
 
     public static class UploadRecordForDisplay {
         public final Date date;

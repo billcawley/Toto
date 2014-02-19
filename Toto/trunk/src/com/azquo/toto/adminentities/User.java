@@ -2,7 +2,6 @@ package com.azquo.toto.adminentities;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Date;
@@ -25,7 +24,15 @@ public final class User extends StandardEntity {
 
     // salt will probably never be passed
     @JsonCreator
-    public User(@JsonProperty("id") int id, @JsonProperty("startDate") Date startDate, @JsonProperty("endDate") Date endDate, @JsonProperty("businessId") int businessId, @JsonProperty("email") String email, @JsonProperty("name") String name, @JsonProperty("status") String status, @JsonProperty("password") String password, @JsonProperty("salt") String salt) {
+    public User(@JsonProperty("id") int id
+            , @JsonProperty("startDate") Date startDate
+            , @JsonProperty("endDate") Date endDate
+            , @JsonProperty("businessId") int businessId
+            , @JsonProperty("email") String email
+            , @JsonProperty("name") String name
+            , @JsonProperty("status") String status
+            , @JsonProperty("password") String password
+            , @JsonProperty("salt") String salt) {
         this.id = id;
         this.startDate = startDate;
         this.endDate = endDate;

@@ -17,7 +17,13 @@ public final class Database extends StandardEntity {
     int nameCount;
     int valueCount;
 
-    public Database(int id, Date startDate, Date endDate, int businessId, String name, String mySQLName, int nameCount, int valueCount) {
+    public Database(int id, Date startDate
+            , Date endDate
+            , int businessId
+            , String name
+            , String mySQLName
+            , int nameCount
+            , int valueCount) {
         this.id = id;
         this.startDate = startDate;
         this.endDate = endDate;
