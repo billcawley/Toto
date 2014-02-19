@@ -176,6 +176,9 @@ public final class NameService {
         return loggedInConnection.getTotoMemoryDB().searchNames(Name.DEFAULT_DISPLAY_NAME, search);
     }*/
 
+
+
+
     public List<Name> findTopNames(final LoggedInConnection loggedInConnection) {
         return loggedInConnection.getTotoMemoryDB().findTopNames();
     }
@@ -225,7 +228,8 @@ public final class NameService {
             //if two commas in succession occur, ignore the blank parent
             if (parentName.length() > 0){
                 parent = findOrCreateName(loggedInConnection, parentName, topParent, parent);
-                if (parent != null && (topParent == null || !unique)){
+                //the attribute 'PLURAL' means that the name cannot be used to identify as a parent
+                if (parent != null && (topParent == null || !unique )  && (parent.getAttribute("PLURAL") == null  || !parent.getAttribute("PLURAL").equalsIgnoreCase("true")) ){
                     topParent = parent;
                 }
             }
@@ -250,7 +254,9 @@ public final class NameService {
         if (existing != null) {
             // I think this is in the case of unique = true, the name to be created is in fact being moved down the hierachy
             if (newparent != null && newparent != parent && existing != newparent) {
-                parent.removeFromChildrenWillBePersisted(existing);
+                if (parent!=null){
+                    parent.removeFromChildrenWillBePersisted(existing);
+                }
                 newparent.addChildWillBePersisted(existing);
             }
             return existing;
@@ -268,7 +274,7 @@ public final class NameService {
             //  the remove here makes no sense, names are equal by ID, it will never match. Check with dad . . .
             //  the 'parent' in this case may be the top parent, while the new parent may be next up the hierarchy.
             if (newparent != null) {
-                if (newparent != parent) {
+                if (newparent != parent && parent!= null) {
                     parent.removeFromChildrenWillBePersisted(newName);
                 }
                 newparent.addChildWillBePersisted(newName);
@@ -851,17 +857,21 @@ public final class NameService {
         }
 
         if (nameJsonRequest.operation.equalsIgnoreCase(DELETE)) {
-            if (nameJsonRequest.id == 0) {
-                return "error: id not passed for delete";
-            } else {
-                Name name = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.id);
-                if (name == null) {
-                    return "error: name for id not found : " + nameJsonRequest.id;
-                }
-                if (name.getValues().size() > 0 && !nameJsonRequest.withData) {
-                    return "error: cannot delete name with data : " + nameJsonRequest.id;
+            if (nameJsonRequest.name.equals("all"))
+                loggedInConnection.getTotoMemoryDB().zapUnusedNames();
+            else{
+                if (nameJsonRequest.id == 0) {
+                    return "error: id not passed for delete";
                 } else {
-                    name.delete();
+                    Name name = loggedInConnection.getTotoMemoryDB().getNameById(nameJsonRequest.id);
+                    if (name == null) {
+                        return "error: name for id not found : " + nameJsonRequest.id;
+                    }
+                    if (name.getValues().size() > 0 && !nameJsonRequest.withData) {
+                        return "error: cannot delete name with data : " + nameJsonRequest.id;
+                    } else {
+                        name.delete();
+                    }
                 }
             }
         }
