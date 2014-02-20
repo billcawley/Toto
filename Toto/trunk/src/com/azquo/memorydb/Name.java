@@ -3,6 +3,7 @@ package com.azquo.memorydb;
 import com.azquo.memorydbdao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.*;
@@ -12,16 +13,16 @@ import java.util.*;
  * User: cawley
  * Date: 16/10/13
  * Time: 19:17
- * A fundamental Azquo object, names now have attributes and what was the name is now simply an attribute of the name, defined currently in a static below. Names can have parent and child relationships with multiple
- * other names. Sets of names. Used to be called label, there may be remnants of this in the code.
+ * A fundamental Azquo object, names now have attributes and what was the name (as in the text) is now simply an attribute of the name
+ * defined currently in a static below. Names can have parent and child relationships with multiple other names. Sets of names.
  * <p/>
  * OK we want this object to only be modified if explicit functions are called, hence getters must not return mutable objects
  * and setters must make it clear what is going on
  * <p/>
- * ok I've been trying to make this class more thread safe with syncronized, not sure if I'm using it in the best way.
+ * ok I've been trying to make this class more thread safe with synchronized, not sure if I'm using it in the best way.
  * <p/>
  * Should I  be using synchronized hash sets e.g.     Set s = Collections.synchronizedSet(new HashSet(...)); ?? Need to read up on concurrency.
- * Brain metling stuff!
+ * Brain melting stuff!
  */
 public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> {
 
@@ -32,30 +33,32 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     private String jsonCache;
 
-    // leaving here as a reminder to consider proper logging
-    //private static final Logger logger = Logger.getLogger(Name.class.getName());
-    // data fields
+//    private static final Logger logger = Logger.getLogger(Name.class);
+
     private Provenance provenance;
     private boolean additive;
     private Map<String, String> attributes;
 
     // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
-
     // ok they're all sets, but some need ordering :)
     // these 3 are for quick lookup, must be modified appropriately e.g.add a peer add to that peer's peer parents
-    private Set<Value> values;
-    private Set<Name> parents;
-    private Set<Name> peerParents;
+    // to be clear, these are not used when persisting, they are derived from the name sets in values and the two below
+    private final Set<Value> values;
+    private final Set<Name> parents;
+    private final Set<Name> peerParents;
+
     /* these two have position which we'll reflect by the place in the list. WHen modifying these sets one has to recreate teh set anyway
     and when doing so changes to the order are taken into account.
 
     Peers is going to become a linked hash map as opposed to set as I need to store whether they are additive or not and this cannot be against the
      name object. A name may be an additive peer in one scenario and not in another.
+
+     These sets are the ones which define data structure and the ones persisted, parents and peerParents above are derived from these
      */
     private LinkedHashSet<Name> children;
     private LinkedHashMap<Name, Boolean> peers;
 
-    // for the code to make enw names
+    // for the code to make new names
 
     public Name(final AzquoMemoryDB azquoMemoryDB, final Provenance provenance, boolean additive) throws Exception {
         this(azquoMemoryDB, 0, null);
@@ -85,7 +88,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         return getAttribute(DEFAULT_DISPLAY_NAME);
     }
 
-    // should I be cloning provenance? Not while it's immutable I don't think
+    // provenance immutable. If it were not then would need to clone
 
     public Provenance getProvenance() {
         return provenance;
@@ -124,9 +127,9 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // these two are becoming protected so they can be set by Value.
     // Value will be the reference point for the value name link, the ones here are for fast lookup, no need for persistence
 
-    // turns out recreating sets is not so efficient so while the object can accept a new value set it's better to allow it to be changed but not externally
+    // turns out recreating sets is not so efficient so it's better to allow it to be changed but not externally - means values can be final
 
-    // syncronized here along with Collections.unmodifiableSet should provide some basic thread safety.
+    // synchronized here along with Collections.unmodifiableSet should provide some basic thread safety.
 
     protected void addToValues(final Value value) throws Exception {
         checkDatabaseMatches(value);
@@ -134,8 +137,6 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             values.add(value);
         }
     }
-
-    // turns out recreating sets is not so efficient so while the object can accept a new value set it's better to allow it to be changed but not externally
 
     protected void removeFromValues(final Value value) throws Exception {
         checkDatabaseMatches(value);// even if not needed throw the damn exception!
@@ -152,20 +153,10 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         return Collections.unmodifiableSet(peerParents);
     }
 
-
     // don't allow external classes to set the parents, Name can manage this based on set children
-
-    /* ok I can return a linked hash set but I'm not sure oof the advantage
-
-        return (LinkedHashSet<Name>)Collections.unmodifiableSet(children);
-    leave as set for the mo
-
-       */
-
 
     // returns a list as I don't think we care about duplicates here
     // these two functions moved here from the service
-
 
     public List<Name> findAllParents() {
         final List<Name> allParents = new ArrayList<Name>();
@@ -201,7 +192,8 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         return this;
     }
 
-    // same logic as above but returns a set, should be correct
+    // same logic as find all parents but returns a set, should be correct
+    // also we have the option to use additive or not
 
     private Set<Name> findAllChildrenCache = null;
     private Set<Name> findAllChildrenPayAttentionToAdditiveCache = null;
@@ -265,7 +257,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             if (newChild.equals(this) || findAllParents().contains(newChild)) {
                 throw new Exception("error cannot assign child due to circular reference, " + newChild + " cannot be added to " + this);
             }
-            // now we need to check the top parent is not changing ont eh child
+            // now we need to check the top parent is not changing on the child
             if (newChild.getParents().size() > 0) { // it has parents so we need to check
                 if (!newChild.findTopParent().equals(this) && parents.size() > 0 && !newChild.findTopParent().equals(findTopParent())) {
                     throw new Exception("error cannot assign child as it has a different top parent" + newChild + " has top parent " + newChild.findTopParent() + " " + this + " has or is a different top parent");
@@ -275,7 +267,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
         // remove all parents on the old one
         for (Name oldChild : this.children) {
-            // need to stop concurrent modification of the object I'm directly modifying. Maybe this should be vis a setter?, what if this function is called simultaneously and an object is assigned two parents at the same time?
+            // need to stop concurrent modification of the object I'm directly modifying. Maybe this should be via a setter?, what if this function is called simultaneously and an object is assigned two parents at the same time?
             synchronized (oldChild.parents) { // may as well be specific, less chance of locking, we just want to alter the parents
                 oldChild.parents.remove(this);
             }
@@ -393,13 +385,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         setNeedsPersisting();
     }
 
-    // think I'm only going to allow bulk attribute settings in this package as it won't do the checks the single below will
-    // really the below should only be called by azquomemorydb
-
-    protected synchronized void setAttributesWillBePersisted(LinkedHashMap<String, String> attributes) throws Exception {
-        this.attributes = attributes;
-        setNeedsPersisting();
-    }
+    // zapping set attribute set, only done by he populate from json below I think
 
     public synchronized String setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
 
@@ -463,7 +449,11 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         public LinkedHashSet<Integer> childrenIds;
 
         @JsonCreator
-        public JsonTransport(@JsonProperty("provenanceId") int provenanceId, @JsonProperty("additive") boolean additive, @JsonProperty("attributes") Map<String, String> attributes, @JsonProperty("peerIds") LinkedHashMap<Integer, Boolean> peerIds, @JsonProperty("childrenIds") LinkedHashSet<Integer> childrenIds) {
+        public JsonTransport(@JsonProperty("provenanceId") int provenanceId
+                , @JsonProperty("additive") boolean additive
+                , @JsonProperty("attributes") Map<String, String> attributes
+                , @JsonProperty("peerIds") LinkedHashMap<Integer, Boolean> peerIds
+                , @JsonProperty("childrenIds") LinkedHashSet<Integer> childrenIds) {
             this.provenanceId = provenanceId;
             this.additive = additive;
             this.attributes = attributes;
@@ -517,11 +507,11 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 }
 
                 // what we're doign here is the same as setchildrenwillbepersisted but without checks as during loading conditions may not be met
-                // TODO : add a flag to setchildrenwill be persisted
+                // TODO : add a flag to setchildrenwill be persisted?
 
                 this.children = children;
                 // need to sort out the parents
-                for (Name newChild : children){
+                for (Name newChild : children) {
                     newChild.parents.add(this);
                 }
             } catch (IOException e) {
