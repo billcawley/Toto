@@ -138,7 +138,7 @@ public final class Provenance extends TotoMemoryDBEntity {
 
     @Override
     protected StandardDAO.PersistedTable getPersistTable() {
-        return StandardDAO.PersistedTable.name;
+        return StandardDAO.PersistedTable.provenance;
     }
 
     @Override

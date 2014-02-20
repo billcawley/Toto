@@ -101,10 +101,6 @@ public class LoginService {
                 if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
                     azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
                 }
-                loginRecordDAO.store(new LoginRecord(0, user.getId(), memoryDB.getDatabase().getId(), new Date()));
-                if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")) {
-                    azquoMailer.sendEMail(user.getEmail(), user.getName(), "Login to Azquo", "You have logged into Azquo.");
-                }
                 connections.put(lic.getConnectionId(), lic);
                 return lic;
             } // else would be wrong password

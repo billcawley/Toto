@@ -134,7 +134,7 @@ public final class Value extends TotoMemoryDBEntity {
 
     @Override
     protected StandardDAO.PersistedTable getPersistTable() {
-        return StandardDAO.PersistedTable.name;
+        return StandardDAO.PersistedTable.value;
     }
 
     @Override
