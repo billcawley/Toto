@@ -23,13 +23,13 @@
     </filter-mapping>
 
     <servlet>
-        <servlet-name>totospringdispatcher</servlet-name>
+        <servlet-name>azquospringdispatcher</servlet-name>
         <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
         <load-on-startup>1</load-on-startup>
     </servlet>
 
     <servlet-mapping>
-        <servlet-name>totospringdispatcher</servlet-name>
+        <servlet-name>azquospringdispatcher</servlet-name>
         <!--the demo pages are all html in /phase1-->
         <!--<url-pattern>/*</url-pattern>-->
         <!-- rest   -->

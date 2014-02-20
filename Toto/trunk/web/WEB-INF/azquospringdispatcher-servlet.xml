@@ -16,12 +16,12 @@
         for details of controller annotations
         -->
     <mvc:annotation-driven/>
-    <context:component-scan base-package="com.azquo.toto.controller">
+    <context:component-scan base-package="com.azquo.controller">
     </context:component-scan>
 
     <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
         <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
-        <!--<property name="url" value="jdbc:mysql://localhost:3306/toto?jdbcCompliantTruncation=false&amp;useUnicode=true&amp;characterEncoding=UTF-8"/>-->
+        <!--<property name="url" value="jdbc:mysql://localhost:3306/azquo?jdbcCompliantTruncation=false&amp;useUnicode=true&amp;characterEncoding=UTF-8"/>-->
         <property name="url"
                   value="jdbc:mysql://localhost:3306/?jdbcCompliantTruncation=false&amp;useUnicode=true&amp;characterEncoding=UTF-8"/>
         <property name="username" value="toto"/>
@@ -30,24 +30,24 @@
     <bean id="jdbcTemplate" class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
-    <bean name="azquoMailer" class="com.azquo.toto.util.AzquoMailer"/>
-    <bean name="mySQLDatabaseManager" class="com.azquo.toto.admindao.MySQLDatabaseManager"/>
-    <bean name="uploadRecordDao" class="com.azquo.toto.admindao.UploadRecordDAO"/>
-    <bean name="businessDao" class="com.azquo.toto.admindao.BusinessDAO"/>
-    <bean name="userDao" class="com.azquo.toto.admindao.UserDAO"/>
-    <bean name="databaseDao" class="com.azquo.toto.admindao.DatabaseDAO"/>
-    <bean name="loginRecordDao" class="com.azquo.toto.admindao.LoginRecordDAO"/>
-    <bean name="accessDao" class="com.azquo.toto.admindao.PermissionDAO"/>
-    <bean name="nameService" class="com.azquo.toto.service.NameService"/>
-    <bean name="valueService" class="com.azquo.toto.service.ValueService"/>
-    <bean name="standardDao" class="com.azquo.toto.memorydbdao.StandardDAO"/>
-    <bean name="provenanceService" class="com.azquo.toto.service.ProvenanceService"/>
-    <bean name="loginService" class="com.azquo.toto.service.LoginService"/>
-    <bean name="importService" class="com.azquo.toto.service.ImportService"/>
-    <bean name="businessService" class="com.azquo.toto.service.AdminService"/>
+    <bean name="azquoMailer" class="com.azquo.util.AzquoMailer"/>
+    <bean name="mySQLDatabaseManager" class="com.azquo.admindao.MySQLDatabaseManager"/>
+    <bean name="uploadRecordDao" class="com.azquo.admindao.UploadRecordDAO"/>
+    <bean name="businessDao" class="com.azquo.admindao.BusinessDAO"/>
+    <bean name="userDao" class="com.azquo.admindao.UserDAO"/>
+    <bean name="databaseDao" class="com.azquo.admindao.DatabaseDAO"/>
+    <bean name="loginRecordDao" class="com.azquo.admindao.LoginRecordDAO"/>
+    <bean name="accessDao" class="com.azquo.admindao.PermissionDAO"/>
+    <bean name="nameService" class="com.azquo.service.NameService"/>
+    <bean name="valueService" class="com.azquo.service.ValueService"/>
+    <bean name="standardDao" class="com.azquo.memorydbdao.StandardDAO"/>
+    <bean name="provenanceService" class="com.azquo.service.ProvenanceService"/>
+    <bean name="loginService" class="com.azquo.service.LoginService"/>
+    <bean name="importService" class="com.azquo.service.ImportService"/>
+    <bean name="businessService" class="com.azquo.service.AdminService"/>
     <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
-    <bean name="memoryDBManager" class="com.azquo.toto.memorydb.MemoryDBManager">
-        <constructor-arg type="com.azquo.toto.admindao.DatabaseDAO" ref="databaseDao"/>
-        <constructor-arg type="com.azquo.toto.memorydbdao.StandardDAO" ref="standardDao"/>
+    <bean name="memoryDBManager" class="com.azquo.memorydb.MemoryDBManager">
+        <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
+        <constructor-arg type="com.azquo.memorydbdao.StandardDAO" ref="standardDao"/>
     </bean>
 </beans>

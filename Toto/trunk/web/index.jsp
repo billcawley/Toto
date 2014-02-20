@@ -11,6 +11,6 @@
     <title></title>
   </head>
   <body>
-  Here is the Toto app
+  Here is the Azquo app
   </body>
 </html>
