@@ -4,6 +4,7 @@ import com.azquo.service.*;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -22,7 +23,7 @@ import java.util.StringTokenizer;
 /**
  * Created by bill on 17/12/13.
  * will import csv files (usual record structure, with headings specifying peers if necessary)
- * Now prepares the  multi part form data for the import service
+ * Now prepares the  multi part form data for the import service - edd added parsing for Mac since it sends the multi part data differently
  */
 
 @Controller
@@ -37,10 +38,7 @@ public class ImportController {
     @Autowired
     private LoginService loginService;
 
-    @Autowired
-    private NameService nameService;
-
-//    private static final Logger logger = Logger.getLogger(TestController.class);
+    private static final Logger logger = Logger.getLogger(ImportController.class);
 
     @RequestMapping
     @ResponseBody
@@ -53,8 +51,9 @@ public class ImportController {
 
         'fileType' can be 'data' or 'translate'
 
-           'data' files have column headings that may include 'peers' definition.
-           'translate' files sill assume that the default language will be the column headed 'name'
+        'data' files have column headings that may include 'peers' definition.
+
+        'translate' files sill assume that the default language will be the column headed 'name'
                 e.g.  if the initial import has been done from the accounts program using accounts codes then the translate file might have headings
                'accounts', 'name' (...others might include 'french', or 'payroll')
 
@@ -63,7 +62,7 @@ public class ImportController {
 
         'separator'  will be a tab unless otherwise specified (e.g. 'comma' or 'pipe')
 
-         'create' will indicate if new names are to be created.  If 'create' is not specified, any name that is not understood will be rejected
+        'create' will indicate if new names are to be created.  If 'create' is not specified, any name that is not understood will be rejected
 
          */
         String origLanguage = "";
@@ -147,8 +146,8 @@ public class ImportController {
                 item = (FileItem) it.next();
             }
             String result;
-            System.out.println("upload file : " + item.getName());
-            System.out.println("upload file size : " + item.getSize());
+            logger.info("upload file : " + item.getName());
+            logger.info("upload file size : " + item.getSize());
             InputStream uploadFile = item.getInputStream();
             origLanguage = loggedInConnection.getLanguage();
             if (language.toLowerCase().endsWith("loose")){
