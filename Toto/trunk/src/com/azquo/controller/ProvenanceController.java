@@ -89,6 +89,7 @@ public class ProvenanceController {
                         }
                     }
                 }
+                // should maybe be an error here?
                 return formatProvenanceForOutput(null, jsonFunction);
             }
 
@@ -137,62 +138,66 @@ public class ProvenanceController {
         return "no action taken";
     }
 
-    private Set<Name> listDiff(Set<Name> list1, Set <Name> list2){
+    private Set<Name> listDiff(Set<Name> list1, Set<Name> list2) {
         Set<Name> diff = new HashSet<Name>();
         diff.addAll(list1);
         diff.removeAll(list2);
         return diff;
     }
 
-    public String formatCellProvenanceForOutput(Set <Name> origNames, List<Value> values, String jsonFunction){
+    // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
+    // not exactly sure why
+    // this might make it a bit more difficult to jackson but we should aim to do it really
+
+    public String formatCellProvenanceForOutput(Set<Name> origNames, List<Value> values, String jsonFunction) {
 
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
         String output = "{provenance:[";
         int count = 0;
 
-        for (Value value:values){
-            if (count < 6){
+        for (Value value : values) {
+            if (count < 6) {
                 Provenance provenance = value.getProvenance();
-                if (count++ > 0) output +=",";
+                if (count++ > 0) output += ",";
                 Set<Name> diffNames = new HashSet<Name>();
                 diffNames.addAll(listDiff(value.getNames(), origNames));
                 output += "{\"value\":\"" + value.getText() + "\",\"names\":[";
                 int nameCount = 0;
-                for (Name name:diffNames){
+                for (Name name : diffNames) {
                     if (nameCount++ > 0) output += ",";
-                    output +="\"" + name.getDefaultDisplayName() + "\"";
+                    output += "\"" + name.getDefaultDisplayName() + "\"";
                 }
-                output +=  "],\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + df.format(provenance.getTimeStamp()) + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}";
+                output += "],\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + df.format(provenance.getTimeStamp()) + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}";
 
             }
         }
         output += "]}";
-        if (jsonFunction != null && jsonFunction.length() > 0){
+        if (jsonFunction != null && jsonFunction.length() > 0) {
             return jsonFunction + "(" + output + ")";
-        }else{
+        } else {
             return output;
         }
 
 
-
     }
 
+    // Todo : get rid of this function and use jackson instead BUT this means changing the names in Excel
 
-    public String formatProvenanceForOutput(Provenance provenance, String jsonFunction){
+    public String formatProvenanceForOutput(Provenance provenance, String jsonFunction) {
 
-           String output;
-           if (provenance == null){
-                output = "{provenance:{\"who\":\"no provenance\"}}";
-            }else{
-                String user = provenance.getUser();
-                output = "{\"provenance\":{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}}";
-            }
-           if (jsonFunction != null && jsonFunction.length() > 0){
-               return jsonFunction + "(" + output + ")";
-           }else{
-               return output;
-           }
-       }
+        String output;
+        if (provenance == null) {
+            output = "{provenance:{\"who\":\"no provenance\"}}";
+        } else {
+            String user = provenance.getUser();
+            output = "{\"provenance\":{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}}";
+        }
+        if (jsonFunction != null && jsonFunction.length() > 0) {
+            return jsonFunction + "(" + output + ")";
+        } else {
+            return output;
+        }
+    }
 
 
 }
