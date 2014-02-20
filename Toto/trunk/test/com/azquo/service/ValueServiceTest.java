@@ -15,7 +15,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
  * Test for the value service, an important business
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = {"file:../../../../web/WEB-INF/azquospringdispatcher-servlet.xml"})
+@ContextConfiguration(locations = {"file:web/WEB-INF/azquospringdispatcher-servlet.xml"})
 
 public class ValueServiceTest {
 

@@ -11,7 +11,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
  */
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = {"file:../../../../web/WEB-INF/azquospringdispatcher-servlet.xml"})
+@ContextConfiguration(locations = {"file:web/WEB-INF/azquospringdispatcher-servlet.xml"})
 
 public class MySQLDatabaseManagerTest {
 

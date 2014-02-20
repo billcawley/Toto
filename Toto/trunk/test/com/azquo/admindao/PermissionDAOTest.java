@@ -13,7 +13,7 @@ import java.util.Date;
  * Created by cawley on 08/01/14.
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = {"file:../../../../web/WEB-INF/azquospringdispatcher-servlet.xml"})
+@ContextConfiguration(locations = {"file:web/WEB-INF/azquospringdispatcher-servlet.xml"})
 
 public class PermissionDAOTest {
     @Autowired

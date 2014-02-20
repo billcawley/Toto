@@ -19,11 +19,9 @@ import java.util.Set;
  * does a straight load from Mysql then we can test query speed
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = {"file:../../../../web/WEB-INF/azquospringdispatcher-servlet.xml"})
+@ContextConfiguration(locations = {"file:web/WEB-INF/azquospringdispatcher-servlet.xml"})
 public class AzquoMemoryDBTest {
 
-    @Autowired
-    AzquoMemoryDB azquoMemoryDB;
     @Autowired
     NameService nameService;
     @Autowired
