@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * User: cawley
  * Date: 25/10/13
  * Time: 10:33
- * created after it became apparent that Mysql in the way I'd arranged the objects didnt' ahve a hope in hell of
+ * created after it became apparent that Mysql in the way I'd arranged the objects didn't have a hope in hell of
  * delivering data fast enough. Leverage collections to implement Azquo spec.
  */
 public final class AzquoMemoryDB {
@@ -32,16 +32,17 @@ public final class AzquoMemoryDB {
     private final Map<Integer, Value> valueByIdMap;
     private final Map<Integer, Provenance> provenanceByIdMap;
 
-    // does this database need loading from mysql
+    // does this database need loading from mysql, a significant flag that affects rules for memory db instantiation for example
     private boolean needsLoading;
 
     // reference to the mysql db
     private final Database database;
 
+    // object ids. We handle this here, it's not done by MySQL
     private int maxIdAtLoad;
     private int nextId;
 
-    // when objects are modified they are added to these lists
+    // when objects are modified they are added to these sets held in a map. AzquoMemoryDBEntity has all functions require to persist.
 
     private final Map<StandardDAO.PersistedTable, Set<AzquoMemoryDBEntity>> entitiesToPersist;
 
@@ -134,9 +135,9 @@ public final class AzquoMemoryDB {
     // reads from a list of changed objects
 
     public synchronized void saveDataToMySQL() {
-        // this is where I need to think carefully about concurrency, azquodb has the last say when the maps are modified although the flags are another point
+        // this is where I need to think carefully about concurrency, azquodb has the last say when the sets are modified although the flags are another point
         // for the moment just make it work.
-        // new code that doesn't repeat nearly as much,
+        // map of sets to persist means that should we add another object type then this code should not need to change
         for (StandardDAO.PersistedTable tableToStoreIn : StandardDAO.PersistedTable.values()) { // run through 'em. Worth remembering this enum syntax
             Set<AzquoMemoryDBEntity> entities = entitiesToPersist.get(tableToStoreIn);
             if (!entitiesToPersist.isEmpty()) {
@@ -161,7 +162,7 @@ public final class AzquoMemoryDB {
     // will block currently!
 
     protected synchronized int getNextId() {
-        nextId++; // increment but return what it was . . .a little messy but I want tat value in memory to be what it says
+        nextId++; // increment but return what it was . . .a little messy but I want that value in memory to be what it says
         return nextId - 1;
     }
 
@@ -228,6 +229,8 @@ public final class AzquoMemoryDB {
         return names;
     }
 
+    // should this somehow be against name??
+
     public boolean isInParentTreeOf(final Name child, final Name testParent) {
         for (Name parent : child.getParents()) {
             if (testParent == parent || isInParentTreeOf(parent, testParent)) {
@@ -237,18 +240,11 @@ public final class AzquoMemoryDB {
         return false;
     }
 
-    private Name getTopParent(final Name name) {
-        for (Name parent : name.getParents()) {
-            return getTopParent(parent);
-        }
-        return name;
-    }
-
     public void zapUnusedNames() throws Exception {
         for (Name name : nameByIdMap.values()) {
             // remove everything except top layer and names with values.   Change parents to top layer where sets deleted
             if (name.getParents().size() > 0 && name.getValues().size() == 0) {
-                Name topParent = getTopParent(name);
+                Name topParent = name.findTopParent();
                 for (Name child : name.getChildren()) {
                     topParent.addChildWillBePersisted(child);
                 }
@@ -272,35 +268,6 @@ public final class AzquoMemoryDB {
         }
         return toReturn;
     }
-
-/*
-    public List<Name> searchNames(final String attribute, String search) {
-        long track = System.currentTimeMillis();
-        search = search.trim().toLowerCase();
-        boolean wildCardAtBeginning = false;
-        boolean wildCardAtEnd = false;
-        if (search.startsWith("*")) {
-            wildCardAtBeginning = true;
-            search = search.substring(1);
-        }
-        if (search.endsWith("*")) {
-            wildCardAtEnd = true;
-            search = search.substring(0, search.length() - 1);
-        }
-        final List<Name> toReturn = new ArrayList<Name>();
-        if (!wildCardAtBeginning && !wildCardAtEnd) {
-            Name check = getNameByAttribute(attribute, search, null);
-            if (check != null) {
-                toReturn.add(check);
-            }
-        } else {
-            // use new function, remember booleans are swapped
-            toReturn.addAll(getNamesByAttributeValueWildcards(attribute, search, wildCardAtEnd, wildCardAtBeginning));
-        }
-        System.out.println("search time : " + (System.currentTimeMillis() - track));
-        return toReturn;
-    }
-*/
 
     public Provenance getProvenanceById(final int id) {
         return provenanceByIdMap.get(id);
@@ -327,8 +294,8 @@ public final class AzquoMemoryDB {
         }
     }
 
-    // ok I'd have liked this to be part of the above function but the name won't have been initialised, has to be called in the name constructor
-    // custom maps here need to be dealt with in the constructors I think
+    // ok I'd have liked this to be part of add name to db but the name won't have been initialised, add name to db is called in the name constructor
+    // before the attributes have been initialised
 
     protected void addNameToAttributeNameMap(final Name newName) throws Exception {
         synchronized (nameByAttributeMap) {
@@ -370,6 +337,7 @@ public final class AzquoMemoryDB {
     }
 
     // to be called after loading moves the json and extracts attributes to useful maps here
+    // called after loading as the names reference themselves
 
     private synchronized void initNames() throws Exception {
         for (Name name : nameByIdMap.values()) {
@@ -378,15 +346,7 @@ public final class AzquoMemoryDB {
         }
     }
 
-/*    protected void removeNameFromDbNameMap(Name name) throws Exception {
-        name.checkDatabaseMatches(this);
-        String lcName = name.getDefaultDisplayName().toLowerCase();
-        if (nameByNameMap.get(lcName) != null) {
-            nameByNameMap.get(lcName).remove(name);
-        }
-    }*/
-
-    // trying for new more simplifies persistence - make functions not linked to classes
+    // trying for new more simplified persistence - make functions not linked to classes
     // maps will be set up in the constructor. Think about any concurrency issues here???
 
     protected void setEntityNeedsPersisting(StandardDAO.PersistedTable tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
