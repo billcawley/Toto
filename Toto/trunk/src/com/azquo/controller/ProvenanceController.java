@@ -116,7 +116,7 @@ public class ProvenanceController {
                             originalCellNames.addAll(loggedInConnection.getContext(region));
                             originalCellNames.addAll(loggedInConnection.getRowHeadings(region).get(rowInt));
                             originalCellNames.addAll(loggedInConnection.getColumnHeadings(region).get(colInt));
-                            Set<Name> specialForProvenance = new HashSet<Name>();
+                            //Set<Name> specialForProvenance = new HashSet<Name>();
 
 
                             return formatCellProvenanceForOutput(originalCellNames, valuesForCell, jsonFunction);
@@ -189,7 +189,7 @@ public class ProvenanceController {
         if (provenance == null) {
             output = "{provenance:{\"who\":\"no provenance\"}}";
         } else {
-            String user = provenance.getUser();
+            //String user = provenance.getUser();
             output = "{\"provenance\":{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}}";
         }
         if (jsonFunction != null && jsonFunction.length() > 0) {

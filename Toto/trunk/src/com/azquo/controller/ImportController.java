@@ -60,8 +60,6 @@ public class ImportController {
             columns containing names may contain names separated by commas to indicate a structure, which may not be complete
                  e.g.  'London, Ontario'    or 'London, Canada'   would find the same place ('London, Ontario, Canada') if it was already in the database.
 
-        'separator'  will be a tab unless otherwise specified (e.g. 'comma' or 'pipe')
-
         'create' will indicate if new names are to be created.  If 'create' is not specified, any name that is not understood will be rejected
 
          */
@@ -69,7 +67,6 @@ public class ImportController {
         String fileName = "";
         String fileType = "";
         String language = "";
-        String separator = "\t";
         String create = "";
         LoggedInConnection loggedInConnection = null;
         try {
@@ -99,8 +96,6 @@ public class ImportController {
                         fileType = item.getString();
                     } else if (item.getFieldName().equals("language")) {
                         language = item.getString();
-                    } else if (item.getFieldName().equals("separator")) {
-                        separator = item.getString();
                     } else if (item.getFieldName().equals("create")) {
                         create = item.getString();
                     }
@@ -131,9 +126,6 @@ public class ImportController {
                         if (parameterName.equals("language")) {
                             language = st2.nextToken();
                         }
-                        if (parameterName.equals("separator")) {
-                            separator = st2.nextToken();
-                        }
                         if (parameterName.equals("create")) {
                             create = st2.nextToken();
                         }
@@ -160,12 +152,12 @@ public class ImportController {
 
             loggedInConnection.setLanguage(language);
 
-            result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, separator, create, macMode);
+            result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, create, macMode);
             loggedInConnection.setLanguage(origLanguage);
             return result;
         } catch (Exception e) {
             e.printStackTrace();
-            if (origLanguage.length() > 0) {
+            if (origLanguage.length() > 0 && loggedInConnection != null) {
                 loggedInConnection.setLanguage(origLanguage);
             }
             return "error:" + e.getMessage();
