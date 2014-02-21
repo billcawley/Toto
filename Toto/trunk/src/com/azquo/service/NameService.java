@@ -3,6 +3,7 @@ package com.azquo.service;
 import com.azquo.jsonrequestentities.NameJsonRequest;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
+import org.apache.commons.lang.math.NumberUtils;
 
 import java.net.URLEncoder;
 import java.util.*;
@@ -86,7 +87,7 @@ public final class NameService {
     }
 
     // untested!
-
+/*
     public ArrayList<Name> sortNames(final ArrayList<Name> namesList, final String language) {
         Comparator<Name> compareName = new Comparator<Name>() {
             public int compare(Name n1, Name n2) {
@@ -95,7 +96,7 @@ public final class NameService {
         };
         Collections.sort(namesList, compareName);
         return namesList;
-    }
+    }*/
 
     // get names from a comma separated list
 
@@ -665,7 +666,7 @@ public final class NameService {
                 if (result.startsWith("error:")){
                     return result;
                 }else{
-                    if (name.getAttribute("RPCALC") == null || name.getAttribute("RPCALC") != result) {
+                    if (name.getAttribute("RPCALC") == null || !name.getAttribute("RPCALC").equals(result)) {
                         name.setAttributeWillBePersisted("RPCALC", result);
                     }
                 }
@@ -730,11 +731,10 @@ public final class NameService {
 
 
         if (term.charAt(0) ==NAMEMARKER) return term + " ";
-        try {
-            double d = Double.parseDouble(term);
-            return d + " ";
-        } catch (Exception e) {
 
+        if (NumberUtils.isNumber(term)){
+            // do we need to parse double here??
+            return Double.parseDouble(term) + " ";
         }
         // this routine must interpret set formulae as well as calc formulae, hence the need to look for semicolons
          int nameEnd = term.indexOf(";");
@@ -785,7 +785,7 @@ public final class NameService {
         calc = stripQuotes(loggedInConnection, calc);
 
         Pattern p = Pattern.compile("[\\+\\-/\\*\\(\\)]"); // only simple maths allowed at present
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
         String origCalc = calc;
@@ -806,7 +806,7 @@ public final class NameService {
             while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && ")+-*/(".indexOf(thisOp) <= "(+-*/".indexOf(stack.charAt(0)))) {
 
                 if (stack.charAt(0) != '(') {
-                    sb.append(stack.charAt(0) + " ");
+                    sb.append(stack.charAt(0)).append(" ");
                 }
                 lastOffStack = stack.charAt(0);
                 stack = stack.substring(1);
@@ -832,7 +832,7 @@ public final class NameService {
 
         //.. and clear the stack
         while (stack.length() > 0) {
-            sb.append(stack.charAt(0) + " ");
+            sb.append(stack.charAt(0)).append(" ");
             stack = stack.substring(1);
         }
 
@@ -1108,7 +1108,6 @@ public final class NameService {
     // again should use jackson?
 
     private String getChildStructureFormattedForOutput(final Name name) {
-        //SHOULD USE GSON HERE!
         int totalValues = getTotalValues(name);
         //if (totalValues > 0) {
         StringBuilder sb = new StringBuilder();
@@ -1165,8 +1164,6 @@ public final class NameService {
 
 
         return sb.toString();
-        //}
-        //return "";
     }
 
 

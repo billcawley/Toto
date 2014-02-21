@@ -4,6 +4,7 @@ import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import com.azquo.memorydb.Value;
 import com.csvreader.CsvReader;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -36,6 +37,8 @@ public final class ValueService {
         value.setNamesWillBePersisted(new HashSet<Name>());
     }
 
+    // one line function, much point??
+
     public Value createValue(final LoggedInConnection loggedInConnection, final Provenance provenance, final String text) throws Exception {
         return new Value(loggedInConnection.getAzquoMemoryDB(), provenance, text, null);
     }
@@ -47,7 +50,7 @@ public final class ValueService {
         final Set<Name> validNames = new HashSet<Name>();
         final Map<String, String> nameCheckResult = nameService.isAValidNameSet(names, validNames);
         final String error = nameCheckResult.get(NameService.ERROR);
-        final String warning = nameCheckResult.get(NameService.ERROR);
+        final String warning = nameCheckResult.get(NameService.WARNING);
         if (error != null) {
             return error;
         } else if (warning != null) {
@@ -79,11 +82,6 @@ public final class ValueService {
         Value newValue = new Value(loggedInConnection.getAzquoMemoryDB(), loggedInConnection.getProvenance(), newValueString, null);
         newValue.setNamesWillBePersisted(existingValue.getNames());
         deleteValue(existingValue);
-        return true;
-    }
-
-    public boolean storeNewValueFromEdit(final LoggedInConnection loggedInConnection, final Set<Name> names, final String newValueString) throws Exception {
-        storeValueWithProvenanceAndNames(loggedInConnection, newValueString, names);
         return true;
     }
 
@@ -226,6 +224,7 @@ public final class ValueService {
         String calcString = "";
         boolean hasCalc = false;
         // add all names to calcnames except the the one with RPCALC
+        // and here's a thing : if more than one name has RPcalc then only the first will be used
         for (Name name : names) {
             if (!hasCalc) {
                 calcString = name.getAttribute("RPCALC");
@@ -248,7 +247,6 @@ public final class ValueService {
             StringTokenizer st = new StringTokenizer(calcString, " ");
             while (st.hasMoreTokens()) {
                 String term = st.nextToken();
-                double calcedVal = 0.0;
                 if (term.length() == 1) { // operation
                     valNo--;
                     char charTerm = term.charAt(0);
@@ -264,11 +262,10 @@ public final class ValueService {
                         values[valNo - 1] /= values[valNo];
                     }
                 } else { // a value, not in the Azquo sense, a number or reference to a name
-                    try {
-                        // try to parse the value, if it parses then add it to wherever we are in the values array and increment the pointer.
-                        calcedVal = Double.parseDouble(term);
-                        values[valNo++] = calcedVal;
-                    } catch (Exception e) {
+                    // TODO : check this with dad
+                    if (NumberUtils.isNumber(term)){
+                        values[valNo++] = Double.parseDouble(term);
+                    } else {
                         // we assume it's a name id starting with NAMEMARKER
                         int id = Integer.parseInt(term.substring(1));
                         // so get the name and add it to the other names
@@ -335,7 +332,6 @@ public final class ValueService {
         final StringBuilder sb = new StringBuilder();
 
         if (language==null || language.length() == 0) language = Name.DEFAULT_DISPLAY_NAME;
-        List<Name> lastxNames = null;
         for (int x = 0; x < headings.size(); x++) {
             List<Name> xNames = headings.get(x);
             if (x > 0) sb.append("\n");
@@ -352,10 +348,10 @@ public final class ValueService {
         return sb.toString();
     }
 
-    public List<Name> interpretItem(String item) {
+/*    public List<Name> interpretItem(String item) {
         //todo  - item should be a string, but potentially include ;children; level x; from a; to b; from n; to n;
         return null;
-    }
+    }*/
 
     /*
 

@@ -181,7 +181,7 @@ public class ValueController {
                                         numberOfValuesModified++;
                                     } else if (valuesForCell.isEmpty()) {
                                         logger.info("storing new value here . . .");
-                                        valueService.storeNewValueFromEdit(loggedInConnection, namesForCell, edited);
+                                        valueService.storeValueWithProvenanceAndNames(loggedInConnection, edited, namesForCell);
                                         numberOfValuesModified++;
                                     }
                                 } else {
