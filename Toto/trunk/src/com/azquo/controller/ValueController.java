@@ -4,6 +4,7 @@ import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Value;
 import com.azquo.service.*;
 import com.csvreader.CsvReader;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,18 +36,24 @@ public class ValueController {
 
     // TODO : break up into separate functions
 
-//    private static final Logger logger = Logger.getLogger(TestController.class);
+    private static final Logger logger = Logger.getLogger(ValueController.class);
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "rowheadings", required = false) final String rowheadings, @RequestParam(value = "columnheadings", required = false) final String columnheadings,
-                                @RequestParam(value = "context", required = false) final String context, @RequestParam(value = "connectionid", required = false) String connectionId,
-                                @RequestParam(value = "region", required = false) String region, @RequestParam(value = "lockmap", required = false) final String lockMap,
-                                @RequestParam(value = "editeddata", required = false) final String editedData, @RequestParam(value = "searchbynames", required = false) final String searchByNames,
-                                @RequestParam(value = "jsonfunction", required = false) final String jsonfunction, @RequestParam(value = "user", required = false) final String user,
-                                @RequestParam(value = "password", required = false) final String password, @RequestParam(value = "spreadsheetName", required = false) final String spreadsheetName, @RequestParam(value = "database", required = false) final String database) throws Exception {
+    public String handleRequest(@RequestParam(value = "rowheadings", required = false) final String rowheadings
+            , @RequestParam(value = "columnheadings", required = false) final String columnheadings
+            , @RequestParam(value = "context", required = false) final String context
+            , @RequestParam(value = "connectionid", required = false) String connectionId
+            , @RequestParam(value = "region", required = false) String region
+            , @RequestParam(value = "lockmap", required = false) final String lockMap
+            , @RequestParam(value = "editeddata", required = false) final String editedData
+            , @RequestParam(value = "searchbynames", required = false) final String searchByNames
+            , @RequestParam(value = "jsonfunction", required = false) final String jsonfunction
+            , @RequestParam(value = "user", required = false) final String user
+            , @RequestParam(value = "password", required = false) final String password
+            , @RequestParam(value = "spreadsheetName", required = false) final String spreadsheetName
+            , @RequestParam(value = "database", required = false) final String database) throws Exception {
 
-        // these 3 statements copied, should factor
         long startTime = System.currentTimeMillis();
         if (region != null && region.length() == 0) {
             region = null; // make region null and blank the same . . .   , maybe change later???
@@ -69,14 +76,17 @@ public class ValueController {
             }
              String result = "error: no action taken";
 
+            // expand the row and column headings.
+            // the result is jammed into result but may not be needed - getrowheadings is still important as it sets up the bits in the logged in connection
+
              if (rowheadings != null && rowheadings.length() > 0) {
                 result =  valueService.getRowHeadings(loggedInConnection, region, rowheadings);
-                System.out.println("time for row headings in region " + region + " is " + (System.currentTimeMillis() - startTime) );
+                logger.info("time for row headings in region " + region + " is " + (System.currentTimeMillis() - startTime));
               }
 
             if (columnheadings != null && columnheadings.length() > 0) {
                 result =  valueService.getColumnHeadings(loggedInConnection, region, columnheadings);
-                System.out.println("time for column headings in region " + region + " is " + (System.currentTimeMillis() - startTime) );
+                logger.info("time for column headings in region " + region + " is " + (System.currentTimeMillis() - startTime));
             }
              if (context != null) {
                 //System.out.println("passed context : " + context);
@@ -89,6 +99,9 @@ public class ValueController {
                         return result;
                     }
                     contextNames.add(contextName);
+                    // I guess this is a trick to check the context is correct? Not sure what sense this makes
+                    // ok this is to create the RP calc if needed (if there is a calculation attribute)
+                    // this will be moved to on saving of a name,
                     result = nameService.calcReversePolish(loggedInConnection, contextName);
                     if (result.startsWith("error:")){
                         return result;
@@ -96,7 +109,7 @@ public class ValueController {
                 }
                 if (loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0 && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0) {
                     result =  valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region);
-                    System.out.println("time for data in region " + region + " is " + (System.currentTimeMillis() - startTime) );
+                    logger.info("time for data in region " + region + " is " + (System.currentTimeMillis() - startTime));
                  } else {
                     result = "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
                 }
@@ -106,14 +119,17 @@ public class ValueController {
                 result = loggedInConnection.getLockMap(region);
             }
 
-            System.out.println("edited data " + editedData);
+            // this edit bit has a fair bit of what might be considered business logic,wonder if it should be moved to the service layer
+
+            logger.info("edited data " + editedData);
             if (editedData != null && editedData.length() > 0) {
-                System.out.println("------------------");
-                System.out.println(loggedInConnection.getLockMap(region));
-                System.out.println(loggedInConnection.getRowHeadings(region));
-                System.out.println(loggedInConnection.getColumnHeadings(region));
-                System.out.println(loggedInConnection.getSentDataMap(region));
-                System.out.println(loggedInConnection.getContext(region));
+                logger.info("------------------");
+                logger.info(loggedInConnection.getLockMap(region));
+                logger.info(loggedInConnection.getRowHeadings(region));
+                logger.info(loggedInConnection.getColumnHeadings(region));
+                logger.info(loggedInConnection.getSentDataMap(region));
+                logger.info(loggedInConnection.getContext(region));
+                // I'm not sure if these conditions are quite correct maybe check for getDataValueMap and getDataNamesMap instead of columns and rows etc?
                 if (loggedInConnection.getLockMap(region) != null &&
                         loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0
                         && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0
@@ -152,24 +168,26 @@ public class ValueController {
                             }
                             if (!orig.equals(edited)) {
                                 if (!locked.equalsIgnoreCase("locked")) { // it wasn't locked, good to go, check inside the different values bit to error if the excel tries something it should not
-                                    System.out.println(columnCounter + ", " + rowCounter + " not locked and modified");
-                                    System.out.println(orig + "|" + edited + "|");
+                                    logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
+                                    logger.info(orig + "|" + edited + "|");
 
                                     final List<Value> valuesForCell = rowValues.get(columnCounter);
                                     final Set<Name> namesForCell = rowNames.get(columnCounter);
                                     // one thing about these store functions to the value service, they expect the provenance on the logged in connection to be appropriate
                                     if (valuesForCell.size() == 1) {
                                         final Value theValue = valuesForCell.get(0);
-                                        System.out.println("trying to overwrite");
+                                        logger.info("trying to overwrite");
                                         valueService.overWriteExistingValue(loggedInConnection, theValue, edited);
                                         numberOfValuesModified++;
                                     } else if (valuesForCell.isEmpty()) {
-                                        System.out.println("storing new value here . . .");
+                                        logger.info("storing new value here . . .");
                                         valueService.storeNewValueFromEdit(loggedInConnection, namesForCell, edited);
+                                        numberOfValuesModified++;
                                     }
                                 } else {
                                     // should this add on for a list???
                                     result = "error:cannot edit locked cell " + columnCounter + ", " + rowCounter + " in region " + region;
+                                    return result;
                                 }
                             }
                             columnCounter++;
@@ -185,7 +203,7 @@ public class ValueController {
             if (searchByNames != null && searchByNames.length() > 0) {
 
 
-                System.out.println("search by names : " + searchByNames);
+                logger.info("search by names : " + searchByNames);
 
                 final Set<Name> names = nameService.decodeString(loggedInConnection, searchByNames);
                 if (!names.isEmpty()) {
@@ -195,10 +213,17 @@ public class ValueController {
                     }
                 }
             }
+            /*
+            BufferedReader br = new BufferedReader(new StringReader(result));
+            String line;
+            logger.error("----- sent result");
+            while ((line = br.readLine()) != null) {
+                logger.info(line);
+            }*/
 
              return result;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("value controller error", e);
             return "error:" + e.getMessage();
         }
 
