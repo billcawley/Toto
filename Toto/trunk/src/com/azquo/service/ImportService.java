@@ -213,7 +213,9 @@ public final class ImportService {
     public String namesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
         // should we have encoding options?? Leave for the mo . . .
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
-        csvReader.setUseTextQualifier(false);
+       //TODO WE NEED TO BE ABLE TO SET TextQualifier TO false
+
+        csvReader.setUseTextQualifier(true);
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
         String importLanguage = loggedInConnection.getLanguage();
@@ -260,7 +262,9 @@ public final class ImportService {
                             } else {
                                 String error = name.setAttributeWillBePersisted(attName, newAttributeValue);
                                 if (error.length() > 0) return error;
-                            }
+                                //...in case this is a calculation
+                                error = nameService.calcReversePolish(loggedInConnection,name);
+                             }
                         }
                     }
                 }
