@@ -218,7 +218,7 @@ public final class ValueService {
     There may be name references in there, by !nameid
     */
 
-    public double findValueForNames(final LoggedInConnection loggedInConnection, final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value>valuesFound) {
+    public double findValueForNames(final LoggedInConnection loggedInConnection, final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound) {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
         String calcString = "";
@@ -239,7 +239,7 @@ public final class ValueService {
         }
         // no reverse polish converted formula, just sum
         if (!hasCalc) {
-              return findSumForNamesIncludeChildren(names, locked, payAttentionToAdditive, valuesFound);
+            return findSumForNamesIncludeChildren(names, locked, payAttentionToAdditive, valuesFound);
         } else {
             // ok I think I know why an array was used, to easily reference the entry before
             double[] values = new double[20];//should be enough!!
@@ -253,7 +253,7 @@ public final class ValueService {
                     if (charTerm == '+') {
                         values[valNo - 1] += values[valNo];
                     } else if (charTerm == '-') {
-                            values[valNo - 1] -= values[valNo];
+                        values[valNo - 1] -= values[valNo];
                     } else if (charTerm == '*') {
                         values[valNo - 1] *= values[valNo];
                     } else if (values[valNo] == 0) {
@@ -263,7 +263,7 @@ public final class ValueService {
                     }
                 } else { // a value, not in the Azquo sense, a number or reference to a name
                     // TODO : check this with dad
-                    if (NumberUtils.isNumber(term)){
+                    if (NumberUtils.isNumber(term)) {
                         values[valNo++] = Double.parseDouble(term);
                     } else {
                         // we assume it's a name id starting with NAMEMARKER
@@ -282,7 +282,7 @@ public final class ValueService {
         }
     }
 
-      public double findSumForNamesIncludeChildren(final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound) {
+    public double findSumForNamesIncludeChildren(final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound) {
         //System.out.println("findSumForNamesIncludeChildren");
         long start = System.nanoTime();
 
@@ -301,11 +301,11 @@ public final class ValueService {
         if (values.size() > 1) {
             locked.setValue(true);
         }
-        if (valuesFound != null){
+        if (valuesFound != null) {
             valuesFound.addAll(values);
         }
 
-            part2NanoCallTime += (System.nanoTime() - point);
+        part2NanoCallTime += (System.nanoTime() - point);
         totalNanoCallTime += (System.nanoTime() - start);
         numberOfTimesCalled++;
         return sumValue;
@@ -331,7 +331,7 @@ public final class ValueService {
 
         final StringBuilder sb = new StringBuilder();
 
-        if (language==null || language.length() == 0) language = Name.DEFAULT_DISPLAY_NAME;
+        if (language == null || language.length() == 0) language = Name.DEFAULT_DISPLAY_NAME;
         for (int x = 0; x < headings.size(); x++) {
             List<Name> xNames = headings.get(x);
             if (x > 0) sb.append("\n");
@@ -340,10 +340,10 @@ public final class ValueService {
                 //NOW - LEAVE THE PRUNING OF NAMES TO EXCEL - MAYBE THE LIST WILL BE SORTED.
                 //don't show repeating names in the headings - leave blank.
                 //if ((x == 0 || !lastxNames.get(y).equals(xNames.get(y))) && (y == 0 || !xNames.get(y - 1).equals(xNames.get(y)))) {
-                    sb.append(xNames.get(y).getAttribute(language));
+                sb.append(xNames.get(y).getAttribute(language));
                 //}
             }
-           // lastxNames = xNames;
+            // lastxNames = xNames;
         }
         return sb.toString();
     }
@@ -372,8 +372,8 @@ seaports;children   container;children
     public String createNameListsFromExcelRegion(final LoggedInConnection loggedInConnection, List<List<List<Name>>> nameLists, final String excelRegionPasted) throws Exception {
         int maxColCount = 1;
         CsvReader pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t');
-        while (pastedDataReader.readRecord()){
-            if (pastedDataReader.getColumnCount() > maxColCount){
+        while (pastedDataReader.readRecord()) {
+            if (pastedDataReader.getColumnCount() > maxColCount) {
                 maxColCount = pastedDataReader.getColumnCount();
             }
         }
@@ -381,11 +381,11 @@ seaports;children   container;children
         pastedDataReader.setUseTextQualifier(false);
         while (pastedDataReader.readRecord()) {
             List<List<Name>> row = new ArrayList<List<Name>>();
-            for (int column = 0; column < pastedDataReader.getColumnCount(); column++){
+            for (int column = 0; column < pastedDataReader.getColumnCount(); column++) {
                 String cellString = pastedDataReader.get(column);
                 List<Name> nameList = new ArrayList<Name>();
                 String error = nameService.interpretName(loggedInConnection, nameList, cellString);
-                if (error.length() > 0){
+                if (error.length() > 0) {
                     return error;
                 }
                 row.add(nameList);
@@ -435,17 +435,17 @@ seaports;children   container;children
 
         //this will return only up to three levels.  I tried a recursive routine, but the arrays, though created correctly (see below) did not return correctly
         List<List<T>> toReturn = null;
-        for (List<T> permutationDimension : listsToPermute){
-            if (toReturn == null){ // first one, just assign the single column
+        for (List<T> permutationDimension : listsToPermute) {
+            if (toReturn == null) { // first one, just assign the single column
                 toReturn = new ArrayList<List<T>>();
-                for (T item : permutationDimension){
+                for (T item : permutationDimension) {
                     List<T> createdRow = new ArrayList<T>();
                     createdRow.add(item);
                     toReturn.add(createdRow);
                 }
             } else {
                 // this is better as a different function as internally it created a new 2d array which we can then assign back to this one
-                toReturn = get2DArrayWithAddedPermutation(toReturn,permutationDimension);
+                toReturn = get2DArrayWithAddedPermutation(toReturn, permutationDimension);
             }
         }
         return toReturn;
@@ -474,8 +474,8 @@ seaports;children   container;children
 
     public <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
         List<List<T>> toReturn = new ArrayList<List<T>>();
-        for (List<T> existingRow : existing2DArray){
-            for (T elementWeWantToAdd : permutationWeWantToAdd){ // for each new element
+        for (List<T> existingRow : existing2DArray) {
+            for (T elementWeWantToAdd : permutationWeWantToAdd) { // for each new element
                 List<T> newRow = new ArrayList<T>(existingRow); // copy the existing row
                 newRow.add(elementWeWantToAdd);// add the extra element
                 toReturn.add(newRow);
@@ -514,16 +514,16 @@ seaports;children   container;children
                                      the rows are permuted as far as the next item on the same line
            */
 
-         List<List<Name>> output = new ArrayList<List<Name>>();
+        List<List<Name>> output = new ArrayList<List<Name>>();
         final int noCols = headingLists.size();
 
         final int lastRowIndex = headingLists.get(0).size() - 1; // the size of the first row
         for (int columnIndex = 0; columnIndex < noCols; columnIndex++) {
             List<List<Name>> partheadings = headingLists.get(columnIndex);
 
-              // ok so while the column index is less than the row length and there's more than one row and
+            // ok so while the column index is less than the row length and there's more than one row and
             while (columnIndex < noCols - 1 && blankCol(headingLists.get(columnIndex + 1))) {
-                if (headingLists.get(++columnIndex).get(lastRowIndex) != null){
+                if (headingLists.get(++columnIndex).get(lastRowIndex) != null) {
                     partheadings.get(lastRowIndex).addAll(headingLists.get(columnIndex).get(lastRowIndex));
                 }
             }
@@ -556,7 +556,7 @@ seaports;children   container;children
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
         String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, headingsSent);
-        if (error.length() > 0){
+        if (error.length() > 0) {
             return error;
         }
         loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
@@ -567,8 +567,8 @@ seaports;children   container;children
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<Name>>> columnHeadingLists = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
-        String error =  createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, headingsSent);
-        if (error.length() > 0){
+        String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, headingsSent);
+        if (error.length() > 0) {
             return error;
         }
         loggedInConnection.setColumnHeadings(region, (expandHeadings(transpose2DList(columnHeadingLists))));
@@ -654,45 +654,45 @@ seaports;children   container;children
         return sb.toString();
     }
 
-    private boolean isInPeers(Name name, Map<Name, Boolean> peers){
-        for (Name peer:peers.keySet()){
+    private boolean isInPeers(Name name, Map<Name, Boolean> peers) {
+        for (Name peer : peers.keySet()) {
             if (peer == name) return true;
 
         }
-        for (Name parent:name.getParents()){
-          if (isInPeers(parent, peers)){
-              return true;
-          }
+        for (Name parent : name.getParents()) {
+            if (isInPeers(parent, peers)) {
+                return true;
+            }
         }
         return false;
     }
 
-    private void createCellNameList(final Set<Name> namesForThisCell, final List<Name> rowName, final List<Name> columnName, final List<Name> contextNames){
+    private void createCellNameList(final Set<Name> namesForThisCell, final List<Name> rowName, final List<Name> columnName, final List<Name> contextNames) {
         namesForThisCell.addAll(contextNames);
         namesForThisCell.addAll(columnName);
         namesForThisCell.addAll(rowName);
         //now check that all names are needed
 
-        Map<Name, Boolean>  peers = new LinkedHashMap<Name, Boolean>();
-        for (Name peerCell: columnName){
-            if (peerCell.getPeers().size() > 0){
+        Map<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>();
+        for (Name peerCell : columnName) {
+            if (peerCell.getPeers().size() > 0) {
                 peers = peerCell.getPeers();
             }
         }
-        if (peers.size()==0){
-            for (Name peerCell:rowName){
-                if (peerCell.getPeers().size() > 0){
+        if (peers.size() == 0) {
+            for (Name peerCell : rowName) {
+                if (peerCell.getPeers().size() > 0) {
                     peers = peerCell.getPeers();
                 }
             }
         }
-        if (peers.size() > 0 && peers.size()!=namesForThisCell.size()){
+        if (peers.size() > 0 && peers.size() != namesForThisCell.size()) {
             // we must discard some names
             List<Name> surplusNames = new ArrayList<Name>();
-            for (Name name:namesForThisCell){
-                if (name.getPeers().size() == 0 && !isInPeers(name, peers)){
+            for (Name name : namesForThisCell) {
+                if (name.getPeers().size() == 0 && !isInPeers(name, peers)) {
                     surplusNames.add(name);
-                 }
+                }
             }
             namesForThisCell.removeAll(surplusNames);
         }
@@ -716,7 +716,7 @@ seaports;children   container;children
             for (List<Name> columnName : loggedInConnection.getColumnHeadings(region)) {
                 final Set<Name> namesForThisCell = new HashSet<Name>();
                 createCellNameList(namesForThisCell, rowName, columnName, contextNames);
-                  // edd putting in peer check stuff here, should I not???
+                // edd putting in peer check stuff here, should I not???
                 Map<String, String> result = nameService.isAValidNameSet(namesForThisCell, new HashSet<Name>());
                 if (result.get(NameService.ERROR) != null) { // not a valid peer set? must say something useful to the user!
                     return result.get(NameService.ERROR);
