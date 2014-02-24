@@ -79,6 +79,10 @@ public final class LoggedInConnection {
         return azquoMemoryDB;
     }
 
+    public String getCurrentDBName() {
+        return azquoMemoryDB.getDatabase().getName();
+    }
+
     protected void setAzquoMemoryDB(final AzquoMemoryDB azquoMemoryDB) {
         this.azquoMemoryDB = azquoMemoryDB;
     }
