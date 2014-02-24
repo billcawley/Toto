@@ -81,7 +81,7 @@ public class ValueController {
 
              if (rowheadings != null && rowheadings.length() > 0) {
                 result =  valueService.getRowHeadings(loggedInConnection, region, rowheadings);
-                logger.info("time for row headings in region " + region + " is " + (System.currentTimeMillis() - startTime));
+                 logger.info("time for row headings in region " + region + " is " + (System.currentTimeMillis() - startTime) + " on database " + loggedInConnection.getCurrentDBName() + " in language " + loggedInConnection.getLanguage());
               }
 
             if (columnheadings != null && columnheadings.length() > 0) {
