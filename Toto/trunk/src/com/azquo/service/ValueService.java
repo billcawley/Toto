@@ -203,10 +203,10 @@ public final class ValueService {
     }
 
     public void printFindForNamesIncludeChildrenStats() {
-        System.out.println("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
-        System.out.println("part 1 average nano : " + (part1NanoCallTime1 / numberOfTimesCalled1));
-        System.out.println("part 2 average nano : " + (part2NanoCallTime1 / numberOfTimesCalled1));
-        System.out.println("part 3 average nano : " + (part3NanoCallTime1 / numberOfTimesCalled1));
+        logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
+        logger.info("part 1 average nano : " + (part1NanoCallTime1 / numberOfTimesCalled1));
+        logger.info("part 2 average nano : " + (part2NanoCallTime1 / numberOfTimesCalled1));
+        logger.info("part 3 average nano : " + (part3NanoCallTime1 / numberOfTimesCalled1));
     }
 
 
@@ -314,10 +314,10 @@ public final class ValueService {
     }
 
     public void printSumStats() {
-        System.out.println("calls to  findSumForNamesIncludeChildren : " + numberOfTimesCalled);
-        System.out.println("part 1 average nano : " + (part1NanoCallTime / numberOfTimesCalled));
-        System.out.println("part 2 average nano : " + (part2NanoCallTime / numberOfTimesCalled));
-        System.out.println("total average nano : " + (totalNanoCallTime / numberOfTimesCalled));
+        logger.info("calls to  findSumForNamesIncludeChildren : " + numberOfTimesCalled);
+        logger.info("part 1 average nano : " + (part1NanoCallTime / numberOfTimesCalled));
+        logger.info("part 2 average nano : " + (part2NanoCallTime / numberOfTimesCalled));
+        logger.info("total average nano : " + (totalNanoCallTime / numberOfTimesCalled));
     }
 
     public List<Value> findValuesForNameIncludeAllChildren(final Name name, boolean payAttentionToAdditive) {
@@ -689,6 +689,8 @@ seaports;children   container;children
         return false;
     }
 
+    // todo edd understand
+
     private void createCellNameList(final Set<Name> namesForThisCell, final List<Name> rowName, final List<Name> columnName, final List<Name> contextNames) {
         namesForThisCell.addAll(contextNames);
         namesForThisCell.addAll(columnName);
@@ -766,7 +768,7 @@ seaports;children   container;children
         }
         printSumStats();
         printFindForNamesIncludeChildrenStats();
-        System.out.println("time to execute : " + (System.currentTimeMillis() - track));
+        logger.info("time to execute : " + (System.currentTimeMillis() - track));
         loggedInConnection.setLockMap(region, lockMapsb.toString());
         loggedInConnection.setSentDataMap(region, sb.toString());
         loggedInConnection.setDataValueMap(region, dataValuesMap);
