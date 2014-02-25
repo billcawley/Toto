@@ -6,6 +6,7 @@ import com.azquo.memorydb.Value;
 import com.csvreader.CsvReader;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.StringReader;
@@ -19,6 +20,8 @@ import java.util.*;
  * Workhorse hammering away at the memory DB.
  */
 public final class ValueService {
+
+    private static final Logger logger = Logger.getLogger(ValueService.class);
 
     @Autowired
     private NameService nameService;
@@ -353,6 +356,7 @@ public final class ValueService {
         return null;
     }*/
 
+
     /*
 
     Ok, select a region of names in excel and paste and this function will build a multidimentional array of name objects from that paste
@@ -366,10 +370,13 @@ seaports;children   container;children
 
  for example returns a list of 1 as there's only 1 row passed, with a list of 2 as there's two cells in that row with lists of something like 90 and 3 names in the two cell list items
 
+ we're not permuting, just saying "here is what that 2d excel region looks like in names"
+
      */
 
 
     public String createNameListsFromExcelRegion(final LoggedInConnection loggedInConnection, List<List<List<Name>>> nameLists, final String excelRegionPasted) throws Exception {
+        //logger.info("excel region pasted : " + excelRegionPasted);
         int maxColCount = 1;
         CsvReader pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t');
         while (pastedDataReader.readRecord()) {
@@ -487,61 +494,51 @@ seaports;children   container;children
     // TODO again edd understand
     /*
 
-    This is called after the names are loaded by createNameListsFromExcelRegion. in the case of rows it is transposed first.
-
-    Therefore we expect the 2d array to be set up for column headings, the top of the excel sheet
+    This is called after the names are loaded by createNameListsFromExcelRegion. in the case of columns it is transposed first
 
     The dynamic namecalls e.g. Seaports; children; have their lists populated but they have not been expanded out into the 2d set itself
 
-    That is what this does. Following the convention of down then right as in outer list os the rows and teh inner the cells in teh rows
-    one would not expect the outer list to be bigger than 3 or 4 though the inner list may be more, 20-30 or more in the case that the user has specified many column or row headings manually
+    So in the case of row headings for the export example it's passed a list or 1 (the outermost list of row headings derined)
 
+    and this 1 has a list of 2, the two cells defined in row headings as seaports; children     container;children
+
+      We want to return a list<list> being row, cells in that row, the expansion of each of the rows. The source in my example being ony one row with 2 cells in it
+      those two cells holding lists of 96 and 4 hence we get 384 back, each with 2 cells.
 
 
      */
 
 
     public List<List<Name>> expandHeadings(final List<List<List<Name>>> headingLists) {
-          /*
-
-
-          e.g.                      null    1,2,3         null     4,5
-                                     a        b     c,d,e   f        g   h
-                          this should expand to
-                                    null   1  1  1  1  1  2  2  2   2  2  3  3   3   3   3  4  4   5   5
-                                     a     b  c  d  e  f  b  c  d   e  f  b  c   d   e   f  g  h   g   h
-
-                                     the rows are permuted as far as the next item on the same line
-           */
 
         List<List<Name>> output = new ArrayList<List<Name>>();
-        final int noCols = headingLists.size();
+        final int noOfheadingDefinitionRows = headingLists.size();
+        final int firstHeadingDefinitionRowLength = headingLists.get(0).size() - 1;
 
-        final int lastRowIndex = headingLists.get(0).size() - 1; // the size of the first row
-        for (int columnIndex = 0; columnIndex < noCols; columnIndex++) {
-            List<List<Name>> partheadings = headingLists.get(columnIndex);
 
-            // ok so while the column index is less than the row length and there's more than one row and
-            while (columnIndex < noCols - 1 && blankCol(headingLists.get(columnIndex + 1))) {
-                if (headingLists.get(++columnIndex).get(lastRowIndex) != null) {
-                    partheadings.get(lastRowIndex).addAll(headingLists.get(columnIndex).get(lastRowIndex));
+
+        for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfheadingDefinitionRows; headingDefinitionRowIndex++) {
+            List<List<Name>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
+            // while we're not at the end and
+            while (headingDefinitionRowIndex < noOfheadingDefinitionRows - 1 && blankRow(headingLists.get(headingDefinitionRowIndex + 1))) {
+                if (headingLists.get(++headingDefinitionRowIndex).get(firstHeadingDefinitionRowLength) != null) {
+                    headingDefinitionRow.get(firstHeadingDefinitionRowLength).addAll(headingLists.get(headingDefinitionRowIndex).get(firstHeadingDefinitionRowLength));
                 }
             }
-            List<List<Name>> permuted = get2DPermutationOfLists(partheadings);
+            List<List<Name>> permuted = get2DPermutationOfLists(headingDefinitionRow);
             output.addAll(permuted);
         }
         return output;
+
     }
 
     // todo edd understand
-    // is the column blank except the bottom row?
 
-    private boolean blankCol(List<List<Name>> headingLists) {
-        int numberOfRows = headingLists.size(); // number of rows
-        if (numberOfRows == 1) return false; // if one row return false because there's no rows to check
-        // check all rows except the bottom row
-        for (int rowIndex = 0; rowIndex < numberOfRows - 1; rowIndex++) {
-            if (headingLists.get(rowIndex) != null) return false; // if we find anything in that column it's not blank
+    private boolean blankRow(List<List<Name>> headingLists) {
+        int numberOfColumnsInThisHeadingDefinition = headingLists.size();
+        if (numberOfColumnsInThisHeadingDefinition == 1) return false;
+        for (int columnIndex = 0; columnIndex < numberOfColumnsInThisHeadingDefinition - 1; columnIndex++) {
+            if (headingLists.get(columnIndex) != null) return false;
 
         }
         return true;
@@ -551,10 +548,18 @@ seaports;children   container;children
     /*todo edd try to understand
     notable that these two are the same except one transposes before setting to the logged in connection and one does after
     one is transposing lists the other is not, based on whether the transposing happens before or after expand headings
+
+    createNameListsFromExcelRegion is fairly simple, given seaports;children    container;children returns a list of names of seaports and a list of container criteria held in a list
+     which is in turn held in a larger list as seaports;children    container;children is one row which expands out to many, there could be further rows underneath (I mean rows in excel to define headings)
+     notable that this means that headings for rows or columns are sent in the same format, a region from excel
+
+     Rowheadingslists outside is actual rows, one in is columns,final one is for the cell
                   */
 
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
+        final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
+        // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
+        // "here is what that 2d heading definition excel region looks like in names"
         String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, headingsSent);
         if (error.length() > 0) {
             return error;
@@ -566,7 +571,9 @@ seaports;children   container;children
 
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        List<List<List<Name>>> columnHeadingLists = new ArrayList<List<List<Name>>>(); //note that each cell at this point may contain a list (e.g. xxx;elements)
+        List<List<List<Name>>> columnHeadingLists = new ArrayList<List<List<Name>>>();
+        // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
+        // "here is what that 2d heading definition excel region looks like in names"
         String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, headingsSent);
         if (error.length() > 0) {
             return error;
