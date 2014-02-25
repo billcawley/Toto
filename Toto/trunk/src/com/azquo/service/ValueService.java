@@ -390,12 +390,16 @@ seaports;children   container;children
             List<List<Name>> row = new ArrayList<List<Name>>();
             for (int column = 0; column < pastedDataReader.getColumnCount(); column++) {
                 String cellString = pastedDataReader.get(column);
-                List<Name> nameList = new ArrayList<Name>();
-                String error = nameService.interpretName(loggedInConnection, nameList, cellString);
-                if (error.length() > 0) {
-                    return error;
+                if (cellString.length()== 0){
+                    row.add(null);
+                }else{
+                    List<Name> nameList = new ArrayList<Name>();
+                    String error = nameService.interpretName(loggedInConnection, nameList, cellString);
+                    if (error.length() > 0) {
+                        return error;
+                    }
+                    row.add(nameList);
                 }
-                row.add(nameList);
             }
             while (row.size() < maxColCount) row.add(null);
             nameLists.add(row);
