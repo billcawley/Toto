@@ -24,6 +24,7 @@
           <element id="library" level="project" name="org.springframework:spring-jdbc:3.2.4.RELEASE" />
           <element id="library" level="project" name="org.springframework:spring-test:3.2.4.RELEASE" />
           <element id="library" level="project" name="junit:junit:4.9" />
+          <element id="library" level="project" name="org.apache.poi:poi-ooxml:3.10-FINAL" />
         </element>
       </element>
     </root>
