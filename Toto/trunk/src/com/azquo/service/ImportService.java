@@ -6,9 +6,12 @@ import com.azquo.adminentities.UploadRecord;
 import com.azquo.memorydb.Name;
 import com.csvreader.CsvReader;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.poi.hssf.usermodel.*;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
+//import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -37,7 +40,6 @@ public final class ImportService {
         if (loggedInConnection.getAzquoMemoryDB() == null) {
             return "error: no database set";
         }
-        String result = "";
         String tempFile = "";
         boolean create = false;
         if (strCreate != null && strCreate.equals("true")) {
@@ -62,21 +64,25 @@ public final class ImportService {
             }
 
         }
-        if (fileName.contains(".xls")) {
-            readExcel(loggedInConnection, tempFile, create);
+        String error = "";
+        if (fileName.contains(".xlsx")) {
+            error = readxlsx(loggedInConnection, tempFile, create);
+
+        }else if (fileName.contains(".xls")){
+            error = readExcel(loggedInConnection, tempFile, create);
 
         } else {
             if (tempFile.length() > 0) {
                 uploadFile = new FileInputStream(tempFile);
             }
-            readPreparedFile(loggedInConnection, uploadFile, fileType, create);
+            error = readPreparedFile(loggedInConnection, uploadFile, fileType, create);
         }
         nameService.persist(loggedInConnection);
         Database db = loggedInConnection.getAzquoMemoryDB().getDatabase();
-        UploadRecord uploadRecord = new UploadRecord(0, new Date(), db.getBusinessId(), db.getId(), loggedInConnection.getUser().getId(), fileName, fileType, result);
+        UploadRecord uploadRecord = new UploadRecord(0, new Date(), db.getBusinessId(), db.getId(), loggedInConnection.getUser().getId(), fileName, fileType, error);
         uploadRecordDAO.store(uploadRecord);
 
-        return result;
+        return error;
     }
 
     private String readPreparedFile(LoggedInConnection loggedInConnection, InputStream uploadFile, String fileType, boolean create) throws Exception {
@@ -496,75 +502,111 @@ public final class ImportService {
         return tempName;
     }
 
-    private void readExcel(final LoggedInConnection loggedInConnection, final String fileName, boolean create) {
+    private String readExcel(final LoggedInConnection loggedInConnection, final String fileName, boolean create) {
 
 
         try {
             POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(fileName));
-            HSSFWorkbook wb = new HSSFWorkbook(fs);
-            HSSFRow row;
-            HSSFCell cell;
-            HSSFDataFormatter formatter = new HSSFDataFormatter();
-            int sheetNo = 0;
+            Workbook wb = new HSSFWorkbook(fs);
+             int sheetNo = 0;
 
             while (sheetNo < wb.getNumberOfSheets()) {
-                HSSFSheet sheet = wb.getSheetAt(sheetNo);
-                String fileType = sheet.getSheetName();
-
-                int rows; // No of rows
-                rows = sheet.getPhysicalNumberOfRows();
-
-                int cols = 0; // No of columns
-                int tmp;
-
-                // This trick ensures that we get the data properly even if it doesn't start from first few rows
-                for (int i = 0; i < 10 || i < rows; i++) {
-                    row = sheet.getRow(i);
-                    if (row != null) {
-                        tmp = sheet.getRow(i).getPhysicalNumberOfCells();
-                        if (tmp > cols) cols = tmp;
-                    }
+                Sheet sheet = wb.getSheetAt(sheetNo);
+                String error = readSheet(loggedInConnection, fileName, sheet, create);
+                if (error.startsWith("error:")){
+                    return error;
                 }
-                File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4), "." + fileType);
-                String tempName = temp.getPath();
-
-                temp.deleteOnExit();
-                FileWriter fw = new FileWriter(tempName);
-                BufferedWriter bw = new BufferedWriter(fw);
-
-                for (int r = 0; r < rows; r++) {
-                    row = sheet.getRow(r);
-                    if (row != null) {
-                        //System.out.println("Excel row " + r);
-                        int colCount = 0;
-                        for (int c = 0; c < cols; c++) {
-                            // this was cast to a short, why??
-                            cell = row.getCell(c);
-                            if (colCount++ > 0) bw.write('\t');
-                            if (cell != null) {
-
-                                String cellFormat = formatter.formatCellValue(cell);
-                                //Integers seem to have '.0' appended, so this is a manual chop.  It might cause problems if someone wanted to import a version '1.0'
-                                if (NumberUtils.isNumber(cellFormat) && cellFormat.endsWith(".0")) {
-                                    cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
-                                }
-
-                                bw.write(cellFormat);
-                            }
-                        }
-                        bw.write('\n');
-                    }
-                }
-                bw.close();
-                InputStream uploadFile = new FileInputStream(tempName);
-                readPreparedFile(loggedInConnection, uploadFile, fileType, create);
                 sheetNo++;
             }
         } catch (Exception ioe) {
             ioe.printStackTrace();
         }
-
+        return "";
     }
+
+
+    private String readxlsx (final LoggedInConnection loggedInConnection, final String fileName, boolean create) {
+
+
+        try {
+            Workbook wb = new XSSFWorkbook(new FileInputStream(fileName));
+            int sheetNo = 0;
+
+            while (sheetNo < wb.getNumberOfSheets()) {
+                Sheet sheet = wb.getSheetAt(sheetNo);
+                String error = readSheet(loggedInConnection, fileName, sheet, create);
+                if (error.startsWith("error:")){
+                    return error;
+                }
+                sheetNo++;
+            }
+        } catch (Exception ioe) {
+            ioe.printStackTrace();
+        }
+        return "";
+    }
+
+
+    private String readSheet(final LoggedInConnection loggedInConnection, final String fileName, final Sheet sheet, boolean create) throws Exception{
+        Row row;
+        Cell cell;
+        DataFormatter formatter = new DataFormatter();
+
+        String fileType = sheet.getSheetName();
+
+        int rows; // No of rows
+        rows = sheet.getPhysicalNumberOfRows();
+
+        int cols = 0; // No of columns
+        int tmp;
+
+        // This trick ensures that we get the data properly even if it doesn't start from first few rows
+        for (int i = 0; i < 10 || i < rows; i++) {
+            row = sheet.getRow(i);
+            if (row != null) {
+                tmp = sheet.getRow(i).getPhysicalNumberOfCells();
+                if (tmp > cols) cols = tmp;
+            }
+        }
+        File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4), "." + fileType);
+        String tempName = temp.getPath();
+
+        temp.deleteOnExit();
+        FileWriter fw = new FileWriter(tempName);
+        BufferedWriter bw = new BufferedWriter(fw);
+
+        for (int r = 0; r < rows; r++) {
+            row = sheet.getRow(r);
+            if (row != null) {
+                //System.out.println("Excel row " + r);
+                int colCount = 0;
+                for (int c = 0; c < cols; c++) {
+                    // this was cast to a short, why??
+                    cell = row.getCell(c);
+                    if (colCount++ > 0) bw.write('\t');
+                    if (cell != null) {
+
+                        String cellFormat = formatter.formatCellValue(cell);
+                        //Integers seem to have '.0' appended, so this is a manual chop.  It might cause problems if someone wanted to import a version '1.0'
+                        if (NumberUtils.isNumber(cellFormat) && cellFormat.endsWith(".0")) {
+                            cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
+                        }
+
+                        bw.write(cellFormat);
+                    }
+                }
+                bw.write('\n');
+            }
+        }
+        bw.close();
+        InputStream uploadFile = new FileInputStream(tempName);
+        readPreparedFile(loggedInConnection, uploadFile, fileType, create);
+
+        return "";
+    }
+
+
+
 
 
 }
