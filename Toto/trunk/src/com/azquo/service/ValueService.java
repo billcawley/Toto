@@ -265,7 +265,6 @@ public final class ValueService {
                         values[valNo - 1] /= values[valNo];
                     }
                 } else { // a value, not in the Azquo sense, a number or reference to a name
-                    // TODO : check this with dad
                     if (NumberUtils.isNumber(term)) {
                         values[valNo++] = Double.parseDouble(term);
                     } else {
@@ -390,9 +389,9 @@ seaports;children   container;children
             List<List<Name>> row = new ArrayList<List<Name>>();
             for (int column = 0; column < pastedDataReader.getColumnCount(); column++) {
                 String cellString = pastedDataReader.get(column);
-                if (cellString.length()== 0){
+                if (cellString.length() == 0) {
                     row.add(null);
-                }else{
+                } else {
                     List<Name> nameList = new ArrayList<Name>();
                     String error = nameService.interpretName(loggedInConnection, nameList, cellString);
                     if (error.length() > 0) {
@@ -444,7 +443,6 @@ seaports;children   container;children
 
     public <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
 
-        //this will return only up to three levels.  I tried a recursive routine, but the arrays, though created correctly (see below) did not return correctly
         List<List<T>> toReturn = null;
         for (List<T> permutationDimension : listsToPermute) {
             if (toReturn == null) { // first one, just assign the single column
@@ -495,7 +493,6 @@ seaports;children   container;children
         return toReturn;
     }
 
-    // TODO again edd understand
     /*
 
     This is called after the names are loaded by createNameListsFromExcelRegion. in the case of columns it is transposed first
@@ -509,6 +506,12 @@ seaports;children   container;children
       We want to return a list<list> being row, cells in that row, the expansion of each of the rows. The source in my example being ony one row with 2 cells in it
       those two cells holding lists of 96 and 4 hence we get 384 back, each with 2 cells.
 
+    RIGHT!
+
+    I know what the function that used to be called blank col is for. Heading definitions are a region
+    if this region is more than on column wide then rows which have only one cell populated and that cell is the right most cell
+    then that cell is added to the cell above it, it becomes part of that permutation.
+
 
      */
 
@@ -516,18 +519,18 @@ seaports;children   container;children
     public List<List<Name>> expandHeadings(final List<List<List<Name>>> headingLists) {
 
         List<List<Name>> output = new ArrayList<List<Name>>();
-        final int noOfheadingDefinitionRows = headingLists.size();
-        final int firstHeadingDefinitionRowLength = headingLists.get(0).size() - 1;
+        final int noOfHeadingDefinitionRows = headingLists.size();
+        final int lastHeadingDefinitionCellIndex = headingLists.get(0).size() - 1; // the headingLists will be square, that is to say all row lists the same length as prepared by createNameListsFromExcelRegion
 
 
-
-        for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfheadingDefinitionRows; headingDefinitionRowIndex++) {
+        for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) {
             List<List<Name>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
-            // while we're not at the end and
-            while (headingDefinitionRowIndex < noOfheadingDefinitionRows - 1 && blankRow(headingLists.get(headingDefinitionRowIndex + 1))) {
-                if (headingLists.get(++headingDefinitionRowIndex).get(firstHeadingDefinitionRowLength) != null) {
-                    headingDefinitionRow.get(firstHeadingDefinitionRowLength).addAll(headingLists.get(headingDefinitionRowIndex).get(firstHeadingDefinitionRowLength));
-                }
+            // ok we have one of the heading definition rows
+            while (headingDefinitionRowIndex < noOfHeadingDefinitionRows - 1 // we're not on the last row
+                    && headingLists.get(headingDefinitionRowIndex + 1).size() > 1 // the next row is not a single cell (will all rows be the same length?)
+                    && headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex + 1))) { // and the last cell is the only not null one
+                headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
+                headingDefinitionRowIndex++;
             }
             List<List<Name>> permuted = get2DPermutationOfLists(headingDefinitionRow);
             output.addAll(permuted);
@@ -536,23 +539,21 @@ seaports;children   container;children
 
     }
 
-    // todo edd understand
+    // what we're saying is it's only got one cell in the heading definition filled and it's the last one.
 
-    private boolean blankRow(List<List<Name>> headingLists) {
-        int numberOfColumnsInThisHeadingDefinition = headingLists.size();
-        if (numberOfColumnsInThisHeadingDefinition == 1) return false;
-        for (int columnIndex = 0; columnIndex < numberOfColumnsInThisHeadingDefinition - 1; columnIndex++) {
-            if (headingLists.get(columnIndex) != null) return false;
+    private boolean headingDefinitionRowHasOnlyTheRightCellPopulated(List<List<Name>> headingLists) {
+        int numberOfCellsInThisHeadingDefinition = headingLists.size();
+        for (int cellIndex = 0; cellIndex < numberOfCellsInThisHeadingDefinition; cellIndex++) {
+            if (headingLists.get(cellIndex) != null) {
+                return cellIndex == numberOfCellsInThisHeadingDefinition - 1; // if the first to trip the not null is the last in the row then true!
+            }
 
         }
-        return true;
+        return false; // it was ALL null, error time?
     }
 
 
-    /*todo edd try to understand
-    notable that these two are the same except one transposes before setting to the logged in connection and one does after
-    one is transposing lists the other is not, based on whether the transposing happens before or after expand headings
-
+    /*
     createNameListsFromExcelRegion is fairly simple, given seaports;children    container;children returns a list of names of seaports and a list of container criteria held in a list
      which is in turn held in a larger list as seaports;children    container;children is one row which expands out to many, there could be further rows underneath (I mean rows in excel to define headings)
      notable that this means that headings for rows or columns are sent in the same format, a region from excel
@@ -572,6 +573,16 @@ seaports;children   container;children
         String language = nameService.getInstruction(headingsSent, "language");
         return outputHeadings(loggedInConnection.getRowHeadings(region), language);
     }
+
+    /* ok so transposing happens here
+    this is because the expand headings function is orientated for for headings and the column heading definitions are unsurprisingly set up for columns
+     what is notable here is that the headings are then stored this way in column headings, we need to say "give me the headings for column x"
+
+     NOTE : this means the column heading are not stored according to the orientation used in the above function
+
+      hence, to output them we have to transpose them again!
+
+     */
 
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {

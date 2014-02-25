@@ -76,8 +76,12 @@ public class ValueController {
             }
              String result = "error: no action taken";
 
-            // expand the row and column headings.
-            // the result is jammed into result but may not be needed - getrowheadings is still important as it sets up the bits in the logged in connection
+            /* expand the row and column headings.
+            the result is jammed into result but may not be needed - getrowheadings is still important as it sets up the bits in the logged in connection
+
+            ok, one could send the row and column headings at the same time as the data but looking at the export demo it's asking for rows headings then column headings then the context
+
+             */
 
              if (rowheadings != null && rowheadings.length() > 0) {
                 result =  valueService.getRowHeadings(loggedInConnection, region, rowheadings);
