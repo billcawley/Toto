@@ -15,13 +15,6 @@ import java.util.regex.Pattern;
  * User: cawley
  * Date: 17/10/13
  * Time: 14:18
- * I've been convinced that a service layer is probably a good idea, with the DAO/Database it can form the model.
- * <p/>
- * Changes to how the data access will work certainly support this!
- * It will be passed credentials by the controller, that will determine which memory DB to use - it won;t access the DAO any more.
- * <p/>
- * <p/>
- * It now does quite a lot of string parsing . . .should this be done by the controller? Not sure. At least validated there.
  */
 public final class NameService {
     public static final String LEVEL = "level";
@@ -50,15 +43,15 @@ public final class NameService {
 
     // replaces commas in quotes (e.g. "shop", "location", "region with a , in it's name" should become "shop", "location", "region with a - in it's name")  with -, useful for parsing name lists
 
-    public String replaceCommasInQuotes(String s){
+    public String replaceCommasInQuotes(String s) {
         boolean inQuotes = false;
         StringBuilder withoutCommasInQuotes = new StringBuilder();
         char[] charactersString = s.toCharArray();
-        for (char c : charactersString){
-            if (c == '\"'){
+        for (char c : charactersString) {
+            if (c == '\"') {
                 inQuotes = !inQuotes;
             }
-            if (c == ','){
+            if (c == ',') {
                 withoutCommasInQuotes.append(inQuotes ? '-' : ',');
             } else {
                 withoutCommasInQuotes.append(c);
@@ -100,7 +93,7 @@ public final class NameService {
 
     // get names from a comma separated list
 
-    public Set<Name> decodeString(LoggedInConnection loggedInConnection, String searchByNames) throws  Exception{
+    public Set<Name> decodeString(LoggedInConnection loggedInConnection, String searchByNames) throws Exception {
         searchByNames = stripQuotes(loggedInConnection, searchByNames);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         Set<Name> names = new HashSet<Name>();
@@ -124,16 +117,16 @@ public final class NameService {
         return loggedInConnection.getAzquoMemoryDB().getNameById(id);
     }
 
-    private Name getNameByAttribute(LoggedInConnection loggedInConnection, String name, Name parent){
-        if (name.charAt(0) ==NAMEMARKER) {
+    private Name getNameByAttribute(LoggedInConnection loggedInConnection, String name, Name parent) {
+        if (name.charAt(0) == NAMEMARKER) {
             try {
                 int nameId = Integer.parseInt(name.substring(1).trim());
                 return findById(loggedInConnection, nameId);
-            }catch(Exception e){
+            } catch (Exception e) {
                 return null;
             }
         }
-        return loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, name.replace("\"",""), parent);
+        return loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, name.replace("\"", ""), parent);
 
     }
 
@@ -151,9 +144,9 @@ public final class NameService {
         // language effectively being the attribute name
         // so london, ontario, canada
         // parent name would be canada
-       if (name == null || name.length()== 0) return null;
+        if (name == null || name.length() == 0) return null;
         String parentName = findParentFromList(name);
-       String remainder = name;
+        String remainder = name;
         Name parent = null;
         // keep chopping away at the string until we find the closest parent we can
         // the point of all of this is to be able to ask for a name with the nearest parent but we can't just try and get it from the string directly e.g. get me WHsmiths on High street
@@ -178,15 +171,13 @@ public final class NameService {
     }*/
 
 
-
-
     public List<Name> findTopNames(final LoggedInConnection loggedInConnection) {
         return loggedInConnection.getAzquoMemoryDB().findTopNames();
     }
 
 
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
-        if(name.toLowerCase().endsWith(";plural")) {
+        if (name.toLowerCase().endsWith(";plural")) {
             return findOrCreateName(loggedInConnection, name.substring(0, name.length() - 7), false);
         }
         return findOrCreateName(loggedInConnection, name, true);
@@ -225,12 +216,12 @@ public final class NameService {
         */
         Name parent = null;
         while (parentName != null) {
-            remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length()- 1));
+            remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length() - 1));
             //if two commas in succession occur, ignore the blank parent
-            if (parentName.length() > 0){
+            if (parentName.length() > 0) {
                 parent = findOrCreateName(loggedInConnection, parentName, topParent, parent);
                 //the attribute 'PLURAL' means that the name cannot be used to identify as a parent
-                if (parent != null && (topParent == null || !unique )  && (parent.getAttribute("PLURAL") == null  || !parent.getAttribute("PLURAL").equalsIgnoreCase("true")) ){
+                if (parent != null && (topParent == null || !unique) && (parent.getAttribute("PLURAL") == null || !parent.getAttribute("PLURAL").equalsIgnoreCase("true"))) {
                     topParent = parent;
                 }
             }
@@ -255,7 +246,7 @@ public final class NameService {
         if (existing != null) {
             // I think this is in the case of unique = true, the name to be created is in fact being moved down the hierachy
             if (newparent != null && newparent != parent && existing != newparent) {
-                if (parent!=null){
+                if (parent != null) {
                     parent.removeFromChildrenWillBePersisted(existing);
                 }
                 newparent.addChildWillBePersisted(existing);
@@ -275,7 +266,7 @@ public final class NameService {
             //  the remove here makes no sense, names are equal by ID, it will never match. Check with dad . . .
             //  the 'parent' in this case may be the top parent, while the new parent may be next up the hierarchy.
             if (newparent != null) {
-                if (newparent != parent && parent!= null) {
+                if (newparent != parent && parent != null) {
                     parent.removeFromChildrenWillBePersisted(newName);
                 }
                 newparent.addChildWillBePersisted(newName);
@@ -284,27 +275,7 @@ public final class NameService {
         }
     }
 
-    public void  addNames(final Name name, List<Name> namesFound, final int currentLevel, final int level) throws Exception {
-        if (currentLevel == level || level == -2){
-            namesFound.add(name);
-        }
-        if (currentLevel == level){
-            return;
-        }
-        if (name.getChildren().size() ==0){
-            if (level == -1){
-                namesFound.add(name);
-            }
-            return;
-        }
-        for (Name child:name.getChildren()){
-            addNames(child, namesFound,currentLevel + 1, level);
-        }
-
-    }
-
-
-        // needs to be a list to preserve order when adding. Or could use a linked set, don't see much advantage
+    // needs to be a list to preserve order when adding. Or could use a linked set, don't see much advantage
 
     public List<Name> findChildrenAtLevel(final Name name, final String levelString) throws Exception {
         // level -1 means get me the lowest
@@ -316,9 +287,9 @@ public final class NameService {
             if (levelString.equalsIgnoreCase(LOWEST)) {
                 System.out.println("lowest");
                 level = -1;
-            }else if (levelString.equalsIgnoreCase(ALL)){
+            } else if (levelString.equalsIgnoreCase(ALL)) {
                 level = -2;
-            }else{
+            } else {
                 try {
                     level = Integer.parseInt(levelString);
                 } catch (NumberFormatException nfe) {
@@ -331,6 +302,25 @@ public final class NameService {
         List<Name> namesFound = new ArrayList<Name>();
         addNames(name, namesFound, 0, level);
         return namesFound;
+    }
+
+    public void addNames(final Name name, List<Name> namesFound, final int currentLevel, final int level) throws Exception {
+        if (currentLevel == level || level == -2) {
+            namesFound.add(name);
+        }
+        if (currentLevel == level) {
+            return;
+        }
+        if (name.getChildren().size() == 0) {
+            if (level == -1) {
+                namesFound.add(name);
+            }
+            return;
+        }
+        for (Name child : name.getChildren()) {
+            addNames(child, namesFound, currentLevel + 1, level);
+        }
+
     }
 
     // since we need different from the standard set ordering use a list, I see no real harm in that in these functions
@@ -350,8 +340,8 @@ public final class NameService {
             try {
                 from = Integer.parseInt(fromString);
             } catch (NumberFormatException nfe) {// may be a number, may not . . .
-                if (fromString.charAt(0)== NAMEMARKER){
-                    Name fromName = findByName(loggedInConnection,fromString);
+                if (fromString.charAt(0) == NAMEMARKER) {
+                    Name fromName = findByName(loggedInConnection, fromString);
                     fromString = fromName.getDefaultDisplayName();
                 }
             }
@@ -359,16 +349,16 @@ public final class NameService {
         }
         if (toString.length() > 0) {
             boolean fromEnd = false;
-            if (toString.toLowerCase().endsWith("from end")){
+            if (toString.toLowerCase().endsWith("from end")) {
                 fromEnd = true;
                 toString = toString.substring(0, toString.length() - 9);
             }
             try {
                 to = Integer.parseInt(toString);
-                if (fromEnd) to = names.size() -to;
+                if (fromEnd) to = names.size() - to;
             } catch (NumberFormatException nfe) {// may be a number, may not . . .
-                if (toString.charAt(0)== NAMEMARKER){
-                    Name toName = findByName(loggedInConnection,toString);
+                if (toString.charAt(0) == NAMEMARKER) {
+                    Name toName = findByName(loggedInConnection, toString);
                     toString = toName.getDefaultDisplayName();
                 }
             }
@@ -388,16 +378,16 @@ public final class NameService {
 
         int position = 1;
         boolean inSet = false;
-        if (to != -1000 && to < 0){
+        if (to != -1000 && to < 0) {
             to = names.size() + to;
         }
 
 
         int added = 0;
 
-         for (Name name : names) {
+        for (Name name : names) {
             if (position == from || name.getDefaultDisplayName().equals(fromString)) inSet = true;
-            if (inSet){
+            if (inSet) {
                 toReturn.add(name);
                 added++;
             }
@@ -406,8 +396,6 @@ public final class NameService {
         }
         return toReturn;
     }
-
-
 
 
     // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
@@ -541,13 +529,13 @@ public final class NameService {
     public String getInstruction(final String instructions, final String instructionName) {
         String toReturn = null;
         //needs to detect that e.g. 'from' is an instruction, and not contained in a word
-        int iPos=instructions.toLowerCase().indexOf(instructionName.toLowerCase());
+        int iPos = instructions.toLowerCase().indexOf(instructionName.toLowerCase());
         if (iPos >= 0) {
-            while (iPos>0 && instructions.charAt(iPos-1) != ';'){
-              iPos = instructions.toLowerCase().indexOf(instructionName.toLowerCase(), iPos + 1);
+            while (iPos > 0 && instructions.charAt(iPos - 1) != ';') {
+                iPos = instructions.toLowerCase().indexOf(instructionName.toLowerCase(), iPos + 1);
             }
         }
-        if (iPos >= 0){
+        if (iPos >= 0) {
             int commandStart = instructions.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length();
             if (instructions.indexOf(";", commandStart) != -1) {
                 toReturn = instructions.substring(commandStart, instructions.indexOf(";", commandStart)).trim();
@@ -557,33 +545,33 @@ public final class NameService {
             if (toReturn.startsWith("\"")) {
                 toReturn = toReturn.substring(1, toReturn.length() - 1); // trim quotes
             }
-            if (toReturn.length() > 0 && toReturn.charAt(0) == '='){
+            if (toReturn.length() > 0 && toReturn.charAt(0) == '=') {
                 toReturn = toReturn.substring(1).trim();
             }
         }
-         return toReturn;
+        return toReturn;
     }
 
 
-    private String stripQuotes(LoggedInConnection loggedInConnection, String instructions) throws Exception{
+    private String stripQuotes(LoggedInConnection loggedInConnection, String instructions) throws Exception {
         int lastQuoteEnd = instructions.lastIndexOf("\"");
-        while (lastQuoteEnd >= 0){
-            int  lastQuoteStart = instructions.lastIndexOf("\"",lastQuoteEnd - 1);
+        while (lastQuoteEnd >= 0) {
+            int lastQuoteStart = instructions.lastIndexOf("\"", lastQuoteEnd - 1);
             //find the parents - if they exist
             String nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd + 1);
-            if (lastQuoteEnd < instructions.length() - 1 && instructions.charAt(lastQuoteEnd + 1)==','){
-               Pattern p =  Pattern.compile("[ ;\\+\\*]");
-               Matcher m =  p.matcher(instructions.substring(lastQuoteEnd + 1));
-               if (m.find()){
-                  lastQuoteEnd += m.start();
-                  nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd);
-               }
+            if (lastQuoteEnd < instructions.length() - 1 && instructions.charAt(lastQuoteEnd + 1) == ',') {
+                Pattern p = Pattern.compile("[ ;\\+\\*]");
+                Matcher m = p.matcher(instructions.substring(lastQuoteEnd + 1));
+                if (m.find()) {
+                    lastQuoteEnd += m.start();
+                    nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd);
+                }
             }
             Name quoteName = findByName(loggedInConnection, nameToFind);
-            if (quoteName!=null){
-                instructions = instructions.substring(0,lastQuoteStart) + NAMEMARKER + quoteName.getId()  + " " + instructions.substring(lastQuoteEnd + 1);
+            if (quoteName != null) {
+                instructions = instructions.substring(0, lastQuoteStart) + NAMEMARKER + quoteName.getId() + " " + instructions.substring(lastQuoteEnd + 1);
                 lastQuoteEnd = instructions.lastIndexOf("\"");
-            }else{
+            } else {
                 lastQuoteEnd = -1;
             }
 
@@ -592,6 +580,7 @@ public final class NameService {
     }
 
     // to find a set of names, a few bits that were part of the original set of functions
+    //seems a bit overkill in teh case where a name is just the name but works still I think
 
     public String interpretName(final LoggedInConnection loggedInConnection, final List<Name> nameList, String setFormula) throws Exception {
 
@@ -607,50 +596,50 @@ public final class NameService {
         *
         * */
         List<List<Name>> nameStack = new ArrayList<List<Name>>();
-        setFormula = shuntingYardAlgorithm(loggedInConnection,  setFormula);
-        if (setFormula.startsWith("error:")){
-             return setFormula;
+        setFormula = shuntingYardAlgorithm(loggedInConnection, setFormula);
+        if (setFormula.startsWith("error:")) {
+            return setFormula;
         }
 
 
         Pattern p = Pattern.compile("[\\+-/\\*\\(\\)" + NAMEMARKER + "]"); // only simple maths allowed at present
         int pos = 0;
         int stackCount = 0;
-        while (pos < setFormula.length()){
-            Matcher m = p.matcher(setFormula.substring(pos+2));
+        while (pos < setFormula.length()) {
+            Matcher m = p.matcher(setFormula.substring(pos + 2));
             // HANDLE SET INTERSECTIONS UNIONS AND EXCLUSIONS (* + - )
             char op = setFormula.charAt(pos);
             int nextTerm = setFormula.length() + 1;
-            if (m.find()){
+            if (m.find()) {
                 nextTerm = m.start() + pos + 2;
                 //PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
                 //  neet to check for this....
-                while (nextTerm > 5 && nextTerm < setFormula.length() && (setFormula.substring(nextTerm - 5,nextTerm).equalsIgnoreCase("from ") || setFormula.substring(nextTerm - 3,nextTerm).equalsIgnoreCase("to "))){
+                while (nextTerm > 5 && nextTerm < setFormula.length() && (setFormula.substring(nextTerm - 5, nextTerm).equalsIgnoreCase("from ") || setFormula.substring(nextTerm - 3, nextTerm).equalsIgnoreCase("to "))) {
                     int startPos = nextTerm + 1;
                     nextTerm = setFormula.length() + 1;
                     m = p.matcher(setFormula.substring(startPos));
-                    if (m.find()){
+                    if (m.find()) {
                         nextTerm = m.start() + startPos;
                     }
                 }
             }
-            if (op == NAMEMARKER){
+            if (op == NAMEMARKER) {
                 stackCount++;
                 List<Name> nextNames = new ArrayList<Name>();
-                String error = interpretSetTerm(loggedInConnection,nextNames, setFormula.substring(pos, nextTerm - 1));
-                if (error.length() > 0 ) {
+                String error = interpretSetTerm(loggedInConnection, nextNames, setFormula.substring(pos, nextTerm - 1));
+                if (error.length() > 0) {
                     return error;
                 }
                 nameStack.add(nextNames);
-            }else if (stackCount-- < 2){
+            } else if (stackCount-- < 2) {
                 return "error: not understood:  " + setFormula;
 
-            }else if (op=='*'){
-                nameStack.get(stackCount-1).retainAll(nameStack.get(stackCount));
-            }else if (op=='-'){
-                nameStack.get(stackCount-1).removeAll(nameStack.get(stackCount));
-            }else if (op=='+'){
-                nameStack.get(stackCount-1).addAll(nameStack.get(stackCount));
+            } else if (op == '*') {
+                nameStack.get(stackCount - 1).retainAll(nameStack.get(stackCount));
+            } else if (op == '-') {
+                nameStack.get(stackCount - 1).removeAll(nameStack.get(stackCount));
+            } else if (op == '+') {
+                nameStack.get(stackCount - 1).addAll(nameStack.get(stackCount));
             }
             pos = nextTerm;
         }
@@ -658,14 +647,16 @@ public final class NameService {
         return "";
     }
 
-    public String calcReversePolish(LoggedInConnection loggedInConnection, Name name) throws Exception{
+    // arguably should be called on store and the RPCALC stored as that attribute only changes when "CALCULATION" changes
+
+    public String calcReversePolish(LoggedInConnection loggedInConnection, Name name) throws Exception {
         String calc = name.getAttribute("CALCULATION");
-        if (calc != null && calc.length() > 0){
+        if (calc != null && calc.length() > 0) {
             String result = shuntingYardAlgorithm(loggedInConnection, calc);
-            if (result != null && result.length() > 0){
-                if (result.startsWith("error:")){
+            if (result != null && result.length() > 0) {
+                if (result.startsWith("error:")) {
                     return result;
-                }else{
+                } else {
                     if (name.getAttribute("RPCALC") == null || !name.getAttribute("RPCALC").equals(result)) {
                         name.setAttributeWillBePersisted("RPCALC", result);
                     }
@@ -674,7 +665,10 @@ public final class NameService {
         }
         return "";
     }
-    private String interpretSetTerm(LoggedInConnection loggedInConnection, List<Name> namesFound, String setTerm) throws Exception{
+
+    // todo - new function edd needs to understand
+
+    private String interpretSetTerm(LoggedInConnection loggedInConnection, List<Name> namesFound, String setTerm) throws Exception {
 
         final String levelString = getInstruction(setTerm, LEVEL);
         String fromString = getInstruction(setTerm, FROM);
@@ -691,18 +685,18 @@ public final class NameService {
         if (name == null) {
             return "error:  not understood: " + nameString;
         }
-        if (childrenString == null){
+        if (childrenString == null) {
             names.add(name);
-        }else{
+        } else {
             // FIRST - get the set of names given the level
             names = findChildrenAtLevel(name, levelString);
-            if (fromString==null) fromString = "";
+            if (fromString == null) fromString = "";
             if (toString == null) toString = "";
             if (countString == null) countString = "";
 
             //SECOND  trim that down to the subset defined by from, to, count
             if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
-                names = findChildrenFromToCount (loggedInConnection, names, fromString, toString, countString);
+                names = findChildrenFromToCount(loggedInConnection, names, fromString, toString, countString);
             }
             // THIRD   Sort if necessary
             if (getInstruction(setTerm, SORTED) != null) {
@@ -716,7 +710,7 @@ public final class NameService {
         }
         namesFound.addAll(names);
         return "";
-   }
+    }
 
     // ok it seems the name is passed purely for debugging purposes
     // called from shuntingyardalgorithm 3 times, think not on operations
@@ -730,18 +724,18 @@ public final class NameService {
     private String interpretTerm(final LoggedInConnection loggedInConnection, final String term) {
 
 
-        if (term.charAt(0) ==NAMEMARKER) return term + " ";
+        if (term.charAt(0) == NAMEMARKER) return term + " ";
 
-        if (NumberUtils.isNumber(term)){
+        if (NumberUtils.isNumber(term)) {
             // do we need to parse double here??
             return Double.parseDouble(term) + " ";
         }
         // this routine must interpret set formulae as well as calc formulae, hence the need to look for semicolons
-         int nameEnd = term.indexOf(";");
-         if (nameEnd < 0){
-             nameEnd = term.length();
+        int nameEnd = term.indexOf(";");
+        if (nameEnd < 0) {
+            nameEnd = term.length();
         }
-        Name nameFound = findByName(loggedInConnection, term.substring(0,nameEnd));
+        Name nameFound = findByName(loggedInConnection, term.substring(0, nameEnd));
         if (nameFound == null) {
             return "error: formula not understood: " + term;
         }
@@ -749,9 +743,9 @@ public final class NameService {
 
     }
 
-    // TODO Edd try to understand
     // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
     // it's a list of values and operations
+    // ok, edd here, I don't 100% understand  the exact logic but I do know what it's doing. Maybe some more checking into it later.
 
     private String shuntingYardAlgorithm(LoggedInConnection loggedInConnection, String calc) throws Exception {
 /*   TODO SORT OUT ACTION ON ERROR
@@ -840,6 +834,8 @@ public final class NameService {
         return sb.toString();
     }
 
+    // pretty much replaced the original set of functions to do basic name manipulation
+
     public String processJsonRequest(LoggedInConnection loggedInConnection, NameJsonRequest nameJsonRequest) throws Exception {
         String toReturn = "";
 
@@ -850,7 +846,7 @@ public final class NameService {
         if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)) {
             List<Name> nameList = new ArrayList<Name>();
             String error = interpretName(loggedInConnection, nameList, nameJsonRequest.name);
-            if (error.length() > 0){
+            if (error.length() > 0) {
                 return error;
             }
             return getNamesFormattedForOutput(nameList);
@@ -859,7 +855,7 @@ public final class NameService {
         if (nameJsonRequest.operation.equalsIgnoreCase(DELETE)) {
             if (nameJsonRequest.name.equals("all"))
                 loggedInConnection.getAzquoMemoryDB().zapUnusedNames();
-            else{
+            else {
                 if (nameJsonRequest.id == 0) {
                     return "error: id not passed for delete";
                 } else {
@@ -914,11 +910,11 @@ public final class NameService {
                 boolean foundPeers = false;
                 int position = 0;
                 // only clear and re set if attributes passed!
-                if (nameJsonRequest.attributes != null && !nameJsonRequest.attributes.isEmpty()){
+                if (nameJsonRequest.attributes != null && !nameJsonRequest.attributes.isEmpty()) {
                     name.clearAttributes(); // and just re set them below
                     for (String key : nameJsonRequest.attributes.keySet()) {
                         position++;
-                          if (!key.equalsIgnoreCase(PEERS)){
+                        if (!key.equalsIgnoreCase(PEERS)) {
                             name.setAttributeWillBePersisted(key, nameJsonRequest.attributes.get(key));
                         }
                         if (key.equalsIgnoreCase(PEERS) || (position == nameJsonRequest.attributes.keySet().size() && !foundPeers)) { // the second means run this if we hit the end having not run it
@@ -1081,11 +1077,11 @@ public final class NameService {
         if (name != null) {
             return "{\"names\":[" + getChildStructureFormattedForOutput(name) + "]}";
         } else {
-             ArrayList<Name> names = new ArrayList<Name>();
-             if (nameSearch.length() > 0){
-               names = findContainingName(loggedInConnection, nameSearch.replace("\"",""));
-             }
-             if (names.size() == 0) {
+            ArrayList<Name> names = new ArrayList<Name>();
+            if (nameSearch.length() > 0) {
+                names = findContainingName(loggedInConnection, nameSearch.replace("\"", ""));
+            }
+            if (names.size() == 0) {
                 names = (ArrayList<Name>) findTopNames(loggedInConnection);
                 names = sortNames(names);
             }
