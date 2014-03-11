@@ -11,14 +11,12 @@ import com.azquo.adminentities.User;
 import com.azquo.jsonrequestentities.StandardJsonRequest;
 import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.memorydb.MemoryDBManager;
+import com.azquo.memorydb.Name;
 import com.azquo.util.AzquoMailer;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -45,11 +43,13 @@ public class LoginService {
     private AdminService adminService;
     @Autowired
     private AzquoMailer azquoMailer;
+    @Autowired
+    private NameService nameService;
 
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
 
 
-    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName) {
+    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName) throws  Exception{
 
         if (spreadsheetName == null) {
             spreadsheetName = "unknown";
@@ -79,11 +79,13 @@ public class LoginService {
                 }
                 logger.info("ok databases size " + okDatabases.size());
                 AzquoMemoryDB memoryDB = null;
+                Database database;
                 if (okDatabases.size() == 1) {
                     logger.info("1 database, use that");
-                    memoryDB = memoryDBManager.getAzquoMemoryDB(okDatabases.values().iterator().next());
+                    database = okDatabases.values().iterator().next();
+                    memoryDB = memoryDBManager.getAzquoMemoryDB(database);
                 } else {
-                    Database database = okDatabases.get(databaseName);
+                    database = okDatabases.get(databaseName);
                     if (database != null) {
                         memoryDB = memoryDBManager.getAzquoMemoryDB(database);
                     }
@@ -95,7 +97,19 @@ public class LoginService {
                 if (memoryDB != null){
                     databaseId = memoryDB.getDatabase().getId();
                 }
-
+                Permission permission = permissionDao.findByBusinessUserAndDatabase(lic.getUser(),database);
+                Set<Name> names = new HashSet<Name>();
+                if (permission != null){
+                     String error = nameService.decodeString(lic,permission.getReadList(), names);
+                     //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
+                }
+                lic.setReadPermissions(names);
+                names = new HashSet<Name>();
+                if (permission != null){
+                    String error = nameService.decodeString(lic,permission.getWriteList(), names);
+                    //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
+                }
+                lic.setWritePermissions(names);
 
                 loginRecordDAO.store(new LoginRecord(0,user.getId(),databaseId, new Date()));
                 if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
@@ -124,7 +138,7 @@ public class LoginService {
 
     }
 
-    public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest) {
+    public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest) throws Exception{
         if (standardJsonRequest.user != null && standardJsonRequest.user.length() > 0 &&
                 standardJsonRequest.password != null && standardJsonRequest.password.length() > 0) {
             return login(standardJsonRequest.database == null ? "" : standardJsonRequest.database, standardJsonRequest.user, standardJsonRequest.password, 60, standardJsonRequest.spreadsheetName);
