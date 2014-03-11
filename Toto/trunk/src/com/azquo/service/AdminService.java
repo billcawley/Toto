@@ -3,16 +3,14 @@ package com.azquo.service;
 import com.azquo.admindao.*;
 import com.azquo.adminentities.*;
 import com.azquo.memorydb.MemoryDBManager;
+import com.azquo.memorydb.Name;
 import com.azquo.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
 import java.io.IOException;
 import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Formatter;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -44,6 +42,8 @@ public class AdminService {
     private MemoryDBManager memoryDBManager;
     @Autowired
     private LoginService loginService;
+    @Autowired
+    private NameService nameService;
 
 
     public String registerBusiness(final String email
@@ -92,7 +92,7 @@ public class AdminService {
         return "true";
     }
 
-    public String confirmKey(final String businessName, final String email, final String password, final String key, String spreadsheetName) {
+    public String confirmKey(final String businessName, final String email, final String password, final String key, String spreadsheetName) throws Exception{
         final Business business = businessDao.findByName(businessName);
         if (business != null && business.getBusinessDetails().validationKey.equals(key)) {
             business.setEndDate(new Date(130, 1, 1));
@@ -124,7 +124,11 @@ public class AdminService {
             final String mysqlName = getSQLDatabaseName(loggedInConnection, databaseName);
             final Business b = businessDao.findById(loggedInConnection.getUser().getBusinessId());
             final Database database = new Database(0, new Date(), new Date(130, 1, 1), b.getId(), databaseName, mysqlName, 0, 0);
-            mySQLDatabaseManager.createNewDatabase(mysqlName);
+            try{
+               mySQLDatabaseManager.createNewDatabase(mysqlName);
+            }catch (Exception e){
+                throw e;
+            }
             databaseDao.store(database);
             memoryDBManager.addNewToDBMap(database);
             if (loggedInConnection.getAzquoMemoryDB() == null) { // creating their first db I guess?
@@ -224,11 +228,15 @@ public class AdminService {
     public String setUserListForBusiness(final LoggedInConnection loggedInConnection, List<User> userList) {
         if (loggedInConnection.getUser().isAdministrator()) {
             for (User user : userList) {
-                if (user.getBusinessId() != loggedInConnection.getUser().getBusinessId()) {
-                    return "error: cannot modify/create users for a different business!";
+                User existingUser = userDao.findByEmail(user.getEmail());
+                if (existingUser != null && existingUser.getBusinessId() != loggedInConnection.getUser().getBusinessId()) {
+                    return "error: cannot modify/create users for a different business! (" + existingUser.getEmail() + ")";
+                }
+                if (user.getEndDate().getYear() > 129){
+                    user.setEndDate(new Date(130,1,1));
                 }
                 if (user.getId() > 0) {
-                    User existingUser = userDao.findById(user.getId());
+                    existingUser = userDao.findById(user.getId());
                     if (existingUser == null) {
                         return "error: passed used with an Id I can't find";
                     } else {
@@ -250,7 +258,7 @@ public class AdminService {
                         if (user.getStatus() != null) {
                             existingUser.setStatus(user.getStatus());
                         }
-                        if (user.getPassword() != null) {
+                        if (user.getPassword() != null && user.getPassword().length() > 0) {
                             final String salt = shaHash(System.currentTimeMillis() + "salt");
                             existingUser.setSalt(salt);
                             existingUser.setPassword(encrypt(user.getPassword(), salt));
@@ -261,6 +269,7 @@ public class AdminService {
                     if (user.getPassword() != null) {
                         final String salt = shaHash(System.currentTimeMillis() + "salt");
                         user.setSalt(salt);
+                        user.setBusinessId(loggedInConnection.getUser().getBusinessId());
                         user.setPassword(encrypt(user.getPassword(), salt));
                     }
                     userDao.store(user);
@@ -295,8 +304,14 @@ public class AdminService {
     }
 
     // there is a constraint on here,only allow relevant user or database ids! Otherwise could cause all sort of trouble
-    public String setPermissionListForBusiness(LoggedInConnection loggedInConnection, List<Permission> permissionList) {
+    public String setPermissionListForBusiness(LoggedInConnection loggedInConnection, List<Permission> permissionList) throws Exception{
+        permissionDao.deleteForBusinessId(loggedInConnection.getUser().getBusinessId());
         for (Permission permission : permissionList) {
+            if (permission.getEndDate().getYear() > 129){
+                permission.setEndDate(new Date(130,1,1));
+            }
+
+
             Database d = databaseDao.findForName(permission.getDatabase());
             if (d == null || d.getBusinessId() != loggedInConnection.getUser().getBusinessId()) {
                 return "error: database name " + permission.getDatabase() + " is invalid";
@@ -305,6 +320,15 @@ public class AdminService {
             User u = userDao.findByEmail(permission.getEmail());
             if (u == null || u.getBusinessId() != loggedInConnection.getUser().getBusinessId()) {
                 return "error: user email " + permission.getEmail() + " is invalid";
+            }
+            final Set<Name> names = new HashSet<Name>();
+            String error = nameService.decodeString(loggedInConnection,permission.getReadList(), names);
+            if (error.length() > 0){
+                return error;
+            }
+            error = nameService.decodeString(loggedInConnection, permission.getWriteList(), names);
+            if (error.length() > 0){
+                return error;
             }
             permission.setUserId(u.getId());
             permissionDao.store(permission);
