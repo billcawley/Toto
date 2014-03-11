@@ -5,6 +5,7 @@ import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import org.apache.commons.lang.math.NumberUtils;
 
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -93,18 +94,20 @@ public final class NameService {
 
     // get names from a comma separated list
 
-    public Set<Name> decodeString(LoggedInConnection loggedInConnection, String searchByNames) throws Exception {
+    public  String decodeString(LoggedInConnection loggedInConnection, String searchByNames, final Set<Name> names) throws Exception {
         searchByNames = stripQuotes(loggedInConnection, searchByNames);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
-        Set<Name> names = new HashSet<Name>();
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
             Name name = findByName(loggedInConnection, nameName);
+
             if (name != null) {
                 names.add(name);
+            }else{
+                return ("error: cannot understand " + nameName);
             }
         }
-        return names;
+        return "";
 
     }
 
@@ -170,6 +173,17 @@ public final class NameService {
         return loggedInConnection.getAzquoMemoryDB().searchNames(Name.DEFAULT_DISPLAY_NAME, search);
     }*/
 
+    public void clearChildren(Name name) throws Exception{
+        // DON'T DELETE SET WHILE ITERATING, SO MAKE A COPY FIRST
+        Set <Name> children = new HashSet<Name>();
+        for (Name child:name.getChildren()){
+            children.add(child);
+        }
+        for (Name child:children){
+            name.removeFromChildrenWillBePersisted(child);
+        }
+
+    }
 
     public List<Name> findTopNames(final LoggedInConnection loggedInConnection) {
         return loggedInConnection.getAzquoMemoryDB().findTopNames();
@@ -666,7 +680,31 @@ public final class NameService {
         return "";
     }
 
-    // todo - new function edd needs to understand
+    private boolean inParents(Name name, Name maybeParent){
+        if (name==maybeParent) {
+            return true;
+        }
+        for (Name parent: name.getParents()){
+            if (inParents(parent, maybeParent)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isAllowed(Name name, Set<Name> names){
+        Name topParent = name.findTopParent();
+        for (Name listName:names){
+            if (topParent == listName.findTopParent()){
+                return inParents(name, listName);
+
+            }
+        }
+        String confidential = name.getAttribute("CONFIDENTIAL");
+        if (confidential == null || !confidential.equalsIgnoreCase("true")) return true;
+        return false;
+    }
+
 
     private String interpretSetTerm(LoggedInConnection loggedInConnection, List<Name> namesFound, String setTerm) throws Exception {
 
@@ -685,30 +723,33 @@ public final class NameService {
         if (name == null) {
             return "error:  not understood: " + nameString;
         }
-        if (childrenString == null) {
-            names.add(name);
-        } else {
+        if (childrenString == null){
+             names.add(name);
+         } else {
             // FIRST - get the set of names given the level
             names = findChildrenAtLevel(name, levelString);
             if (fromString == null) fromString = "";
             if (toString == null) toString = "";
             if (countString == null) countString = "";
-
-            //SECOND  trim that down to the subset defined by from, to, count
-            if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
-                names = findChildrenFromToCount(loggedInConnection, names, fromString, toString, countString);
-            }
-            // THIRD   Sort if necessary
+            // SECOND  Sort if necessary
             if (getInstruction(setTerm, SORTED) != null) {
                 Collections.sort(names);
             }
+
+            //THIRD  trim that down to the subset defined by from, to, count
+            if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
+                names = findChildrenFromToCount(loggedInConnection, names, fromString, toString, countString);
+            }
+         }
+        if (loggedInConnection.getReadPermissions() != null){
+           for (Name possible:names){
+               if (isAllowed(possible, loggedInConnection.getReadPermissions())){
+                    namesFound.add(possible);
+               }
+           }
+        }else{
+           namesFound.addAll(names);
         }
-        // LAST  see if any are calculated fields
-        for (Name name2 : names) {
-            String result = calcReversePolish(loggedInConnection, name2);
-            if (result.startsWith("error:")) return result;
-        }
-        namesFound.addAll(names);
         return "";
     }
 
@@ -845,7 +886,7 @@ public final class NameService {
         }
         if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)) {
             List<Name> nameList = new ArrayList<Name>();
-            String error = interpretName(loggedInConnection, nameList, nameJsonRequest.name);
+            String error = interpretName(loggedInConnection, nameList, URLDecoder.decode(nameJsonRequest.name));
             if (error.length() > 0) {
                 return error;
             }
@@ -962,6 +1003,7 @@ public final class NameService {
                         }
                     }
                 }
+                calcReversePolish(loggedInConnection,name);
                 // re set attributes, use single functions so checks happen
             }
         }
