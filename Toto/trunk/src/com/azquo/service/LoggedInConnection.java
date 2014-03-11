@@ -45,6 +45,8 @@ public final class LoggedInConnection {
     private final Map<String, String> sentDataMaps;
     private final Map<String, List<List<List<Value>>>> sentDataValuesMaps; // As in a 2 d array (lists of lists) of lists of valuer Useful for when data is saved
     private final Map<String, List<List<Set<Name>>>> sentDataNamesMaps; // As in a 2 d array (lists of lists) of sets of names, identifying each cell. Necessary if saving new data in that cell. SHould the values map use sets also???
+    private Set<Name>  readPermissions = new HashSet<Name>();
+    private Set<Name> writePermissions = new HashSet<Name>();
 
     private static final String defaultRegion = "default-region";
 
@@ -69,6 +71,7 @@ public final class LoggedInConnection {
         } else {
             this.timeOut = 1000 * 60 * 120;
         }
+
     }
 
     public String getConnectionId() {
@@ -257,4 +260,24 @@ public final class LoggedInConnection {
             logger.error("can't set a new provenance", e);
         }
     }
+
+    public Set<Name> getReadPermissions(){
+        return this.readPermissions;
+    }
+
+    public void setReadPermissions(Set<Name> names){
+        this.readPermissions = names;
+    }
+
+    public Set<Name> getWritePermissions(){
+        return this.writePermissions;
+    }
+
+    public void setWritePermissions(Set<Name> names){
+        this.writePermissions = names;
+    }
+
+
+
 }
+
