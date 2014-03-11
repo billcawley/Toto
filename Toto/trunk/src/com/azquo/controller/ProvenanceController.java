@@ -77,17 +77,20 @@ public class ProvenanceController {
                 }
             }
             if (searchNames != null && searchNames.length() > 0) {
-                final Set<Name> names = nameService.decodeString(loggedInConnection, searchNames);
+                final Set<Name> names = new HashSet<Name>();
+                String error = nameService.decodeString(loggedInConnection, searchNames, names);
+                if (error.length() > 0){
+                    return error;
+                }
                 if (!names.isEmpty()) {
 
                     if (names.size() == 1) {
                         return formatProvenanceForOutput(names.iterator().next().getProvenance(), jsonFunction);
                     } else {
                         final List<Value> values = valueService.findForNamesIncludeChildren(names, false);
-                        if (values.size() == 1) {
-                            return formatProvenanceForOutput(values.get(0).getProvenance(), jsonFunction);
-                        }
-                    }
+                        String result = formatCellProvenanceForOutput(names, values, jsonFunction);
+                        return result;
+                     }
                 }
                 // should maybe be an error here?
                 return formatProvenanceForOutput(null, jsonFunction);
