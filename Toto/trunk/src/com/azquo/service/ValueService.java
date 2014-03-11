@@ -81,6 +81,28 @@ public final class ValueService {
         return toReturn;
     }
 
+    private boolean inParents(Name name, Name maybeParent){
+        if (name==maybeParent) {
+            return true;
+        }
+        for (Name parent: name.getParents()){
+            if (inParents(parent, maybeParent)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isAllowed(Name name, Set<Name> names){
+        Name topParent = name.findTopParent();
+        for (Name listName:names){
+            if (topParent == listName.findTopParent()){
+                return inParents(name, listName);
+
+            }
+        }
+        return true;
+    }
     public boolean overWriteExistingValue(final LoggedInConnection loggedInConnection, final Value existingValue, final String newValueString) throws Exception {
         Value newValue = new Value(loggedInConnection.getAzquoMemoryDB(), loggedInConnection.getProvenance(), newValueString, null);
         newValue.setNamesWillBePersisted(existingValue.getNames());
@@ -240,9 +262,13 @@ public final class ValueService {
                 calcnames.add(name);
             }
         }
-        // no reverse polish converted formula, just sum
+         // no reverse polish converted formula, just sum
         if (!hasCalc) {
-            return findSumForNamesIncludeChildren(names, locked, payAttentionToAdditive, valuesFound);
+            locked.setValue(false);
+            for (Name oneName: names){
+                    if (oneName.getChildren().size() > 0 || !nameService.isAllowed(oneName, loggedInConnection.getWritePermissions())) locked.setValue(true);
+            }
+            return findSumForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound);
         } else {
             // ok I think I know why an array was used, to easily reference the entry before
             double[] values = new double[20];//should be enough!!
@@ -280,11 +306,12 @@ public final class ValueService {
                     }
                 }
             }
+            locked.setValue(true);
             return values[0];
         }
     }
 
-    public double findSumForNamesIncludeChildren(final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound) {
+    public double findSumForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound) {
         //System.out.println("findSumForNamesIncludeChildren");
         long start = System.nanoTime();
 
@@ -299,9 +326,6 @@ public final class ValueService {
                 } catch (Exception ignored) {
                 }
             }
-        }
-        if (values.size() > 1) {
-            locked.setValue(true);
         }
         if (valuesFound != null) {
             valuesFound.addAll(values);
@@ -760,8 +784,8 @@ seaports;children   container;children
                     sb.append("\t");
                     lockMapsb.append("\t");
                 } else {
-                    sb.append("\r");
-                    lockMapsb.append("\r");
+                    sb.append("\n");
+                    lockMapsb.append("\n");
                 }
                 count++;
             }
