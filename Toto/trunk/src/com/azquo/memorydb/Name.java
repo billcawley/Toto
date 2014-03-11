@@ -347,6 +347,10 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         synchronized (name.parents) {
             name.parents.remove(this);
         }
+        //don't allow names that have previously had parents to fall out of topparent set
+        if (name.parents.size() == 0){
+           this.findTopParent().addChildWillBePersisted(name);//revert to top parent (Note that, if 'this' is top parent, then it will be re-instated!
+        }
         if (children.remove(name)) { // it changed the set
             findAllChildrenCache = null;
             setNeedsPersisting();
