@@ -119,12 +119,25 @@ function  az_showSet(namesFound, style){
     return htmlText;
 }
 
-function az_showProvenance(provenance){
-    document.getElementById("az_who").innerHTML = provenance.who;
-    document.getElementById("az_when").innerHTML = provenance.when;
-    document.getElementById("az_method").innerHTML = provenance.method;
-    document.getElementById("az_where").innerHTML = provenance.where;
+function az_showProvenance(allprovenance){
+    var provenance = "Provenance:<br/><br/>";
+    var lastPerson = ""
+    var lastTime = ""
+    for (var i = 0;i <allprovenance.length;i++){
+        var oneProv = allprovenance[i];
 
+        if (oneProv.when != lastTime || oneProv.who != lastPerson){
+           lastPerson = oneProv.who;
+           lastTime = oneProv.when;
+           provenance = provenance + "updated by: " + lastPerson +  " at " + lastTime + " - " + oneProv.how + " " + oneProv.where + "<br/>";
+        }
+        //provenance = provenance + "<br/>" +  oneProv.value + "  ";
+        //var provNames = oneProv.names;
+        //for (var j = 0; j< provNames.length; j++){
+        //    provenance = provenance + provNames[j] + " ";
+        //}
+    }
+    document.getElementById("az_provenanceinfo").innerHTML = provenance;
     document.getElementById("az_provenance").style.display = "block"
 }
 
