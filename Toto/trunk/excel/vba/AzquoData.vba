@@ -726,10 +726,8 @@ Private Function inHeadings(Target As Range)
 End Function
 
 Sub DoubleClick(ByVal Target As Range, Cancel As Boolean)
-Dim JSON, JSONProv, oneProv As Object
 Dim lib As JSONLib
-Dim ProvenanceString, DataRegionName, provenance, LastPerson, LastTime As String
-Dim provName As Variant
+Dim ProvenanceString As String
 
  CheckConnectionId
   If (Target = "") Then
@@ -745,20 +743,30 @@ Dim provName As Variant
   If DataRegionName > "" Then
      ProvenanceString = getProvenanceForValue((Target.Column - Range(DataRegionName).Column), (Target.Row - Range(DataRegionName).Row), Mid(DataRegionName, 14, 1000))
   End If
+  Call ShowProvenance(ProvenanceString, Target)
+End Sub
+
+Sub ShowProvenance(ProvenanceString, Target)
+Dim JSON, JSONProv, oneProv As Object
+Dim lib As JSONLib
+Dim provenance, LastPerson, LastTime As String
+Dim provName As Variant
+  
   Set lib = New JSONLib
   Set JSON = lib.parse(ProvenanceString)
+  
   Set JSONProv = JSON.Item("provenance")
   provenance = "Provenance for " & Target.value
   provenance = "Provenance:" & vbCrLf & vbCrLf
   LastPerson = ""
   LastTime = ""
   For Each oneProv In JSONProv
-    If oneProv("when") <> LastTime Or oneProv("who") <> LastPerson Then
-      LastPerson = oneProv("who")
-      LastTime = oneProv("when")
-      provenance = provenance & "updated by: " & oneProv("who") & " at " & oneProv("when") & " - " & oneProv("how") & " " & oneProv("where") & vbCrLf
+    If oneProv.Item("when") <> LastTime Or oneProv.Item("who") <> LastPerson Then
+      LastPerson = oneProv.Item("who")
+      LastTime = oneProv.Item("when")
+      provenance = provenance & "updated by: " & oneProv.Item("who") & " at " & oneProv.Item("when") & " - " & oneProv.Item("how") & " " & oneProv.Item("where") & vbCrLf
     End If
-    provenance = provenance & vbCrLf & oneProv("value") & vbTab
+    provenance = provenance & vbCrLf & oneProv.Item("value") & vbTab
     'provNames = oneprov("names")
     For Each provName In oneProv.Item("names")
        provenance = provenance & provName & vbTab
