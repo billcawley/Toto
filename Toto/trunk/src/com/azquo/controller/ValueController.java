@@ -1,9 +1,12 @@
 package com.azquo.controller;
 
+import com.azquo.jsonrequestentities.NameJsonRequest;
+import com.azquo.jsonrequestentities.ValueJsonRequest;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Value;
 import com.azquo.service.*;
 import com.csvreader.CsvReader;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -12,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.StringReader;
+import java.net.URLDecoder;
 import java.util.*;
 
 /**
@@ -37,27 +41,58 @@ public class ValueController {
     // TODO : break up into separate functions
 
     private static final Logger logger = Logger.getLogger(ValueController.class);
+    private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "rowheadings", required = false) final String rowheadings
-            , @RequestParam(value = "columnheadings", required = false) final String columnheadings
-            , @RequestParam(value = "context", required = false) final String context
+    public String handleRequest(@RequestParam(value = "rowheadings", required = false) String rowheadings
+            , @RequestParam(value = "columnheadings", required = false) String columnheadings
+            , @RequestParam(value = "context", required = false) String context
             , @RequestParam(value = "connectionid", required = false) String connectionId
             , @RequestParam(value = "region", required = false) String region
-            , @RequestParam(value = "lockmap", required = false) final String lockMap
-            , @RequestParam(value = "editeddata", required = false) final String editedData
-            , @RequestParam(value = "searchbynames", required = false) final String searchByNames
-            , @RequestParam(value = "jsonfunction", required = false) final String jsonfunction
-            , @RequestParam(value = "user", required = false) final String user
-            , @RequestParam(value = "password", required = false) final String password
-            , @RequestParam(value = "spreadsheetName", required = false) final String spreadsheetName
-            , @RequestParam(value = "database", required = false) final String database) throws Exception {
+            , @RequestParam(value = "lockmap", required = false) String lockMap
+            , @RequestParam(value = "editeddata", required = false) String editedData
+            , @RequestParam(value = "searchbynames", required = false) String searchByNames
+            , @RequestParam(value = "jsonfunction", required = false) String jsonfunction
+            , @RequestParam(value = "user", required = false)  String user
+            , @RequestParam(value = "password", required = false) String password
+            , @RequestParam(value = "spreadsheetName", required = false) String spreadsheetName
+            , @RequestParam(value = "json", required = false) final String json
+            , @RequestParam(value = "database", required = false) String database) throws Exception {
+
 
         long startTime = System.currentTimeMillis();
         if (region != null && region.length() == 0) {
             region = null; // make region null and blank the same . . .   , maybe change later???
         }
+        if (json!=null && json.length() > 0){
+            // for Google sheets, better to send all parameters as JSON
+           ValueJsonRequest valueJsonRequest;
+           try {
+               valueJsonRequest = jacksonMapper.readValue(json, ValueJsonRequest.class);
+           } catch (Exception e) {
+               logger.error("name json parse problem", e);
+               return "error:badly formed json " + e.getMessage();
+           }
+            if (valueJsonRequest.rowheadings != null){
+                rowheadings = URLDecoder.decode(valueJsonRequest.rowheadings);
+            }
+            if (valueJsonRequest.columnheadings != null){
+                columnheadings = URLDecoder.decode(valueJsonRequest.columnheadings);
+            }
+            if (valueJsonRequest.context != null) context = URLDecoder.decode(valueJsonRequest.context);
+            if (valueJsonRequest.connectionid != null) connectionId = valueJsonRequest.connectionid;
+            if (valueJsonRequest.region != null) region = valueJsonRequest.region;
+            if (valueJsonRequest.lockmap != null) lockMap = valueJsonRequest.lockmap;
+            if (valueJsonRequest.editeddata != null) editedData = URLDecoder.decode(valueJsonRequest.editeddata);
+            if (valueJsonRequest.searchbynames != null) searchByNames = valueJsonRequest.searchbynames;
+            if (valueJsonRequest.jsonfunction != null) jsonfunction = valueJsonRequest.jsonfunction;
+            if (valueJsonRequest.user != null) user = valueJsonRequest.user;
+            if (valueJsonRequest.password != null) password = valueJsonRequest.password;
+            if (valueJsonRequest.spreadsheetname != null) spreadsheetName = valueJsonRequest.spreadsheetname;
+            if (valueJsonRequest.database != null) database = valueJsonRequest.database;
+        }
+
 
         try {
 
@@ -82,8 +117,7 @@ public class ValueController {
             ok, one could send the row and column headings at the same time as the data but looking at the export demo it's asking for rows headings then column headings then the context
 
              */
-
-             if (rowheadings != null && rowheadings.length() > 0) {
+              if (rowheadings != null && rowheadings.length() > 0) {
                 result =  valueService.getRowHeadings(loggedInConnection, region, rowheadings);
                  logger.info("time for row headings in region " + region + " is " + (System.currentTimeMillis() - startTime) + " on database " + loggedInConnection.getCurrentDBName() + " in language " + loggedInConnection.getLanguage());
               }
@@ -199,6 +233,10 @@ public class ValueController {
                         rowCounter++;
                     }
                     result =  numberOfValuesModified + " values modified";
+                    //putting in a 'persist' here for security.
+                    if (numberOfValuesModified > 0){
+                        nameService.persist(loggedInConnection);
+                    }
                 } else {
                     result =  "error:cannot deal with edited data as there is no sent data/rows/columns/context";
                 }
@@ -208,8 +246,12 @@ public class ValueController {
 
 
                 logger.info("search by names : " + searchByNames);
+                final Set<Name> names = new HashSet<Name>();
+                String error = nameService.decodeString(loggedInConnection, searchByNames, names);
+                if (error.length() > 0){
+                    return error;
+                }
 
-                final Set<Name> names = nameService.decodeString(loggedInConnection, searchByNames);
                 if (!names.isEmpty()) {
                     result = valueService.getExcelDataForNamesSearch(names);
                     if (jsonfunction != null && jsonfunction.length() > 0) {
