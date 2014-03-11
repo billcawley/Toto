@@ -15,7 +15,7 @@ Sub Auto_open()
 
     azConnectionId = ""
     azError = ""
-    azVersion = "1.04"
+    azVersion = "1.05"
 End Sub
 
 
