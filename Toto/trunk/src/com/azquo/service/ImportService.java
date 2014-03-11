@@ -324,6 +324,9 @@ public final class ImportService {
         while ((line = br.readLine()) != null) {
             StringTokenizer st = new StringTokenizer(line, "\t");
             String setName = st.nextToken();
+            //clear the set before re-instating
+            Name set = nameService.findOrCreateName(loggedInConnection,setName);
+            nameService.clearChildren(set);
             while (st.hasMoreTokens()) {
                 if (create) {
                     nameService.findOrCreateName(loggedInConnection, st.nextToken() + "," + setName);
