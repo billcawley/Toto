@@ -4,7 +4,6 @@ Attribute VB_Name = "AzquoMaintenance"
 Option Explicit
 
 
-Global azNameChosen
 
 Public az_RgtClkMenu As CommandBar
 Public azName As Object

@@ -4,7 +4,6 @@ Attribute VB_Name = "AzquoData"
 Option Explicit
 
 
-Global azNameChosen
 
 
 

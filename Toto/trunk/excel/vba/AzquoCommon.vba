@@ -8,12 +8,14 @@ Attribute VB_Name = "AzquoCommon"
 Global azConnectionId
 Global azResponse
 Global azError
+Global azNameChosen
+
 
 Sub Auto_open()
 
     azConnectionId = ""
     azError = ""
-    azVersion = "1.03"
+    azVersion = "1.04"
 End Sub
 
 
