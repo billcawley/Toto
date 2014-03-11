@@ -97,7 +97,10 @@ public class LoginService {
                 if (memoryDB != null){
                     databaseId = memoryDB.getDatabase().getId();
                 }
-                Permission permission = permissionDao.findByBusinessUserAndDatabase(lic.getUser(),database);
+                Permission permission = null;
+                if (database != null){
+                    permission = permissionDao.findByBusinessUserAndDatabase(lic.getUser(),database);
+                }
                 Set<Name> names = new HashSet<Name>();
                 if (permission != null){
                      String error = nameService.decodeString(lic,permission.getReadList(), names);
