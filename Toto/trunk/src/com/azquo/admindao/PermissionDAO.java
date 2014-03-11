@@ -1,6 +1,8 @@
 package com.azquo.admindao;
 
+import com.azquo.adminentities.Database;
 import com.azquo.adminentities.Permission;
+import com.azquo.adminentities.User;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -53,6 +55,24 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         return findListWithWhereSQLAndParameters(", `master_db`.`database`  WHERE `master_db`.`database`.id = `master_db`.`permission`.`database_id` and  `master_db`.`database`.`" + DatabaseDAO.BUSINESSID + "` = :" + DatabaseDAO.BUSINESSID, namedParams, false);
     }
 
+
+    public Permission findByBusinessUserAndDatabase(User user, Database database) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(USERID, user.getId());
+        namedParams.addValue(DATABASEID, database.getId());
+        return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " and " + DATABASEID + " =:" + DATABASEID, namedParams);
+    }
+
+
+    public void deleteForBusinessId(int businessId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DatabaseDAO.BUSINESSID, businessId);
+        final String SQL_DELETE = "DELETE  from `" + MASTER_DB + "`.`" + getTableName() + "` where `" + DATABASEID + "` =:" + DATABASEID;
+        jdbcTemplate.update(SQL_DELETE, namedParams);
+
+
+
+    }
     public static final class PermissionRowMapper implements RowMapper<Permission> {
 
         @Override
