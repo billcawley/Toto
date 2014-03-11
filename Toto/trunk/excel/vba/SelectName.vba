@@ -21,8 +21,8 @@ Sub SelectName_Initialize()
    NameChoice.Clear
    Set lib = New JSONLib
    Set NameList = lib.parse(azResponse)
-   For Each nName In NameList("names")
-      NameChoice.AddItem (nName("name"))
+   For Each nName In NameList.Item("names")
+      NameChoice.AddItem (nName.Item("name"))
    Next
       
    
