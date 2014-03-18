@@ -44,6 +44,8 @@ public class AdminService {
     private LoginService loginService;
     @Autowired
     private NameService nameService;
+    @Autowired
+    private ValueService valueService;
 
 
     public String registerBusiness(final String email
@@ -101,7 +103,7 @@ public class AdminService {
             user.setEndDate(new Date(130, 1, 1));
             user.setStatus(User.STATUS_ADMINISTRATOR);
             userDao.store(user);
-            LoggedInConnection loggedInConnection = loginService.login("unknown", email, password, 0, spreadsheetName);
+            LoggedInConnection loggedInConnection = loginService.login("unknown", email, password, 0, spreadsheetName, false);
             if (loggedInConnection == null) {
                 return "error:no connection id";
             }
@@ -321,7 +323,7 @@ public class AdminService {
             if (u == null || u.getBusinessId() != loggedInConnection.getUser().getBusinessId()) {
                 return "error: user email " + permission.getEmail() + " is invalid";
             }
-            final Set<Name> names = new HashSet<Name>();
+            final List<Set<Name>> names = new ArrayList<Set<Name>>();
             String error = nameService.decodeString(loggedInConnection,permission.getReadList(), names);
             if (error.length() > 0){
                 return error;
@@ -333,6 +335,75 @@ public class AdminService {
             permission.setUserId(u.getId());
             permissionDao.store(permission);
         }
+        return "";
+    }
+
+    private Name findToName(final LoggedInConnection lic2, final Name name, final String prefix) throws Exception{
+
+
+        //this routine transfers the name and all the parent paths to that name.  It then copies the name attributes  and peers (but not the attributes of the parents)
+        Name name2 = null;
+        if (name.getParents().size() == 0){
+            name2 = nameService.findOrCreateName(lic2, prefix + "\"" + name.getDefaultDisplayName() + "\"");
+            return name2;
+        }
+        for (Name parent:name.getParents()){
+            //will the the same name2 on each iteration, but the
+            name2 = findToName(lic2, parent, prefix + "\"" + name.getDefaultDisplayName() + "\",");
+
+        }
+        //never uses the return here...
+        return name2;
+    }
+
+    public String copyDatabase(LoggedInConnection loggedInConnection, String database, String nameList) throws Exception{
+
+        LoggedInConnection lic2 = loginService.login(database, loggedInConnection.getUser().getEmail(),"",1,"",true);
+        if (lic2 == null){
+            return "error:  cannot log in to " + database;
+        }
+        lic2.setNewProvenance("transfer from", database);
+        List<Set<Name>> namesToTransfer = new ArrayList<Set<Name>>();
+        //can't use 'nameService.decodeString as this may have multiple values in each list
+        String error = nameService.decodeString(loggedInConnection,nameList, namesToTransfer);
+        //find the data to transfer
+        Map<Set<Name>, Double> showValues = valueService.getSearchValues(namesToTransfer);
+        //extract the names from this data
+        final Set<Name> namesFound = new HashSet<Name>();
+        for (Set<Name> nameValues:showValues.keySet()){
+            for (Name name:nameValues){
+                namesFound.add(name);
+            }
+        }
+        //transfer each name and its parents.
+        Map<Name, Name> dictionary = new HashMap<Name, Name>();
+        for (Name name:namesFound){
+            Name name2 = findToName(lic2, name, "");
+            for (String attName : name.getAttributes().keySet()) {
+                name2.setAttributeWillBePersisted(attName, name.getAttribute(attName));
+            }
+            LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
+            for (Name peer:name.getPeers().keySet()){
+                Name peer2 = nameService.findOrCreateName(lic2,"\""  + peer.getDefaultDisplayName() + "\"");
+                peers2.put(peer2, name.getPeers().get(peer));
+
+            }
+            if (peers2.size() > 0){
+                name2.setPeersWillBePersisted(peers2);
+            }
+            dictionary.put(name, name2);
+
+        }
+        for (Set<Name> nameValues:showValues.keySet()){
+            Set<Name> names2 = new HashSet<Name>();
+            for (Name name:nameValues){
+                names2.add(dictionary.get(name));
+
+            }
+            valueService.storeValueWithProvenanceAndNames(lic2,showValues.get(nameValues) + "", names2);
+        }
+        nameService.persist(lic2);
+
         return "";
     }
 }
