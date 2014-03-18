@@ -81,28 +81,7 @@ public final class ValueService {
         return toReturn;
     }
 
-    private boolean inParents(Name name, Name maybeParent){
-        if (name==maybeParent) {
-            return true;
-        }
-        for (Name parent: name.getParents()){
-            if (inParents(parent, maybeParent)){
-                return true;
-            }
-        }
-        return false;
-    }
 
-    private boolean isAllowed(Name name, Set<Name> names){
-        Name topParent = name.findTopParent();
-        for (Name listName:names){
-            if (topParent == listName.findTopParent()){
-                return inParents(name, listName);
-
-            }
-        }
-        return true;
-    }
     public boolean overWriteExistingValue(final LoggedInConnection loggedInConnection, final Value existingValue, final String newValueString) throws Exception {
         Value newValue = new Value(loggedInConnection.getAzquoMemoryDB(), loggedInConnection.getProvenance(), newValueString, null);
         newValue.setNamesWillBePersisted(existingValue.getNames());
@@ -223,6 +202,53 @@ public final class ValueService {
 
         return values;
     }
+
+   // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
+    public Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names, boolean payAttentionToAdditive) {
+        long start = System.nanoTime();
+
+        final Set<Value> values = new HashSet<Value>();
+        // assume that the first set of names is the most restrictive
+        Set<Name> smallestNames = names.get(0);
+        part1NanoCallTime1 += (System.nanoTime() - start);
+        long point = System.nanoTime();
+
+        final Set<Value> valueSet = new HashSet<Value>();
+        for (Name name:smallestNames){
+            valueSet.addAll(findValuesForNameIncludeAllChildren(name, payAttentionToAdditive));
+        }
+        part2NanoCallTime1 += (System.nanoTime() - point);
+        point = System.nanoTime();
+        for (Value value : valueSet) {
+            boolean theValueIsOk = true;
+            for (Set<Name> nameSet : names) {
+                if (!nameSet.equals(smallestNames)) { // ignore the one we started with
+                    boolean foundInChildList = false;
+                    for(Name valueNames:value.getNames()){
+                        if (nameService.inParentSet(valueNames,nameSet) !=null){
+                            foundInChildList = true;
+                            break;
+                        }
+                    }
+                    if (!foundInChildList) {
+                        theValueIsOk = false;
+                        break;
+                    }
+                }
+            }
+            if (theValueIsOk) { // it was in all the names :)
+                values.add(value);
+            }
+        }
+        part3NanoCallTime1 += (System.nanoTime() - point);
+        numberOfTimesCalled1++;
+        //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
+        //track = System.nanoTime();
+
+        return values;
+    }
+
+
 
     public void printFindForNamesIncludeChildrenStats() {
         logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
@@ -650,18 +676,53 @@ seaports;children   container;children
         return flipped;
     }
 
+    private Name sumName(Name name, List<Set<Name>> searchNames){
+        for (Set<Name> searchName: searchNames){
+            Name maybeParent = nameService.inParentSet(name, searchName);
+            if (maybeParent != null){
+                return maybeParent;
+            }
+        }
+        return name;
 
-    public String getExcelDataForNamesSearch(final Set<Name> searchNames) throws Exception {
+
+    }
+
+
+    public Map<Set<Name>, Double> getSearchValues(final List<Set<Name>>searchNames) throws Exception {
+        Set<Value> values = findForSearchNamesIncludeChildren(searchNames, false);
+        final Map<Set<Name>, Double> showValues = new HashMap<Set<Name>,Double>();
+        for (Value value:values){
+            Set<Name> sumNames = new HashSet<Name>();
+            for (Name name:value.getNames()){
+                sumNames.add(sumName(name, searchNames));
+            }
+            Double valFound = 0.0;
+            try {
+                valFound = Double.parseDouble(value.getText());
+            }catch (Exception e){
+
+            }
+            if (showValues.get(sumNames) != null){
+                showValues.put(sumNames, showValues.get(sumNames) + valFound);
+            }else{
+                showValues.put(sumNames, valFound);
+            }
+        }
+        return showValues;
+    }
+
+    public String getExcelDataForNamesSearch(final List<Set<Name>> searchNames) throws Exception {
         final StringBuilder sb = new StringBuilder();
-        List<Value> values = findForNamesIncludeChildren(searchNames, false);
-        Set<String> headings = new LinkedHashSet<String>();
+        Map<Set<Name>, Double> showValues = getSearchValues(searchNames);
+         Set<String> headings = new LinkedHashSet<String>();
         // this may not be optimal, can sort later . . .
         int count = 0;
-        for (Value value : values) {
+        for (Set<Name> valNames :showValues.keySet()) {
             if (count++ == 2000) {
                 break;
             }
-            for (Name name : value.getNames()) {
+            for (Name name : valNames) {
                 if (!headings.contains(name.findTopParent().getDefaultDisplayName())) {
                     headings.add(name.findTopParent().getDefaultDisplayName());
                 }
@@ -673,15 +734,16 @@ seaports;children   container;children
         }
         sb.append("\n");
         count = 0;
-        for (Value value : values) {
+        for (Set<Name> valNames: showValues.keySet()) {
             if (count++ == 2000) {
                 break;
             }
-            sb.append(value.getText());
+            double val = showValues.get(valNames);
+            sb.append(val + "");
             String[] names = new String[headings.size()];
             int i = 0;
             for (String heading : headings) {
-                for (Name name : value.getNames()) {
+                for (Name name : valNames) {
                     if (name.findTopParent().getDefaultDisplayName().equals(heading)) {
                         names[i] = name.getDefaultDisplayName();
                     }
