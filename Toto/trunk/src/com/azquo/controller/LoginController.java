@@ -79,7 +79,7 @@ public class LoginController {
                 }
             }
 
-            final LoggedInConnection loggedInConnection = loginService.login(database, userEmail, password, minutesTimeout, spreadsheetName);
+            final LoggedInConnection loggedInConnection = loginService.login(database, userEmail, password, minutesTimeout, spreadsheetName, false);
             if (loggedInConnection != null) {
                 return loggedInConnection.getConnectionId();
             }
