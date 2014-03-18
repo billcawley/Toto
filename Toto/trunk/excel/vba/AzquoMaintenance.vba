@@ -116,7 +116,7 @@ Sub SearchData()
       azSearchNames.UserForm_Initialize
       azSearchNames.Show
    End If
-   Range("az_currentSearch") = azNameChosen
+   Range("az_SearchName") = azNameChosen
    If azNameChosen > "" Then
       azResponse = AzquoPost("Value", "searchbynames=" & URLEncode(azNameChosen))
       Call FillTheRange(azResponse, "azSearchData")
@@ -126,7 +126,14 @@ Sub SearchData()
 End Sub
 
 
+Sub SearchExpression()
 
+   azNameChosen = Range("az_SearchName")
+   If azNameChosen > "" Then
+      azResponse = AzquoPost("Value", "searchbynames=" & URLEncode(azNameChosen))
+      Call FillTheRange(azResponse, "azSearchData")
+   End If
+End Sub
 
 
 
