@@ -49,7 +49,7 @@ public class LoginService {
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
 
 
-    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName) throws  Exception{
+    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn) throws  Exception{
 
         if (spreadsheetName == null) {
             spreadsheetName = "unknown";
@@ -57,7 +57,7 @@ public class LoginService {
 
         User user = userDao.findByEmail(userEmail);
         if (user != null) {
-            if (adminService.encrypt(password, user.getSalt()).equals(user.getPassword())) {
+            if (loggedIn || adminService.encrypt(password, user.getSalt()).equals(user.getPassword())) {
                 // ok user should be ok :)
                 final List<Permission> userAcceses = permissionDao.findForUserId(user.getId());
                 final Map<String, Database> okDatabases = new HashMap<String, Database>();
@@ -101,13 +101,13 @@ public class LoginService {
                 if (database != null){
                     permission = permissionDao.findByBusinessUserAndDatabase(lic.getUser(),database);
                 }
-                Set<Name> names = new HashSet<Name>();
+                List<Set<Name>> names = new ArrayList<Set<Name>>();
                 if (permission != null){
                      String error = nameService.decodeString(lic,permission.getReadList(), names);
                      //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
                 }
                 lic.setReadPermissions(names);
-                names = new HashSet<Name>();
+                names = new ArrayList<Set<Name>>();
                 if (permission != null){
                     String error = nameService.decodeString(lic,permission.getWriteList(), names);
                     //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
@@ -144,7 +144,7 @@ public class LoginService {
     public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest) throws Exception{
         if (standardJsonRequest.user != null && standardJsonRequest.user.length() > 0 &&
                 standardJsonRequest.password != null && standardJsonRequest.password.length() > 0) {
-            return login(standardJsonRequest.database == null ? "" : standardJsonRequest.database, standardJsonRequest.user, standardJsonRequest.password, 60, standardJsonRequest.spreadsheetName);
+            return login(standardJsonRequest.database == null ? "" : standardJsonRequest.database, standardJsonRequest.user, standardJsonRequest.password, 60, standardJsonRequest.spreadsheetName, false);
         } else if (standardJsonRequest.connectionId != null && standardJsonRequest.connectionId.length() > 0) {
             return getConnection(standardJsonRequest.connectionId);
         }
