@@ -94,17 +94,18 @@ public final class NameService {
 
     // get names from a comma separated list
 
-    public  String decodeString(LoggedInConnection loggedInConnection, String searchByNames, final Set<Name> names) throws Exception {
+    public  String decodeString(LoggedInConnection loggedInConnection, String searchByNames, final List<Set<Name>> names) throws Exception {
         searchByNames = stripQuotes(loggedInConnection, searchByNames);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            Name name = findByName(loggedInConnection, nameName);
+            List <Name> nameList = new ArrayList<Name>();
+            String error = interpretSetTerm(loggedInConnection,nameList,nameName);
 
-            if (name != null) {
-                names.add(name);
+            if (nameList != null) {
+                names.add(new HashSet<Name>(nameList));
             }else{
-                return ("error: cannot understand " + nameName);
+                return error;
             }
         }
         return "";
@@ -680,24 +681,32 @@ public final class NameService {
         return "";
     }
 
-    private boolean inParents(Name name, Name maybeParent){
-        if (name==maybeParent) {
-            return true;
+
+    public Name inParentSet(Name name, Set<Name> maybeParents){
+        if (maybeParents.contains(name)) {
+            return name;
         }
         for (Name parent: name.getParents()){
-            if (inParents(parent, maybeParent)){
-                return true;
+            Name maybeParent =inParentSet(parent, maybeParents);
+            if (maybeParent != null){
+                return maybeParent;
             }
         }
-        return false;
+        return null;
     }
 
-    public boolean isAllowed(Name name, Set<Name> names){
-        Name topParent = name.findTopParent();
-        for (Name listName:names){
-            if (topParent == listName.findTopParent()){
-                return inParents(name, listName);
 
+
+    public boolean isAllowed(Name name, List<Set<Name>> names){
+        Name topParent = name.findTopParent();
+        for (Set<Name> listNames:names){
+            for (Name listName:listNames){
+                if (topParent == listName.findTopParent()){
+                    if(inParentSet(name, listNames) != null) {
+                        return true;
+                    }
+                }
+                break; //all names in each list have the same topparent, so don't try further
             }
         }
         String confidential = name.getAttribute("CONFIDENTIAL");
