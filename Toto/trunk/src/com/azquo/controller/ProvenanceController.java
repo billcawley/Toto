@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -53,7 +54,7 @@ public class ProvenanceController {
         try {
 
             if (connectionId == null) {
-                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, spreadsheetName);
+                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, spreadsheetName, false);
                 if (loggedInConnection == null) {
                     return "error:no connection id";
                 }
@@ -77,10 +78,19 @@ public class ProvenanceController {
                 }
             }
             if (searchNames != null && searchNames.length() > 0) {
-                final Set<Name> names = new HashSet<Name>();
-                String error = nameService.decodeString(loggedInConnection, searchNames, names);
+                final List<Set<Name>> nameSet = new ArrayList<Set<Name>>();
+                String error = nameService.decodeString(loggedInConnection, searchNames, nameSet);
+
                 if (error.length() > 0){
                     return error;
+                }
+                //assumes here that each set is a single element
+                final Set<Name> names = new HashSet<Name>();
+                for (Set<Name> nameFound:nameSet){
+                    if (nameFound.size() !=1){
+                        return "error: " + searchNames + " is not a list of names";
+                    }
+                    names.addAll(nameFound);
                 }
                 if (!names.isEmpty()) {
 
