@@ -15,7 +15,7 @@ Sub Auto_open()
 
     azConnectionId = ""
     azError = ""
-    azVersion = "1.05"
+    azVersion = "1.06"
 End Sub
 
 
@@ -81,7 +81,23 @@ Function FillTheRange(DataIn, RegionName)
          FirstRemove = DisplayRows.Row + NoRows - 1
          Rows(FirstRemove & ":" & LastRemove).Delete
      End If
-     Dim MyData As DataObject
+      ColumnHeadings = Split(DataSent(0), Strings.Chr(9))
+     NoColumns = UBound(ColumnHeadings) + 1
+     If DisplayRows.Columns.Count < NoColumns Then
+         FirstInsert = DisplayRows.Column + DisplayRows.Columns.Count - 1
+         LastInsert = DisplayRows.Column + NoColumns - 2
+         Range(Columns(FirstInsert), Columns(LastInsert)).Insert
+     End If
+     ColCount = DisplayRows.Columns.Count
+     If NoColumns < 3 Then
+        NoColumns = 3
+     End If
+     If ColCount > NoColumns Then
+         LastRemove = DisplayRows.Column + ColCount - 2
+         FirstRemove = DisplayRows.Column + NoColumns - 1
+         Range(Columns(FirstRemove), Columns(LastRemove)).Delete
+     End If
+    Dim MyData As DataObject
 
      Set MyData = New DataObject
      MyData.SetText DataIn
