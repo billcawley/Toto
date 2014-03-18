@@ -1,9 +1,22 @@
 Attribute VB_Name = "VersionControl"
+
 Private Declare Function URLDownloadToFile Lib "urlmon" Alias _
   "URLDownloadToFileA" (ByVal pCaller As Long, ByVal szURL As String, ByVal _
     szFileName As String, ByVal dwReserved As Long, ByVal lpfnCB As Long) As Long
     
 Private Declare Function DeleteUrlCacheEntry Lib "wininet.dll" Alias "DeleteUrlCacheEntryA" (ByVal lpszUrlName As String) As Long
+
+'these routines developed by Bill Cawley (bill@azquo.com) for updating our worksheets, but we are happy to share them, and would value any suggestions for improvement.
+'it's based on ideas of others taken from the web.
+
+'The security option in Excel which allows access to the VBA code needs to be set!
+
+'This version control still requires the manual alteration of the version number in 'AzquoCommon.vba' and 'Version.txt'.
+'Also the VersionControl.bas module is not itself replaced!
+
+'to test it, load it into a blank workbook, and run 'UpdateCode'
+
+'The Mac work has not been tested in this context.
 
 #If Mac Then
 Function getFile(FileName As String)
