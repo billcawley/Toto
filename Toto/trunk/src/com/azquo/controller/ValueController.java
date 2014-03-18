@@ -97,7 +97,7 @@ public class ValueController {
         try {
 
             if (connectionId == null) {
-                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, spreadsheetName);
+                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, spreadsheetName, false);
                 if (loggedInConnection == null) {
                     return "error:no connection id";
                 }
@@ -246,7 +246,7 @@ public class ValueController {
 
 
                 logger.info("search by names : " + searchByNames);
-                final Set<Name> names = new HashSet<Name>();
+                final List<Set<Name>> names = new ArrayList<Set<Name>>();
                 String error = nameService.decodeString(loggedInConnection, searchByNames, names);
                 if (error.length() > 0){
                     return error;
