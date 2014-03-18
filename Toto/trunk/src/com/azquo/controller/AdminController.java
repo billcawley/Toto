@@ -46,6 +46,7 @@ public class AdminController {
     private static final String PERMISSIONLIST = "permissionlist";
     private static final String SAVEPERMISSIONS = "savepermissions";
     private static final String UPLOADSLIST = "uploadslist";
+    private static final String COPYDATABASE = "copydatabase";
 
     // maybe change all this to JSON later?
 
@@ -69,6 +70,7 @@ public class AdminController {
             , @RequestParam(value = "writelist", required = false) final String writeList
             , @RequestParam(value = "json", required = false) final String json
             , @RequestParam(value = "spreadsheetname", required = false) final String spreadsheetName
+            , @RequestParam(value = "namelist", required = false) final String nameList
             , @RequestParam(value = "connectionid", required = false) final String connectionId) throws Exception {
 
         logger.info("request to admin controller : " + op);
@@ -137,6 +139,9 @@ public class AdminController {
                 return jacksonMapper.writeValueAsString(adminService.getUserListForBusiness(loggedInConnection));
             }
 
+            if (op.equalsIgnoreCase(COPYDATABASE)) {
+                return adminService.copyDatabase(loggedInConnection, database, nameList);
+            }
             if (op.equalsIgnoreCase(SAVEUSERS)) {
                 if (json != null && json.length() > 0) {
                     List<User> usersFromJson = jacksonMapper.readValue(json, new TypeReference<List<User>>() {});
