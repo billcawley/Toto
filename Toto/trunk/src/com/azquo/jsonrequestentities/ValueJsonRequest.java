@@ -19,8 +19,10 @@ public class ValueJsonRequest {
          public String jsonfunction;
          public String user;
          public String password;
+         public String filtercount;
          public String spreadsheetname;
          public String database;
+
 
 
 }
