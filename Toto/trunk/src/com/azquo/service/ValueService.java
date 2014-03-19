@@ -610,18 +610,53 @@ seaports;children   container;children
 
      Rowheadingslists outside is actual rows, one in is columns,final one is for the cell
                   */
+    private boolean blankRows(LoggedInConnection loggedInConnection, String region, int rowInt, int count){
 
-    public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
+        final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
+
+        if (dataValueMap != null) {
+            for (int rowCount = 0; rowCount < count; rowCount ++){
+                if (dataValueMap.get(rowInt + rowCount) != null) {
+                    final List<List<Value>> rowValues = dataValueMap.get(rowInt + rowCount);
+                    for (List<Value> oneCell:rowValues){
+                        if (oneCell.size() > 0){
+                            return  false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+
+    public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent, final int filterCount) throws Exception {
         final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
         // "here is what that 2d heading definition excel region looks like in names"
-        String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, headingsSent);
-        if (error.length() > 0) {
-            return error;
-        }
-        loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
         String language = nameService.getInstruction(headingsSent, "language");
-        return outputHeadings(loggedInConnection.getRowHeadings(region), language);
+        if (filterCount > 0){
+            //send back a list of the headings with data.
+            List<List<Name>> rowHeadingsWithData = new ArrayList<List<Name>>();
+            List<List<Name>> allRowHeadings = loggedInConnection.getRowHeadings(region);
+            int rowInt = 0;
+            while (rowInt < allRowHeadings.size()){
+                if ( !blankRows(loggedInConnection,region, rowInt, filterCount)){
+                    for (int rowCount = 0; rowCount< filterCount; rowCount++){
+                        rowHeadingsWithData.add(allRowHeadings.get(rowInt + rowCount));
+                    }
+                }
+                rowInt += filterCount;
+            }
+            return outputHeadings(rowHeadingsWithData, language);
+        }else{
+            String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, headingsSent);
+            if (error.length() > 0) {
+                return error;
+            }
+            loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
+            return outputHeadings(loggedInConnection.getRowHeadings(region), language);
+        }
     }
 
     /* ok so transposing happens here
@@ -808,22 +843,28 @@ seaports;children   container;children
         }
     }
 
-    public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region) throws Exception {
+    public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount) throws Exception {
         loggedInConnection.setContext(region, contextNames); // needed for provenance
         long track = System.currentTimeMillis();
         final StringBuilder sb = new StringBuilder();
         final StringBuilder lockMapsb = new StringBuilder();
 
-        List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
+        final List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
+        loggedInConnection.setDataValueMap(region, dataValuesMap);
         List<List<Set<Name>>> dataNamesMap = new ArrayList<List<Set<Name>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of names for each cell
-
+        int rowInt = 0;
+        int blockRowCount = 0;
+        int outputMarker = 0;
         for (List<Name> rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
+            if (blockRowCount == 0){
+                outputMarker = sb.length();// in case we need to truncate it.
+            }
             ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(loggedInConnection.getColumnHeadings(region).size());
             ArrayList<Set<Name>> thisRowNames = new ArrayList<Set<Name>>(loggedInConnection.getColumnHeadings(region).size());
             dataValuesMap.add(thisRowValues);
             dataNamesMap.add(thisRowNames);
             int count = 1;
-            for (List<Name> columnName : loggedInConnection.getColumnHeadings(region)) {
+             for (List<Name> columnName : loggedInConnection.getColumnHeadings(region)) {
                 final Set<Name> namesForThisCell = new HashSet<Name>();
                 createCellNameList(namesForThisCell, rowName, columnName, contextNames);
                 // edd putting in peer check stuff here, should I not???
@@ -849,15 +890,25 @@ seaports;children   container;children
                     sb.append("\n");
                     lockMapsb.append("\n");
                 }
-                count++;
+               count++;
             }
+            rowInt++;
+            if (++blockRowCount==filterCount){
+                if (blankRows(loggedInConnection, region, rowInt - filterCount, filterCount)){
+                    sb.delete(outputMarker, sb.length());
+                }
+                blockRowCount = 0;
+            }
+
         }
+
+
+
         printSumStats();
         printFindForNamesIncludeChildrenStats();
         logger.info("time to execute : " + (System.currentTimeMillis() - track));
         loggedInConnection.setLockMap(region, lockMapsb.toString());
         loggedInConnection.setSentDataMap(region, sb.toString());
-        loggedInConnection.setDataValueMap(region, dataValuesMap);
         loggedInConnection.setDataNamesMap(region, dataNamesMap);
         return sb.toString();
     }
