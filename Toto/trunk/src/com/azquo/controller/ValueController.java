@@ -56,8 +56,9 @@ public class ValueController {
             , @RequestParam(value = "jsonfunction", required = false) String jsonfunction
             , @RequestParam(value = "user", required = false)  String user
             , @RequestParam(value = "password", required = false) String password
+            , @RequestParam(value = "filtercount", required = false) String filterString
             , @RequestParam(value = "spreadsheetName", required = false) String spreadsheetName
-            , @RequestParam(value = "json", required = false) final String json
+            , @RequestParam(value = "json", required = false) String json
             , @RequestParam(value = "database", required = false) String database) throws Exception {
 
 
@@ -89,6 +90,7 @@ public class ValueController {
             if (valueJsonRequest.jsonfunction != null) jsonfunction = valueJsonRequest.jsonfunction;
             if (valueJsonRequest.user != null) user = valueJsonRequest.user;
             if (valueJsonRequest.password != null) password = valueJsonRequest.password;
+            if (valueJsonRequest.filtercount != null) filterString = valueJsonRequest.filtercount;
             if (valueJsonRequest.spreadsheetname != null) spreadsheetName = valueJsonRequest.spreadsheetname;
             if (valueJsonRequest.database != null) database = valueJsonRequest.database;
         }
@@ -117,8 +119,12 @@ public class ValueController {
             ok, one could send the row and column headings at the same time as the data but looking at the export demo it's asking for rows headings then column headings then the context
 
              */
-              if (rowheadings != null && rowheadings.length() > 0) {
-                result =  valueService.getRowHeadings(loggedInConnection, region, rowheadings);
+             int filterCount = 0;
+             if (filterString != null){
+                 filterCount = Integer.parseInt(filterString);
+             }
+              if (rowheadings != null && (rowheadings.length() > 0 || filterCount !=0)) {
+                result =  valueService.getRowHeadings(loggedInConnection, region, rowheadings, filterCount);
                  logger.info("time for row headings in region " + region + " is " + (System.currentTimeMillis() - startTime) + " on database " + loggedInConnection.getCurrentDBName() + " in language " + loggedInConnection.getLanguage());
               }
 
@@ -146,7 +152,7 @@ public class ValueController {
                     }
                 }
                 if (loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0 && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0) {
-                    result =  valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region);
+                    result =  valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount);
                     logger.info("time for data in region " + region + " is " + (System.currentTimeMillis() - startTime));
                  } else {
                     result = "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
