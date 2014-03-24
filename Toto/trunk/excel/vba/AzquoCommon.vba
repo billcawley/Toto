@@ -15,7 +15,7 @@ Sub Auto_open()
 
     azConnectionId = ""
     azError = ""
-    azVersion = "1.06"
+    azVersion = "1.07"
 End Sub
 
 
@@ -57,55 +57,75 @@ End Sub
 
 Function FillTheRange(DataIn, RegionName)
 
-     Dim DataSent As Variant
-     Dim NoRows, LastRow, FirstInsert, LastInsert, FirstRemove, LastRemove, RowCount As Integer
-     Dim DisplayRows As Range
+     Dim FillData, RowData As Variant
+     Dim NoRows, LastRow, FirstInsert, LastInsert, FirstRemove, LastRemove, RowCount, RowNo, ColNo As Integer
+     Dim FillRegion As Range
+     Dim Formula As String
      
-     DataSent = Split(DataIn, Strings.Chr(10))
-     NoRows = UBound(DataSent) + 1
-     Set DisplayRows = Range(RegionName)
-     LastRow = DisplayRows.Row + DisplayRows.Rows.Count - 1
-     If DisplayRows.Rows.Count < NoRows Then
+     
+     If Right(DataIn, 1) = Strings.Chr(10) Then
+        DataIn = Left(DataIn, Len(DataIn) - 1)
+     End If
+     FillData = Split(DataIn, Strings.Chr(10))
+     
+     NoRows = UBound(FillData) + 1
+     Set FillRegion = Range(RegionName)
+     LastRow = FillRegion.Row + FillRegion.Rows.Count - 1
+     If FillRegion.Rows.Count < NoRows Then
          FirstInsert = LastRow
-         LastInsert = DisplayRows.Row + NoRows - 2
+         LastInsert = FillRegion.Row + NoRows - 2
          Rows(FirstInsert & ":" & LastInsert).Insert
          Rows(LastRow - 1).Copy
          Rows(LastRow & ":" & LastInsert).PasteSpecial
      End If
-     RowCount = DisplayRows.Rows.Count
+     RowCount = FillRegion.Rows.Count
      If (NoRows > 1 And RowCount = 1) Then
        RowCount = 2
      End If
      If RowCount > NoRows Then
-         LastRemove = DisplayRows.Row + RowCount - 2
-         FirstRemove = DisplayRows.Row + NoRows - 1
+         LastRemove = FillRegion.Row + RowCount - 2
+         FirstRemove = FillRegion.Row + NoRows - 1
          Rows(FirstRemove & ":" & LastRemove).Delete
      End If
-      ColumnHeadings = Split(DataSent(0), Strings.Chr(9))
-     NoColumns = UBound(ColumnHeadings) + 1
-     If DisplayRows.Columns.Count < NoColumns Then
-         FirstInsert = DisplayRows.Column + DisplayRows.Columns.Count - 1
-         LastInsert = DisplayRows.Column + NoColumns - 2
+      RowData = Split(FillData(0), Strings.Chr(9))
+     NoColumns = UBound(RowData) + 1
+     ColumnsSent = NoColumns
+     If FillRegion.Columns.Count < NoColumns Then
+         FirstInsert = FillRegion.Column + FillRegion.Columns.Count - 1
+         LastInsert = FillRegion.Column + NoColumns - 2
          Range(Columns(FirstInsert), Columns(LastInsert)).Insert
      End If
-     ColCount = DisplayRows.Columns.Count
+     ColCount = FillRegion.Columns.Count
      If NoColumns < 3 Then
         NoColumns = 3
      End If
      If ColCount > NoColumns Then
-         LastRemove = DisplayRows.Column + ColCount - 2
-         FirstRemove = DisplayRows.Column + NoColumns - 1
+         LastRemove = FillRegion.Column + ColCount - 2
+         FirstRemove = FillRegion.Column + NoColumns - 1
          Range(Columns(FirstRemove), Columns(LastRemove)).Delete
      End If
-    Dim MyData As DataObject
+     For RowNo = 0 To NoRows - 1
+       RowData = Split(FillData(RowNo), Strings.Chr(9))
+       'If UBound(RowData) > 0 Then
+          For ColNo = 0 To ColumnsSent - 1
+            Set ThisCell = Cells(FillRegion.Row + RowNo, FillRegion.Column + ColNo)
+            Formula = ThisCell.FormulaR1C1
+            If Len(Formula) <= 1 Or Left(Formula, 1) <> "=" Then
+               ThisCell.value = RowData(ColNo)
+            End If
+          Next
+       'End If
+     Next
+            
+    'Dim MyData As DataObject
 
-     Set MyData = New DataObject
-     MyData.SetText DataIn
-     MyData.PutInClipboard
+     'Set MyData = New DataObject
+     'MyData.SetText DataIn
+     'MyData.PutInClipboard
      
-     DisplayRows.Select
-     Application.DisplayAlerts = False
-     ActiveSheet.PasteSpecial Format:="Text"
+     'FillRegion.Select
+     'Application.DisplayAlerts = False
+     'ActiveSheet.PasteSpecial Format:="Text"
 
      
      
