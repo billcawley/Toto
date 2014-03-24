@@ -112,9 +112,9 @@ Sub LoadDataRegion(Region As String)
      azError = FillData(Region)
      If azError = "" Then
        Call ShowProgress(Region, "Options")
-       If hasOption(Region, "hiderows") > "" Then
-         HideRows (Region)
-       End If
+       'If hasOption(Region, "hiderows") > "" Then
+       '  HideRows (Region)
+       'End If
        If hasOption(Region, "Percentage") > "" Then
          PercentageRows (Region)
        End If
@@ -131,9 +131,9 @@ Sub LoadDataRegion(Region As String)
      Call ShowProgress(Region, "Complete")
   End If
   
-  ActiveWorkbook.Names("copyregion").Delete
+  'ActiveWorkbook.Names("copyregion").Delete
   
-  ZapSheet ("Azquo Clipboard")
+  'ZapSheet ("Azquo Clipboard")
   Application.ScreenUpdating = True
 End Sub
 
@@ -310,7 +310,7 @@ Function FillRowHeadings(Region)
      'CheckRange ("az_DisplayRowHeadings" & Region)
      
      azResponse = AzquoPost("Value", "rowheadings=" & RangeText("az_RowHeadings" & Region) & "&region=" & Region)
-     If Not rangeExists("az_DisplayRowHeadings" & Region) Then
+     If Not rangeExists("az_DisplayRowHeadings" & Region) Or hasOption(Region, "hiderows") > "" Then
         Exit Function
      End If
      'CopyDataRegionToClipboard (Region)
@@ -318,17 +318,6 @@ Function FillRowHeadings(Region)
     
      Call FillTheRange(azResponse, "az_DisplayRowHeadings" & Region)
      Set DisplayRows = Range("az_DisplayRowHeadings" & Region)
-     Dim MyData As DataObject
-
-     Set MyData = New DataObject
-     MyData.SetText azResponse
-     MyData.PutInClipboard
-     
-     DisplayRows.Select
-     Application.DisplayAlerts = False
-     ActiveSheet.PasteSpecial Format:="Text"
-     'CopyClipboardBack (Region)
-     Application.DisplayAlerts = True
      FillRowHeadings = ""
      Rows(DisplayRows.Row & ":" & DisplayRows.Row + DisplayRows.Rows.Count - 1).EntireRow.AutoFit
 End Function
@@ -344,40 +333,8 @@ Function FillColumnHeadings(Region)
      If Not rangeExists("az_DisplayColumnHeadings" & Region) Then
        Exit Function
      End If
-      'CopyDataRegionToClipboard (Region)
-     Dim ColumnHeadings As Variant
-     If InStr(azResponse, Chr(10)) > 0 Then
-        ColumnHeadings = Split(Left(azResponse, InStr(azResponse, Chr(10))), Chr(9))
-     Else
-         ColumnHeadings = Split(azResponse, Strings.Chr(9))
-     End If
-     NoColumns = UBound(ColumnHeadings) + 1
+     Call FillTheRange(azResponse, "az_DisplayColumnHeadings" & Region)
      Set DIsplayColumns = Range("az_DisplayColumnHeadings" & Region)
-     If DIsplayColumns.Columns.Count < NoColumns Then
-         FirstInsert = DIsplayColumns.Column + DIsplayColumns.Columns.Count - 1
-         LastInsert = DIsplayColumns.Column + NoColumns - 2
-         Range(Columns(FirstInsert), Columns(LastInsert)).Insert
-     End If
-     ColCount = DIsplayColumns.Columns.Count
-     If NoColumns < 3 Then
-        NoColumns = 3
-     End If
-     If ColCount > NoColumns Then
-         LastRemove = DIsplayColumns.Column + ColCount - 2
-         FirstRemove = DIsplayColumns.Column + NoColumns - 1
-         Range(Columns(FirstRemove), Columns(LastRemove)).Delete
-     End If
-     Dim MyData As DataObject
-
-     Set MyData = New DataObject
-     MyData.SetText azResponse
-     MyData.PutInClipboard
-     
-     DIsplayColumns.Select
-     Application.DisplayAlerts = False
-     ActiveSheet.PasteSpecial Format:="Text"
-     'CopyClipboardBack (Region)
-     Application.DisplayAlerts = True
      FillColumnHeadings = ""
      Rows(DIsplayColumns.Row & ":" & DIsplayColumns.Row + DIsplayColumns.Rows.Count - 1).EntireRow.AutoFit
      
@@ -386,67 +343,30 @@ End Function
 
 Function FillData(Region)
     Dim Context, DataRegion As Range
- 
+    Dim filtered, azHeadings As String
+    
      Call ShowProgress(Region, "Data")
      CheckRange ("az_Context" & Region)
      CheckRange ("az_DataRegion" & Region)
      Context = RangeText("az_Context" & Region)
-     azResponse = AzquoPost("Value", "context=" & Context & "&region=" & Region)
-      
+     filtered = hasOption(Region, "hiderows")
+     If filtered > "" Then
+        filtered = "&filtercount=" & filtered
+     End If
+     azResponse = AzquoPost("Value", "context=" & Context & "&region=" & Region & filtered)
+     If filtered > "" Then
+       'need to get the row headings filtered
+       azHeadings = AzquoPost("Value", "rowheadings=&region=" & Region & filtered)
+       Call FillTheRange(azHeadings, "az_DisplayRowHeadings")
+     End If
      ' copy the formulae in the data region to another sheet, so as to copy them back after the data region has been filled
-     CopyDataRegionToClipboard (Region)
-     Set DataRegion = Range("az_DataRegion" & Region)
-     DataRegion.Select
-     
-     ' insert the data
-     
-     Dim MyData As DataObject
-     Set MyData = New DataObject
-     MyData.SetText azResponse
-     MyData.PutInClipboard
-     Application.DisplayAlerts = False
-     ActiveSheet.PasteSpecial Format:="Text"
-     
-     'now copy back the formulae and formats
-     CopyClipboardBack (Region)
-     Application.DisplayAlerts = True
+     Call FillTheRange(azResponse, "az_DataRegion" & Region)
      FillData = ""
      Cells(1, 1).Select
 
 End Function
 
-Function CopyDataRegionToClipboard(Region)
-   Dim thisSheet, CopySheet As Worksheet
-   Dim DataRegion As Range
 
-    Set thisSheet = ActiveSheet
-    AddSheet ("Azquo Clipboard")
-     Set CopySheet = Sheets("Azquo Clipboard")
-     Set DataRegion = Range("az_DataRegion" & Region)
-     DataRegion.Copy
-     ActiveSheet.Cells(1, 1).Select
-     ActiveSheet.Paste
-      ActiveWorkbook.Names.Add Name:="copyregion", RefersToR1C1:= _
-        "='Azquo Clipboard'!R1C1:R" & DataRegion.Rows.Count & "C" & DataRegion.Columns.Count
-        
-     thisSheet.Activate
-End Function
-
-Function CopyClipboardBack(Region)
-    Dim thisSheet, CopySheet As Worksheet
-    
-    Set thisSheet = ActiveSheet
-    Set CopySheet = Sheets("Azquo Clipboard")
-    CopySheet.Activate
-     Range("copyregion").Copy
-     thisSheet.Activate
-     
-     Range("az_DataRegion" & Region).Select
-     Selection.PasteSpecial Paste:=xlPasteFormulas, SkipBlanks:=True
-     Selection.PasteSpecial Paste:=xlPasteFormats
-     ZapSheet ("Azquo clipboard")
-
-End Function
 
 
 
@@ -506,8 +426,23 @@ Function SaveRegionData(Region)
 
 End Function
 Function ClearRange(RangeName As String)
+   Dim RowNo, ColNo As Integer
+   Dim ClearRegion, ClearCell As Range
+   Dim Formula As String
+   
    If rangeExists(RangeName) Then
-     Range(RangeName).ClearContents
+     Set ClearRegion = Range(RangeName)
+     For RowNo = 0 To ClearRegion.Rows.Count - 1
+       For ColNo = 0 To ClearRegion.Columns.Count - 1
+          Set ClearCell = Cells(ClearRegion.Row + RowNo, ClearRegion.Column + ColNo)
+          Formula = ClearCell.Formula
+          If Len(Formula) < 2 Or Left(Formula, 1) <> "=" Then
+             ClearCell.ClearContents
+          End If
+        Next
+      Next
+     'Range(RangeName).ClearContents
+     
    End If
 End Function
 
@@ -571,7 +506,7 @@ Sub ClearData()
   Dim RName As Name
   Dim Region As String
   Dim updatedCell As Range
-  zapName ("copyregion")
+  'zapName ("copyregion")
   
   For Each RName In ActiveWorkbook.Names
      If Left(RName.Name, 13) = "az_DataRegion" Then
@@ -619,9 +554,10 @@ Sub ClearDataRegion(Region As String)
       End If
      ' copy the formulae
      Set DataRegion = Range("az_DataRegion" & Region)
-      
-     DataRegion.Copy
-     DataRegion.ClearContents
+     
+     ClearRange ("az_DataRegion" & Region)
+     'DataRegion.Copy
+     'DataRegion.ClearContents
      'DataRegion.PasteSpecial Paste:=xlPasteFormulasAndNumberFormats
      
   
@@ -808,7 +744,7 @@ Sub ButtonSelect()
    Dim RName, RNameSaved As Name
    Dim Nearest As Integer
    
-   zapName ("copyregion")
+   'zapName ("copyregion")
    ButtonPressed = Application.Caller
    RowNo = ActiveSheet.Shapes(ButtonPressed).BottomRightCell.Row
    Nearest = 0
