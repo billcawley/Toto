@@ -308,8 +308,8 @@ public final class AzquoMemoryDB {
                 }
                 final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
                 final String attributeValue = attributes.get(attributeName).toLowerCase().trim();
-                if (attributeValue.contains("`")) {
-                    String error = "has quotes";
+                if (attributeValue.contains("\"")) {
+                    String error = attributeValue + " has quotes";
                     throw new Exception(error);
                 }
                 if (namesForThisAttribute.get(attributeValue) != null) {
