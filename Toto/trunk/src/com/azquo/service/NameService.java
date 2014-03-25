@@ -272,10 +272,23 @@ public final class NameService {
             Provenance provenance = loggedInConnection.getProvenance();
             Name newName = new Name(loggedInConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
             newName.setAttributeWillBePersisted(loggedInConnection.getLanguage(), storeName);
-            if (!loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME)) {
+              if (!loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME)) {
                 String displayName = newName.getAttribute(Name.DEFAULT_DISPLAY_NAME);
                 if (displayName == null || displayName.length() == 0) {
                     newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName);
+                }
+            }
+            //if the parent already has peers, provisionally set the child peers to be the same.
+            Map<Name, Boolean> newPeers = null;
+            if (newparent != null){
+                newPeers = newparent.getPeers();
+                if (newPeers !=null){
+                    LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
+                    for (Name peer:newPeers.keySet()){
+                        peers2.put(peer, newparent.getPeers().get(peer));
+
+                    }
+                    newName.setPeersWillBePersisted(peers2);
                 }
             }
             //  the remove here makes no sense, names are equal by ID, it will never match. Check with dad . . .
