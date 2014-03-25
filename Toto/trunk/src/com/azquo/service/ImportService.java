@@ -88,8 +88,8 @@ public final class ImportService {
     private String readPreparedFile(LoggedInConnection loggedInConnection, InputStream uploadFile, String fileType, boolean create) throws Exception {
 
         if (fileType.toLowerCase().startsWith("values")) {
-            if (fileType.length() > 7) {
-                String language = fileType.substring(7).trim();
+            if (fileType.length() > 10 && fileType.substring(0,10).equals("values in ")) {
+                String language = fileType.substring(10).trim();
                 String origLanguage = loggedInConnection.getLanguage();
                 loggedInConnection.setLanguage(language);
                 String result = valuesImport(loggedInConnection, uploadFile, create);
@@ -171,7 +171,8 @@ public final class ImportService {
                         //storeStructuredName(peer,peerVal, loggedInConnection);
                         // lower level names first so the syntax is something like Knightsbridge, London, UK
                         // hence we're passing a multi level name lookup to the name service, whatever is in that column with the header on the end
-                        final String nameToFind = "\"" + peerVal + "\",\"" + peer.getDefaultDisplayName() + "\"";
+                        // sometimes quotes are used in the middle of names to indicate inches - e.g. '4" pipe'      - store as '4inch pipe'
+                        final String nameToFind = "\"" + peerVal.replace("\"","inch") + "\",\"" + peer.getDefaultDisplayName() + "\"";
                         // check the local cache first
                         Name nameFound = namesFound.get(nameToFind);
                         if (nameFound == null) {
