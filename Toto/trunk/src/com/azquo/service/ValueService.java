@@ -364,10 +364,12 @@ public final class ValueService {
     }
 
     public void printSumStats() {
-        logger.info("calls to  findSumForNamesIncludeChildren : " + numberOfTimesCalled);
-        logger.info("part 1 average nano : " + (part1NanoCallTime / numberOfTimesCalled));
-        logger.info("part 2 average nano : " + (part2NanoCallTime / numberOfTimesCalled));
-        logger.info("total average nano : " + (totalNanoCallTime / numberOfTimesCalled));
+        if (numberOfTimesCalled > 0){
+          logger.info("calls to  findSumForNamesIncludeChildren : " + numberOfTimesCalled);
+          logger.info("part 1 average nano : " + (part1NanoCallTime / numberOfTimesCalled));
+          logger.info("part 2 average nano : " + (part2NanoCallTime / numberOfTimesCalled));
+          logger.info("total average nano : " + (totalNanoCallTime / numberOfTimesCalled));
+        }
     }
 
     public List<Value> findValuesForNameIncludeAllChildren(final Name name, boolean payAttentionToAdditive) {
@@ -868,17 +870,27 @@ seaports;children   container;children
                 final Set<Name> namesForThisCell = new HashSet<Name>();
                 createCellNameList(namesForThisCell, rowName, columnName, contextNames);
                 // edd putting in peer check stuff here, should I not???
-                Map<String, String> result = nameService.isAValidNameSet(namesForThisCell, new HashSet<Name>());
-                if (result.get(NameService.ERROR) != null) { // not a valid peer set? must say something useful to the user!
-                    return result.get(NameService.ERROR);
-                }
+                 MutableBoolean locked = new MutableBoolean(false); // we can pass a mutable boolean in and have the function set it
+                 Map<String, String> result = nameService.isAValidNameSet(namesForThisCell, new HashSet<Name>());
+                if (result.get(NameService.ERROR) != null) { // not a valid peer set? Show a blank locked cell
+                    sb.append("");
+                    locked.setValue(true);
+                }else{
 
-                List<Value> values = new ArrayList<Value>();
-                thisRowValues.add(values);
-                thisRowNames.add(namesForThisCell);
-                MutableBoolean locked = new MutableBoolean(false); // we can pass a mutable boolean in and have the function set it
-                // TODO - peer additive check. If using peers and not additive, don't include children
-                sb.append(findValueForNames(loggedInConnection, namesForThisCell, locked, true, values)); // true = pay attention to names additive flag
+                    List<Value> values = new ArrayList<Value>();
+                    thisRowValues.add(values);
+                    thisRowNames.add(namesForThisCell);
+                    // TODO - peer additive check. If using peers and not additive, don't include children
+                    double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values); // true = pay attention to names additive flag
+                    //if there's only one value, treat it as text (it may be text, or may include £,$,%)
+                    if (values.size() == 1){
+                        for (Value value:values){
+                            sb.append(value.getText());
+                        }
+                    }else{
+                        sb.append(cellValue);
+                    }
+                }
                 if (locked.isTrue()) {
                     lockMapsb.append("LOCKED");
                 }
