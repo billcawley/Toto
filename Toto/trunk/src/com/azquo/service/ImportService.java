@@ -148,7 +148,7 @@ public final class ImportService {
         }
 
         if (namesWithPeersHeaderMap.keySet().isEmpty()) {
-            throw new Exception("unable to find any name with peers");
+            throw new Exception(uploadFile + ": unable to find any name with peers");
         }
 
 
