@@ -519,6 +519,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                     newChild.parents.add(this);
                 }
             } catch (IOException e) {
+                System.out.println("jsoncache = " + jsonCache);
                 e.printStackTrace();
             }
         }
