@@ -28,7 +28,7 @@ SET time_zone = "+00:00";
 
 CREATE TABLE IF NOT EXISTS `name` (
   `id`   INT(11) NOT NULL AUTO_INCREMENT,
-  `json` TEXT    NOT NULL,
+  `json` MEDIUMTEXT    NOT NULL,
   PRIMARY KEY (`id`)
 )
   ENGINE =InnoDB
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS `name` (
 
 CREATE TABLE IF NOT EXISTS `value` (
   `id`   INT(11) NOT NULL AUTO_INCREMENT,
-  `json` TEXT    NOT NULL,
+  `json` MEDIUMTEXT    NOT NULL,
   PRIMARY KEY (`id`)
 )
   ENGINE =InnoDB
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `value` (
 
 CREATE TABLE IF NOT EXISTS `provenance` (
   `id`   INT(11) NOT NULL AUTO_INCREMENT,
-  `json` TEXT    NOT NULL,
+  `json` MEDIUMTEXT    NOT NULL,
   PRIMARY KEY (`id`)
 )
   ENGINE =InnoDB
