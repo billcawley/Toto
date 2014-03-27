@@ -1,4 +1,4 @@
-Version 1.07
+Version 1.08
 AzquoCommon.vba
 AzquoData.vba
 AzquoMaintenance.vba
