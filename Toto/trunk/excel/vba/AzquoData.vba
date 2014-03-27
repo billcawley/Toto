@@ -166,7 +166,7 @@ Sub HideRows(Region)
    TotalCol = GetHideColumn()
    Set DataRegion = Range("az_DataRegion" & Region)
    VisibleRow = 0
-   DataRows = DataRegion.Rows.Count
+   DataRows = DataRegion.rows.Count
    RowNo = DataRegion.Row
    LastRow = DataRegion.Row + DataRows - 1
    While RowNo <= LastRow
@@ -179,11 +179,11 @@ Sub HideRows(Region)
          'never delete the bottom row, or leave less than 3 rows
          If DataRows <= 3 Or DataRows <= HideCount Or RowNo = LastRow Then
            For Count = 0 To HideCount - 1
-              Rows(RowNo + Count).EntireRow.Hidden = True
+              rows(RowNo + Count).EntireRow.Hidden = True
            Next
         Else
            For Count = 0 To HideCount - 1
-             Rows(RowNo).Delete
+             rows(RowNo).Delete
            Next
            LastRow = LastRow - HideCount
            DataRows = DataRows - HideCount
@@ -200,7 +200,7 @@ Sub PercentageRows(Region)
    Dim DataRegion As Range
    
    Set DataRegion = Range("az_DataRegion" & Region)
-   TotalRow = DataRegion.Row + DataRegion.Rows.Count
+   TotalRow = DataRegion.Row + DataRegion.rows.Count
    For ColNo = DataRegion.Column To DataRegion.Column + DataRegion.Columns.Count - 1
       If Cells(TotalRow, ColNo) > 0 Then
           Total = Cells(TotalRow, ColNo)
@@ -220,7 +220,7 @@ Sub SortRows(Region)
    Dim TotalCol As Integer
    TotalCol = GetHideColumn()
    Set DataRegion = Range("az_DataRegion" & Region)
-   Set SortRegion = Range(Cells(DataRegion.Row, TotalCol), Cells(DataRegion.Row + DataRegion.Rows.Count - 1, DataRegion.Column + DataRegion.Columns.Count - 1))
+   Set SortRegion = Range(Cells(DataRegion.Row, TotalCol), Cells(DataRegion.Row + DataRegion.rows.Count - 1, DataRegion.Column + DataRegion.Columns.Count - 1))
    If hasOption(Region, "sort desc") > "" Then
       SortRegion.Sort Key1:=Cells(DataRegion.Row, TotalCol), Order1:=xlDescending
    Else
@@ -237,8 +237,8 @@ Sub MaxRows(Region)
   strRowCount = hasOption(Region, "maxrows")
   RowCount = strRowCount
   Set DataRegion = Range("az_DataRegion" & Region)
-  If DataRegion.Rows.Count > RowCount Then
-     Rows((DataRegion.Row + RowCount) & ":" & (DataRegion.Row + DataRegion.Rows.Count - 1)).EntireRow.Delete
+  If DataRegion.rows.Count > RowCount Then
+     rows((DataRegion.Row + RowCount) & ":" & (DataRegion.Row + DataRegion.rows.Count - 1)).EntireRow.Delete
   End If
   
   
@@ -255,8 +255,8 @@ Sub TrimRowHeadings(Region)
    Set RowHeadings = Range("az_DisplayRowHeadings" & Region)
    For ColNo = RowHeadings.Column To RowHeadings.Column + RowHeadings.Columns.Count - 1
       VisibleRow = RowHeadings.Row - 1
-      For RowNo = RowHeadings.Row To RowHeadings.Row + RowHeadings.Rows.Count - 1
-         If Rows(RowNo).EntireRow.Hidden = False Then
+      For RowNo = RowHeadings.Row To RowHeadings.Row + RowHeadings.rows.Count - 1
+         If rows(RowNo).EntireRow.Hidden = False Then
             If Cells(RowNo, ColNo) = Cells(VisibleRow, ColNo) Then
               Cells(RowNo, ColNo).ClearContents
             Else
@@ -280,7 +280,7 @@ Sub TrimColumnHeadings(Region)
       Exit Sub
    End If
    Set ColumnHeadings = Range("az_DisplayColumnHeadings" & Region)
-   For RowNo = ColumnHeadings.Row To ColumnHeadings.Row + ColumnHeadings.Rows.Count - 1
+   For RowNo = ColumnHeadings.Row To ColumnHeadings.Row + ColumnHeadings.rows.Count - 1
       VisibleColumn = ColumnHeadings.Column - 1
       For ColNo = ColumnHeadings.Column To ColumnHeadings.Column + ColumnHeadings.Columns.Count - 1
             If Cells(RowNo, ColNo) = Cells(RowNo, VisibleColumn) Then
@@ -319,7 +319,7 @@ Function FillRowHeadings(Region)
      Call FillTheRange(azResponse, "az_DisplayRowHeadings" & Region)
      Set DisplayRows = Range("az_DisplayRowHeadings" & Region)
      FillRowHeadings = ""
-     Rows(DisplayRows.Row & ":" & DisplayRows.Row + DisplayRows.Rows.Count - 1).EntireRow.AutoFit
+     rows(DisplayRows.Row & ":" & DisplayRows.Row + DisplayRows.rows.Count - 1).EntireRow.AutoFit
 End Function
 
 
@@ -336,7 +336,7 @@ Function FillColumnHeadings(Region)
      Call FillTheRange(azResponse, "az_DisplayColumnHeadings" & Region)
      Set DIsplayColumns = Range("az_DisplayColumnHeadings" & Region)
      FillColumnHeadings = ""
-     Rows(DIsplayColumns.Row & ":" & DIsplayColumns.Row + DIsplayColumns.Rows.Count - 1).EntireRow.AutoFit
+     rows(DIsplayColumns.Row & ":" & DIsplayColumns.Row + DIsplayColumns.rows.Count - 1).EntireRow.AutoFit
      
 
 End Function
@@ -381,7 +381,7 @@ Function RangeText(RangeName)
      RangeText = ""
      Set azTopLeft = azRange.Worksheet.Cells(azRange.Row, azRange.Column)
      
-     For RowNo = 0 To azRange.Rows.Count - 1
+     For RowNo = 0 To azRange.rows.Count - 1
         If (RowNo > 0) Then
            RangeText = RangeText & Chr(10)
         End If
@@ -432,7 +432,7 @@ Function ClearRange(RangeName As String)
    
    If rangeExists(RangeName) Then
      Set ClearRegion = Range(RangeName)
-     For RowNo = 0 To ClearRegion.Rows.Count - 1
+     For RowNo = 0 To ClearRegion.rows.Count - 1
        For ColNo = 0 To ClearRegion.Columns.Count - 1
           Set ClearCell = Cells(ClearRegion.Row + RowNo, ClearRegion.Column + ColNo)
           Formula = ClearCell.Formula
@@ -530,13 +530,13 @@ Sub ClearDataRegion(Region As String)
      
      DataRegion.EntireRow.Hidden = False
      If rangeExists("az_DisplayRowHeadings" & Region) Then
-         If DataRegion.Rows.Count > 3 Then
-             LastRemove = DataRegion.Row + DataRegion.Rows.Count - 2
+         If DataRegion.rows.Count > 3 Then
+             LastRemove = DataRegion.Row + DataRegion.rows.Count - 2
              FirstRemove = DataRegion.Row + 2
              If LeftColumn > 0 Then
                 Range(Cells(FirstRemove, LeftColumn), Cells(LastRemove, 100)).Delete Shift:=xlUp
              Else
-                 Rows(FirstRemove & ":" & LastRemove).Delete
+                 rows(FirstRemove & ":" & LastRemove).Delete
              End If
          End If
          ClearRange ("az_DisplayRowHeadings" & Region)
@@ -589,7 +589,9 @@ Function GetTextFromRangeText(ByVal poRange As Range) As String
                     sRet = sRet & vbCrLf & vRange(i, j)
                 End If
             Else
-                sRet = sRet & vbTab & vRange(i, j)
+                On Error Resume Next ' mainly to handle divide by 0 functions
+                sRet = sRet & vbTab
+                sRet = sRet & vRange(i, j)
             End If
                 firstcell = False
             Next j
@@ -615,7 +617,7 @@ Sub SetChartData(Region)
     RegionRight = "$" & Chr(63 + DataRegion.Column + DataRegion.Columns.Count)
     topLine = "$" & ColHeadings.Row
     DataTop = "$" & DataRegion.Row
-    DataBottom = "$" & (DataRegion.Row + DataRegion.Rows.Count - 1)
+    DataBottom = "$" & (DataRegion.Row + DataRegion.rows.Count - 1)
   
     RangeString = RegionLeft & topLine & ":" & RegionRight & topLine & ","
     RangeString = RangeString + RegionLeft & DataTop & ":" & RegionRight & DataBottom
@@ -756,7 +758,7 @@ Sub ButtonSelect()
        End If
    Next
    NameChosen = RNameSaved.Name
-   Call SelectItem(Replace(NameChosen, "chosen", "choice"), NameChosen)
+   Call SelectItem(Replace(Replace(NameChosen, "chosen", "choice"), "Chosen", "Choice"), NameChosen)
  
 End Sub
 
