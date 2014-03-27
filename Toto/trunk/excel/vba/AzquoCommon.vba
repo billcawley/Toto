@@ -15,7 +15,7 @@ Sub Auto_open()
 
     azConnectionId = ""
     azError = ""
-    azVersion = "1.07"
+    azVersion = "1.08"
 End Sub
 
 
@@ -70,22 +70,22 @@ Function FillTheRange(DataIn, RegionName)
      
      NoRows = UBound(FillData) + 1
      Set FillRegion = Range(RegionName)
-     LastRow = FillRegion.Row + FillRegion.Rows.Count - 1
-     If FillRegion.Rows.Count < NoRows Then
+     LastRow = FillRegion.Row + FillRegion.rows.Count - 1
+     If FillRegion.rows.Count < NoRows Then
          FirstInsert = LastRow
          LastInsert = FillRegion.Row + NoRows - 2
-         Rows(FirstInsert & ":" & LastInsert).Insert
-         Rows(LastRow - 1).Copy
-         Rows(LastRow & ":" & LastInsert).PasteSpecial
+         rows(FirstInsert & ":" & LastInsert).Insert
+         rows(LastRow - 1).Copy
+         rows(LastRow & ":" & LastInsert).PasteSpecial
      End If
-     RowCount = FillRegion.Rows.Count
+     RowCount = FillRegion.rows.Count
      If (NoRows > 1 And RowCount = 1) Then
        RowCount = 2
      End If
      If RowCount > NoRows Then
          LastRemove = FillRegion.Row + RowCount - 2
          FirstRemove = FillRegion.Row + NoRows - 1
-         Rows(FirstRemove & ":" & LastRemove).Delete
+         rows(FirstRemove & ":" & LastRemove).Delete
      End If
       RowData = Split(FillData(0), Strings.Chr(9))
      NoColumns = UBound(RowData) + 1
