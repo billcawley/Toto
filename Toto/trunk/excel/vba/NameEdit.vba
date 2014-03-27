@@ -17,6 +17,7 @@ Attribute VB_Exposed = False
 
 
 
+
 Private attcount As Integer
 Private thisNode As clsNode
 
