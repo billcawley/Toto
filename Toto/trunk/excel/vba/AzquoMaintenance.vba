@@ -270,15 +270,15 @@ If Not response = "" Then
   Wend
   
   If Count > 1 Then
-    Rows((RowNo + 1) & ":" & (RowNo + Count - 1)).EntireRow.Delete
+    rows((RowNo + 1) & ":" & (RowNo + Count - 1)).EntireRow.Delete
   End If
   Count = 0
   Set JSON = lib.parse(response)
   For Each oneline In JSON
      Count = Count + 1
-    Rows(RowNo + 1).EntireRow.Copy
-     Rows(RowNo + Count).EntireRow.Insert
-     Rows(RowNo + Count).EntireRow.PasteSpecial
+    rows(RowNo + 1).EntireRow.Copy
+     rows(RowNo + Count).EntireRow.Insert
+     rows(RowNo + Count).EntireRow.PasteSpecial
      ColNo = 1
      While Cells(RowNo, ColNo) > "" And Cells(RowNo, ColNo) <> "password"
 '       Cells(RowNo + Count, ColNo) = oneline(Cells(RowNo, ColNo).value)
