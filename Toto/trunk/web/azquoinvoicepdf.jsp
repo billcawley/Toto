@@ -1,0 +1,166 @@
+<%@ page contentType="application/pdf" %>
+<%@ page
+        import="java.util.*,java.text.*,java.io.*,  org.apache.fop.apps.*, javax.xml.transform.*, javax.xml.transform.stream.*, javax.xml.transform.sax.*" %>
+<%@ page import="org.apache.commons.lang.*" %>
+<%
+
+    double quantity = 1;
+    int dayrate = 2000;
+    int terms = 14;
+    String poNumber = "";
+    Date invoiceDate = new Date();
+    String invoiceid = "2014/03";
+    String currency = "GBP";
+    String month = "February";
+//    String invoiceAddress = "Anonymous Ginger Ltd.\n177B New Kings Road\nParsons Green\nLondon\nSW6 4SN";
+    String invoiceAddress = "";
+//    String invoiceDesc = "Development of RaceAdvisor App";
+    String invoiceDesc = "";
+
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+    String sageRef = "AG1";
+
+    try{
+        quantity = Double.parseDouble(request.getParameter("quantity"));
+        dayrate = Integer.parseInt(request.getParameter("dayrate"));
+        terms = Integer.parseInt(request.getParameter("terms"));
+        poNumber = request.getParameter("ponumber");
+        invoiceDate = sdf.parse(request.getParameter("invoicedate"));
+
+        invoiceid = request.getParameter("invoiceid");
+        currency = request.getParameter("currency");
+        month = request.getParameter("month");
+        invoiceAddress = request.getParameter("invoiceaddress");
+        invoiceDesc = request.getParameter("description");
+        sageRef = request.getParameter("sageref");
+
+    } catch (Exception e){
+        e.printStackTrace();
+    }
+
+
+
+    double currencyValue = dayrate * quantity;
+    double vat = currencyValue * 0.2;
+    double total = currencyValue + vat;
+
+
+// -           SimpleDateFormat formatter = new SimpleDateFormat("dd MMM yyyy");
+
+    // check here that we won't get a keyword error on month!!!!!
+
+    String invoicePeriod;
+    String ponumber = "";
+    invoicePeriod = month;
+
+
+    FopFactory fopFactory = FopFactory.newInstance();
+    TransformerFactory tFactory = TransformerFactory.newInstance();
+    System.out.println("creating Invoice PDF " + request.getRemoteAddr());
+
+    response.setContentType("application/pdf");
+    Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF, response.getOutputStream());
+    Transformer transformer = tFactory.newTransformer();
+    StringBuffer template = new StringBuffer();
+    String inputLine = null;
+    try {
+
+
+        //FileInputStream fstream = new FileInputStream("/home/cawley/IdeaProjects/Toto/web/azquoinvoice.fop");
+        FileInputStream fstream = new FileInputStream("/usr/share/apache-tomcat-7.0.42/webapps/ROOT/azquoinvoice.fop");
+        DataInputStream in = new DataInputStream(fstream);
+        BufferedReader br = new BufferedReader(new InputStreamReader(in));
+        while ((inputLine = br.readLine()) != null) {
+            // Print the content on the console
+            template.append(inputLine);
+        }
+        //Close the input stream
+        in.close();
+    } catch (Exception e) {//Catch exception if any
+        System.out.println("Error reading azquoinvoice.fop: " + e.getMessage());
+    }
+    String invoiceFOP = template.toString();
+    NumberFormat nf = NumberFormat.getInstance();
+    nf.setMinimumFractionDigits(2);
+    String paymentTerms = "30 Days";
+    if (paymentTerms != null && paymentTerms.length() > 0) {
+        String days = paymentTerms.substring(0, paymentTerms.indexOf(" "));
+        try {
+            terms = Integer.parseInt(days);
+        } catch (Exception e) {
+        }
+    }
+    java.util.Date dateDue = new java.util.Date(invoiceDate.getYear(), invoiceDate.getMonth(), invoiceDate.getDate() + terms);
+    SimpleDateFormat monthDisplay = new SimpleDateFormat("MMMMM");
+    //invoiceFOP = invoiceFOP.replace("INVOICEMONTH",monthDisplay.format(i.getDate()), true);
+    String invoiceTitle = "Monthly fee for developmennt of RaceAdvisor App";
+    invoiceFOP = invoiceFOP.replace("INVOICETITLE", StringEscapeUtils.escapeXml(invoiceTitle));
+    SimpleDateFormat df = new SimpleDateFormat("dd/MM/yyyy");
+    String dateDueI = StringEscapeUtils.escapeXml(df.format(dateDue));
+    String paidWithThanks = "";
+    //if (i.getDatePaid() !=null) paidWithThanks = "Paid with thanks " + Database.dateFormat2.format(i.getDatePaid());
+    invoiceFOP = invoiceFOP.replace("INVOICENAME", "INVOICE");
+    invoiceFOP = invoiceFOP.replace("PAIDWITHTHANKS", paidWithThanks);
+    invoiceFOP = invoiceFOP.replace("DATEDUE", dateDueI);
+    invoiceFOP = invoiceFOP.replace("PONUMBER", StringEscapeUtils.escapeXml(poNumber));
+    int lineNo = 2;
+    invoiceFOP = invoiceFOP.replace("INVOICEL1", "");
+    invoiceFOP = invoiceFOP.replace("INVOICEPER1", month);
+    invoiceFOP = invoiceFOP.replace("INVOICEDESC1", invoiceDesc);
+    invoiceFOP = invoiceFOP.replace("INVOICEQUANT1", quantity + "");
+    invoiceFOP = invoiceFOP.replace("INVOICEMON1", dayrate + "");
+    invoiceFOP = invoiceFOP.replace("INVOICEN1", nf.format(currencyValue));
+
+    while (lineNo < 10) {
+        invoiceFOP = invoiceFOP.replace("INVOICEL" + lineNo, "");
+        invoiceFOP = invoiceFOP.replace("INVOICEPER" + lineNo, "");
+        invoiceFOP = invoiceFOP.replace("INVOICEDESC" + lineNo, "");
+        invoiceFOP = invoiceFOP.replace("INVOICEQUANT" + lineNo, "");
+        invoiceFOP = invoiceFOP.replace("INVOICEMON" + lineNo, "");
+        invoiceFOP = invoiceFOP.replace("INVOICEN" + lineNo, "");
+        lineNo++;
+
+    }
+
+    invoiceFOP = invoiceFOP.replace("INVOICECURRENCY", StringEscapeUtils.escapeXml("GBP"));
+    invoiceFOP = invoiceFOP.replace("INVOICEDATE", StringEscapeUtils.escapeXml(df.format(invoiceDate)));
+    String iNo = invoiceid;
+    invoiceFOP = invoiceFOP.replace("INVOICENUMBER", StringEscapeUtils.escapeXml(iNo));
+    invoiceFOP = invoiceFOP.replace("INVOICEVAT", StringEscapeUtils.escapeXml(nf.format(vat)));
+    invoiceFOP = invoiceFOP.replace("INVOICEAMOUNT", StringEscapeUtils.escapeXml(nf.format(currencyValue)));
+    invoiceFOP = invoiceFOP.replace("INVOICETOTAL", StringEscapeUtils.escapeXml(nf.format(total)));
+    if (sageRef == null) sageRef = "";
+    invoiceFOP = invoiceFOP.replace("INVOICESAGEREF", StringEscapeUtils.escapeXml(sageRef));
+
+
+    String text = invoiceFOP;
+    //invoiceAddress = invoiceAddress.replace("&","&#38;");
+    String address = invoiceAddress.trim();
+    int line = 1;
+    StringTokenizer st = new StringTokenizer(address, "\n");
+    while (st.hasMoreTokens()) {
+        text = text.replace("ADDRESS" + line, StringEscapeUtils.escapeXml(st.nextToken()));
+        line++;
+    }
+    text = text.replace("ADDRESS" + line, ""); // blank other lines . . .
+    line++;
+    text = text.replace("ADDRESS" + line, ""); // blank other lines . . .
+    line++;
+    text = text.replace("ADDRESS" + line, ""); // blank other lines . . .
+    line++;
+    text = text.replace("ADDRESS" + line, ""); // blank other lines . . .
+    line++;
+
+    if (paymentTerms == null) paymentTerms = "30 days";
+    text = text.replace("PAYMENTTERMS", paymentTerms);
+
+
+    invoiceFOP = text;
+
+
+    Source src = new StreamSource(new StringReader(invoiceFOP));
+    Result res = new SAXResult(fop.getDefaultHandler());
+
+    transformer.transform(src, res);
+
+%>
