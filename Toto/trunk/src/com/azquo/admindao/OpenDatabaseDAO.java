@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,10 +61,11 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
         return new OpenDatabaseRowMapper();
     }
 
-    public OpenDatabase findOpenForBusinessId(final int databaseId) {
+    public void closeForDatabaseId(final int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(CLOSE, new Date());
         namedParams.addValue(DATABASEID, databaseId);
-        return findOneWithWhereSQLAndParameters(" WHERE `close` = '0000-00-00' and `" + DATABASEID + "` = :" + DATABASEID, namedParams);
+        update(" SET `" + CLOSE + "`=:" + CLOSE + " WHERE `" + CLOSE + "` = '0000-00-00' and `" + DATABASEID + "` = :" + DATABASEID, namedParams);
     }
 
 
