@@ -69,3 +69,12 @@ CREATE TABLE IF NOT EXISTS `login_record` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
+CREATE TABLE IF NOT EXISTS `open_database` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `database_id` int(11) NOT NULL,
+  `open` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `close` timestamp,
+  PRIMARY KEY (`id`),
+  KEY `close` (`close`),
+  KEY `database_id` (`database_id`,`close`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
