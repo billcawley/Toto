@@ -1,13 +1,7 @@
 package com.azquo.service;
 
-import com.azquo.admindao.LoginRecordDAO;
-import com.azquo.admindao.PermissionDAO;
-import com.azquo.admindao.DatabaseDAO;
-import com.azquo.admindao.UserDAO;
-import com.azquo.adminentities.LoginRecord;
-import com.azquo.adminentities.Permission;
-import com.azquo.adminentities.Database;
-import com.azquo.adminentities.User;
+import com.azquo.admindao.*;
+import com.azquo.adminentities.*;
 import com.azquo.jsonrequestentities.StandardJsonRequest;
 import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.memorydb.MemoryDBManager;
@@ -46,9 +40,11 @@ public class LoginService {
     private AzquoMailer azquoMailer;
     @Autowired
     private NameService nameService;
+    @Autowired
+    private OpenDatabaseDAO openDatabaseDAO;
 
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
-    private final HashMap<String, Integer> openDBCount = new HashMap<String, Integer>();
+    private final HashMap<Integer, Integer> openDBCount = new HashMap<Integer, Integer>();
 
 
     public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn) throws  Exception{
@@ -96,15 +92,15 @@ public class LoginService {
                 //TODO : ask tomcat for a session id . . .
 
                 final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
-                Integer openCount = openDBCount.get(databaseName);
-                if (openCount != null){
-                    openDBCount.put(databaseName, openCount + 1);
-                }else{
-                    openDBCount.put(databaseName, 1);
-                }
-                int databaseId  = 0;
+                int databaseId = 0;
                 if (memoryDB != null){
-                    databaseId = memoryDB.getDatabase().getId();
+                   databaseId = memoryDB.getDatabase().getId();
+                   Integer openCount = openDBCount.get(databaseId);
+                   if (openCount != null){
+                       openDBCount.put(databaseId, openCount + 1);
+                   }else{
+                       openDBCount.put(databaseId, 1);
+                   }
                 }
                 Permission permission = null;
                 if (database != null){
@@ -139,13 +135,14 @@ public class LoginService {
             LoggedInConnection lic = connections.get(connection);
             if ((System.currentTimeMillis() - lic.getLastAccessed().getTime()) > lic.getTimeOut()) {
                 // connection timed out
-                String dbName = lic.getCurrentDBName();
+                int databaseId = lic.getAzquoMemoryDB().getDatabase().getId();
                 connections.remove(lic.getConnectionId());
-                Integer openCount = openDBCount.get(dbName);
+                Integer openCount = openDBCount.get(databaseId);
                 if (openCount == 1){
-                    memoryDBManager.removeDatabase(dbName);
-                    openDBCount.remove(dbName);
-                 }
+                    memoryDBManager.removeDatabase(lic.getAzquoMemoryDB().getDatabase());
+                    openDBCount.remove(databaseId);
+                    openDatabaseDAO.closeForDatabaseId(databaseId);
+                }
 
             }
          }
@@ -154,6 +151,7 @@ public class LoginService {
 
     public LoggedInConnection getConnection(final String connectionId) {
 
+        zapConnectionsTimedOut();
         final LoggedInConnection lic = connections.get(connectionId);
         if (lic != null) {
             logger.info("last accessed : " + lic.getLastAccessed() + " timeout " + lic.getTimeOut());
