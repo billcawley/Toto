@@ -137,4 +137,10 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         return results.get(0);
     }
 
+    public final void update(final String setclause, final MapSqlParameterSource namedParams) throws DataAccessException{
+        final String SQL_UPDATE = "update `" + MASTER_DB + "`.`" + getTableName() + "` " + setclause;
+        jdbcTemplate.update(SQL_UPDATE, namedParams);
+
+    }
+
 }
