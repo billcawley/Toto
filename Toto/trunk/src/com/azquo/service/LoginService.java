@@ -15,6 +15,7 @@ import com.azquo.memorydb.Name;
 import com.azquo.util.AzquoMailer;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import sun.rmi.runtime.Log;
 
 import java.util.*;
 
@@ -47,6 +48,7 @@ public class LoginService {
     private NameService nameService;
 
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
+    private final HashMap<String, Integer> openDBCount = new HashMap<String, Integer>();
 
 
     public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn) throws  Exception{
@@ -57,7 +59,7 @@ public class LoginService {
 
         User user = userDao.findByEmail(userEmail);
         if (user != null) {
-            if (loggedIn || adminService.encrypt(password, user.getSalt()).equals(user.getPassword())) {
+            if (loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword())) {
                 // ok user should be ok :)
                 final List<Permission> userAcceses = permissionDao.findForUserId(user.getId());
                 final Map<String, Database> okDatabases = new HashMap<String, Database>();
@@ -92,7 +94,14 @@ public class LoginService {
                 }
                 // could be a null memory db . . .
                 //TODO : ask tomcat for a session id . . .
+
                 final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
+                Integer openCount = openDBCount.get(databaseName);
+                if (openCount != null){
+                    openDBCount.put(databaseName, openCount + 1);
+                }else{
+                    openDBCount.put(databaseName, 1);
+                }
                 int databaseId  = 0;
                 if (memoryDB != null){
                     databaseId = memoryDB.getDatabase().getId();
@@ -125,16 +134,29 @@ public class LoginService {
         return null;
     }
 
+    public void zapConnectionsTimedOut(){
+        for (String connection:connections.keySet()){
+            LoggedInConnection lic = connections.get(connection);
+            if ((System.currentTimeMillis() - lic.getLastAccessed().getTime()) > lic.getTimeOut()) {
+                // connection timed out
+                String dbName = lic.getCurrentDBName();
+                connections.remove(lic.getConnectionId());
+                Integer openCount = openDBCount.get(dbName);
+                if (openCount == 1){
+                    memoryDBManager.removeDatabase(dbName);
+                    openDBCount.remove(dbName);
+                 }
+
+            }
+         }
+
+    }
+
     public LoggedInConnection getConnection(final String connectionId) {
 
         final LoggedInConnection lic = connections.get(connectionId);
         if (lic != null) {
             logger.info("last accessed : " + lic.getLastAccessed() + " timeout " + lic.getTimeOut());
-            if ((System.currentTimeMillis() - lic.getLastAccessed().getTime()) > lic.getTimeOut()) {
-                // connection timed out
-                connections.remove(lic.getConnectionId());
-                return null;
-            }
             lic.setLastAccessed(new Date());
         }
         return lic;
