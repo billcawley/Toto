@@ -270,12 +270,10 @@ public class AdminService {
                 } else { // a new one. Possibly need checks on required fields but for the moment just sort the password and store.
                     if (user.getPassword() != null) {
                         final String salt = shaHash(System.currentTimeMillis() + "salt");
-                        user.setSalt(salt);
-                        user.setBusinessId(loggedInConnection.getUser().getBusinessId());
-                        user.setPassword(encrypt(user.getPassword(), salt));
+                        final User newUser = new User(0, new Date(), new Date(), loggedInConnection.getUser().getBusinessId(), user.getEmail(), user.getName(), user.getStatus(), encrypt(user.getPassword(), salt), salt);
+                        userDao.store(newUser);
                     }
-                    userDao.store(user);
-                }
+                 }
             }
         }
         return "";
