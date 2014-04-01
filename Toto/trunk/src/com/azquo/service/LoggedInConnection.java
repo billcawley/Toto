@@ -40,6 +40,7 @@ public final class LoggedInConnection {
 
     private final Map<String, List<List<Name>>> rowHeadings;
     private final Map<String, List<List<Name>>> columnHeadings;
+    private final Map<String, List<Name>> rowHeadingSupplements;//this will allow product classes to be included in the returned row headings, not used to define data.
     private final Map<String, List<Name>> contexts;
     private final Map<String, String> lockMaps;
     private final Map<String, String> sentDataMaps;
@@ -61,6 +62,7 @@ public final class LoggedInConnection {
         loose = false;
         rowHeadings = new HashMap<String, List<List<Name>>>();
         columnHeadings = new HashMap<String, List<List<Name>>>();
+        rowHeadingSupplements = new HashMap<String, List<Name>>();
         contexts = new HashMap<String, List<Name>>();
         lockMaps = new HashMap<String, String>();
         sentDataMaps = new HashMap<String, String>();
@@ -157,6 +159,24 @@ public final class LoggedInConnection {
             this.columnHeadings.put(region, columnHeadings);
         }
     }
+
+    public List<Name> getRowHeadingSupplements(final String region) {
+        if (region == null || region.isEmpty()) {
+            return rowHeadingSupplements.get(defaultRegion);
+        } else {
+            return rowHeadingSupplements.get(region);
+        }
+    }
+
+    public void setRowHeadingSupplements(final String region, final List<Name> rowHeadingSupplements) {
+        if (region == null || region.isEmpty()) {
+            this.rowHeadingSupplements.put(defaultRegion, rowHeadingSupplements);
+        } else {
+            this.rowHeadingSupplements.put(region, rowHeadingSupplements);
+        }
+    }
+
+
 
     public List<Name> getContext(final String region) {
         if (region == null || region.isEmpty()) {
