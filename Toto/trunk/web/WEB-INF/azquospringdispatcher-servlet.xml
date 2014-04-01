@@ -45,6 +45,7 @@
     <bean name="loginService" class="com.azquo.service.LoginService"/>
     <bean name="importService" class="com.azquo.service.ImportService"/>
     <bean name="businessService" class="com.azquo.service.AdminService"/>
+    <bean name="openDatabaseDao" class="com.azquo.admindao.OpenDatabaseDAO"/>
     <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
     <bean name="memoryDBManager" class="com.azquo.memorydb.MemoryDBManager">
         <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
