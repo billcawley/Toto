@@ -1,10 +1,13 @@
 package com.azquo.memorydb;
 
+import com.azquo.admindao.OpenDatabaseDAO;
 import com.azquo.adminentities.Database;
+import com.azquo.adminentities.OpenDatabase;
 import com.azquo.memorydbdao.JsonRecordTransport;
 import com.azquo.memorydbdao.StandardDAO;
 import com.azquo.service.LoggedInConnection;
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * delivering data fast enough. Leverage collections to implement Azquo spec.
  */
 public final class AzquoMemoryDB {
+
 
     private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
 
@@ -62,6 +66,7 @@ public final class AzquoMemoryDB {
         }
 
         loadData();
+
         nextId = maxIdAtLoad + 1;
     }
 
@@ -172,17 +177,31 @@ public final class AzquoMemoryDB {
 
     public Name getNameByAttribute(final LoggedInConnection loggedInConnection, final String attributeValue, final Name parent) {
         String attributeName = loggedInConnection.getLanguage();
-        if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null) {// there is an attribute with that name in the whole db . . .
-            Set<Name> possibles = nameByAttributeMap.get(attributeName.toLowerCase().trim()).get(attributeValue.toLowerCase().trim());
-            if (possibles == null) {
-                if (!loggedInConnection.getLoose()) {
+        Map <String,Set<Name>> map = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+        if (map != null || loggedInConnection.getLoose()) {// there is an attribute with that name in the whole db . . .
+            Set<Name> possibles = null;
+            if (map != null){
+                possibles = map.get(attributeValue.toLowerCase().trim());
+                if (possibles == null) {
+                    if (!loggedInConnection.getLoose()) {
+                       return null;
+                    }
+                //maybe if 'loose' we should look at ALL languages, but here will look at default language.
+                    possibles = nameByAttributeMap.get(Name.DEFAULT_DISPLAY_NAME.toLowerCase()).get(attributeValue.toLowerCase().trim());
+                    if (possibles == null) {
+                        return null;
+                    }
+                }
+            }else{
+                map = nameByAttributeMap.get(Name.DEFAULT_DISPLAY_NAME.toLowerCase());
+                if (map == null){
                     return null;
                 }
-                //maybe if 'loose' we should look at ALL languages, but here will look at default language.
-                possibles = nameByAttributeMap.get(Name.DEFAULT_DISPLAY_NAME.toLowerCase()).get(attributeValue.toLowerCase().trim());
+                possibles = map.get(attributeValue.toLowerCase().trim());
                 if (possibles == null) {
                     return null;
                 }
+
             }
             if (parent == null) {
                 if (possibles.size() != 1) {
