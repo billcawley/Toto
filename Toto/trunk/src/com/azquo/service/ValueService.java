@@ -381,7 +381,7 @@ public final class ValueService {
         return toReturn;
     }
 
-    public String outputHeadings(final List<List<Name>> headings, String language) {
+    public String outputHeadings(final List<List<Name>> headings, String language, List<Name> rowHeadingSupplements) {
 
         final StringBuilder sb = new StringBuilder();
 
@@ -389,13 +389,20 @@ public final class ValueService {
         for (int x = 0; x < headings.size(); x++) {
             List<Name> xNames = headings.get(x);
             if (x > 0) sb.append("\n");
+            Name lastName = null;
             for (int y = 0; y < xNames.size(); y++) {
                 if (y > 0) sb.append("\t");
                 //NOW - LEAVE THE PRUNING OF NAMES TO EXCEL - MAYBE THE LIST WILL BE SORTED.
                 //don't show repeating names in the headings - leave blank.
                 //if ((x == 0 || !lastxNames.get(y).equals(xNames.get(y))) && (y == 0 || !xNames.get(y - 1).equals(xNames.get(y)))) {
-                sb.append(xNames.get(y).getAttribute(language));
+                lastName = xNames.get(y);
+                sb.append(lastName.getAttribute(language));
                 //}
+            }
+            if (rowHeadingSupplements != null){
+                for (Name structureName:rowHeadingSupplements){
+                    sb.append("\t" + getStructureName(lastName, structureName));
+                }
             }
             // lastxNames = xNames;
         }
@@ -426,7 +433,28 @@ seaports;children   container;children
      */
 
 
-    public String createNameListsFromExcelRegion(final LoggedInConnection loggedInConnection, List<List<List<Name>>> nameLists, final String excelRegionPasted) throws Exception {
+
+    private String getStructureName(Name element, Name className){
+        //works out to which set in the class the element belongs (e.g. if topparent = "car", element = "mondeo' and class = "manufacturer", this should find 'Ford cars' and return 'Ford'
+        String byName = "by " + className.getDefaultDisplayName();
+        for (Name parent:element.getParents()){
+            for (Name grandParent:parent.getParents()){
+                String grandParentName = grandParent.getDefaultDisplayName();
+                if (grandParentName.endsWith(byName)){
+                    String plural = grandParentName.substring(0, grandParentName.length() - byName.length()).trim();
+                    String parentName = parent.getDefaultDisplayName();
+                    if (parentName.length() > plural.length()){
+                        return parentName.substring(0,parentName.length() - plural.length()).trim();
+                    }
+
+                }
+            }
+        }
+
+        return "";
+    }
+
+    public String createNameListsFromExcelRegion(final LoggedInConnection loggedInConnection, List<List<List<Name>>> nameLists, List<Name> supplementNames, final String excelRegionPasted) throws Exception {
         //logger.info("excel region pasted : " + excelRegionPasted);
         int maxColCount = 1;
         CsvReader pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t');
@@ -445,6 +473,19 @@ seaports;children   container;children
                     row.add(null);
                 } else {
                     List<Name> nameList = new ArrayList<Name>();
+                    if (cellString.toLowerCase().contains(";with ")){
+                        int withPos = cellString.toLowerCase().indexOf(";with ");
+                        String withList = cellString.substring(withPos + 6);
+                        cellString = cellString.substring(0,withPos);
+                        List<Set<Name>> sNames = new ArrayList<Set<Name>>();
+                        String error = nameService.decodeString(loggedInConnection,withList, sNames);
+                        if (error.length() > 0){
+                            return error;
+                        }
+                        for (Set<Name> sName:sNames){
+                            supplementNames.addAll(sName); // sName should be a set of one element
+                        }
+                    }
                     String error = nameService.interpretName(loggedInConnection, nameList, cellString);
                     if (error.length() > 0) {
                         return error;
@@ -637,8 +678,9 @@ seaports;children   container;children
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
         // "here is what that 2d heading definition excel region looks like in names"
         String language = nameService.getInstruction(headingsSent, "language");
+
         if (filterCount > 0){
-            //send back a list of the headings with data.
+            //send back only those headings that have data - considered in batches of length filtercount.
             List<List<Name>> rowHeadingsWithData = new ArrayList<List<Name>>();
             List<List<Name>> allRowHeadings = loggedInConnection.getRowHeadings(region);
             int rowInt = 0;
@@ -650,14 +692,16 @@ seaports;children   container;children
                 }
                 rowInt += filterCount;
             }
-            return outputHeadings(rowHeadingsWithData, language);
+            return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
         }else{
-            String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, headingsSent);
+            List <Name> supplementNames = new ArrayList<Name>();
+            String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent);
             if (error.length() > 0) {
                 return error;
             }
             loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
-            return outputHeadings(loggedInConnection.getRowHeadings(region), language);
+            loggedInConnection.setRowHeadingSupplements(region,supplementNames);
+            return outputHeadings(loggedInConnection.getRowHeadings(region), language, loggedInConnection.getRowHeadingSupplements(region));
         }
     }
 
@@ -674,15 +718,16 @@ seaports;children   container;children
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<Name>>> columnHeadingLists = new ArrayList<List<List<Name>>>();
+        List<Name> supplementNames = new ArrayList<Name>();//not used for column headings, but needed for the interpretation routine
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
         // "here is what that 2d heading definition excel region looks like in names"
-        String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, headingsSent);
+        String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, supplementNames, headingsSent);
         if (error.length() > 0) {
             return error;
         }
         loggedInConnection.setColumnHeadings(region, (expandHeadings(transpose2DList(columnHeadingLists))));
         String language = nameService.getInstruction(headingsSent, "language");
-        return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)), language);
+        return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)), language, null);
     }
 
     /*
