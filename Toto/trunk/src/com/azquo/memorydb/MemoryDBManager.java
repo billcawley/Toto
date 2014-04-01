@@ -56,8 +56,8 @@ public final class MemoryDBManager {
     }
 
 
-    public synchronized void removeDatabase(String dbName){
-        memoryDatabaseMap.remove(dbName);
+    public synchronized void removeDatabase(Database db){
+        memoryDatabaseMap.remove(db.getMySQLName());
 
     }
 
