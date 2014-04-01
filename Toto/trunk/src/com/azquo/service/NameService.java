@@ -427,16 +427,6 @@ public final class NameService {
 
 
     // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
-    public void createPeers(final LoggedInConnection loggedInConnection, final Name parentName, final List<String> peerNames) throws Exception {
-        // in this we're going assume that we overwrite existing name links, the single one can be used for adding
-        final LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>(peerNames.size());
-        for (String peerName : peerNames) {
-            if (peerName.trim().length() > 0) {
-                peers.put(findOrCreateName(loggedInConnection, peerName), true); // additive by default for the mo
-            }
-        }
-        parentName.setPeersWillBePersisted(peers);
-    }
 
     public Map<Name, Boolean> getPeersIncludeParents(final Name name) throws Exception {
         if (name.getPeers().size() > 0) {
@@ -1036,75 +1026,10 @@ public final class NameService {
 
     // right now ONLY called for the column heading in uploads, set peers on existing names
 
-    public String setPeersForImportHeading(LoggedInConnection loggedInConnection, String instructions)
-            throws Exception {
-        try {
-            String nameString = instructions;
-            if (instructions == null) {
-                return "error:no instructions passed";
-            }
-            System.out.println("instructions : |" + instructions + "|");
-            instructions = instructions.trim();
-            // typically a command will start with a name
-            if (instructions.indexOf(';') > 0) { // actually something to do
-                nameString = instructions.substring(0, instructions.indexOf(';')).trim();
-                instructions = instructions.substring(instructions.indexOf(';') + 1).trim();
-                String peers = getInstruction(instructions, PEERS);
-                String create = getInstruction(instructions, CREATE);
-                if (peers != null) {
-                    System.out.println("peers : |" + peers + "|");
-                    if (peers.length() > 0) { // ok, add the peers. No create, just from existing
-                        Name name;
-                        if (create != null) {
-                            name = findOrCreateName(loggedInConnection, nameString);
-                        } else {
-                            name = findByName(loggedInConnection, nameString);
-                            if (name == null) {
-                                return "error:name not found:`" + nameString + "`";
-                            }
-                        }
-                        // now I understand two options. One is an insert after a certain position the other an array, let's deal with the array
-                        if (peers.startsWith("{")) { // array, typically when creating in the first place, the service call will insert after any existing
-                            if (peers.contains("}")) {
-                                peers = peers.substring(1, peers.indexOf("}"));
-                                final StringTokenizer st = new StringTokenizer(peers, ",");
-                                final List<String> peersToAdd = new ArrayList<String>();
-                                String notFoundError = "";
-                                while (st.hasMoreTokens()) {
-                                    String peerName = st.nextToken().trim();
-                                    if (peerName.startsWith("`")) {
-                                        peerName = peerName.substring(1, peerName.length() - 1); // trim escape chars
-                                    }
-                                    if (create == null && findByName(loggedInConnection, peerName) == null) {
-                                        if (notFoundError.isEmpty()) {
-                                            notFoundError = peerName;
-                                        } else {
-                                            notFoundError += (",`" + peerName + "`");
-                                        }
-                                    }
-                                    peersToAdd.add(peerName);
-                                }
-                                if (notFoundError.isEmpty()) {
-                                    createPeers(loggedInConnection, name, peersToAdd);
-                                } else {
-                                    return "error:name not found:`" + notFoundError + "`";
-                                }
-                                return nameString;
-                            } else {
-                                return "error:Unclosed }";
-                            }
-                        }
-                        // taken away support for inserting/removing a single peer
-                    }
-                }
-            }
-            return nameString;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "error:" + e.getMessage();
-        }
 
-    }
+
+
+
 
     // should use jackson??
 
