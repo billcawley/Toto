@@ -17,7 +17,6 @@ Attribute VB_Exposed = False
 
 
 
-
 Private attcount As Integer
 Private thisNode As clsNode
 
@@ -73,8 +72,17 @@ End Sub
 
 Private Sub SubmitButton_Click()
    Dim AttList As String
+   Dim id As Long
+   Dim Operation As String
    
-   AttList = """operation"":""edit"",""id"":""" & thisNode.AzquoName.Item("id") & """,""attributes"":{""DEFAULT_DISPLAY_NAME"":""" & azNameValue.value & """"
+   id = 0
+   Operation = "new"
+   If Not thisNode.AzquoName Is Nothing Then
+     id = thisNode.AzquoName.Item("Id")
+     Operation = "edit"
+   End If
+   
+   AttList = """operation"":""" & Operation & """,""id"":""" & id & """,""attributes"":{""DEFAULT_DISPLAY_NAME"":""" & azNameValue.value & """"
    Dim attNo As Integer
    For attNo = 1 To attcount
       Dim AttName As String
