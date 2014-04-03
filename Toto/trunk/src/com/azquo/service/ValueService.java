@@ -48,7 +48,7 @@ public final class ValueService {
 
     // this is passed a string for the value, not sure if that is the best practice, need to think on it.
 
-    public String storeValueWithProvenanceAndNames(final LoggedInConnection loggedInConnection, final String valueString, final Set<Name> names) throws Exception {
+    public String storeValueWithProvenanceAndNames(final LoggedInConnection loggedInConnection, String valueString, final Set<Name> names) throws Exception {
         String toReturn = "";
         final Set<Name> validNames = new HashSet<Name>();
         final Map<String, String> nameCheckResult = nameService.isAValidNameSet(names, validNames);
@@ -62,6 +62,17 @@ public final class ValueService {
         final List<Value> existingValues = findForNames(validNames);
         boolean alreadyInDatabase = false;
         for (Value existingValue : existingValues) { // really should only be one
+            if (existingValue.getProvenance().equals(loggedInConnection.getProvenance()) && existingValue.getProvenance().getMethod().equals("import")){
+                //new behaviour - add values from same import.
+                try{
+                    Double existingDouble = Double.parseDouble(existingValue.getText());
+                    Double newValue = Double.parseDouble(valueString);
+                    valueString = (existingDouble + newValue) + "";
+                    existingValue.setText(valueString);
+                }catch (Exception e){
+                    // use the latest value
+                }
+            }
             if (existingValue.getText().equals(valueString)) {
                 toReturn += "  that value already exists, skipping";
                 alreadyInDatabase = true;
@@ -251,10 +262,12 @@ public final class ValueService {
 
 
     public void printFindForNamesIncludeChildrenStats() {
-        logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
-        logger.info("part 1 average nano : " + (part1NanoCallTime1 / numberOfTimesCalled1));
-        logger.info("part 2 average nano : " + (part2NanoCallTime1 / numberOfTimesCalled1));
-        logger.info("part 3 average nano : " + (part3NanoCallTime1 / numberOfTimesCalled1));
+        if (numberOfTimesCalled1 > 0){
+            logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
+            logger.info("part 1 average nano : " + (part1NanoCallTime1 / numberOfTimesCalled1));
+            logger.info("part 2 average nano : " + (part2NanoCallTime1 / numberOfTimesCalled1));
+            logger.info("part 3 average nano : " + (part3NanoCallTime1 / numberOfTimesCalled1));
+        }
     }
 
 
@@ -695,6 +708,7 @@ seaports;children   container;children
             return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
         }else{
             List <Name> supplementNames = new ArrayList<Name>();
+            loggedInConnection.getProvenance().setRowHeadings(headingsSent);
             String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent);
             if (error.length() > 0) {
                 return error;
@@ -717,6 +731,7 @@ seaports;children   container;children
 
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
+        loggedInConnection.getProvenance().setColumnHeadings(headingsSent);
         List<List<List<Name>>> columnHeadingLists = new ArrayList<List<List<Name>>>();
         List<Name> supplementNames = new ArrayList<Name>();//not used for column headings, but needed for the interpretation routine
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
