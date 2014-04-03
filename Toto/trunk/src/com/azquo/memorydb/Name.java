@@ -366,6 +366,19 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     public synchronized void setPeersWillBePersisted(LinkedHashMap<Name, Boolean> peers) throws Exception {
+        //check if identical to existing
+        if (this.getPeers().size()== peers.size()){
+            boolean identical = true;
+            for (Name peer:this.getPeers().keySet()){
+                   Boolean newAdditive = peers.get(peer);
+                   if (newAdditive == null || newAdditive != this.getPeers().get(peer)){
+                       identical = false;
+                   }
+            }
+            if (identical){
+                return;
+            }
+        }
         checkDatabaseForSet(peers.keySet());
         for (Name peer : peers.keySet()) {
             if (peer.equals(this)) {
@@ -395,6 +408,11 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
         // important, manage persistence, allowed name rules, db look ups
         // only care about ones in this set
+        String existing = attributes.get(attributeName);
+        if (existing!= null && existing.equals(attributeValue)){
+            return "";
+        }
+
         for (Name parent : parents) {
             for (Name fellowChild : parent.getChildren()) {
                 if (fellowChild.getId() != getId() && fellowChild.getAttribute(attributeName) != null && fellowChild.getAttribute(attributeName).equalsIgnoreCase(attributeValue)) {
