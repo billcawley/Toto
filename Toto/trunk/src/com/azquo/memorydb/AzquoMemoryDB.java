@@ -204,11 +204,16 @@ public final class AzquoMemoryDB {
 
             }
             if (parent == null) {
-                if (possibles.size() != 1) {
-                    return null;
+                if (possibles.size()==1){
+                    return possibles.iterator().next();
                 }
-                return possibles.iterator().next();
-            } else {
+                for (Name possible:possibles){
+                    if (possible.getParents().size() == 0){
+                        return possible;
+                    }
+                }
+                return null;
+             } else {
                 for (Name possible : possibles) {
                     if (isInParentTreeOf(possible, parent)) {
                         return possible;
