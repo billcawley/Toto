@@ -86,13 +86,15 @@ Dim i%, sName$
 
 Dim dirPath$
 
-dirPath$ = "F:\azquo\vba\"
+dirPath$ = "G:\azquo\vba\"
 
 With ThisWorkbook.VBProject
     For i% = 1 To .VBComponents.Count
         If .VBComponents(i%).CodeModule.CountOfLines > 0 Then
             sName$ = .VBComponents(i%).CodeModule.Name
-            .VBComponents(i%).Export dirPath$ & sName$ & ".vba"
+            If Not isWorksheet(sName$) Then
+               .VBComponents(i%).Export dirPath$ & sName$ & ".vba"
+            End If
         End If
     Next i
 End With
