@@ -137,13 +137,19 @@ Sub LoadDataRegion(Region As String)
   Application.ScreenUpdating = True
 End Sub
 
-Function GetHideColumn()
+Function GetTotalColumn()
 
-   If Not rangeExists("az_HideColumn") Then
-      MsgBox ("To hide blank rows, you need a hidden column to the left of the screen with a cell range named 'az_HideColumn'.  Put a formula in this column which, if zero, will hide the row")
-      End
+  
+   If rangeExists("az_hideColumn") Then
+     GetTotalColumn = Range("az_HideColumn").Column
+   Else
+     If Not rangeExists("az_TotalColumn") Then
+       MsgBox ("To sort rows, you need a column with a cell range named 'az_TotalColumn' in it")
+       End
+     Else
+       GetTotalColumn = Range("az_TotalColumn").Column
+     End If
    End If
-   GetHideColumn = Range("az_HideColumn").Column
 
 
 End Function
@@ -163,7 +169,7 @@ Sub HideRows(Region)
    
    Dim TotalCol, VisibleRow As Integer
    Dim Total, Count
-   TotalCol = GetHideColumn()
+   TotalCol = GetTotalColumn()
    Set DataRegion = Range("az_DataRegion" & Region)
    VisibleRow = 0
    DataRows = DataRegion.rows.Count
@@ -218,7 +224,7 @@ Sub SortRows(Region)
    Dim SortRegion As Range
    
    Dim TotalCol As Integer
-   TotalCol = GetHideColumn()
+   TotalCol = GetTotalColumn()
    Set DataRegion = Range("az_DataRegion" & Region)
    Set SortRegion = Range(Cells(DataRegion.Row, TotalCol), Cells(DataRegion.Row + DataRegion.rows.Count - 1, DataRegion.Column + DataRegion.Columns.Count - 1))
    If hasOption(Region, "sort desc") > "" Then
