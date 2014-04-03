@@ -222,11 +222,21 @@ Sub SortRows(Region)
    Dim DataRegion As Range
    Dim DataRows As Integer
    Dim SortRegion As Range
+   Dim FirstCol, LastCol As Integer
    
    Dim TotalCol As Integer
    TotalCol = GetTotalColumn()
    Set DataRegion = Range("az_DataRegion" & Region)
-   Set SortRegion = Range(Cells(DataRegion.Row, TotalCol), Cells(DataRegion.Row + DataRegion.rows.Count - 1, DataRegion.Column + DataRegion.Columns.Count - 1))
+   FirstCol = DataRegion.Column
+   LastCol = FirstCol + DataRegion.Columns.Count - 1
+   If TotalCol < FirstCol Then
+      FirstCol = TotalCol
+   Else
+     If TotalCol > LastCol Then
+        LastCol = TotalCol
+     End If
+   End If
+   Set SortRegion = Range(Cells(DataRegion.Row, FirstCol), Cells(DataRegion.Row + DataRegion.rows.Count - 1, LastCol))
    If hasOption(Region, "sort desc") > "" Then
       SortRegion.Sort Key1:=Cells(DataRegion.Row, TotalCol), Order1:=xlDescending
    Else
