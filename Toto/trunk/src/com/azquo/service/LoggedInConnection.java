@@ -273,9 +273,13 @@ public final class LoggedInConnection {
         return provenance;
     }
 
-    public void setNewProvenance(String provenanceMethod, String provenanceName) {
+    public void setNewProvenance(String provenanceMethod, String provenanceName){
+        setNewProvenance(provenanceMethod, provenanceName,"","","");
+    }
+
+    public void setNewProvenance(String provenanceMethod, String provenanceName, String rowHeadings, String columnHeadings, String context) {
         try {
-            provenance = new Provenance(getAzquoMemoryDB(), user.getName(), new Date(), provenanceMethod, provenanceName, "", "", "");
+            provenance = new Provenance(getAzquoMemoryDB(), user.getName(), new Date(), provenanceMethod, provenanceName, rowHeadings, columnHeadings, context);
         } catch (Exception e) {
             logger.error("can't set a new provenance", e);
         }
