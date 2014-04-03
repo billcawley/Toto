@@ -191,6 +191,13 @@ public final class NameService {
     }
 
 
+    public Name includeNameInSet(final LoggedInConnection loggedInConnection, String nameString, Name set) throws Exception{
+        Name topParent = set.findTopParent();
+        return findOrCreateName(loggedInConnection,nameString , topParent, set);
+
+    }
+
+
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
         if (name.toLowerCase().endsWith(";plural")) {
             return findOrCreateName(loggedInConnection, name.substring(0, name.length() - 7), false);
@@ -898,7 +905,7 @@ public final class NameService {
         }
         if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)) {
             List<Name> nameList = new ArrayList<Name>();
-            String error = interpretName(loggedInConnection, nameList, URLDecoder.decode(nameJsonRequest.name));
+            String error = interpretName(loggedInConnection, nameList, nameJsonRequest.name);
             if (error.length() > 0) {
                 return error;
             }
