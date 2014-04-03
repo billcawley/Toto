@@ -22,7 +22,7 @@ public final class Value extends AzquoMemoryDBEntity {
     private static final Logger logger = Logger.getLogger(Value.class);
 
     private final Provenance provenance;
-    private final String text;
+    private String text;//no longer final.   May be adjusted during imports (if duplicate lines are found will sum...)
     private String deletedInfo;
 
     private Set<Name> names;
@@ -66,6 +66,10 @@ public final class Value extends AzquoMemoryDBEntity {
 
     public String getText() {
         return text;
+    }
+
+    public void setText(String text){
+        this.text = text;
     }
 
     public String getDeletedInfo() {
