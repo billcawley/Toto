@@ -134,7 +134,8 @@ public class ValueController {
             }
              if (context != null) {
                 //System.out.println("passed context : " + context);
-                final StringTokenizer st = new StringTokenizer(context, "\n");
+                 loggedInConnection.getProvenance().setContext(context);
+                 final StringTokenizer st = new StringTokenizer(context, "\n");
                 final List<Name> contextNames = new ArrayList<Name>();
                 while (st.hasMoreTokens()) {
                     final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim());
@@ -164,7 +165,7 @@ public class ValueController {
             }
 
             // this edit bit has a fair bit of what might be considered business logic,wonder if it should be moved to the service layer
-
+            loggedInConnection.getProvenance().setTimeStamp();
             logger.info("edited data " + editedData);
             if (editedData != null && editedData.length() > 0) {
                 logger.info("------------------");
