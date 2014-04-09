@@ -9,13 +9,14 @@ Global azConnectionId
 Global azResponse
 Global azError
 Global azNameChosen
+Global azConnectionIDs As Object
 
 
 Sub Auto_open()
 
     azConnectionId = ""
     azError = ""
-    azVersion = "1.09"
+    azVersion = "1.10"
 End Sub
 
 
@@ -36,14 +37,51 @@ Function logon()
    End If
 End Function
 
+Function RangeInThisSheet(RangeName As String)
+   Dim RName As Name
+   
+   For Each RName In ActiveWorkbook.Names
+     If InStr(RName.Name, RangeName) = 1 And RName.RefersToRange.Worksheet.Name = ActiveSheet.Name Then
+        Set RangeFound = Range(RName)
+        If RangeFound.rows.Count = 1 And RangeFound.Columns.Count = 1 Then
+           RangeInThisSheet = Range(RName).value
+        Else
+           RangeInThisSheet = RName
+        End If
+        Exit Function
+     End If
+   Next
+   RangeInThisSheet = ""
+End Function
+
+
+
+
 Sub CheckConnectionId()
 Dim LogonOk As Boolean
 Dim result As String
-
+Dim Connection As String
 LogonOk = False
+ If RangeInThisSheet("az_DataRegion") > "" Then
+   Connection = ActiveSheet.Name
+ Else
+   Connection = "AzquoMaintenance"
+ End If
+ azConnectionId = ""
+ If azConnectionIDs Is Nothing Then
+    Set azConnectionIDs = New Dictionary
+ End If
+ If azConnectionIDs.Exists(Connection) Then
+     azConnectionId = azConnectionIDs.Item(Connection)
+ End If
  While (azConnectionId = "")
      logon
-     LogonOk = True
+     If azConnectionId > "" Then
+         azConnectionIDs.Add key:=Connection, Item:=azConnectionId
+         LogonOk = True
+     Else
+         End
+     End If
   Wend
   
  While (Not LogonOk)
@@ -55,7 +93,7 @@ LogonOk = False
 End Sub
 
 
-Function FillTheRange(DataIn, RegionName)
+Sub FillTheRange(DataIn, RegionName)
 
      Dim FillData, RowData As Variant
      Dim NoRows, LastRow, FirstInsert, LastInsert, FirstRemove, LastRemove, RowCount, RowNo, ColNo As Integer
@@ -63,12 +101,16 @@ Function FillTheRange(DataIn, RegionName)
      Dim Formula As String
      
      
+     If DataIn = "" Then
+        Exit Sub
+     End If
      If Right(DataIn, 1) = Strings.Chr(10) Then
         DataIn = Left(DataIn, Len(DataIn) - 1)
      End If
      FillData = Split(DataIn, Strings.Chr(10))
      
      NoRows = UBound(FillData) + 1
+     
      Set FillRegion = Range(RegionName)
      LastRow = FillRegion.Row + FillRegion.rows.Count - 1
      If FillRegion.rows.Count < NoRows Then
@@ -129,7 +171,7 @@ Function FillTheRange(DataIn, RegionName)
 
      
      
-End Function
+End Sub
 
 
 
@@ -183,7 +225,7 @@ Function HTTPPost(sUrl As String, sQuery As String) As String
 
     sCmd = "curl --data """ & sQuery & """" & " " & sUrl
     sResult = execShell(sCmd, lExitCode)
-MsgBox (sCmd & " - " & sResult)
+'MsgBox (sCmd & " - " & sResult)
     ' ToDo check lExitCode
 
     HTTPPost = sResult
@@ -203,7 +245,7 @@ strPostData = "connectionid=" & azConnectionId & "&" & strPostData
     sCmd = "curl -F """ & strPostData & """" & " -F ""source=@" & strFileName & """" & " -v https://data.azquo.com:8443/api/" & strURL
  '-F "source=@me.jpg" -F "message=Me" -v
     sResult = execShell(sCmd, lExitCode)
-MsgBox (sCmd & " - " & sResult)
+'MsgBox (sCmd & " - " & sResult)
     ' ToDo check lExitCode
 
     AzquoPostMulti = sResult
