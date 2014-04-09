@@ -87,7 +87,7 @@ public class ProvenanceController {
                 //assumes here that each set is a single element
                 final Set<Name> names = new HashSet<Name>();
                 for (Set<Name> nameFound:nameSet){
-                    if (nameFound.size() !=1){
+                    if (nameFound.size() >1){
                         return "error: " + searchNames + " is not a list of names";
                     }
                     names.addAll(nameFound);
