@@ -105,6 +105,15 @@ Const cl2Exp16 = 65536              '2 to the 16th
 
 End Function
 
+Sub SeeStructure()
+
+  azResponse = AzquoPost("Name", """operation"":""structure"",""name"":""""")
+   If (azResponse > "") Then
+      azSearchNames.UserForm_Initialize
+      azSearchNames.Show
+   End If
+
+End Sub
 
 
 Sub SearchData()
