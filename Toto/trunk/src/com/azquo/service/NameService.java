@@ -28,6 +28,8 @@ public final class NameService {
     public static final String ALL = "all";
     public static final char NAMEMARKER = '!';
     public static final String PEERS = "peers";
+    public static final String COUNTBACK = "count back";
+    public static final String COMPAREWITH = "compare with";
     public static final String STRUCTURE = "structure";
     public static final String NAMELIST = "namelist";
     public static final String CREATE = "create";
@@ -176,6 +178,10 @@ public final class NameService {
 
     public void clearChildren(Name name) throws Exception{
         // DON'T DELETE SET WHILE ITERATING, SO MAKE A COPY FIRST
+        if (name.getParents().size() == 0){
+            //can't clear from topparent
+            return;
+        }
         Set <Name> children = new HashSet<Name>();
         for (Name child:name.getChildren()){
             children.add(child);
@@ -361,13 +367,23 @@ public final class NameService {
     // since we need different from the standard set ordering use a list, I see no real harm in that in these functions
     // note : in default language!
 
+    private int parseInt(final String string, int existing){
+        try{
+            int i = Integer.parseInt(string);
+            return i;
+        }catch(Exception e){
+            return existing;
+        }
+    }
 
-    public List<Name> findChildrenFromToCount(final LoggedInConnection loggedInConnection, final List<Name> names, String fromString, String toString, final String countString) throws Exception {
+    public List<Name> findChildrenFromToCount(final LoggedInConnection loggedInConnection, final List<Name> names, String fromString, String toString, final String countString, final String countbackString, final String compareWithString) throws Exception {
         final ArrayList<Name> toReturn = new ArrayList<Name>();
-        int to = -10000;
+        int to =-10000;
         int from = 1;
-        int count = -1;
-
+        int count = parseInt(countString,-1);
+        int offset = parseInt(countbackString,0);
+        int compareWith = parseInt(compareWithString, 0);
+        int space = 1; //spacing between 'compare with' fields
         //first look for integers and encoded names...
 
         if (fromString.length() > 0) {
@@ -399,18 +415,6 @@ public final class NameService {
             }
 
         }
-
-        if (countString.length() > 0) {
-            try {
-                count = Integer.parseInt(countString);
-            } catch (NumberFormatException nfe) {
-
-                // should I actually throw an exception as count should really just work?
-            }
-
-        }
-
-
         int position = 1;
         boolean inSet = false;
         if (to != -1000 && to < 0) {
@@ -420,13 +424,20 @@ public final class NameService {
 
         int added = 0;
 
-        for (Name name : names) {
-            if (position == from || name.getDefaultDisplayName().equals(fromString)) inSet = true;
+        for (int i = offset; i < names.size() + offset; i++) {
+
+            if (position == from || (i < names.size() && names.get(i).getDefaultDisplayName().equals(fromString))) inSet = true;
             if (inSet) {
-                toReturn.add(name);
+                toReturn.add(names.get(i - offset));
+                if (compareWith != 0){
+                    toReturn.add(names.get(i - offset + compareWith));
+                    for (int j=0; j<space;j++){
+                       toReturn.add(null);
+                    }
+                }
                 added++;
             }
-            if (position == to || name.getDefaultDisplayName().equals(toString) || added == count) inSet = false;
+            if (position == to || (i < names.size() && names.get(i).getDefaultDisplayName().equals(toString)) || added == count) inSet = false;
             position++;
         }
         return toReturn;
@@ -466,26 +477,28 @@ public final class NameService {
         final Set<Name> namesToCheck = new HashSet<Name>();
 
         for (Name name : names) {
-            boolean thisNameHasPeers = false;
-            if (!name.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
-                hasPeers.add(name);
-                thisNameHasPeers = true;
-            } else { // try looking up the chain and find the first with peers
-                final List<Name> parents = name.findAllParents();
-                for (Name parent : parents) {
-                    if (!parent.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
-                        hasPeers.add(parent); // put the parent not the actual name in as it will be used to determine the criteria for this value
-                        thisNameHasPeers = true;
-                        break;
+            if (name != null){
+                boolean thisNameHasPeers = false;
+                if (!name.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
+                    hasPeers.add(name);
+                    thisNameHasPeers = true;
+                } else { // try looking up the chain and find the first with peers
+                    final List<Name> parents = name.findAllParents();
+                    for (Name parent : parents) {
+                        if (!parent.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
+                            hasPeers.add(parent); // put the parent not the actual name in as it will be used to determine the criteria for this value
+                            thisNameHasPeers = true;
+                            break;
+                        }
                     }
                 }
-            }
-            // it wasn't a name with peers hence it's on the list of names to match up to the peer list of the name that DOES have peers :)
-            if (!thisNameHasPeers) {
-                namesToCheck.add(name);
-            } else {
-                // not adding the name with peers to namesToCheck is more efficient and it stops the name with peers from showing up as being superfluous to the peer list if that makes sense
-                validNameList.add(name); // the rest will be added below but we need to add this here as the peer defining name is not on the list of peers
+                // it wasn't a name with peers hence it's on the list of names to match up to the peer list of the name that DOES have peers :)
+                if (!thisNameHasPeers) {
+                    namesToCheck.add(name);
+                } else {
+                    // not adding the name with peers to namesToCheck is more efficient and it stops the name with peers from showing up as being superfluous to the peer list if that makes sense
+                    validNameList.add(name); // the rest will be added below but we need to add this here as the peer defining name is not on the list of peers
+                }
             }
         }
 
@@ -661,11 +674,15 @@ public final class NameService {
 
             } else if (op == '*') {
                 nameStack.get(stackCount - 1).retainAll(nameStack.get(stackCount));
-            } else if (op == '-') {
+                nameStack.remove(stackCount);
+             } else if (op == '-') {
                 nameStack.get(stackCount - 1).removeAll(nameStack.get(stackCount));
+                nameStack.remove(stackCount);
             } else if (op == '+') {
                 nameStack.get(stackCount - 1).addAll(nameStack.get(stackCount));
+                nameStack.remove(stackCount);
             }
+
             pos = nextTerm;
         }
         nameList.addAll(nameStack.get(0));
@@ -708,6 +725,10 @@ public final class NameService {
 
 
     public boolean isAllowed(Name name, List<Set<Name>> names){
+
+        if (name==null) {
+            return true;
+        }
         Name topParent = name.findTopParent();
         for (Set<Name> listNames:names){
             for (Name listName:listNames){
@@ -732,6 +753,8 @@ public final class NameService {
         final String childrenString = getInstruction(setTerm, CHILDREN);
         String toString = getInstruction(setTerm, TO);
         String countString = getInstruction(setTerm, COUNT);
+        final String countbackString = getInstruction(setTerm,COUNTBACK);
+        final String compareWithString = getInstruction(setTerm,COMPAREWITH);
         List<Name> names = new ArrayList<Name>();
 
         String nameString = setTerm;
@@ -742,7 +765,7 @@ public final class NameService {
         if (name == null) {
             return "error:  not understood: " + nameString;
         }
-        if (childrenString == null){
+        if (childrenString == null && fromString == null && toString==null && countString==null){
              names.add(name);
          } else {
             // FIRST - get the set of names given the level
@@ -757,7 +780,7 @@ public final class NameService {
 
             //THIRD  trim that down to the subset defined by from, to, count
             if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
-                names = findChildrenFromToCount(loggedInConnection, names, fromString, toString, countString);
+                names = findChildrenFromToCount(loggedInConnection, names, fromString, toString, countString, countbackString, compareWithString);
             }
          }
         if (loggedInConnection.getReadPermissions() != null){
