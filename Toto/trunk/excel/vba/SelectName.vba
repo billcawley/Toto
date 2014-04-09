@@ -18,15 +18,21 @@ Attribute VB_Exposed = False
 
 
 
-Sub SelectName_Initialize()
+
+Sub SelectName_Initialize(CallSet)
    Dim lib As JSONLib
    Dim NameList, nName As Object
+   Dim Shown As String
    
    NameChoice.Clear
    Set lib = New JSONLib
    Set NameList = lib.parse(azResponse)
    For Each nName In NameList.Item("names")
-      NameChoice.AddItem (nName.Item("name"))
+      Shown = nName.Item("name")
+      If (Shown = CallSet) Then
+         Shown = "Every " & CallSet
+      End If
+      NameChoice.AddItem (Shown)
    Next
       
    
