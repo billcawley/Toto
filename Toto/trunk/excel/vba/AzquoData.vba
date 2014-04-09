@@ -73,7 +73,7 @@ Sub LoadData()
   
   
   For Each RName In ActiveWorkbook.Names
-     If Left(RName.Name, 13) = "az_DataRegion" Then
+     If Left(RName.Name, 13) = "az_DataRegion" And RName.RefersToRange.Worksheet.Name = ActiveSheet.Name Then
         'Set updatedCell = Cells(Range(RName.Name).Row - 1, Range("az_HideColumn").Column)
         'don't update if updated within the last ten minutes
         'If DateDiff("n", updatedCell, Now()) > 10 Then
@@ -138,17 +138,17 @@ Sub LoadDataRegion(Region As String)
 End Sub
 
 Function GetTotalColumn()
-
+  Dim TotCol As String
   
-   If rangeExists("az_hideColumn") Then
-     GetTotalColumn = Range("az_HideColumn").Column
-   Else
-     If Not rangeExists("az_TotalColumn") Then
-       MsgBox ("To sort rows, you need a column with a cell range named 'az_TotalColumn' in it")
+   TotCol = RangeInThisSheet("az_HideColumn")
+   If TotCol = "" Then
+     TotCol = RangeInThisSheet("az_TotalColumn")
+   End If
+   If TotCol = "" Then
+       MsgBox ("To sort rows, you need a column with a cell range with name starting 'az_TotalColumn' and at least two cells in it")
        End
-     Else
-       GetTotalColumn = Range("az_TotalColumn").Column
-     End If
+  Else
+       GetTotalColumn = Range(TotCol).Column
    End If
 
 
@@ -227,7 +227,7 @@ Sub SortRows(Region)
    Dim TotalCol As Integer
    TotalCol = GetTotalColumn()
    Set DataRegion = Range("az_DataRegion" & Region)
-   FirstCol = DataRegion.Column
+   FirstCol = Range("az_DisplayRowHeadings" & Region).Column
    LastCol = FirstCol + DataRegion.Columns.Count - 1
    If TotalCol < FirstCol Then
       FirstCol = TotalCol
@@ -263,13 +263,14 @@ End Sub
 
 Sub TrimRowHeadings(Region)
    Dim RowHeadings As Range
-   Dim RowNo, ColNo, VisibleRow As Integer
+   Dim RowNo, ColNo, Cols, VisibleRow As Integer
    
    If Not rangeExists("az_DisplayRowHeadings" & Region) Then
       Exit Sub
    End If
+   Cols = Range("az_RowHeadings" & Region).Columns.Count
    Set RowHeadings = Range("az_DisplayRowHeadings" & Region)
-   For ColNo = RowHeadings.Column To RowHeadings.Column + RowHeadings.Columns.Count - 1
+   For ColNo = RowHeadings.Column To RowHeadings.Column + Cols - 1
       VisibleRow = RowHeadings.Row - 1
       For RowNo = RowHeadings.Row To RowHeadings.Row + RowHeadings.rows.Count - 1
          If rows(RowNo).EntireRow.Hidden = False Then
@@ -373,11 +374,13 @@ Function FillData(Region)
      If filtered > "" Then
        'need to get the row headings filtered
        azHeadings = AzquoPost("Value", "rowheadings=&region=" & Region & filtered)
-       Call FillTheRange(azHeadings, "az_DisplayRowHeadings")
+       Call FillTheRange(azHeadings, "az_DisplayRowHeadings" & Region)
      End If
      ' copy the formulae in the data region to another sheet, so as to copy them back after the data region has been filled
      Call FillTheRange(azResponse, "az_DataRegion" & Region)
      FillData = ""
+     Application.CutCopyMode = False
+
      Cells(1, 1).Select
 
 End Function
@@ -392,6 +395,7 @@ Function RangeText(RangeName)
      Dim azRange As Range
      Dim RowNo, ColNo As Integer
      Dim azTopLeft As Range
+     Dim CellText As String
      
      Set azRange = Range(RangeName)
      RangeText = ""
@@ -405,7 +409,11 @@ Function RangeText(RangeName)
            If (ColNo > 0) Then
               RangeText = RangeText & Chr(9)
            End If
-           RangeText = RangeText & azTopLeft.Offset(RowNo, ColNo).value
+           CellText = azTopLeft.Offset(RowNo, ColNo).value
+           If InStr(CellText, "Every") = 1 Then
+             CellText = Mid(CellText, 6, 1000)
+           End If
+           RangeText = RangeText & CellText
         Next
      Next
      RangeText = URLEncode(RangeText)
@@ -418,7 +426,7 @@ Sub SaveData()
   
   
   For Each RName In ActiveWorkbook.Names
-     If Left(RName.Name, 13) = "az_DataRegion" Then
+     If Left(RName.Name, 13) = "az_DataRegion" And RName.RefersToRange.Worksheet.Name = ActiveSheet.Name Then
         'Set updatedCell = Cells(Range(RName.Name).Row - 1, Range("az_HideColumn").Column)
         'don't update if updated within the last ten minutes
         'If DateDiff("n", updatedCell, Now()) > 10 Then
@@ -525,7 +533,7 @@ Sub ClearData()
   'zapName ("copyregion")
   
   For Each RName In ActiveWorkbook.Names
-     If Left(RName.Name, 13) = "az_DataRegion" Then
+     If Left(RName.Name, 13) = "az_DataRegion" And RName.RefersToRange.Worksheet.Name = ActiveSheet.Name Then
              Region = Mid(RName.Name, 14, 1000)
              ClearDataRegion (Region)
      End If
@@ -624,13 +632,20 @@ Sub SetChartData(Region)
   Dim ChartName As String
   Dim ThisChart As Chart
   Dim Plotby As XlRowCol
+  Dim RightCol As Integer
   
   ChartName = hasOption(Region, "Chart")
   If ChartName > "" Then
     Set ColHeadings = Range("az_DisplayColumnHeadings" & Region)
     Set DataRegion = Range("az_DataRegion" & Region)
     RegionLeft = "$" & Chr(63 + DataRegion.Column)
-    RegionRight = "$" & Chr(63 + DataRegion.Column + DataRegion.Columns.Count)
+    RightCol = DataRegion.Column + DataRegion.Columns.Count
+    RegionRight = "$"
+    If RightCol > 26 Then
+      RegionRight = RegionRight & "A"
+      RightCol = RightCol - 26
+    End If
+    RegionRight = RegionRight + Chr(63 + RightCol)
     topLine = "$" & ColHeadings.Row
     DataTop = "$" & DataRegion.Row
     DataBottom = "$" & (DataRegion.Row + DataRegion.rows.Count - 1)
@@ -746,11 +761,15 @@ Function getProvenanceForValue(Col, Row, Region)
 
 Sub SelectItem(ChoiceRange, TargetRange)
   Dim NameChoice As String
-  NameChoice = Replace(Range(ChoiceRange), """", "\""")
+  Dim Clauses
   
+  NameChoice = Replace(Range(ChoiceRange), """", "\""")
+  Clauses = Split(NameChoice, ";")
   azResponse = AzquoPost("Name", """operation"":""namelist"",""name"":""" & URLEncode(NameChoice) & """")
-  SelectName.SelectName_Initialize
+ 
+  SelectName.SelectName_Initialize (Clauses(0))
    SelectName.Show
+  
   Range(TargetRange) = azNameChosen
 End Sub
 
