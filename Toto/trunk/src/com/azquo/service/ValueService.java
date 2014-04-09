@@ -409,8 +409,9 @@ public final class ValueService {
                 //don't show repeating names in the headings - leave blank.
                 //if ((x == 0 || !lastxNames.get(y).equals(xNames.get(y))) && (y == 0 || !xNames.get(y - 1).equals(xNames.get(y)))) {
                 lastName = xNames.get(y);
-                sb.append(lastName.getAttribute(language));
-                //}
+                if (lastName != null){
+                    sb.append(lastName.getAttribute(language));
+                }
             }
             if (rowHeadingSupplements != null){
                 for (Name structureName:rowHeadingSupplements){
@@ -882,13 +883,13 @@ seaports;children   container;children
 
         Map<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>();
         for (Name peerCell : columnName) {
-            if (peerCell.getPeers().size() > 0) {
+            if (peerCell != null && peerCell.getPeers().size() > 0) {
                 peers = peerCell.getPeers();
             }
         }
         if (peers.size() == 0) {
             for (Name peerCell : rowName) {
-                if (peerCell.getPeers().size() > 0) {
+                if (peerCell != null && peerCell.getPeers().size() > 0) {
                     peers = peerCell.getPeers();
                 }
             }
