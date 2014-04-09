@@ -6,9 +6,12 @@ import com.azquo.adminentities.UploadRecord;
 import com.azquo.memorydb.Name;
 import com.csvreader.CsvReader;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.xmlbeans.impl.xb.xsdschema.ImportDocument;
 import org.springframework.beans.factory.annotation.Autowired;
 //import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -33,27 +36,46 @@ public final class ImportService {
     @Autowired
     private UploadRecordDAO uploadRecordDAO;
 
+    public final String IDENTIFIER = "key";
+    public final String CHILDOF = "child of ";
+    public final String PARENTOF = "parent of ";
+    public final String STRUCTURE = "structure ";
+    public final String ATTRIBUTE = "attribute ";
+    public final String PLURAL = "plural ";
+    public final String PEERS = "peers";
+
+
     class ImportHeading{
-        String heading;
+         String heading;
         Name name;
         Name structureName;
         String parentOf;
-        int relatedColumn;
+        String childOfString;
+        int identityColumn;
+        int childColumn;
+        int structureColumn;
         Name childOf;
         String attribute;
         Set<Integer> peerColumns;
         String plural;
+        Name topParent;
+        boolean identifier;
 
         public ImportHeading(){
             heading = null;
             name = null;
             structureName = null;
             parentOf = null;
-            relatedColumn = -1;
+            childOfString = null;
+            identityColumn = -1;
+            childColumn = -1;
+            structureColumn = -1;
             childOf = null;
             attribute = null;
             peerColumns = new HashSet<Integer>();
             plural = null;
+            topParent = null;
+            identifier = false;
 
 
         }
@@ -137,30 +159,27 @@ public final class ImportService {
     }
 
     private String readClause(String keyName, String phrase){
-        if (phrase.length() > keyName.length() && phrase.startsWith(keyName)){
+        if (phrase.length() >= keyName.length() && phrase.startsWith(keyName)){
             return phrase.substring(keyName.length()).trim();
         }
         return null;
     }
 
     private String interpretClause(LoggedInConnection loggedInConnection, ImportHeading heading, String clause)throws Exception{
-         if (readClause("language ", clause)!= null){
-            loggedInConnection.setLanguage(readClause("language ", clause));
+         if (readClause(IDENTIFIER, clause)!= null){
+            heading.identifier = true;
         }
-        if (readClause("parent of ", clause) != null){
-            heading.parentOf = readClause("parent of", clause);
+        if (readClause(PARENTOF, clause) != null){
+            heading.parentOf = readClause(PARENTOF, clause);
             if (heading.parentOf == null){
                 return "error: " + clause + " not understood";
             }
         }
-        if (readClause("child of ",clause) != null){
-            heading.childOf = nameService.findOrCreateName(loggedInConnection,readClause("child of", clause));
-            if (heading.childOf == null){
-                return "error: " + clause + " not understood";
-            }
-        }
-       if (readClause("attribute ", clause)!=null){
-           heading.attribute = readClause("attribute ", clause);
+        if (readClause(CHILDOF,clause) != null){
+            heading.childOfString =readClause(CHILDOF, clause);
+         }
+       if (readClause(ATTRIBUTE, clause)!=null){
+           heading.attribute = readClause(ATTRIBUTE, clause);
 
            if (heading.attribute.length() == 0){
                return "error: " + clause + " not understood";
@@ -168,26 +187,26 @@ public final class ImportService {
            if (heading.attribute.equalsIgnoreCase("name")){
                heading.attribute = Name.DEFAULT_DISPLAY_NAME;
            }
-           heading.name = nameService.findOrCreateName(loggedInConnection, heading.heading);
+           //heading.name = nameService.findOrCreateName(loggedInConnection, heading.heading);
        }
-       if (readClause("structure ", clause) !=null){
-            heading.structureName = nameService.findOrCreateName(loggedInConnection,readClause("structure ", clause));
+       if (readClause(STRUCTURE, clause) !=null){
+            heading.structureName = nameService.findOrCreateName(loggedInConnection,readClause(STRUCTURE, clause));
             if (heading.structureName == null){
                 return "error: " + clause + " not understood";
             }
 
        }
-        if (readClause("plural ", clause) !=null){
-            heading.plural= readClause("plural ", clause);
+        if (readClause(PLURAL, clause) !=null){
+            heading.plural= readClause(PLURAL, clause);
             if (heading.plural.length() == 0){
                 return "error: " + clause + " not understood";
             }
 
         }
-        if (readClause("peers ",clause)!=null){
+        if (readClause(PEERS,clause)!=null){
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
             heading.name = nameService.findOrCreateName(loggedInConnection, heading.heading);
-            String peersString = readClause("peers ", clause);
+            String peersString = readClause(PEERS, clause);
             if (peersString.startsWith("{")) { // array, typically when creating in the first place, the service call will insert after any existing
                 if (peersString.contains("}")) {
                     peersString = peersString.substring(1, peersString.indexOf("}"));
@@ -229,7 +248,7 @@ public final class ImportService {
         StringTokenizer clauses = new StringTokenizer(headingString, ";");
 
         heading.heading = clauses.nextToken();
-
+        heading.name = nameService.findByName(loggedInConnection,heading.heading);//at this stage, look for a name, but don't create it unless necessary
         while (clauses.hasMoreTokens()){
             String error = interpretClause(loggedInConnection, heading, clauses.nextToken());
             if (error.length() > 0){
@@ -240,13 +259,39 @@ public final class ImportService {
     }
 
     private int findColumn(String nameToFind, List<ImportHeading> headings){
+        //look for a column with identifier, or, if not found, a column that does not specify an attribute
         for (int col = 0; col < headings.size();col++){
-            if (headings.get(col).heading.equalsIgnoreCase(nameToFind) && headings.get(col).attribute == null){
+            ImportHeading heading = headings.get(col);
+            if (heading.heading != null && heading.heading.equalsIgnoreCase(nameToFind) && heading.identifier){
+                return col;
+            }
+        }
+        for (int col = 0; col < headings.size();col++){
+            ImportHeading heading = headings.get(col);
+            if (heading.heading != null && heading.heading.equalsIgnoreCase(nameToFind) && heading.attribute == null){
                 return col;
             }
         }
         return -1;
     }
+
+    public void findTopParent(LoggedInConnection loggedInConnection, ImportHeading heading, List<ImportHeading> headings) throws Exception{
+        //need to work out the topparent for use when classifing names found in this column
+        ImportHeading child = heading;
+        if (heading.identityColumn >=0){
+            child = headings.get(heading.identityColumn);
+        }
+        while (child.parentOf != null){
+            child.childColumn = findColumn(child.parentOf, headings);
+            child = headings.get(child.childColumn);
+        }
+        if (child.name == null){
+            child.name = nameService.findOrCreateName(loggedInConnection,child.heading);
+        }
+        heading.topParent = child.name;
+
+    }
+
 
     public String valuesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
         long track = System.currentTimeMillis();
@@ -289,21 +334,43 @@ public final class ImportService {
                     }
                 }
                 if (importHeading.attribute != null){
-                    importHeading.relatedColumn = findColumn(importHeading.heading, headings);
-                    if (importHeading.relatedColumn < 0){
+                    importHeading.identityColumn = findColumn(importHeading.heading, headings);
+                    if (importHeading.identityColumn < 0){
                         return "error: cannot find column " + importHeading.name.getDefaultDisplayName() + " for attribute " + importHeading.attribute;
                     }
+                    //treat the default name in the row, if it exists, as an attribute
+                    for (ImportHeading heading2:headings){
+                        if (heading2.heading != null && heading2.heading.equals(importHeading.heading) && heading2.attribute == null){
+                            heading2.attribute = Name.DEFAULT_DISPLAY_NAME;
+                            heading2.identityColumn = importHeading.identityColumn;
+                            break;
+                        }
+
+                    }
+                    findTopParent(loggedInConnection, importHeading, headings);
                 }
                 if (importHeading.parentOf != null){
-                    importHeading.relatedColumn = findColumn(importHeading.parentOf, headings);
-                    if (importHeading.relatedColumn < 0){
+                    importHeading.childColumn = findColumn(importHeading.parentOf, headings);
+                          if (importHeading.childColumn < 0){
                         return "error: cannot find column " + importHeading.parentOf + " for child of " + importHeading.name.getDefaultDisplayName();
                     }
-                }
+                    findTopParent(loggedInConnection, importHeading, headings);
+                  }
                 if (importHeading.structureName != null){
-                    importHeading.relatedColumn = findColumn(importHeading.structureName.getDefaultDisplayName(), headings);
-                    if (importHeading.relatedColumn < 0){
+                    importHeading.structureColumn = findColumn(importHeading.structureName.getDefaultDisplayName(), headings);
+                    if (importHeading.structureColumn < 0){
                         return "error: cannot find column " + importHeading.structureName.getDefaultDisplayName() + " for structure " + importHeading.name.getDefaultDisplayName();
+                    }
+                }
+                if (importHeading.childOfString != null){
+                    if (importHeading.topParent == null){
+                        importHeading.childOf = nameService.findOrCreateName(loggedInConnection, importHeading.childOfString);
+                    }else{
+                        if (!importHeading.topParent.getDefaultDisplayName().equals(importHeading.childOfString)){
+                           importHeading.childOf = nameService.includeNameInSet(loggedInConnection, importHeading.childOfString, importHeading.topParent);
+                        }else{
+                            importHeading.childOf = importHeading.topParent;
+                        }
                     }
                 }
             }
@@ -365,43 +432,61 @@ public final class ImportService {
                     }
                 }
                 if (heading.structureName != null){
-                    String itemName = csvReader.get(heading.relatedColumn);
+                    String itemName = csvReader.get(heading.structureColumn);
                     String category = csvReader.get(column);
                     if (category.trim().length() > 0){
-                        String plural = headings.get(heading.relatedColumn).plural;
+                        if (heading.name == null){
+                            heading.name = nameService.findOrCreateName(loggedInConnection,heading.heading);
+                        }
+                        ImportHeading structureName = headings.get(heading.structureColumn);
+                        if (structureName.name == null){
+                            structureName.name = nameService.findOrCreateName(loggedInConnection,structureName.heading);
+                        }
+                        String plural = structureName.plural;
                         if (plural == null){
-                            plural = headings.get(heading.relatedColumn).name.getDefaultDisplayName() + "s";
+                            plural = structureName.heading + "s";
                         }
                         //create the name and structure
-                        Name byCategory = nameService.includeNameInSet(loggedInConnection,plural + " by " + heading.name.getDefaultDisplayName(), headings.get(heading.relatedColumn).name);
+                        Name byCategory = nameService.includeNameInSet(loggedInConnection,plural + " by " + heading.name.getDefaultDisplayName(), structureName.name);
                         Name thisSet = nameService.includeNameInSet(loggedInConnection,category + " " + plural,byCategory);
                         nameService.includeNameInSet(loggedInConnection, itemName,thisSet);
                           //and put the category in its set.
                         nameService.includeNameInSet(loggedInConnection, category, heading.name);
                     }
                 }
-                if (heading.attribute !=null){
-                    String itemName = csvReader.get(heading.relatedColumn);
-                    String attVal = csvReader.get(column);
-                    Name name = nameService.includeNameInSet(loggedInConnection,itemName,heading.name);
-                    name.setAttributeWillBePersisted(heading.attribute, attVal);
+                if (heading.identityColumn >= 0){
+                    ImportHeading identity = headings.get(heading.identityColumn);
+                     String itemName = csvReader.get(heading.identityColumn);
+                    if (itemName.length() > 0){
+                        String origLanguage = loggedInConnection.getLanguage();
+                        if (identity.identityColumn >=0){
+                            loggedInConnection.setLanguage(identity.attribute);
+                        }
 
+                        Name name = nameService.includeNameInSet(loggedInConnection,itemName,heading.topParent);
+                        loggedInConnection.setLanguage(origLanguage);
+                        name.setAttributeWillBePersisted(heading.attribute, csvReader.get(column));
+                    }
                 }
                 if (heading.parentOf !=null){
-                    String childName = csvReader.get(heading.relatedColumn);
+                    String childName = csvReader.get(heading.childColumn);
                     String parentName = csvReader.get(column);
-                    Name parentSet = null;
-                    if (heading.childOf != null){
-                         parentSet = nameService.includeNameInSet(loggedInConnection, parentName,heading.childOf);
-                    }else{
-                        parentSet = nameService.findOrCreateName(loggedInConnection,parentName);
+                    if (parentName.length() > 0){
+                        Name parentSet = null;
+                        if (heading.childOf != null){
+                            parentSet = nameService.includeNameInSet(loggedInConnection, parentName,heading.childOf);
+                        }else{
+                            parentSet = nameService.findOrCreateName(loggedInConnection,parentName);
+                        }
+                        Name name = nameService.includeNameInSet(loggedInConnection,childName,parentSet);
                     }
-                    Name name = nameService.includeNameInSet(loggedInConnection,childName,parentSet);
                 }
 
                 if (heading.childOf !=null){
                     String childName = csvReader.get(column);
-                    Name name = nameService.includeNameInSet(loggedInConnection,childName,heading.childOf);
+                    if (childName.length() > 0){
+                       Name name = nameService.includeNameInSet(loggedInConnection,childName,heading.childOf);
+                    }
                 }
             }
         }
@@ -515,6 +600,28 @@ public final class ImportService {
         return "";
     }
 
+    public String findExistingDate(LoggedInConnection loggedInConnection, String element) throws Exception{
+        //PROBABLY NOT NEEDED - HAD A PROBLEM WITH EXCEL IMPORTS, MAYBE SOLVED
+        Name name = nameService.findByName(loggedInConnection,element);
+        if (name == null){
+            String alternateDate = element;
+            //may need to add zeros
+            int firstSlash = element.indexOf("/");
+            int secondSlash = element.indexOf("/", firstSlash + 1);
+            if (secondSlash - firstSlash < 2){
+                alternateDate = element.substring(0,firstSlash + 1) + "0" + element.substring(firstSlash + 1);
+            }
+            if (firstSlash < 2){
+                alternateDate = "0" + alternateDate;
+            }
+            name = nameService.findByName(loggedInConnection,alternateDate);
+            if (name != null){
+                element = alternateDate;
+            }
+        }
+        return element;
+
+    }
 
     public String setsImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
 
@@ -533,7 +640,14 @@ public final class ImportService {
             Name set = importHeading.name;
             nameService.clearChildren(set);
             while (st.hasMoreTokens()) {
-                nameService.includeNameInSet(loggedInConnection, st.nextToken(), set);
+               String element = st.nextToken();
+               if (element.length() > 0 ){
+                   //the Excel formatter seems to get some dates wrong.  check for this
+                   //if (element.indexOf("/") > 0 && element.length() < 10){
+                  //     element = findExistingDate(loggedInConnection, element);
+                   //   }
+                   nameService.includeNameInSet(loggedInConnection, element, set);
+               }
             }
         }
         return "";
@@ -711,33 +825,82 @@ public final class ImportService {
 
         try {
             POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(fileName));
-            Workbook wb = new HSSFWorkbook(fs);
-             int sheetNo = 0;
-
-            while (sheetNo < wb.getNumberOfSheets()) {
-                Sheet sheet = wb.getSheetAt(sheetNo);
-                String error = readSheet(loggedInConnection, fileName, sheet, create);
-                if (error.startsWith("error:")){
-                    return error;
-                }
-                sheetNo++;
-            }
-        } catch (Exception ioe) {
-            ioe.printStackTrace();
-        }
-        return "";
-    }
-
-
-    private String readxlsx (final LoggedInConnection loggedInConnection, final String fileName, boolean create) {
-
-
-        try {
-            Workbook wb = new XSSFWorkbook(new FileInputStream(fileName));
+            HSSFWorkbook wb = new HSSFWorkbook(fs);
+            HSSFRow row;
+            HSSFCell cell;
+            HSSFDataFormatter formatter = new HSSFDataFormatter();
             int sheetNo = 0;
 
             while (sheetNo < wb.getNumberOfSheets()) {
-                Sheet sheet = wb.getSheetAt(sheetNo);
+                HSSFSheet sheet = wb.getSheetAt(sheetNo);
+                String fileType = sheet.getSheetName();
+
+                int rows; // No of rows
+                rows = sheet.getPhysicalNumberOfRows();
+
+                int cols = 0; // No of columns
+                int tmp;
+
+                // This trick ensures that we get the data properly even if it doesn't start from first few rows
+                for (int i = 0; i < 10 || i < rows; i++) {
+                    row = sheet.getRow(i);
+                    if (row != null) {
+                        tmp = sheet.getRow(i).getPhysicalNumberOfCells();
+                        if (tmp > cols) cols = tmp;
+                    }
+                }
+                File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4), "." + fileType);
+                String tempName = temp.getPath();
+
+                temp.deleteOnExit();
+                FileWriter fw = new FileWriter(tempName);
+                BufferedWriter bw = new BufferedWriter(fw);
+
+                for (int r = 0; r < rows; r++) {
+                    row = sheet.getRow(r);
+                    if (row != null) {
+                        //System.out.println("Excel row " + r);
+                        int colCount = 0;
+                        for (int c = 0; c < cols; c++) {
+                            // this was cast to a short, why??
+                            cell = row.getCell(c);
+                            if (colCount++ > 0) bw.write('\t');
+                            if (cell != null) {
+
+                                String cellFormat = formatter.formatCellValue(cell);
+                                //Integers seem to have '.0' appended, so this is a manual chop.  It might cause problems if someone wanted to import a version '1.0'
+                                if (NumberUtils.isNumber(cellFormat) && cellFormat.endsWith(".0")) {
+                                    cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
+                                }
+
+                                bw.write(cellFormat.replace("\"","''"));// remove double quotes and replace with two single quotes
+                            }
+                        }
+                        bw.write('\n');
+                    }
+                }
+                bw.close();
+                InputStream uploadFile = new FileInputStream(tempName);
+                String error = readPreparedFile(loggedInConnection, uploadFile, fileType, create);
+                if (error.startsWith("error:")){
+                    return error;
+                }
+                sheetNo++;
+            }
+        } catch (Exception ioe) {
+            ioe.printStackTrace();
+        }
+        return "";
+    }
+private String readxlsx (final LoggedInConnection loggedInConnection, final String fileName, boolean create) {
+
+
+        try {
+            XSSFWorkbook wb = new XSSFWorkbook(new FileInputStream(fileName));
+            int sheetNo = 0;
+
+            while (sheetNo < wb.getNumberOfSheets()) {
+                XSSFSheet sheet = wb.getSheetAt(sheetNo);
                 String error = readSheet(loggedInConnection, fileName, sheet, create);
                 if (error.startsWith("error:")){
                     return error;
@@ -751,10 +914,11 @@ public final class ImportService {
     }
 
 
-    private String readSheet(final LoggedInConnection loggedInConnection, final String fileName, final Sheet sheet, boolean create) throws Exception{
-        Row row;
-        Cell cell;
-        DataFormatter formatter = new DataFormatter();
+
+    private String readSheet(final LoggedInConnection loggedInConnection, final String fileName, final XSSFSheet sheet, boolean create) throws Exception{
+        XSSFRow row;
+        XSSFCell cell;
+        HSSFDataFormatter formatter = new HSSFDataFormatter();
 
         String fileType = sheet.getSheetName();
 
