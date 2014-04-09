@@ -15,15 +15,12 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 
 
+
 Private Sub LogonSubmit_Click()
     azConnectionId = "aborted"
     
     Dim params As String
     'test code....
-    If UserName = "" And Password = "" Then
-       UserName = "demo@user.com"
-       Password = "password"
-    End If
      params = "useremail=" & UserName & "&password=" & Password & "&database=" & Database
     azConnectionId = AzquoPost1("Login", params)
     If (azConnectionId = "false") Then
@@ -37,18 +34,13 @@ Private Sub LogonSubmit_Click()
 End Sub
 
 Private Sub UserForm_Activate()
-   If rangeExists("az_Logon") Then
-      UserName = Range("az_Logon")
-   End If
-   If rangeExists("az_Password") Then
-      Password = Range("az_Password")
-   End If
-   If rangeExists("az_Database") Then
-      Database = Range("az_Database")
-   End If
+   UserName = RangeInThisSheet("az_Logon")
+   Password = RangeInThisSheet("az_Password")
+   Database = RangeInThisSheet("az_Database")
    If UserName > "" And Password > "" And Database > "" Then
         params = "useremail=" & UserName & "&password=" & Password & "&database=" & Database
         azConnectionId = AzquoPost1("Login", params)
+        
         If azConnectionId > "" Then
           LogonForm.Hide
         End If
