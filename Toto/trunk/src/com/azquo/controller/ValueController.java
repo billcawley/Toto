@@ -147,11 +147,7 @@ public class ValueController {
                     // I guess this is a trick to check the context is correct? Not sure what sense this makes
                     // ok this is to create the RP calc if needed (if there is a calculation attribute)
                     // this will be moved to on saving of a name,
-                    result = nameService.calcReversePolish(loggedInConnection, contextName);
-                    if (result.startsWith("error:")){
-                        return result;
-                    }
-                }
+                 }
                 if (loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0 && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0) {
                     result =  valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount);
                     logger.info("time for data in region " + region + " is " + (System.currentTimeMillis() - startTime));
