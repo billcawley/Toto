@@ -159,7 +159,7 @@ public final class ImportService {
     }
 
     private String readClause(String keyName, String phrase){
-        if (phrase.length() >= keyName.length() && phrase.startsWith(keyName)){
+        if (phrase.length() >= keyName.length() && phrase.toLowerCase().startsWith(keyName)){
             return phrase.substring(keyName.length()).trim();
         }
         return null;
@@ -268,7 +268,7 @@ public final class ImportService {
         }
         for (int col = 0; col < headings.size();col++){
             ImportHeading heading = headings.get(col);
-            if (heading.heading != null && heading.heading.equalsIgnoreCase(nameToFind) && heading.attribute == null){
+            if (heading.heading != null && heading.heading.equalsIgnoreCase(nameToFind) && (heading.attribute == null || heading.attribute.equals(Name.DEFAULT_DISPLAY_NAME))){
                 return col;
             }
         }
@@ -295,10 +295,11 @@ public final class ImportService {
 
     public String valuesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
         long track = System.currentTimeMillis();
-        String strCreate = "";
+       String strCreate = "";
         if (create) strCreate = ";create";
 
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
+        csvReader.setUseTextQualifier(false);
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
         // what we're doing here is going through the headers, First thing to do is to set up the peers if defined for a header
@@ -333,7 +334,7 @@ public final class ImportService {
                         importHeading.peerColumns.add(peerColumn);
                     }
                 }
-                if (importHeading.attribute != null){
+                if (importHeading.attribute != null && !importHeading.attribute.equals(Name.DEFAULT_DISPLAY_NAME)){
                     importHeading.identityColumn = findColumn(importHeading.heading, headings);
                     if (importHeading.identityColumn < 0){
                         return "error: cannot find column " + importHeading.name.getDefaultDisplayName() + " for attribute " + importHeading.attribute;
@@ -392,6 +393,7 @@ public final class ImportService {
                     final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
                     namesForValue.add(heading.name); // the one at the top of this column, the name with peers.
                     for (int peerColumn : heading.peerColumns) { // go looking for the peers
+                        ImportHeading peerHeading = headings.get(peerColumn);
                         final String peerVal = csvReader.get(peerColumn);
                         if (peerVal == null || peerVal.length() == 0) { // the file specified
                             hasRequiredPeers = false;
@@ -404,7 +406,13 @@ public final class ImportService {
                             // check the local cache first
                             Name nameFound = namesFound.get(nameToFind);
                             if (nameFound == null) {
+                                String origLanguage = loggedInConnection.getLanguage();
+                                if (peerHeading.attribute  != null){
+                                    loggedInConnection.setLanguage(peerHeading.attribute);
+                                }
+
                                 nameFound = nameService.includeNameInSet(loggedInConnection, peerVal, headings.get(peerColumn).name);
+                                loggedInConnection.setLanguage(origLanguage);
                                 if (nameFound != null) {
                                     namesFound.put(nameToFind, nameFound);
                                 }
@@ -462,10 +470,16 @@ public final class ImportService {
                         if (identity.identityColumn >=0){
                             loggedInConnection.setLanguage(identity.attribute);
                         }
+                        if (heading.topParent == null){
+                            //may have escaped the checks...
+                            findTopParent(loggedInConnection,heading,headings);
+                        }
 
                         Name name = nameService.includeNameInSet(loggedInConnection,itemName,heading.topParent);
                         loggedInConnection.setLanguage(origLanguage);
                         name.setAttributeWillBePersisted(heading.attribute, csvReader.get(column));
+                        nameService.calcReversePolish(loggedInConnection,name);
+
                     }
                 }
                 if (heading.parentOf !=null){
@@ -503,7 +517,7 @@ public final class ImportService {
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
        //TODO WE NEED TO BE ABLE TO SET TextQualifier TO false
 
-        csvReader.setUseTextQualifier(true);
+        csvReader.setUseTextQualifier(false);
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
         String importLanguage = loggedInConnection.getLanguage();
@@ -873,7 +887,7 @@ public final class ImportService {
                                     cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
                                 }
 
-                                bw.write(cellFormat.replace("\"","''"));// remove double quotes and replace with two single quotes
+                                bw.write(cellFormat);
                             }
                         }
                         bw.write('\n');
