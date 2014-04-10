@@ -331,11 +331,10 @@ public final class AzquoMemoryDB {
                     nameByAttributeMap.put(attributeName.toLowerCase().trim(), new HashMap<String, Set<Name>>());
                 }
                 final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
-                final String attributeValue = attributes.get(attributeName).toLowerCase().trim();
-                if (attributeValue.contains("\"")) {
-                    String error = attributeValue + " has quotes";
-                    throw new Exception(error);
-                }
+                String attributeValue = attributes.get(attributeName).toLowerCase().trim();
+                if (attributeValue.contains("\"") && !attributeName.equals("CALCULATION")) {
+                     attributeValue = attributeValue.replace("\"","''");
+                  }
                 if (namesForThisAttribute.get(attributeValue) != null) {
                     namesForThisAttribute.get(attributeValue).add(newName);
                 } else {
