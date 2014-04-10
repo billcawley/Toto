@@ -16,7 +16,7 @@ Sub Auto_open()
 
     azConnectionId = ""
     azError = ""
-    azVersion = "1.10"
+    azVersion = "1.11"
 End Sub
 
 
@@ -38,10 +38,11 @@ Function logon()
 End Function
 
 Function RangeInThisSheet(RangeName As String)
-   Dim RName As Name
-   
+   Dim RName, Current As Name
    For Each RName In ActiveWorkbook.Names
-     If InStr(RName.Name, RangeName) = 1 And RName.RefersToRange.Worksheet.Name = ActiveSheet.Name Then
+    Set Current = RName
+    On Error GoTo zapcurrent
+    If InStr(RName.Name, RangeName) = 1 And RName.RefersToRange.Worksheet.Name = ActiveSheet.Name Then
         Set RangeFound = Range(RName)
         If RangeFound.rows.Count = 1 And RangeFound.Columns.Count = 1 Then
            RangeInThisSheet = Range(RName).value
@@ -52,6 +53,9 @@ Function RangeInThisSheet(RangeName As String)
      End If
    Next
    RangeInThisSheet = ""
+   Exit Function
+zapcurrent:
+  Current.Delete
 End Function
 
 
