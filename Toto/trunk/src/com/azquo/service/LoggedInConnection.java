@@ -41,6 +41,8 @@ public final class LoggedInConnection {
     private final Map<String, List<List<Name>>> rowHeadings;
     private final Map<String, List<List<Name>>> columnHeadings;
     private final Map<String, List<Name>> rowHeadingSupplements;//this will allow product classes to be included in the returned row headings, not used to define data.
+    private final Map<String, List<Integer>> rowOrder;//for when top or bottom values need to be returned.
+    private final Map<String, Integer> restrictCount; //as above
     private final Map<String, List<Name>> contexts;
     private final Map<String, String> lockMaps;
     private final Map<String, String> sentDataMaps;
@@ -63,6 +65,8 @@ public final class LoggedInConnection {
         rowHeadings = new HashMap<String, List<List<Name>>>();
         columnHeadings = new HashMap<String, List<List<Name>>>();
         rowHeadingSupplements = new HashMap<String, List<Name>>();
+        rowOrder = new HashMap<String, List<Integer>>();
+        restrictCount = new HashMap<String, Integer>();
         contexts = new HashMap<String, List<Name>>();
         lockMaps = new HashMap<String, String>();
         sentDataMaps = new HashMap<String, String>();
@@ -174,6 +178,41 @@ public final class LoggedInConnection {
         } else {
             this.rowHeadingSupplements.put(region, rowHeadingSupplements);
         }
+
+    }
+
+    public List<Integer> getRowOrder(final String region) {
+        if (region == null || region.isEmpty()) {
+            return rowOrder.get(defaultRegion);
+        } else {
+            return rowOrder.get(region);
+        }
+    }
+
+      public void setRowOrder(final String region, final List<Integer> rowOrder){
+          if (region == null || region.isEmpty()) {
+              this.rowOrder.put(defaultRegion, rowOrder);
+          } else {
+              this.rowOrder.put(region, rowOrder);
+          }
+
+      }
+
+    public Integer getRestrictCount(final String region) {
+        if (region == null || region.isEmpty()) {
+            return restrictCount.get(defaultRegion);
+        } else {
+            return restrictCount.get(region);
+        }
+    }
+
+    public void setRestrictCount(final String region, final int restrictCount){
+        if (region == null || region.isEmpty()) {
+            this.restrictCount.put(defaultRegion, restrictCount);
+        } else {
+            this.restrictCount.put(region, restrictCount);
+        }
+
     }
 
 
