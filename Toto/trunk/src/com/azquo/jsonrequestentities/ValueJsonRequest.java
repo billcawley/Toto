@@ -19,7 +19,8 @@ public class ValueJsonRequest {
          public String jsonfunction;
          public String user;
          public String password;
-         public String filtercount;
+         public String filtercount;//batch count of lines. If entire batch is empty it will be ignored   RowHeadings only
+         public String restrictcount; //show the top n rows by value (or bottom -n rows if n is negative)  RowHeadings only
          public String spreadsheetname;
          public String database;
 
