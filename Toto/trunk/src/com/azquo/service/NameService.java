@@ -574,13 +574,16 @@ public final class NameService {
             }
         }
         if (iPos >= 0) {
-            int commandStart = instructions.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length();
-            if (instructions.indexOf(";", commandStart) != -1) {
-                toReturn = instructions.substring(commandStart, instructions.indexOf(";", commandStart)).trim();
-            } else {
-                toReturn = instructions.substring(commandStart).trim();
+            int commandStart = instructions.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length() +1;
+            Pattern p = Pattern.compile("[^a-zA-Z\\-0-9!]");
+
+            Matcher m = p.matcher(instructions.substring(commandStart));
+            int commandEnd = instructions.length();
+            if (m.find()){
+                commandEnd = commandStart + m.start();
             }
-            if (toReturn.startsWith("\"")) {
+            toReturn = instructions.substring(commandStart, commandEnd).trim();
+             if (toReturn.startsWith("\"")) {
                 toReturn = toReturn.substring(1, toReturn.length() - 1); // trim quotes
             }
             if (toReturn.length() > 0 && toReturn.charAt(0) == '=') {
