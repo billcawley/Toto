@@ -57,6 +57,7 @@ public class ValueController {
             , @RequestParam(value = "user", required = false)  String user
             , @RequestParam(value = "password", required = false) String password
             , @RequestParam(value = "filtercount", required = false) String filterString
+            , @RequestParam(value = "restrictcount", required = false) String restrictString
             , @RequestParam(value = "spreadsheetName", required = false) String spreadsheetName
             , @RequestParam(value = "json", required = false) String json
             , @RequestParam(value = "database", required = false) String database) throws Exception {
@@ -92,6 +93,7 @@ public class ValueController {
             if (valueJsonRequest.password != null) password = valueJsonRequest.password;
             if (valueJsonRequest.filtercount != null) filterString = valueJsonRequest.filtercount;
             if (valueJsonRequest.spreadsheetname != null) spreadsheetName = valueJsonRequest.spreadsheetname;
+            if (valueJsonRequest.restrictcount !=null)  restrictString = valueJsonRequest.restrictcount;
             if (valueJsonRequest.database != null) database = valueJsonRequest.database;
         }
 
@@ -123,7 +125,11 @@ public class ValueController {
              if (filterString != null){
                  filterCount = Integer.parseInt(filterString);
              }
-              if (rowheadings != null && (rowheadings.length() > 0 || filterCount !=0)) {
+             int restrictCount = 0;
+             if (restrictString !=null){
+                 restrictCount = Integer.parseInt(restrictString);
+             }
+              if (rowheadings != null && (rowheadings.length() > 0 || filterCount !=0 || restrictCount!=0)) {
                 result =  valueService.getRowHeadings(loggedInConnection, region, rowheadings, filterCount);
                  logger.info("time for row headings in region " + region + " is " + (System.currentTimeMillis() - startTime) + " on database " + loggedInConnection.getCurrentDBName() + " in language " + loggedInConnection.getLanguage());
               }
@@ -149,7 +155,7 @@ public class ValueController {
                     // this will be moved to on saving of a name,
                  }
                 if (loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0 && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0) {
-                    result =  valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount);
+                    result =  valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, restrictCount);
                     logger.info("time for data in region " + region + " is " + (System.currentTimeMillis() - startTime));
                  } else {
                     result = "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
@@ -187,9 +193,10 @@ public class ValueController {
                     final List<List<Set<Name>>> dataNamesMap = loggedInConnection.getDataNamesMap(region);
                     // TODO : deal with mismatched column and row counts
                     int numberOfValuesModified = 0;
+                    List<Integer>sortedRows = loggedInConnection.getRowOrder(region);
                     while (lockMapReader.readRecord()) {
                         int columnCounter = 0;
-                        final List<List<Value>> rowValues = dataValuesMap.get(rowCounter);
+                        final List<List<Value>> rowValues = dataValuesMap.get(sortedRows.get(rowCounter));
                         final List<Set<Name>> rowNames = dataNamesMap.get(rowCounter);
                         originalReader.readRecord();
                         editedReader.readRecord();
