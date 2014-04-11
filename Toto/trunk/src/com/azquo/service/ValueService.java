@@ -410,7 +410,11 @@ public final class ValueService {
                 //if ((x == 0 || !lastxNames.get(y).equals(xNames.get(y))) && (y == 0 || !xNames.get(y - 1).equals(xNames.get(y)))) {
                 lastName = xNames.get(y);
                 if (lastName != null){
-                    sb.append(lastName.getAttribute(language));
+                    String nameInLanguage =lastName.getAttribute(language);
+                    if (nameInLanguage==null) {
+                        nameInLanguage = lastName.getDefaultDisplayName();
+                    }
+                    sb.append(nameInLanguage);
                 }
             }
             if (rowHeadingSupplements != null){
@@ -667,6 +671,9 @@ seaports;children   container;children
 
      Rowheadingslists outside is actual rows, one in is columns,final one is for the cell
                   */
+
+
+
     private boolean blankRows(LoggedInConnection loggedInConnection, String region, int rowInt, int count){
 
         final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
@@ -684,6 +691,56 @@ seaports;children   container;children
             }
         }
         return true;
+    }
+
+    private static Map sortByComparator(Map unsortMap) {
+
+        List list = new LinkedList(unsortMap.entrySet());
+
+        // sort list based on comparator
+        Collections.sort(list, new Comparator() {
+            public int compare(Object o1, Object o2) {
+                return ((Comparable) ((Map.Entry) (o1)).getValue())
+                        .compareTo(((Map.Entry) (o2)).getValue());
+            }
+        });
+
+        // put sorted list into map again
+        //LinkedHashMap make sure order in which keys were inserted
+        Map sortedMap = new LinkedHashMap();
+        for (Iterator it = list.iterator(); it.hasNext();) {
+            Map.Entry entry = (Map.Entry) it.next();
+            sortedMap.put(entry.getKey(), entry.getValue());
+        }
+        return sortedMap;
+    }
+
+    public List<Integer> sortRows(int restrictCount, Map<Integer, Double> rowTotals){
+
+        List<Integer>sortedRows = new ArrayList<Integer>();
+        if (restrictCount != 0){
+            List list = new LinkedList(rowTotals.entrySet());
+
+            // sort list based on comparator
+            Collections.sort(list, new Comparator() {
+                public int compare(Object o1, Object o2) {
+                    return ((Comparable) ((Map.Entry) (o1)).getValue())
+                            .compareTo(((Map.Entry) (o2)).getValue());
+                }
+            });
+
+            for (Iterator it = list.iterator(); it.hasNext();) {
+                Map.Entry entry = (Map.Entry) it.next();
+                sortedRows.add((Integer)entry.getKey());
+            }
+
+        }else{
+            for (int i = 0;i < rowTotals.size(); i++){
+                sortedRows.add(i);
+            }
+        }
+        return sortedRows;
+
     }
 
 
@@ -705,6 +762,16 @@ seaports;children   container;children
                     }
                 }
                 rowInt += filterCount;
+            }
+            //note that the sort order has already been set.... there cannot be both a restrict count and a filter count
+            return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
+        }else if (loggedInConnection.getRestrictCount(region)!=null && loggedInConnection.getRestrictCount(region)!= 0){
+            int restrictCount = loggedInConnection.getRestrictCount(region);
+            List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
+            List<List<Name>> rowHeadingsWithData = new ArrayList<List<Name>>();
+            List<List<Name>> allRowHeadings = loggedInConnection.getRowHeadings(region);
+            for (int rowInt = 0;rowInt < restrictCount;rowInt++){
+                rowHeadingsWithData.add(allRowHeadings.get(sortedRows.get(rowInt)));
             }
             return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
         }else{
@@ -906,36 +973,94 @@ seaports;children   container;children
         }
     }
 
-    public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount) throws Exception {
-        loggedInConnection.setContext(region, contextNames); // needed for provenance
-        long track = System.currentTimeMillis();
-        final StringBuilder sb = new StringBuilder();
-        final StringBuilder lockMapsb = new StringBuilder();
 
-        final List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
-        loggedInConnection.setDataValueMap(region, dataValuesMap);
-        List<List<Set<Name>>> dataNamesMap = new ArrayList<List<Set<Name>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of names for each cell
+    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, List<List<Boolean>> lockArray, int filterCount, int restrictCount, Map<Integer,Double>rowTotals){
+
         int rowInt = 0;
         int blockRowCount = 0;
         int outputMarker = 0;
-        for (List<Name> rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
+        boolean firstRow = true;
+        if (restrictCount==0) {
+            restrictCount = rowTotals.size();
+        }
+        final StringBuilder sb = new StringBuilder();
+        final StringBuilder lockMapsb = new StringBuilder();
+        List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
+        for (int rowNo =0;rowNo < restrictCount;rowNo++){
+
+            List<String> rowValuesShown = shownValueArray.get(sortedRows.get(rowNo));
+            List<Boolean> locks = lockArray.get(sortedRows.get(rowNo));
             if (blockRowCount == 0){
                 outputMarker = sb.length();// in case we need to truncate it.
             }
-            ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(loggedInConnection.getColumnHeadings(region).size());
+            if (!firstRow){
+                lockMapsb.append("\n");
+                sb.append("\n");
+            }
+            boolean newRow = true;
+            Iterator it = locks.iterator();
+            for (String colValue:rowValuesShown){
+                boolean locked = (Boolean) it.next();
+                if (!newRow){
+                    lockMapsb.append("\t");
+                    sb.append("\t");
+                }
+                sb.append(colValue);
+                if (locked){
+                    lockMapsb.append("LOCKED");
+                }else{
+                    lockMapsb.append("");
+                }
+                newRow = false;
+
+            }
+
+            rowInt++;
+            firstRow = false;
+            if (++blockRowCount==filterCount){
+                if (blankRows(loggedInConnection, region, rowInt - filterCount, filterCount)){
+                    sb.delete(outputMarker, sb.length());
+                }
+                blockRowCount = 0;
+            }
+        }
+        loggedInConnection.setLockMap(region, lockMapsb.toString());
+        loggedInConnection.setSentDataMap(region, sb.toString());
+
+        return sb;
+    }
+
+    public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictCount) throws Exception {
+        loggedInConnection.setContext(region, contextNames); // needed for provenance
+        long track = System.currentTimeMillis();
+
+        final List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
+        loggedInConnection.setDataValueMap(region, dataValuesMap);
+        final Map<Integer,Double> rowTotals = new HashMap<Integer,Double>();
+        List<List<Set<Name>>> dataNamesMap = new ArrayList<List<Set<Name>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of names for each cell
+         List<List<String>> shownValueArray = new ArrayList<List<String>>();
+        List<List<Boolean>> lockArray = new ArrayList<List<Boolean>>();
+        int rowNo = 0;
+        for (List<Name> rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
+              ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(loggedInConnection.getColumnHeadings(region).size());
             ArrayList<Set<Name>> thisRowNames = new ArrayList<Set<Name>>(loggedInConnection.getColumnHeadings(region).size());
+            List<String> shownValues = new ArrayList<String>();
+            List<Boolean> lockedCells = new ArrayList<Boolean>();
             dataValuesMap.add(thisRowValues);
             dataNamesMap.add(thisRowNames);
-            int count = 1;
-             for (List<Name> columnName : loggedInConnection.getColumnHeadings(region)) {
+            shownValueArray.add(shownValues);
+            lockArray.add(lockedCells);
+
+            double rowTotal = 0.0;
+            for (List<Name> columnName : loggedInConnection.getColumnHeadings(region)) {
                 final Set<Name> namesForThisCell = new HashSet<Name>();
                 createCellNameList(namesForThisCell, rowName, columnName, contextNames);
                 // edd putting in peer check stuff here, should I not???
                  MutableBoolean locked = new MutableBoolean(false); // we can pass a mutable boolean in and have the function set it
                  Map<String, String> result = nameService.isAValidNameSet(namesForThisCell, new HashSet<Name>());
                 if (result.get(NameService.ERROR) != null) { // not a valid peer set? Show a blank locked cell
-                    sb.append("");
-                    locked.setValue(true);
+                    shownValues.add("");
+                    lockedCells.add(true);
                 }else{
 
                     List<Value> values = new ArrayList<Value>();
@@ -944,45 +1069,36 @@ seaports;children   container;children
                     // TODO - peer additive check. If using peers and not additive, don't include children
                     double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values); // true = pay attention to names additive flag
                     //if there's only one value, treat it as text (it may be text, or may include £,$,%)
+                    if (restrictCount < 0){
+                        rowTotal += cellValue;
+                    }else{
+                        rowTotal -= cellValue;
+                    }
                     if (values.size() == 1){
                         for (Value value:values){
-                            sb.append(value.getText());
+                            shownValues.add(value.getText());
                         }
                     }else{
-                        sb.append(cellValue);
+                        shownValues.add(cellValue + "");
+                    }
+                    if (locked.isTrue()){
+                        lockedCells.add(true);
+                    }else{
+                        lockedCells.add(false);
                     }
                 }
-                if (locked.isTrue()) {
-                    lockMapsb.append("LOCKED");
-                }
-                // if it's 1 then saving is easy, overwrite the old value. If not then since it's valid peer set I guess we add the new value?
-                if (count < loggedInConnection.getColumnHeadings(region).size()) {
-                    sb.append("\t");
-                    lockMapsb.append("\t");
-                } else {
-                    sb.append("\n");
-                    lockMapsb.append("\n");
-                }
-               count++;
             }
-            rowInt++;
-            if (++blockRowCount==filterCount){
-                if (blankRows(loggedInConnection, region, rowInt - filterCount, filterCount)){
-                    sb.delete(outputMarker, sb.length());
-                }
-                blockRowCount = 0;
-            }
+            rowTotals.put(rowNo++, rowTotal);
 
         }
-
-
+        loggedInConnection.setRowOrder(region,sortRows(restrictCount, rowTotals));
+        loggedInConnection.setRestrictCount(region,restrictCount);
+        final StringBuilder sb =  formatDataRegion(loggedInConnection,region, shownValueArray, lockArray, filterCount, restrictCount, rowTotals);
 
         printSumStats();
         printFindForNamesIncludeChildrenStats();
-        logger.info("time to execute : " + (System.currentTimeMillis() - track));
-        loggedInConnection.setLockMap(region, lockMapsb.toString());
-        loggedInConnection.setSentDataMap(region, sb.toString());
         loggedInConnection.setDataNamesMap(region, dataNamesMap);
+        logger.info("time to execute : " + (System.currentTimeMillis() - track));
         return sb.toString();
     }
 }
