@@ -78,9 +78,9 @@ Sub LoadData()
         'don't update if updated within the last ten minutes
         'If DateDiff("n", updatedCell, Now()) > 10 Then
              Region = Mid(RName.Name, 14, 1000)
-             LoadDataRegion (Region)
+               LoadDataRegion (Region)
              'updatedCell = Now()
-         ' End If
+          'End If
      End If
   Next
 
@@ -121,9 +121,9 @@ Sub LoadDataRegion(Region As String)
        If hasOption(Region, "sort") > "" Then
          SortRows (Region)
        End If
-       If hasOption(Region, "maxrows") > "" Then
-         MaxRows (Region)
-       End If
+       'If hasOption(Region, "maxrows") > "" Then
+       '  MaxRows (Region)
+       'End If
       TrimRowHeadings (Region)
        TrimColumnHeadings (Region)
        SetChartData (Region)
@@ -327,7 +327,7 @@ Function FillRowHeadings(Region)
      'CheckRange ("az_DisplayRowHeadings" & Region)
      
      azResponse = AzquoPost("Value", "rowheadings=" & RangeText("az_RowHeadings" & Region) & "&region=" & Region)
-     If Not rangeExists("az_DisplayRowHeadings" & Region) Or hasOption(Region, "hiderows") > "" Then
+     If Not rangeExists("az_DisplayRowHeadings" & Region) Or hasOption(Region, "hiderows") > "" Or hasOption(Region, "maxrows") > "" Then
         Exit Function
      End If
      'CopyDataRegionToClipboard (Region)
@@ -369,6 +369,9 @@ Function FillData(Region)
      filtered = hasOption(Region, "hiderows")
      If filtered > "" Then
         filtered = "&filtercount=" & filtered
+     End If
+     If hasOption(Region, "maxrows") > "" Then
+       filtered = "&restrictcount=" & hasOption(Region, "maxrows")
      End If
      azResponse = AzquoPost("Value", "context=" & Context & "&region=" & Region & filtered)
      If filtered > "" Then
