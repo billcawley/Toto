@@ -51,7 +51,7 @@ public final class NameService {
         StringBuilder withoutCommasInQuotes = new StringBuilder();
         char[] charactersString = s.toCharArray();
         for (char c : charactersString) {
-            if (c == '\"') {
+            if (c == Name.QUOTE) {
                 inQuotes = !inQuotes;
             }
             if (c == ',') {
@@ -132,7 +132,7 @@ public final class NameService {
                 return null;
             }
         }
-        return loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, name.replace("\"", ""), parent);
+        return loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, name.replace(Name.QUOTE, ' ').trim(), parent);
 
     }
 
@@ -268,7 +268,7 @@ public final class NameService {
         the 'parent' will usually be the top of the tree, and the new parent will be a name created as a branch.  */
 
 
-        String storeName = name.replace("\"", "");
+        String storeName = name.replace(Name.QUOTE, ' ').trim();
 
         final Name existing = loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, storeName, parent);
         if (existing != null) {
@@ -575,17 +575,22 @@ public final class NameService {
         }
         if (iPos >= 0) {
             int commandStart = instructions.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length() +1;
-            Pattern p = Pattern.compile("[^a-zA-Z\\-0-9!]");
-
-            Matcher m = p.matcher(instructions.substring(commandStart));
-            int commandEnd = instructions.length();
-            if (m.find()){
-                commandEnd = commandStart + m.start();
+            Pattern p = Pattern.compile("[^a-z A-Z\\-0-9!]");
+             int commandEnd;
+            if (commandStart < instructions.length()){
+                Matcher m = p.matcher(instructions.substring(commandStart));
+                commandEnd = instructions.length();
+                if (m.find()){
+                    commandEnd = commandStart + m.start();
+                }
+            }else{
+                commandStart = 0;
+                commandEnd = commandStart;
             }
             toReturn = instructions.substring(commandStart, commandEnd).trim();
-             if (toReturn.startsWith("\"")) {
-                toReturn = toReturn.substring(1, toReturn.length() - 1); // trim quotes
-            }
+           //  if (toReturn.startsWith(Name.QUOTE)) {
+          //      toReturn = toReturn.substring(1, toReturn.length() - 1); // trim quotes
+           // }
             if (toReturn.length() > 0 && toReturn.charAt(0) == '=') {
                 toReturn = toReturn.substring(1).trim();
             }
@@ -595,9 +600,9 @@ public final class NameService {
 
 
     private String stripQuotes(LoggedInConnection loggedInConnection, String instructions) throws Exception {
-        int lastQuoteEnd = instructions.lastIndexOf("\"");
+        int lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
         while (lastQuoteEnd >= 0) {
-            int lastQuoteStart = instructions.lastIndexOf("\"", lastQuoteEnd - 1);
+            int lastQuoteStart = instructions.lastIndexOf(Name.QUOTE, lastQuoteEnd - 1);
             //find the parents - if they exist
             String nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd + 1);
             if (lastQuoteEnd < instructions.length() - 1 && instructions.charAt(lastQuoteEnd + 1) == ',') {
@@ -608,10 +613,10 @@ public final class NameService {
                     nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd);
                 }
             }
-            Name quoteName = findByName(loggedInConnection, nameToFind);
+            Name quoteName = findByName(loggedInConnection, nameToFind.substring(1,nameToFind.length()-1));
             if (quoteName != null) {
                 instructions = instructions.substring(0, lastQuoteStart) + NAMEMARKER + quoteName.getId() + " " + instructions.substring(lastQuoteEnd + 1);
-                lastQuoteEnd = instructions.lastIndexOf("\"");
+                lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
             } else {
                 lastQuoteEnd = -1;
             }
