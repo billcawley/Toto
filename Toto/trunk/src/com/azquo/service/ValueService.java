@@ -305,7 +305,7 @@ public final class ValueService {
         if (!hasCalc) {
             locked.setValue(false);
             for (Name oneName: names){
-                    if (oneName.getChildren().size() > 0 || !nameService.isAllowed(oneName, loggedInConnection.getWritePermissions())) locked.setValue(true);
+                    if ((oneName.getPeers().size()==0 && oneName.getChildren().size() > 0) || !nameService.isAllowed(oneName, loggedInConnection.getWritePermissions())) locked.setValue(true);
             }
             return findSumForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound);
         } else {
