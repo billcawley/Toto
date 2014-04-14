@@ -182,7 +182,7 @@ function az_getdata(e){
     }
     document.getElementById("az_search_set").innerHTML = az_chosen;
     document.getElementById("az_Select").style.display = "none";
-    azquojson("Value","searchbynames=" + escape("\"" + az_chosen + "\"") + "&jsonfunction=azquojsonfeed");
+    azquojson("Value","searchbynames=" + escape("`" + az_chosen + "`") + "&jsonfunction=azquojsonfeed");
 
 
 }
