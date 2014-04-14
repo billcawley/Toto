@@ -332,8 +332,8 @@ public final class AzquoMemoryDB {
                 }
                 final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
                 String attributeValue = attributes.get(attributeName).toLowerCase().trim();
-                if (attributeValue.contains("\"") && !attributeName.equals("CALCULATION")) {
-                     attributeValue = attributeValue.replace("\"","''");
+                if (attributeValue.indexOf(Name.QUOTE) >= 0 && !attributeName.equals("CALCULATION")) {
+                     attributeValue = attributeValue.replace(Name.QUOTE,'\'');
                   }
                 if (namesForThisAttribute.get(attributeValue) != null) {
                     namesForThisAttribute.get(attributeValue).add(newName);
