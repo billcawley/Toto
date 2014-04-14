@@ -70,9 +70,11 @@ Sub LoadData()
   Dim RName As Name
   Dim Region As String
   Dim updatedCell As Range
-  
-  
+  Dim RCurrent As Name
+  CleanNames
   For Each RName In ActiveWorkbook.Names
+     Set RCurrent = RName
+     On Error GoTo zapName
      If Left(RName.Name, 13) = "az_DataRegion" And RName.RefersToRange.Worksheet.Name = ActiveSheet.Name Then
         'Set updatedCell = Cells(Range(RName.Name).Row - 1, Range("az_HideColumn").Column)
         'don't update if updated within the last ten minutes
@@ -83,7 +85,9 @@ Sub LoadData()
           'End If
      End If
   Next
-
+  Exit Sub
+zapName:
+  RCurrent.Delete
 End Sub
 
 Sub ShowProgress(Region, Activity)
