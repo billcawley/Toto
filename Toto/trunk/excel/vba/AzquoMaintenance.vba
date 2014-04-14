@@ -109,12 +109,21 @@ Sub SeeStructure()
 
   azResponse = AzquoPost("Name", """operation"":""structure"",""name"":""""")
    If (azResponse > "") Then
-      azSearchNames.UserForm_Initialize
+      'azSearchNames.UserForm_Initialize
       azSearchNames.Show
    End If
 
 End Sub
 
+Sub CleanNames()
+Dim RName As Name
+
+For Each RName In ActiveWorkbook.Names
+   If Left(RName.RefersTo, 6) = "=#REF!" Then
+     RName.Delete
+   End If
+Next
+End Sub
 
 Sub SearchData()
   'CheckConnectionId
@@ -122,7 +131,7 @@ Sub SearchData()
   azSearchName = Range("az_SearchName")
    azResponse = AzquoPost("Name", """operation"":""structure"",""name"":""" & azSearchName & """")
    If (azResponse > "") Then
-      azSearchNames.UserForm_Initialize
+      'azSearchNames.UserForm_Initialize
       azSearchNames.Show
    End If
    Range("az_SearchName") = azNameChosen
