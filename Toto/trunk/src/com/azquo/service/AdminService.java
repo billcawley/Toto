@@ -342,12 +342,12 @@ public class AdminService {
         //this routine transfers the name and all the parent paths to that name.  It then copies the name attributes  and peers (but not the attributes of the parents)
         Name name2 = null;
         if (name.getParents().size() == 0){
-            name2 = nameService.findOrCreateName(lic2, prefix + "\"" + name.getDefaultDisplayName() + "\"");
+            name2 = nameService.findOrCreateName(lic2, prefix + Name.QUOTE + name.getDefaultDisplayName() + Name.QUOTE);
             return name2;
         }
         for (Name parent:name.getParents()){
             //will the the same name2 on each iteration, but the
-            name2 = findToName(lic2, parent, prefix + "\"" + name.getDefaultDisplayName() + "\",");
+            name2 = findToName(lic2, parent, prefix + Name.QUOTE + name.getDefaultDisplayName() + Name.QUOTE + ",");
 
         }
         //never uses the return here...
@@ -382,7 +382,7 @@ public class AdminService {
             }
             LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
             for (Name peer:name.getPeers().keySet()){
-                Name peer2 = nameService.findOrCreateName(lic2,"\""  + peer.getDefaultDisplayName() + "\"");
+                Name peer2 = nameService.findOrCreateName(lic2,Name.QUOTE  + peer.getDefaultDisplayName() + Name.QUOTE);
                 peers2.put(peer2, name.getPeers().get(peer));
 
             }
