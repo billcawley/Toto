@@ -216,7 +216,7 @@ public final class ImportService {
                     final LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>(st.countTokens());
                     while (st.hasMoreTokens()) {
                         String peerName = st.nextToken().trim();
-                        if (peerName.startsWith("\"")) {
+                        if (peerName.indexOf(Name.QUOTE) == 0) {
                             peerName = peerName.substring(1, peerName.length() - 1); // trim escape chars
                         }
                         Name peer = nameService.findOrCreateName(loggedInConnection,peerName);
@@ -402,7 +402,7 @@ public final class ImportService {
                             // lower level names first so the syntax is something like Knightsbridge, London, UK
                             // hence we're passing a multi level name lookup to the name service, whatever is in that column with the header on the end
                             // sometimes quotes are used in the middle of names to indicate inches - e.g. '4" pipe'      - store as '4inch pipe'
-                            final String nameToFind = "\"" + peerVal + "\",\"" + headings.get(peerColumn).name.getDefaultDisplayName() + "\"";
+                            final String nameToFind = Name.QUOTE + peerVal +Name.QUOTE + "," + Name.QUOTE + headings.get(peerColumn).name.getDefaultDisplayName() + Name.QUOTE;
                             // check the local cache first
                             Name nameFound = namesFound.get(nameToFind);
                             if (nameFound == null) {
@@ -517,7 +517,7 @@ public final class ImportService {
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
        //TODO WE NEED TO BE ABLE TO SET TextQualifier TO false
 
-        csvReader.setUseTextQualifier(false);
+        csvReader.setUseTextQualifier(true);
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
         String importLanguage = loggedInConnection.getLanguage();
@@ -974,8 +974,7 @@ private String readxlsx (final LoggedInConnection loggedInConnection, final Stri
                             cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
                         }
 
-                        bw.write(cellFormat.replace("\"","''"));// remove double quotes and replace with two single quotes
-                    }
+                     }
                 }
                 bw.write('\n');
             }
