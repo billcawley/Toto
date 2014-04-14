@@ -27,6 +27,7 @@ import java.util.*;
 public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> {
 
     public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
+    public static final char QUOTE = '`';
 
     // name needs this as it links to itself hence have to load all names THEN parse the json, other objects do not hence it's in here not the memory db entity
     // as mentioned just a cache while the names by id map is being populated
