@@ -6,6 +6,7 @@ Attribute VB_Name = "AzquoCommon"
   Private Declare Function feof Lib "libc.dylib" (ByVal file As Long) As Long
 #End If
 Global azConnectionId
+Global az_Logon, az_Password
 Global azResponse
 Global azError
 Global azNameChosen
