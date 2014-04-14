@@ -16,6 +16,8 @@ Attribute VB_Exposed = False
 
 
 
+
+
 Private Sub LogonSubmit_Click()
     azConnectionId = "aborted"
     
@@ -27,6 +29,8 @@ Private Sub LogonSubmit_Click()
        azConnectionId = ""
     End If
     If (azConnectionId > "") Then
+       az_Logon = UserName
+       az_Password = Password
        LogonForm.Hide
     Else
        MsgBox ("Please try again")
@@ -34,8 +38,8 @@ Private Sub LogonSubmit_Click()
 End Sub
 
 Private Sub UserForm_Activate()
-   UserName = RangeInThisSheet("az_Logon")
-   Password = RangeInThisSheet("az_Password")
+   UserName = az_Logon
+   Password = az_Password
    Database = RangeInThisSheet("az_Database")
    If UserName > "" And Password > "" And Database > "" Then
         params = "useremail=" & UserName & "&password=" & Password & "&database=" & Database
