@@ -115,15 +115,6 @@ Sub SeeStructure()
 
 End Sub
 
-Sub CleanNames()
-Dim RName As Name
-
-For Each RName In ActiveWorkbook.Names
-   If Left(RName.RefersTo, 6) = "=#REF!" Then
-     RName.Delete
-   End If
-Next
-End Sub
 
 Sub SearchData()
   'CheckConnectionId
@@ -137,7 +128,11 @@ Sub SearchData()
    Range("az_SearchName") = azNameChosen
    If azNameChosen > "" Then
       azResponse = AzquoPost("Value", "searchbynames=" & URLEncode(azNameChosen))
+      Application.ScreenUpdating = False
+     
       Call FillTheRange(azResponse, "azSearchData")
+      Application.ScreenUpdating = True
+      
    End If
    
    
@@ -149,7 +144,9 @@ Sub SearchExpression()
    azNameChosen = Range("az_SearchName")
    If azNameChosen > "" Then
       azResponse = AzquoPost("Value", "searchbynames=" & URLEncode(azNameChosen))
+      Application.ScreenUpdating = False
       Call FillTheRange(azResponse, "azSearchData")
+      Application.ScreenUpdating = True
    End If
 End Sub
 
@@ -280,7 +277,7 @@ If Not response = "" Then
   Dim oneline As Object
   Dim Count As Integer
   Dim RowNo, ColNo As Integer
-  
+  Application.ScreenUpdating = False
   RowNo = Range(RangeName).Row
   Count = 1
   While Cells(RowNo + Count, 2) > ""
@@ -288,15 +285,15 @@ If Not response = "" Then
   Wend
   
   If Count > 1 Then
-    rows((RowNo + 1) & ":" & (RowNo + Count - 1)).EntireRow.Delete
+    Rows((RowNo + 1) & ":" & (RowNo + Count - 1)).EntireRow.Delete
   End If
   Count = 0
   Set JSON = lib.parse(response)
   For Each oneline In JSON
      Count = Count + 1
-    rows(RowNo + 1).EntireRow.Copy
-     rows(RowNo + Count).EntireRow.Insert
-     rows(RowNo + Count).EntireRow.PasteSpecial
+    Rows(RowNo + 1).EntireRow.Copy
+     Rows(RowNo + Count).EntireRow.Insert
+     Rows(RowNo + Count).EntireRow.PasteSpecial
      ColNo = 1
      While Cells(RowNo, ColNo) > "" And Cells(RowNo, ColNo) <> "password"
 '       Cells(RowNo + Count, ColNo) = oneline(Cells(RowNo, ColNo).value)
@@ -309,6 +306,8 @@ If Not response = "" Then
   
   Cells(RowNo + 1, 1).Select
   End If
+  Application.ScreenUpdating = True
+  
 End Sub
 
 Sub ActivateDatabases()
@@ -360,7 +359,7 @@ End Sub
 
 Sub NewDatabase()
   
-   azResponse = AzquoPost("Maintain", "op=newdatabase&database=" & Range("az_NewDatabase"))
+   azConnectionId = AzquoPost("Maintain", "op=newdatabase&database=" & Range("az_NewDatabase"))
    DownloadDatabaseList
 End Sub
 
@@ -480,4 +479,15 @@ End Sub
 
 Sub rtclkDeleteName()
   azSearchNames.cmdRemoveNode_Click
+End Sub
+
+Sub CleanNames()
+Dim RName As Name
+
+For Each RName In ActiveWorkbook.Names
+  
+  If Left(RName.RefersTo, 6) = "=#REF!" Then
+    RName.Delete
+  End If
+Next
 End Sub
