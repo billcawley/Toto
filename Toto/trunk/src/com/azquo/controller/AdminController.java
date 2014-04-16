@@ -1,5 +1,6 @@
 package com.azquo.controller;
 
+import com.azquo.adminentities.OnlineReport;
 import com.azquo.adminentities.Permission;
 import com.azquo.adminentities.User;
 import com.azquo.service.AdminService;
@@ -47,6 +48,7 @@ public class AdminController {
     private static final String SAVEPERMISSIONS = "savepermissions";
     private static final String UPLOADSLIST = "uploadslist";
     private static final String COPYDATABASE = "copydatabase";
+    private static final String SAVEONLINEREPORTS = "saveonlinereports";
 
     // maybe change all this to JSON later?
 
@@ -170,6 +172,17 @@ public class AdminController {
 
             if (op.equalsIgnoreCase(UPLOADSLIST)) {
                 return jacksonMapper.writeValueAsString(adminService.getUploadRecordsForDisplayForBusiness(loggedInConnection));
+            }
+            if (op.equalsIgnoreCase(SAVEONLINEREPORTS)) {
+                logger.info("save online report json " + json);
+                if (json != null && json.length() > 0) {
+                    try {
+                        List<OnlineReport> onlineReportsFromJson = jacksonMapper.readValue(json, new TypeReference<List<OnlineReport>>() {});
+                        return adminService.saveOnlineReportList(loggedInConnection, onlineReportsFromJson);
+                    } catch (Exception e) {
+                        logger.error("problem saving online reports", e);
+                    }
+                }
             }
         }
         return "";
