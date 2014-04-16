@@ -200,10 +200,10 @@ public class ProvenanceController {
 
         String output;
         if (provenance == null) {
-            output = "{provenance:{\"who\":\"no provenance\"}}";
+            output = "{provenance:[{\"who\":\"no provenance\"}]}";
         } else {
             //String user = provenance.getUser();
-            output = "{\"provenance\":{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}}";
+            output = "{\"provenance\":[{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"value\":\"\",\"context\":\"" + provenance.getContext() + "\"}]}";
         }
         if (jsonFunction != null && jsonFunction.length() > 0) {
             return jsonFunction + "(" + output + ")";
