@@ -613,7 +613,7 @@ public final class NameService {
                     nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd);
                 }
             }
-            Name quoteName = findByName(loggedInConnection, nameToFind.substring(1,nameToFind.length()-1));
+            Name quoteName = findByName(loggedInConnection, nameToFind);
             if (quoteName != null) {
                 instructions = instructions.substring(0, lastQuoteStart) + NAMEMARKER + quoteName.getId() + " " + instructions.substring(lastQuoteEnd + 1);
                 lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
@@ -1106,7 +1106,7 @@ public final class NameService {
         } else {
             ArrayList<Name> names = new ArrayList<Name>();
             if (nameSearch.length() > 0) {
-                names = findContainingName(loggedInConnection, nameSearch.replace("\"", ""));
+                names = findContainingName(loggedInConnection, nameSearch.replace("`", ""));
             }
             if (names.size() == 0) {
                 names = (ArrayList<Name>) findTopNames(loggedInConnection);
