@@ -78,9 +78,10 @@ public final class DatabaseDAO extends StandardDAO<Database> {
         return findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID, namedParams, false);
     }
 
-    public Database findForName(final String name) {
+    public Database findForName(final int businessID, final String name) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessID);
         namedParams.addValue(NAME, name);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + NAME + "` = :" + NAME, namedParams);
+        return findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` =:" + BUSINESSID + " and `" + NAME + "` = :" + NAME, namedParams);
     }
 }
