@@ -854,32 +854,44 @@ seaports;children   container;children
     }
 
 
-    public Map<Set<Name>, Double> getSearchValues(final List<Set<Name>>searchNames) throws Exception {
+    public Map<Set<Name>, String> getSearchValues(final List<Set<Name>>searchNames) throws Exception {
         Set<Value> values = findForSearchNamesIncludeChildren(searchNames, false);
-        final Map<Set<Name>, Double> showValues = new HashMap<Set<Name>,Double>();
+        //The names on the values have been moved 'up' the tree to the name that was searched
+        // e.g. if the search was 'England' and the name was 'London' then 'London' has been replaced with 'England'
+        // so there may be duplicates in an unordered search - hence the consolidation below.
+        final Map<Set<Name>, String> showStrings = new HashMap<Set<Name>,String>();
         for (Value value:values){
             Set<Name> sumNames = new HashSet<Name>();
             for (Name name:value.getNames()){
                 sumNames.add(sumName(name, searchNames));
             }
-            Double valFound = 0.0;
-            try {
-                valFound = Double.parseDouble(value.getText());
-            }catch (Exception e){
+            String alreadyThere = showStrings.get(sumNames);
+            if (alreadyThere != null){
+                //handle percentages, but not currency prefixes currently
 
-            }
-            if (showValues.get(sumNames) != null){
-                showValues.put(sumNames, showValues.get(sumNames) + valFound);
+                if (NumberUtils.isNumber(alreadyThere) && NumberUtils.isNumber(value.getText())){
+                    showStrings.put(sumNames,(Double.parseDouble(alreadyThere) + Double.parseDouble(value.getText()))+"");
+                }else if (alreadyThere.endsWith("%") && value.getText().endsWith("%")){
+                    showStrings.put(sumNames, Double.parseDouble(alreadyThere.substring(0,alreadyThere.length() - 1)) + Double.parseDouble(value.getText().substring(0,value.getText().length()-1)) + "%");
+                }else{
+                    showStrings.put(sumNames, alreadyThere + "+" + value.getText());
+                }
             }else{
-                showValues.put(sumNames, valFound);
+                showStrings.put(sumNames,value.getText());
+            }
+            for (Set<Name> nameSet:showStrings.keySet()){
+                String val = showStrings.get(nameSet);
+                if (NumberUtils.isNumber(val) && val.endsWith(".0")){
+                    showStrings.put(nameSet,val.substring(0, val.length() - 2));
+                }
             }
         }
-        return showValues;
+        return showStrings;
     }
 
     public String getExcelDataForNamesSearch(final List<Set<Name>> searchNames) throws Exception {
         final StringBuilder sb = new StringBuilder();
-        Map<Set<Name>, Double> showValues = getSearchValues(searchNames);
+        Map<Set<Name>, String> showValues = getSearchValues(searchNames);
          Set<String> headings = new LinkedHashSet<String>();
         // this may not be optimal, can sort later . . .
         int count = 0;
@@ -903,8 +915,7 @@ seaports;children   container;children
             if (count++ == 2000) {
                 break;
             }
-            double val = showValues.get(valNames);
-            sb.append(val + "");
+            sb.append(showValues.get(valNames));
             String[] names = new String[headings.size()];
             int i = 0;
             for (String heading : headings) {
