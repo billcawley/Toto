@@ -3,24 +3,16 @@ var az_connectionId;
 var az_chosen;
 az_connectionId = "";
 az_chosen = "";
+az_logon = "demo@user.com";
+az_password = "password"
 
-
-function zapParam(params, tozap){
-    var paramPos = params.indexOf("&" + tozap);
-    if (paramPos > 0){
-        var paramEnd = params.indexOf("&",paramPos + 1);
-        if (paramEnd < 0) return params.substring(0,paramPos);
-        return params.substring(0,paramPos) + params.substring(paramEnd);
-    }
-    return params;
-}
 
 
 function azquojson(functionName, params){
     if (functionName == "Name"){
-        params = "json={" + params + ",\"user\":\"demo@user.com\",\"password\":\"password\",\"database\":\"export\",\"jsonFunction\":\"azquojsonfeed\"}";
+        params = "json={" + params + ",\"user\":\"" +  az_logon + "\",\"password\":\"" + az_password + "\",\"database\":\"export\",\"jsonFunction\":\"azquojsonfeed\"}";
     }else{
-        params +="&user=demo@user.com&password=password&database=export";
+        params +="&user=" + az_logon + "&password=" +  az_password + "&database=export";
     }
     var htmlText = "https://data.azquo.com:8443/api/" + functionName + "?" + params;
     var script = document.createElement('script'),
@@ -45,13 +37,13 @@ function azquojsonfeed(obj) {
             var datalabel = "";
             for (j = 1;j < data[i].length; j++){
                 if (data[i][j] > "") {
-                    datalabel += "\"" +  data[i][j] + "\",";
+                    datalabel += "`" +  data[i][j] + "`,";
                 }
             }
             for (j = 0;j < data[i].length; j++){
                 if (j > 0){
                     if (data[i][j] > ""){
-                        datalabel  = "\"" +  data[i][j] + "\"";
+                        datalabel  = "`" +  data[i][j] + "`";
                     }else{
                         datalabel = "";
                     }
@@ -141,13 +133,17 @@ function az_showProvenance(allprovenance){
     document.getElementById("az_provenance").style.display = "block"
 }
 
+function jsonElement(elementName, elementValue){
+    return "\"" + elementName + "\":\"" + elementValue + "\"";
+}
 
 
 function az_inputChanged(){
     document.getElementById("az_Data").style.display = "none";
     var newname = document.getElementById("az_InputName").value
-    azquojson("Name","\"operation\":\"structure\",\"name\":\"\\\"" + escape(newname) + "\\\"\"");
+    azquojson("Name",jsonElement("operation","structure") + "," + jsonElement("name","`" + escape(newname) + "`"));
 }
+
 
 
 function az_click(e){
@@ -188,7 +184,7 @@ function az_getdata(e){
 }
 
 function az_provenance(e, datalabel){
-    document.getElementById("az_provenance_cell").innerHTML = datalabel.replace(new RegExp("%2C","g"),", ").replace(new RegExp("%22","g"),"").replace(new RegExp("%20","g")," ");
+    document.getElementById("az_provenance_cell").innerHTML = datalabel.replace(new RegExp("%2C","g"),", ").replace(new RegExp("%22","g"),"").replace(new RegExp("%20","g")," ").replace(new RegExp ("%60","g"),"");
     var prov = document.getElementById("az_provenance");
     var node;
     if (e) {
