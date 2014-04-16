@@ -46,6 +46,8 @@ public class AdminService {
     private NameService nameService;
     @Autowired
     private ValueService valueService;
+    @Autowired
+    private OnlineReportDAO onlineReportDAO;
 
 
     public String registerBusiness(final String email
@@ -225,7 +227,66 @@ public class AdminService {
         return null;
     }
 
-    // note, this takes users populated from the json, hence the reloading by ID
+
+    public String saveOnlineReportList(final LoggedInConnection loggedInConnection, List<OnlineReport> reportsSent){
+
+        for (OnlineReport reportSent:reportsSent){
+            //when saving a report from an Excel data sheet, the system does not know the ID, so the report can be identified by name
+            //when saving from the admin workbook, the name may be changed, so check for duplicate names.
+            final int EXISTINGREPORT = -1;
+            reportSent.setBusinessId(loggedInConnection.getUser().getBusinessId());
+            if (reportSent.getDatabaseId() == 0){
+                Database d = databaseDao.findForName(loggedInConnection.getUser().getBusinessId(), reportSent.getDatabase());
+                if (d != null){
+                    reportSent.setDatabaseId(d.getId());
+                }else{
+                    return "error: database not recognised " + reportSent.getDatabase();
+                }
+
+            }
+            OnlineReport existingReport = onlineReportDAO.findForDatabaseIdAndName(reportSent.getDatabaseId(), reportSent.getReportName());
+            if (reportSent.getUserStatus() == null){
+                reportSent.setUserStatus("");
+            }
+            if (reportSent.getId() == EXISTINGREPORT){
+                if (existingReport == null){
+                    reportSent.setId(0);
+                }else{
+                    reportSent.setId(existingReport.getId());
+                }
+            }
+            if (existingReport != null && existingReport.getId() != reportSent.getId()){
+                return "error:  there already exists a report named " + reportSent.getReportName() + " in the database " + databaseDao.findById(reportSent.getDatabaseId()).getName();
+
+            }
+
+            if (reportSent.getId() > 0){
+                existingReport = onlineReportDAO.findById(reportSent.getId());
+                if (existingReport != null){
+                    if (reportSent.getReportName().length() == 0){
+                        onlineReportDAO.removeById(reportSent);
+
+                    }else{
+                        existingReport.setDatabaseId(reportSent.getDatabaseId());
+                        existingReport.setReportName(reportSent.getReportName());
+                        if (reportSent.getUserStatus() != null && reportSent.getUserStatus().length() > 0){
+                            existingReport.setUserStatus(reportSent.getUserStatus());
+                        }
+                        if (reportSent.getJson() != null && reportSent.getJson().length() > 0){
+                            existingReport.setJson(reportSent.getJson());
+                        }
+                        onlineReportDAO.store(existingReport);
+                    }
+                }
+                else{
+                    return "error: the report id " + reportSent.getId() + " does not exist";
+                }
+            }else{
+                onlineReportDAO.store(reportSent);
+            }
+        }
+        return "";
+    }
 
     public String setUserListForBusiness(final LoggedInConnection loggedInConnection, List<User> userList) {
         if (loggedInConnection.getUser().isAdministrator()) {
@@ -312,7 +373,7 @@ public class AdminService {
             }
 
 
-            Database d = databaseDao.findForName(permission.getDatabase());
+            Database d = databaseDao.findForName(loggedInConnection.getUser().getBusinessId(), permission.getDatabase());
             if (d == null || d.getBusinessId() != loggedInConnection.getUser().getBusinessId()) {
                 return "error: database name " + permission.getDatabase() + " is invalid";
             }
@@ -365,7 +426,7 @@ public class AdminService {
         //can't use 'nameService.decodeString as this may have multiple values in each list
         String error = nameService.decodeString(loggedInConnection,nameList, namesToTransfer);
         //find the data to transfer
-        Map<Set<Name>, Double> showValues = valueService.getSearchValues(namesToTransfer);
+        Map<Set<Name>, String> showValues = valueService.getSearchValues(namesToTransfer);
         //extract the names from this data
         final Set<Name> namesFound = new HashSet<Name>();
         for (Set<Name> nameValues:showValues.keySet()){
@@ -398,7 +459,7 @@ public class AdminService {
                 names2.add(dictionary.get(name));
 
             }
-            valueService.storeValueWithProvenanceAndNames(lic2,showValues.get(nameValues) + "", names2);
+            valueService.storeValueWithProvenanceAndNames(lic2,showValues.get(nameValues), names2);
         }
         nameService.persist(lic2);
 
