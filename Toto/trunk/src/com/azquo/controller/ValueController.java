@@ -99,10 +99,12 @@ public class ValueController {
 
 
         try {
-
+            if (spreadsheetName == null){
+                spreadsheetName = "unknown";
+            }
             if (connectionId == null) {
                 LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, spreadsheetName, false);
-                if (loggedInConnection == null) {
+                 if (loggedInConnection == null) {
                     return "error:no connection id";
                 }
                 connectionId = loggedInConnection.getConnectionId();
@@ -138,28 +140,12 @@ public class ValueController {
                 result =  valueService.getColumnHeadings(loggedInConnection, region, columnheadings);
                 logger.info("time for column headings in region " + region + " is " + (System.currentTimeMillis() - startTime));
             }
-             if (context != null) {
+            if (context != null) {
                 //System.out.println("passed context : " + context);
-                 loggedInConnection.getProvenance().setContext(context);
-                 final StringTokenizer st = new StringTokenizer(context, "\n");
-                final List<Name> contextNames = new ArrayList<Name>();
-                while (st.hasMoreTokens()) {
-                    final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim());
-                     if (contextName == null) {
-                        result =  "error:I can't find a name for the context : " + context;
-                        return result;
-                    }
-                    contextNames.add(contextName);
-                    // I guess this is a trick to check the context is correct? Not sure what sense this makes
-                    // ok this is to create the RP calc if needed (if there is a calculation attribute)
-                    // this will be moved to on saving of a name,
-                 }
-                if (loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0 && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0) {
-                    result =  valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, restrictCount);
-                    logger.info("time for data in region " + region + " is " + (System.currentTimeMillis() - startTime));
-                 } else {
-                    result = "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
-                }
+                result =  valueService.getDataRegion(loggedInConnection, context, region, filterCount, restrictCount);
+                logger.info("time for data in region " + region + " is " + (System.currentTimeMillis() - startTime));
+            } else {
+                result = "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
             }
 
             if (lockMap != null) {
@@ -167,7 +153,7 @@ public class ValueController {
             }
 
             // this edit bit has a fair bit of what might be considered business logic,wonder if it should be moved to the service layer
-            loggedInConnection.getProvenance().setTimeStamp();
+                loggedInConnection.getProvenance().setTimeStamp();
             logger.info("edited data " + editedData);
             if (editedData != null && editedData.length() > 0) {
                 logger.info("------------------");
@@ -269,7 +255,7 @@ public class ValueController {
                     }
                 }
             }
-            /*
+              /*
             BufferedReader br = new BufferedReader(new StringReader(result));
             String line;
             logger.error("----- sent result");
