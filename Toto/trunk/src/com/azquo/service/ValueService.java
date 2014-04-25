@@ -1,9 +1,13 @@
 package com.azquo.service;
 
+import com.azquo.adminentities.OnlineReport;
+import com.azquo.jsonrequestentities.OnlineReportJson;
+import com.azquo.jsonrequestentities.ValueJsonRequest;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import com.azquo.memorydb.Value;
 import com.csvreader.CsvReader;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.log4j.Logger;
@@ -22,6 +26,7 @@ import java.util.*;
 public final class ValueService {
 
     private static final Logger logger = Logger.getLogger(ValueService.class);
+    private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
     @Autowired
     private NameService nameService;
@@ -750,6 +755,7 @@ seaports;children   container;children
         // "here is what that 2d heading definition excel region looks like in names"
         String language = nameService.getInstruction(headingsSent, "language");
 
+
         if (filterCount > 0){
             //send back only those headings that have data - considered in batches of length filtercount.
             List<List<Name>> rowHeadingsWithData = new ArrayList<List<Name>>();
@@ -765,15 +771,23 @@ seaports;children   container;children
             }
             //note that the sort order has already been set.... there cannot be both a restrict count and a filter count
             return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
-        }else if (loggedInConnection.getRestrictCount(region)!=null && loggedInConnection.getRestrictCount(region)!= 0){
+        }else if (loggedInConnection.getRestrictCount(region)!=null && loggedInConnection.getRestrictCount(region)!= 0) {
             int restrictCount = loggedInConnection.getRestrictCount(region);
             List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
             List<List<Name>> rowHeadingsWithData = new ArrayList<List<Name>>();
             List<List<Name>> allRowHeadings = loggedInConnection.getRowHeadings(region);
-            for (int rowInt = 0;rowInt < restrictCount;rowInt++){
+            if (restrictCount > allRowHeadings.size()) {
+                restrictCount = allRowHeadings.size();
+                loggedInConnection.setRestrictCount(region, restrictCount);
+            }
+            for (int rowInt = 0; rowInt < restrictCount; rowInt++) {
                 rowHeadingsWithData.add(allRowHeadings.get(sortedRows.get(rowInt)));
             }
             return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
+        }else if (filterCount==-1){//Online reports with no filtercount or sorting
+            return outputHeadings(loggedInConnection.getRowHeadings(region), language, loggedInConnection.getRowHeadingSupplements(region));
+
+
         }else{
             List <Name> supplementNames = new ArrayList<Name>();
             loggedInConnection.getProvenance().setRowHeadings(headingsSent);
@@ -997,6 +1011,9 @@ seaports;children   container;children
         final StringBuilder sb = new StringBuilder();
         final StringBuilder lockMapsb = new StringBuilder();
         List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
+        if (restrictCount > sortedRows.size()){
+            restrictCount = sortedRows.size();
+        }
         for (int rowNo =0;rowNo < restrictCount;rowNo++){
 
             List<String> rowValuesShown = shownValueArray.get(sortedRows.get(rowNo));
@@ -1040,6 +1057,30 @@ seaports;children   container;children
 
         return sb;
     }
+ public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows) throws Exception{
+
+     if (loggedInConnection.getRowHeadings(region) == null || loggedInConnection.getRowHeadings(region).size() == 0 || loggedInConnection.getColumnHeadings(region) == null || loggedInConnection.getColumnHeadings(region).size() == 0){
+         return "no headings passed";
+     }
+
+
+
+     loggedInConnection.getProvenance().setContext(context);
+
+     final StringTokenizer st = new StringTokenizer(context, "\n");
+     final List<Name> contextNames = new ArrayList<Name>();
+     while (st.hasMoreTokens()) {
+         final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim());
+         if (contextName == null) {
+             return "error:I can't find a name for the context : " + context;
+         }
+         contextNames.add(contextName);
+     }
+     return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows);
+ }
+
+
+
 
     public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictCount) throws Exception {
         loggedInConnection.setContext(region, contextNames); // needed for provenance
@@ -1112,4 +1153,42 @@ seaports;children   container;children
         logger.info("time to execute : " + (System.currentTimeMillis() - track));
         return sb.toString();
     }
+
+
+    private String jsonElement(String elementName, String elementValue){
+        return "\"" + elementName + "\":\"" + elementValue.replace("\"","\\") + "\"";
+    }
+
+    public String sortSelectsJson(Map<OnlineReportJson.Select,Integer> selects){
+
+        List list = new LinkedList(selects.entrySet());
+        StringBuffer sb = new StringBuffer();
+        // sort list based on comparator
+        Collections.sort(list, new Comparator() {
+            public int compare(Object o1, Object o2) {
+                return ((Comparable) ((Map.Entry) (o1)).getValue())
+                        .compareTo(((Map.Entry) (o2)).getValue());
+            }
+        });
+        sb.append("\"selects\":[");
+        boolean firstSelect = true;
+        for (Iterator it = list.iterator(); it.hasNext();) {
+            Map.Entry entry = (Map.Entry) it.next();
+
+            OnlineReportJson.Select select = (OnlineReportJson.Select) entry.getKey();
+            if (firstSelect){
+                firstSelect = false;
+            }else{
+                sb.append(",");
+            }
+            sb.append("{" + jsonElement("line", select.lineNo + "") + "," + jsonElement("caption" , select.caption) + "," + jsonElement("defaultvalue", select.defaultValue) + "," + jsonElement("choice", select.choiceDefinition) + "}");
+
+        }
+        sb.append("]");
+        return sb.toString();
+
+    }
+
+
+
 }
