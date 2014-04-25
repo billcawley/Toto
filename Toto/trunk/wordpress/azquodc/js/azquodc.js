@@ -4,15 +4,16 @@ var az_chosen;
 az_connectionId = "";
 az_chosen = "";
 az_logon = "demo@user.com";
-az_password = "password"
+az_password = "password";
+az_database = "export";
 
 
 
 function azquojson(functionName, params){
     if (functionName == "Name"){
-        params = "json={" + params + ",\"user\":\"" +  az_logon + "\",\"password\":\"" + az_password + "\",\"database\":\"export\",\"jsonFunction\":\"azquojsonfeed\"}";
+        params = "json={" + params + ",\"user\":\"" +  az_logon + "\",\"password\":\"" + az_password + "\",\"database\":\"" + az_database + "\",\"jsonFunction\":\"azquojsonfeed\"}";
     }else{
-        params +="&user=" + az_logon + "&password=" +  az_password + "&database=export";
+        params +="&user=" + az_logon + "&password=" +  az_password + "&database=" + az_database;
     }
     var htmlText = "https://data.azquo.com:8443/api/" + functionName + "?" + params;
     var script = document.createElement('script'),
@@ -22,6 +23,20 @@ function azquojson(functionName, params){
 }
 
 
+
+
+function azquojsontest(functionName, params){
+    if (functionName == "Name"){
+        params = "json={" + params + ",\"user\":\"" +  az_logon + "\",\"password\":\"" + az_password + "\",\"database\":\"" + az_database + "\",\"jsonFunction\":\"azquojsonfeed\"}";
+    }else{
+        params +="&user=" + az_logon + "&password=" +  az_password + "&database=" + az_database;
+    }
+    var htmlText = "http://www.bomorgan.co.uk:8080/api/" + functionName + "?" + params;
+    var script = document.createElement('script'),
+        head = document.getElementsByTagName('head')[0] || document.documentElement;
+    script.src = htmlText;
+    head.appendChild(script);
+}
 
 
 
@@ -73,6 +88,22 @@ function azquojsonfeed(obj) {
 }
 
 
+function azquojsonreportfeed(obj) {
+
+
+    var reportsFound = obj.reportlist;
+    var htmlText = "";
+    if (reportsFound > ""){
+        htmlText = "<p>Click on the report you want to see</p>";
+        htmlText += az_showReports(reportsFound,"");
+        var azSelect = document.getElementById("az_Select");
+        azSelect.innerHTML = htmlText;
+        azSelect.style.display = "block";
+    }
+}
+
+
+
 function showLegend(){
     htmlText = "<p>In the list below, you can click on any item with elements to see the elements</p>";
      return htmlText;
@@ -111,6 +142,24 @@ function  az_showSet(namesFound, style){
     return htmlText;
 }
 
+
+
+function  az_showReports(reportsFound, style){
+
+    var htmlText = "<ul" + style + ">";
+    // All dirs
+    var count = 0
+    while (count < reportsFound.length){
+           var reportFound = reportsFound[count];
+           htmlText += "<li class=\"name\"><span class='item-expandable' onclick=\"az_sendReportId(" + reportFound.id + ")\"><i class='icon-external-link'></i>"  +reportFound.database + ":" + reportFound.reportName + "</span></li>";
+        count++;
+    }
+    htmlText +="</ul>";
+    return htmlText;
+}
+
+
+
 function az_showProvenance(allprovenance){
     var provenance = "Provenance:<br/><br/>";
     var lastPerson = ""
@@ -142,6 +191,21 @@ function az_inputChanged(){
     document.getElementById("az_Data").style.display = "none";
     var newname = document.getElementById("az_InputName").value
     azquojson("Name",jsonElement("operation","structure") + "," + jsonElement("name","`" + escape(newname) + "`"));
+}
+
+function az_sendlogon(){
+    document.getElementById("az_LogonForm").style.display = "none";
+    az_logon = document.getElementById("az_Logon").value;
+    az_password = document.getElementById("az_Password").value;
+    az_database = ""
+    azquojsontest("Maintain","op=reportlist&jsonfunction=azquojsonreportfeed");
+}
+
+
+function az_sendReportId(reportId){
+    window.open("http://www.bomorgan.co.uk:8080/api/Online?user=" + az_logon + "&password=" + az_password + "&reportid=" + reportId,"_blank");
+    //document.getElementById("az_Select").style.display = "none";
+    //azquojsontest("Value","reportid=" + reportId +  "&jsonfunction=azquojsonreportfeed");
 }
 
 
