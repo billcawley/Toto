@@ -35,6 +35,7 @@
     <bean name="uploadRecordDao" class="com.azquo.admindao.UploadRecordDAO"/>
     <bean name="businessDao" class="com.azquo.admindao.BusinessDAO"/>
     <bean name="userDao" class="com.azquo.admindao.UserDAO"/>
+    <bean name="userChoiceDao" class="com.azquo.admindao.UserChoiceDAO"/>
     <bean name="databaseDao" class="com.azquo.admindao.DatabaseDAO"/>
     <bean name="loginRecordDao" class="com.azquo.admindao.LoginRecordDAO"/>
     <bean name="accessDao" class="com.azquo.admindao.PermissionDAO"/>
@@ -45,6 +46,7 @@
     <bean name="loginService" class="com.azquo.service.LoginService"/>
     <bean name="importService" class="com.azquo.service.ImportService"/>
     <bean name="businessService" class="com.azquo.service.AdminService"/>
+    <bean name="onlineService" class="com.azquo.service.OnlineService"/>
     <bean name="openDatabaseDao" class="com.azquo.admindao.OpenDatabaseDAO"/>
     <bean name="onlineReportDao" class="com.azquo.admindao.OnlineReportDAO"/>
 
