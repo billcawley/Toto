@@ -136,17 +136,18 @@ public class LoginService {
             LoggedInConnection lic = entry.getValue();
             if ((System.currentTimeMillis() - lic.getLastAccessed().getTime()) > lic.getTimeOut()) {
                 // connection timed out
-                int databaseId = lic.getAzquoMemoryDB().getDatabase().getId();
-                it.remove();
-                Integer openCount = openDBCount.get(databaseId);
-                if (openCount == 1){
-                    memoryDBManager.removeDatabase(lic.getAzquoMemoryDB().getDatabase());
-                    openDBCount.remove(databaseId);
-                    openDatabaseDAO.closeForDatabaseId(databaseId);
-                }else{
-                    openDBCount.put(databaseId, openCount - 1);
+                if (lic.getAzquoMemoryDB()!=null){
+                    int databaseId = lic.getAzquoMemoryDB().getDatabase().getId();
+                    it.remove();
+                    Integer openCount = openDBCount.get(databaseId);
+                    if (openCount == 1){
+                        memoryDBManager.removeDatabase(lic.getAzquoMemoryDB().getDatabase());
+                        openDBCount.remove(databaseId);
+                        openDatabaseDAO.closeForDatabaseId(databaseId);
+                    }else{
+                        openDBCount.put(databaseId, openCount - 1);
+                    }
                 }
-
             }
          }
 
