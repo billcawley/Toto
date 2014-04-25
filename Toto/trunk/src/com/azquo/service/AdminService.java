@@ -272,8 +272,8 @@ public class AdminService {
                         if (reportSent.getUserStatus() != null && reportSent.getUserStatus().length() > 0){
                             existingReport.setUserStatus(reportSent.getUserStatus());
                         }
-                        if (reportSent.getJson() != null && reportSent.getJson().length() > 0){
-                            existingReport.setJson(reportSent.getJson());
+                        if (reportSent.getFilename() != null && reportSent.getFilename().length() > 0){
+                            existingReport.setFilename(reportSent.getFilename());
                         }
                         onlineReportDAO.store(existingReport);
                     }
@@ -287,6 +287,24 @@ public class AdminService {
         }
         return "";
     }
+
+
+    public List<OnlineReport> getReportList(final LoggedInConnection loggedInConnection) {
+        List<OnlineReport> reportList;
+        if (loggedInConnection.getUser().isAdministrator()) {
+            reportList = onlineReportDAO.findForBusinessId(loggedInConnection.getUser().getBusinessId());
+        }else{
+            reportList = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getUser().getBusinessId(),loggedInConnection.getUser().getStatus());
+        }
+        if (reportList != null){
+            for (OnlineReport onlineReport:reportList) {
+                onlineReport.setDatabase(databaseDao.findById(onlineReport.getDatabaseId()).getName());
+            }
+        }
+        return reportList;
+    }
+
+
 
     public String setUserListForBusiness(final LoggedInConnection loggedInConnection, List<User> userList) {
         if (loggedInConnection.getUser().isAdministrator()) {
