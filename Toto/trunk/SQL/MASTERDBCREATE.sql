@@ -78,3 +78,26 @@ CREATE TABLE IF NOT EXISTS `open_database` (
   KEY `close` (`close`),
   KEY `database_id` (`database_id`,`close`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+
+
+CREATE TABLE IF NOT EXISTS `online_report` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `business_id` int(11) NOT NULL,
+  `database_id` int(11) NOT NULL,
+  `report_name`  varchar(255) NOT NULL,
+  `user_status` varchar(255) NOT NULL,
+  `json` text NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `business_id` (`business_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+
+CREATE TABLE IF NOT EXISTS `user_choices` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `report_id` int(11) NOT NULL,
+  `choice_name` varchar(255) NOT NULL,
+  `choice_value` varchar(255) NOT NULL,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
