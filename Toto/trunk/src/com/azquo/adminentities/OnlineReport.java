@@ -19,7 +19,7 @@ public class OnlineReport extends StandardEntity {
     private String database; // for sending parameters only
     private String reportName;
     private String userStatus;
-    private String json;
+    private String filename;
 
      @JsonCreator
     public OnlineReport(@JsonProperty("id") int id
@@ -28,14 +28,14 @@ public class OnlineReport extends StandardEntity {
              , @JsonProperty("database") String database
             , @JsonProperty("reportName") String reportName
             , @JsonProperty("userStatus") String userStatus
-            , @JsonProperty("json") String json) {
+            , @JsonProperty("filename") String filename) {
         this.id = id;
         this.businessId = businessId;
         this.databaseId = databaseId;
         this.database = database;
         this.reportName = reportName;
         this.userStatus = userStatus;
-        this.json = json;
+        this.filename = filename;
     }
 
     public int getBusinessId() {
@@ -74,12 +74,12 @@ public class OnlineReport extends StandardEntity {
         this.userStatus = userStatus;
     }
 
-    public String getJson() {
-        return json;
+    public String getFilename() {
+        return filename;
     }
 
-    public void setJson(String json) {
-        this.json = json;
+    public void setFilename(String filename) {
+        this.filename = filename;
     }
 
 
@@ -91,7 +91,7 @@ public class OnlineReport extends StandardEntity {
                 ", databaseId=" + databaseId +
                 ", reportName='" + reportName +'\'' +
                 ", userStatus='" + userStatus + '\'' +
-                ", json='" + json + '\'' +
+                ", filename='" + filename + '\'' +
                 '}';
     }
 }

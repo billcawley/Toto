@@ -30,7 +30,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
     public static final String DATABASE = "database";
     public static final String REPORTNAME = "report_name";
     public static final String USERSTATUS = "user_status";
-    public static final String JSON = "json";
+    public static final String FILENAME = "filename";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
@@ -40,7 +40,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
         toReturn.put(DATABASEID, onlineReport.getDatabaseId());
         toReturn.put(REPORTNAME, onlineReport.getReportName());
         toReturn.put(USERSTATUS, onlineReport.getUserStatus());
-        toReturn.put(JSON, onlineReport.getJson());
+        toReturn.put(FILENAME, onlineReport.getFilename());
         return toReturn;
     }
 
@@ -55,7 +55,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
                         , ""
                         , rs.getString(REPORTNAME)
                         , rs.getString(USERSTATUS)
-                        , rs.getString(JSON));
+                        , rs.getString(FILENAME));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
