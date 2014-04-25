@@ -49,6 +49,7 @@ public class AdminController {
     private static final String UPLOADSLIST = "uploadslist";
     private static final String COPYDATABASE = "copydatabase";
     private static final String SAVEONLINEREPORTS = "saveonlinereports";
+    private static final String REPORTLIST ="reportlist";
 
     // maybe change all this to JSON later?
 
@@ -56,7 +57,7 @@ public class AdminController {
     @ResponseBody
     public String handleRequest(@RequestParam(value = "op") final String op
             , @RequestParam(value = "email", required = false) final String email
-            , @RequestParam(value = "username", required = false) final String userName
+            , @RequestParam(value = "user", required = false) final String user
             , @RequestParam(value = "password", required = false) final String password
             , @RequestParam(value = "businessname", required = false) final String businessName
             , @RequestParam(value = "address1", required = false) final String address1
@@ -71,9 +72,10 @@ public class AdminController {
             , @RequestParam(value = "readlist", required = false) final String readList
             , @RequestParam(value = "writelist", required = false) final String writeList
             , @RequestParam(value = "json", required = false) final String json
+            , @RequestParam(value = "jsonfunction", required = false) final String jsonFunction //this is the return function for Javascript
             , @RequestParam(value = "spreadsheetname", required = false) final String spreadsheetName
             , @RequestParam(value = "namelist", required = false) final String nameList
-            , @RequestParam(value = "connectionid", required = false) final String connectionId) throws Exception {
+            , @RequestParam(value = "connectionid", required = false) String connectionId) throws Exception {
 
         logger.info("request to admin controller : " + op);
 
@@ -85,11 +87,11 @@ public class AdminController {
                         , key
                         , spreadsheetName);
             } else if (email != null && email.length() > 0
-                    && userName != null && userName.length() > 0
+                    && user != null && user.length() > 0
                     && businessName != null && businessName.length() > 0
                     && password != null && password.length() > 0) {
                 return adminService.registerBusiness(email
-                        , userName
+                        , user
                         , password
                         , businessName
                         , address1 != null ? address1 : ""
@@ -102,8 +104,12 @@ public class AdminController {
         } else {
             logger.info("connection id : " + connectionId);
             if (connectionId == null) {
-                return "error:no connection id";
-            }
+                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, spreadsheetName, false);
+                if (loggedInConnection == null) {
+                    return "error:no connection id";
+                }
+                connectionId = loggedInConnection.getConnectionId();
+             }
 
             final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
             if (loggedInConnection == null) {
@@ -118,10 +124,10 @@ public class AdminController {
 
             if (op.equalsIgnoreCase(NEWUSER)) {
                 if (email != null && email.length() > 0
-                        && userName != null && userName.length() > 0
+                        && user != null && user.length() > 0
                         && status != null && status.length() > 0
                         && password != null && password.length() > 0) {
-                    return adminService.createUser(email, userName, status, password, loggedInConnection) + "";
+                    return adminService.createUser(email, user, status, password, loggedInConnection) + "";
                 }
             }
 
@@ -184,6 +190,12 @@ public class AdminController {
                     }
                 }
             }
+            if (op.equalsIgnoreCase(REPORTLIST)) {
+                // ok needs to work without email . .
+                String result = jacksonMapper.writeValueAsString(adminService.getReportList(loggedInConnection));
+                logger.info("returned report list : " + result);
+                return jsonFunction + "({\"username\":\"" + loggedInConnection.getUser().getName() + "\",\"reportlist\":" + result + "})";
+             }
         }
         return "";
     }
