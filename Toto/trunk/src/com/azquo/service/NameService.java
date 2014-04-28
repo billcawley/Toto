@@ -197,12 +197,6 @@ public final class NameService {
     }
 
 
-    public Name includeNameInSet(final LoggedInConnection loggedInConnection, String nameString, Name set) throws Exception{
-        Name topParent = set.findTopParent();
-        return findOrCreateName(loggedInConnection,nameString , topParent, set);
-
-    }
-
 
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
         if (name.toLowerCase().endsWith(";plural")) {
@@ -231,7 +225,7 @@ public final class NameService {
         String parentName = findParentFromList(name);
         String remainder = name;
         if (parentName == null) {
-            return findOrCreateName(loggedInConnection, name, null, null);
+            return findOrCreateName(loggedInConnection, name, null);
         }
 
 
@@ -247,7 +241,7 @@ public final class NameService {
             remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length() - 1));
             //if two commas in succession occur, ignore the blank parent
             if (parentName.length() > 0) {
-                parent = findOrCreateName(loggedInConnection, parentName, topParent, parent);
+                parent = findOrCreateName(loggedInConnection, parentName, parent);
                 //the attribute 'PLURAL' means that the name cannot be used to identify as a parent
                 if (parent != null && (topParent == null || !unique) && (parent.getAttribute("PLURAL") == null || !parent.getAttribute("PLURAL").equalsIgnoreCase("true"))) {
                     topParent = parent;
@@ -256,30 +250,48 @@ public final class NameService {
             parentName = findParentFromList(remainder);
         }
 
-        return findOrCreateName(loggedInConnection, remainder, topParent, parent);
+        return findOrCreateName(loggedInConnection, remainder, parent);
 
     }
 
-    // TODO : address the two parents passed through in this function and how it interacts with the above function.
 
-    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, final Name parent, final Name newparent) throws Exception {
+    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, final Name newparent) throws Exception {
 
-     /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import,and insert a structure into it
-        the 'parent' will usually be the top of the tree, and the new parent will be a name created as a branch.  */
+     /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import),and insert a structure into it
+        */
 
 
         String storeName = name.replace(Name.QUOTE, ' ').trim();
-
-        final Name existing = loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, storeName, parent);
-        if (existing != null) {
-            // I think this is in the case of unique = true, the name to be created is in fact being moved down the hierachy
-            if (newparent != null && newparent != parent && existing != newparent) {
-                if (parent != null) {
-                    parent.removeFromChildrenWillBePersisted(existing);
+        Name existing = null;
+        if (newparent != null) {
+            //try for an existing name already with the same topparent
+            existing = loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, storeName, newparent.findTopParent());
+            // find an existing name with no parents. (note that if there are multiple such names, then the return will be null)
+            if (existing == null) {
+                existing = loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, storeName, null);
+                if (existing != null && existing.getParents().size() > 0) {
+                    existing = null;
                 }
-                newparent.addChildWillBePersisted(existing);
             }
-            return existing;
+        }else{
+            existing = loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, storeName, null);
+        }
+        if (existing != null) {
+            // direct parents may be moved up the hierarchy (e.g. if existing parent is 'Europe' and new parent is 'London', which is in 'Europe' then
+            // remove 'Europe' from the direct parent list.
+            //NEW CONDITION ADDED - we are parent = child, but not bothering to put into the set.  This may need discussio - are the parent and child really the same?
+            if (newparent!=null && existing!=newparent && !existing.findAllParents().contains(newparent)){
+                 //only check if the new parent is not already in the parent hierarchy.
+                List<Name> newParents = newparent.findAllParents();
+                newparent.addChildWillBePersisted(existing);//this will now check the descendants of the child for direct connections
+                for (Name parent:existing.getParents()) {
+                    if (newParents.contains(parent)) {
+                        parent.removeFromChildrenWillBePersisted(existing);
+                        break;//only remove one!   The loop will be corrupted.
+                    }
+               }
+           }
+           return existing;
         } else {
             // actually creating a new one
             Provenance provenance = loggedInConnection.getProvenance();
@@ -302,13 +314,6 @@ public final class NameService {
 
                     }
                     newName.setPeersWillBePersisted(peers2);
-                }
-            }
-            //  the remove here makes no sense, names are equal by ID, it will never match. Check with dad . . .
-            //  the 'parent' in this case may be the top parent, while the new parent may be next up the hierarchy.
-            if (newparent != null) {
-                if (newparent != parent && parent != null) {
-                    parent.removeFromChildrenWillBePersisted(newName);
                 }
                 newparent.addChildWillBePersisted(newName);
             }
@@ -444,23 +449,7 @@ public final class NameService {
     }
 
 
-    // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
-
-    public Map<Name, Boolean> getPeersIncludeParents(final Name name) throws Exception {
-        if (name.getPeers().size() > 0) {
-            return name.getPeers();
-        }
-        final List<Name> parents = name.findAllParents();
-        for (Name parent : parents) {
-            if (!parent.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
-                return parent.getPeers();
-            }
-        }
-        return new LinkedHashMap<Name, Boolean>();
-    }
-
-
-    // these should probably live somewhere more global
+     // these should probably live somewhere more global
     public static final String ERROR = "ERROR";
     public static final String WARNING = "WARNING";
 
@@ -473,31 +462,27 @@ public final class NameService {
         String error = "";
         String warning = "";
 
-        final Set<Name> hasPeers = new HashSet<Name>(); // the names (or their parents) in this list which have peer requirements, should only be one
+        Name peerName = null;
+        final Map<Name, Boolean> peers = new HashMap<Name, Boolean>(); // the names (or their parents) in this list which have peer requirements, should only be one
         final Set<Name> namesToCheck = new HashSet<Name>();
 
         for (Name name : names) {
             if (name != null){
                 boolean thisNameHasPeers = false;
                 if (!name.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
-                    hasPeers.add(name);
-                    thisNameHasPeers = true;
-                } else { // try looking up the chain and find the first with peers
-                    final List<Name> parents = name.findAllParents();
-                    for (Name parent : parents) {
-                        if (!parent.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
-                            hasPeers.add(parent); // put the parent not the actual name in as it will be used to determine the criteria for this value
-                            thisNameHasPeers = true;
-                            break;
+                    if (peerName == null){
+                        peerName = name;
+                        for (Name peer:name.getPeers().keySet()){
+                            peers.put(peer.findTopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
                         }
+                    }else{
+                        error += "two names have peers: " + peerName.getDefaultDisplayName() + " and " + name.getDefaultDisplayName();
+                        return toReturn;
                     }
-                }
-                // it wasn't a name with peers hence it's on the list of names to match up to the peer list of the name that DOES have peers :)
-                if (!thisNameHasPeers) {
-                    namesToCheck.add(name);
+                    validNameList.add(name); // the rest will be added below but we need to add this here as the peer defining name is not on the list of peers
                 } else {
                     // not adding the name with peers to namesToCheck is more efficient and it stops the name with peers from showing up as being superfluous to the peer list if that makes sense
-                    validNameList.add(name); // the rest will be added below but we need to add this here as the peer defining name is not on the list of peers
+                    namesToCheck.add(name);
                 }
             }
         }
@@ -506,18 +491,12 @@ public final class NameService {
         //System.out.println("track 1-1 : " + (System.currentTimeMillis() - track) + "  ---   ");
         //track = System.currentTimeMillis();
 
-        if (hasPeers.isEmpty()) {
+        if (peers.isEmpty()) {
             error += "  none of the names passed have peers, I don't know what names are required for this value";
-        } else if (hasPeers.size() > 1) {
-            error += "  more than one name passed has peers ";
-            for (Name has : hasPeers) {
-                error += has.getDefaultDisplayName() + ", ";
-            }
-            error += "I don't know what names are required for this value";
-        } else { // one set of peers, ok :)
+        }else { // one set of peers, ok :)
             // match peers child names are ok, ignore extra names, warn about this
             // think that is a bit ofo dirty way of getting the single item in the set . . .just assign it?
-            for (Name requiredPeer : hasPeers.iterator().next().getPeers().keySet()) {
+            for (Name requiredPeer : peers.keySet()) {
                 boolean found = false;
                 // do a first direct pass, see old logic below, I think(!) this will work and be faster. Need to think about that equals on name, much cost of tolowercase?
                 if (namesToCheck.remove(requiredPeer)) {// skip to the next one and remove the name from names to check and add it to the validated list to return
@@ -528,9 +507,7 @@ public final class NameService {
                 if (!found) { // couldn't find this peer, need to look up through parents of each name for the peer
                     // again new logic here
                     for (Name nameToCheck : namesToCheck) {
-                        final List<Name> allParents = nameToCheck.findAllParents();
-                        // again trying for more efficient logic
-                        if (allParents.contains(requiredPeer)) {
+                         if (nameToCheck.findAllParents().contains(requiredPeer)) {
                             namesToCheck.remove(nameToCheck); // skip to the next one and remove the name from names to check and add it to the validated list to return
                             validNameList.add(nameToCheck);
                             found = true;
@@ -1041,7 +1018,7 @@ public final class NameService {
                                 if (name.getParents().size() == 0) { // top level, we can edit
                                     name.setPeersWillBePersisted(peers);
                                 } else {
-                                    if (getPeersIncludeParents(name).size() == 0) { // no peers on the aprent
+                                    if (name.getPeers().size() == 0) { // no peers on the aprent
                                         return "error: cannot edit peers, this is not a top level name and there is no peer set for  this name or it's parents, name id " + nameJsonRequest.id;
                                     }
                                     if (name.getValues().size() > 0) {
@@ -1128,7 +1105,7 @@ public final class NameService {
         }
     }
 
-    // again should use jackson?
+     // again should use jackson?
 
     private String getChildStructureFormattedForOutput(final Name name) {
         int totalValues = getTotalValues(name);
@@ -1189,6 +1166,5 @@ public final class NameService {
         return sb.toString();
     }
 
-
-}
+ }
 
