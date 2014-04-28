@@ -144,8 +144,6 @@ public class ValueController {
                 //System.out.println("passed context : " + context);
                 result =  valueService.getDataRegion(loggedInConnection, context, region, filterCount, restrictCount);
                 logger.info("time for data in region " + region + " is " + (System.currentTimeMillis() - startTime));
-            } else {
-                result = "error:Column and/or row headings are not defined for use with context" + (region != null ? " and region " + region : "");
             }
 
             if (lockMap != null) {
