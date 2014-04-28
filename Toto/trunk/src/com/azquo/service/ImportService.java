@@ -41,6 +41,7 @@ public final class ImportService {
     public final String PARENTOF = "parent of ";
     public final String STRUCTURE = "structure ";
     public final String ATTRIBUTE = "attribute ";
+    public final String LANGUAGE = "language ";
     public final String PLURAL = "plural ";
     public final String PEERS = "peers";
 
@@ -178,6 +179,15 @@ public final class ImportService {
         if (readClause(CHILDOF,clause) != null){
             heading.childOfString =readClause(CHILDOF, clause);
          }
+        if (readClause(LANGUAGE, clause)!=null){
+            heading.attribute = readClause(LANGUAGE, clause);
+            heading.identifier = true;
+
+            if (heading.attribute.length() == 0){
+                return "error: " + clause + " not understood";
+            }
+              //heading.name = nameService.findOrCreateName(loggedInConnection, heading.heading);
+        }
        if (readClause(ATTRIBUTE, clause)!=null){
            heading.attribute = readClause(ATTRIBUTE, clause);
 
@@ -260,22 +270,25 @@ public final class ImportService {
 
     private int findColumn(String nameToFind, List<ImportHeading> headings){
         //look for a column with identifier, or, if not found, a column that does not specify an attribute
-        for (int col = 0; col < headings.size();col++){
+        int colfound = -1;
+        for (int col = 0; col < headings.size();col++) {
             ImportHeading heading = headings.get(col);
-            if (heading.heading != null && heading.heading.equalsIgnoreCase(nameToFind) && heading.identifier){
-                return col;
+            //checking the name itself, then the name as part of a comma separated string
+            if (heading.heading != null && (heading.heading.equalsIgnoreCase(nameToFind) || heading.heading.toLowerCase().indexOf(nameToFind.toLowerCase() + ",") == 0)) {
+                if (heading.identifier) {
+                    return col;
+                }
+                if (colfound == -1) {
+                    colfound = col;
+                } else {
+                    return -1;//too many possibilities
+                }
             }
         }
-        for (int col = 0; col < headings.size();col++){
-            ImportHeading heading = headings.get(col);
-            if (heading.heading != null && heading.heading.equalsIgnoreCase(nameToFind) && (heading.attribute == null || heading.attribute.equals(Name.DEFAULT_DISPLAY_NAME))){
-                return col;
-            }
-        }
-        return -1;
+        return colfound;
     }
 
-    public void findTopParent(LoggedInConnection loggedInConnection, ImportHeading heading, List<ImportHeading> headings) throws Exception{
+    public String findTopParent(LoggedInConnection loggedInConnection, ImportHeading heading, List<ImportHeading> headings) throws Exception{
         //need to work out the topparent for use when classifing names found in this column
         ImportHeading child = heading;
         if (heading.identityColumn >=0){
@@ -283,15 +296,31 @@ public final class ImportService {
         }
         while (child.parentOf != null){
             child.childColumn = findColumn(child.parentOf, headings);
+            if (child.childColumn < 0 ){
+                return "error: cannot find " + child.parentOf;
+            }
             child = headings.get(child.childColumn);
         }
         if (child.name == null){
             child.name = nameService.findOrCreateName(loggedInConnection,child.heading);
         }
         heading.topParent = child.name;
-
+        return "";
     }
 
+    private Name includeInSet(LoggedInConnection loggedInConnection, String name, Name parent, Map<String, Name> namesFound)throws  Exception{
+
+        //maybe should include topname in findName below
+        String findName = name + ", " + parent.getDefaultDisplayName();
+        Name found = namesFound.get(findName);
+        if (found != null){
+            return found;
+        }
+        found = nameService.findOrCreateName(loggedInConnection, name, parent);
+        namesFound.put(findName, found);
+        return found;
+
+    }
 
     public String valuesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, final boolean create) throws Exception {
         long track = System.currentTimeMillis();
@@ -299,7 +328,7 @@ public final class ImportService {
         if (create) strCreate = ";create";
 
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
-        csvReader.setUseTextQualifier(false);
+        csvReader.setUseTextQualifier(true);
         csvReader.readHeaders();
         final String[] headers = csvReader.getHeaders();
         // what we're doing here is going through the headers, First thing to do is to set up the peers if defined for a header
@@ -336,16 +365,14 @@ public final class ImportService {
                 }
                 if (importHeading.attribute != null && !importHeading.attribute.equals(Name.DEFAULT_DISPLAY_NAME)){
                     importHeading.identityColumn = findColumn(importHeading.heading, headings);
-                    if (importHeading.identityColumn < 0){
-                        return "error: cannot find column " + importHeading.name.getDefaultDisplayName() + " for attribute " + importHeading.attribute;
-                    }
-                    //treat the default name in the row, if it exists, as an attribute
-                    for (ImportHeading heading2:headings){
-                        if (heading2.heading != null && heading2.heading.equals(importHeading.heading) && heading2.attribute == null){
-                            heading2.attribute = Name.DEFAULT_DISPLAY_NAME;
-                            heading2.identityColumn = importHeading.identityColumn;
-                            break;
-                        }
+                    if (importHeading.identityColumn >=0){
+                    for (ImportHeading heading2:headings) {
+                          if (heading2.heading != null && heading2.heading.equals(importHeading.heading) && heading2.attribute == null) {
+                              heading2.attribute = Name.DEFAULT_DISPLAY_NAME;
+                              heading2.identityColumn = importHeading.identityColumn;
+                              break;
+                          }
+                      }
 
                     }
                     findTopParent(loggedInConnection, importHeading, headings);
@@ -353,10 +380,11 @@ public final class ImportService {
                 if (importHeading.parentOf != null){
                     importHeading.childColumn = findColumn(importHeading.parentOf, headings);
                           if (importHeading.childColumn < 0){
-                        return "error: cannot find column " + importHeading.parentOf + " for child of " + importHeading.name.getDefaultDisplayName();
+                        return "error: cannot find column " + importHeading.parentOf + " for child of " + importHeading.heading;
                     }
-                    findTopParent(loggedInConnection, importHeading, headings);
-                  }
+                    String error = findTopParent(loggedInConnection, importHeading, headings);
+                    if (error.length() > 0) return error;
+                }
                 if (importHeading.structureName != null){
                     importHeading.structureColumn = findColumn(importHeading.structureName.getDefaultDisplayName(), headings);
                     if (importHeading.structureColumn < 0){
@@ -368,7 +396,7 @@ public final class ImportService {
                         importHeading.childOf = nameService.findOrCreateName(loggedInConnection, importHeading.childOfString);
                     }else{
                         if (!importHeading.topParent.getDefaultDisplayName().equals(importHeading.childOfString)){
-                           importHeading.childOf = nameService.includeNameInSet(loggedInConnection, importHeading.childOfString, importHeading.topParent);
+                           importHeading.childOf = nameService.findOrCreateName(loggedInConnection, importHeading.childOfString, importHeading.topParent);
                         }else{
                             importHeading.childOf = importHeading.topParent;
                         }
@@ -411,7 +439,7 @@ public final class ImportService {
                                     loggedInConnection.setLanguage(peerHeading.attribute);
                                 }
 
-                                nameFound = nameService.includeNameInSet(loggedInConnection, peerVal, headings.get(peerColumn).name);
+                                nameFound = nameService.findOrCreateName(loggedInConnection, peerVal, headings.get(peerColumn).name);
                                 loggedInConnection.setLanguage(origLanguage);
                                 if (nameFound != null) {
                                     namesFound.put(nameToFind, nameFound);
@@ -445,6 +473,7 @@ public final class ImportService {
                     if (category.trim().length() > 0){
                         if (heading.name == null){
                             heading.name = nameService.findOrCreateName(loggedInConnection,heading.heading);
+                            heading.heading = heading.name.getDefaultDisplayName();
                         }
                         ImportHeading structureName = headings.get(heading.structureColumn);
                         if (structureName.name == null){
@@ -455,11 +484,11 @@ public final class ImportService {
                             plural = structureName.heading + "s";
                         }
                         //create the name and structure
-                        Name byCategory = nameService.includeNameInSet(loggedInConnection,plural + " by " + heading.name.getDefaultDisplayName(), structureName.name);
-                        Name thisSet = nameService.includeNameInSet(loggedInConnection,category + " " + plural,byCategory);
-                        nameService.includeNameInSet(loggedInConnection, itemName,thisSet);
+                        Name byCategory = nameService.findOrCreateName(loggedInConnection,plural + " by " + heading.name.getDefaultDisplayName(), structureName.name);
+                        Name thisSet = nameService.findOrCreateName(loggedInConnection,category + " " + plural,byCategory);
+                        includeInSet(loggedInConnection, itemName,thisSet, namesFound);
                           //and put the category in its set.
-                        nameService.includeNameInSet(loggedInConnection, category, heading.name);
+                        includeInSet(loggedInConnection, category, heading.name, namesFound);
                     }
                 }
                 if (heading.identityColumn >= 0){
@@ -472,10 +501,11 @@ public final class ImportService {
                         }
                         if (heading.topParent == null){
                             //may have escaped the checks...
-                            findTopParent(loggedInConnection,heading,headings);
+                             String error = findTopParent(loggedInConnection,heading, headings);
+                            if (error.length() > 0) return error;
                         }
 
-                        Name name = nameService.includeNameInSet(loggedInConnection,itemName,heading.topParent);
+                        Name name = includeInSet(loggedInConnection,itemName,heading.topParent, namesFound);
                         loggedInConnection.setLanguage(origLanguage);
                         name.setAttributeWillBePersisted(heading.attribute, csvReader.get(column));
                         nameService.calcReversePolish(loggedInConnection,name);
@@ -488,18 +518,18 @@ public final class ImportService {
                     if (parentName.length() > 0){
                         Name parentSet = null;
                         if (heading.childOf != null){
-                            parentSet = nameService.includeNameInSet(loggedInConnection, parentName,heading.childOf);
+                            parentSet = includeInSet(loggedInConnection, parentName,heading.childOf, namesFound);
                         }else{
                             parentSet = nameService.findOrCreateName(loggedInConnection,parentName);
                         }
-                        Name name = nameService.includeNameInSet(loggedInConnection,childName,parentSet);
+                        Name name = includeInSet(loggedInConnection,childName,parentSet, namesFound);
                     }
                 }
 
                 if (heading.childOf !=null){
                     String childName = csvReader.get(column);
                     if (childName.length() > 0){
-                       Name name = nameService.includeNameInSet(loggedInConnection,childName,heading.childOf);
+                       Name name = includeInSet(loggedInConnection,childName,heading.childOf, namesFound);
                     }
                 }
             }
@@ -524,7 +554,7 @@ public final class ImportService {
         //if no name has been specified, then 'name' (case insensitive) should work
         String strCreate = "";
         if (create) strCreate = ";create";
-        if (importLanguage.equals("DEFAULT_DISPLAY_NAME")) {
+        if (importLanguage.equals("n_NAME")) {
             for (String header : headers) {
                 if (header.equalsIgnoreCase("name")) {
                     importLanguage = header;
@@ -540,6 +570,7 @@ public final class ImportService {
                 ImportHeading heading = new ImportHeading();
                 String error = interpretHeading(loggedInConnection,searchName,heading);
                 heading.name = nameService.findOrCreateName(loggedInConnection,heading.heading);
+                heading.heading = heading.name.getDefaultDisplayName();
                 if (error.length() > 0){
                     return error;
                 }
@@ -601,11 +632,11 @@ public final class ImportService {
                         } else {
                             //create the name and structure
                             Name headerN = nameService.findOrCreateName(loggedInConnection,headerName);
-                            Name byCategory = nameService.includeNameInSet(loggedInConnection,plural + " by " + headerName, topN);
-                            Name thisSet = nameService.includeNameInSet(loggedInConnection,category + " " + plural,byCategory);
-                            nameService.includeNameInSet(loggedInConnection, itemName,thisSet);
+                            Name byCategory = nameService.findOrCreateName(loggedInConnection,plural + " by " + headerName, topN);
+                            Name thisSet = nameService.findOrCreateName(loggedInConnection,category + " " + plural,byCategory);
+                            nameService.findOrCreateName(loggedInConnection, itemName,thisSet);
                             //and put the category in its set.
-                            nameService.includeNameInSet(loggedInConnection, category,headerN);
+                            nameService.findOrCreateName(loggedInConnection, category,headerN);
                          }
                     }
                 }
@@ -660,7 +691,7 @@ public final class ImportService {
                    //if (element.indexOf("/") > 0 && element.length() < 10){
                   //     element = findExistingDate(loggedInConnection, element);
                    //   }
-                   nameService.includeNameInSet(loggedInConnection, element, set);
+                   nameService.findOrCreateName(loggedInConnection, element, set);
                }
             }
         }
