@@ -338,6 +338,13 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             }
             setNeedsPersisting();
         }
+        //and check that there are not indirect connections which should be deleted (e.g. if London exists in UK and Europe, and we are now
+        //specifying that UK is in Europe, we must remove the direct link from London to Europe
+        for (Name descendant:child.findAllChildren(false)){
+            if (children.contains(descendant)){
+                removeFromChildrenWillBePersisted(descendant);
+            }
+        }
     }
 
     // removal ok on linked lists
