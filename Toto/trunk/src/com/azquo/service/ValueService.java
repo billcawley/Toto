@@ -747,10 +747,23 @@ seaports;children   container;children
         return sortedRows;
 
     }
+   public String getFullRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent)throws Exception{
+       String language = nameService.getInstruction(headingsSent, "language");
+       final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
+       List <Name> supplementNames = new ArrayList<Name>();
+       loggedInConnection.getProvenance().setRowHeadings(headingsSent);
+       String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent);
+       if (error.length() > 0) {
+           return error;
+       }
+       loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
+       loggedInConnection.setRowHeadingSupplements(region,supplementNames);
+       return outputHeadings(loggedInConnection.getRowHeadings(region), language, loggedInConnection.getRowHeadingSupplements(region));
 
+
+   }
 
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent, final int filterCount) throws Exception {
-        final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
         // "here is what that 2d heading definition excel region looks like in names"
         String language = nameService.getInstruction(headingsSent, "language");
@@ -789,15 +802,7 @@ seaports;children   container;children
 
 
         }else{
-            List <Name> supplementNames = new ArrayList<Name>();
-            loggedInConnection.getProvenance().setRowHeadings(headingsSent);
-            String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent);
-            if (error.length() > 0) {
-                return error;
-            }
-            loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
-            loggedInConnection.setRowHeadingSupplements(region,supplementNames);
-            return outputHeadings(loggedInConnection.getRowHeadings(region), language, loggedInConnection.getRowHeadingSupplements(region));
+            return getFullRowHeadings(loggedInConnection,region,headingsSent);
         }
     }
 
