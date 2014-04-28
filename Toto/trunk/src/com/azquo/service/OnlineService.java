@@ -3,7 +3,6 @@ package com.azquo.service;
 import com.azquo.admindao.UserChoiceDAO;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.adminentities.UserChoice;
-import com.azquo.util.HtmlHelper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.hssf.usermodel.HSSFCellStyle;
 import org.apache.poi.hssf.usermodel.HSSFRow;
@@ -12,8 +11,6 @@ import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.hssf.usermodel.HSSFPalette;
 
 
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.format.CellFormat;
 import org.apache.poi.ss.format.CellFormatResult;
 import org.apache.poi.ss.usermodel.*;
@@ -21,11 +18,9 @@ import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFRow;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -105,17 +100,17 @@ public final class OnlineService {
             "double 3pt", BORDER_HAIR, "solid 1px", BORDER_MEDIUM, "solid 2pt",
             BORDER_MEDIUM_DASH_DOT, "dashed 2pt", BORDER_MEDIUM_DASH_DOT_DOT,
             "solid 2pt", BORDER_MEDIUM_DASHED, "solid 2pt", BORDER_NONE,
-            "none", BORDER_SLANTED_DASH_DOT, "solid 2pt", BORDER_THICK,
+            "1px solid silver", BORDER_SLANTED_DASH_DOT, "solid 2pt", BORDER_THICK,
             "solid 3pt", BORDER_THIN, "solid 1pt");
 
-    private static final Map<Short, Short> BORDERSIZE = mapFor(BORDER_DASH_DOT,
-            1, BORDER_DASH_DOT_DOT, 1, BORDER_DASHED,
-            1, BORDER_DOTTED, 1, BORDER_DOUBLE,
-            1, BORDER_HAIR, 1, BORDER_MEDIUM, 2,
-            BORDER_MEDIUM_DASH_DOT, 2, BORDER_MEDIUM_DASH_DOT_DOT,
-            2, BORDER_MEDIUM_DASHED, 2, BORDER_NONE,
-            0, BORDER_SLANTED_DASH_DOT, 2, BORDER_THICK,
-            3, BORDER_THIN, 1);
+    private static final Map<Short, String> BORDERSIZE = mapFor(BORDER_DASH_DOT,
+            "1", BORDER_DASH_DOT_DOT, "1", BORDER_DASHED,
+            "1", BORDER_DOTTED, "1", BORDER_DOUBLE,
+            "1", BORDER_HAIR, "1", BORDER_MEDIUM, "2",
+            BORDER_MEDIUM_DASH_DOT, "2", BORDER_MEDIUM_DASH_DOT_DOT,
+            "2", BORDER_MEDIUM_DASHED, "2", BORDER_NONE,
+            "1", BORDER_SLANTED_DASH_DOT, "2", BORDER_THICK,
+            "3", BORDER_THIN, "1");
 
 
 
@@ -153,15 +148,19 @@ public final class OnlineService {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        printClasses();
+        head.append("<style>\n");
+        for (String className : shortStyles.keySet()){
+            head.append("." + shortStyles.get(className) + " {" + className + "}\n");
+        }
+        printFile("excelStyle.css");
+        head.append("</style>\n");
+        head.append("<script>\n");
+        printFile("online.js");
+         head.append("</script>");
         return head.toString() + "</head>\n" + sb.toString();
     }
 
 
-
-    /**
-     * Run this class as a program
-     */
 
 
     private void createMergeMap() {
@@ -205,18 +204,49 @@ public final class OnlineService {
         return s;
     }
 
+    private String adjustRefersToFormula(String formula, int shiftStart, int shiftCols){
+        int startPos = formula.indexOf("!") + 1;
+        StringBuffer adjusted = new StringBuffer();
+        adjusted.append(formula.substring(0, startPos));
+        char c = formula.charAt(startPos);
+        int num = 0;
+        while (startPos < formula.length()) {
+            c = formula.charAt(startPos++);
+            if (c < 'A') {
+                adjusted.append(c);
+            } else {
+                //convert the column to a number
+                int col = c - 65;
+                if (col > 32) col = col - 32;//lower to upper
+                if (startPos < formula.length() && formula.charAt(startPos) >= 'A') {
+                    int nextChar = formula.charAt(startPos++);
+                    if (nextChar > 96) nextChar -= 32;//lower to upper
+                    col = col * 26 + nextChar - 65;
+                }
+                //change if required
+                if (col >= shiftStart) {
+                    col += shiftCols;
+                }
+                //and convert back to letters
+                int nextChar = 64;
+                while (col >= 26) {
+                    nextChar++;
+                    col -= 26;
+                }
+                if (nextChar > 64) {
+                    adjusted.append((char)nextChar);
+                }
+                adjusted.append((char)(col + 65));
+            }
+        }
+        return adjusted.toString();
+    }
+
     private void adjustNames(int colStart, int colShift) {
         for (int i = 0; i < wb.getNumberOfNames(); i++) {
             Name name = wb.getNameAt(i);
             if (name.getRefersToFormula() != null) {
-                Range r = interpretRangeName(name.getRefersToFormula());
-                if (r.startCell != null) {
-                    r.startCell = shiftCell(r.startCell, colStart, colShift);
-                    r.endCell = shiftCell(r.endCell, colStart, colShift);
-                    if (r.startCell != null) {
-                        name.setRefersToFormula(rangeToString(r));
-                    }
-                }
+                name.setRefersToFormula(adjustRefersToFormula(name.getRefersToFormula(), colStart, colShift));
             }
         }
         createChoiceMap();
@@ -247,22 +277,29 @@ public final class OnlineService {
 
     private Cell interpretCellName(Sheet sheet, String cellString) {
 
-        //TOTO  use a proper range interpreter!  this one assumes a single letter
 
-        if (cellString.startsWith("$")) {
-            cellString = cellString.substring(1);
+        int pos = 0;
+        int ch = cellString.charAt(pos++);
+        if (ch == '$')  ch = cellString.charAt(pos++);;
+
+        int column = ch - 65;
+        if (column > 32) column -=32;
+        ch = cellString.charAt(pos++);
+        if (ch >= 'A'){
+            if (ch >='a') ch -=32;
+            column = column * 26 + ch;
+            ch = cellString.charAt(pos++);
 
         }
-        int column = cellString.charAt(0) - 65;
-        String rowchars = cellString.substring(1);
-        if (rowchars.startsWith("$")) {
-            rowchars = rowchars.substring(1);
+        if (ch==':') ch = cellString.charAt(pos++);//note the conditional cell formulae (Azquo style) do not have colons
+        if (ch == '$')  ch = cellString.charAt(pos++);
+        int rowNo = ch - 48;
+        while (pos < cellString.length()){
+            //no check for a number - assumed to be so!
+            ch = cellString.charAt(pos++);
+            rowNo = rowNo * 10 + ch - 48;
         }
-        int rowNo = -1;
-        try {
-            rowNo = Integer.parseInt(rowchars) - 1;
-        } catch (Exception e) {
-        }
+        rowNo = rowNo-1;
         if (column >= 0 && rowNo >= 0 && sheet.getRow(rowNo) != null) {
             Cell cell = sheet.getRow(rowNo).getCell(column);
             if (cell == null) {
@@ -385,6 +422,7 @@ public final class OnlineService {
     }
 
     private void insertCols(Range range, int colCount) {
+        //TODO MOVE HIDDEN COLUMNS TOO!
         Map<Integer, CellStyle> styleMap = new HashMap<Integer, CellStyle>();
         int existingCols = range.endCell.getColumnIndex() - range.startCell.getColumnIndex() + 1;
         if (existingCols < colCount) {
@@ -492,29 +530,33 @@ public final class OnlineService {
             return;
         }
         Range range = interpretRangeName(regionFormula);
-        StringTokenizer rows = new StringTokenizer(fillText, "\n");
+        String[] rows  = fillText.split("\n", -1);
         int rowNo = range.startCell.getRowIndex();
-        while (rows.hasMoreTokens()) {
-            String row = rows.nextToken();
-            StringTokenizer cols = new StringTokenizer(row, "\t");
-            int colCount = cols.countTokens();
+        for (String row:rows) {
+            String[] vals = row.split("\t", -1);
+            int colCount = vals.length;
             if (!shapeAdjusted) {
-                int rowCount = rows.countTokens() + 1;
+                int rowCount = rows.length;
                 insertRows(range, rowCount);
                 insertCols(range, colCount);
                 createNameMap();
                 shapeAdjusted = true;
             }
             Row aRow = azquoSheet.getRow(rowNo);
-            for (int colNo = range.startCell.getColumnIndex(); colNo < range.startCell.getColumnIndex() + colCount; colNo++) {
+            int colNo = range.startCell.getColumnIndex();
+            for (String val:vals){
                 if (aRow.getCell(colNo) == null) aRow.createCell(colNo);
-                String val = cols.nextToken();
                 if (val.equals("0.0")) val = "";
-                if (NumberUtils.isNumber(val)) {
-                    aRow.getCell(colNo).setCellValue(Double.parseDouble(val));
+                if (val.endsWith("%") && NumberUtils.isNumber(val.substring(0, val.length() - 1))){
+                        aRow.getCell(colNo).setCellValue(Double.parseDouble(val.substring(0,val.length()-1))/100);
                 }else{
-                    aRow.getCell(colNo).setCellValue(val);
+                    if (NumberUtils.isNumber(val)) {
+                        aRow.getCell(colNo).setCellValue(Double.parseDouble(val));
+                    } else {
+                        aRow.getCell(colNo).setCellValue(val);
+                    }
                 }
+                colNo++;
             }
             rowNo++;
         }
@@ -536,7 +578,7 @@ public final class OnlineService {
         if (headings.startsWith("error:")) {
             return headings;
         }
-        String result = valueService.getRowHeadings(loggedInConnection, region, headings, 0);
+        String result = valueService.getFullRowHeadings(loggedInConnection, region, headings);
         if (result.startsWith("error:")) return result;
         //don't bother to display yet - maybe need to filter out or sort
         headingsFormula = rangeNames.get("az_columnheadings" + region);
@@ -612,6 +654,58 @@ public final class OnlineService {
 
     }
 
+    private List<String> interpretList(String list){
+        //expects a list  "aaaa","bbbb"  etc, though it will pay attention only to the quotes
+        List<String> items = new ArrayList<String>();
+        StringBuffer item = new StringBuffer();
+        boolean inItem = false;
+        int pos = 0;
+        while (pos < list.length()){
+            char c = list.charAt(pos++);
+            if (c == '\"') {
+                if (inItem) {
+                    inItem = false;
+                    items.add(item.toString());
+                    item = new StringBuffer();
+                } else {
+                    inItem = true;
+                }
+            }else {
+                if (inItem) item.append((char) c);
+            }
+        }
+        return items;
+
+    }
+
+    private String addOption(String item, String selected){
+        String content = "<option value = \"" + item + "\"";
+        if (item.equals(selected)) {
+            content += " selected";
+
+        }
+        content += ">" + item + "</option>\n";
+        return content;
+    }
+
+    private void getMaxCol(){
+
+        Iterator<Row> rows = azquoSheet.rowIterator();
+        maxCol=0;
+        while (rows.hasNext()) {
+            Row row = rows.next();
+            //maxHeight += (int) row.getHeight() / ROWSCALE;
+            int lastColWithData = row.getLastCellNum();
+
+            if (lastColWithData > maxCol) {
+
+                maxCol = lastColWithData;
+            }
+
+        }
+
+    }
+
     public void print(LoggedInConnection loggedInConnection, int reportId) throws Exception {
 
 
@@ -620,9 +714,10 @@ public final class OnlineService {
             hssfColors = ((HSSFWorkbook) wb).getCustomPalette();
         }
 
-        head.append("<?xml version=\"1.0\" encoding=\"iso-8859-1\" ?>\n");
+        head.append("<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n");
         head.append("<html>\n");
         head.append("<head>\n");
+        head.append("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n");
         head.append("<script type=\"text/javascript\">\n");
         head.append("\n");
         head.append("function chosen(divName){\n");
@@ -642,31 +737,24 @@ public final class OnlineService {
         loadData(loggedInConnection);
         calculateAll(wb);
         calcConditionalFormats();
-        Iterator<Row> rows = azquoSheet.rowIterator();
-        while (rows.hasNext()) {
-            Row row = rows.next();
-            maxHeight += (int) row.getHeight() / ROWSCALE;
-
-           if (row.getLastCellNum() > maxCol) {
-                maxCol = row.getLastCellNum();
-            }
-
-        }
-        //find the cells that will be used to make choices...
+         //find the cells that will be used to make choices...
+        getMaxCol();
         createNameMap();
         setupColwidths();
 
 
 
 
-        out.format("   <body>%n  <form name=\"azquoform\" method=\"post\"> <div class=\"excelDefaults\" style=\"height:%s;width:%s;\">%n", maxHeight, maxWidth);
-        out.format("   <input type=\"hidden\" name=\"reportid\" id=\"reportId\" value=\"%s\">%n", reportId);
-        out.format("   <input type=\"hidden\" name=\"connectionid\" id=\"connectionId\" value=\"%s\">%n", loggedInConnection.getConnectionId());
-        out.format("   <input type=\"hidden\" name=\"editedname\" id=\"editedName\" value=\"\">%n");
-        out.format("   <input type=\"hidden\" name=\"editedvalue\" id=\"editedValue\" value=\"\">%n");
-        out.format("   </form>%n");
+        out.format("   <body>%n  <div class=\"excelDefaults\" onkeydown =\"keyDown()\"  style=\"height:%s;width:%s;\">%n", maxHeight, maxWidth);
+        out.format("   <form name=\"azquoform\" method=\"post\">%n");
+        out.format("   <input type=\"hidden\" name=\"reportid\" id=\"reportId\" value=\"%s\"/>%n", reportId);
+        out.format("   <input type=\"hidden\" name=\"connectionid\" id=\"connectionId\" value=\"%s\"/>%n", loggedInConnection.getConnectionId());
+        out.format("   <input type=\"hidden\" name=\"editedname\" id=\"editedName\" value=\"\"/>%n");
+        out.format("   <input type=\"hidden\" name=\"editedvalue\" id=\"editedValue\" value=\"\"/>%n");
+         out.format("   </form>%n");
+        out.format("    <div id=\"selector\" class=\"selector\"></div>%n");
 
-        rows = azquoSheet.rowIterator();
+        Iterator<Row> rows = azquoSheet.rowIterator();
 
         int rowNo = 0;
         int cellTop = 0;
@@ -739,24 +827,34 @@ public final class OnlineService {
                             if (choice != null) {
                                 Range range = interpretRangeName(choice);
                                 if (range.startCell != null && range.endCell == range.startCell) {
-                                  List<com.azquo.memorydb.Name> choiceList = new ArrayList<com.azquo.memorydb.Name>();
-                                    try {
-                                        String error = nameService.interpretName(loggedInConnection, choiceList, range.startCell.getStringCellValue());
-                                    } catch (Exception e) {
-                                        //TODO think what to do !
+
+                                    List<com.azquo.memorydb.Name> choiceList = new ArrayList<com.azquo.memorydb.Name>();
+                                    String cellChoice = range.startCell.getStringCellValue();
+                                    List<String> constants = new ArrayList<String>();
+                                    if (cellChoice.startsWith("\"")){
+                                        constants = interpretList(cellChoice);
+
+
+                                    }else {
+                                        try {
+                                            String error = nameService.interpretName(loggedInConnection, choiceList, range.startCell.getStringCellValue());
+                                        } catch (Exception e) {
+                                            //TODO think what to do !
+                                        }
                                     }
-                                    if (choiceList.size() > 0) {
+                                    if (constants.size() > 0 || choiceList.size() > 0) {
+
                                         String origContent = content;
                                         //TODO  SORT OUT THE BACKGROUND COLOUR IF NOT WHITE
+
                                         content = "<select onchange=\"chosen('" + choiceName + "')\" id=\"" + choiceMap.get(cell) + "\" class=\"" + cellClass + "\"  style=\"left:0;border:0;background-color:white;\">\n";
                                         content += "<option value = \"\"></option>";
-                                        for (com.azquo.memorydb.Name name : choiceList) {
-                                            content += "<option value = \"" + name.getDefaultDisplayName() + "\"";
-                                            if (name.getDefaultDisplayName().equals(origContent)) {
-                                                content += " selected";
 
-                                            }
-                                            content += ">" + name.getDefaultDisplayName() + "</option>\n";
+                                        for (String constant:constants){
+                                           content += addOption(constant, origContent);
+                                        }
+                                        for (com.azquo.memorydb.Name name : choiceList) {
+                                            content += addOption(name.getDefaultDisplayName(), origContent);
                                         }
                                         content += "</select>";
 
@@ -826,7 +924,7 @@ public final class OnlineService {
             HSSFstyleColor("color", cs.getFont(wb).getColor());
             HSSFstyleColor("border-right-color", cs.getRightBorderColor());
             HSSFstyleColor("border-bottom-color", cs.getBottomBorderColor());
-        } else {
+         } else {
             XSSFCellStyle cs = (XSSFCellStyle) style;
             XSSFstyleColor("background-color", cs.getFillForegroundXSSFColor());
             XSSFstyleColor("text-color", cs.getFont().getXSSFColor());
@@ -941,17 +1039,18 @@ public final class OnlineService {
         }
         styleOut("border-right", borderRightType, BORDER);
         styleOut("border-bottom", borderBottomType, BORDER);
-        borderBottom = 0;
+         borderBottom = 0;
         borderRight = 0;
         try {
-            borderBottom = BORDERSIZE.get(borderBottomType);
-            borderRight = BORDERSIZE.get(borderRightType);
-        }catch(Exception e){
+            borderBottom = (short)((BORDERSIZE.get(borderBottomType)).charAt(0) - 48);//tried the map as Short, Short, but had casting problems
+            borderRight = (short)((BORDERSIZE.get(borderRightType)).charAt(0) - 48);
+         }catch(Exception e){
+            e.printStackTrace();
 
         }
 
         colorStyles(style);
-    }
+     }
 
     private <K> void styleOut(String attr, K key, Map<K, String> mapping) {
         String value = mapping.get(key);
@@ -1149,7 +1248,7 @@ public final class OnlineService {
          if (fixedCol) {
              output = "$";
          }
-         if (colNo >26){
+         if (colNo >=26){
              colNo -= 26;
              char first = 'A';
              while (colNo >= 26){
@@ -1270,18 +1369,18 @@ public final class OnlineService {
     }
 
     Cell calcRule(String condition, String formatModel, Cell cell) {
-         if (condition.indexOf("|") > 0) {
+        if (condition.indexOf("|") > 0) {
             StringTokenizer orSplit = new StringTokenizer("|");
             while (orSplit.hasMoreTokens()) {
-                if (calcRule(orSplit.nextToken(), formatModel,cell) != null)
+                if (calcRule(orSplit.nextToken(), formatModel, cell) != null)
                     return interpretRuleCell(formatModel, cell);
             }
             return null;
         }
         if (condition.indexOf("&") > 0) {
-            StringTokenizer orSplit = new StringTokenizer(condition,"&");
+            StringTokenizer orSplit = new StringTokenizer(condition, "&");
             while (orSplit.hasMoreTokens()) {
-                if (calcRule(orSplit.nextToken(), formatModel,cell) == null)
+                if (calcRule(orSplit.nextToken(), formatModel, cell) == null)
                     return null;
             }
             return interpretRuleCell(formatModel, cell);
@@ -1289,7 +1388,7 @@ public final class OnlineService {
         boolean greater = false;
         boolean equal = false;
         boolean less = false;
-        if (condition.length() < 4) {
+        if (condition.length() < 2) {
             return null;
         }
         int firstChar = condition.charAt(0);
@@ -1323,27 +1422,44 @@ public final class OnlineService {
                 condLen = 2;
                 break;
         }
-        Cell compareCell = interpretRuleCell(condition.substring(condLen), cell);
+        String compareItem = condition.substring(condLen);
+        firstChar = compareItem.charAt(0);
+        Double diff;
         try {
-            Double diff = cell.getNumericCellValue() - compareCell.getNumericCellValue();
+            if (firstChar == '"' || firstChar == 8189) {//Excel seems to store " as char(8189) ????
+                diff = (double) cell.getStringCellValue().compareToIgnoreCase(compareItem.substring(1, compareItem.length()-1));
+                //compare strings
+            } else {
+                double compareNumber = 0.0;
+
+                if (firstChar >= '0' && firstChar <= '9') {
+                    compareNumber = Double.parseDouble(compareItem);//compare numbers
+                } else {
+                    Cell compareCell = interpretRuleCell(condition.substring(condLen), cell);
+                    if (compareCell != null) {
+                        compareNumber = compareCell.getNumericCellValue();
+
+                    }
+                }
+
+                diff = cell.getNumericCellValue() - compareNumber;
+            }
             if ((greater && diff > 0) || (equal && diff == 0) || (less && diff < 0)) {
-                return interpretRuleCell(formatModel, cell);
+               return interpretRuleCell(formatModel, cell);
             }
         } catch (Exception e) {
             //if the cells are not numeric, let it pass
         }
         return null;
-
     }
 
-    void printClasses(){
+    void printFile(String filename){
 
-        head.append("<style>\n");
-        // First, copy the base css
+         // First, copy the base css
         BufferedReader in = null;
         try {
             in = new BufferedReader(new InputStreamReader(
-                    getClass().getResourceAsStream("excelStyle.css")));
+                    getClass().getResourceAsStream(filename)));
             String line;
             while ((line = in.readLine()) != null) {
                 head.append(line + "\n");
@@ -1361,9 +1477,5 @@ public final class OnlineService {
             }
         }
 
-        for (String className : shortStyles.keySet()){
-            head.append("." + shortStyles.get(className) + " {" + className + "}\n");
-        }
-        head.append("</style>\n\n");
-    }
+      }
 }
