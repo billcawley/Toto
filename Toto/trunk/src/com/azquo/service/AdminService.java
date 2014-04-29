@@ -297,9 +297,12 @@ public class AdminService {
             reportList = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getUser().getBusinessId(),loggedInConnection.getUser().getStatus());
         }
         if (reportList != null){
-            for (OnlineReport onlineReport:reportList) {
+             for (OnlineReport onlineReport:reportList) {
                 onlineReport.setDatabase(databaseDao.findById(onlineReport.getDatabaseId()).getName());
             }
+        }else{
+            OnlineReport notFound = new OnlineReport(0,0,0,"","No reports found","","");
+            reportList.add(notFound);
         }
         return reportList;
     }
