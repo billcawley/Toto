@@ -1164,36 +1164,6 @@ seaports;children   container;children
         return "\"" + elementName + "\":\"" + elementValue.replace("\"","\\") + "\"";
     }
 
-    public String sortSelectsJson(Map<OnlineReportJson.Select,Integer> selects){
-
-        List list = new LinkedList(selects.entrySet());
-        StringBuffer sb = new StringBuffer();
-        // sort list based on comparator
-        Collections.sort(list, new Comparator() {
-            public int compare(Object o1, Object o2) {
-                return ((Comparable) ((Map.Entry) (o1)).getValue())
-                        .compareTo(((Map.Entry) (o2)).getValue());
-            }
-        });
-        sb.append("\"selects\":[");
-        boolean firstSelect = true;
-        for (Iterator it = list.iterator(); it.hasNext();) {
-            Map.Entry entry = (Map.Entry) it.next();
-
-            OnlineReportJson.Select select = (OnlineReportJson.Select) entry.getKey();
-            if (firstSelect){
-                firstSelect = false;
-            }else{
-                sb.append(",");
-            }
-            sb.append("{" + jsonElement("line", select.lineNo + "") + "," + jsonElement("caption" , select.caption) + "," + jsonElement("defaultvalue", select.defaultValue) + "," + jsonElement("choice", select.choiceDefinition) + "}");
-
-        }
-        sb.append("]");
-        return sb.toString();
-
-    }
-
 
 
 }
