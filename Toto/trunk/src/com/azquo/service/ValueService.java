@@ -1,7 +1,6 @@
 package com.azquo.service;
 
 import com.azquo.adminentities.OnlineReport;
-import com.azquo.jsonrequestentities.OnlineReportJson;
 import com.azquo.jsonrequestentities.ValueJsonRequest;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
@@ -26,9 +25,8 @@ import java.util.*;
 public final class ValueService {
 
     private static final Logger logger = Logger.getLogger(ValueService.class);
-    private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
-    @Autowired
+     @Autowired
     private NameService nameService;
 
     // set the names in delete info and unlink - best I can come up with at the moment
