@@ -74,6 +74,8 @@ public final class OnlineService {
     HSSFPalette hssfColors = null;
 
     int maxCol = 0;
+    int maxHeight = 0;
+
     private Formatter out;
     private StringBuffer head = null;
     private Formatter sOut = null;//for cell styles
@@ -400,6 +402,12 @@ public final class OnlineService {
 
     }
 
+    private void setupMaxHeight(){
+        maxHeight = 0;
+        for (int rowNo = 0; rowNo < azquoSheet.getLastRowNum();rowNo++){
+            maxHeight+=azquoSheet.getRow(rowNo).getHeight()/ROWSCALE;
+        }
+    }
 
     private void insertRows(Range range, int rowCount) {
            int existingRows = range.endCell.getRowIndex() - range.startCell.getRowIndex() + 1;
@@ -714,7 +722,8 @@ public final class OnlineService {
             hssfColors = ((HSSFWorkbook) wb).getCustomPalette();
         }
 
-        head.append("<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n");
+        //head.append("<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n");
+        head.append("<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">\n");
         head.append("<html>\n");
         head.append("<head>\n");
         head.append("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n");
@@ -728,8 +737,7 @@ public final class OnlineService {
         head.append("   </script>\n");
 
 
-        int maxHeight = 0;
-        azquoSheet = wb.getSheetAt(0);
+         azquoSheet = wb.getSheetAt(0);
         shortStyles = new HashMap<String, String>();
         createNameMap();
         setChoices(loggedInConnection, reportId);
@@ -741,11 +749,12 @@ public final class OnlineService {
         getMaxCol();
         createNameMap();
         setupColwidths();
+        setupMaxHeight();
 
 
 
 
-        out.format("   <body>%n  <div class=\"excelDefaults\" onkeydown =\"keyDown()\"  style=\"height:%s;width:%s;\">%n", maxHeight, maxWidth);
+        out.format("   <body>%n  <div class=\"excelDefaults\" onkeydown =\"keyDown()\"  style=\"height:%spx;width:%spx;\">%n", maxHeight, maxWidth);
         out.format("   <form name=\"azquoform\" method=\"post\">%n");
         out.format("   <input type=\"hidden\" name=\"reportid\" id=\"reportId\" value=\"%s\"/>%n", reportId);
         out.format("   <input type=\"hidden\" name=\"connectionid\" id=\"connectionId\" value=\"%s\"/>%n", loggedInConnection.getConnectionId());
@@ -819,7 +828,7 @@ public final class OnlineService {
                             }
                         }
                         addStyle("position","absolute");
-                        addStyle("width",cellWidth + "");
+                        addStyle("width",cellWidth + "px");
                         if (choiceMap.get(cell) != null) {
                             //create a select list
                             String choiceName = choiceMap.get(cell);
@@ -866,7 +875,7 @@ public final class OnlineService {
                             }
                         }
                         cellClass.append("rp" + rowNo + " cp" + i + " ");
-                        addStyle("height", cellHeight + "");
+                        addStyle("height", cellHeight + "px");
                         out.format("   <div class=\"%s\"  id=\"cell" + rowNo + "-" + i + "\">  %s </div>%n", cellClass, content);
                         //out.format("    <td class=%s %s>%s</td>%n", styleName(style),
                         //        attrs, content);
