@@ -15,6 +15,10 @@
         See   http://blog.springsource.org/2007/11/14/annotated-web-mvc-controllers-in-spring-25/
         for details of controller annotations
         -->
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="prefix" value="/WEB-INF/pages/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
     <mvc:annotation-driven/>
     <context:component-scan base-package="com.azquo.controller">
     </context:component-scan>

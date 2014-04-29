@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -45,8 +46,7 @@ public class OnlineController {
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
     @RequestMapping
-    @ResponseBody
-    public String handleRequest (HttpServletRequest request){
+    public String handleRequest (ModelMap model,HttpServletRequest request){
 
     /*
     public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId
@@ -144,13 +144,12 @@ public class OnlineController {
             while ((line = br.readLine()) != null) {
                 logger.info(line);
             }*/
-
-            return result;
+            model.addAttribute("content", result);
         } catch (Exception e) {
             logger.error("value controller error", e);
-            return "error:" + e.getMessage();
+            model.addAttribute("content", "error:" + e.getMessage());
         }
-
+        return "utf8page";
 
     }
 

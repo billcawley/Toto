@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -31,8 +32,8 @@ public class LoginController {
     private LoginService loginService;
 
     @RequestMapping
-    @ResponseBody
-    public String handleRequest(@RequestParam(value = "database", required = false) String database,
+    public String handleRequest(ModelMap model,
+                                @RequestParam(value = "database", required = false) String database,
                                 @RequestParam(value = "useremail", required = false)  String userEmail,
                                 @RequestParam(value = "password", required = false)  String password,
                                 @RequestParam(value = "spreadsheetname", required = false) String spreadsheetName,
@@ -91,6 +92,7 @@ public class LoginController {
                 return "error:expired or incorrect connection id";
             }
         }
-        return "error:incorrect login details";
+        model.addAttribute("content", "error:incorrect login details");
+        return "utf8page";
     }
 }
