@@ -72,7 +72,7 @@ public class ProvenanceController {
                 Name theName = nameService.findByName(loggedInConnection, name);
                 if (theName != null) {
                     //System.out.println("In provenance controller name found : " + name);
-                    return formatProvenanceForOutput(theName.getProvenance(), jsonFunction);
+                    return valueService.formatProvenanceForOutput(theName.getProvenance(), jsonFunction);
                 } else {
                     return "error:name not found :" + name;
                 }
@@ -81,13 +81,13 @@ public class ProvenanceController {
                 final List<Set<Name>> nameSet = new ArrayList<Set<Name>>();
                 String error = nameService.decodeString(loggedInConnection, searchNames, nameSet);
 
-                if (error.length() > 0){
+                if (error.length() > 0) {
                     return error;
                 }
                 //assumes here that each set is a single element
                 final Set<Name> names = new HashSet<Name>();
-                for (Set<Name> nameFound:nameSet){
-                    if (nameFound.size() >1){
+                for (Set<Name> nameFound : nameSet) {
+                    if (nameFound.size() > 1) {
                         return "error: " + searchNames + " is not a list of names";
                     }
                     names.addAll(nameFound);
@@ -95,15 +95,15 @@ public class ProvenanceController {
                 if (!names.isEmpty()) {
 
                     if (names.size() == 1) {
-                        return formatProvenanceForOutput(names.iterator().next().getProvenance(), jsonFunction);
+                        return valueService.formatProvenanceForOutput(names.iterator().next().getProvenance(), jsonFunction);
                     } else {
                         final List<Value> values = valueService.findForNamesIncludeChildren(names, false);
-                        String result = formatCellProvenanceForOutput(names, values, jsonFunction);
+                        String result = valueService.formatCellProvenanceForOutput(loggedInConnection, names, values, jsonFunction);
                         return result;
-                     }
+                    }
                 }
                 // should maybe be an error here?
-                return formatProvenanceForOutput(null, jsonFunction);
+                return valueService.formatProvenanceForOutput(null, jsonFunction);
             }
 
             if (row != null && row.length() > 0 && col != null && col.length() > 0) {
@@ -115,101 +115,14 @@ public class ProvenanceController {
                 } catch (Exception e) {
                     return "error: row/col must be integers";
                 }
-                final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
-
-                // going to assume row and col start at 1 hence for index bits on here need to decrement
-                if (dataValueMap != null) {
-                    if (dataValueMap.get(rowInt) != null) {
-                        final List<List<Value>> rowValues = dataValueMap.get(rowInt);
-
-                        if (rowValues.get(colInt) != null) {
-                            final List<Value> valuesForCell = rowValues.get(colInt);
-                            final Set<Name> originalCellNames = new HashSet<Name>();
-                            //Need to find the difference between this value and the visible value.  First find the visible names on the cell
-                            originalCellNames.addAll(loggedInConnection.getContext(region));
-                            originalCellNames.addAll(loggedInConnection.getRowHeadings(region).get(rowInt));
-                            originalCellNames.addAll(loggedInConnection.getColumnHeadings(region).get(colInt));
-                            //Set<Name> specialForProvenance = new HashSet<Name>();
-
-
-                            return formatCellProvenanceForOutput(originalCellNames, valuesForCell, jsonFunction);
-                        } else {
-                            return "error: col out of range : " + col;
-                        }
-                    } else {
-                        return "error: row out of range : " + row;
-                    }
-                } else {
-                    return "error: data has not been sent for that row/col/region";
-                }
-            }
+                return valueService.formatDataRegionProvenanceForOutput(loggedInConnection, region, rowInt, colInt, jsonFunction);
+               }
 
         } catch (Exception e) {
             e.printStackTrace();
             return "error:" + e.getMessage();
         }
         return "no action taken";
-    }
-
-    private Set<Name> listDiff(Set<Name> list1, Set<Name> list2) {
-        Set<Name> diff = new HashSet<Name>();
-        diff.addAll(list1);
-        diff.removeAll(list2);
-        return diff;
-    }
-
-    // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
-    // not exactly sure why
-    // this might make it a bit more difficult to jackson but we should aim to do it really
-
-    public String formatCellProvenanceForOutput(Set<Name> origNames, List<Value> values, String jsonFunction) {
-
-        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
-        String output = "{provenance:[";
-        int count = 0;
-
-        for (Value value : values) {
-            if (count < 6) {
-                Provenance provenance = value.getProvenance();
-                if (count++ > 0) output += ",";
-                Set<Name> diffNames = new HashSet<Name>();
-                diffNames.addAll(listDiff(value.getNames(), origNames));
-                output += "{\"value\":\"" + value.getText() + "\",\"names\":[";
-                int nameCount = 0;
-                for (Name name : diffNames) {
-                    if (nameCount++ > 0) output += ",";
-                    output += "\"" + name.getDefaultDisplayName() + "\"";
-                }
-                output += "],\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + df.format(provenance.getTimeStamp()) + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"context\":\"" + provenance.getContext() + "\"}";
-
-            }
-        }
-        output += "]}";
-        if (jsonFunction != null && jsonFunction.length() > 0) {
-            return jsonFunction + "(" + output + ")";
-        } else {
-            return output;
-        }
-
-
-    }
-
-    // Todo : get rid of this function and use jackson instead BUT this means changing the names in Excel
-
-    public String formatProvenanceForOutput(Provenance provenance, String jsonFunction) {
-
-        String output;
-        if (provenance == null) {
-            output = "{provenance:[{\"who\":\"no provenance\"}]}";
-        } else {
-            //String user = provenance.getUser();
-            output = "{\"provenance\":[{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"value\":\"\",\"context\":\"" + provenance.getContext() + "\"}]}";
-        }
-        if (jsonFunction != null && jsonFunction.length() > 0) {
-            return jsonFunction + "(" + output + ")";
-        } else {
-            return output;
-        }
     }
 
 
