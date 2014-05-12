@@ -130,6 +130,9 @@ public final class ImportService {
         }
         nameService.persist(loggedInConnection);
         Database db = loggedInConnection.getAzquoMemoryDB().getDatabase();
+        if (fileType==null){
+            fileType = "spreadsheet";
+        }
         UploadRecord uploadRecord = new UploadRecord(0, new Date(), db.getBusinessId(), db.getId(), loggedInConnection.getUser().getId(), fileName, fileType, error);
         uploadRecordDAO.store(uploadRecord);
 
@@ -274,7 +277,7 @@ public final class ImportService {
         for (int col = 0; col < headings.size();col++) {
             ImportHeading heading = headings.get(col);
             //checking the name itself, then the name as part of a comma separated string
-            if (heading.heading != null && (heading.heading.equalsIgnoreCase(nameToFind) || heading.heading.toLowerCase().indexOf(nameToFind.toLowerCase() + ",") == 0)) {
+            if (heading.heading != null && (heading.heading.equalsIgnoreCase(nameToFind) || heading.heading.toLowerCase().indexOf(nameToFind.toLowerCase() + ",") == 0) && (heading.identifier || heading.attribute == null) ) {
                 if (heading.identifier) {
                     return col;
                 }
@@ -364,15 +367,18 @@ public final class ImportService {
                     }
                 }
                 if (importHeading.attribute != null && !importHeading.attribute.equals(Name.DEFAULT_DISPLAY_NAME)){
+                    //first remove the parent
+                    importHeading.name = nameService.findOrCreateName(loggedInConnection,importHeading.heading);
+                    importHeading.heading = importHeading.name.getDefaultDisplayName();
                     importHeading.identityColumn = findColumn(importHeading.heading, headings);
                     if (importHeading.identityColumn >=0){
-                    for (ImportHeading heading2:headings) {
-                          if (heading2.heading != null && heading2.heading.equals(importHeading.heading) && heading2.attribute == null) {
-                              heading2.attribute = Name.DEFAULT_DISPLAY_NAME;
-                              heading2.identityColumn = importHeading.identityColumn;
-                              break;
-                          }
-                      }
+                        for (ImportHeading heading2:headings) {
+                            if (heading2.heading != null && heading2.heading.equals(importHeading.heading) && heading2.attribute == null) {
+                                heading2.attribute = Name.DEFAULT_DISPLAY_NAME;
+                                heading2.identityColumn = importHeading.identityColumn;
+                                break;
+                            }
+                        }
 
                     }
                     findTopParent(loggedInConnection, importHeading, headings);
@@ -522,7 +528,12 @@ public final class ImportService {
                         }else{
                             parentSet = nameService.findOrCreateName(loggedInConnection,parentName);
                         }
+                        String origLanguage = loggedInConnection.getLanguage();
+                        if (headings.get(heading.childColumn).attribute != null){
+                            loggedInConnection.setLanguage(headings.get(heading.childColumn).attribute);
+                        }
                         Name name = includeInSet(loggedInConnection,childName,parentSet, namesFound);
+                        loggedInConnection.setLanguage(origLanguage);
                     }
                 }
 
@@ -677,22 +688,27 @@ public final class ImportService {
             StringTokenizer st = new StringTokenizer(line, "\t");
             //clear the set before re-instating
             ImportHeading importHeading = new ImportHeading();
-            String error = interpretHeading(loggedInConnection,st.nextToken(), importHeading);
-            importHeading.name = nameService.findOrCreateName(loggedInConnection, importHeading.heading);
-            if (error.length() > 0){
-                return error;
-            }
-            Name set = importHeading.name;
-            nameService.clearChildren(set);
-            while (st.hasMoreTokens()) {
-               String element = st.nextToken();
-               if (element.length() > 0 ){
-                   //the Excel formatter seems to get some dates wrong.  check for this
-                   //if (element.indexOf("/") > 0 && element.length() < 10){
-                  //     element = findExistingDate(loggedInConnection, element);
-                   //   }
-                   nameService.findOrCreateName(loggedInConnection, element, set);
-               }
+            if (st.hasMoreTokens()) {
+                String setName = st.nextToken();
+                if (setName.length() > 0) {
+                    String error = interpretHeading(loggedInConnection, setName, importHeading);
+                    importHeading.name = nameService.findOrCreateName(loggedInConnection, importHeading.heading);
+                    if (error.length() > 0) {
+                        return error;
+                    }
+                    Name set = importHeading.name;
+                    nameService.clearChildren(set);
+                    while (st.hasMoreTokens()) {
+                        String element = st.nextToken();
+                        if (element.length() > 0) {
+                            //the Excel formatter seems to get some dates wrong.  check for this
+                            //if (element.indexOf("/") > 0 && element.length() < 10){
+                            //     element = findExistingDate(loggedInConnection, element);
+                            //   }
+                            nameService.findOrCreateName(loggedInConnection, element, set);
+                        }
+                    }
+                }
             }
         }
         return "";
@@ -870,14 +886,17 @@ public final class ImportService {
 
         try {
             POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(fileName));
-            HSSFWorkbook wb = new HSSFWorkbook(fs);
-            HSSFRow row;
-            HSSFCell cell;
-            HSSFDataFormatter formatter = new HSSFDataFormatter();
+            Workbook wb = new HSSFWorkbook(fs);
+            AzquoBook ab = new AzquoBook();
+            ab.setWb(wb);
+            ab.calculateAll(wb);
+            Row row;
+            Cell cell;
+            DataFormatter formatter = new HSSFDataFormatter();
             int sheetNo = 0;
 
             while (sheetNo < wb.getNumberOfSheets()) {
-                HSSFSheet sheet = wb.getSheetAt(sheetNo);
+                Sheet sheet = wb.getSheetAt(sheetNo);
                 String fileType = sheet.getSheetName();
 
                 int rows; // No of rows
@@ -911,8 +930,17 @@ public final class ImportService {
                             cell = row.getCell(c);
                             if (colCount++ > 0) bw.write('\t');
                             if (cell != null) {
-
-                                String cellFormat = formatter.formatCellValue(cell);
+                                String cellFormat = "";
+                                try {
+                                    if (cell != null && cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
+                                        //evaluator.evaluateFormulaCell(cell);
+                                        cellFormat = cell.getStringCellValue();
+                                    } else {
+                                        cellFormat = formatter.formatCellValue(cell);
+                                    }
+                                }catch(Exception e){
+                                    cellFormat = "";
+                                }
                                 //Integers seem to have '.0' appended, so this is a manual chop.  It might cause problems if someone wanted to import a version '1.0'
                                 if (NumberUtils.isNumber(cellFormat) && cellFormat.endsWith(".0")) {
                                     cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
