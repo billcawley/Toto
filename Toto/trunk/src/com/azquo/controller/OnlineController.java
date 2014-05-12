@@ -4,6 +4,7 @@ import com.azquo.admindao.DatabaseDAO;
 import com.azquo.admindao.OnlineReportDAO;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.service.*;
+import com.azquo.util.Chart;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.Enumeration;
 
 
@@ -46,7 +48,7 @@ public class OnlineController {
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
     @RequestMapping
-    public String handleRequest (ModelMap model,HttpServletRequest request){
+    public String handleRequest (ModelMap model,HttpServletRequest request, HttpServletResponse response){
 
     /*
     public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId
@@ -65,24 +67,54 @@ public class OnlineController {
         String choiceName = null;
         String choiceValue = null;
         String reportId = null;
+        String chartParams = null;
+        String chart = null;
+        String jsonFunction = null;
+        String region = null;
+        String rowStr = null;
+        String colStr = null;
+        String changedValue = null;
+        String opcode = "";
+        boolean savebook = false;
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
             String paramValue = request.getParameterValues(paramName)[0];
-            if (paramName.equals("user")){
-                     user= paramValue;
-            }else if (paramName.equals("password")){
+            if (paramName.equals("user")) {
+                user = paramValue;
+            } else if (paramName.equals("password")) {
                 password = paramValue;
-            }else if (paramName.equals("connectionid")){
+            } else if (paramName.equals("connectionid")) {
                 connectionId = paramValue;
-            }else if (paramName.equals("editedname")){
+            } else if (paramName.equals("editedname")) {
                 choiceName = paramValue;
-            }else if (paramName.equals("editedvalue")){
+            } else if (paramName.equals("editedvalue")) {
                 choiceValue = paramValue;
-            }else if (paramName.equals("reportid")){
+            } else if (paramName.equals("reportid")) {
                 reportId = paramValue;
+            } else if (paramName.equals("jsonfunction")) {
+                jsonFunction = paramValue;
+            } else if (paramName.equals("chart")) {
+                chartParams = paramValue;
+            } else if (paramName.equals("opcode")) {
+                if (paramValue.equals("download")) {
+                    savebook = true;
+                }
+                opcode = paramValue;
+
+            } else if (paramName.equals("region")) {
+                region = paramValue;
+            } else if (paramName.equals("row")) {
+                rowStr = paramValue;
+            } else if (paramName.equals("col")) {
+                colStr = paramValue;
+            } else if (paramName.equals("value")) {
+                changedValue = paramValue;
+            }
+            String callerId = request.getRemoteAddr();
+            if (callerId != null && user != null && user.equals("demo@user.com")) {
+                user += callerId;
             }
         }
-
 
         long startTime = System.currentTimeMillis();
         String spreadsheetName = null;
@@ -102,6 +134,9 @@ public class OnlineController {
                 spreadsheetName = "unknown";
             }
             if (connectionId == null) {
+                if (user.equals("demo@user.com")){
+                    user += request.getRemoteAddr();
+                }
                 LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, spreadsheetName, false);
 
                 if (loggedInConnection == null) {
@@ -128,14 +163,36 @@ public class OnlineController {
             ok, one could send the row and column headings at the same time as the data but looking at the export demo it's asking for rows headings then column headings then the context
 
              */
-             if (choiceName != null){
-                 onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
-             }
+            if (choiceName != null){
+                onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
+            }
+            if (savebook){
+                String fileName = onlineReport.getFilename();
+                fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+                onlineService.saveBook(response, loggedInConnection, fileName);
+            }
+            if (changedValue!=null){
+                result = onlineService.changeValue(loggedInConnection, region, Integer.parseInt(rowStr), Integer.parseInt(colStr), changedValue);
+                result = jsonFunction + "({\"changedvalues\":" + result + "})";
+            }
 
-             if (onlineReport != null){
-                result = onlineService.readExcel(loggedInConnection,onlineReport);
+            if (opcode.equals("provenance")){
+                result = onlineService.getProvenance(loggedInConnection, Integer.parseInt(rowStr), Integer.parseInt(colStr), jsonFunction);
+            }
+            if (chartParams != null){
+                if (chartParams.length() > 6){ //params start with 'chart '
+                    chartParams = chartParams.substring(6);
+                }else{
+                    chartParams="";
+                }
+                chart =  onlineService.getChart(loggedInConnection, chartParams);
+                result = jsonFunction + "({\"chart\":\"" + chart + "\"})";
 
+            }else {
 
+                if (onlineReport != null) {
+                    result = onlineService.readExcel(loggedInConnection, onlineReport);
+                }
             }
             /*
             BufferedReader br = new BufferedReader(new StringReader(result));
@@ -146,7 +203,7 @@ public class OnlineController {
             }*/
             model.addAttribute("content", result);
         } catch (Exception e) {
-            logger.error("value controller error", e);
+            logger.error("online controller error", e);
             model.addAttribute("content", "error:" + e.getMessage());
         }
         return "utf8page";
