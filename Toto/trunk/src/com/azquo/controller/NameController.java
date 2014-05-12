@@ -23,6 +23,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import java.util.Enumeration;
+
 @Controller
 @RequestMapping("/Name")
 public class NameController {
@@ -39,7 +43,20 @@ public class NameController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "json", required = true) String json) throws Exception {
+    public String handleRequest(HttpServletRequest request)throws Exception {
+
+        Enumeration<String> parameterNames = request.getParameterNames();
+
+        String json = "";
+        while (parameterNames.hasMoreElements()) {
+            String paramName = parameterNames.nextElement();
+            String paramValue = request.getParameterValues(paramName)[0];
+            if (paramName.equals("json")) {
+                json = paramValue;
+            }
+        }
+        String callerIP = request.getRemoteAddr();
+
         try {
             if (json.length() > 0) {
                 NameJsonRequest nameJsonRequest;
@@ -49,7 +66,7 @@ public class NameController {
                     logger.error("name json parse problem", e);
                     return "error:badly formed json " + e.getMessage();
                 }
-                LoggedInConnection loggedInConnection = loginService.getConnectionFromJsonRequest(nameJsonRequest);
+                LoggedInConnection loggedInConnection = loginService.getConnectionFromJsonRequest(nameJsonRequest, callerIP);
                 if (loggedInConnection == null) {
                     return "error:invalid connection id or login credentials";
                 }
