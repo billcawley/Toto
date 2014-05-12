@@ -4,6 +4,7 @@ import com.azquo.adminentities.OnlineReport;
 import com.azquo.adminentities.Permission;
 import com.azquo.adminentities.User;
 import com.azquo.service.AdminService;
+import com.azquo.service.ImportService;
 import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.List;
 
 /**
@@ -36,6 +39,8 @@ public class AdminController {
     private AdminService adminService;
     @Autowired
     private LoginService loginService;
+    @Autowired
+    private ImportService importService;
 
     private static final String SIGNON = "signon";
     private static final String NEWDATABASE = "newdatabase";
@@ -50,6 +55,7 @@ public class AdminController {
     private static final String COPYDATABASE = "copydatabase";
     private static final String SAVEONLINEREPORTS = "saveonlinereports";
     private static final String REPORTLIST ="reportlist";
+    private static final String UPLOADFILE = "uploadfile";
 
     // maybe change all this to JSON later?
 
@@ -75,6 +81,8 @@ public class AdminController {
             , @RequestParam(value = "jsonfunction", required = false) final String jsonFunction //this is the return function for Javascript
             , @RequestParam(value = "spreadsheetname", required = false) final String spreadsheetName
             , @RequestParam(value = "namelist", required = false) final String nameList
+            , @RequestParam(value = "filename", required = false) final String fileName
+            , @RequestParam(value = "filetype", required = false) final String fileType
             , @RequestParam(value = "connectionid", required = false) String connectionId) throws Exception {
 
         logger.info("request to admin controller : " + op);
@@ -196,6 +204,16 @@ public class AdminController {
                 logger.info("returned report list : " + result);
                 return jsonFunction + "({\"username\":\"" + loggedInConnection.getUser().getName() + "\",\"reportlist\":" + result + "})";
              }
+
+            if (op.equalsIgnoreCase(UPLOADFILE)) {
+                // just a quick way to load for WFC
+               //InputStream uploadFile = new FileInputStream("/home/azquo/import/" + fileName);
+               InputStream uploadFile = new FileInputStream("/home/bill/azquo/" + fileName);
+                 return  importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType,"true", true);
+            }
+
+
+
         }
         return "";
     }
