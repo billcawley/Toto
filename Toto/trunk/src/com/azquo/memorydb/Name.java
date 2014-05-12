@@ -27,6 +27,10 @@ import java.util.*;
 public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> {
 
     public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
+    public static final String CALCULATION = "CALCULATION";
+    public static final String RPCALC = "RPCALC";
+    public static final String ANON = "ANON";
+
     public static final char QUOTE = '`';
 
     // name needs this as it links to itself hence have to load all names THEN parse the json, other objects do not hence it's in here not the memory db entity
@@ -408,6 +412,12 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             }
         }
         setNeedsPersisting();
+    }
+
+    public void setTemporaryAttribute(String attributeName, String attributeValue)throws Exception{
+        attributes.put(attributeName, attributeValue);
+        getAzquoMemoryDB().addNameToAttributeNameMap(this); // will overwrite but that's fine
+
     }
 
     // zapping set attribute set, only done by he populate from json below I think
