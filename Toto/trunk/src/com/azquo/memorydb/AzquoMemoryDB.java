@@ -234,6 +234,9 @@ public final class AzquoMemoryDB {
         final String lctAttributeName = attributeName.toLowerCase().trim();
         final String lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
         final Set<Name> names = new HashSet<Name>();
+        if (nameByAttributeMap.get(lctAttributeName) == null){
+            return names;
+        }
         for (String attributeValue : nameByAttributeMap.get(lctAttributeName).keySet()) {
             if (startsWith && endsWith) {
                 if (attributeValue.toLowerCase().contains(lctAttributeValueSearch.toLowerCase())) {
@@ -332,7 +335,7 @@ public final class AzquoMemoryDB {
                 }
                 final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
                 String attributeValue = attributes.get(attributeName).toLowerCase().trim();
-                if (attributeValue.indexOf(Name.QUOTE) >= 0 && !attributeName.equals("CALCULATION")) {
+                if (attributeValue.indexOf(Name.QUOTE) >= 0 && !attributeName.equals(Name.CALCULATION)) {
                      attributeValue = attributeValue.replace(Name.QUOTE,'\'');
                   }
                 if (namesForThisAttribute.get(attributeValue) != null) {
