@@ -42,6 +42,8 @@ public class LoginService {
     private NameService nameService;
     @Autowired
     private OpenDatabaseDAO openDatabaseDAO;
+    @Autowired
+    private ValueService valueService;
 
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
     private final HashMap<Integer, Integer> openDBCount = new HashMap<Integer, Integer>();
@@ -53,7 +55,23 @@ public class LoginService {
             spreadsheetName = "unknown";
         }
 
-        User user = userDao.findByEmail(userEmail);
+        User user;
+
+        //for demo users, a new User id is made for each user.
+        if (userEmail.startsWith("demo@user.com")){
+            user = userDao.findByEmail(userEmail);
+            if (user== null) {
+                user = userDao.findByEmail("demo@user.com");
+                if (user != null) {
+                    user.setEmail(userEmail);
+                    user.setId(0);
+                    userDao.store(user);
+                }
+            }
+        }else{
+            user = userDao.findByEmail(userEmail);
+
+        }
         if (user != null) {
             if (loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword())) {
                 // ok user should be ok :)
@@ -121,14 +139,52 @@ public class LoginService {
 
                 loginRecordDAO.store(new LoginRecord(0,user.getId(),databaseId, new Date()));
                 if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
-                    azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
+                    //azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
                 }
                 connections.put(lic.getConnectionId(), lic);
+                if (lic.getAzquoMemoryDB()!=null){
+                    anonymise(lic);
+                }
+
+
                 return lic;
             } // else would be wrong password
         } // else would be email not found
         return null;
     }
+
+    public void anonymise(LoggedInConnection loggedInConnection){
+        List<Name> anonNames = nameService.findContainingName(loggedInConnection,"",Name.ANON);
+
+        for (Name set:anonNames){
+            String anonName = set.getAttribute(Name.ANON);
+            if (set.getPeers().size() > 0 ){
+                Double low = 0.5;
+                Double high = 0.5;
+                try{
+                    String[] limits = anonName.split(" ");
+                    low = Double.parseDouble(limits[0]) / 100;
+                    high = Double.parseDouble(limits[1])/ 100;
+
+                }catch(Exception e){
+
+                }
+                valueService.randomAdjust(set, low, high);
+
+            }else {
+                int count = 1;
+                for (Name name : set.getChildren()) {
+                    try {
+                        name.setTemporaryAttribute(Name.DEFAULT_DISPLAY_NAME, anonName.replace("[nn]", count + ""));
+                        count++;
+                    } catch (Exception e) {
+
+                    }
+                }
+            }
+        }
+    }
+
 
     public void zapConnectionsTimedOut(){
         for (Iterator<Map.Entry<String, LoggedInConnection>> it = connections.entrySet().iterator(); it.hasNext();){
@@ -165,7 +221,12 @@ public class LoginService {
 
     }
 
-    public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest) throws Exception{
+    public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest, String callerIP) throws Exception{
+        String user = standardJsonRequest.user;
+        if (user != null && user.equals("demo@user.com")){
+            user = user + callerIP;
+
+        }
         if (standardJsonRequest.user != null && standardJsonRequest.user.length() > 0 &&
                 standardJsonRequest.password != null && standardJsonRequest.password.length() > 0) {
             return login(standardJsonRequest.database == null ? "" : standardJsonRequest.database, standardJsonRequest.user, standardJsonRequest.password, 60, standardJsonRequest.spreadsheetName, false);
