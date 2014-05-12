@@ -18,6 +18,8 @@ import java.util.regex.Pattern;
  * Time: 14:18
  */
 public final class NameService {
+
+
     public static final String LEVEL = "level";
     public static final String FROM = "from";
     public static final String TO = "to";
@@ -116,8 +118,14 @@ public final class NameService {
 
     public ArrayList<Name> findContainingName(final LoggedInConnection loggedInConnection, final String name) {
         // go for the default for the moment
-        return sortNames(new ArrayList<Name>(loggedInConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(Name.DEFAULT_DISPLAY_NAME, name)));
+        return findContainingName(loggedInConnection,name, Name.DEFAULT_DISPLAY_NAME);
     }
+
+    public ArrayList<Name> findContainingName(final LoggedInConnection loggedInConnection, final String name, String attribute) {
+        // go for the default for the moment
+       return sortNames(new ArrayList<Name>(loggedInConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name)));
+    }
+
 
     public Name findById(final LoggedInConnection loggedInConnection, int id) {
         return loggedInConnection.getAzquoMemoryDB().getNameById(id);
@@ -453,7 +461,7 @@ public final class NameService {
     public static final String ERROR = "ERROR";
     public static final String WARNING = "WARNING";
 
-    public Map<String, String> isAValidNameSet(final Set<Name> names, final Set<Name> validNameList) throws Exception {
+    public Map<String, String> isAValidNameSet(LoggedInConnection loggedInConnection,final Set<Name> names, final Set<Name> validNameList) throws Exception {
 
         //long track = System.currentTimeMillis();
 
@@ -468,21 +476,54 @@ public final class NameService {
 
         for (Name name : names) {
             if (name != null){
-                boolean thisNameHasPeers = false;
-                if (!name.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
-                    if (peerName == null){
-                        peerName = name;
-                        for (Name peer:name.getPeers().keySet()){
-                            peers.put(peer.findTopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
+                String calc = name.getAttribute(Name.RPCALC);
+                // if one term is calculated, the required peers will be the largest of any set of peers in the calculation
+                // if one term has peers, then all should have peers, and all should be a subset of the largest set, but I'm not checking this currently
+                if (calc!=null && calc.length()>0 && peers.isEmpty()){
+                    while (calc.length()>0){
+                        String nextTerm;
+                        if (calc.indexOf(" ") > 0) {
+                            nextTerm = calc.substring(0, calc.indexOf(" ")).trim();
+                        }else{
+                            nextTerm = calc;
                         }
-                    }else{
-                        error += "two names have peers: " + peerName.getDefaultDisplayName() + " and " + name.getDefaultDisplayName();
-                        return toReturn;
+                        if (nextTerm.charAt(0) == NAMEMARKER){
+                            Name termName = getNameByAttribute(loggedInConnection,nextTerm,null);
+                            if (termName==null){
+                                error+="the formula for " + peerName.getDefaultDisplayName() + " is not understood";
+                            }
+                            if (termName.getPeers().size() > peers.size()){
+                                peerName = name;
+                                peers.clear();
+                                for (Name peer:name.getPeers().keySet()){
+                                    peers.put(peer.findTopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
+                                }
+                           }
+                        }
+                        calc = calc.substring(nextTerm.length()).trim();
                     }
-                    validNameList.add(name); // the rest will be added below but we need to add this here as the peer defining name is not on the list of peers
-                } else {
-                    // not adding the name with peers to namesToCheck is more efficient and it stops the name with peers from showing up as being superfluous to the peer list if that makes sense
-                    namesToCheck.add(name);
+                    if (!peers.isEmpty()){
+                        peerName = name;
+                        validNameList.add(name);
+                    }else{
+                        namesToCheck.add(name);
+                    }
+                }else {
+                    if (!name.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
+                        if (peerName == null) {
+                            peerName = name;
+                            for (Name peer : name.getPeers().keySet()) {
+                                peers.put(peer.findTopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
+                            }
+                        } else {
+                            error += "two names have peers: " + peerName.getDefaultDisplayName() + " and " + name.getDefaultDisplayName();
+                            return toReturn;
+                        }
+                        validNameList.add(name); // the rest will be added below but we need to add this here as the peer defining name is not on the list of peers
+                    } else {
+                        // not adding the name with peers to namesToCheck is more efficient and it stops the name with peers from showing up as being superfluous to the peer list if that makes sense
+                        namesToCheck.add(name);
+                    }
                 }
             }
         }
@@ -677,15 +718,15 @@ public final class NameService {
     // arguably should be called on store and the RPCALC stored as that attribute only changes when "CALCULATION" changes
 
     public String calcReversePolish(LoggedInConnection loggedInConnection, Name name) throws Exception {
-        String calc = name.getAttribute("CALCULATION");
+        String calc = name.getAttribute(Name.CALCULATION);
         if (calc != null && calc.length() > 0) {
             String result = shuntingYardAlgorithm(loggedInConnection, calc);
             if (result != null && result.length() > 0) {
                 if (result.startsWith("error:")) {
                     return result;
                 } else {
-                    if (name.getAttribute("RPCALC") == null || !name.getAttribute("RPCALC").equals(result)) {
-                        name.setAttributeWillBePersisted("RPCALC", result);
+                    if (name.getAttribute(Name.RPCALC) == null || !name.getAttribute(Name.RPCALC).equals(result)) {
+                        name.setAttributeWillBePersisted(Name.RPCALC, result);
                     }
                 }
             }
@@ -1166,5 +1207,5 @@ public final class NameService {
         return sb.toString();
     }
 
- }
+  }
 
