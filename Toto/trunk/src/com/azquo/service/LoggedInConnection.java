@@ -48,8 +48,9 @@ public final class LoggedInConnection {
     private final Map<String, String> sentDataMaps;
     private final Map<String, List<List<List<Value>>>> sentDataValuesMaps; // As in a 2 d array (lists of lists) of lists of valuer Useful for when data is saved
     private final Map<String, List<List<Set<Name>>>> sentDataNamesMaps; // As in a 2 d array (lists of lists) of sets of names, identifying each cell. Necessary if saving new data in that cell. SHould the values map use sets also???
-    private List<Set<Name>>  readPermissions = new ArrayList<Set<Name>>();
-    private List<Set<Name>> writePermissions = new ArrayList<Set<Name>>();
+    private List<Set<Name>>  readPermissions;
+    private List<Set<Name>> writePermissions;
+    private AzquoBook azquoBook;
 
     private static final String defaultRegion = "default-region";
 
@@ -72,6 +73,10 @@ public final class LoggedInConnection {
         sentDataMaps = new HashMap<String, String>();
         sentDataValuesMaps = new HashMap<String, List<List<List<Value>>>>();
         sentDataNamesMaps = new HashMap<String, List<List<Set<Name>>>>();
+        readPermissions =  new ArrayList<Set<Name>>();
+        writePermissions = new ArrayList<Set<Name>>();
+        azquoBook = null;
+
         if (timeOut > 0) {
             this.timeOut = timeOut;
         } else {
@@ -339,6 +344,10 @@ public final class LoggedInConnection {
     public void setWritePermissions(List<Set<Name>> names){
         this.writePermissions = names;
     }
+
+    public AzquoBook getAzquoBook() { return this.azquoBook; }
+
+    public void setAzquoBook(AzquoBook azquoBook){    this.azquoBook = azquoBook;  }
 
 
 
