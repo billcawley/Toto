@@ -13,6 +13,8 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.StringReader;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -54,7 +56,8 @@ public final class ValueService {
     public String storeValueWithProvenanceAndNames(final LoggedInConnection loggedInConnection, String valueString, final Set<Name> names) throws Exception {
         String toReturn = "";
         final Set<Name> validNames = new HashSet<Name>();
-        final Map<String, String> nameCheckResult = nameService.isAValidNameSet(names, validNames);
+
+        final Map<String, String> nameCheckResult = nameService.isAValidNameSet(loggedInConnection, names, validNames);
         final String error = nameCheckResult.get(NameService.ERROR);
         final String warning = nameCheckResult.get(NameService.WARNING);
         if (error != null) {
@@ -285,16 +288,36 @@ public final class ValueService {
     There may be name references in there, by !nameid
     */
 
+    private Set<Name> trimNames(Name name, Set<Name> nameSet){
+        //this is for weeding out peers when an element of the calc has less peers
+        int required= name.getPeers().size();
+        Set<Name> applicableNames = new HashSet<Name>();
+        for (Name peer:name.getPeers().keySet()) {
+            for (Name listName : nameSet) {
+                if (listName.findTopParent() == peer.findTopParent()) {
+                    applicableNames.add(listName);
+                    if (--required == 0) {
+                        return applicableNames;
+                    }
+
+                }
+            }
+        }
+        return applicableNames;
+
+    }
+
     public double findValueForNames(final LoggedInConnection loggedInConnection, final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound) {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
-        String calcString = "";
+
+         String calcString = "";
         boolean hasCalc = false;
         // add all names to calcnames except the the one with RPCALC
         // and here's a thing : if more than one name has RPcalc then only the first will be used
         for (Name name : names) {
             if (!hasCalc) {
-                calcString = name.getAttribute("RPCALC");
+                calcString = name.getAttribute(Name.RPCALC);
                 if (calcString != null) {
                     hasCalc = true;
                 } else {
@@ -330,7 +353,7 @@ public final class ValueService {
                     } else if (values[valNo] == 0) {
                         values[valNo - 1] = 0;
                     } else {
-                        values[valNo - 1] /= values[valNo];
+                         values[valNo - 1] /= values[valNo];
                     }
                 } else { // a value, not in the Azquo sense, a number or reference to a name
                     if (NumberUtils.isNumber(term)) {
@@ -340,12 +363,20 @@ public final class ValueService {
                         int id = Integer.parseInt(term.substring(1));
                         // so get the name and add it to the other names
                         Name name = nameService.findById(loggedInConnection, id);
-                        calcnames.add(name);
+                        Set<Name> seekSet = new HashSet(calcnames);
+                        if (name.getPeers().size()== 0 || name.getPeers().size() == calcnames.size()) {
+                            seekSet.add(name);
+                        }else{
+                            seekSet = trimNames(name, seekSet);
+                            seekSet.add(name);
+                        }
+
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
-                        values[valNo++] = findValueForNames(loggedInConnection, new HashSet<Name>(calcnames), locked, payAttentionToAdditive, valuesFound);
-                        calcnames.remove(calcnames.size() - 1);
-                    }
+                        values[valNo++] = findValueForNames(loggedInConnection, seekSet, locked, payAttentionToAdditive, valuesFound);
+
+
+                      }
                 }
             }
             locked.setValue(true);
@@ -791,6 +822,11 @@ seaports;children   container;children
                 restrictCount = allRowHeadings.size();
                 loggedInConnection.setRestrictCount(region, restrictCount);
             }
+            if (restrictCount > sortedRows.size()) {
+                restrictCount = sortedRows.size();
+                loggedInConnection.setRestrictCount(region, restrictCount);
+            }
+
             for (int rowInt = 0; rowInt < restrictCount; rowInt++) {
                 rowHeadingsWithData.add(allRowHeadings.get(sortedRows.get(rowInt)));
             }
@@ -845,6 +881,9 @@ seaports;children   container;children
 
     public <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
         final List<List<T>> flipped = new ArrayList<List<T>>();
+        if (source2Dlist.size() == 0){
+            return flipped;
+        }
         final int oldXMax = source2Dlist.get(0).size(); // size of nested list, as described above (that is to say get the length of one row)
         for (int newY = 0; newY < oldXMax; newY++) {
             List<T> newRow = new ArrayList<T>(); // make a new row
@@ -1001,8 +1040,31 @@ seaports;children   container;children
         }
     }
 
+    private void formatLockMap(LoggedInConnection loggedInConnection, String region, List<List<Boolean>>lockMap){
+        StringBuffer sb = new StringBuffer();
+        boolean firstRow = true;
+        for (List<Boolean> row:lockMap){
+            if (firstRow){
+                firstRow = false;
+            }else{
+                sb.append("\n");
+            }
+            boolean firstCol = true;
+            for (Boolean lock:row){
+                if (firstCol){
+                    firstCol = false;
+                }else{
+                    sb.append("\t");
+                }
+                if (lock){
+                    sb.append("LOCKED");
+                }
+            }
+        }
+        loggedInConnection.setLockMap(region, sb.toString());
+    }
 
-    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, List<List<Boolean>> lockArray, int filterCount, int restrictCount, Map<Integer,Double>rowTotals){
+    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, int filterCount, int restrictCount, Map<Integer,Double>rowTotals){
 
         int rowInt = 0;
         int blockRowCount = 0;
@@ -1012,7 +1074,6 @@ seaports;children   container;children
             restrictCount = rowTotals.size();
         }
         final StringBuilder sb = new StringBuilder();
-        final StringBuilder lockMapsb = new StringBuilder();
         List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
         if (restrictCount > sortedRows.size()){
             restrictCount = sortedRows.size();
@@ -1020,28 +1081,18 @@ seaports;children   container;children
         for (int rowNo =0;rowNo < restrictCount;rowNo++){
 
             List<String> rowValuesShown = shownValueArray.get(sortedRows.get(rowNo));
-            List<Boolean> locks = lockArray.get(sortedRows.get(rowNo));
             if (blockRowCount == 0){
                 outputMarker = sb.length();// in case we need to truncate it.
             }
             if (!firstRow){
-                lockMapsb.append("\n");
-                sb.append("\n");
+                 sb.append("\n");
             }
             boolean newRow = true;
-            Iterator it = locks.iterator();
             for (String colValue:rowValuesShown){
-                boolean locked = (Boolean) it.next();
                 if (!newRow){
-                    lockMapsb.append("\t");
-                    sb.append("\t");
+                     sb.append("\t");
                 }
                 sb.append(colValue);
-                if (locked){
-                    lockMapsb.append("LOCKED");
-                }else{
-                    lockMapsb.append("");
-                }
                 newRow = false;
 
             }
@@ -1055,8 +1106,7 @@ seaports;children   container;children
                 blockRowCount = 0;
             }
         }
-        loggedInConnection.setLockMap(region, lockMapsb.toString());
-        loggedInConnection.setSentDataMap(region, sb.toString());
+          loggedInConnection.setSentDataMap(region, sb.toString());
 
         return sb;
     }
@@ -1107,16 +1157,23 @@ seaports;children   container;children
             lockArray.add(lockedCells);
 
             double rowTotal = 0.0;
+            boolean hasValues = false;
             for (List<Name> columnName : loggedInConnection.getColumnHeadings(region)) {
                 final Set<Name> namesForThisCell = new HashSet<Name>();
                 createCellNameList(namesForThisCell, rowName, columnName, contextNames);
                 // edd putting in peer check stuff here, should I not???
-                 MutableBoolean locked = new MutableBoolean(false); // we can pass a mutable boolean in and have the function set it
-                 Map<String, String> result = nameService.isAValidNameSet(namesForThisCell, new HashSet<Name>());
-                if (result.get(NameService.ERROR) != null) { // not a valid peer set? Show a blank locked cell
+                MutableBoolean locked = new MutableBoolean(false); // we can pass a mutable boolean in and have the function set it
+                // why bother?   Maybe leave it as 'on demand' when a data region doesn't work
+                // Map<String, String> result = nameService.isAValidNameSet(loggedInConnection, namesForThisCell, new HashSet<Name>());
+               // much simpler check - simply that the list is complete.
+                boolean checked = true;
+                for (Name name:namesForThisCell){
+                    if (name== null) checked=false;
+                }
+                if (!checked) { // not a valid peer set? Show a blank locked cell
                     shownValues.add("");
                     lockedCells.add(true);
-                }else{
+                } else {
 
                     List<Value> values = new ArrayList<Value>();
                     thisRowValues.add(values);
@@ -1124,31 +1181,39 @@ seaports;children   container;children
                     // TODO - peer additive check. If using peers and not additive, don't include children
                     double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values); // true = pay attention to names additive flag
                     //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                    if (restrictCount < 0){
+                    if (restrictCount < 0) {
                         rowTotal += cellValue;
-                    }else{
+                    } else {
                         rowTotal -= cellValue;
                     }
-                    if (values.size() == 1){
-                        for (Value value:values){
+                    if (values.size() > 0) {
+                        hasValues = true;
+                    }
+                    if (values.size() == 1 && !locked.isTrue()) {
+                        for (Value value : values) {
                             shownValues.add(value.getText());
                         }
-                    }else{
+                    } else {
                         shownValues.add(cellValue + "");
                     }
-                    if (locked.isTrue()){
+                    if (locked.isTrue()) {
                         lockedCells.add(true);
-                    }else{
+                    } else {
                         lockedCells.add(false);
                     }
                 }
             }
-            rowTotals.put(rowNo++, rowTotal);
+            if (hasValues) {
+                rowTotals.put(rowNo++, rowTotal);
+            }else{
+                rowNo++;
+            }
 
         }
         loggedInConnection.setRowOrder(region,sortRows(restrictCount, rowTotals));
         loggedInConnection.setRestrictCount(region,restrictCount);
-        final StringBuilder sb =  formatDataRegion(loggedInConnection,region, shownValueArray, lockArray, filterCount, restrictCount, rowTotals);
+        final StringBuilder sb =  formatDataRegion(loggedInConnection,region, shownValueArray, filterCount, restrictCount, rowTotals);
+        formatLockMap(loggedInConnection,region,lockArray);
 
         printSumStats();
         printFindForNamesIncludeChildrenStats();
@@ -1162,6 +1227,248 @@ seaports;children   container;children
         return "\"" + elementName + "\":\"" + elementValue.replace("\"","\\") + "\"";
     }
 
+    public void randomAdjust(Name name, double low, double high){
+        for (Value value:name.getValues()){
+            try{
+                double orig = Double.parseDouble(value.getText());
+                Double newValue = orig * ((1 + low) + (high - low) * Math.random());
+                int newRound = (int)(newValue*100);
+                value.setText((((double)newRound)/100) + "");
+            }catch(Exception e){
+
+            }
+        }
+
+    }
+
+
+
+public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt,String jsonFunction) {
+    final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
+    final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
+
+
+    if (dataValueMap != null) {
+        if (dataValueMap.get(rowInt) != null) {
+            final List<List<Value>> rowValues = dataValueMap.get(rowOrder.get(rowInt));
+
+            if (rowValues.get(colInt) != null) {
+                final List<Value> valuesForCell = rowValues.get(colInt);
+                final Set<Name> originalCellNames = new HashSet<Name>();
+                //Need to find the difference between this value and the visible value.  First find the visible names on the cell
+                originalCellNames.addAll(loggedInConnection.getContext(region));
+                originalCellNames.addAll(loggedInConnection.getRowHeadings(region).get(rowOrder.get(rowInt)));
+                originalCellNames.addAll(loggedInConnection.getColumnHeadings(region).get(colInt));
+                //Set<Name> specialForProvenance = new HashSet<Name>();
+
+
+                return formatCellProvenanceForOutput(loggedInConnection, originalCellNames, valuesForCell, jsonFunction);
+            } else {
+                return ""; //return "error: col out of range : " + colInt;
+            }
+        } else {
+            return ""; //"error: row out of range : " + rowInt;
+        }
+    } else {
+        return ""; //"error: data has not been sent for that row/col/region";
+    }
+}
+    private Name getMostUsedName(Set<Value> values){
+        Map<Name,Integer> nameCount = new HashMap<Name, Integer>();
+        for (Value value:values){
+            for (Name name:value.getNames()){
+                Integer origCount = nameCount.get(name);
+                if (origCount == null) {
+                    nameCount.put(name, 1);
+                } else {
+                    nameCount.put(name, origCount + 1);
+                }
+            }
+        }
+        int maxCount = 0;
+        Name maxName = null;
+        for (Name name:nameCount.keySet()){
+            int count = nameCount.get(name);
+            if (count > maxCount){
+                maxCount = count;
+                maxName = name;
+            }
+        }
+        return maxName;
+    }
+
+
+    public void sortValues(List<Value> values){
+
+             Collections.sort(values, new Comparator() {
+                public int compare(Object o1, Object o2) {
+                    return ((Comparable) ((Value)(o1)).getProvenance().getTimeStamp())
+                            .compareTo(((Value) (o2)).getProvenance().getTimeStamp());
+                }
+            });
+
+    }
+
+
+
+    private Set<Name> listDiff(Set<Name> list1, Set<Name> list2) {
+        Set<Name> diff = new HashSet<Name>();
+        diff.addAll(list1);
+        diff.removeAll(list2);
+        return diff;
+    }
+
+
+    private StringBuffer printBatch(LoggedInConnection loggedInConnection, Set<Value> values) {
+        StringBuffer sb = new StringBuffer();
+         int debugCount = 0;
+        boolean headingNeeded = false;
+        boolean firstName = true;
+        for (Value value:values){
+            if (value.getNames().size() > 1 ){
+                headingNeeded = true;
+                break;
+            }
+            String nameFound = null;
+            for (Name name:value.getNames()){
+                nameFound = name.getDefaultDisplayName();
+            }
+            if (firstName){
+                firstName = false;
+            }else{
+                sb.append(",");
+            }
+            sb.append("{");
+            debugCount = value.getNames().size();
+            sb.append(jsonValue("value", value.getText(), false));
+            sb.append(jsonValue("name", nameFound, true));
+            sb.append("}");
+
+        }
+
+        if (headingNeeded){
+            boolean firstHeading = true;
+            while (values.size() > 0) {
+                Name heading = getMostUsedName(values);
+                Set<Value> extract = new HashSet<Value>();
+                Set<Value> slimExtract = new HashSet<Value>();
+                 for (Value value : values) {
+                    if (value.getNames().contains(heading)) {
+                        extract.add(value);
+                        //creating a new 'value' with one less name for recursion
+                        Value slimValue = null;
+                        try {
+                            slimValue = new Value(loggedInConnection.getAzquoMemoryDB(), null, value.getText(), null);
+                        } catch (Exception e) {
+                            //no reason for exceptions, so ignore.
+                        }
+                        Set<Name> slimNames = new HashSet<Name>();
+                        for (Name name : value.getNames()) {
+                            slimNames.add(name);
+                        }
+                        slimNames.remove(heading);
+                        slimValue.setNames(slimNames);
+                        slimExtract.add(slimValue);
+                        debugCount = slimValue.getNames().size();
+                    }
+
+
+                }
+                values.removeAll(extract);
+                if (firstHeading){
+                    firstHeading = false;
+                }else{
+                    sb.append(",");
+                }
+                sb.append("{");
+                sb.append(jsonValue("heading", heading.getDefaultDisplayName(), false));
+                sb.append(",\"items\":[" + printBatch(loggedInConnection,slimExtract).toString() + "]");
+                sb.append("}");
+            }
+        }
+        return sb;
+
+    }
+
+
+
+    private String jsonValue(String val1, String val2, boolean comma){
+        String result =  "\"" + val1 + "\":\"" + val2 + "\"";
+        if (!comma){
+            return result;
+
+        }
+        return "," + result;
+    }
+
+
+    private StringBuffer printExtract(LoggedInConnection loggedInConnection, Set<Value> values, Provenance p) {
+        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
+        StringBuffer sb = new StringBuffer();
+        sb.append(jsonValue("heading", df.format(p.getTimeStamp()) + " " + p.getUser() + " " + p.getMethod() + " " + p.getName(), false));
+        sb.append(",\"items\":[");
+        sb.append(printBatch(loggedInConnection, values));
+        sb.append("]");
+        return sb;
+    }
+
+
+
+    // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
+    // not exactly sure why
+    // this might make it a bit more difficult to jackson but we should aim to do it really
+
+    public String formatCellProvenanceForOutput(LoggedInConnection loggedInConnection, Set<Name> origNames, List<Value> values, String jsonFunction) {
+
+         StringBuffer output = new StringBuffer();
+        output.append(jsonFunction + "({\"provenance\":[{");
+        int count = 0;
+        sortValues(values);
+
+        //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
+        Date provdate = values.get(0).getProvenance().getTimeStamp();
+        Set<Value> oneUpdate = new HashSet<Value>();
+        Provenance p = null;
+        for (Value value:values) {
+            if (value.getProvenance().getTimeStamp() == provdate) {
+                oneUpdate.add(value);
+                p = value.getProvenance();
+            } else{
+                output.append(printExtract(loggedInConnection,oneUpdate,p));
+                oneUpdate = new HashSet<Value>();
+                provdate = value.getProvenance().getTimeStamp();
+            }
+        }
+        output.append(printExtract(loggedInConnection,oneUpdate, p));
+        output.append("}]})");
+        return output.toString();
+
+
+
+
+    }
+
+
+
+
+    public String formatProvenanceForOutput(Provenance provenance, String jsonFunction) {
+
+        String output;
+        if (provenance == null) {
+            output = "{provenance:[{\"who\":\"no provenance\"}]}";
+        } else {
+            //String user = provenance.getUser();
+            output = "{\"provenance\":[{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"value\":\"\",\"context\":\"" + provenance.getContext().replace("\n",",") + "\"}]}";
+        }
+        if (jsonFunction != null && jsonFunction.length() > 0) {
+            return jsonFunction + "(" + output + ")";
+        } else {
+            return output;
+        }
+    }
 
 
 }
+
+
+
