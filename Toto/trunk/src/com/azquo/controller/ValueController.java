@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
 import java.io.StringReader;
 import java.net.URLDecoder;
 import java.util.*;
@@ -45,23 +47,85 @@ public class ValueController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "rowheadings", required = false) String rowheadings
-            , @RequestParam(value = "columnheadings", required = false) String columnheadings
-            , @RequestParam(value = "context", required = false) String context
-            , @RequestParam(value = "connectionid", required = false) String connectionId
-            , @RequestParam(value = "region", required = false) String region
-            , @RequestParam(value = "lockmap", required = false) String lockMap
-            , @RequestParam(value = "editeddata", required = false) String editedData
-            , @RequestParam(value = "searchbynames", required = false) String searchByNames
-            , @RequestParam(value = "jsonfunction", required = false) String jsonfunction
-            , @RequestParam(value = "user", required = false)  String user
-            , @RequestParam(value = "password", required = false) String password
-            , @RequestParam(value = "filtercount", required = false) String filterString
-            , @RequestParam(value = "restrictcount", required = false) String restrictString
-            , @RequestParam(value = "spreadsheetName", required = false) String spreadsheetName
-            , @RequestParam(value = "json", required = false) String json
-            , @RequestParam(value = "database", required = false) String database) throws Exception {
+    public String handleRequest(HttpServletRequest request)throws Exception{
 
+        String rowheadings = null;
+        String columnheadings = null;
+        String context = null;
+        String connectionId = null;
+        String region = null;
+        String lockMap = null;
+        String editedData = null;
+        String searchByNames = null;
+        String jsonfunction = null;
+        String user = null;
+        String password = null;
+        String filterString = null;
+        String restrictString = null;
+        String spreadsheetName = null;
+        String json = null;
+        String database = null;
+
+        Enumeration<String> parameterNames = request.getParameterNames();
+
+        while (parameterNames.hasMoreElements()) {
+            String paramName = parameterNames.nextElement();
+            String paramValue = request.getParameterValues(paramName)[0];
+            if (paramName.equals("rowheadings")) {
+                rowheadings = paramValue;
+            }
+            if (paramName.equals("columnheadings")) {
+                columnheadings = paramValue;
+            }
+            if (paramName.equals("context")) {
+                context = paramValue;
+            }
+            if (paramName.equals("connectionid")) {
+                connectionId = paramValue;
+            }
+            if (paramName.equals("region")) {
+                region = paramValue;
+            }
+            if (paramName.equals("lockmap")) {
+                lockMap = paramValue;
+            }
+            if (paramName.equals("editeddata")) {
+                editedData = paramValue;
+            }
+            if (paramName.equals("searchbynames")) {
+                searchByNames = paramValue;
+            }
+            if (paramName.equals("jsonfunction")) {
+                jsonfunction = paramValue;
+            }
+            if (paramName.equals("user")) {
+                user = paramValue;
+            }
+            if (paramName.equals("password")) {
+                password = paramValue;
+            }
+            if (paramName.equals("filtercount")) {
+                filterString = paramValue;
+            }
+            if (paramName.equals("restrictcount")) {
+                restrictString = paramValue;
+            }
+            if (paramName.equals("spreadsheetName")) {
+                spreadsheetName = paramValue;
+            }
+            if (paramName.equals("json")) {
+                json = paramValue;
+            }
+            if (paramName.equals("database")) {
+                database = paramValue;
+            }
+         }
+
+
+         String callerID = request.getRemoteAddr();
+        if (callerID != null && user != null && user.equals("demo@user.com")){
+            user += callerID;
+        }
 
         long startTime = System.currentTimeMillis();
         if (region != null && region.length() == 0) {
