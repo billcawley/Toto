@@ -97,6 +97,11 @@ public final class Value extends AzquoMemoryDBEntity {
         return Collections.unmodifiableSet(names);
     }
 
+    public void setNames(final Set<Name> names){
+        //this function is used only for temporary 'values' while creating provenance information on sets of values.
+        this.names = names;
+    }
+
     // make sure to adjust the values lists on the name objects :)
     // synchronised but I'm not sure if this is good enough? Certainly better then nothing
 
