@@ -16,7 +16,7 @@ var entryRegion = null;
 var entryRegionX = 0;
 var entryRegionY = 0;
 var controlKeyDown = false;
-
+var menuControls = [{"position":1,"name":"provenance","enabled":true,"link":"showProvenance()"},{"position":3,"name":"highlight changes","enabled":false,"link":"showHighlight()"}];
 
 
 positionSelection();
@@ -48,6 +48,57 @@ function convertRegions(){
         region.y = parseInt(region.top);
         region.rows = parseInt(region.bottom) - region.y + 1;
         region.cols = parseInt(region.right) - region.x + 1;
+    }
+}
+
+
+function showMenu(){
+    var selector = document.getElementById("selector");
+    var left = getStyleInt(selector,"left");
+    var top = getStyleInt(selector,"top");
+    if (top > 100){
+        top -=80;
+
+    }
+    left = left+20;
+    var popup =document.getElementById("popupmenu");
+    popup.style.left = left + "px";
+    popup.style.top = top + "px";
+    var menucontent = "";
+    for (var i=1; i < 4; i++){
+        var menuItem = findMenuItem(i);
+        if (menuItem!=null){
+           if (!menuItem.enabled){
+                menucontent += '<div class="disabled">' + menuItem.name + "</div>"
+            } else{
+               menucontent += '<div class="enabled"><a href="#" onclick="' + menuItem.link + '">' + menuItem.name + "</a></div>"
+
+           }
+        }else{
+            menucontent += '<div class="divider"></div>'
+        }
+
+    }
+    popup.innerHTML = menucontent;
+    popup.style.display="block";
+}
+
+function findMenuItem(position){
+    for (var i = 0;i < menuControls.length;i++){
+        if (menuControls[i].position == position){
+            return menuControls[i];
+        }
+    }
+    return null;
+}
+
+
+function setEnabled(menuitem, enabled){
+    for (var i=0;i<menuControls.length;i++){
+        if (menuControls[i].name == menuitem){
+            menuControls[i].enabled = enabled;
+            break;
+        }
     }
 }
 
@@ -96,7 +147,11 @@ function locked(cellX,cellY){
 }
 
 
-document.onclick = function(e){
+
+document.onclick = onClick;
+
+function onClick(e){
+    document.getElementById("popupmenu").style.display="none";
     var target = e.target;
     var cellId = target.id
     while (cellId != undefined && cellId.substring(0, 4) != "cell" && target.parentNode != null) {
@@ -137,6 +192,12 @@ function startEntry() {
 
 }
 
+function saveData(){
+    azquojson("Online","jsonfunction=azquojsonfeed&opcode=savedata");
+
+}
+
+
 function cancelEntry() {
 
     if (entryX < 0) return;
@@ -144,6 +205,7 @@ function cancelEntry() {
     container.setAttribute("contentEditable", false);
     if (entryVal != container.innerHTML.trim()){
         sendValue(container.innerHTML.trim())
+        document.getElementById("savedata").style.display="block";
     }
 
     entryX = -1;
@@ -174,7 +236,8 @@ document.onkeydown =function (e) {
         case 17: controlKeyDown = true;
             break;
         case 81: if (controlKeyDown){
-            showProvenance();
+            //showProvenance();
+            showMenu();
             break;
         }
 
@@ -234,6 +297,7 @@ function drawChart(){
 
 function sendValue(value){
 
+    document.getElementById("message").innerHTML = "";
     azquojson("Online","jsonfunction=azquojsonfeed&region=" + entryRegion + "&row=" + entryRegionY + "&col=" + entryRegionX  + "&value=" + encodeURIComponent(value));
 }
 
@@ -298,12 +362,17 @@ function azquojsonfeed(obj) {
     }
     if (obj.provenance > "") {
         var innerhtml = "<h2>Provenance</h2>"
-        innerhtml +=  decodeProvenance(obj.provenance);
+        innerhtml += decodeProvenance(obj.provenance);
         var prov = document.getElementById("provenancecontent");
         prov.innerHTML = innerhtml;
         document.getElementById("provenance").style.display = "block";
 
     }
+    if (obj.message > ""){
+        document.getElementById("message").innerHTML = obj.message;
+    }
+}
+
 
 
     function decodeProvenance(provDisplays) {
@@ -320,4 +389,17 @@ function azquojsonfeed(obj) {
         output += "</ul>";
         return output;
     }
+
+if (document.addEventListener) {
+    document.addEventListener('contextmenu', function(e) {
+        onClick(e);
+        showMenu();
+        e.preventDefault();
+    }, false);
+} else {
+    document.attachEvent('oncontextmenu', function() {
+        onClick(e);
+        showMenu();
+        window.event.returnValue = false;
+    });
 }
