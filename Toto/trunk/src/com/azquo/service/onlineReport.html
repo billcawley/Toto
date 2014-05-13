@@ -11,6 +11,8 @@
               <a href="http://www.azquo.com"><img src="http://www.azquo.com/wp-content/uploads/2014/01/azquo-logo2.png" alt="Azquo logo"/></a>
               <a class="downloadbutton" style="left:250px;top:35px" href="#" onclick="downloadSheet();">Download</a>
               <a class="downloadbutton" style="left:400px;top:35px" href="#" onclick="drawChart();">Draw chart</a>
+            <a class="downloadbutton" id="savedata" style="display:none;left:550px;top:35px" href="#" onclick="saveData();">Save data</a>
+            <div id="message">Right-click on a cell for 'provenance'</div>
         </div>
         <div class="excelDefaults" style="height:$maxheight;width:$maxwidth;" id="spreadsheet">
             <form name="azquoform" method="post">
@@ -22,7 +24,8 @@
             </form>
 
             <div id="selector" class="selector"></div>
-            <div id="provenance" class="provenance"><div class="closebutton"><a href="#" onclick="document.getElementById('provenance').style.display = 'none';"><img src="https://data.azquo.com:8443/images/closebutton.png" alt="close button"/></a></div><div id="provenancecontent"></div></div>
+            <div id="provenance" class="provenance"><div class="closebutton"><a href="#" onclick="document.getElementById('provenance').style.display = 'none';"><img src="https://data.azquo.com:8443/images/closebutton.png" alt="close button"/></a></div><div id="provenancecontent" class="content"></div></div>
+            <div id="popupmenu" class="popupmenu"></div>
             $workbook
         </div>
     </div>

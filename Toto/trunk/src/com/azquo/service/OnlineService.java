@@ -188,5 +188,13 @@ public final class OnlineService {
     }
 
 
+    public String saveData(LoggedInConnection loggedInConnection, String jsonFunction)throws Exception{
+
+        String result = loggedInConnection.getAzquoBook().saveData(loggedInConnection, valueService);
+        if (result.length()==0){
+            result = "data saved successfully";
+        }
+        return jsonFunction + "({\"message\":\"" + result + "\"})";
+    }
 
 }

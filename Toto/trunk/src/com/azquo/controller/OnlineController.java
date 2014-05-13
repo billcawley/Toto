@@ -179,6 +179,9 @@ public class OnlineController {
             if (opcode.equals("provenance")){
                 result = onlineService.getProvenance(loggedInConnection, Integer.parseInt(rowStr), Integer.parseInt(colStr), jsonFunction);
             }
+            if (opcode.equals("savedata")){
+                result = onlineService.saveData(loggedInConnection, jsonFunction);
+            }
             if (chartParams != null){
                 if (chartParams.length() > 6){ //params start with 'chart '
                     chartParams = chartParams.substring(6);
