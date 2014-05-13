@@ -28,7 +28,7 @@ public final class ValueService {
 
     private static final Logger logger = Logger.getLogger(ValueService.class);
 
-     @Autowired
+    @Autowired
     private NameService nameService;
 
     // set the names in delete info and unlink - best I can come up with at the moment
@@ -68,14 +68,14 @@ public final class ValueService {
         final List<Value> existingValues = findForNames(validNames);
         boolean alreadyInDatabase = false;
         for (Value existingValue : existingValues) { // really should only be one
-            if (existingValue.getProvenance().equals(loggedInConnection.getProvenance()) && existingValue.getProvenance().getMethod().equals("import")){
+            if (existingValue.getProvenance().equals(loggedInConnection.getProvenance()) && existingValue.getProvenance().getMethod().equals("import")) {
                 //new behaviour - add values from same import.
-                try{
+                try {
                     Double existingDouble = Double.parseDouble(existingValue.getText());
                     Double newValue = Double.parseDouble(valueString);
                     valueString = (existingDouble + newValue) + "";
                     existingValue.setText(valueString);
-                }catch (Exception e){
+                } catch (Exception e) {
                     // use the latest value
                 }
             }
@@ -100,6 +100,7 @@ public final class ValueService {
 
 
     public boolean overWriteExistingValue(final LoggedInConnection loggedInConnection, final Value existingValue, final String newValueString) throws Exception {
+
         Value newValue = new Value(loggedInConnection.getAzquoMemoryDB(), loggedInConnection.getProvenance(), newValueString, null);
         newValue.setNamesWillBePersisted(existingValue.getNames());
         deleteValue(existingValue);
@@ -220,7 +221,7 @@ public final class ValueService {
         return values;
     }
 
-   // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
+    // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
     public Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names, boolean payAttentionToAdditive) {
         long start = System.nanoTime();
 
@@ -231,7 +232,7 @@ public final class ValueService {
         long point = System.nanoTime();
 
         final Set<Value> valueSet = new HashSet<Value>();
-        for (Name name:smallestNames){
+        for (Name name : smallestNames) {
             valueSet.addAll(findValuesForNameIncludeAllChildren(name, payAttentionToAdditive));
         }
         part2NanoCallTime1 += (System.nanoTime() - point);
@@ -241,8 +242,8 @@ public final class ValueService {
             for (Set<Name> nameSet : names) {
                 if (!nameSet.equals(smallestNames)) { // ignore the one we started with
                     boolean foundInChildList = false;
-                    for(Name valueNames:value.getNames()){
-                        if (nameService.inParentSet(valueNames,nameSet) !=null){
+                    for (Name valueNames : value.getNames()) {
+                        if (nameService.inParentSet(valueNames, nameSet) != null) {
                             foundInChildList = true;
                             break;
                         }
@@ -266,9 +267,8 @@ public final class ValueService {
     }
 
 
-
     public void printFindForNamesIncludeChildrenStats() {
-        if (numberOfTimesCalled1 > 0){
+        if (numberOfTimesCalled1 > 0) {
             logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
             logger.info("part 1 average nano : " + (part1NanoCallTime1 / numberOfTimesCalled1));
             logger.info("part 2 average nano : " + (part2NanoCallTime1 / numberOfTimesCalled1));
@@ -288,11 +288,11 @@ public final class ValueService {
     There may be name references in there, by !nameid
     */
 
-    private Set<Name> trimNames(Name name, Set<Name> nameSet){
+    private Set<Name> trimNames(Name name, Set<Name> nameSet) {
         //this is for weeding out peers when an element of the calc has less peers
-        int required= name.getPeers().size();
+        int required = name.getPeers().size();
         Set<Name> applicableNames = new HashSet<Name>();
-        for (Name peer:name.getPeers().keySet()) {
+        for (Name peer : name.getPeers().keySet()) {
             for (Name listName : nameSet) {
                 if (listName.findTopParent() == peer.findTopParent()) {
                     applicableNames.add(listName);
@@ -311,7 +311,7 @@ public final class ValueService {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
 
-         String calcString = "";
+        String calcString = "";
         boolean hasCalc = false;
         // add all names to calcnames except the the one with RPCALC
         // and here's a thing : if more than one name has RPcalc then only the first will be used
@@ -327,11 +327,12 @@ public final class ValueService {
                 calcnames.add(name);
             }
         }
-         // no reverse polish converted formula, just sum
+        // no reverse polish converted formula, just sum
         if (!hasCalc) {
             locked.setValue(false);
-            for (Name oneName: names){
-                    if ((oneName.getPeers().size()==0 && oneName.getChildren().size() > 0) || !nameService.isAllowed(oneName, loggedInConnection.getWritePermissions())) locked.setValue(true);
+            for (Name oneName : names) {
+                if ((oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) || !nameService.isAllowed(oneName, loggedInConnection.getWritePermissions()))
+                    locked.setValue(true);
             }
             return findSumForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound);
         } else {
@@ -353,7 +354,7 @@ public final class ValueService {
                     } else if (values[valNo] == 0) {
                         values[valNo - 1] = 0;
                     } else {
-                         values[valNo - 1] /= values[valNo];
+                        values[valNo - 1] /= values[valNo];
                     }
                 } else { // a value, not in the Azquo sense, a number or reference to a name
                     if (NumberUtils.isNumber(term)) {
@@ -364,9 +365,9 @@ public final class ValueService {
                         // so get the name and add it to the other names
                         Name name = nameService.findById(loggedInConnection, id);
                         Set<Name> seekSet = new HashSet(calcnames);
-                        if (name.getPeers().size()== 0 || name.getPeers().size() == calcnames.size()) {
+                        if (name.getPeers().size() == 0 || name.getPeers().size() == calcnames.size()) {
                             seekSet.add(name);
-                        }else{
+                        } else {
                             seekSet = trimNames(name, seekSet);
                             seekSet.add(name);
                         }
@@ -376,7 +377,7 @@ public final class ValueService {
                         values[valNo++] = findValueForNames(loggedInConnection, seekSet, locked, payAttentionToAdditive, valuesFound);
 
 
-                      }
+                    }
                 }
             }
             locked.setValue(true);
@@ -411,11 +412,11 @@ public final class ValueService {
     }
 
     public void printSumStats() {
-        if (numberOfTimesCalled > 0){
-          logger.info("calls to  findSumForNamesIncludeChildren : " + numberOfTimesCalled);
-          logger.info("part 1 average nano : " + (part1NanoCallTime / numberOfTimesCalled));
-          logger.info("part 2 average nano : " + (part2NanoCallTime / numberOfTimesCalled));
-          logger.info("total average nano : " + (totalNanoCallTime / numberOfTimesCalled));
+        if (numberOfTimesCalled > 0) {
+            logger.info("calls to  findSumForNamesIncludeChildren : " + numberOfTimesCalled);
+            logger.info("part 1 average nano : " + (part1NanoCallTime / numberOfTimesCalled));
+            logger.info("part 2 average nano : " + (part2NanoCallTime / numberOfTimesCalled));
+            logger.info("total average nano : " + (totalNanoCallTime / numberOfTimesCalled));
         }
     }
 
@@ -443,16 +444,16 @@ public final class ValueService {
                 //don't show repeating names in the headings - leave blank.
                 //if ((x == 0 || !lastxNames.get(y).equals(xNames.get(y))) && (y == 0 || !xNames.get(y - 1).equals(xNames.get(y)))) {
                 lastName = xNames.get(y);
-                if (lastName != null){
-                    String nameInLanguage =lastName.getAttribute(language);
-                    if (nameInLanguage==null) {
+                if (lastName != null) {
+                    String nameInLanguage = lastName.getAttribute(language);
+                    if (nameInLanguage == null) {
                         nameInLanguage = lastName.getDefaultDisplayName();
                     }
                     sb.append(nameInLanguage);
                 }
             }
-            if (rowHeadingSupplements != null){
-                for (Name structureName:rowHeadingSupplements){
+            if (rowHeadingSupplements != null) {
+                for (Name structureName : rowHeadingSupplements) {
                     sb.append("\t" + getStructureName(lastName, structureName));
                 }
             }
@@ -485,18 +486,17 @@ seaports;children   container;children
      */
 
 
-
-    private String getStructureName(Name element, Name className){
+    private String getStructureName(Name element, Name className) {
         //works out to which set in the class the element belongs (e.g. if topparent = "car", element = "mondeo' and class = "manufacturer", this should find 'Ford cars' and return 'Ford'
         String byName = "by " + className.getDefaultDisplayName();
-        for (Name parent:element.getParents()){
-            for (Name grandParent:parent.getParents()){
+        for (Name parent : element.getParents()) {
+            for (Name grandParent : parent.getParents()) {
                 String grandParentName = grandParent.getDefaultDisplayName();
-                if (grandParentName.endsWith(byName)){
+                if (grandParentName.endsWith(byName)) {
                     String plural = grandParentName.substring(0, grandParentName.length() - byName.length()).trim();
                     String parentName = parent.getDefaultDisplayName();
-                    if (parentName.length() > plural.length()){
-                        return parentName.substring(0,parentName.length() - plural.length()).trim();
+                    if (parentName.length() > plural.length()) {
+                        return parentName.substring(0, parentName.length() - plural.length()).trim();
                     }
 
                 }
@@ -525,16 +525,16 @@ seaports;children   container;children
                     row.add(null);
                 } else {
                     List<Name> nameList = new ArrayList<Name>();
-                    if (cellString.toLowerCase().contains(";with ")){
+                    if (cellString.toLowerCase().contains(";with ")) {
                         int withPos = cellString.toLowerCase().indexOf(";with ");
                         String withList = cellString.substring(withPos + 6);
-                        cellString = cellString.substring(0,withPos);
+                        cellString = cellString.substring(0, withPos);
                         List<Set<Name>> sNames = new ArrayList<Set<Name>>();
-                        String error = nameService.decodeString(loggedInConnection,withList, sNames);
-                        if (error.length() > 0){
+                        String error = nameService.decodeString(loggedInConnection, withList, sNames);
+                        if (error.length() > 0) {
                             return error;
                         }
-                        for (Set<Name> sName:sNames){
+                        for (Set<Name> sName : sNames) {
                             supplementNames.addAll(sName); // sName should be a set of one element
                         }
                     }
@@ -665,6 +665,9 @@ seaports;children   container;children
 
         List<List<Name>> output = new ArrayList<List<Name>>();
         final int noOfHeadingDefinitionRows = headingLists.size();
+        if (noOfHeadingDefinitionRows == 0){
+            return output;
+        }
         final int lastHeadingDefinitionCellIndex = headingLists.get(0).size() - 1; // the headingLists will be square, that is to say all row lists the same length as prepared by createNameListsFromExcelRegion
 
 
@@ -707,18 +710,17 @@ seaports;children   container;children
                   */
 
 
-
-    private boolean blankRows(LoggedInConnection loggedInConnection, String region, int rowInt, int count){
+    private boolean blankRows(LoggedInConnection loggedInConnection, String region, int rowInt, int count) {
 
         final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
 
         if (dataValueMap != null) {
-            for (int rowCount = 0; rowCount < count; rowCount ++){
+            for (int rowCount = 0; rowCount < count; rowCount++) {
                 if (dataValueMap.get(rowInt + rowCount) != null) {
                     final List<List<Value>> rowValues = dataValueMap.get(rowInt + rowCount);
-                    for (List<Value> oneCell:rowValues){
-                        if (oneCell.size() > 0){
-                            return  false;
+                    for (List<Value> oneCell : rowValues) {
+                        if (oneCell.size() > 0) {
+                            return false;
                         }
                     }
                 }
@@ -742,17 +744,17 @@ seaports;children   container;children
         // put sorted list into map again
         //LinkedHashMap make sure order in which keys were inserted
         Map sortedMap = new LinkedHashMap();
-        for (Iterator it = list.iterator(); it.hasNext();) {
+        for (Iterator it = list.iterator(); it.hasNext(); ) {
             Map.Entry entry = (Map.Entry) it.next();
             sortedMap.put(entry.getKey(), entry.getValue());
         }
         return sortedMap;
     }
 
-    public List<Integer> sortRows(int restrictCount, Map<Integer, Double> rowTotals){
+    public List<Integer> sortRows(int restrictCount, Map<Integer, Double> rowTotals) {
 
-        List<Integer>sortedRows = new ArrayList<Integer>();
-        if (restrictCount != 0){
+        List<Integer> sortedRows = new ArrayList<Integer>();
+        if (restrictCount != 0) {
             List list = new LinkedList(rowTotals.entrySet());
 
             // sort list based on comparator
@@ -763,34 +765,35 @@ seaports;children   container;children
                 }
             });
 
-            for (Iterator it = list.iterator(); it.hasNext();) {
+            for (Iterator it = list.iterator(); it.hasNext(); ) {
                 Map.Entry entry = (Map.Entry) it.next();
-                sortedRows.add((Integer)entry.getKey());
+                sortedRows.add((Integer) entry.getKey());
             }
 
-        }else{
-            for (int i = 0;i < rowTotals.size(); i++){
+        } else {
+            for (int i = 0; i < rowTotals.size(); i++) {
                 sortedRows.add(i);
             }
         }
         return sortedRows;
 
     }
-   public String getFullRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent)throws Exception{
-       String language = nameService.getInstruction(headingsSent, "language");
-       final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
-       List <Name> supplementNames = new ArrayList<Name>();
-       loggedInConnection.getProvenance().setRowHeadings(headingsSent);
-       String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent);
-       if (error.length() > 0) {
-           return error;
-       }
-       loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
-       loggedInConnection.setRowHeadingSupplements(region,supplementNames);
-       return outputHeadings(loggedInConnection.getRowHeadings(region), language, loggedInConnection.getRowHeadingSupplements(region));
+
+    public String getFullRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
+        String language = nameService.getInstruction(headingsSent, "language");
+        final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
+        List<Name> supplementNames = new ArrayList<Name>();
+        loggedInConnection.getProvenance().setRowHeadings(headingsSent);
+        String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent);
+        //if (error.length() > 0) {
+       //     return error;
+       // }
+        loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
+        loggedInConnection.setRowHeadingSupplements(region, supplementNames);
+        return outputHeadings(loggedInConnection.getRowHeadings(region), language, loggedInConnection.getRowHeadingSupplements(region));
 
 
-   }
+    }
 
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent, final int filterCount) throws Exception {
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
@@ -798,14 +801,14 @@ seaports;children   container;children
         String language = nameService.getInstruction(headingsSent, "language");
 
 
-        if (filterCount > 0){
+        if (filterCount > 0) {
             //send back only those headings that have data - considered in batches of length filtercount.
             List<List<Name>> rowHeadingsWithData = new ArrayList<List<Name>>();
             List<List<Name>> allRowHeadings = loggedInConnection.getRowHeadings(region);
             int rowInt = 0;
-            while (rowInt < allRowHeadings.size()){
-                if ( !blankRows(loggedInConnection,region, rowInt, filterCount)){
-                    for (int rowCount = 0; rowCount< filterCount; rowCount++){
+            while (rowInt < allRowHeadings.size()) {
+                if (!blankRows(loggedInConnection, region, rowInt, filterCount)) {
+                    for (int rowCount = 0; rowCount < filterCount; rowCount++) {
                         rowHeadingsWithData.add(allRowHeadings.get(rowInt + rowCount));
                     }
                 }
@@ -813,7 +816,7 @@ seaports;children   container;children
             }
             //note that the sort order has already been set.... there cannot be both a restrict count and a filter count
             return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
-        }else if (loggedInConnection.getRestrictCount(region)!=null && loggedInConnection.getRestrictCount(region)!= 0) {
+        } else if (loggedInConnection.getRestrictCount(region) != null && loggedInConnection.getRestrictCount(region) != 0) {
             int restrictCount = loggedInConnection.getRestrictCount(region);
             List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
             List<List<Name>> rowHeadingsWithData = new ArrayList<List<Name>>();
@@ -831,12 +834,12 @@ seaports;children   container;children
                 rowHeadingsWithData.add(allRowHeadings.get(sortedRows.get(rowInt)));
             }
             return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
-        }else if (filterCount==-1){//Online reports with no filtercount or sorting
+        } else if (filterCount == -1) {//Online reports with no filtercount or sorting
             return outputHeadings(loggedInConnection.getRowHeadings(region), language, loggedInConnection.getRowHeadingSupplements(region));
 
 
-        }else{
-            return getFullRowHeadings(loggedInConnection,region,headingsSent);
+        } else {
+            return getFullRowHeadings(loggedInConnection, region, headingsSent);
         }
     }
 
@@ -881,7 +884,7 @@ seaports;children   container;children
 
     public <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
         final List<List<T>> flipped = new ArrayList<List<T>>();
-        if (source2Dlist.size() == 0){
+        if (source2Dlist.size() == 0) {
             return flipped;
         }
         final int oldXMax = source2Dlist.get(0).size(); // size of nested list, as described above (that is to say get the length of one row)
@@ -897,10 +900,10 @@ seaports;children   container;children
         return flipped;
     }
 
-    private Name sumName(Name name, List<Set<Name>> searchNames){
-        for (Set<Name> searchName: searchNames){
+    private Name sumName(Name name, List<Set<Name>> searchNames) {
+        for (Set<Name> searchName : searchNames) {
             Name maybeParent = nameService.inParentSet(name, searchName);
-            if (maybeParent != null){
+            if (maybeParent != null) {
                 return maybeParent;
             }
         }
@@ -910,35 +913,35 @@ seaports;children   container;children
     }
 
 
-    public Map<Set<Name>, String> getSearchValues(final List<Set<Name>>searchNames) throws Exception {
+    public Map<Set<Name>, String> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
         Set<Value> values = findForSearchNamesIncludeChildren(searchNames, false);
         //The names on the values have been moved 'up' the tree to the name that was searched
         // e.g. if the search was 'England' and the name was 'London' then 'London' has been replaced with 'England'
         // so there may be duplicates in an unordered search - hence the consolidation below.
-        final Map<Set<Name>, String> showStrings = new HashMap<Set<Name>,String>();
-        for (Value value:values){
+        final Map<Set<Name>, String> showStrings = new HashMap<Set<Name>, String>();
+        for (Value value : values) {
             Set<Name> sumNames = new HashSet<Name>();
-            for (Name name:value.getNames()){
+            for (Name name : value.getNames()) {
                 sumNames.add(sumName(name, searchNames));
             }
             String alreadyThere = showStrings.get(sumNames);
-            if (alreadyThere != null){
+            if (alreadyThere != null) {
                 //handle percentages, but not currency prefixes currently
 
-                if (NumberUtils.isNumber(alreadyThere) && NumberUtils.isNumber(value.getText())){
-                    showStrings.put(sumNames,(Double.parseDouble(alreadyThere) + Double.parseDouble(value.getText()))+"");
-                }else if (alreadyThere.endsWith("%") && value.getText().endsWith("%")){
-                    showStrings.put(sumNames, Double.parseDouble(alreadyThere.substring(0,alreadyThere.length() - 1)) + Double.parseDouble(value.getText().substring(0,value.getText().length()-1)) + "%");
-                }else{
+                if (NumberUtils.isNumber(alreadyThere) && NumberUtils.isNumber(value.getText())) {
+                    showStrings.put(sumNames, (Double.parseDouble(alreadyThere) + Double.parseDouble(value.getText())) + "");
+                } else if (alreadyThere.endsWith("%") && value.getText().endsWith("%")) {
+                    showStrings.put(sumNames, Double.parseDouble(alreadyThere.substring(0, alreadyThere.length() - 1)) + Double.parseDouble(value.getText().substring(0, value.getText().length() - 1)) + "%");
+                } else {
                     showStrings.put(sumNames, alreadyThere + "+" + value.getText());
                 }
-            }else{
-                showStrings.put(sumNames,value.getText());
+            } else {
+                showStrings.put(sumNames, value.getText());
             }
-            for (Set<Name> nameSet:showStrings.keySet()){
+            for (Set<Name> nameSet : showStrings.keySet()) {
                 String val = showStrings.get(nameSet);
-                if (NumberUtils.isNumber(val) && val.endsWith(".0")){
-                    showStrings.put(nameSet,val.substring(0, val.length() - 2));
+                if (NumberUtils.isNumber(val) && val.endsWith(".0")) {
+                    showStrings.put(nameSet, val.substring(0, val.length() - 2));
                 }
             }
         }
@@ -948,10 +951,10 @@ seaports;children   container;children
     public String getExcelDataForNamesSearch(final List<Set<Name>> searchNames) throws Exception {
         final StringBuilder sb = new StringBuilder();
         Map<Set<Name>, String> showValues = getSearchValues(searchNames);
-         Set<String> headings = new LinkedHashSet<String>();
+        Set<String> headings = new LinkedHashSet<String>();
         // this may not be optimal, can sort later . . .
         int count = 0;
-        for (Set<Name> valNames :showValues.keySet()) {
+        for (Set<Name> valNames : showValues.keySet()) {
             if (count++ == 2000) {
                 break;
             }
@@ -967,7 +970,7 @@ seaports;children   container;children
         }
         sb.append("\n");
         count = 0;
-        for (Set<Name> valNames: showValues.keySet()) {
+        for (Set<Name> valNames : showValues.keySet()) {
             if (count++ == 2000) {
                 break;
             }
@@ -1040,23 +1043,23 @@ seaports;children   container;children
         }
     }
 
-    private void formatLockMap(LoggedInConnection loggedInConnection, String region, List<List<Boolean>>lockMap){
+    private void formatLockMap(LoggedInConnection loggedInConnection, String region, List<List<Boolean>> lockMap) {
         StringBuffer sb = new StringBuffer();
         boolean firstRow = true;
-        for (List<Boolean> row:lockMap){
-            if (firstRow){
+        for (List<Boolean> row : lockMap) {
+            if (firstRow) {
                 firstRow = false;
-            }else{
+            } else {
                 sb.append("\n");
             }
             boolean firstCol = true;
-            for (Boolean lock:row){
-                if (firstCol){
+            for (Boolean lock : row) {
+                if (firstCol) {
                     firstCol = false;
-                }else{
+                } else {
                     sb.append("\t");
                 }
-                if (lock){
+                if (lock) {
                     sb.append("LOCKED");
                 }
             }
@@ -1064,33 +1067,33 @@ seaports;children   container;children
         loggedInConnection.setLockMap(region, sb.toString());
     }
 
-    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, int filterCount, int restrictCount, Map<Integer,Double>rowTotals){
+    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, int filterCount, int restrictCount, Map<Integer, Double> rowTotals) {
 
         int rowInt = 0;
         int blockRowCount = 0;
         int outputMarker = 0;
         boolean firstRow = true;
-        if (restrictCount==0) {
+        if (restrictCount == 0) {
             restrictCount = rowTotals.size();
         }
         final StringBuilder sb = new StringBuilder();
         List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
-        if (restrictCount > sortedRows.size()){
+        if (restrictCount > sortedRows.size()) {
             restrictCount = sortedRows.size();
         }
-        for (int rowNo =0;rowNo < restrictCount;rowNo++){
+        for (int rowNo = 0; rowNo < restrictCount; rowNo++) {
 
             List<String> rowValuesShown = shownValueArray.get(sortedRows.get(rowNo));
-            if (blockRowCount == 0){
+            if (blockRowCount == 0) {
                 outputMarker = sb.length();// in case we need to truncate it.
             }
-            if (!firstRow){
-                 sb.append("\n");
+            if (!firstRow) {
+                sb.append("\n");
             }
             boolean newRow = true;
-            for (String colValue:rowValuesShown){
-                if (!newRow){
-                     sb.append("\t");
+            for (String colValue : rowValuesShown) {
+                if (!newRow) {
+                    sb.append("\t");
                 }
                 sb.append(colValue);
                 newRow = false;
@@ -1099,40 +1102,38 @@ seaports;children   container;children
 
             rowInt++;
             firstRow = false;
-            if (++blockRowCount==filterCount){
-                if (blankRows(loggedInConnection, region, rowInt - filterCount, filterCount)){
+            if (++blockRowCount == filterCount) {
+                if (blankRows(loggedInConnection, region, rowInt - filterCount, filterCount)) {
                     sb.delete(outputMarker, sb.length());
                 }
                 blockRowCount = 0;
             }
         }
-          loggedInConnection.setSentDataMap(region, sb.toString());
+        loggedInConnection.setSentDataMap(region, sb.toString());
 
         return sb;
     }
- public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows) throws Exception{
 
-     if (loggedInConnection.getRowHeadings(region) == null || loggedInConnection.getRowHeadings(region).size() == 0 || loggedInConnection.getColumnHeadings(region) == null || loggedInConnection.getColumnHeadings(region).size() == 0){
-         return "no headings passed";
-     }
+    public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows) throws Exception {
 
-
-
-     loggedInConnection.getProvenance().setContext(context);
-
-     final StringTokenizer st = new StringTokenizer(context, "\n");
-     final List<Name> contextNames = new ArrayList<Name>();
-     while (st.hasMoreTokens()) {
-         final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim());
-         if (contextName == null) {
-             return "error:I can't find a name for the context : " + context;
-         }
-         contextNames.add(contextName);
-     }
-     return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows);
- }
+        if (loggedInConnection.getRowHeadings(region) == null || loggedInConnection.getRowHeadings(region).size() == 0 || loggedInConnection.getColumnHeadings(region) == null || loggedInConnection.getColumnHeadings(region).size() == 0) {
+            return "no headings passed";
+        }
 
 
+        loggedInConnection.getProvenance().setContext(context);
+
+        final StringTokenizer st = new StringTokenizer(context, "\n");
+        final List<Name> contextNames = new ArrayList<Name>();
+        while (st.hasMoreTokens()) {
+            final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim());
+            if (contextName == null) {
+                return "error:I can't find a name for the context : " + context;
+            }
+            contextNames.add(contextName);
+        }
+        return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows);
+    }
 
 
     public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictCount) throws Exception {
@@ -1141,13 +1142,13 @@ seaports;children   container;children
 
         final List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
         loggedInConnection.setDataValueMap(region, dataValuesMap);
-        final Map<Integer,Double> rowTotals = new HashMap<Integer,Double>();
+        final Map<Integer, Double> rowTotals = new HashMap<Integer, Double>();
         List<List<Set<Name>>> dataNamesMap = new ArrayList<List<Set<Name>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of names for each cell
-         List<List<String>> shownValueArray = new ArrayList<List<String>>();
+        List<List<String>> shownValueArray = new ArrayList<List<String>>();
         List<List<Boolean>> lockArray = new ArrayList<List<Boolean>>();
         int rowNo = 0;
         for (List<Name> rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
-              ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(loggedInConnection.getColumnHeadings(region).size());
+            ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(loggedInConnection.getColumnHeadings(region).size());
             ArrayList<Set<Name>> thisRowNames = new ArrayList<Set<Name>>(loggedInConnection.getColumnHeadings(region).size());
             List<String> shownValues = new ArrayList<String>();
             List<Boolean> lockedCells = new ArrayList<Boolean>();
@@ -1165,10 +1166,10 @@ seaports;children   container;children
                 MutableBoolean locked = new MutableBoolean(false); // we can pass a mutable boolean in and have the function set it
                 // why bother?   Maybe leave it as 'on demand' when a data region doesn't work
                 // Map<String, String> result = nameService.isAValidNameSet(loggedInConnection, namesForThisCell, new HashSet<Name>());
-               // much simpler check - simply that the list is complete.
+                // much simpler check - simply that the list is complete.
                 boolean checked = true;
-                for (Name name:namesForThisCell){
-                    if (name== null) checked=false;
+                for (Name name : namesForThisCell) {
+                    if (name == null) checked = false;
                 }
                 if (!checked) { // not a valid peer set? Show a blank locked cell
                     shownValues.add("");
@@ -1203,17 +1204,13 @@ seaports;children   container;children
                     }
                 }
             }
-            if (hasValues) {
-                rowTotals.put(rowNo++, rowTotal);
-            }else{
-                rowNo++;
-            }
+            rowTotals.put(rowNo++, rowTotal);
 
         }
-        loggedInConnection.setRowOrder(region,sortRows(restrictCount, rowTotals));
-        loggedInConnection.setRestrictCount(region,restrictCount);
-        final StringBuilder sb =  formatDataRegion(loggedInConnection,region, shownValueArray, filterCount, restrictCount, rowTotals);
-        formatLockMap(loggedInConnection,region,lockArray);
+        loggedInConnection.setRowOrder(region, sortRows(restrictCount, rowTotals));
+        loggedInConnection.setRestrictCount(region, restrictCount);
+        final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, filterCount, restrictCount, rowTotals);
+        formatLockMap(loggedInConnection, region, lockArray);
 
         printSumStats();
         printFindForNamesIncludeChildrenStats();
@@ -1223,18 +1220,18 @@ seaports;children   container;children
     }
 
 
-    private String jsonElement(String elementName, String elementValue){
-        return "\"" + elementName + "\":\"" + elementValue.replace("\"","\\") + "\"";
+    private String jsonElement(String elementName, String elementValue) {
+        return "\"" + elementName + "\":\"" + elementValue.replace("\"", "\\") + "\"";
     }
 
-    public void randomAdjust(Name name, double low, double high){
-        for (Value value:name.getValues()){
-            try{
+    public void randomAdjust(Name name, double low, double high) {
+        for (Value value : name.getValues()) {
+            try {
                 double orig = Double.parseDouble(value.getText());
                 Double newValue = orig * ((1 + low) + (high - low) * Math.random());
-                int newRound = (int)(newValue*100);
-                value.setText((((double)newRound)/100) + "");
-            }catch(Exception e){
+                int newRound = (int) (newValue * 100);
+                value.setText((((double) newRound) / 100) + "");
+            } catch (Exception e) {
 
             }
         }
@@ -1242,41 +1239,41 @@ seaports;children   container;children
     }
 
 
-
-public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt,String jsonFunction) {
-    final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
-    final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
-
-
-    if (dataValueMap != null) {
-        if (dataValueMap.get(rowInt) != null) {
-            final List<List<Value>> rowValues = dataValueMap.get(rowOrder.get(rowInt));
-
-            if (rowValues.get(colInt) != null) {
-                final List<Value> valuesForCell = rowValues.get(colInt);
-                final Set<Name> originalCellNames = new HashSet<Name>();
-                //Need to find the difference between this value and the visible value.  First find the visible names on the cell
-                originalCellNames.addAll(loggedInConnection.getContext(region));
-                originalCellNames.addAll(loggedInConnection.getRowHeadings(region).get(rowOrder.get(rowInt)));
-                originalCellNames.addAll(loggedInConnection.getColumnHeadings(region).get(colInt));
-                //Set<Name> specialForProvenance = new HashSet<Name>();
+    public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt, String jsonFunction) {
+        final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
+        final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
 
 
-                return formatCellProvenanceForOutput(loggedInConnection, originalCellNames, valuesForCell, jsonFunction);
+        if (dataValueMap != null) {
+            if (dataValueMap.get(rowInt) != null) {
+                final List<List<Value>> rowValues = dataValueMap.get(rowOrder.get(rowInt));
+
+                if (rowValues.get(colInt) != null) {
+                    final List<Value> valuesForCell = rowValues.get(colInt);
+                    final Set<Name> originalCellNames = new HashSet<Name>();
+                    //Need to find the difference between this value and the visible value.  First find the visible names on the cell
+                    originalCellNames.addAll(loggedInConnection.getContext(region));
+                    originalCellNames.addAll(loggedInConnection.getRowHeadings(region).get(rowOrder.get(rowInt)));
+                    originalCellNames.addAll(loggedInConnection.getColumnHeadings(region).get(colInt));
+                    //Set<Name> specialForProvenance = new HashSet<Name>();
+
+
+                    return formatCellProvenanceForOutput(loggedInConnection, originalCellNames, valuesForCell, jsonFunction);
+                } else {
+                    return ""; //return "error: col out of range : " + colInt;
+                }
             } else {
-                return ""; //return "error: col out of range : " + colInt;
+                return ""; //"error: row out of range : " + rowInt;
             }
         } else {
-            return ""; //"error: row out of range : " + rowInt;
+            return ""; //"error: data has not been sent for that row/col/region";
         }
-    } else {
-        return ""; //"error: data has not been sent for that row/col/region";
     }
-}
-    private Name getMostUsedName(Set<Value> values){
-        Map<Name,Integer> nameCount = new HashMap<Name, Integer>();
-        for (Value value:values){
-            for (Name name:value.getNames()){
+
+    private Name getMostUsedName(Set<Value> values) {
+        Map<Name, Integer> nameCount = new HashMap<Name, Integer>();
+        for (Value value : values) {
+            for (Name name : value.getNames()) {
                 Integer origCount = nameCount.get(name);
                 if (origCount == null) {
                     nameCount.put(name, 1);
@@ -1287,9 +1284,9 @@ public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInCon
         }
         int maxCount = 0;
         Name maxName = null;
-        for (Name name:nameCount.keySet()){
+        for (Name name : nameCount.keySet()) {
             int count = nameCount.get(name);
-            if (count > maxCount){
+            if (count > maxCount) {
                 maxCount = count;
                 maxName = name;
             }
@@ -1298,17 +1295,16 @@ public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInCon
     }
 
 
-    public void sortValues(List<Value> values){
+    public void sortValues(List<Value> values) {
 
-             Collections.sort(values, new Comparator() {
-                public int compare(Object o1, Object o2) {
-                    return ((Comparable) ((Value)(o1)).getProvenance().getTimeStamp())
-                            .compareTo(((Value) (o2)).getProvenance().getTimeStamp());
-                }
-            });
+        Collections.sort(values, new Comparator() {
+            public int compare(Object o1, Object o2) {
+                return ((Comparable) ((Value) (o1)).getProvenance().getTimeStamp())
+                        .compareTo(((Value) (o2)).getProvenance().getTimeStamp());
+            }
+        });
 
     }
-
 
 
     private Set<Name> listDiff(Set<Name> list1, Set<Name> list2) {
@@ -1321,21 +1317,21 @@ public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInCon
 
     private StringBuffer printBatch(LoggedInConnection loggedInConnection, Set<Value> values) {
         StringBuffer sb = new StringBuffer();
-         int debugCount = 0;
+        int debugCount = 0;
         boolean headingNeeded = false;
         boolean firstName = true;
-        for (Value value:values){
-            if (value.getNames().size() > 1 ){
+        for (Value value : values) {
+            if (value.getNames().size() > 1) {
                 headingNeeded = true;
                 break;
             }
             String nameFound = null;
-            for (Name name:value.getNames()){
+            for (Name name : value.getNames()) {
                 nameFound = name.getDefaultDisplayName();
             }
-            if (firstName){
+            if (firstName) {
                 firstName = false;
-            }else{
+            } else {
                 sb.append(",");
             }
             sb.append("{");
@@ -1346,13 +1342,13 @@ public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInCon
 
         }
 
-        if (headingNeeded){
+        if (headingNeeded) {
             boolean firstHeading = true;
             while (values.size() > 0) {
                 Name heading = getMostUsedName(values);
                 Set<Value> extract = new HashSet<Value>();
                 Set<Value> slimExtract = new HashSet<Value>();
-                 for (Value value : values) {
+                for (Value value : values) {
                     if (value.getNames().contains(heading)) {
                         extract.add(value);
                         //creating a new 'value' with one less name for recursion
@@ -1375,14 +1371,14 @@ public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInCon
 
                 }
                 values.removeAll(extract);
-                if (firstHeading){
+                if (firstHeading) {
                     firstHeading = false;
-                }else{
+                } else {
                     sb.append(",");
                 }
                 sb.append("{");
                 sb.append(jsonValue("heading", heading.getDefaultDisplayName(), false));
-                sb.append(",\"items\":[" + printBatch(loggedInConnection,slimExtract).toString() + "]");
+                sb.append(",\"items\":[" + printBatch(loggedInConnection, slimExtract).toString() + "]");
                 sb.append("}");
             }
         }
@@ -1391,10 +1387,9 @@ public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInCon
     }
 
 
-
-    private String jsonValue(String val1, String val2, boolean comma){
-        String result =  "\"" + val1 + "\":\"" + val2 + "\"";
-        if (!comma){
+    private String jsonValue(String val1, String val2, boolean comma) {
+        String result = "\"" + val1 + "\":\"" + val2 + "\"";
+        if (!comma) {
             return result;
 
         }
@@ -1405,13 +1400,12 @@ public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInCon
     private StringBuffer printExtract(LoggedInConnection loggedInConnection, Set<Value> values, Provenance p) {
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
         StringBuffer sb = new StringBuffer();
-        sb.append(jsonValue("heading", df.format(p.getTimeStamp()) + " " + p.getUser() + " " + p.getMethod() + " " + p.getName(), false));
+        sb.append(jsonValue("heading", "<b>" +  df.format(p.getTimeStamp()) + "</b> by <b>" + p.getUser() + "</b><br/>Method:" + p.getMethod() + " " + p.getName(), false));
         sb.append(",\"items\":[");
         sb.append(printBatch(loggedInConnection, values));
         sb.append("]");
         return sb;
     }
-
 
 
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
@@ -1420,7 +1414,7 @@ public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInCon
 
     public String formatCellProvenanceForOutput(LoggedInConnection loggedInConnection, Set<Name> origNames, List<Value> values, String jsonFunction) {
 
-         StringBuffer output = new StringBuffer();
+        StringBuffer output = new StringBuffer();
         output.append(jsonFunction + "({\"provenance\":[{");
         int count = 0;
         sortValues(values);
@@ -1429,26 +1423,22 @@ public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInCon
         Date provdate = values.get(0).getProvenance().getTimeStamp();
         Set<Value> oneUpdate = new HashSet<Value>();
         Provenance p = null;
-        for (Value value:values) {
+        for (Value value : values) {
             if (value.getProvenance().getTimeStamp() == provdate) {
                 oneUpdate.add(value);
                 p = value.getProvenance();
-            } else{
-                output.append(printExtract(loggedInConnection,oneUpdate,p));
+            } else {
+                output.append(printExtract(loggedInConnection, oneUpdate, p));
                 oneUpdate = new HashSet<Value>();
                 provdate = value.getProvenance().getTimeStamp();
             }
         }
-        output.append(printExtract(loggedInConnection,oneUpdate, p));
+        output.append(printExtract(loggedInConnection, oneUpdate, p));
         output.append("}]})");
         return output.toString();
 
 
-
-
     }
-
-
 
 
     public String formatProvenanceForOutput(Provenance provenance, String jsonFunction) {
@@ -1458,7 +1448,7 @@ public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInCon
             output = "{provenance:[{\"who\":\"no provenance\"}]}";
         } else {
             //String user = provenance.getUser();
-            output = "{\"provenance\":[{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"value\":\"\",\"context\":\"" + provenance.getContext().replace("\n",",") + "\"}]}";
+            output = "{\"provenance\":[{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"value\":\"\",\"context\":\"" + provenance.getContext().replace("\n", ",") + "\"}]}";
         }
         if (jsonFunction != null && jsonFunction.length() > 0) {
             return jsonFunction + "(" + output + ")";
@@ -1468,7 +1458,94 @@ public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInCon
     }
 
 
+    public String saveData(LoggedInConnection loggedInConnection, String region, String editedData) throws Exception {
+        String result = "";
+        logger.info("------------------");
+        logger.info(loggedInConnection.getLockMap(region));
+        logger.info(loggedInConnection.getRowHeadings(region));
+        logger.info(loggedInConnection.getColumnHeadings(region));
+        logger.info(loggedInConnection.getSentDataMap(region));
+        logger.info(loggedInConnection.getContext(region));
+        // I'm not sure if these conditions are quite correct maybe check for getDataValueMap and getDataNamesMap instead of columns and rows etc?
+        if (loggedInConnection.getLockMap(region) != null &&
+                loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0
+                && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0
+                && loggedInConnection.getSentDataMap(region) != null && loggedInConnection.getContext(region) != null) {
+            // oh-kay, need to compare against the sent data
+            // going to parse the data here for the moment as parsing is controller stuff
+            // I need to track column and Row
+            int rowCounter = 0;
+            final CsvReader originalReader = new CsvReader(new StringReader(loggedInConnection.getSentDataMap(region)), '\t');
+            final CsvReader editedReader = new CsvReader(new StringReader(editedData), '\t');
+            final CsvReader lockMapReader = new CsvReader(new StringReader(loggedInConnection.getLockMap(region)), '\t');
+            // rows, columns, value lists
+            final List<List<List<Value>>> dataValuesMap = loggedInConnection.getDataValueMap(region);
+            final List<List<Set<Name>>> dataNamesMap = loggedInConnection.getDataNamesMap(region);
+            // TODO : deal with mismatched column and row counts
+            int numberOfValuesModified = 0;
+            List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
+            while (lockMapReader.readRecord()) {
+                int columnCounter = 0;
+                final List<List<Value>> rowValues = dataValuesMap.get(sortedRows.get(rowCounter));
+                final List<Set<Name>> rowNames = dataNamesMap.get(rowCounter);
+                originalReader.readRecord();
+                editedReader.readRecord();
+                final String[] originalValues = originalReader.getValues();
+                final String[] editedValues = editedReader.getValues();
+                for (String locked : lockMapReader.getValues()) {
+                    //System.out.println("on " + columnCounter + ", " + rowCounter + " locked : " + locked);
+                    // and here we get to the crux, the values do NOT match
+                    // ok assign these two then deal with doubvle formatting stuff that can trip things up
+                    String orig = originalValues[columnCounter].trim();
+                    String edited = editedValues[columnCounter].trim();
+                    if (orig.endsWith(".0")) {
+                        orig = orig.substring(0, orig.length() - 2);
+                    }
+                    if (edited.endsWith(".0")) {
+                        edited = edited.substring(0, edited.length() - 2);
+                    }
+                    if (!orig.equals(edited)) {
+                        if (!locked.equalsIgnoreCase("locked")) { // it wasn't locked, good to go, check inside the different values bit to error if the excel tries something it should not
+                            logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
+                            logger.info(orig + "|" + edited + "|");
+
+                            final List<Value> valuesForCell = rowValues.get(columnCounter);
+                            final Set<Name> namesForCell = rowNames.get(columnCounter);
+                            // one thing about these store functions to the value service, they expect the provenance on the logged in connection to be appropriate
+                            if (valuesForCell.size() == 1) {
+                                final Value theValue = valuesForCell.get(0);
+                                logger.info("trying to overwrite");
+                                if (edited.length() > 0) {
+                                    //sometimes non-existant original values are stored as '0'
+                                    overWriteExistingValue(loggedInConnection, theValue, edited);
+                                    numberOfValuesModified++;
+                                }else
+                                    deleteValue(theValue);
+                            } else if (valuesForCell.isEmpty()) {
+                                logger.info("storing new value here . . .");
+                                storeValueWithProvenanceAndNames(loggedInConnection, edited, namesForCell);
+                                numberOfValuesModified++;
+                            }
+                        } else {
+                            // should this add on for a list???
+                            result = "error:cannot edit locked cell " + columnCounter + ", " + rowCounter + " in region " + region;
+                            return result;
+                        }
+                    }
+                    columnCounter++;
+                }
+                rowCounter++;
+            }
+            result = numberOfValuesModified + " values modified";
+            //putting in a 'persist' here for security.
+            if (numberOfValuesModified > 0) {
+                nameService.persist(loggedInConnection);
+            }
+        } else {
+            result = " no sent data/rows/columns/context";
+        }
+        return result;
+
+    }
+
 }
-
-
-
