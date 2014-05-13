@@ -31,7 +31,6 @@
 }
 
 .provenance{
-    height:200px;
     width:300px;
     border:1px solid black;
     position:absolute;
@@ -41,11 +40,18 @@
     z-index:4;
     background-color:white;
     padding:5px;
+}
+
+.provenance .content{
+    height:300px;
     overflow:auto;
 }
 
 .provenance .closebutton{
     align:right;
+    position:absolute;
+    right:-15px;
+    top:-15px;
 }
 
 ul{
@@ -72,6 +78,13 @@ li{
 .provenance td{
     font-size:12px;
     text-align:left;
+}
+
+#message{
+    position:absolute;
+    left:800px;
+    top:55px;
+    height:20px;
 }
 
 .excelDefaults {
@@ -137,5 +150,49 @@ li{
     -moz-transform:rotate(90deg); /* Firefox */
     -webkit-transform:rotate(90deg); /* Safari and Chrome */
     -o-transform:rotate(90deg); /* Opera */
+    -webkit-transform-origin:12px 18px;
+    -moz-transform-origin: 12px 18px;
+    -ms-transform-origin: 12px 18px;
+    -o-transform-origin: 12px 18px;
 
+
+}
+
+.popupmenu{
+    display:none;
+    width: 140px;
+    height: 200px;
+    position: absolute;
+    z-index: 4;
+    padding:20px 10px 10px 10px;
+    background-color: #eeeeee;
+    border: 1px solid #444444;
+}
+
+.popupmenu .enabled{
+    text-align:center;
+
+}
+
+.popupmenu .enabled a{
+    color:#444444;
+    height:20px;
+    font-size:14px;
+    text-decoration:none;
+}
+
+.popupmenu .disabled{
+    color:grey;
+    height:20px;
+    font-size:14px;
+    text-align:center;
+}
+
+.popupmenu .divider{
+    border: 1px solid #dddddd;
+    height: 0px;
+    width: 100px;
+    margin: 10px;
+    left: 15px;
+    position: relative;
 }
