@@ -218,88 +218,8 @@ public class ValueController {
                 loggedInConnection.getProvenance().setTimeStamp();
             logger.info("edited data " + editedData);
             if (editedData != null && editedData.length() > 0) {
-                logger.info("------------------");
-                logger.info(loggedInConnection.getLockMap(region));
-                logger.info(loggedInConnection.getRowHeadings(region));
-                logger.info(loggedInConnection.getColumnHeadings(region));
-                logger.info(loggedInConnection.getSentDataMap(region));
-                logger.info(loggedInConnection.getContext(region));
-                // I'm not sure if these conditions are quite correct maybe check for getDataValueMap and getDataNamesMap instead of columns and rows etc?
-                if (loggedInConnection.getLockMap(region) != null &&
-                        loggedInConnection.getRowHeadings(region) != null && loggedInConnection.getRowHeadings(region).size() > 0
-                        && loggedInConnection.getColumnHeadings(region) != null && loggedInConnection.getColumnHeadings(region).size() > 0
-                        && loggedInConnection.getSentDataMap(region) != null && loggedInConnection.getContext(region) != null) {
-                    // oh-kay, need to compare against the sent data
-                    // going to parse the data here for the moment as parsing is controller stuff
-                    // I need to track column and Row
-                    int rowCounter = 0;
-                    final CsvReader originalReader = new CsvReader(new StringReader(loggedInConnection.getSentDataMap(region)), '\t');
-                    final CsvReader editedReader = new CsvReader(new StringReader(editedData), '\t');
-                    final CsvReader lockMapReader = new CsvReader(new StringReader(loggedInConnection.getLockMap(region)), '\t');
-                    // rows, columns, value lists
-                    final List<List<List<Value>>> dataValuesMap = loggedInConnection.getDataValueMap(region);
-                    final List<List<Set<Name>>> dataNamesMap = loggedInConnection.getDataNamesMap(region);
-                    // TODO : deal with mismatched column and row counts
-                    int numberOfValuesModified = 0;
-                    List<Integer>sortedRows = loggedInConnection.getRowOrder(region);
-                    while (lockMapReader.readRecord()) {
-                        int columnCounter = 0;
-                        final List<List<Value>> rowValues = dataValuesMap.get(sortedRows.get(rowCounter));
-                        final List<Set<Name>> rowNames = dataNamesMap.get(rowCounter);
-                        originalReader.readRecord();
-                        editedReader.readRecord();
-                        final String[] originalValues = originalReader.getValues();
-                        final String[] editedValues = editedReader.getValues();
-                        for (String locked : lockMapReader.getValues()) {
-                            //System.out.println("on " + columnCounter + ", " + rowCounter + " locked : " + locked);
-                            // and here we get to the crux, the values do NOT match
-                            // ok assign these two then deal with doubvle formatting stuff that can trip things up
-                            String orig = originalValues[columnCounter].trim();
-                            String edited = editedValues[columnCounter].trim();
-                            if (orig.endsWith(".0")){
-                                orig = orig.substring(0, orig.length() - 2);
-                            }
-                            if (edited.endsWith(".0")){
-                                edited = edited.substring(0, edited.length() - 2);
-                            }
-                            if (!orig.equals(edited)) {
-                                if (!locked.equalsIgnoreCase("locked")) { // it wasn't locked, good to go, check inside the different values bit to error if the excel tries something it should not
-                                    logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
-                                    logger.info(orig + "|" + edited + "|");
-
-                                    final List<Value> valuesForCell = rowValues.get(columnCounter);
-                                    final Set<Name> namesForCell = rowNames.get(columnCounter);
-                                    // one thing about these store functions to the value service, they expect the provenance on the logged in connection to be appropriate
-                                    if (valuesForCell.size() == 1) {
-                                        final Value theValue = valuesForCell.get(0);
-                                        logger.info("trying to overwrite");
-                                        valueService.overWriteExistingValue(loggedInConnection, theValue, edited);
-                                        numberOfValuesModified++;
-                                    } else if (valuesForCell.isEmpty()) {
-                                        logger.info("storing new value here . . .");
-                                        valueService.storeValueWithProvenanceAndNames(loggedInConnection, edited, namesForCell);
-                                        numberOfValuesModified++;
-                                    }
-                                } else {
-                                    // should this add on for a list???
-                                    result = "error:cannot edit locked cell " + columnCounter + ", " + rowCounter + " in region " + region;
-                                    return result;
-                                }
-                            }
-                            columnCounter++;
-                        }
-                        rowCounter++;
-                    }
-                    result =  numberOfValuesModified + " values modified";
-                    //putting in a 'persist' here for security.
-                    if (numberOfValuesModified > 0){
-                        nameService.persist(loggedInConnection);
-                    }
-                } else {
-                    result =  "error:cannot deal with edited data as there is no sent data/rows/columns/context";
-                }
+                valueService.saveData(loggedInConnection, region, editedData);
             }
-
             if (searchByNames != null && searchByNames.length() > 0) {
 
 
