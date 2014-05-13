@@ -548,7 +548,7 @@ public  class AzquoBook {
         // for the headins, the lockmap is "locked" rather than the full array.
         boolean shapeAdjusted = false;
         String regionFormula = rangeNames.get(regionName);
-        if (regionFormula == null) {
+        if (regionFormula == null || lockMap==null) {
             return;
         }
         Range range = interpretRangeName(regionFormula);
@@ -857,8 +857,15 @@ public  class AzquoBook {
         }else {
             style = cell.getCellStyle();
         }
-        styleOut("text-align", style.getAlignment(), ALIGN);
-        styleOut("vertical-align", style.getAlignment(), VERTICAL_ALIGN);
+        short alignment = style.getAlignment();
+
+        if (cell != null && cell.getCellType() == Cell.CELL_TYPE_STRING && alignment==0){
+            alignment =ALIGN_LEFT; //Excel defaults text alignment left, numbers to the right
+
+        }
+
+        styleOut("text-align", alignment, ALIGN);
+        styleOut("vertical-align", style.getVerticalAlignment(), VERTICAL_ALIGN);
         fontStyle(style);
         short borderRightType = style.getBorderRight();
         short borderBottomType = style.getBorderBottom();
@@ -1268,7 +1275,7 @@ public  class AzquoBook {
         return "";
     }
 
-    private void calcConditionalFormats() {
+    private void calcConditionalFormats(Set<Cell>changedCells) {
             /* this routine uses the Azquo range "az_ConditionalFormats to calculate conditional formats, since the Apacne POI does not currently nandle them
             In the azquo definition, the first column is a set of range names to which the conditions apply, and the second is a series of conditions:formats separated by commas
             the conditions consist of the operators < > = & | and cell references with * as 'copy the target cell'.
@@ -1302,7 +1309,12 @@ public  class AzquoBook {
                                 modelCell = calcRule(st.nextToken(), st.nextToken(), targetCell);
                             }
                             if (modelCell!=null){
-                                targetCell.setCellStyle(modelCell.getCellStyle());
+                                if (modelCell.getCellStyle()!=targetCell.getCellStyle()) {
+                                    targetCell.setCellStyle(modelCell.getCellStyle());
+                                    if (changedCells !=null){
+                                        changedCells.add(targetCell);
+                                    }
+                                }
                             }
                         }
                     }
@@ -1447,7 +1459,7 @@ public  class AzquoBook {
        if (error.startsWith("error:")){
            return error;
        }
-       calcConditionalFormats();
+       calcConditionalFormats(null);
        //find the cells that will be used to make choices...
        calcMaxCol();
        createNameMap();
@@ -1510,19 +1522,7 @@ public  class AzquoBook {
 
         sOut = new Formatter(cellClass);
         boolean cellRotated = false;
-        if (cell != null) {
-            CellStyle style = cell.getCellStyle();
-            if (cell.getCellType() == Cell.CELL_TYPE_STRING && style.getAlignment()==0){
-                style.setAlignment(ALIGN_LEFT); //Excel defaults text alignment left, numbers to the right
-
-            }
-            setCellClass(rowNo, colNo, cell);
-         } else {
-            setCellClass(rowNo, colNo, null);//or GetRowStyle??
-            //if (row.getCell(row.getFirstCellNum()) != null) {
-            //    borderBottomType = row.getCell(row.getFirstCellNum()).getCellStyle().getborderBottomType();//line up blanks with other cells in the line
-            // }
-        }
+        setCellClass(rowNo, colNo, cell);
         cellClass.append("rp" + rowNo + " cp" + colNo + " ");
         return cellClass;
 
@@ -1629,7 +1629,7 @@ public  class AzquoBook {
                                }
                            }
                        }
-                       output.append("   <div class=\"" + cellClass + sizeInfo + "\"  id=\"cell" + rowNo + "-" + i + "\"> " + content.trim()  + "</div>\n");
+                       output.append("   <div class=\"" + cellClass + sizeInfo + "\"  id=\"cell" + rowNo + "-" + i + "\">" + content.trim()  + "</div>\n");
                        //out.format("    <td class=%s %s>%s</td>%n", styleName(style),
                        //        attrs, content);
                        cellLeft += colWidth.get(i);
@@ -1735,31 +1735,33 @@ public  class AzquoBook {
 
     private StringBuffer jsonRange(String name, String array){
         StringBuffer sb = new StringBuffer();
-        String[] rows = array.split("\n",-1);
 
         sb.append(",\"" + name +"\":[");
-        boolean firstRow = true;
-        for (String row:rows){
-            String[]cells = row.split("\t",-1);
-            boolean firstCol = true;
-            if (firstRow){
-                firstRow = false;
-            }else{
-                sb.append(",");
-
-            }
-            sb.append("[");
-            for (String cell:cells){
-                if (firstCol){
-                    firstCol = false;
-                }else{
+        if (array != null) {
+            String[] rows = array.split("\n", -1);
+            boolean firstRow = true;
+            for (String row : rows) {
+                String[] cells = row.split("\t", -1);
+                boolean firstCol = true;
+                if (firstRow) {
+                    firstRow = false;
+                } else {
                     sb.append(",");
 
                 }
-                sb.append("\"" + cell + "\"");
-            }
-            sb.append("]");
+                sb.append("[");
+                for (String cell : cells) {
+                    if (firstCol) {
+                        firstCol = false;
+                    } else {
+                        sb.append(",");
 
+                    }
+                    sb.append("\"" + cell + "\"");
+                }
+                sb.append("]");
+
+            }
         }
         sb.append("]");
         return sb;
@@ -1818,7 +1820,7 @@ public  class AzquoBook {
             FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
             calcAll(evaluator, cellSet, changedCells);
         }
-        calcConditionalFormats();//if this is slow, could be refined.
+        calcConditionalFormats(changedCells);//if this is slow, could be refined.
         StringBuffer sb = new StringBuffer();
         sb.append("[");
         boolean firstCell = true;
@@ -1878,4 +1880,43 @@ public  class AzquoBook {
         return "";
     }
 
+    public String saveData(LoggedInConnection loggedInConnection, ValueService valueService)throws Exception{
+        for (int i=0;i<wb.getNumberOfNames();i++){
+            Name name = wb.getNameAt(i);
+            String nameName = name.getNameName().toLowerCase();
+            if (nameName.startsWith("az_dataregion")  && name.getSheetName().equals(azquoSheet.getSheetName())){
+                String region = nameName.substring(13);
+                Range dataRange = interpretRangeName(name.getRefersToFormula());
+                StringBuffer sb = new StringBuffer();
+                boolean firstRow = true;
+                for (int rowNo = dataRange.startCell.getRowIndex(); rowNo <= dataRange.endCell.getRowIndex();rowNo++){
+                    if (firstRow){
+                        firstRow= false;
+                    }else{
+                        sb.append("\n");
+                    }
+                    boolean firstCol = true;
+                    for (int colNo = dataRange.startCell.getColumnIndex(); colNo <= dataRange.endCell.getColumnIndex();colNo++){
+                        if (firstCol){
+                            firstCol = false;
+                        }else{
+                            sb.append("\t");
+                        }
+                        Cell cell = azquoSheet.getRow(rowNo).getCell(colNo);
+                        if (cell!=null) {
+                            CellStyle style = cell.getCellStyle();
+                            CellFormat cf = CellFormat.getInstance(style.getDataFormatString());
+                            CellFormatResult result = cf.apply(cell);
+                            sb.append(result.text);
+                        }
+                    }
+                }
+                String result = valueService.saveData(loggedInConnection,region, sb.toString());
+                if (result.startsWith("error:")){
+                    return result;
+                }
+            }
+        }
+        return "";
+    }
 }
