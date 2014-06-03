@@ -75,24 +75,7 @@ public class LoginService {
         if (user != null) {
             if (loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword())) {
                 // ok user should be ok :)
-                final List<Permission> userAcceses = permissionDao.findForUserId(user.getId());
-                final Map<String, Database> okDatabases = new HashMap<String, Database>();
-                if (user.isAdministrator()) { // automatically has all dbs regardless of permission
-                    for (Database database : databaseDao.findForBusinessId(user.getBusinessId())) {
-                        if (database.getEndDate().after(new Date())) {
-                            okDatabases.put(database.getName(), database);
-                        }
-                    }
-                } else {
-                    for (Permission permission : userAcceses) {
-                        if (permission.getEndDate().after(new Date())) {
-                            Database database = databaseDao.findById(permission.getDatabaseId());
-                            if (database.getEndDate().after(new Date())) {
-                                okDatabases.put(database.getName(), database);
-                            }
-                        }
-                    }
-                }
+                final Map<String, Database> okDatabases = foundDatabases(user);
                 logger.info("ok databases size " + okDatabases.size());
                 AzquoMemoryDB memoryDB = null;
                 Database database;
@@ -153,6 +136,32 @@ public class LoginService {
         return null;
     }
 
+
+
+    public Map<String, Database> foundDatabases(User user) {
+        final List<Permission> userAcceses = permissionDao.findForUserId(user.getId());
+        final Map<String, Database> okDatabases = new HashMap<String, Database>();
+        if (user.isAdministrator()) { // automatically has all dbs regardless of permission
+            for (Database database : databaseDao.findForBusinessId(user.getBusinessId())) {
+                if (database.getEndDate().after(new Date())) {
+                    okDatabases.put(database.getName(), database);
+                }
+            }
+        } else {
+            for (Permission permission : userAcceses) {
+                if (permission.getEndDate().after(new Date())) {
+                    Database database = databaseDao.findById(permission.getDatabaseId());
+                    if (database.getEndDate().after(new Date())) {
+                        okDatabases.put(database.getName(), database);
+                    }
+                }
+            }
+        }
+        return okDatabases;
+    }
+
+
+
     public void anonymise(LoggedInConnection loggedInConnection){
         List<Name> anonNames = nameService.findContainingName(loggedInConnection,"",Name.ANON);
 
@@ -186,28 +195,59 @@ public class LoginService {
     }
 
 
-    public void zapConnectionsTimedOut(){
-        for (Iterator<Map.Entry<String, LoggedInConnection>> it = connections.entrySet().iterator(); it.hasNext();){
+    public void zapConnectionsTimedOut() {
+        for (Iterator<Map.Entry<String, LoggedInConnection>> it = connections.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<String, LoggedInConnection> entry = it.next();
             LoggedInConnection lic = entry.getValue();
             if ((System.currentTimeMillis() - lic.getLastAccessed().getTime()) > lic.getTimeOut()) {
                 // connection timed out
-                if (lic.getAzquoMemoryDB()!=null){
+                if (lic.getAzquoMemoryDB() != null) {
                     int databaseId = lic.getAzquoMemoryDB().getDatabase().getId();
                     it.remove();
                     Integer openCount = openDBCount.get(databaseId);
-                    if (openCount == 1){
+                    if (openCount == 1) {
                         memoryDBManager.removeDatabase(lic.getAzquoMemoryDB().getDatabase());
                         openDBCount.remove(databaseId);
                         openDatabaseDAO.closeForDatabaseId(databaseId);
-                    }else{
+                    } else {
                         openDBCount.put(databaseId, openCount - 1);
                     }
                 }
             }
-         }
+        }
+    }
+
+    public void switchDatabase(LoggedInConnection loggedInConnection, Database newDb)throws Exception{
+        if (loggedInConnection.getAzquoMemoryDB()!= null){
+            if (loggedInConnection.getAzquoMemoryDB().getDatabase().getName().equals(newDb.getName())) return;
+            int databaseId = loggedInConnection.getAzquoMemoryDB().getDatabase().getId();
+            Integer openCount = openDBCount.get(databaseId);
+            if (openCount == null){
+                logger.info("opencount cancelled for " + loggedInConnection.getAzquoMemoryDB().getDatabase().getName());
+                return;//this should be an error......
+            }
+            if (openCount == 1) {
+                memoryDBManager.removeDatabase(loggedInConnection.getAzquoMemoryDB().getDatabase());
+                openDBCount.remove(databaseId);
+                openDatabaseDAO.closeForDatabaseId(databaseId);
+            } else {
+                openDBCount.put(databaseId, openCount - 1);
+            }
+        }
+        AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(newDb);
+        int databaseId = memoryDB.getDatabase().getId();
+        Integer openCount = openDBCount.get(databaseId);
+        if (openCount != null){
+            openDBCount.put(databaseId, openCount + 1);
+        }else{
+            openDBCount.put(databaseId, 1);
+        }
+        loggedInConnection.setAzquoMemoryDB(memoryDB);
+
 
     }
+
+
 
     public LoggedInConnection getConnection(final String connectionId) {
 
