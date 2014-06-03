@@ -16,11 +16,12 @@ var entryRegion = null;
 var entryRegionX = 0;
 var entryRegionY = 0;
 var controlKeyDown = false;
-var menuControls = [{"position":1,"name":"provenance","enabled":true,"link":"showProvenance()"},{"position":3,"name":"highlight changes","enabled":false,"link":"showHighlight()"}];
+var menuControls = $menuitems;
+var clickedItem = null;
+var nameChosenNo = 0
+var cutitem = null;
+var copyitem = null;
 
-
-positionSelection();
-convertRegions();
 
 
 function getStyle(oElm, strCssRule){
@@ -52,7 +53,21 @@ function convertRegions(){
 }
 
 
-function showMenu(){
+function hideMenu(control){
+    document.getElementById(control).style.display = "none";
+}
+
+function showMenu(control, e){
+    clickedItem = e.target;
+    if (clickedItem == null) clickedItem = e;
+    if (clickedItem != null){
+
+        if (clickedItem.tagName.toLowerCase() == "li") {
+            clickedItem.className = "highlight";
+            var nextItem = nextSibling(clickedItem);
+            nameChosenNo = nextItem.innerHTML;
+        }
+    }
     var selector = document.getElementById("selector");
     var left = getStyleInt(selector,"left");
     var top = getStyleInt(selector,"top");
@@ -61,11 +76,11 @@ function showMenu(){
 
     }
     left = left+20;
-    var popup =document.getElementById("popupmenu");
+    var popup =document.getElementById(control);
     popup.style.left = left + "px";
     popup.style.top = top + "px";
     var menucontent = "";
-    for (var i=1; i < 4; i++){
+    for (var i=1; i < 20; i++){
         var menuItem = findMenuItem(i);
         if (menuItem!=null){
            if (!menuItem.enabled){
@@ -81,6 +96,7 @@ function showMenu(){
     }
     popup.innerHTML = menucontent;
     popup.style.display="block";
+    return false; //disables the default context menu
 }
 
 function findMenuItem(position){
@@ -151,7 +167,10 @@ function locked(cellX,cellY){
 document.onclick = onClick;
 
 function onClick(e){
-    document.getElementById("popupmenu").style.display="none";
+    hideMenu("popupmenu");
+    if (copyitem == null && cutitem==null && clickedItem!=null){
+        clickedItem.className = "";
+    }
     var target = e.target;
     var cellId = target.id
     while (cellId != undefined && cellId.substring(0, 4) != "cell" && target.parentNode != null) {
@@ -205,7 +224,7 @@ function cancelEntry() {
     container.setAttribute("contentEditable", false);
     if (entryVal != container.innerHTML.trim()){
         sendValue(container.innerHTML.trim())
-        document.getElementById("savedata").style.display="block";
+        document.getElementById("savedata").style.display="inline";
     }
 
     entryX = -1;
@@ -219,10 +238,131 @@ document.onkeyup =function (e) {
 }
 
 
-function showProvenance(){
-    azquojson("Online","jsonfunction=azquojsonfeed&opcode=provenance&row=" + selectionY + "&col=" + selectionX );
+function sortCol(region, colNo){
+    document.getElementById("editedName").value = "sort " + region + " by column";
+    document.getElementById("editedValue").value = colNo + "";
+    document.azquoform.submit();
 }
 
+
+function showProvenance(){
+    azquojson("Online","jsonfunction=azquojsonfeed&opcode=provenance&row=" + selectionY + "&col=" + selectionX );
+    hideMenu("popupmenu");
+}
+
+function edit(){
+    hideMenu("popupmenu");
+    clickedItem.className = "highlight";
+    azquojson("Online","opcode=details&nameid=" + nameChosenNo);
+}
+
+
+function cut(){
+     cutitem = clickedItem;
+    copyitem = null;
+}
+
+function copy(){
+    copyitem = clickedItem;
+    cutitem = null;
+}
+
+
+function findParent(item){
+    var parent = item.parentNode;
+    var count = 0;
+    for (var count = 0;count < 5;count++){
+        if (parent.tagName.toLowerCase()=='li'){
+            break;
+        }
+        parent = parent.previousElementSibling;
+    }
+    if (count==3) return null;
+    return parent;
+}
+
+
+function paste(offset) {
+
+    var anchorNode = clickedItem;
+    //each LI item is followed by an unseen 'div' containing the name id
+    if (cutitem == null && copyitem == null) return;
+    var cutting = false;
+    if (cutitem != null) {
+        var source = cutitem;
+    } else {
+        source = copyitem;
+    }
+    if (offset==2) {//paste into}
+           while (anchorNode.nextElementSibling != null && anchorNode.nextElementSibling.tagName.toLowerCase()!="li"){
+               anchorNode = anchorNode.nextElementSibling;
+           }
+
+        anchorNode.parentNode.insertBefore(document.createElement("ul"),anchorNode.nextElementSibling);
+        var ulTag = anchorNode.nextElementSibling;
+        ulTag.appendChild(source.cloneNode(true));
+        ulTag.appendChild(source.nextElementSibling.cloneNode(true));
+        var nextEl = source.nextElementSibling.nextElementSibling;
+        if (nextEl != null && nextEl.tagName.toLowerCase()=="ul"){
+            ulTag.appendChild(nextEl.cloneNode(true));
+        }
+
+    }else {
+        var divNode = anchorNode.nextElementSibling;
+        var pos = findPos(anchorNode);
+        var parent = findParent(anchorNode);
+        if (parent == null) return
+        if (offset==1){
+            pos++;
+            anchorNode = anchorNode.nextElementSibling
+            while (anchorNode.nextElementSibling != null && anchorNode.tagName.toLowerCase()!="li") {
+                anchorNode = anchorNode.nextElementSibling;
+
+
+            }
+        }
+        var nextEl = source.nextElementSibling.nextElementSibling;
+        if (anchorNode.nextElementSibling != null) {
+            anchorNode.parentNode.insertBefore(source.cloneNode(true), anchorNode);
+            anchorNode.parentNode.insertBefore(source.nextElementSibling.cloneNode(true),anchorNode);
+            if (nextEl != null && nextEl.tagName.toLowerCase()=="ul"){
+                anchorNode.parentNode.insertBefore(nextEl.cloneNode(true), anchorNode);
+            }
+
+        } else {
+            if (nextEl != null && nextEl.tagName.toLowerCase()=="ul"){
+                anchorNode.parentNode.insertBefore(nextEl.cloneNode(true), anchorNode.nextElementSibling);
+            }
+
+            anchorNode.parentNode.insertBefore(source.nextElementSibling.cloneNode(true), anchorNode.nextElementSibling);
+            anchorNode.parentNode.insertBefore(source.cloneNode(true), anchorNode.nextElementSibling);
+
+        }
+    }
+    //now cut if necessary
+    //and tell Azquo!
+
+
+
+
+     var j=1;
+}
+
+function deleteName(){
+    var j=1;
+}
+
+
+function showHighlight() {
+    document.getElementById("highlightoptions").style.display = "block";
+    hideMenu("popupmenu");
+}
+
+function highlight(days){
+    document.getElementById("editedName").value = "highlight";
+    document.getElementById("editedValue").value = days + "";
+    document.azquoform.submit();
+}
 
 
 
@@ -235,9 +375,9 @@ document.onkeydown =function (e) {
     switch (unicode) {
         case 17: controlKeyDown = true;
             break;
+        case 89:
         case 81: if (controlKeyDown){
-            //showProvenance();
-            showMenu();
+             showMenu("popupmenu", e);
             break;
         }
 
@@ -285,15 +425,68 @@ function chosen(divName){
     document.azquoform.submit();
 }
 
-function downloadSheet(){
-    document.getElementById("opcode").value = "download";
+
+function buttonPressed(rowNo, colNo){
+    document.getElementById("rowchosen").value = rowNo;
+    document.getElementById("colchosen").value = colNo;
     document.azquoform.submit();
+}
+
+function loadsheet(sheetname){
+    document.getElementById("spreadsheetname").value = sheetname;
+    document.azquoform.submit();
+}
+
+function downloadSheet(){
+    azquojson("Online","jsonfunction=azquojsonfeed&opcode=download");//not currently returning a status
 }
 
 
 function drawChart(){
     azquojson("Online","jsonfunction=azquojsonfeed&chart=$region");
 }
+
+function findPos(item){
+    //returns the position in the set of the current item
+    var parent = item.parentNode;
+    var list = parent.getElementsByTagName("LI");
+    for (var i=0;i < list.length;i++){
+        var child = list[i];
+        if (child.innerHTML == item.innerHTML){
+           return i + 1;
+        }
+    }
+    return 0;
+}
+
+
+function nextSibling(azSet){
+    var azNext = azSet.nextElementSibling;
+    if (!azNext) azNext = azSet.nextElementSibling; //IE
+    return azNext;
+}
+
+
+function az_clicklist(e){
+    e = e || window.event;
+    if (e.target) {
+        var azSet = e.target;
+    }else{
+        azSet = e;
+    }
+
+    while (azSet.tagName.toLowerCase() != "ul"){
+        azSet = nextSibling(azSet)
+    }
+    if (azSet.style.display=="none"){
+        azSet.style.display="block";
+    }else{
+        azSet.style.display="none";
+    }
+}
+
+
+
 
 function sendValue(value){
 
@@ -305,12 +498,12 @@ function sendValue(value){
 
 function azquojson(functionName, params){
     if (functionName == "Name"){
-        params = "json={" + params + ",\"connectionid\":\"" + azquoform.connectionid.value + "\",\"jsonFunction\":\"azquojsonfeed\"}";
+        params = "json={" + params + ",\"connectionId\":\"" + azquoform.connectionid.value + "\",\"jsonFunction\":\"azquojsonfeed\"}";
     }else{
         params +="&connectionid=" + azquoform.connectionid.value;
     }
-    //var htmlText = "http://www.bomorgan.co.uk:8080/api/" + functionName + "?" + params;
-    var htmlText = "https://data.azquo.com:8443/api/" + functionName + "?" + params;
+    var htmlText = "http://www.bomorgan.co.uk:8080/api/" + functionName + "?" + params;
+    //var htmlText = "https://data.azquo.com:8443/api/" + functionName + "?" + params;
     var script = document.createElement('script'),
         head = document.getElementsByTagName('head')[0] || document.documentElement;
     script.src = htmlText;
@@ -346,6 +539,7 @@ function makeList(names){
 function azquojsonfeed(obj) {
 
 
+    if (obj==null) return;
     var chart = obj.chart;
     if (chart > "") {
         window.open(chart, "_blank", "toolbar=no, scrollbars=no, resizable=yes, width=800, height=400");
@@ -362,7 +556,7 @@ function azquojsonfeed(obj) {
     }
     if (obj.provenance > "") {
         var innerhtml = "<h2>Provenance</h2>"
-        innerhtml += decodeProvenance(obj.provenance);
+        innerhtml += decodeProvenance(obj.provenance, 0);
         var prov = document.getElementById("provenancecontent");
         prov.innerHTML = innerhtml;
         document.getElementById("provenance").style.display = "block";
@@ -371,17 +565,48 @@ function azquojsonfeed(obj) {
     if (obj.message > ""){
         document.getElementById("message").innerHTML = obj.message;
     }
+    if (obj.namedetails >""){
+        showNameDetails(obj.namedetails);
+    }
 }
 
+    function addAttribute(i, attname, attvalue){
+        var htmlAtts = document.getElementById("htmlatts");
+        htmlAtts.innerHTML += "<div class=\"namedetailsline\">" +
+            "<div class = \"name\"><input id=\"attname" + i + "\" class=\"attname\" type=\"text\" value=\"" + attname + "\"/></div>" +
+            "<div class=\"value\"><input class=\"attvalue\" id=\"attvalue" + i + "\" type=\"text\" value=\"" + attvalue + "\"/></div>" +
+            "</div>"
+
+    }
+
+   function showNameDetails(nameDetails){
+       document.getElementById("htmlatts").innerHTML = "";
+       //currently ignoring the 'dataelements' 'elements'  'mydataelements'  values
+       var keys = Object.keys(nameDetails.attributes);
+       for (var i=0;i < keys.length;i++){
+           var attname = keys[i];
+           var attvalue =  decodeURIComponent((nameDetails.attributes[attname]+'').replace(/\+/g, '%20'));
+           if (attname== "DEFAULT_DISPLAY_NAME"){
+               document.getElementById("DEFAULT_DISPLAY_NAME").value = attvalue;
+           }else{
+               addAttribute(i, attname, attvalue)
+           }
+
+       }
+       addAttribute(i,"","");
+       document.getElementById("namedetails").style.display = "block";
+   }
 
 
-    function decodeProvenance(provDisplays) {
-        var output = "<ul>"
+    function decodeProvenance(provDisplays, level) {
+        var style = "";
+        if (level > 1) style = ' style="display:none;"';
+        var output = "<ul" + style + ">";
         for (var i = 0; i < provDisplays.length; i++){
             var provDisplay = provDisplays[i];
             if (provDisplay.heading) {
-                output += "<li>" + provDisplay.heading + "</li>";
-                output += decodeProvenance(provDisplay.items);
+                 output += '<li onclick="tree_click(this);">' + provDisplay.heading + "</li>";
+                output += decodeProvenance(provDisplay.items, level + 1);
             } else {
                 output += "<li>" + provDisplay.value + " " + provDisplay.name + "</li>";
             }
@@ -390,16 +615,59 @@ function azquojsonfeed(obj) {
         return output;
     }
 
+function tree_click(e){
+    e = e || window.event;
+    var azSet;
+    if (e.target) azSet = e.target.nextElementSibling;//from Googling should be IE
+    if (!azSet) azSet = e.nextElementSibling;
+    if (!azSet) azSet = e.nextSibling; //IE
+    if (azSet.style.display=="none"){
+        azSet.style.display="block";
+    }else{
+        azSet.style.display="none";
+    }
+}
+
+function hideNameList(){
+    hideMenu("namelistpopup");
+}
+
+function hideDetails(){
+    hideMenu("namedetails");
+    clickedItem.className = "";
+}
+
+function submitNameDetails(){
+    var json = "\"operation\":\"edit\",\"id\":" + nameChosenNo + ",\"attributes\":{\"DEFAULT_DISPLAY_NAME\":\"" + document.getElementById("DEFAULT_DISPLAY_NAME").value + "\"";
+    for (var i= 0; i<20;i++){//max number of attributes = 20 - arbitrary
+        var attname = document.getElementById("attname" + i);
+        if (attname != null) {
+            if (attname.value > ""){
+                json += ",\"" + attname.value + "\":\"" + document.getElementById("attvalue" + i).value + "\"";
+            }
+        }
+    }
+    json +="}";
+    hideDetails();
+    azquojson("Name", json);
+    clickedItem.innerHTML = document.getElementById("DEFAULT_DISPLAY_NAME").value;
+
+}
+
+
+
+
 if (document.addEventListener) {
     document.addEventListener('contextmenu', function(e) {
         onClick(e);
-        showMenu();
+       showMenu("popupmenu", e);
         e.preventDefault();
     }, false);
 } else {
     document.attachEvent('oncontextmenu', function() {
         onClick(e);
-        showMenu();
+        showMenu("popupmenu",e);
         window.event.returnValue = false;
     });
 }
+
