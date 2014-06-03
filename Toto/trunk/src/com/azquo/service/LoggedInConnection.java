@@ -43,6 +43,7 @@ public final class LoggedInConnection {
     private final Map<String, List<Name>> rowHeadingSupplements;//this will allow product classes to be included in the returned row headings, not used to define data.
     private final Map<String, List<Integer>> rowOrder;//for when top or bottom values need to be returned.
     private final Map<String, Integer> restrictCount; //as above
+    private final Map<String, Integer> sortCol; //when a region is to be sorted on a particular column
     private final Map<String, List<Name>> contexts;
     private final Map<String, String> lockMaps;
     private final Map<String, String> sentDataMaps;
@@ -68,6 +69,7 @@ public final class LoggedInConnection {
         rowHeadingSupplements = new HashMap<String, List<Name>>();
         rowOrder = new HashMap<String, List<Integer>>();
         restrictCount = new HashMap<String, Integer>();
+        sortCol = new HashMap<String, Integer>();
         contexts = new HashMap<String, List<Name>>();
         lockMaps = new HashMap<String, String>();
         sentDataMaps = new HashMap<String, String>();
@@ -220,6 +222,22 @@ public final class LoggedInConnection {
 
     }
 
+    public Integer getSortCol(final String region) {
+        if (region == null || region.isEmpty()) {
+            return sortCol.get(defaultRegion);
+        } else {
+            return sortCol.get(region);
+        }
+    }
+
+    public void setSortCol(final String region, final int sortCol){
+        if (region == null || region.isEmpty()) {
+            this.sortCol.put(defaultRegion, sortCol);
+        } else {
+            this.sortCol.put(region, sortCol);
+        }
+
+    }
 
 
     public List<Name> getContext(final String region) {
@@ -310,7 +328,7 @@ public final class LoggedInConnection {
     public Provenance getProvenance() {
         if (provenance == null) {
             try {
-                provenance = new Provenance(getAzquoMemoryDB(), user.getName(), new Date(), "method", spreadsheetName, "row heading", "column headings", "context");
+                provenance = new Provenance(getAzquoMemoryDB(), user.getName(), new Date(), "in spreadsheet", spreadsheetName, "row heading", "column headings", "context");
             } catch (Exception e) {
             }
         }
