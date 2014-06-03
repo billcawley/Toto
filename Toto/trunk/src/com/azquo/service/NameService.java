@@ -1,9 +1,12 @@
 package com.azquo.service;
 
 import com.azquo.jsonrequestentities.NameJsonRequest;
+import com.azquo.jsonrequestentities.NameListJson;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.log4j.Logger;
 
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -39,6 +42,8 @@ public final class NameService {
     public static final String NEW = "new";
     public static final String DELETE = "delete";
 
+    private static final ObjectMapper jacksonMapper = new ObjectMapper();
+    private static final Logger logger = Logger.getLogger(NameService.class);
 
     // hacky but testing for the moment
 
@@ -98,17 +103,17 @@ public final class NameService {
 
     // get names from a comma separated list
 
-    public  String decodeString(LoggedInConnection loggedInConnection, String searchByNames, final List<Set<Name>> names) throws Exception {
+    public String decodeString(LoggedInConnection loggedInConnection, String searchByNames, final List<Set<Name>> names) throws Exception {
         searchByNames = stripQuotes(loggedInConnection, searchByNames);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            List <Name> nameList = new ArrayList<Name>();
-            String error = interpretSetTerm(loggedInConnection,nameList,nameName);
+            List<Name> nameList = new ArrayList<Name>();
+            String error = interpretSetTerm(loggedInConnection, nameList, nameName);
 
             if (nameList != null) {
                 names.add(new HashSet<Name>(nameList));
-            }else{
+            } else {
                 return error;
             }
         }
@@ -118,12 +123,12 @@ public final class NameService {
 
     public ArrayList<Name> findContainingName(final LoggedInConnection loggedInConnection, final String name) {
         // go for the default for the moment
-        return findContainingName(loggedInConnection,name, Name.DEFAULT_DISPLAY_NAME);
+        return findContainingName(loggedInConnection, name, Name.DEFAULT_DISPLAY_NAME);
     }
 
     public ArrayList<Name> findContainingName(final LoggedInConnection loggedInConnection, final String name, String attribute) {
         // go for the default for the moment
-       return sortNames(new ArrayList<Name>(loggedInConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name)));
+        return sortNames(new ArrayList<Name>(loggedInConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name)));
     }
 
 
@@ -184,17 +189,17 @@ public final class NameService {
         return loggedInConnection.getAzquoMemoryDB().searchNames(Name.DEFAULT_DISPLAY_NAME, search);
     }*/
 
-    public void clearChildren(Name name) throws Exception{
+    public void clearChildren(Name name) throws Exception {
         // DON'T DELETE SET WHILE ITERATING, SO MAKE A COPY FIRST
-        if (name.getParents().size() == 0){
+        if (name.getParents().size() == 0) {
             //can't clear from topparent
             return;
         }
-        Set <Name> children = new HashSet<Name>();
-        for (Name child:name.getChildren()){
+        Set<Name> children = new HashSet<Name>();
+        for (Name child : name.getChildren()) {
             children.add(child);
         }
-        for (Name child:children){
+        for (Name child : children) {
             name.removeFromChildrenWillBePersisted(child);
         }
 
@@ -203,7 +208,6 @@ public final class NameService {
     public List<Name> findTopNames(final LoggedInConnection loggedInConnection) {
         return loggedInConnection.getAzquoMemoryDB().findTopNames();
     }
-
 
 
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
@@ -281,31 +285,31 @@ public final class NameService {
                     existing = null;
                 }
             }
-        }else{
+        } else {
             existing = loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, storeName, null);
         }
         if (existing != null) {
             // direct parents may be moved up the hierarchy (e.g. if existing parent is 'Europe' and new parent is 'London', which is in 'Europe' then
             // remove 'Europe' from the direct parent list.
             //NEW CONDITION ADDED - we are parent = child, but not bothering to put into the set.  This may need discussio - are the parent and child really the same?
-            if (newparent!=null && existing!=newparent && !existing.findAllParents().contains(newparent)){
-                 //only check if the new parent is not already in the parent hierarchy.
+            if (newparent != null && existing != newparent && !existing.findAllParents().contains(newparent)) {
+                //only check if the new parent is not already in the parent hierarchy.
                 List<Name> newParents = newparent.findAllParents();
                 newparent.addChildWillBePersisted(existing);//this will now check the descendants of the child for direct connections
-                for (Name parent:existing.getParents()) {
+                for (Name parent : existing.getParents()) {
                     if (newParents.contains(parent)) {
                         parent.removeFromChildrenWillBePersisted(existing);
                         break;//only remove one!   The loop will be corrupted.
                     }
-               }
-           }
-           return existing;
+                }
+            }
+            return existing;
         } else {
             // actually creating a new one
             Provenance provenance = loggedInConnection.getProvenance();
             Name newName = new Name(loggedInConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
             newName.setAttributeWillBePersisted(loggedInConnection.getLanguage(), storeName);
-              if (!loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME)) {
+            if (!loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME)) {
                 String displayName = newName.getAttribute(Name.DEFAULT_DISPLAY_NAME);
                 if (displayName == null || displayName.length() == 0) {
                     newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName);
@@ -313,11 +317,11 @@ public final class NameService {
             }
             //if the parent already has peers, provisionally set the child peers to be the same.
             Map<Name, Boolean> newPeers = null;
-            if (newparent != null){
+            if (newparent != null) {
                 newPeers = newparent.getPeers();
-                if (newPeers !=null){
+                if (newPeers != null) {
                     LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
-                    for (Name peer:newPeers.keySet()){
+                    for (Name peer : newPeers.keySet()) {
                         peers2.put(peer, newparent.getPeers().get(peer));
 
                     }
@@ -380,21 +384,21 @@ public final class NameService {
     // since we need different from the standard set ordering use a list, I see no real harm in that in these functions
     // note : in default language!
 
-    private int parseInt(final String string, int existing){
-        try{
+    private int parseInt(final String string, int existing) {
+        try {
             int i = Integer.parseInt(string);
             return i;
-        }catch(Exception e){
+        } catch (Exception e) {
             return existing;
         }
     }
 
     public List<Name> findChildrenFromToCount(final LoggedInConnection loggedInConnection, final List<Name> names, String fromString, String toString, final String countString, final String countbackString, final String compareWithString) throws Exception {
         final ArrayList<Name> toReturn = new ArrayList<Name>();
-        int to =-10000;
+        int to = -10000;
         int from = 1;
-        int count = parseInt(countString,-1);
-        int offset = parseInt(countbackString,0);
+        int count = parseInt(countString, -1);
+        int offset = parseInt(countbackString, 0);
         int compareWith = parseInt(compareWithString, 0);
         int space = 1; //spacing between 'compare with' fields
         //first look for integers and encoded names...
@@ -439,29 +443,35 @@ public final class NameService {
 
         for (int i = offset; i < names.size() + offset; i++) {
 
-            if (position == from || (i < names.size() && names.get(i).getDefaultDisplayName().equals(fromString))) inSet = true;
+            if (position == from || (i < names.size() && names.get(i).getDefaultDisplayName().equals(fromString)))
+                inSet = true;
             if (inSet) {
                 toReturn.add(names.get(i - offset));
-                if (compareWith != 0){
+                if (compareWith != 0) {
                     toReturn.add(names.get(i - offset + compareWith));
-                    for (int j=0; j<space;j++){
-                       toReturn.add(null);
+                    for (int j = 0; j < space; j++) {
+                        toReturn.add(null);
                     }
                 }
                 added++;
             }
-            if (position == to || (i < names.size() && names.get(i).getDefaultDisplayName().equals(toString)) || added == count) inSet = false;
+            if (position == to || (i < names.size() && names.get(i).getDefaultDisplayName().equals(toString)) || added == count)
+                inSet = false;
             position++;
+        }
+        while (added++ < count) {
+            toReturn.add(null);
+
         }
         return toReturn;
     }
 
 
-     // these should probably live somewhere more global
+    // these should probably live somewhere more global
     public static final String ERROR = "ERROR";
     public static final String WARNING = "WARNING";
 
-    public Map<String, String> isAValidNameSet(LoggedInConnection loggedInConnection,final Set<Name> names, final Set<Name> validNameList) throws Exception {
+    public Map<String, String> isAValidNameSet(LoggedInConnection loggedInConnection, final Set<Name> names, final Set<Name> validNameList) throws Exception {
 
         //long track = System.currentTimeMillis();
 
@@ -475,40 +485,40 @@ public final class NameService {
         final Set<Name> namesToCheck = new HashSet<Name>();
 
         for (Name name : names) {
-            if (name != null){
+            if (name != null) {
                 String calc = name.getAttribute(Name.RPCALC);
                 // if one term is calculated, the required peers will be the largest of any set of peers in the calculation
                 // if one term has peers, then all should have peers, and all should be a subset of the largest set, but I'm not checking this currently
-                if (calc!=null && calc.length()>0 && peers.isEmpty()){
-                    while (calc.length()>0){
+                if (calc != null && calc.length() > 0 && peers.isEmpty()) {
+                    while (calc.length() > 0) {
                         String nextTerm;
                         if (calc.indexOf(" ") > 0) {
                             nextTerm = calc.substring(0, calc.indexOf(" ")).trim();
-                        }else{
+                        } else {
                             nextTerm = calc;
                         }
-                        if (nextTerm.charAt(0) == NAMEMARKER){
-                            Name termName = getNameByAttribute(loggedInConnection,nextTerm,null);
-                            if (termName==null){
-                                error+="the formula for " + peerName.getDefaultDisplayName() + " is not understood";
+                        if (nextTerm.charAt(0) == NAMEMARKER) {
+                            Name termName = getNameByAttribute(loggedInConnection, nextTerm, null);
+                            if (termName == null) {
+                                error += "the formula for " + peerName.getDefaultDisplayName() + " is not understood";
                             }
-                            if (termName.getPeers().size() > peers.size()){
+                            if (termName.getPeers().size() > peers.size()) {
                                 peerName = name;
                                 peers.clear();
-                                for (Name peer:name.getPeers().keySet()){
+                                for (Name peer : name.getPeers().keySet()) {
                                     peers.put(peer.findTopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
                                 }
-                           }
+                            }
                         }
                         calc = calc.substring(nextTerm.length()).trim();
                     }
-                    if (!peers.isEmpty()){
+                    if (!peers.isEmpty()) {
                         peerName = name;
                         validNameList.add(name);
-                    }else{
+                    } else {
                         namesToCheck.add(name);
                     }
-                }else {
+                } else {
                     if (!name.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
                         if (peerName == null) {
                             peerName = name;
@@ -534,7 +544,7 @@ public final class NameService {
 
         if (peers.isEmpty()) {
             error += "  none of the names passed have peers, I don't know what names are required for this value";
-        }else { // one set of peers, ok :)
+        } else { // one set of peers, ok :)
             // match peers child names are ok, ignore extra names, warn about this
             // think that is a bit ofo dirty way of getting the single item in the set . . .just assign it?
             for (Name requiredPeer : peers.keySet()) {
@@ -548,7 +558,7 @@ public final class NameService {
                 if (!found) { // couldn't find this peer, need to look up through parents of each name for the peer
                     // again new logic here
                     for (Name nameToCheck : namesToCheck) {
-                         if (nameToCheck.findAllParents().contains(requiredPeer)) {
+                        if (nameToCheck.findAllParents().contains(requiredPeer)) {
                             namesToCheck.remove(nameToCheck); // skip to the next one and remove the name from names to check and add it to the validated list to return
                             validNameList.add(nameToCheck);
                             found = true;
@@ -592,23 +602,23 @@ public final class NameService {
             }
         }
         if (iPos >= 0) {
-            int commandStart = instructions.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length() +1;
+            int commandStart = instructions.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length() + 1;
             Pattern p = Pattern.compile("[^a-z A-Z\\-0-9!]");
-             int commandEnd;
-            if (commandStart < instructions.length()){
+            int commandEnd;
+            if (commandStart < instructions.length()) {
                 Matcher m = p.matcher(instructions.substring(commandStart));
                 commandEnd = instructions.length();
-                if (m.find()){
+                if (m.find()) {
                     commandEnd = commandStart + m.start();
                 }
-            }else{
+            } else {
                 commandStart = 0;
                 commandEnd = commandStart;
             }
             toReturn = instructions.substring(commandStart, commandEnd).trim();
-           //  if (toReturn.startsWith(Name.QUOTE)) {
-          //      toReturn = toReturn.substring(1, toReturn.length() - 1); // trim quotes
-           // }
+            //  if (toReturn.startsWith(Name.QUOTE)) {
+            //      toReturn = toReturn.substring(1, toReturn.length() - 1); // trim quotes
+            // }
             if (toReturn.length() > 0 && toReturn.charAt(0) == '=') {
                 toReturn = toReturn.substring(1).trim();
             }
@@ -666,7 +676,8 @@ public final class NameService {
         }
 
 
-        Pattern p = Pattern.compile("[\\+-/\\*\\(\\)" + NAMEMARKER + "]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
+
         int pos = 0;
         int stackCount = 0;
         while (pos < setFormula.length()) {
@@ -701,7 +712,7 @@ public final class NameService {
             } else if (op == '*') {
                 nameStack.get(stackCount - 1).retainAll(nameStack.get(stackCount));
                 nameStack.remove(stackCount);
-             } else if (op == '-') {
+            } else if (op == '-') {
                 nameStack.get(stackCount - 1).removeAll(nameStack.get(stackCount));
                 nameStack.remove(stackCount);
             } else if (op == '+') {
@@ -735,13 +746,13 @@ public final class NameService {
     }
 
 
-    public Name inParentSet(Name name, Set<Name> maybeParents){
+    public Name inParentSet(Name name, Set<Name> maybeParents) {
         if (maybeParents.contains(name)) {
             return name;
         }
-        for (Name parent: name.getParents()){
-            Name maybeParent =inParentSet(parent, maybeParents);
-            if (maybeParent != null){
+        for (Name parent : name.getParents()) {
+            Name maybeParent = inParentSet(parent, maybeParents);
+            if (maybeParent != null) {
                 return maybeParent;
             }
         }
@@ -749,17 +760,16 @@ public final class NameService {
     }
 
 
+    public boolean isAllowed(Name name, List<Set<Name>> names) {
 
-    public boolean isAllowed(Name name, List<Set<Name>> names){
-
-        if (name==null) {
+        if (name == null) {
             return true;
         }
         Name topParent = name.findTopParent();
-        for (Set<Name> listNames:names){
-            for (Name listName:listNames){
-                if (topParent == listName.findTopParent()){
-                    if(inParentSet(name, listNames) != null) {
+        for (Set<Name> listNames : names) {
+            for (Name listName : listNames) {
+                if (topParent == listName.findTopParent()) {
+                    if (inParentSet(name, listNames) != null) {
                         return true;
                     }
                 }
@@ -779,8 +789,8 @@ public final class NameService {
         final String childrenString = getInstruction(setTerm, CHILDREN);
         String toString = getInstruction(setTerm, TO);
         String countString = getInstruction(setTerm, COUNT);
-        final String countbackString = getInstruction(setTerm,COUNTBACK);
-        final String compareWithString = getInstruction(setTerm,COMPAREWITH);
+        final String countbackString = getInstruction(setTerm, COUNTBACK);
+        final String compareWithString = getInstruction(setTerm, COMPAREWITH);
         List<Name> names = new ArrayList<Name>();
 
         String nameString = setTerm;
@@ -791,9 +801,9 @@ public final class NameService {
         if (name == null) {
             return "error:  not understood: " + nameString;
         }
-        if (childrenString == null && fromString == null && toString==null && countString==null){
-             names.add(name);
-         } else {
+        if (childrenString == null && fromString == null && toString == null && countString == null) {
+            names.add(name);
+        } else {
             // FIRST - get the set of names given the level
             names = findChildrenAtLevel(name, levelString);
             if (fromString == null) fromString = "";
@@ -808,15 +818,15 @@ public final class NameService {
             if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
                 names = findChildrenFromToCount(loggedInConnection, names, fromString, toString, countString, countbackString, compareWithString);
             }
-         }
-        if (loggedInConnection.getReadPermissions() != null){
-           for (Name possible:names){
-               if (isAllowed(possible, loggedInConnection.getReadPermissions())){
+        }
+        if (loggedInConnection.getReadPermissions() != null) {
+            for (Name possible : names) {
+                if (isAllowed(possible, loggedInConnection.getReadPermissions())) {
                     namesFound.add(possible);
-               }
-           }
-        }else{
-           namesFound.addAll(names);
+                }
+            }
+        } else {
+            namesFound.addAll(names);
         }
         return "";
     }
@@ -943,6 +953,10 @@ public final class NameService {
         return sb.toString();
     }
 
+
+    private String jsonElement(String jsonName, String jsonValue){
+        return("\"" + jsonName + "\":\"" + jsonValue + "\"");
+    }
     // pretty much replaced the original set of functions to do basic name manipulation
 
     public String processJsonRequest(LoggedInConnection loggedInConnection, NameJsonRequest nameJsonRequest) throws Exception {
@@ -1071,7 +1085,7 @@ public final class NameService {
                         }
                     }
                 }
-                calcReversePolish(loggedInConnection,name);
+                calcReversePolish(loggedInConnection, name);
                 // re set attributes, use single functions so checks happen
             }
         }
@@ -1081,10 +1095,6 @@ public final class NameService {
 
 
     // right now ONLY called for the column heading in uploads, set peers on existing names
-
-
-
-
 
 
     // should use jackson??
@@ -1117,7 +1127,7 @@ public final class NameService {
 
     // use jackson?
 
-    private String getStructureForNameSearch(LoggedInConnection loggedInConnection, String nameSearch) {
+    public String getStructureForNameSearch(LoggedInConnection loggedInConnection, String nameSearch) {
         final Name name = findByName(loggedInConnection, nameSearch);
         if (name != null) {
             return "{\"names\":[" + getChildStructureFormattedForOutput(name) + "]}";
@@ -1146,14 +1156,19 @@ public final class NameService {
         }
     }
 
-     // again should use jackson?
+    // again should use jackson?
 
     private String getChildStructureFormattedForOutput(final Name name) {
+        return getChildStructureFormattedForOutput(name, true);
+    }
+
+
+        private String getChildStructureFormattedForOutput(final Name name, boolean showChildren) {
         int totalValues = getTotalValues(name);
         //if (totalValues > 0) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"name\":");
-        sb.append("\"").append(name.getDefaultDisplayName()).append("\"");
+        sb.append("\"").append(name.getDefaultDisplayName().replace("\"","''")).append("\"");//trapping quotes in name - should not be there
         sb.append(", \"id\":\"" + name.getId() + "\"");
 
         sb.append(", \"dataitems\":\"" + totalValues + "\"");
@@ -1175,20 +1190,20 @@ public final class NameService {
                         peerList += "--";
                     }
                 }
-                sb.append("\"peers\":\"" + peerList + "\"");
+                sb.append(jsonElement("peers",peerList));
                 count++;
 
             }
             for (String attName : name.getAttributes().keySet()) {
                 if (count > 0) sb.append(",");
-                sb.append("\"" + attName + "\":\"" + URLEncoder.encode(name.getAttributes().get(attName)) + "\"");
+                sb.append(jsonElement(attName,URLEncoder.encode(name.getAttributes().get(attName).replace("\"","''"))));//replacing quotes again
                 count++;
             }
             sb.append("}");
         }
-        final Set<Name> children = name.getChildren();
+         final Set<Name> children = name.getChildren();
         sb.append(", \"elements\":\"" + children.size() + "\"");
-        if (!children.isEmpty()) {
+        if (showChildren && !children.isEmpty()) {
             sb.append(", \"children\":[");
             count = 0;
             for (Name child : children) {
@@ -1207,5 +1222,49 @@ public final class NameService {
         return sb.toString();
     }
 
-  }
+
+    private StringBuffer printJsonName(NameListJson nameListJson){
+        StringBuffer sb = new StringBuffer();
+        sb.append("<li");
+        if (nameListJson.elements > 0) sb.append(" onclick=\"az_clicklist(this)\"");
+        sb.append(">" + nameListJson.name + "\n");
+        sb.append("</li>");
+
+        sb.append("<div class=\"notseen\">" + nameListJson.id +"</div>\n");
+        //ignoring the rest of the info for the moment....
+        if (nameListJson.elements > 0){
+            sb.append("<ul style=\"display:none\">");
+            for (NameListJson child:nameListJson.children){
+                sb.append(printJsonName(child));
+            }
+            sb.append("</ul>");
+        }
+        return sb;
+    }
+
+
+    public String convertJsonToHTML(String json) {
+
+        StringBuffer sb = new StringBuffer();
+        sb.append("<ul class=\"namelist\">\n");
+        try {
+            NameListJson nameListJson = jacksonMapper.readValue(json, NameListJson.class);
+            for (NameListJson child:nameListJson.names){
+                sb.append(printJsonName(child));
+            }
+            sb.append("</ul>\n");
+
+
+        } catch (Exception e) {
+            logger.error("name json parse problem", e);
+            return "error:badly formed json " + e.getMessage();
+        }
+         return sb.toString();
+    }
+
+    public String jsonNameDetails(LoggedInConnection loggedInConnection, int nameId){
+         Name name = findById(loggedInConnection, nameId);
+        return getChildStructureFormattedForOutput(name, false);
+    }
+}
 
