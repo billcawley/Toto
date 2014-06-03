@@ -42,7 +42,13 @@ public final class Value extends AzquoMemoryDBEntity {
 
     protected Value(final AzquoMemoryDB azquoMemoryDB, final int id, final String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id);
-        JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
+        JsonTransport transport= null;
+        try{
+            transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
+        }catch(Exception e){
+            int j = 1;//something very wrong if the JSON doesn't work
+
+        }
         this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
         this.text = transport.text;
         this.deletedInfo = transport.deletedInfo;
