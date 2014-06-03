@@ -69,13 +69,14 @@ public class OnlineController {
         String reportId = null;
         String chartParams = null;
         String chart = null;
-        String jsonFunction = null;
+        String jsonFunction = "azquojsonfeed";
         String region = null;
         String rowStr = null;
         String colStr = null;
         String changedValue = null;
         String opcode = "";
-        boolean savebook = false;
+        String nameId = null;
+        String spreadsheetName = "";
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
             String paramValue = request.getParameterValues(paramName)[0];
@@ -96,11 +97,7 @@ public class OnlineController {
             } else if (paramName.equals("chart")) {
                 chartParams = paramValue;
             } else if (paramName.equals("opcode")) {
-                if (paramValue.equals("download")) {
-                    savebook = true;
-                }
                 opcode = paramValue;
-
             } else if (paramName.equals("region")) {
                 region = paramValue;
             } else if (paramName.equals("row")) {
@@ -109,7 +106,12 @@ public class OnlineController {
                 colStr = paramValue;
             } else if (paramName.equals("value")) {
                 changedValue = paramValue;
+            }else if (paramName.equals("spreadsheetname")){
+                spreadsheetName = paramValue;
+            }else if (paramName.equals("nameid")){
+                nameId = paramValue;
             }
+
             String callerId = request.getRemoteAddr();
             if (callerId != null && user != null && user.equals("demo@user.com")) {
                 user += callerId;
@@ -117,7 +119,7 @@ public class OnlineController {
         }
 
         long startTime = System.currentTimeMillis();
-        String spreadsheetName = null;
+        String workbookName = null;
         String database = null;
         try {
             OnlineReport onlineReport = null;
@@ -125,19 +127,19 @@ public class OnlineController {
                 //report id is assumed to be integer - sent from the website
                 onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
                 if (onlineReport != null){
-                    spreadsheetName = onlineReport.getReportName();
+                    workbookName = onlineReport.getReportName();
                     onlineReport.setDatabase(databaseDAO.findById(onlineReport.getDatabaseId()).getName());
                     database = onlineReport.getDatabase();
                 }
             }
-            if (spreadsheetName == null){
-                spreadsheetName = "unknown";
+            if (workbookName == null){
+                workbookName = "unknown";
             }
             if (connectionId == null) {
                 if (user.equals("demo@user.com")){
                     user += request.getRemoteAddr();
                 }
-                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, spreadsheetName, false);
+                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, workbookName, false);
 
                 if (loggedInConnection == null) {
                     return "error:no connection id";
@@ -150,11 +152,16 @@ public class OnlineController {
             if (loggedInConnection == null) {
                 return "error:invalid or expired connection id";
             }
-            if (loggedInConnection.getProvenance()!=null){
+            /*
+            THIS GIVES A NULL POINTER EXCEPTION - NOT SURE WHY I PUT IT IN!
+            if (loggedInConnection.getProvenance()==null){
                 //will not have been set for online reports
-                loggedInConnection.setNewProvenance("online report",spreadsheetName);
-
+                loggedInConnection.getProvenance().setMethod("Azquosheet");
+                if (workbookName.length() > 0){
+                    loggedInConnection.getProvenance().setName(workbookName);
+                }
             }
+            */
             String result = "error: no action taken";
 
             /* expand the row and column headings.
@@ -166,8 +173,11 @@ public class OnlineController {
             if (choiceName != null){
                 onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
             }
-            if (savebook){
-                String fileName = onlineReport.getFilename();
+            if (opcode.equals("download")){
+                String fileName = "/azquobook.xls";
+                if (onlineReport!=null){
+                      fileName = onlineReport.getFilename();
+                }
                 fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
                 onlineService.saveBook(response, loggedInConnection, fileName);
             }
@@ -182,6 +192,10 @@ public class OnlineController {
             if (opcode.equals("savedata")){
                 result = onlineService.saveData(loggedInConnection, jsonFunction);
             }
+            if (opcode.equals("details")){
+                result = nameService.jsonNameDetails(loggedInConnection, Integer.parseInt(nameId));
+                result = jsonFunction + "({\"namedetails\":" + result + "})";
+            }
             if (chartParams != null){
                 if (chartParams.length() > 6){ //params start with 'chart '
                     chartParams = chartParams.substring(6);
@@ -194,7 +208,7 @@ public class OnlineController {
             }else {
 
                 if (onlineReport != null) {
-                    result = onlineService.readExcel(loggedInConnection, onlineReport);
+                    result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName,"Right-click mouse for provenance");
                 }
             }
             /*
