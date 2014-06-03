@@ -123,8 +123,12 @@ public class AdminService {
 
     }
 
-    public boolean createDatabase(final String databaseName, final LoggedInConnection loggedInConnection) throws Exception {
+    public String createDatabase(final String databaseName, final LoggedInConnection loggedInConnection) throws Exception {
         if (loggedInConnection.getUser().isAdministrator()) {
+             Database existing = databaseDao.findForName(loggedInConnection.getUser().getBusinessId(),databaseName);
+            if (existing != null){
+                return "error: That database already exists";
+            }
             final String mysqlName = getSQLDatabaseName(loggedInConnection, databaseName);
             final Business b = businessDao.findById(loggedInConnection.getUser().getBusinessId());
             final Database database = new Database(0, new Date(), new Date(130, 1, 1), b.getId(), databaseName, mysqlName, 0, 0);
@@ -138,9 +142,9 @@ public class AdminService {
             if (loggedInConnection.getAzquoMemoryDB() == null) { // creating their first db I guess?
                 loggedInConnection.setAzquoMemoryDB(memoryDBManager.getAzquoMemoryDB(database));
             }
-            return true;
+            return "Database created successfully";
         }
-        return false;
+        return "error: Only administrators can create databases";
     }
 
     public boolean createUser(final String email
