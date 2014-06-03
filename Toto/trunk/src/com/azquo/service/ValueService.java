@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.StringReader;
+import java.security.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -751,11 +752,11 @@ seaports;children   container;children
         return sortedMap;
     }
 
-    public List<Integer> sortRows(int restrictCount, Map<Integer, Double> rowTotals) {
+    public List<Integer> sortRows(int restrictCount, Map<Integer, Double> sortTotals) {
 
         List<Integer> sortedRows = new ArrayList<Integer>();
         if (restrictCount != 0) {
-            List list = new LinkedList(rowTotals.entrySet());
+            List list = new LinkedList(sortTotals.entrySet());
 
             // sort list based on comparator
             Collections.sort(list, new Comparator() {
@@ -771,7 +772,7 @@ seaports;children   container;children
             }
 
         } else {
-            for (int i = 0; i < rowTotals.size(); i++) {
+            for (int i = 0; i < sortTotals.size(); i++) {
                 sortedRows.add(i);
             }
         }
@@ -1067,14 +1068,14 @@ seaports;children   container;children
         loggedInConnection.setLockMap(region, sb.toString());
     }
 
-    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, int filterCount, int restrictCount, Map<Integer, Double> rowTotals) {
+    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, int filterCount, int restrictCount, Map<Integer, Double> sortTotals) {
 
         int rowInt = 0;
         int blockRowCount = 0;
         int outputMarker = 0;
         boolean firstRow = true;
         if (restrictCount == 0) {
-            restrictCount = rowTotals.size();
+            restrictCount = sortTotals.size();
         }
         final StringBuilder sb = new StringBuilder();
         List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
@@ -1139,10 +1140,17 @@ seaports;children   container;children
     public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictCount) throws Exception {
         loggedInConnection.setContext(region, contextNames); // needed for provenance
         long track = System.currentTimeMillis();
-
+        Integer sortCol = loggedInConnection.getSortCol(region);
+        if (sortCol == null){
+            sortCol = -1;
+        }
+        if (sortCol >=0 && restrictCount == 0){
+            restrictCount = loggedInConnection.getRowHeadings(region).size();//this is a signal to sort the rows
+        }
+        
         final List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
         loggedInConnection.setDataValueMap(region, dataValuesMap);
-        final Map<Integer, Double> rowTotals = new HashMap<Integer, Double>();
+        final Map<Integer, Double> sortTotals = new HashMap<Integer, Double>();
         List<List<Set<Name>>> dataNamesMap = new ArrayList<List<Set<Name>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of names for each cell
         List<List<String>> shownValueArray = new ArrayList<List<String>>();
         List<List<Boolean>> lockArray = new ArrayList<List<Boolean>>();
@@ -1157,8 +1165,9 @@ seaports;children   container;children
             shownValueArray.add(shownValues);
             lockArray.add(lockedCells);
 
-            double rowTotal = 0.0;
+            double sortTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total.
             boolean hasValues = false;
+            int colNo = 0;
             for (List<Name> columnName : loggedInConnection.getColumnHeadings(region)) {
                 final Set<Name> namesForThisCell = new HashSet<Name>();
                 createCellNameList(namesForThisCell, rowName, columnName, contextNames);
@@ -1174,6 +1183,7 @@ seaports;children   container;children
                 if (!checked) { // not a valid peer set? Show a blank locked cell
                     shownValues.add("");
                     lockedCells.add(true);
+                    thisRowValues.add(null);
                 } else {
 
                     List<Value> values = new ArrayList<Value>();
@@ -1182,10 +1192,12 @@ seaports;children   container;children
                     // TODO - peer additive check. If using peers and not additive, don't include children
                     double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values); // true = pay attention to names additive flag
                     //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                    if (restrictCount < 0) {
-                        rowTotal += cellValue;
-                    } else {
-                        rowTotal -= cellValue;
+                    if (sortCol==-1 || sortCol == colNo) {
+                        if (restrictCount < 0) {
+                            sortTotal += cellValue;
+                        } else {
+                            sortTotal -= cellValue;
+                        }
                     }
                     if (values.size() > 0) {
                         hasValues = true;
@@ -1203,13 +1215,14 @@ seaports;children   container;children
                         lockedCells.add(false);
                     }
                 }
+                colNo++;
             }
-            rowTotals.put(rowNo++, rowTotal);
+            sortTotals.put(rowNo++, sortTotal);
 
         }
-        loggedInConnection.setRowOrder(region, sortRows(restrictCount, rowTotals));
+        loggedInConnection.setRowOrder(region, sortRows(restrictCount, sortTotals));
         loggedInConnection.setRestrictCount(region, restrictCount);
-        final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, filterCount, restrictCount, rowTotals);
+        final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, filterCount, restrictCount, sortTotals);
         formatLockMap(loggedInConnection, region, lockArray);
 
         printSumStats();
@@ -1236,6 +1249,75 @@ seaports;children   container;children
             }
         }
 
+    }
+
+    private String stripCurrency(String val){
+        //TODO we need to be able to detect other currencies
+
+        if (val.length() > 1 && "$£".contains(val.substring(0,1))){
+            return val.substring(1);
+
+        }
+        return val;
+    }
+
+    private boolean compareStringValues(final String val1, final String val2){
+        //tries to work out if numbers expressed with different numbers of decimal places, maybe including percentage signs and currency symbols are the same.
+        if (val1.equals(val2)) return true;
+        String val3 = val1;
+        String val4 = val2;
+        if (val1.endsWith("%") && val2.endsWith("%")){
+            val3 = val1.substring(0, val1.length() - 1);
+            val4 = val2.substring(0, val2.length() - 1);
+         }
+        val3 = stripCurrency(val3);
+        val4 = stripCurrency(val4);
+        if (NumberUtils.isNumber(val3) && NumberUtils.isNumber(val4)){
+            Double n1 = Double.parseDouble(val3);
+            Double n2 = Double.parseDouble(val4);
+            if (n1 - n2 == 0) return true;
+        }
+        return false;
+    }
+
+
+    public int getAge(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt, String currentValue){
+        Calendar cal = Calendar.getInstance();
+        Date today = cal.getTime();
+
+        final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
+        final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
+
+        int age = 10000;
+        if (dataValueMap == null) return age;
+        if (dataValueMap.get(rowInt) == null) return age;
+
+        final List<List<Value>> rowValues = dataValueMap.get(rowOrder.get(rowInt));
+        final List<Value> valuesForCell = rowValues.get(colInt);
+        if (valuesForCell==null || valuesForCell.size() == 0){
+            if (currentValue.length() ==0) return age;
+            return 0;
+        }
+        if (valuesForCell.size()==1){
+            for (Value value:valuesForCell){
+                if (!compareStringValues(value.getText(),currentValue))
+                    return 0; //this cell has been changed
+            }
+        }
+        for (Value value : valuesForCell) {
+            if (value.getText().length() > 0) {
+                Date provdate = value.getProvenance().getTimeStamp();
+
+                final long dateSubtract = today.getTime() - provdate.getTime();
+                final long time = 1000 * 60 * 60 * 24;
+
+                final int cellAge = (int) (dateSubtract / time);
+                if (cellAge < age) {
+                    age = cellAge;
+                }
+            }
+        }
+        return age;
     }
 
 
@@ -1417,23 +1499,25 @@ seaports;children   container;children
         StringBuffer output = new StringBuffer();
         output.append(jsonFunction + "({\"provenance\":[{");
         int count = 0;
-        sortValues(values);
+        if (values.size() > 0) {
+            sortValues(values);
 
-        //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
-        Date provdate = values.get(0).getProvenance().getTimeStamp();
-        Set<Value> oneUpdate = new HashSet<Value>();
-        Provenance p = null;
-        for (Value value : values) {
-            if (value.getProvenance().getTimeStamp() == provdate) {
-                oneUpdate.add(value);
-                p = value.getProvenance();
-            } else {
-                output.append(printExtract(loggedInConnection, oneUpdate, p));
-                oneUpdate = new HashSet<Value>();
-                provdate = value.getProvenance().getTimeStamp();
+            //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
+            Date provdate = values.get(0).getProvenance().getTimeStamp();
+            Set<Value> oneUpdate = new HashSet<Value>();
+            Provenance p = null;
+            for (Value value : values) {
+                if (value.getProvenance().getTimeStamp() == provdate) {
+                    oneUpdate.add(value);
+                    p = value.getProvenance();
+                } else {
+                    output.append(printExtract(loggedInConnection, oneUpdate, p));
+                    oneUpdate = new HashSet<Value>();
+                    provdate = value.getProvenance().getTimeStamp();
+                }
             }
+            output.append(printExtract(loggedInConnection, oneUpdate, p));
         }
-        output.append(printExtract(loggedInConnection, oneUpdate, p));
         output.append("}]})");
         return output.toString();
 
@@ -1504,7 +1588,7 @@ seaports;children   container;children
                     if (edited.endsWith(".0")) {
                         edited = edited.substring(0, edited.length() - 2);
                     }
-                    if (!orig.equals(edited)) {
+                    if (!compareStringValues(orig,edited)) {
                         if (!locked.equalsIgnoreCase("locked")) { // it wasn't locked, good to go, check inside the different values bit to error if the excel tries something it should not
                             logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                             logger.info(orig + "|" + edited + "|");
