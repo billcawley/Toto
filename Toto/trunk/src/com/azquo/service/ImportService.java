@@ -889,7 +889,7 @@ public final class ImportService {
             Workbook wb = new HSSFWorkbook(fs);
             AzquoBook ab = new AzquoBook();
             ab.setWb(wb);
-            ab.calculateAll(wb);
+            //ab.calculateAll(wb);  this caused a problem when importing as 'dependencies' had not been initialised.
             Row row;
             Cell cell;
             DataFormatter formatter = new HSSFDataFormatter();
