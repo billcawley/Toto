@@ -21,8 +21,8 @@ public final class Provenance extends AzquoMemoryDBEntity {
 
     private final String user;
     private Date timeStamp;
-    private final String method;
-    private final String name;
+    String method;
+    String name;
     private String rowHeadings;
     private String columnHeadings;
     private String context;
@@ -80,9 +80,13 @@ public final class Provenance extends AzquoMemoryDBEntity {
         return method;
     }
 
+    public void setMethod(String method){ this.method = method; }
+
     public String getName() {
         return name;
     }
+
+    public void  setName(String name){ this.name = name; }
 
     public String getRowHeadings() {
         return rowHeadings;
