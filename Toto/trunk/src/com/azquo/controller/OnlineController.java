@@ -6,6 +6,9 @@ import com.azquo.adminentities.OnlineReport;
 import com.azquo.service.*;
 import com.azquo.util.Chart;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -14,9 +17,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.File;
 import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.List;
+import java.util.StringTokenizer;
 
 
 /**
@@ -48,7 +56,7 @@ public class OnlineController {
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
     @RequestMapping
-    public String handleRequest (ModelMap model,HttpServletRequest request, HttpServletResponse response){
+    public String handleRequest (ModelMap model,HttpServletRequest request, HttpServletResponse response)throws Exception{
 
     /*
     public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId
@@ -58,8 +66,7 @@ public class OnlineController {
             , @RequestParam(value = "choicevalue", required = false) String choiceValue
             , @RequestParam(value = "reportid", required = false) String reportid) throws Exception {
 */
-
-        Enumeration<String> parameterNames = request.getParameterNames();
+         Enumeration<String> parameterNames = request.getParameterNames();
 
         String user = null;
         String password = null;
@@ -71,12 +78,14 @@ public class OnlineController {
         String chart = null;
         String jsonFunction = "azquojsonfeed";
         String region = null;
-        String rowStr = null;
-        String colStr = null;
+        String rowStr = "";
+        String colStr = "";
         String changedValue = null;
         String opcode = "";
         String nameId = null;
         String spreadsheetName = "";
+        String database = "";
+
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
             String paramValue = request.getParameterValues(paramName)[0];
@@ -110,6 +119,8 @@ public class OnlineController {
                 spreadsheetName = paramValue;
             }else if (paramName.equals("nameid")){
                 nameId = paramValue;
+            }else if (paramName.equals("database")){
+                database = paramValue;
             }
 
             String callerId = request.getRemoteAddr();
@@ -117,10 +128,98 @@ public class OnlineController {
                 user += callerId;
             }
         }
+        FileItem item;
+        FileItem file = null;
+        boolean isMultipart = ServletFileUpload.isMultipartContent(request);
+        if (isMultipart){
+            // Create a factory for disk-based file items
+            DiskFileItemFactory factory = new DiskFileItemFactory();
+
+// Set factory constraints
+            factory.setSizeThreshold(10000000);
+            ServletContext servletContext = request.getServletContext();
+            File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
+            factory.setRepository(repository);
+
+// Create a new file upload handler
+            ServletFileUpload upload = new ServletFileUpload(factory);
+
+// Set overall request size constraint
+            upload.setSizeMax(100000000);
+
+// Parse the request
+            List<FileItem> items = upload.parseRequest(request);
+            Iterator it = items.iterator();
+            item = (FileItem) it.next();
+            boolean macMode = false;
+            if (!item.getFieldName().equals("parameters")) { // no parameters file passed, used to be a plain error but mac may have other ideas - parameters sent via curl
+                while (item != null){
+                    if (item.getName() !=null){
+                        file = item;
+                    }else {
+                        if (item.getFieldName().equals("connectionid")) {
+                            macMode = true;
+                            connectionId = item.getString();
+                        } else if (item.getFieldName().equals("spreadsheetname")) {
+                            spreadsheetName = item.getString();
+                        }else if (item.getFieldName().equals("reportid")){
+                            reportId = item.getString();
+                        }else if (item.getFieldName().equals("row")){
+                            rowStr = item.getString();
+                        }else if (item.getFieldName().equals("col")){
+                            colStr = item.getString();
+                        }else if (item.getFieldName().equals("database")){
+                            database = item.getString();
+                        }
+                    }
+                    if (it.hasNext()) {
+                        item = (FileItem) it.next();
+                    }else{
+                        item = null;
+                    }
+                }
+
+                if (!macMode){ // either mac or windows not sending what we want
+                    return "error: expecting parameters";
+                }
+            } else { // parameters file built on windows
+                String parameters = item.getString();
+                StringTokenizer st = new StringTokenizer(parameters, "&");
+                while (st.hasMoreTokens()) {
+                    file = item;
+                    String parameter = st.nextToken();
+                    if (!parameter.endsWith("=")){
+                        StringTokenizer st2 = new StringTokenizer(parameter, "=");
+                        String parameterName = st2.nextToken();
+                        if (parameterName.equals("connectionid")) {
+                            connectionId = st2.nextToken();
+                        }else if (parameterName.equals("spreadsheetname")) {
+                            spreadsheetName = st2.nextToken();
+                        }else if (parameterName.equals("reportid")){
+                            reportId = st2.nextToken();
+                        }else if (parameterName.equals("row")){
+                            rowStr = st2.nextToken();
+                        }else if (parameterName.equals("col")){
+                            colStr = st2.nextToken();
+                        }else if (parameterName.equals("database")){
+                            database = st2.nextToken();
+                        }
+                    }
+                }
+                if (it.hasNext()){
+                    item = (FileItem) it.next();
+                }else{
+                    item = null;
+
+                }
+            }
+
+        }
+        //assuming that the last item is the file;
+        item = file;
 
         long startTime = System.currentTimeMillis();
         String workbookName = null;
-        String database = null;
         try {
             OnlineReport onlineReport = null;
             if (reportId != null && reportId.length() > 0){
@@ -128,8 +227,10 @@ public class OnlineController {
                 onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
                 if (onlineReport != null){
                     workbookName = onlineReport.getReportName();
-                    onlineReport.setDatabase(databaseDAO.findById(onlineReport.getDatabaseId()).getName());
-                    database = onlineReport.getDatabase();
+                    if (onlineReport.getId()!=1) {
+                        onlineReport.setDatabase(databaseDAO.findById(onlineReport.getDatabaseId()).getName());
+                        database = onlineReport.getDatabase();
+                    }
                 }
             }
             if (workbookName == null){
@@ -163,7 +264,12 @@ public class OnlineController {
             }
             */
             String result = "error: no action taken";
-
+            int row = 0;
+            try {
+                row = Integer.parseInt(rowStr);
+            }catch(Exception e){
+                //rowStr can be blank or '0'
+            }
             /* expand the row and column headings.
             the result is jammed into result but may not be needed - getrowheadings is still important as it sets up the bits in the logged in connection
 
@@ -173,21 +279,13 @@ public class OnlineController {
             if (choiceName != null){
                 onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
             }
-            if (opcode.equals("download")){
-                String fileName = "/azquobook.xls";
-                if (onlineReport!=null){
-                      fileName = onlineReport.getFilename();
-                }
-                fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
-                onlineService.saveBook(response, loggedInConnection, fileName);
-            }
             if (changedValue!=null){
                 result = onlineService.changeValue(loggedInConnection, region, Integer.parseInt(rowStr), Integer.parseInt(colStr), changedValue);
                 result = jsonFunction + "({\"changedvalues\":" + result + "})";
             }
 
             if (opcode.equals("provenance")){
-                result = onlineService.getProvenance(loggedInConnection, Integer.parseInt(rowStr), Integer.parseInt(colStr), jsonFunction);
+                result = onlineService.getProvenance(loggedInConnection, row, Integer.parseInt(colStr), jsonFunction);
             }
             if (opcode.equals("savedata")){
                 result = onlineService.saveData(loggedInConnection, jsonFunction);
@@ -205,12 +303,17 @@ public class OnlineController {
                 chart =  onlineService.getChart(loggedInConnection, chartParams);
                 result = jsonFunction + "({\"chart\":\"" + chart + "\"})";
 
-            }else {
-
-                if (onlineReport != null) {
-                    result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName,"Right-click mouse for provenance");
-                }
             }
+
+            if (onlineReport != null && row == 0) {//first load of admin sheet
+                result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName,"Right-click mouse for provenance");
+            }
+            if (opcode.equals("") && row > 0){//button pressed - follow instructions and reload admin sheet
+                String message = onlineService.followInstructionsAt(loggedInConnection, jsonFunction, row, Integer.parseInt(colStr), database, item);
+                onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
+                result =  onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, message);
+            }
+
             /*
             BufferedReader br = new BufferedReader(new StringReader(result));
             String line;
