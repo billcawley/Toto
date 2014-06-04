@@ -302,7 +302,10 @@ public class AdminService {
         }
         if (reportList != null){
              for (OnlineReport onlineReport:reportList) {
-                onlineReport.setDatabase(databaseDao.findById(onlineReport.getDatabaseId()).getName());
+                 Database database = databaseDao.findById(onlineReport.getDatabaseId());
+                 if (database!=null) {//in case database has been deleted without deleting the report reference.....
+                     onlineReport.setDatabase(database.getName());
+                 }
             }
         }else{
             OnlineReport notFound = new OnlineReport(0,0,0,"","No reports found","","");
