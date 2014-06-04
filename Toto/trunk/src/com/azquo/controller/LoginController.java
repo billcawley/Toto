@@ -56,7 +56,6 @@ public class LoginController {
     @ResponseBody
     public String handleRequest(HttpServletRequest request)throws Exception{
 
-        boolean isMultipart = ServletFileUpload.isMultipartContent(request);
 
         Enumeration<String> parameterNames = request.getParameterNames();
 
@@ -69,9 +68,6 @@ public class LoginController {
         String database=null;
         String checkConnectionId = null;
         String result = null;
-        String rowChosen = "";
-        String colChosen = "";
-        String jsonFunction = "azquojsonfeed";
         boolean online = false;
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
@@ -94,103 +90,9 @@ public class LoginController {
                 checkConnectionId = paramValue;
             }else if (paramName.equals("online")){
                 online = true;
-            }else if (paramName.equals("rowchosen")){
-                rowChosen = paramValue;
-            }else if (paramName.equals("colchosen")){
-                colChosen = paramValue;
-            }else if (paramName.equals("jsonfunction")){
-                jsonFunction = paramValue;
             }
 
         }
-        FileItem item = null;
-        FileItem file = null;
-        if (isMultipart){
-            // Create a factory for disk-based file items
-            DiskFileItemFactory factory = new DiskFileItemFactory();
-
-// Set factory constraints
-            factory.setSizeThreshold(10000000);
-            ServletContext servletContext = request.getServletContext();
-            File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
-            factory.setRepository(repository);
-
-// Create a new file upload handler
-            ServletFileUpload upload = new ServletFileUpload(factory);
-
-// Set overall request size constraint
-            upload.setSizeMax(100000000);
-
-// Parse the request
-            List<FileItem> items = upload.parseRequest(request);
-            Iterator it = items.iterator();
-            item = (FileItem) it.next();
-            boolean macMode = false;
-            if (!item.getFieldName().equals("parameters")) { // no parameters file passed, used to be a plain error but mac may have other ideas - parameters sent via curl
-                while (item != null){
-                    if (item.getName() !=null){
-                        file = item;
-                    }else {
-                        if (item.getFieldName().equals("connectionid")) {
-                            macMode = true;
-                            connectionId = item.getString();
-                        } else if (item.getFieldName().equals("spreadsheetname")) {
-                            spreadsheetName = item.getString();
-                        } else if (item.getFieldName().equals("rowchosen")) {
-                            rowChosen = item.getString();
-                        } else if (item.getFieldName().equals("colchosen")) {
-                            colChosen = item.getString();
-                        } else if (item.getFieldName().equals("database")) {
-                            database = item.getString();
-                        }
-                    }
-                    if (it.hasNext()) {
-                        item = (FileItem) it.next();
-                    }else{
-                        item = null;
-                    }
-                }
-
-                if (!macMode){ // either mac or windows not sending what we want
-                    return "error: expecting parameters";
-                }
-            } else { // parameters file built on windows
-                String parameters = item.getString();
-                StringTokenizer st = new StringTokenizer(parameters, "&");
-                while (st.hasMoreTokens()) {
-                    file = item;
-                    String parameter = st.nextToken();
-                    if (!parameter.endsWith("=")){
-                        StringTokenizer st2 = new StringTokenizer(parameter, "=");
-                        String parameterName = st2.nextToken();
-                        if (parameterName.equals("connectionid")) {
-                            connectionId = st2.nextToken();
-                        }
-                        if (parameterName.equals("spreadsheetname")) {
-                            spreadsheetName = st2.nextToken();
-                        }
-                        if (parameterName.equals("rowchosen")) {
-                            rowChosen = st2.nextToken();
-                        }
-                        if (parameterName.equals("colchosen")) {
-                            colChosen = st2.nextToken();
-                        }
-                        if (parameterName.equals("database")){
-                            database = st2.nextToken();
-                        }
-                    }
-                }
-                if (it.hasNext()){
-                    item = (FileItem) it.next();
-                }else{
-                    item = null;
-
-                }
-            }
-
-        }
-        //assuming that the last item is the file;
-        item = file;
         String callerId = request.getRemoteAddr();
         if (callerId != null && userEmail != null && userEmail.equals("demo@user.com")){
             userEmail += callerId;
@@ -240,12 +142,8 @@ public class LoginController {
          if (loggedInConnection != null) {
                 result =  loggedInConnection.getConnectionId();
                 if (online){
-                    String message = "";
-                    if (rowChosen.length() > 0){
-                        message = onlineService.followInstructionsAt(loggedInConnection, jsonFunction, Integer.parseInt(rowChosen), Integer.parseInt(colChosen), database, item);
-                    }
-                        OnlineReport onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
-                        return onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, message);
+                    OnlineReport onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
+                    return onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "");
                   }
                 return result;
             }
