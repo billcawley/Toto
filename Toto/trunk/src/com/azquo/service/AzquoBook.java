@@ -1444,7 +1444,16 @@ public  class AzquoBook {
         String data = null;
         if (regionName.equals("databases")){
             data = jacksonMapper.writeValueAsString(adminService.getDatabaseListForBusiness(loggedInConnection));
+        }else if (regionName.equals("uploads")){
+            data = jacksonMapper.writeValueAsString(adminService.getUploadRecordsForDisplayForBusiness(loggedInConnection));
+        }else if (regionName.equals("users")){
+            data = jacksonMapper.writeValueAsString(adminService.getUserListForBusiness(loggedInConnection));
+        }else if (regionName.equals("permissions")){
+            data = jacksonMapper.writeValueAsString(adminService.getPermissionList(loggedInConnection));
+        }else if (regionName.equals("reports")){
+            data = jacksonMapper.writeValueAsString(adminService.getReportList(loggedInConnection));
         }
+        if (data == null) return "";
         String rangeFormula = rangeNames.get("az_headings" + regionName);
         Range headings = interpretRangeName(rangeFormula);
         int headingsRow = headings.startCell.getRowIndex();
@@ -1803,7 +1812,7 @@ public  class AzquoBook {
 
     }
 
-    public StringBuffer printBody(LoggedInConnection loggedInConnection, NameService nameService){
+    public StringBuffer convertToHTML(LoggedInConnection loggedInConnection, NameService nameService){
 
        StringBuffer output = new StringBuffer();
        Formatter out = new Formatter(output);
