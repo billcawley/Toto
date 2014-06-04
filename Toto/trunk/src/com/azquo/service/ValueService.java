@@ -1290,9 +1290,13 @@ seaports;children   container;children
 
         int age = 10000;
         if (dataValueMap == null) return age;
+        if (rowInt >= dataValueMap.size()) return age;
         if (dataValueMap.get(rowInt) == null) return age;
 
         final List<List<Value>> rowValues = dataValueMap.get(rowOrder.get(rowInt));
+        if (colInt >=rowValues.size()){// a blank column
+            return age;
+        }
         final List<Value> valuesForCell = rowValues.get(colInt);
         if (valuesForCell==null || valuesForCell.size() == 0){
             if (currentValue.length() ==0) return age;
