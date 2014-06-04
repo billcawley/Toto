@@ -72,6 +72,14 @@ public final class OnlineService {
         AzquoBook azquoBook = new AzquoBook();
         loggedInConnection.setAzquoBook(azquoBook);
         String output = readFile("onlineReport.html").toString();
+        if (spreadsheetName == null){
+            spreadsheetName = "";
+        }
+        if (onlineReport.getId()==1 && spreadsheetName.equals("Upload")) {
+            output = output.replace("$enctype", " enctype=\"multipart/form-data\" ");
+        }else{
+            output = output.replace("$enctype","");
+        }
         try {
             Workbook wb  = WorkbookFactory.create(new FileInputStream(onlineReport.getFilename()));
             azquoBook.setWb(wb);
@@ -82,7 +90,7 @@ public final class OnlineService {
             }
             printTabs(azquoBook,tabs);
 
-            String error = printBody(loggedInConnection, onlineReport.getId(), azquoBook, spreadsheetName, worksheet);
+            String error = convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), azquoBook, spreadsheetName, worksheet);
             if (error.length() > 0){
                 return error;
             }
@@ -173,7 +181,7 @@ public final class OnlineService {
     }
 
 
-    public String printBody(LoggedInConnection loggedInConnection, int reportId, AzquoBook azquoBook, String spreadsheetName,StringBuffer output) throws Exception {
+    public String convertSpreadsheetToHTML(LoggedInConnection loggedInConnection, int reportId, AzquoBook azquoBook, String spreadsheetName,StringBuffer output) throws Exception {
 
 
         azquoBook.setSheet(0);
@@ -192,7 +200,7 @@ public final class OnlineService {
 
 
 
-        output.append(azquoBook.printBody(loggedInConnection, nameService));
+        output.append(azquoBook.convertToHTML(loggedInConnection, nameService));
      /*
           List lst = wb.getAllPictures();
         for (Iterator it = lst.iterator(); it.hasNext(); ) {
@@ -297,27 +305,6 @@ public final class OnlineService {
             result = "data saved successfully";
         }
         return jsonFunction + "({\"message\":\"" + result + "\"})";
-    }
-
-    public String showAdminMenu(LoggedInConnection loggedInConnection){
-        StringBuffer head = new StringBuffer();
-         head.append("<style>\n");
-        head.append(readFile("excelStyle.css"));
-        head.append("</style>\n");
-
-
-        String output = readFile("onlineReport.html").toString();
-        output = output.replace("$script",readFile("online.js"));
-        output = output.replace("$topmenu",createAdminMenu());
-        output=output.replace("$topmessage",createDatabaseSelect(loggedInConnection));
-        output = output.replace("$topcell", "").replace("$leftcell","").replace("$maxheight","1000px").replace("$maxwidth", "2000px");
-        output = output.replace("$maxrow", "0").replace("$maxcol","0");
-        output = output.replace("$reportid", "0").replace("$connectionid", loggedInConnection.getConnectionId() +"");
-        output = output.replace("$regions", "");
-        output = output.replace("$styles", head.toString()).replace("$workbook", "");
-
-
-        return output.toString();
     }
 
     private StringBuffer createDatabaseSelect(LoggedInConnection loggedInConnection){
