@@ -169,7 +169,7 @@ document.onclick = onClick;
 function onClick(e){
     hideMenu("popupmenu");
     if (copyitem == null && cutitem==null && clickedItem!=null){
-        clickedItem.className = "";
+        //clickedItem.className = ""; //for name lists this should be active
     }
     var target = e.target;
     var cellId = target.id
@@ -427,8 +427,8 @@ function chosen(divName){
 
 
 function buttonPressed(rowNo, colNo){
-    document.getElementById("rowchosen").value = rowNo;
-    document.getElementById("colchosen").value = colNo;
+    document.getElementById("row").value = rowNo;
+    document.getElementById("col").value = colNo;
     document.azquoform.submit();
 }
 
@@ -438,7 +438,7 @@ function loadsheet(sheetname){
 }
 
 function downloadSheet(){
-    azquojson("Online","jsonfunction=azquojsonfeed&opcode=download");//not currently returning a status
+    azquojson("Download","reportid=" + document.getElementById("reportId").value);//not currently returning a status
 }
 
 
@@ -502,10 +502,10 @@ function azquojson(functionName, params){
     }else{
         params +="&connectionid=" + azquoform.connectionid.value;
     }
-    var htmlText = "http://www.bomorgan.co.uk:8080/api/" + functionName + "?" + params;
-    //var htmlText = "https://data.azquo.com:8443/api/" + functionName + "?" + params;
+    //var htmlText = "http://www.bomorgan.co.uk:8080/api/" + functionName + "?" + params;
+    var htmlText = "/api/" + functionName + "?" + params;
     var script = document.createElement('script'),
-        head = document.getElementsByTagName('head')[0] || document.documentElement;
+    head = document.getElementsByTagName('head')[0] || document.documentElement;
     script.src = htmlText;
     head.appendChild(script);
 }
@@ -589,7 +589,9 @@ function azquojsonfeed(obj) {
            if (attname== "DEFAULT_DISPLAY_NAME"){
                document.getElementById("DEFAULT_DISPLAY_NAME").value = attvalue;
            }else{
-               addAttribute(i, attname, attvalue)
+               if (attname!="RPCALC"){
+                   addAttribute(i, attname, attvalue)
+               }
            }
 
        }
@@ -634,7 +636,7 @@ function hideNameList(){
 
 function hideDetails(){
     hideMenu("namedetails");
-    clickedItem.className = "";
+    //clickedItem.className = "";  //good for name lists, but not for data regions!
 }
 
 function submitNameDetails(){
