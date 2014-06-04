@@ -17,7 +17,7 @@ function azquojson(functionName, params){
     }
     var htmlText = "https://data.azquo.com:8443/api/" + functionName + "?" + params;
     var script = document.createElement('script'),
-        head = document.getElementsByTagName('head')[0] || document.documentElement;
+    head = document.getElementsByTagName('head')[0] || document.documentElement;
     script.src = htmlText;
     head.appendChild(script);
 }
@@ -194,11 +194,7 @@ function az_inputChanged(){
 }
 
 function az_sendlogon(){
-    document.getElementById("az_LogonForm").style.display = "none";
-    az_logon = document.getElementById("az_Logon").value;
-    az_password = document.getElementById("az_Password").value;
-    az_database = ""
-    azquojsontest("Maintain","op=reportlist&jsonfunction=azquojsonreportfeed");
+    document.loginform.submit();
 }
 
 
