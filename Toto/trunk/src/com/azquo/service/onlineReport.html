@@ -16,7 +16,7 @@
 
         <div id="message">$topmessage</div>
     </div>
-    <form name="azquoform" enctype="multipart/form-data" method="post">
+    <form name="azquoform" $enctype method="post" action="/api/Online">
         <div class="excelDefaults" style="height:$maxheight;width:$maxwidth;" id="spreadsheet">
             <input type="hidden" name="reportid" id="reportId" value="$reportid"/>;
             <input type="hidden" name="connectionid" id="connectionId" value="$connectionid"/>
@@ -24,9 +24,8 @@
             <input type="hidden" name="editedvalue" id="editedValue" value=""/>
             <input type="hidden" name="spreadsheetname" id="spreadsheetname" value="$spreadsheetname"/>
             <input type="hidden" name="opcode" id="opcode" value=""/>
-            <input type="hidden" name="rowchosen" id="rowchosen" value=""/>
-            <input type="hidden" name="colchosen" id="colchosen" value=""/>
-            <input type="hidden" name="optionalfilehack" value=""/>
+            <input type="hidden" name="row" id="row" value=""/>
+            <input type="hidden" name="col" id="col" value=""/>
 
 
             <div id="selector" class="selector"></div>
