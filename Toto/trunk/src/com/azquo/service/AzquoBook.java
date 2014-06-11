@@ -452,7 +452,7 @@ public  class AzquoBook {
             int shiftCols = colCount - existingCols;
             ShiftData shiftData = new ShiftData(0,shiftStart, 0, shiftCols);
             adjustConditionalFormatting('C', shiftStart, shiftCols);
-            for (int rowNo = 0; rowNo < azquoSheet.getLastRowNum(); rowNo++) {
+            for (int rowNo = 0; rowNo <= azquoSheet.getLastRowNum(); rowNo++) {
                 if (azquoSheet.getRow(rowNo) != null) {
                     Row irow = azquoSheet.getRow(rowNo);
 
@@ -494,11 +494,35 @@ public  class AzquoBook {
             maxCol += shiftCols;
 
             adjustNames(shiftStart, shiftCols);
+            adjustSortableHeadings(shiftStart, shiftCols);
+
             setupColwidths();
             createDepencencyMap();//formulae are changed.
             //TODO  Check merged cells.   Maybe they should be left as is.
         }
     }
+
+    private void adjustSortableHeadings(int shiftStart, int shiftCount){
+        for (Cell c:sortableHeadings.keySet()){
+            SortableInfo si = sortableHeadings.get(c);
+            if (c.getColumnIndex() >=shiftStart){
+                //create a new entry entirely
+                int lastCol = si.lastCol + shiftCount;
+
+                sortableHeadings.remove(c);
+                c = azquoSheet.getRow(c.getRowIndex()).getCell(c.getColumnIndex()+shiftCount);
+                String region = si.region;
+                si = new SortableInfo();
+                si.region = region;
+                si.lastCol = lastCol;
+                sortableHeadings.put(c, si);
+            }else{
+                if (si.lastCol >= shiftStart) {
+                    si.lastCol += shiftCount;
+                }
+            }
+        }
+     }
 
     private void adjustConditionalFormatting(int rcFlag, int shiftStart, int shiftCount){
         String formatRange = rangeNames.get("az_conditionalformatting");
@@ -850,20 +874,24 @@ public  class AzquoBook {
     }
 
 
-    private void  colorStyles(CellStyle style) {
+    private void  colorStyles(CellStyle style, boolean hasContent) {
 
         if (wb instanceof HSSFWorkbook) {
             HSSFCellStyle cs = (HSSFCellStyle) style;
             //out.format("  /* fill pattern = %d */%n", cs.getFillPattern());
-            if (cs.getFillForegroundColor() != 9){//TODO set white background, but allow overflow from cells to the left
-                HSSFstyleColor("background-color", cs.getFillForegroundColor());
+            if (hasContent && (cs.getFillForegroundColor()==9 || cs.getFillForegroundColor() == 64)) {
+                HSSFstyleColor("background-color", (short) 9);
+            }else {
+                if (cs.getFillForegroundColor() != 9 && cs.getFillForegroundColor() != 64) {
+                    HSSFstyleColor("background-color", cs.getFillForegroundColor());
+                }
             }
             HSSFstyleColor("color", cs.getFont(wb).getColor());
             HSSFstyleColor("border-right-color", cs.getRightBorderColor());
             HSSFstyleColor("border-bottom-color", cs.getBottomBorderColor());
         } else {
             XSSFCellStyle cs = (XSSFCellStyle) style;
-            if (cs.getFillForegroundColor() != 9){//TODO  SEE ABOVE. not tested whether 9 is White
+            if (hasContent || cs.getFillForegroundColor() != 9){//  TODO NOT TESTED IF 9 IS WHITE
                 XSSFstyleColor("background-color", cs.getFillForegroundXSSFColor());
             }
             XSSFstyleColor("text-color", cs.getFont().getXSSFColor());
@@ -969,7 +997,7 @@ public  class AzquoBook {
 
 
 
-    private void setCellClass(int rowNo, int colNo, Cell cell) {
+    private void setCellClass(int rowNo, int colNo, Cell cell, boolean hasContent) {
         CellStyle style = getCellStyle(rowNo, colNo);
         short alignment = style.getAlignment();
 
@@ -1011,7 +1039,7 @@ public  class AzquoBook {
            addStyle("word-wrap", "break-word");
         }
 
-        colorStyles(style);
+        colorStyles(style, hasContent);
     }
 
     private <K> void styleOut(String attr, K key, Map<K, String> mapping) {
@@ -1438,6 +1466,31 @@ public  class AzquoBook {
 
     }
 
+    private String evaluateExpression(String expression, Map<String, String> pairs){
+
+
+        //evaluates simple text expressions
+        StringBuffer sb = new StringBuffer();
+        int pos= 0;
+        while (pos < expression.length()){
+            if (expression.charAt(pos)=='"'){
+                int endQuote = expression.indexOf("\"", ++pos);
+                if (endQuote < 0) return "error: expression not understood " + expression;
+                sb.append(expression.substring(pos, endQuote));
+                pos = endQuote + 1;
+            }else if(expression.charAt(pos)=='&' || expression.charAt(pos) == ' '){
+                    pos++;
+            }else{
+                int endTerm = (expression + "&").indexOf("&", pos);
+                String val = pairs.get(expression.substring(pos, endTerm).trim());
+                if (val == null) return "error: expression not understood " + expression;
+                sb.append(val);
+                pos = endTerm;
+            }
+        }
+        return sb.toString();
+    }
+
     public String fillAdminData(LoggedInConnection loggedInConnection, String regionName, AdminService adminService)throws Exception{
 
 
@@ -1471,7 +1524,29 @@ public  class AzquoBook {
             }
             for (int colNo = firstHeading; colNo <= lastHeading; colNo++){
                 String heading = azquoSheet.getRow(headingsRow).getCell(colNo).getStringCellValue();
+                String link = null;
+                String linkStart = null;
+                int nameEnd = heading.indexOf(";");
+                if (nameEnd > 0){
+                    link = heading.substring(nameEnd + 1);
+                    heading = heading.substring(0, nameEnd);
+                    if (link.startsWith("href=")){
+                        link = link.substring(5);
+                        linkStart = "<a href=";
+                    }else if (link.startsWith("onclick=")){
+                        link = link.substring(8);
+                        linkStart = "<a href=\"#\" onclick=";
+                    }else{
+                        link = null;
+                    }
+
+                }
                 String valFound = pairs.get(heading);
+                if (link != null){
+                    String linkAddr = evaluateExpression(link.replace("“","\"").replace("”","\""), pairs);//excel uses fancy quotes
+                    if (linkAddr.startsWith("error:")) return linkAddr;
+                    valFound = linkStart + linkAddr + ">" + valFound + "</a>";
+                }
                 if (valFound!=null){
                     if (azquoSheet.getRow(rowNo).getCell(colNo)== null){
                         azquoSheet.getRow(rowNo).createCell(colNo);
@@ -1801,12 +1876,11 @@ public  class AzquoBook {
 
 
 
-    private StringBuffer createCellClass(int rowNo, int colNo, Cell cell){
+    private StringBuffer createCellClass(int rowNo, int colNo, Cell cell, boolean hasContent){
         StringBuffer cellClass = new StringBuffer();
 
         sOut = new Formatter(cellClass);
-        boolean cellRotated = false;
-        setCellClass(rowNo, colNo, cell);
+        setCellClass(rowNo, colNo, cell, hasContent);
         cellClass.append("rp" + rowNo + " cp" + colNo + " ");
         return cellClass;
 
@@ -1869,9 +1943,10 @@ public  class AzquoBook {
                        }
                       String attrs = "";
                        attrs = "";
-
-                       StringBuffer cellClass = createCellClass(rowNo, i , cell);
                        String content = createCellContent(cell);
+
+                       StringBuffer cellClass = createCellClass(rowNo, i , cell, (content.length()>0));
+
                        int cellHeight = rowHeight;
                        int cellWidth = colWidth.get(i);
                        String sizeInfo = "";
@@ -1922,7 +1997,7 @@ public  class AzquoBook {
 
                                        String origContent = content;
 
-                                       content = "<select class = \"" + selectClass + "\" onchange=\"chosen('" + choiceName + "')\" id=\"" + choiceMap.get(cell) + "\" class=\"" + cellClass + "\" >\n";
+                                       content = "<select class = \"" + selectClass + "\" onchange=\"selectChosen('" + choiceName + "')\" id=\"" + choiceMap.get(cell) + "\" class=\"" + cellClass + "\" >\n";
                                        content += "<option value = \"\"></option>";
 
                                        for (String constant:constants){
@@ -2162,7 +2237,7 @@ public  class AzquoBook {
            return sb;
         }
         sb.append("{");
-        sb.append(jsonValue("class", createCellClass(cell.getRowIndex(), cell.getColumnIndex(), cell).toString(), false));
+        sb.append(jsonValue("class", createCellClass(cell.getRowIndex(), cell.getColumnIndex(), cell,content.length()>0).toString(), false));
         sb.append(jsonValue("value", content, true));
         sb.append(jsonValue("id", createCellId(cell), true));
         sb.append("}");
@@ -2190,11 +2265,8 @@ public  class AzquoBook {
 
         StringBuffer sb = new StringBuffer();
         sb.append("[");
-        boolean firstCell = true;
         for (Cell cell:changedCells){
-               if (firstCell){
-                   firstCell = false;
-               }else{
+               if (sb.length() > 1){
                    sb.append(",");
                }
 
