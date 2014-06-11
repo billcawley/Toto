@@ -1205,6 +1205,13 @@ seaports;children   container;children
                     if (values.size() == 1 && !locked.isTrue()) {
                         for (Value value : values) {
                             shownValues.add(value.getText());
+                            if (sortCol == colNo && !NumberUtils.isNumber(value.getText())){
+                                //make up a suitable double to get some kind of order! sort on 8 characters
+                                String padded = value.getText() + "        ";
+                                for (int i = 0;i< 8; i++){
+                                    sortTotal = sortTotal * 64 + padded.charAt(i) - 32;
+                                }
+                            }
                         }
                     } else {
                         shownValues.add(cellValue + "");
