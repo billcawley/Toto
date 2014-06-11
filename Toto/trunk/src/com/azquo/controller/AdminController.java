@@ -63,7 +63,7 @@ public class AdminController {
     @ResponseBody
     public String handleRequest(@RequestParam(value = "op") final String op
             , @RequestParam(value = "email", required = false) final String email
-            , @RequestParam(value = "user", required = false) final String user
+            , @RequestParam(value = "username", required = false) final String user
             , @RequestParam(value = "password", required = false) final String password
             , @RequestParam(value = "businessname", required = false) final String businessName
             , @RequestParam(value = "address1", required = false) final String address1
