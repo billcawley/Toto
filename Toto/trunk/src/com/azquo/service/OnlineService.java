@@ -88,7 +88,7 @@ public final class OnlineService {
                 azquoBook.dataRegionPrefix = "az_input";
 
             }
-            printTabs(azquoBook,tabs);
+            printTabs(azquoBook,tabs, spreadsheetName);
 
             String error = convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), azquoBook, spreadsheetName, worksheet);
             if (error.length() > 0){
@@ -104,7 +104,7 @@ public final class OnlineService {
         head.append(readFile("excelStyle.css"));
         head.append("</style>\n");
         output = output.replace("$script",readFile("online.js"));
-        output = output.replace("$topmenu",createTopMenu());
+        output = output.replace("$topmenu",createTopMenu(loggedInConnection));
         output = output.replace("$tabs", tabs.toString());
         output=output.replace("$topmessage",message);
         if (spreadsheetName==null){
@@ -140,24 +140,40 @@ public final class OnlineService {
         return output;
     }
 
-    private String printTabs(AzquoBook azquoBook, StringBuffer tabs){
+    private String tabImage(int left, int right){
+        return "<img alt=\"\" src = \"https://data.azquo.com:8443/images/tab" + left + right + ".png\"/>";
+    }
+
+    private String printTabs(AzquoBook azquoBook, StringBuffer tabs, String spreadsheetName){
         String error = "";
         final int tabShift = 50;
         int left = 0;
+        int right = 0;
+        String tabclass = null;
         for (int sheetNo=0; sheetNo< azquoBook.getWb().getNumberOfSheets(); sheetNo++){
             Sheet sheet = azquoBook.getWb().getSheetAt(sheetNo);
-            tabs.append("<div class=\"tab\" style=\"left:" + left + "px\"><a href=\"#\" onclick=\"loadsheet('" + sheet.getSheetName() + "')\">" + sheet.getSheetName() + "</a></div>\n");
-            left+=tabShift;
-        }
+            left = right;
+
+            if (sheet.getSheetName().equals(spreadsheetName)) {
+                right = 1;
+                tabclass="tabchosen";
+            } else{
+                right=2;
+                tabclass ="tabbackground";
+            }
+            //tabs.append("<div class=\"tab\" style=\"left:" + left + "px\"><a href=\"#\" onclick=\"loadsheet('" + sheet.getSheetName() + "')\">" + sheet.getSheetName() + "</a></div>\n");
+            tabs.append(tabImage(left, right) +"<span  class=\""+ tabclass + "\"><a href=\"#\" onclick=\"loadsheet('" + sheet.getSheetName() + "')\">" + sheet.getSheetName() + "</a></span>");
+          }
+          tabs.append(tabImage(right, 0));
         return error;
     }
 
 
 
-    private StringBuffer createTopMenu(){
+    private StringBuffer createTopMenu(LoggedInConnection loggedInConnection){
         StringBuffer sb = new StringBuffer();
         sb.append("<ul class=\"topmenu\">\n");
-        sb.append(menuItem("Download", "downloadSheet()",""));
+        sb.append("<li><a href=\"/api/Download?connectionid=" + loggedInConnection.getConnectionId() + "\">Download</a></li>");
         sb.append(menuItem("Draw chart", "drawChart()",""));
         sb.append(menuItem("Save data", "saveData()"," id=\"savedata\" style=\"display:none;\""));
         sb.append("</ul>");
@@ -326,8 +342,10 @@ public final class OnlineService {
             sb.append("</select>");
 
         }else{
-            if (chosen.length() > 0){
-                sb.append(chosen);
+            if (foundDatabases.size()==1){
+                for (String dbName:foundDatabases.keySet()){
+                    sb.append(dbName);
+                }
             }else{
                 sb.append("No database available");
             }
@@ -384,8 +402,10 @@ public final class OnlineService {
                 if (paramName.equals("op")){
                     op = paramValue;
 
-                }else if(paramName.equals("filename")){
+                }else if(paramName.equals("filename")) {
                     filename = paramValue;
+                }else if (paramName.equals("database")){
+                    database = paramValue;
                 }else if (paramName.equals("newdatabase")){
                     newdatabase = paramValue;
                 }else if (paramName.equals("searchterm")){
@@ -412,6 +432,13 @@ public final class OnlineService {
                 return adminService.createDatabase(newdatabase, loggedInConnection) + "";
             }
 
+        }
+        if (op.equals("delete")){
+            loginService.switchDatabase(loggedInConnection, null);
+            Database db = databaseDAO.findForName(loggedInConnection.getUser().getBusinessId(), database);
+            if (db!=null) {
+                databaseDAO.removeById(db);
+            }
         }
         if (op.equalsIgnoreCase("upload")){
             InputStream uploadFile = item.getInputStream();
