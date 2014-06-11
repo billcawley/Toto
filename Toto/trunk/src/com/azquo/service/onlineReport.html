@@ -3,22 +3,20 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     $styles
-    <script type="text/javascript">
-        $script
-    </script>
-</head>
+ </head>
 
 <body>
 <div id="wrapper">
-    <div class="banner">
+    <div class="banner" id="banner">
         <a href="http://www.azquo.com"><img src="https://data.azquo.com:8443/images/azquo-logo2.png" alt="Azquo logo"/></a>
         $topmenu
-
+        <div id="entryfield">Entry: <input id="topentry" value=""  type="text"/></div>
         <div id="message">$topmessage</div>
     </div>
     <form name="azquoform" $enctype method="post" action="/api/Online">
-        <div class="excelDefaults" style="height:$maxheight;width:$maxwidth;" id="spreadsheet">
-            <input type="hidden" name="reportid" id="reportId" value="$reportid"/>;
+        <div class="excelDefaults" style="height:$maxheight;width:$maxwidth;overflow:auto" id="spreadsheet">
+            <input type="hidden" name="reportid" id="reportId" value="$reportid"/>
+            <input type="hidden" name="reporttoload" id="reportToLoad" value="$reportid"/>
             <input type="hidden" name="connectionid" id="connectionId" value="$connectionid"/>
             <input type="hidden" name="editedname" id="editedName" value=""/>
             <input type="hidden" name="editedvalue" id="editedValue" value=""/>
@@ -56,14 +54,16 @@
         <div id="htmlatts"></div>
         <div class="namedetailssubmit"><p><a href="#" onclick="submitNameDetails()">Submit</a></p></div>
     </div>
-    <div class="tabs">$tabs</div>
+    <div class="tabs" id="tabs">$tabs</div>
     $popup
 </div>
 <script type="text/javascript">
 
+    $script
 
     positionSelection();
     convertRegions();
+    setSpreadsheetSize();
 
 
 </script>
