@@ -2,6 +2,7 @@ package com.azquo.controller;
 
 import com.azquo.admindao.DatabaseDAO;
 import com.azquo.admindao.OnlineReportDAO;
+import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.service.*;
 import com.azquo.util.Chart;
@@ -85,6 +86,7 @@ public class OnlineController {
         String nameId = null;
         String spreadsheetName = "";
         String database = "";
+        String reportToLoad = "";
 
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
@@ -101,6 +103,8 @@ public class OnlineController {
                 choiceValue = paramValue;
             } else if (paramName.equals("reportid")) {
                 reportId = paramValue;
+            } else if (paramName.equals("reporttoload")) {
+                reportToLoad = paramValue;
             } else if (paramName.equals("jsonfunction")) {
                 jsonFunction = paramValue;
             } else if (paramName.equals("chart")) {
@@ -151,7 +155,7 @@ public class OnlineController {
             List<FileItem> items = upload.parseRequest(request);
             Iterator it = items.iterator();
             item = (FileItem) it.next();
-            boolean macMode = false;
+             boolean macMode = false;
             if (!item.getFieldName().equals("parameters")) { // no parameters file passed, used to be a plain error but mac may have other ideas - parameters sent via curl
                 while (item != null){
                     if (item.getName() !=null){
@@ -170,6 +174,8 @@ public class OnlineController {
                             colStr = item.getString();
                         }else if (item.getFieldName().equals("database")){
                             database = item.getString();
+                        }else if (item.getFieldName().equals("opcode")){
+                            opcode = item.getString();
                         }
                     }
                     if (it.hasNext()) {
@@ -203,6 +209,8 @@ public class OnlineController {
                             colStr = st2.nextToken();
                         }else if (parameterName.equals("database")){
                             database = st2.nextToken();
+                        }else if (parameterName.equals("opcode")){
+                            opcode = st2.nextToken();
                         }
                     }
                 }
@@ -217,9 +225,13 @@ public class OnlineController {
         }
         //assuming that the last item is the file;
         item = file;
+        if (reportToLoad.length() > 0){
+            reportId = reportToLoad;
+        }
 
         long startTime = System.currentTimeMillis();
         String workbookName = null;
+        Database db = null;
         try {
             OnlineReport onlineReport = null;
             if (reportId != null && reportId.length() > 0){
@@ -228,7 +240,8 @@ public class OnlineController {
                 if (onlineReport != null){
                     workbookName = onlineReport.getReportName();
                     if (onlineReport.getId()!=1) {
-                        onlineReport.setDatabase(databaseDAO.findById(onlineReport.getDatabaseId()).getName());
+                        db = databaseDAO.findById(onlineReport.getDatabaseId());
+                        onlineReport.setDatabase(db.getName());
                         database = onlineReport.getDatabase();
                     }
                 }
@@ -253,6 +266,13 @@ public class OnlineController {
             if (loggedInConnection == null) {
                 return "error:invalid or expired connection id";
             }
+            if (onlineReport != null && onlineReport.getId() > 1){
+                loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(),"","","");
+
+            }
+            if (db!=null){
+                loginService.switchDatabase(loggedInConnection,db);
+            }
             /*
             THIS GIVES A NULL POINTER EXCEPTION - NOT SURE WHY I PUT IT IN!
             if (loggedInConnection.getProvenance()==null){
@@ -263,6 +283,7 @@ public class OnlineController {
                 }
             }
             */
+
             String result = "error: no action taken";
             int row = 0;
             try {
@@ -276,10 +297,11 @@ public class OnlineController {
             ok, one could send the row and column headings at the same time as the data but looking at the export demo it's asking for rows headings then column headings then the context
 
              */
-            if (choiceName != null){
+            if ((opcode.equals("sortcol") || opcode.equals("highlight") || opcode.equals("selectchosen")) && choiceName != null){
                 onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
+                opcode="loadsheet";
             }
-            if (changedValue!=null){
+            if (opcode.equals("valuesent")){
                 result = onlineService.changeValue(loggedInConnection, region, Integer.parseInt(rowStr), Integer.parseInt(colStr), changedValue);
                 result = jsonFunction + "({\"changedvalues\":" + result + "})";
             }
@@ -294,7 +316,7 @@ public class OnlineController {
                 result = nameService.jsonNameDetails(loggedInConnection, Integer.parseInt(nameId));
                 result = jsonFunction + "({\"namedetails\":" + result + "})";
             }
-            if (chartParams != null){
+            if (opcode.equals("chart")){
                 if (chartParams.length() > 6){ //params start with 'chart '
                     chartParams = chartParams.substring(6);
                 }else{
@@ -305,12 +327,18 @@ public class OnlineController {
 
             }
 
-            if (onlineReport != null && row == 0) {//first load of admin sheet
+            if ((opcode.length()==0 || opcode.equals("loadsheet")) && onlineReport != null) {
+                if (onlineReport.getId()!=1 && spreadsheetName.length() > 0){
+                    loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName,"","","");
+                }
                 result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName,"Right-click mouse for provenance");
             }
-            if (opcode.equals("") && row > 0){//button pressed - follow instructions and reload admin sheet
+            if (opcode.equals("buttonpressed") && row > 0){//button pressed - follow instructions and reload admin sheet
                 String message = onlineService.followInstructionsAt(loggedInConnection, jsonFunction, row, Integer.parseInt(colStr), database, item);
-                onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
+
+                if (onlineReport == null){
+                    onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
+                }
                 result =  onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, message);
             }
 
