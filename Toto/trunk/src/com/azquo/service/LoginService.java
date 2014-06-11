@@ -219,13 +219,14 @@ public class LoginService {
 
     public void switchDatabase(LoggedInConnection loggedInConnection, Database newDb)throws Exception{
         if (loggedInConnection.getAzquoMemoryDB()!= null){
-            if (loggedInConnection.getAzquoMemoryDB().getDatabase().getName().equals(newDb.getName())) return;
+            if (newDb!= null && loggedInConnection.getAzquoMemoryDB().getDatabase().getName().equals(newDb.getName())) return;
             int databaseId = loggedInConnection.getAzquoMemoryDB().getDatabase().getId();
             Integer openCount = openDBCount.get(databaseId);
             if (openCount == null){
                 logger.info("opencount cancelled for " + loggedInConnection.getAzquoMemoryDB().getDatabase().getName());
                 return;//this should be an error......
             }
+            if (newDb == null) openCount = 1;//if we're deleting the database, then close the memory, regardless of whether others have it open.
             if (openCount == 1) {
                 memoryDBManager.removeDatabase(loggedInConnection.getAzquoMemoryDB().getDatabase());
                 openDBCount.remove(databaseId);
@@ -233,6 +234,10 @@ public class LoginService {
             } else {
                 openDBCount.put(databaseId, openCount - 1);
             }
+        }
+        if (newDb==null){
+            loggedInConnection.setAzquoMemoryDB(null);
+            return;
         }
         AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(newDb);
         int databaseId = memoryDB.getDatabase().getId();
