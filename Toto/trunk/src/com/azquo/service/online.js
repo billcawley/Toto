@@ -21,6 +21,7 @@ var clickedItem = null;
 var nameChosenNo = 0
 var cutitem = null;
 var copyitem = null;
+var origval = null;
 
 
 
@@ -122,6 +123,9 @@ function positionSelection(){
     if (entryX >=0 && (selectionX != entryX || selectionY != entryY)){
         cancelEntry();
     }
+    if (entryX >=0){
+        return;
+    }
     var cursor = document.getElementById("selector");
     var selectionCell = document.getElementById("cell" + selectionY + "-" + selectionX);
     var selborder = getStyleInt(cursor, "border-right-width");
@@ -133,7 +137,7 @@ function positionSelection(){
     var height =  getStyleInt(selectionCell,"height");
     cursor.style.width = (width - selborder + cellBorderRight) + "px";
     cursor.style.height = (height - selborder + cellBorderBottom) + "px";
-
+    selectionCell.focus();
     if (locked(selectionX, selectionY) == "") {
         startEntry();
     }
@@ -164,7 +168,12 @@ function locked(cellX,cellY){
 
 
 
-document.onclick = onClick;
+document.onclick = onClick
+
+
+function noClick(e){
+    return true;
+}
 
 function onClick(e){
     hideMenu("popupmenu");
@@ -189,11 +198,29 @@ function onClick(e){
 
 
 
+
 function startEntry() {
 
+
     var container = document.getElementById("cell" + selectionY + "-" + selectionX);
-    container.setAttribute("contentEditable", true);
-    container.focus();
+    entryX = selectionX;
+    entryY = selectionY;
+    origval = container.innerHTML.trim();
+    if (origval.substring(0,1)=="<"){
+        var j=1;//debugline
+    }
+
+    var height = container.offsetHeight - 3;//allow for padding (2) and border (1) this may not work on all occasions
+    var width  = container.offsetWidth - 3;
+    container.innerHTML = "<INPUT type=\"text\" id=\"entered\" value=\""+origval+"\" style=\"top:0;left:0;height:" + height + "px;width:" + width + "px;\">";
+    container.firstChild.focus();
+    var entryfield = document.getElementById("entryfield");
+    entryfield.style.display = "block";
+    document.getElementById("topentry").value = origval;
+
+
+    // container.setAttribute("contentEditable", true);
+    //container.focus();
     /*
     var content = container.innerHTML;
     container.innerHTML = "";
@@ -205,48 +232,61 @@ function startEntry() {
     container.appendChild(input);
     input.focus();
     */
-    entryX = selectionX;
-    entryY = selectionY;
-    entryVal = container.innerHTML.trim();
 
 }
 
 function saveData(){
-    azquojson("Online","jsonfunction=azquojsonfeed&opcode=savedata");
+    azquojson("Online","opcode=savedata");
 
 }
 
 
 function cancelEntry() {
 
+
     if (entryX < 0) return;
+
+
     var container = document.getElementById("cell" + entryY + "-" + entryX);
-    container.setAttribute("contentEditable", false);
-    if (entryVal != container.innerHTML.trim()){
-        sendValue(container.innerHTML.trim())
+    var entered = document.getElementById("entered").value.trim();
+    //container.setAttribute("contentEditable", false);
+    container.innerHTML = entered;
+    if (entered != origval){
+         sendValue(entered)
         document.getElementById("savedata").style.display="inline";
     }
 
     entryX = -1;
     entryY = -1;
+    document.getElementById("entryfield").style.display = "none";
 
 
 }
 
 document.onkeyup =function (e) {
+    if (e.target) keyfield = e.target;
+    else keyfield = e;
+    if (keyfield.id == 'entered'){
+        document.getElementById("topentry").value = document.getElementById("entered").value;
+    }
+    if (keyfield.id == 'topentry'){
+        document.getElementById("entered").value = document.getElementById("topentry").value;
+    }
     controlKeyDown = false;
+    return true;
 }
 
 
 function sortCol(region, colNo){
     document.getElementById("editedName").value = "sort " + region + " by column";
     document.getElementById("editedValue").value = colNo + "";
+    document.getElementById("opcode").value="sortcol";
     document.azquoform.submit();
 }
 
 
 function showProvenance(){
-    azquojson("Online","jsonfunction=azquojsonfeed&opcode=provenance&row=" + selectionY + "&col=" + selectionX );
+    azquojson("Online","opcode=provenance&row=" + selectionY + "&col=" + selectionX );
     hideMenu("popupmenu");
 }
 
@@ -281,6 +321,13 @@ function findParent(item){
     return parent;
 }
 
+function findId(item){
+    return item.nextElementSibling.innerHTML;
+}
+
+function findParentId(item){
+    return findId(findParent(item));
+}
 
 function paste(offset) {
 
@@ -339,13 +386,45 @@ function paste(offset) {
 
         }
     }
-    //now cut if necessary
-    //and tell Azquo!
+    var sourceId = findId(source);
+    if (offset < 2 && findParentId(source) == findParentId(clickedItem)){//replacing into the same set.  If we delete first,may need to adjust pos down
+        var oldPos = findPos(clickedItem);
+        if (oldPos < newPos + offset) {
+            pos--;
+        }
+    }
+    if (cutitem != null){
+        tellAzquoNameShift(sourceId, findParentId(source), 0);
+    }
+    if (offset<2) {
+        tellAzquoNameShift(sourceId, findParentId(clickedItem), pos)
+    }else{
+        tellAzquoNameShift(sourceId, findId(clickedItem), 1000000);
+    }
+    if (cutitem!=null){
+        cutitem.parentNode.removeChild(cutitem.nextElementSibling);
+        if (cutitem.nextElementSibling.tagName.toLowerCase()=="ul"){
+            cutitem.parentNode.removeChild(cutitem.nextElementSibling);
+        }
+        cutitem.parentNode.removeChild(cutitem);
+
+    }
+    copyitem = null;
+    cutitem = null;
+
+}
 
 
+function tellAzquoNameShift(source, parent, newPosition){
+    var params="\"operation\":\"edit\",\"id\":" + source;
+    if (newPosition>0){
+        params += ",\"newParent\":" + parent + ",\"newPosition\":" + newPosition;
 
+    }else{
+        params +=",\"oldParent\":" + parent ;
+    }
+    azquojson("Name", params);
 
-     var j=1;
 }
 
 function deleteName(){
@@ -361,6 +440,7 @@ function showHighlight() {
 function highlight(days){
     document.getElementById("editedName").value = "highlight";
     document.getElementById("editedValue").value = days + "";
+    document.getElementById("opcode").value="highlight";
     document.azquoform.submit();
 }
 
@@ -371,15 +451,24 @@ document.onkeydown =function (e) {
     //var evtobj=window.event? event : e;
     //if (evtobj.altKey || evtobj.ctrlKey || evtobj.shiftKey)
     //    alert("you pressed one of the 'Alt', 'Ctrl', or 'Shift' keys");
-    var unicode = e.charCode ? e.charCode : e.keyCode;
+    var el = e.target;
+    if (!e.target) el = e;
+
+    while (el.parentNode != null && (el.id==null || el.id != "topentry")){
+        el = el.parentNode;
+    }
+    if (el.id!=null && el.id=="topentry") return true;
+
+     var unicode = e.charCode ? e.charCode : e.keyCode;
     switch (unicode) {
         case 17: controlKeyDown = true;
             break;
-        case 89:
-        case 81: if (controlKeyDown){
-             showMenu("popupmenu", e);
-            break;
-        }
+        //case 89:
+        //case 81:
+        //    if (controlKeyDown) {
+        //        showMenu("popupmenu", e);
+        //    }
+        //    break;
 
         case 37:
 
@@ -410,18 +499,22 @@ document.onkeydown =function (e) {
                 if (newy <= maxRow) selectionY = newy
             }
             break;
-        case 13:
-            cancelEntry();
-            break;
     }
-    positionSelection();
+   positionSelection();
+    return true;
 }
 
+function reportChosen(reportToLoad){
+    document.getElementById("reportToLoad").value = reportToLoad;
+     document.getElementById("opcode").value="loadsheet";
+    document.getElementById("spreadsheetname").value ="";
+     document.azquoform.submit();
+}
 
-
-function chosen(divName){
+function selectChosen(divName){
     document.getElementById("editedName").value = divName;
     document.getElementById("editedValue").value = document.getElementById(divName).value;
+    document.getElementById("opcode").value="selectchosen"
     document.azquoform.submit();
 }
 
@@ -429,21 +522,25 @@ function chosen(divName){
 function buttonPressed(rowNo, colNo){
     document.getElementById("row").value = rowNo;
     document.getElementById("col").value = colNo;
+    document.getElementById("opcode").value = "buttonpressed";
     document.azquoform.submit();
 }
 
 function loadsheet(sheetname){
     document.getElementById("spreadsheetname").value = sheetname;
+    document.getElementById("opcode").value="loadsheet";
+    document.getElementById("reportToLoad").value = "";
     document.azquoform.submit();
 }
 
 function downloadSheet(){
+    window.open("www.bomorga")
     azquojson("Download","reportid=" + document.getElementById("reportId").value);//not currently returning a status
 }
 
 
 function drawChart(){
-    azquojson("Online","jsonfunction=azquojsonfeed&chart=$region");
+    azquojson("Online","opcode=chart&chart=$region");
 }
 
 function findPos(item){
@@ -491,7 +588,7 @@ function az_clicklist(e){
 function sendValue(value){
 
     document.getElementById("message").innerHTML = "";
-    azquojson("Online","jsonfunction=azquojsonfeed&region=" + entryRegion + "&row=" + entryRegionY + "&col=" + entryRegionX  + "&value=" + encodeURIComponent(value));
+    azquojson("Online","opcode=valuesent&region=" + entryRegion + "&row=" + entryRegionY + "&col=" + entryRegionX  + "&value=" + encodeURIComponent(value));
 }
 
 
@@ -654,6 +751,14 @@ function submitNameDetails(){
     azquojson("Name", json);
     clickedItem.innerHTML = document.getElementById("DEFAULT_DISPLAY_NAME").value;
 
+}
+
+function setSpreadsheetSize(){
+    var ss = document.getElementById("spreadsheet");
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    ss.style.height = (h- 126) + "px";
+    ss.style.width = (w-22) + "px";
 }
 
 
