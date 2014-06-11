@@ -1,10 +1,27 @@
 
-
+a, img {
+    border:none;
+    outline:none
+}
 
 .banner{
-    width:4000px;
     height:70px;
     border-bottom:4px solid #ff6600;
+}
+
+#entryfield{
+    vertical-align:bottom;
+    position:relative;
+    left:300px;
+    bottom:30px;
+    height:20px;
+    display:none;
+    font-family:Arial;
+}
+
+#topentry{
+    width:400px;
+    height:20px;
 }
 
 .topmenu{
@@ -58,30 +75,35 @@
 }
 
 .tabs{
-    height:50px;
+    height:19px;
     width:400px;
     overflow:auto;
     position:relative;
+    overflow:hidden;
+    line-height:16px;
 
 
 }
-
-.tab {
-    position:absolute;
-    top:0;
-    background: transparent url("https://data.azquo.com:8443/images/sheettab.png") no-repeat left top;
-    z-index:0;
-    width:60px;
-    height:20px;
-
-}
-
-.tab a{
+.tabs a{
     text-decoration:none;
     color:#444444;
     font-family:Arial;
     font-size:9px;
+    vertical-align:top;
 }
+
+.tabbackground{
+    height:17px;
+    background-color:#e0e0e0;
+    border-bottom:1px solid #444444;
+    vertical-align:top;
+}
+
+.tabchosen{
+    height:17px;
+    border-bottom:1px solid #444444;
+    vertical-align:top;
+ }
 
 .databaseselect{
     width:320px;
@@ -248,8 +270,6 @@ li{
     text-align: right;
     border-right: 1px solid silver;
     border-bottom: 1px solid silver;
-    background-color:white;
-    overflow:hidden;
 
 }
 
@@ -261,13 +281,12 @@ li{
 
 .excelDefaults .selector {
     z-index: 2;
-    border: 3px solid blue;
+    border: 2px solid #222222;
     position:absolute;
 }
 
 
 .excelDefaults .select{
-    background-color:#80ffff;
     border:0;
     left:0;
     top:0;
