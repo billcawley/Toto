@@ -3,13 +3,13 @@ package com.azquo.controller;
 
 import com.azquo.admindao.OnlineReportDAO;
 import com.azquo.adminentities.OnlineReport;
-import com.azquo.service.AzquoBook;
 import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
 import com.azquo.service.OnlineService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -29,7 +29,8 @@ public class DownloadController {
     @Autowired
     OnlineService onlineService;
 
-    public String handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    @RequestMapping
+    public void handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         Enumeration<String> parameterNames = request.getParameterNames();
 
@@ -48,7 +49,8 @@ public class DownloadController {
         }
         LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
         if (loggedInConnection == null) {
-            return "error: invalid or expired connection";
+
+            return;
         }
         OnlineReport onlineReport = null;
 
@@ -67,7 +69,7 @@ public class DownloadController {
         }
         fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
         onlineService.saveBook(response, loggedInConnection, fileName);
-        return "";
+        return;
     }
 }
 
