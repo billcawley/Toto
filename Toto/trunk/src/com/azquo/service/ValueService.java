@@ -195,15 +195,10 @@ public final class ValueService {
             for (Name name : names) {
                 if (!name.equals(smallestName)) { // ignore the one we started with
                     if (!value.getNames().contains(name)) { // top name not in there check children also
-                        boolean foundInChildList = false;
-                        for (Name child : name.findAllChildren(payAttentionToAdditive)) {
-                            if (value.getNames().contains(child)) {
-                                foundInChildList = true;
-                                break;
-                            }
-                        }
-                        if (!foundInChildList) {
-//                        count++;
+                        Set <Name> copy = new HashSet<Name>(value.getNames());
+                         copy.retainAll(name.findAllChildren(payAttentionToAdditive));
+                         if (copy.size()==0){
+      //                        count++;
                             theValueIsOk = false;
                             break;
                         }
@@ -730,27 +725,6 @@ seaports;children   container;children
         return true;
     }
 
-    private static Map sortByComparator(Map unsortMap) {
-
-        List list = new LinkedList(unsortMap.entrySet());
-
-        // sort list based on comparator
-        Collections.sort(list, new Comparator() {
-            public int compare(Object o1, Object o2) {
-                return ((Comparable) ((Map.Entry) (o1)).getValue())
-                        .compareTo(((Map.Entry) (o2)).getValue());
-            }
-        });
-
-        // put sorted list into map again
-        //LinkedHashMap make sure order in which keys were inserted
-        Map sortedMap = new LinkedHashMap();
-        for (Iterator it = list.iterator(); it.hasNext(); ) {
-            Map.Entry entry = (Map.Entry) it.next();
-            sortedMap.put(entry.getKey(), entry.getValue());
-        }
-        return sortedMap;
-    }
 
     public List<Integer> sortRows(int restrictCount, Map<Integer, Double> sortTotals) {
 
@@ -1572,14 +1546,16 @@ seaports;children   container;children
             int rowCounter = 0;
             final CsvReader originalReader = new CsvReader(new StringReader(loggedInConnection.getSentDataMap(region)), '\t');
             final CsvReader editedReader = new CsvReader(new StringReader(editedData), '\t');
-            final CsvReader lockMapReader = new CsvReader(new StringReader(loggedInConnection.getLockMap(region)), '\t');
-            // rows, columns, value lists
+            final String[] lockLines = loggedInConnection.getLockMap(region).split("\n",-1);
+              // rows, columns, value lists
             final List<List<List<Value>>> dataValuesMap = loggedInConnection.getDataValueMap(region);
             final List<List<Set<Name>>> dataNamesMap = loggedInConnection.getDataNamesMap(region);
             // TODO : deal with mismatched column and row counts
             int numberOfValuesModified = 0;
             List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
-            while (lockMapReader.readRecord()) {
+
+            for (int rowNo = 0; rowNo < lockLines.length; rowNo++) {
+                String lockLine = lockLines[rowNo];
                 int columnCounter = 0;
                 final List<List<Value>> rowValues = dataValuesMap.get(sortedRows.get(rowCounter));
                 final List<Set<Name>> rowNames = dataNamesMap.get(rowCounter);
@@ -1587,7 +1563,9 @@ seaports;children   container;children
                 editedReader.readRecord();
                 final String[] originalValues = originalReader.getValues();
                 final String[] editedValues = editedReader.getValues();
-                for (String locked : lockMapReader.getValues()) {
+                String[] locks = lockLine.split("\t", -1);
+                for (int colNo = 0; colNo < locks.length; colNo++) {
+                    String locked = locks[colNo];
                     //System.out.println("on " + columnCounter + ", " + rowCounter + " locked : " + locked);
                     // and here we get to the crux, the values do NOT match
                     // ok assign these two then deal with doubvle formatting stuff that can trip things up
@@ -1622,9 +1600,9 @@ seaports;children   container;children
                                 numberOfValuesModified++;
                             }
                         } else {
-                            // should this add on for a list???
-                            result = "error:cannot edit locked cell " + columnCounter + ", " + rowCounter + " in region " + region;
-                            return result;
+                            // TODO  WORK OUT WHAT TO BE DONE ON ERROR
+                            //result = "error:cannot edit locked cell " + columnCounter + ", " + rowCounter + " in region " + region;
+                            return "";
                         }
                     }
                     columnCounter++;
