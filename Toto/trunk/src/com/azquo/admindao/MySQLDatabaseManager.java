@@ -38,4 +38,8 @@ public class MySQLDatabaseManager {
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;", new HashMap<String, Object>());
     }
 
+    public void dropDatabase(String databaseName) throws IOException {
+        jdbcTemplate.update("drop database `" + databaseName + "`", new HashMap<String, Object>());
+    }
+
 }
