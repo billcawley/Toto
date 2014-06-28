@@ -18,11 +18,15 @@ import java.util.Map;
  */
 public final class PermissionDAO extends StandardDAO<Permission> {
 
+
+
     // the default table name for this data.
     @Override
     public String getTableName() {
         return "permission";
     }
+
+
 
     // column names except ID which is in the superclass
 
@@ -103,5 +107,51 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         namedParams.addValue(USERID, userId);
         return findListWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID, namedParams, false);
     }
+
+    public Permission findForUserIdAndDatabaseId(final int userId, int databaseId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(USERID, userId);
+        namedParams.addValue(DATABASEID, databaseId);
+        return findOneWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID + " and " + DATABASEID + "= :" + DATABASEID, namedParams);
+    }
+
+
+    public void removeForDatabaseId(int databaseId){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DATABASEID, databaseId);
+        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
+
+    }
+
+    public final void update(int id, Map<String, Object> parameters) {
+        if (id==0) {
+            int dbId = (Integer)parameters.get("database_id");
+            int userId = (Integer)parameters.get("user_id");
+            Permission p = findForUserIdAndDatabaseId(userId, dbId);
+            if (p != null) {
+                id = p.getId();
+            } else {
+                p = new Permission(0,null,null,0,0,"","");
+                store(p);
+                id = p.getId();
+
+
+            }
+        }
+
+        String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
+        MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        for (String columnName:parameters.keySet()){
+            namedParams.addValue(columnName, parameters.get(columnName));
+            updateSql +=  columnName + "= :" + columnName + ", ";
+
+        }
+        namedParams.addValue(ID, id);
+        updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
+        updateSql += " where " + ID + " = :" + ID;
+        jdbcTemplate.update(updateSql, namedParams);
+
+    }
+
 
 }
