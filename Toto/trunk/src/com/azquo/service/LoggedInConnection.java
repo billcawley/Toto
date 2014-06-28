@@ -91,13 +91,15 @@ public final class LoggedInConnection {
         return connectionId;
     }
 
-    protected AzquoMemoryDB getAzquoMemoryDB() {
+    public AzquoMemoryDB getAzquoMemoryDB() {
         return azquoMemoryDB;
-    }
+    }//was 'protected' but need to know if a database is loaded
 
     public String getCurrentDBName() {
         return azquoMemoryDB.getDatabase().getName();
     }
+
+
 
     protected void setAzquoMemoryDB(final AzquoMemoryDB azquoMemoryDB) {
         this.azquoMemoryDB = azquoMemoryDB;
@@ -105,6 +107,10 @@ public final class LoggedInConnection {
 
     public User getUser() {
         return user;
+    }
+
+    public int getBusinessId(){
+        return user.getBusinessId();
     }
 
     public Date getLoginTime() {
