@@ -25,6 +25,43 @@ var origval = null;
 
 
 
+
+function az_clicklist(e) {
+    e = e || window.event;
+    if (e.target) {
+        var azSet = e.target;
+    } else {
+        azSet = e;
+    }
+    clickedItem = azSet;
+    azSet = nextSibling(azSet);
+    var nameId = azSet.innerHTML;
+    var tag = azSet.tagName.toLowerCase();
+    while (tag != "ul" && tag != "li" && nextSibling(azSet) != null){
+        azSet = nextSibling(azSet);
+        tag = azSet.tagName.toLowerCase();
+    }
+    if (tag=="ul"){
+        //zap it!
+        azSet.parentElement.removeChild(azSet);
+
+    }else{
+        azquojson("Online","opcode=children&nameid=" + nameId);
+    }
+    /*  old behaviour - set always present
+
+    while (azSet.tagName.toLowerCase() != "ul" && azSet.tagName.toLowerCase){
+        azSet = nextSibling(azSet)
+    }
+    if (azSet.style.display=="none"){
+        azSet.style.display="block";
+    }else{
+        azSet.style.display="none";
+    }
+    */
+}
+
+
 function getStyle(oElm, strCssRule){
     var strValue = "";
     if(document.defaultView && document.defaultView.getComputedStyle){
@@ -120,7 +157,7 @@ function setEnabled(menuitem, enabled){
 }
 
 function positionSelection(){
-    if (entryX >=0 && (selectionX != entryX || selectionY != entryY)){
+     if (entryX >=0 && (selectionX != entryX || selectionY != entryY)){
         cancelEntry();
     }
     if (entryX >=0){
@@ -197,22 +234,29 @@ function onClick(e){
  }
 
 
-
+function toMenu(){
+    document.getElementById("reportToLoad").value = "1";
+    document.azquoform.submit();
+}
 
 function startEntry() {
 
 
     var container = document.getElementById("cell" + selectionY + "-" + selectionX);
+    origval = container.innerHTML.trim();
+    if (origval.substring(0,1)=="<"){ //not a text cell
+        return;
+    }
+
     entryX = selectionX;
     entryY = selectionY;
-    origval = container.innerHTML.trim();
     if (origval.substring(0,1)=="<"){
         var j=1;//debugline
     }
 
     var height = container.offsetHeight - 3;//allow for padding (2) and border (1) this may not work on all occasions
     var width  = container.offsetWidth - 3;
-    container.innerHTML = "<INPUT type=\"text\" id=\"entered\" value=\""+origval+"\" style=\"top:0;left:0;height:" + height + "px;width:" + width + "px;\">";
+    container.innerHTML = "<INPUT type=\"text\" id=\"entered\" value=\""+origval+"\" class=\"" + container.className + "\" style=\"padding:0;top:0;left:0;height:" + height + "px;width:" + width + "px;\">";
     container.firstChild.focus();
     var entryfield = document.getElementById("entryfield");
     entryfield.style.display = "block";
@@ -245,23 +289,31 @@ function cancelEntry() {
 
 
     if (entryX < 0) return;
-
+    if (document.getElementById("entered")==null){
+        //entry field has been overwritten already by changed values
+        entryX=-1;
+        entryY=-1;
+        return;
+    }
 
     var container = document.getElementById("cell" + entryY + "-" + entryX);
     var entered = document.getElementById("entered").value.trim();
     //container.setAttribute("contentEditable", false);
     container.innerHTML = entered;
-    if (entered != origval){
-         sendValue(entered)
-        document.getElementById("savedata").style.display="inline";
-    }
 
     entryX = -1;
     entryY = -1;
     document.getElementById("entryfield").style.display = "none";
+    if (entered != origval){
+        sendValue(entered)
+        document.getElementById("savedata").style.display="inline";
+    }
 
 
 }
+
+
+
 
 document.onkeyup =function (e) {
     if (e.target) keyfield = e.target;
@@ -305,6 +357,15 @@ function cut(){
 function copy(){
     copyitem = clickedItem;
     cutitem = null;
+}
+
+function nameIdChosen(){
+    document.getElementById("editedName").value = nameChosenNo;
+    document.getElementById("opcode").value = "nameidchosen";
+    document.azquoform.submit();
+
+
+
 }
 
 
@@ -377,6 +438,7 @@ function paste(offset) {
             }
 
         } else {
+            //put in the elements backwards,as the first will then become  anchorNode.nextElementSibling
             if (nextEl != null && nextEl.tagName.toLowerCase()=="ul"){
                 anchorNode.parentNode.insertBefore(nextEl.cloneNode(true), anchorNode.nextElementSibling);
             }
@@ -451,6 +513,8 @@ document.onkeydown =function (e) {
     //var evtobj=window.event? event : e;
     //if (evtobj.altKey || evtobj.ctrlKey || evtobj.shiftKey)
     //    alert("you pressed one of the 'Alt', 'Ctrl', or 'Shift' keys");
+
+
     var el = e.target;
     if (!e.target) el = e;
 
@@ -499,6 +563,8 @@ document.onkeydown =function (e) {
                 if (newy <= maxRow) selectionY = newy
             }
             break;
+        case 13:
+            return false;//disable return key
     }
    positionSelection();
     return true;
@@ -534,7 +600,6 @@ function loadsheet(sheetname){
 }
 
 function downloadSheet(){
-    window.open("www.bomorga")
     azquojson("Download","reportid=" + document.getElementById("reportId").value);//not currently returning a status
 }
 
@@ -544,6 +609,7 @@ function drawChart(){
 }
 
 function findPos(item){
+
     //returns the position in the set of the current item
     var parent = item.parentNode;
     var list = parent.getElementsByTagName("LI");
@@ -563,24 +629,6 @@ function nextSibling(azSet){
     return azNext;
 }
 
-
-function az_clicklist(e){
-    e = e || window.event;
-    if (e.target) {
-        var azSet = e.target;
-    }else{
-        azSet = e;
-    }
-
-    while (azSet.tagName.toLowerCase() != "ul"){
-        azSet = nextSibling(azSet)
-    }
-    if (azSet.style.display=="none"){
-        azSet.style.display="block";
-    }else{
-        azSet.style.display="none";
-    }
-}
 
 
 
@@ -665,7 +713,36 @@ function azquojsonfeed(obj) {
     if (obj.namedetails >""){
         showNameDetails(obj.namedetails);
     }
+    if (obj.names > ""){
+        showSubset(obj.names);
+    }
 }
+
+    function showSubset(names){
+        var list = document.createElement("ul");
+        var html="";
+        for (var i = 0; i < names.length; i++) {
+            var name = names[i];
+            html += "<li"
+            if (name.elements > 0) {
+                  html += " onclick=\"az_clicklist(this)\"";
+            }
+            html += ">" + name.name + "</li>\n";
+            html += "<div class=\"notseen\">" + name.id + "</div>"
+        }
+        list.innerHTML = html;
+        var nextnode = nextSibling(clickedItem);
+        while (nextnode!=null && nextnode.tagName.toLowerCase()!="li"){
+            nextnode = nextSibling(nextnode);
+        }
+        clickedItem.parentNode.insertBefore(list, nextnode);
+
+
+
+
+
+}
+
 
     function addAttribute(i, attname, attvalue){
         var htmlAtts = document.getElementById("htmlatts");
@@ -759,7 +836,7 @@ function setSpreadsheetSize(){
     var h = window.innerHeight;
     ss.style.height = (h- 126) + "px";
     ss.style.width = (w-22) + "px";
-}
+ }
 
 
 
