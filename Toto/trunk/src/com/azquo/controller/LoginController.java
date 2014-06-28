@@ -74,6 +74,8 @@ public class LoginController {
             String paramValue = request.getParameterValues(paramName)[0];
             if (paramName.equals("json")) {
                 json = paramValue;
+            }else if(paramName.equals("user")){
+                userEmail = paramValue;
             }else if(paramName.equals("useremail")){
                 userEmail = paramValue;
             }else if(paramName.equals("password")){
@@ -121,7 +123,7 @@ public class LoginController {
                 return connectionId;
         }
         LoggedInConnection loggedInConnection = null;
-        if ((connectionId == null || connectionId.equals("aborted")) && userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
+        if ((connectionId == null || connectionId.length()==0 || connectionId.equals("aborted")) && userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
             logger.info("spreadsheet name " + spreadsheetName);
             if (database == null || database.length() == 0) {
                 database = "unknown";
@@ -143,7 +145,7 @@ public class LoginController {
                 result =  loggedInConnection.getConnectionId();
                 if (online){
                     OnlineReport onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
-                    return onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "");
+                      return onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "");
                   }
                 return result;
             }
