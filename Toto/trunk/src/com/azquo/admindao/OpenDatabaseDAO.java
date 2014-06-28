@@ -68,5 +68,13 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
         update(" SET `" + CLOSE + "`=:" + CLOSE + " WHERE `" + CLOSE + "` = '0000-00-00' and `" + DATABASEID + "` = :" + DATABASEID, namedParams);
     }
 
+    public void removeForDatabaseId(int databaseId){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DATABASEID, databaseId);
+        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
+
+    }
+
+
 
 }
