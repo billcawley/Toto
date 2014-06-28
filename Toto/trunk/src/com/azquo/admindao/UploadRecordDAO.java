@@ -79,4 +79,12 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
     }
 
 
+    public void removeForDatabaseId(int databaseId){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DATABASEID, databaseId);
+        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
+
+    }
+
+
 }
