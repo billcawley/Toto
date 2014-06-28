@@ -1,10 +1,8 @@
 package com.azquo.service;
 
-import com.azquo.admindao.DatabaseDAO;
-import com.azquo.admindao.UserChoiceDAO;
-import com.azquo.adminentities.Database;
-import com.azquo.adminentities.OnlineReport;
-import com.azquo.adminentities.UserChoice;
+import com.azquo.admindao.*;
+import com.azquo.adminentities.*;
+import com.azquo.memorydbdao.*;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.hssf.usermodel.HSSFCellStyle;
@@ -22,9 +20,11 @@ import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -56,14 +56,36 @@ public final class OnlineService {
     @Autowired
     DatabaseDAO databaseDAO;
 
+    @Autowired
+    OnlineReportDAO onlineReportDAO;
+
+    @Autowired
+    LoginRecordDAO loginRecordDAO;
+
+    @Autowired
+    UploadRecordDAO uploadRecordDAO;
+
+    @Autowired
+    PermissionDAO permissionDAO;
+
+    @Autowired
+    OpenDatabaseDAO openDatabaseDAO;
+
+    @Autowired
+    UserDAO userDAO;
+
 
     public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message) {
 
 
+        if (onlineReport.getId()==1 && !loggedInConnection.getUser().isAdministrator()){
+            onlineReport = onlineReportDAO.findById(-1);//user report list replaces admin sheet
+        }
+
         String popup = "";
         if (message.startsWith("popup:")){
-            popup = "<div id=\"namelistpopup\" class=\"namelistpopup\"> <div class=\"closebutton\"><a href=\"#\" onclick=\"hideNameList();\"><img src=\"https://data.azquo.com:8443/images/closebutton.png\" alt=\"close button\"/></a></div>\n" +
-                    "<div class=\"content\"> " + nameService.convertJsonToHTML(message.substring(6)) + "</div></div>";
+            popup = "<div id=\"namelistpopup\" class=\"namelistpopup\"> <div class=\"closebutton\"><a href=\"#\" onclick=\"hideNameList();\"><img src=\"/images/closebutton.png\" alt=\"close button\"/></a></div>\n" +
+                    "<div class=\"content\"> " + nameService.convertJsonToHTML(message.substring(6)) + "</div>   <div id=\"namedetailssubmit\"><a href=\"#\" onclick=\"nameIdChosen()\">Submit</a></div></div>";
             message = "";
         }
         StringBuffer worksheet = new StringBuffer();
@@ -83,16 +105,16 @@ public final class OnlineService {
         try {
             Workbook wb  = WorkbookFactory.create(new FileInputStream(onlineReport.getFilename()));
             azquoBook.setWb(wb);
-            azquoBook.dataRegionPrefix = "az_dataregion";
-            if (onlineReport.getId()==1){//this is the maintenance workbook
-                azquoBook.dataRegionPrefix = "az_input";
+            azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
+            if (onlineReport.getId()==1 || onlineReport.getId()==-1){//this is the maintenance workbook
+                azquoBook.dataRegionPrefix = azquoBook.azInput;
 
             }
             printTabs(azquoBook,tabs, spreadsheetName);
 
             String error = convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), azquoBook, spreadsheetName, worksheet);
             if (error.length() > 0){
-                return error;
+                message = error;
             }
 
         } catch (Exception e) {
@@ -116,7 +138,7 @@ public final class OnlineService {
         output = output.replace("$maxrow",azquoBook.getMaxRow()+"").replace("$maxcol",azquoBook.getMaxCol()+"");
          output = output.replace("$reportid", onlineReport.getId() + "").replace("$connectionid", loggedInConnection.getConnectionId() +"");
          output = output.replace("$regions", azquoBook.getRegions(loggedInConnection, azquoBook.dataRegionPrefix));
-         if (azquoBook.dataRegionPrefix.equals("az_dataregion")){
+         if (azquoBook.dataRegionPrefix.equals(AzquoBook.azDataRegion)){
              output=  output.replace("$menuitems","[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"},{\"position\":3,\"name\":\"Highlight changes\",\"enabled\":true,\"link\":\"showHighlight()\"}]");
          }else{
              output = output.replace("$menuitems","[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"}," +
@@ -141,7 +163,7 @@ public final class OnlineService {
     }
 
     private String tabImage(int left, int right){
-        return "<img alt=\"\" src = \"https://data.azquo.com:8443/images/tab" + left + right + ".png\"/>";
+        return "<img alt=\"\" src = \"/images/tab" + left + right + ".png\"/>";
     }
 
     private String printTabs(AzquoBook azquoBook, StringBuffer tabs, String spreadsheetName){
@@ -210,9 +232,10 @@ public final class OnlineService {
             }
         }
         String error = azquoBook.prepareSheet(loggedInConnection, reportId, adminService, valueService, userChoiceDAO);
-        if (error.startsWith("error:")){
-            return error;
-        }
+        //TODO IGNORE ERROR CURRENTLY - SEND BACK IN MESSAGE
+        //if (error.startsWith("error:")){
+       //     return error;
+      //  }
 
 
 
@@ -233,7 +256,7 @@ public final class OnlineService {
 
 */
 
-        return "";
+        return error;
     }
 
 
@@ -313,10 +336,107 @@ public final class OnlineService {
                 return loggedInConnection.getAzquoBook().getProvenance(loggedInConnection, valueService, row, col, jsonFunction);
     }
 
+    private String convertDatetoSQL(String dateSent){
+        if (dateSent.charAt(2) == '/'){
+            return "20" + dateSent.substring(6,7) + "-" + dateSent.substring(3,4) + "-" + dateSent.substring(0,2);
+        }
+        return dateSent;
+    }
+
+    private String convertNametoSQL(String fieldName){
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0;i<fieldName.length();i++){
+            char ch = fieldName.charAt(i);
+            if (ch >='a'){
+                sb.append(ch);
+            }else{
+                sb.append(("_" + ch).toLowerCase());
+            }
+        }
+        return sb.toString();
+    }
+
+
+    public String saveAdminData(LoggedInConnection loggedInConnection, String jsonFunction){
+        String result = "";
+        AzquoBook azquoBook=loggedInConnection.getAzquoBook();
+        String tableName = azquoBook.getAdminTableName();
+        StringBuffer data = azquoBook.getAdminData();
+        if (data == null){
+            result = "error: no data to save";
+        }else{
+            StringTokenizer st = new StringTokenizer(data.toString(),"\n");
+            String headingsList = st.nextToken();
+            String[] headings = headingsList.split("\t");
+             while (st.hasMoreTokens()){
+                String dataLine = st.nextToken();
+                StringBuffer sqlSet = new StringBuffer();
+                sqlSet.append("update `" + tableName + "` set ");
+                 final Map<String, Object> parameters = new HashMap<String, Object>();
+                 StringTokenizer st2 = new StringTokenizer(dataLine,"\t");
+                String idVal = st2.nextToken();
+                int id = 0;
+                 if (idVal.length() > 0){
+                     try{
+                         id=Integer.parseInt(idVal);
+                     }catch(Exception e){
+
+                     }
+                 }
+                for (int i = 1;i <headings.length;i++){
+                    String value = "";
+                    if (st2.hasMoreTokens()){
+                        value = st2.nextToken();
+                    }
+                    String heading = convertNametoSQL(headings[i]);
+                    if (heading.contains("date")){
+                        parameters.put(heading, interpretDate(value));
+                    }else {
+                        parameters.put(convertNametoSQL(headings[i]), value);
+                    }
+
+                 }
+                 if (tableName.equalsIgnoreCase("online_report")){
+                     onlineReportDAO.update(id, parameters);
+                 }else if (tableName.equals("permission")){
+                     String dbName = (String) parameters.get("database");
+                     if (dbName!=null && dbName.length() > 0){
+                         Database db = databaseDAO.findForName(loggedInConnection.getBusinessId(), dbName);
+                         if (db!=null){
+                             parameters.put("database_id", db.getId());
+                             String email = (String) parameters.get("email");
+                             if (email != null && email.length() > 0){
+                                 User user = userDAO.findByEmail(email);
+                                 if (user!=null){
+                                     parameters.put("user_id", user.getId());
+                                     parameters.remove("email");
+                                     parameters.remove("database");
+                                     permissionDAO.update(id, parameters);
+
+                                 }
+                             }
+                         }
+                     }
+
+
+                 }else if (tableName.equals("user")){
+                     userDAO.update(id, loggedInConnection.getBusinessId(), parameters);
+                 }
+
+             }
+        }
+        return result;
+    }
 
     public String saveData(LoggedInConnection loggedInConnection, String jsonFunction)throws Exception{
 
-        String result = loggedInConnection.getAzquoBook().saveData(loggedInConnection, valueService);
+        AzquoBook azquoBook = loggedInConnection.getAzquoBook();
+        String result = "";
+        if (azquoBook.dataRegionPrefix.equals(AzquoBook.azInput)){
+            result = saveAdminData(loggedInConnection, jsonFunction);
+        }else {
+            result = azquoBook.saveData(loggedInConnection, valueService);
+        }
         if (result.length()==0){
             result = "data saved successfully";
         }
@@ -389,10 +509,12 @@ public final class OnlineService {
         String newdatabase = "";
         String filename = "";
         String searchTerm = "";
+        String nameList = "";
+        int nameId = 0;
         if (result.startsWith("$button;name=") && result.indexOf("op=") > 0){
             String link = result.substring(result.indexOf("op=")+ 3);
             String paramName = "op";
-            while (paramName.length() > 0){
+             while (paramName.length() > 0){
                 String paramValue = link.substring(0,(link+"&").indexOf("&"));
                 if (paramValue.length() < link.length()){
                     link = link.substring(paramValue.length() + 1);
@@ -410,6 +532,14 @@ public final class OnlineService {
                     newdatabase = paramValue;
                 }else if (paramName.equals("searchterm")){
                     searchTerm = paramValue;
+                }else if (paramName.equals("namelist")){
+                    nameList = paramValue;
+                }else if (paramName.equals("nameid")){
+                    try {
+                        nameId = Integer.parseInt(paramValue);
+                    }catch(Exception e){
+                      //ignore = use whole list
+                    }
                 }
                 paramName = "";
                 if (link.indexOf("=")> 0){
@@ -421,7 +551,7 @@ public final class OnlineService {
 
         }
         if (database.length()>0) {
-            Database db = databaseDAO.findForName(loggedInConnection.getUser().getBusinessId(), database);
+            Database db = databaseDAO.findForName(loggedInConnection.getBusinessId(), database);
             if (db == null) {
                 return database + " - no such database";
             }
@@ -429,15 +559,38 @@ public final class OnlineService {
         }
         if (op.equalsIgnoreCase("newdatabase")){
             if (newdatabase.length() > 0) {
-                return adminService.createDatabase(newdatabase, loggedInConnection) + "";
+                message =  adminService.createDatabase(newdatabase, loggedInConnection) + "";
             }
 
         }
+        if (op.equalsIgnoreCase("copydatabase")){
+            message =  adminService.copyDatabase(loggedInConnection, database, nameList);
+        }
         if (op.equals("delete")){
             loginService.switchDatabase(loggedInConnection, null);
-            Database db = databaseDAO.findForName(loggedInConnection.getUser().getBusinessId(), database);
+            Database db = databaseDAO.findForName(loggedInConnection.getBusinessId(), database);
+
             if (db!=null) {
+                List<OnlineReport> onlineReports = onlineReportDAO.findForDatabaseId(db.getId());
+                for (OnlineReport onlineReport:onlineReports){
+                    userChoiceDAO.deleteForReportId(onlineReport.getId());
+                }
+                loginRecordDAO.removeForDatabaseId(db.getId());
+                onlineReportDAO.removeForDatabaseId(db.getId());
+                openDatabaseDAO.removeForDatabaseId(db.getId());
+                permissionDAO.removeForDatabaseId(db.getId());
+                uploadRecordDAO.removeForDatabaseId(db.getId());
+                String mySQLName = db.getMySQLName();
+
+
+
                 databaseDAO.removeById(db);
+                message = adminService.dropDatabase(mySQLName);
+                if (message.length()==0){
+                    message = "database deleted successfully";
+                }
+
+
             }
         }
         if (op.equalsIgnoreCase("upload")){
@@ -449,7 +602,7 @@ public final class OnlineService {
             }
         }
         if (op.equalsIgnoreCase("inspect")){
-            message = nameService.getStructureForNameSearch(loggedInConnection,searchTerm);
+            message = nameService.getStructureForNameSearch(loggedInConnection,searchTerm, nameId);
             if (message.startsWith("error:")) return message;
             return "popup:" + message;
 
@@ -457,6 +610,47 @@ public final class OnlineService {
 
         return message;
     }
+
+    public static Date interpretDate(String dateString){
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat dateFormat2 = new SimpleDateFormat("dd/MM/yy");
+        SimpleDateFormat dateFormat3 = new SimpleDateFormat("dd/MM/yyyy");
+        SimpleDateFormat dateFormat4 = new SimpleDateFormat("dd-MM-yyyy");
+        Date dateFound = null;
+        if (dateString.length() > 5) {
+            if (dateString.substring(2, 3).equals("/")) {
+                if (dateString.length() > 8) {
+                    try {
+                        dateFound = dateFormat3.parse(dateString);
+                    } catch (Exception ignored) {
+                    }
+
+                } else {
+                    try {
+                        dateFound = dateFormat2.parse(dateString);
+                    } catch (Exception ignored) {
+                    }
+                }
+            } else {
+                if (dateString.substring(2, 3).equals("-")) {
+                    try{
+                        dateFound = dateFormat4.parse(dateString);
+                    }catch (Exception ignored){
+                    }
+                }else{
+                    try {
+                        dateFound = simpleDateFormat.parse(dateString);
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+        }
+        return dateFound;
+
+    }
+
+
+
 
 
 }
