@@ -65,4 +65,11 @@ public final class LoginRecordDAO extends StandardDAO<LoginRecord> {
         return findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` = :" + USERID, namedParams, false);
     }
 
+    public void removeForDatabaseId(int databaseId){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DATABASEID, databaseId);
+        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
+
+    }
+
 }
