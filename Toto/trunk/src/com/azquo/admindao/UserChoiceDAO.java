@@ -80,5 +80,13 @@ public final class UserChoiceDAO extends  StandardDAO<UserChoice> {
         return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " and `" + CHOICENAME + "` = :" + CHOICENAME, namedParams);
     }
 
+    public void deleteForReportId(final int reportId){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+         namedParams.addValue(REPORTID, reportId);
+         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + REPORTID + " = :" + REPORTID, namedParams);
+
+
+    }
+
 
 }

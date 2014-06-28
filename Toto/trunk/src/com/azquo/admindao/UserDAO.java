@@ -1,11 +1,14 @@
 package com.azquo.admindao;
 
 import com.azquo.adminentities.User;
+import com.azquo.service.AdminService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +18,10 @@ import java.util.Map;
  * Users as in those who login
  */
 public class UserDAO extends StandardDAO<User> {
+
+
+    @Autowired
+    AdminService adminService;
 
     // the default table name for this data.
     @Override
@@ -85,5 +92,48 @@ public class UserDAO extends StandardDAO<User> {
         namedParams.addValue(BUSINESSID, businessId);
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
+
+
+    public final void update(int id, int businessId, Map<String, Object> parameters) {
+        String email = (String) parameters.get("email");
+        if (id==0 && email.length() > 0) {
+             User u = findByEmail(email);
+            if (u != null) {
+                id = u.getId();
+            } else {
+                u = new User(0, new Date(), new Date(), businessId, "","","","","");
+                store(u);
+                id = u.getId();
+
+
+            }
+        }
+
+        String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
+        MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        for (String columnName:parameters.keySet()){
+              if (columnName.equals(PASSWORD)){
+                String password = (String)parameters.get(columnName);
+                 if (password.length() > 0) {
+                     final String salt = adminService.shaHash(System.currentTimeMillis() + "salt");
+                     password = adminService.encrypt(password, salt);
+                     namedParams.addValue(PASSWORD, password);
+                     namedParams.addValue(SALT, salt);
+                     updateSql += PASSWORD + "= :" + PASSWORD + ", " + SALT + " = :" + SALT + ", ";
+                 }
+            }else{
+                  namedParams.addValue(columnName, parameters.get(columnName));
+                  updateSql +=  columnName + "= :" + columnName + ", ";
+
+             }
+        }
+        namedParams.addValue(ID, id);
+        updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
+        updateSql += " where " + ID + " = :" + ID;
+        jdbcTemplate.update(updateSql, namedParams);
+
+    }
+
+
 
 }
