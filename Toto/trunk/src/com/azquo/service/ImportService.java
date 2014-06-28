@@ -1,7 +1,9 @@
 package com.azquo.service;
 
+import com.azquo.admindao.OnlineReportDAO;
 import com.azquo.admindao.UploadRecordDAO;
 import com.azquo.adminentities.Database;
+import com.azquo.adminentities.OnlineReport;
 import com.azquo.adminentities.UploadRecord;
 import com.azquo.memorydb.Name;
 import com.csvreader.CsvReader;
@@ -30,6 +32,9 @@ import java.util.zip.ZipInputStream;
 public final class ImportService {
 
 
+    //private static final String reportPath = "/home/bill/apache-tomcat-7.0.47/import/";
+    private static final String reportPath = "/home/azquo/onlinereports/";
+
     private static final String headingDivider = "|";
     @Autowired
     private ValueService valueService;
@@ -37,6 +42,10 @@ public final class ImportService {
     private NameService nameService;
     @Autowired
     private UploadRecordDAO uploadRecordDAO;
+    @Autowired
+    private OnlineReportDAO onlineReportDAO;
+    @Autowired
+    private AdminService adminService;
 
     public final String IDENTIFIER = "key";
     public final String CHILDOF = "child of ";
@@ -125,10 +134,10 @@ public final class ImportService {
         }
         String error = "";
         if (fileName.contains(".xlsx")) {
-            error = readxlsx(loggedInConnection, tempFile, create);
+            error = readxlsx(loggedInConnection, fileName, tempFile, create);
 
         }else if (fileName.contains(".xls")){
-            error = readExcel(loggedInConnection, tempFile, create);
+            error = readExcel(loggedInConnection, fileName, tempFile, create);
 
         } else {
             if (tempFile.length() > 0) {
@@ -275,7 +284,17 @@ public final class ImportService {
     }
 
 
+    private int findContextHeading(Name name, List<ImportHeading> headings){
 
+          for (int headingNo = 0;headingNo < headings.size();headingNo++){
+            ImportHeading heading = headings.get(headingNo);
+            if (heading.contextItem && heading.name.findAllParents().contains(name)){
+                return headingNo;
+
+            }
+        }
+        return -1;
+    }
 
     private int findHeading(String nameToFind, List<ImportHeading> headings){
         //look for a column with identifier, or, if not found, a column that does not specify an attribute
@@ -297,6 +316,26 @@ public final class ImportService {
         return headingFound;
     }
 
+    private int findLowerLevelHeading(LoggedInConnection loggedInConnection, String peerName, List<ImportHeading> headings)throws  Exception{
+        //look for a column with a set name specified as a subset of the peer name
+        int headingFound = -1;
+        for (int headingNo = 0; headingNo < headings.size();headingNo++) {
+            ImportHeading heading = headings.get(headingNo);
+            //checking the name itself, then the name as part of a comma separated string
+            if (heading.heading != null && (heading.heading.toLowerCase().contains(","+ peerName.toLowerCase()))) {
+                heading.name = nameService.findOrCreateName(loggedInConnection, heading.heading);//may need to create it
+
+                return headingNo;
+            }
+        }
+        return headingFound;
+    }
+
+
+
+
+
+
     public String findTopParent(LoggedInConnection loggedInConnection, ImportHeading heading, List<ImportHeading> headings) throws Exception{
         //need to work out the topparent for use when classifing names found in this column
         ImportHeading child = heading;
@@ -317,16 +356,18 @@ public final class ImportService {
         return "";
     }
 
+
+
     private Name includeInSet(LoggedInConnection loggedInConnection, String name, Name parent, Map<String, Name> namesFound)throws  Exception{
 
         //maybe should include topname in findName below
         String findName = name + ", " + parent.getDefaultDisplayName();
-        Name found = namesFound.get(findName);
-        if (found != null){
-            return found;
-        }
-        found = nameService.findOrCreateName(loggedInConnection, name, parent);
-        namesFound.put(findName, found);
+        //Name found = namesFound.get(findName);
+       // if (found != null){
+      //      return found;
+       // }
+        Name found = nameService.findOrCreateName(loggedInConnection, name, parent);
+        //namesFound.put(findName, found);
         return found;
 
     }
@@ -378,9 +419,17 @@ public final class ImportService {
             if (importHeading.heading != null){
                 if (importHeading.name != null && importHeading.name.getPeers().size() > 0 && !importHeading.contextItem){
                     for (Name peer:importHeading.name.getPeers().keySet()){
+                        //three possibilities to find the peer:
                         int peerHeading = findHeading(peer.getDefaultDisplayName(), headings);
                         if (peerHeading == -1) {
-                            return "error: cannot find peer " + peer.getDefaultDisplayName() + " for " + importHeading.name.getDefaultDisplayName();
+                            peerHeading = findContextHeading(peer, headings);
+                            if (peerHeading == -1) {
+                                peerHeading = findLowerLevelHeading(loggedInConnection,peer.getDefaultDisplayName(), headings);
+                                if (peerHeading == -1) {
+                                    return "error: cannot find peer " + peer.getDefaultDisplayName() + " for " + importHeading.name.getDefaultDisplayName();
+                                }
+
+                            }
                         }
                         if (peerHeading>=0) {
                             ImportHeading importPeer = headings.get(peerHeading);
@@ -877,14 +926,58 @@ public final class ImportService {
         return tempName;
     }
 
-    private String readExcel(final LoggedInConnection loggedInConnection, final String fileName, boolean create) {
+
+    private String uploadReport(LoggedInConnection loggedInConnection,AzquoBook ab, String fileName, String reportName) throws Exception{
+        int businessId = loggedInConnection.getBusinessId();
+        int databaseId = loggedInConnection.getAzquoMemoryDB().getDatabase().getId();
+        OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
+        int reportId = 0;
+        if (or!=null){
+            reportId = or.getId();
+        }
+
+        String fullPath = reportPath + adminService.getBusinessPrefix(loggedInConnection) + "/" + fileName;
+        Workbook wb = ab.getWb();
+        File file = new File(fullPath);
+        file.getParentFile().mkdirs();
+
+         FileOutputStream out = new FileOutputStream(fullPath);
+         wb.write(out);
+         out.close();
+         or = new OnlineReport(reportId, businessId,databaseId ,"", reportName, "", fullPath,"");
+         onlineReportDAO.store(or);
+        return "";
+
+
+    }
+
+
+
+    private String getReportName(AzquoBook ab){
+        Workbook wb = ab.getWb();
+        for (int i = 0; i < wb.getNumberOfNames();i++){
+            org.apache.poi.ss.usermodel.Name name = wb.getNameAt(i);
+            String nameName = name.getNameName();
+            if (nameName.equalsIgnoreCase("az_reportname")){
+                return ab.getRangeValue(name);
+             }
+         }
+        return null;
+
+    }
+
+    private String readExcel(final LoggedInConnection loggedInConnection, final String fileName, final String inputFileName, boolean create) {
 
 
         try {
-            POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(fileName));
+            POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(inputFileName));
             Workbook wb = new HSSFWorkbook(fs);
             AzquoBook ab = new AzquoBook();
             ab.setWb(wb);
+            String reportName = getReportName(ab);
+            if (reportName!=null){
+                return uploadReport(loggedInConnection, ab, fileName, reportName);
+            }
             //ab.calculateAll(wb);  this caused a problem when importing as 'dependencies' had not been initialised.
             Row row;
             Cell cell;
@@ -909,7 +1002,7 @@ public final class ImportService {
                         if (tmp > cols) cols = tmp;
                     }
                 }
-                File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4), "." + fileType);
+                File temp = File.createTempFile(inputFileName.substring(0, inputFileName.length() - 4), "." + fileType);
                 String tempName = temp.getPath();
 
                 temp.deleteOnExit();
@@ -961,21 +1054,31 @@ public final class ImportService {
         }
         return "";
     }
-private String readxlsx (final LoggedInConnection loggedInConnection, final String fileName, boolean create) {
+
+
+private String readxlsx (final LoggedInConnection loggedInConnection, final String fileName, final String tempName, boolean create) {
 
 
         try {
-            XSSFWorkbook wb = new XSSFWorkbook(new FileInputStream(fileName));
+            XSSFWorkbook wb = new XSSFWorkbook(new FileInputStream(tempName));
+            AzquoBook ab = new AzquoBook();
+            ab.setWb(wb);
+            String reportName = getReportName(ab);
+            if (reportName!=null){
+                return uploadReport(loggedInConnection, ab, fileName, reportName);
+            }
+
             int sheetNo = 0;
 
             while (sheetNo < wb.getNumberOfSheets()) {
                 XSSFSheet sheet = wb.getSheetAt(sheetNo);
-                String error = readSheet(loggedInConnection, fileName, sheet, create);
+                String error = readSheet(loggedInConnection, tempName, sheet, create);
                 if (error.startsWith("error:")){
                     return error;
                 }
                 sheetNo++;
             }
+
         } catch (Exception ioe) {
             ioe.printStackTrace();
         }
@@ -984,7 +1087,7 @@ private String readxlsx (final LoggedInConnection loggedInConnection, final Stri
 
 
 
-    private String readSheet(final LoggedInConnection loggedInConnection, final String fileName, final XSSFSheet sheet, boolean create) throws Exception{
+    private String readSheet(final LoggedInConnection loggedInConnection, final String tempFileName, final XSSFSheet sheet, boolean create) throws Exception{
         XSSFRow row;
         XSSFCell cell;
         HSSFDataFormatter formatter = new HSSFDataFormatter();
@@ -1005,7 +1108,7 @@ private String readxlsx (final LoggedInConnection loggedInConnection, final Stri
                 if (tmp > cols) cols = tmp;
             }
         }
-        File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4), "." + fileType);
+        File temp = File.createTempFile(tempFileName.substring(0, tempFileName.length() - 4), "." + fileType);
         String tempName = temp.getPath();
 
         temp.deleteOnExit();
@@ -1023,14 +1126,24 @@ private String readxlsx (final LoggedInConnection loggedInConnection, final Stri
                     if (colCount++ > 0) bw.write('\t');
                     if (cell != null) {
 
-                        String cellFormat = formatter.formatCellValue(cell);
+                        String cellFormat = "";
+                        try {
+                            if (cell != null && cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
+                                //evaluator.evaluateFormulaCell(cell);
+                                cellFormat = cell.getStringCellValue();
+                            } else {
+                                cellFormat = formatter.formatCellValue(cell);
+                            }
+                        }catch(Exception e){
+                            cellFormat = "";
+                        }
                         //Integers seem to have '.0' appended, so this is a manual chop.  It might cause problems if someone wanted to import a version '1.0'
                         if (NumberUtils.isNumber(cellFormat) && cellFormat.endsWith(".0")) {
                             cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
                         }
                         bw.write(cellFormat);
 
-                     }
+                    }
 
                 }
                 bw.write('\n');
