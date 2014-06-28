@@ -31,6 +31,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
     public static final String REPORTNAME = "report_name";
     public static final String USERSTATUS = "user_status";
     public static final String FILENAME = "filename";
+    public static final String EXPLANATION = "explanation";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
@@ -41,6 +42,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
         toReturn.put(REPORTNAME, onlineReport.getReportName());
         toReturn.put(USERSTATUS, onlineReport.getUserStatus());
         toReturn.put(FILENAME, onlineReport.getFilename());
+        toReturn.put(EXPLANATION, onlineReport.getExplanation());
         return toReturn;
     }
 
@@ -55,7 +57,8 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
                         , ""
                         , rs.getString(REPORTNAME)
                         , rs.getString(USERSTATUS)
-                        , rs.getString(FILENAME));
+                        , rs.getString(FILENAME)
+                        , rs.getString(EXPLANATION));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -80,8 +83,8 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
     public List<OnlineReport> findForBusinessIdAndUserStatus(final int businessId, String userStatus) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        namedParams.addValue(userStatus, userStatus);
-        return findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " and " + USERSTATUS + " like '%:" + USERSTATUS + "%'", namedParams, false);
+        namedParams.addValue(USERSTATUS, "%" + userStatus + "%");
+        return findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " and " + USERSTATUS + " like :" + USERSTATUS, namedParams, false);
     }
 
     public List<OnlineReport> findForBusinessId(final int businessId) {
@@ -89,6 +92,37 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
         namedParams.addValue(BUSINESSID, businessId);
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
+
+    public List<OnlineReport> findForDatabaseId(final int databaseId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DATABASEID, databaseId);
+        return findListWithWhereSQLAndParameters("WHERE " + DATABASEID + " = :" + DATABASEID, namedParams, false);
+    }
+
+    public void removeForDatabaseId(int databaseId){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DATABASEID, databaseId);
+        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
+
+    }
+
+    public final void update(int id, Map<String, Object> parameters){
+        String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        for (String columnName:parameters.keySet()){
+            updateSql += "`" + columnName + "` = :" + columnName + ", ";
+            namedParams.addValue(columnName, parameters.get(columnName));
+         }
+        updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
+        updateSql += " where " + ID + " = :" + ID;
+        namedParams.addValue(ID, id);
+        jdbcTemplate.update(updateSql, namedParams);
+
+    }
+
+
+
+
 }
 
 
