@@ -119,7 +119,7 @@ a, img {
 .button{
     height:20px;
     width:60px;
-    background: transparent url("https://data.azquo.com:8443/images/button.png") no-repeat left top;
+    background: transparent url("/images/button.png") no-repeat left top;
     text-align:center;
     vertical-align: middle;
     position:absolute;
@@ -290,8 +290,9 @@ li{
     border:0;
     left:0;
     top:0;
-    z-index:1;
+    z-index:3;
     position:absolute;
+
 }
 
 .excelDefaults .r90{
@@ -393,6 +394,13 @@ li{
     border: 1px solid silver;
     font-family: Arial;
     font-size: 12px;
+}
+
+#namedetailssubmit{
+    position:relative;
+    vertical-align: bottom;
+    text-align:center;
+    bottom:20px;
 }
 
 #htmlatts{
