@@ -115,22 +115,33 @@ public class AdminService {
     }
 
     public String getSQLDatabaseName(final LoggedInConnection loggedInConnection, final String databaseName) {
-        Business b = businessDao.findById(loggedInConnection.getUser().getBusinessId());
+        Business b = businessDao.findById(loggedInConnection.getBusinessId());
         //TODO  Check name below is unique.
-        String mysqlName = (b.getBusinessName() + "     ").substring(0, 5).trim() + "_" + databaseName;
-        return mysqlName.replaceAll("[^A-Za-z0-9_]", "");
+        return getBusinessPrefix(loggedInConnection) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
 
+
+    }
+
+    public String getBusinessPrefix(final LoggedInConnection loggedInConnection){
+        Business b = businessDao.findById(loggedInConnection.getBusinessId());
+        return (b.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "");
+
+    }
+
+    public String dropDatabase(String mysqlName) throws Exception{
+        mySQLDatabaseManager.dropDatabase(mysqlName);
+        return "";
 
     }
 
     public String createDatabase(final String databaseName, final LoggedInConnection loggedInConnection) throws Exception {
         if (loggedInConnection.getUser().isAdministrator()) {
-             Database existing = databaseDao.findForName(loggedInConnection.getUser().getBusinessId(),databaseName);
+             Database existing = databaseDao.findForName(loggedInConnection.getBusinessId(),databaseName);
             if (existing != null){
                 return "error: That database already exists";
             }
             final String mysqlName = getSQLDatabaseName(loggedInConnection, databaseName);
-            final Business b = businessDao.findById(loggedInConnection.getUser().getBusinessId());
+            final Business b = businessDao.findById(loggedInConnection.getBusinessId());
             final Database database = new Database(0, new Date(), new Date(130, 1, 1), b.getId(), databaseName, mysqlName, 0, 0);
             try{
                mySQLDatabaseManager.createNewDatabase(mysqlName);
@@ -154,7 +165,7 @@ public class AdminService {
             , final LoggedInConnection loggedInConnection) throws IOException {
         if (loggedInConnection.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
-            final User user = new User(0, new Date(), new Date(130, 1, 1), loggedInConnection.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt);
+            final User user = new User(0, new Date(), new Date(130, 1, 1), loggedInConnection.getBusinessId(), email, userName, status, encrypt(password, salt), salt);
             userDao.store(user);
             return true;
         }
@@ -219,14 +230,14 @@ public class AdminService {
 
     public List<Database> getDatabaseListForBusiness(final LoggedInConnection loggedInConnection) {
         if (loggedInConnection.getUser().isAdministrator()) {
-            return databaseDao.findForBusinessId(loggedInConnection.getUser().getBusinessId());
+            return databaseDao.findForBusinessId(loggedInConnection.getBusinessId());
         }
         return null;
     }
 
     public List<User> getUserListForBusiness(final LoggedInConnection loggedInConnection) {
         if (loggedInConnection.getUser().isAdministrator/**/()) {
-            return userDao.findForBusinessId(loggedInConnection.getUser().getBusinessId());
+            return userDao.findForBusinessId(loggedInConnection.getBusinessId());
         }
         return null;
     }
@@ -238,9 +249,9 @@ public class AdminService {
             //when saving a report from an Excel data sheet, the system does not know the ID, so the report can be identified by name
             //when saving from the admin workbook, the name may be changed, so check for duplicate names.
             final int EXISTINGREPORT = -1;
-            reportSent.setBusinessId(loggedInConnection.getUser().getBusinessId());
+            reportSent.setBusinessId(loggedInConnection.getBusinessId());
             if (reportSent.getDatabaseId() == 0){
-                Database d = databaseDao.findForName(loggedInConnection.getUser().getBusinessId(), reportSent.getDatabase());
+                Database d = databaseDao.findForName(loggedInConnection.getBusinessId(), reportSent.getDatabase());
                 if (d != null){
                     reportSent.setDatabaseId(d.getId());
                 }else{
@@ -296,9 +307,14 @@ public class AdminService {
     public List<OnlineReport> getReportList(final LoggedInConnection loggedInConnection) {
         List<OnlineReport> reportList;
         if (loggedInConnection.getUser().isAdministrator()) {
-            reportList = onlineReportDAO.findForBusinessId(loggedInConnection.getUser().getBusinessId());
+            reportList = onlineReportDAO.findForBusinessId(loggedInConnection.getBusinessId());
         }else{
-            reportList = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getUser().getBusinessId(),loggedInConnection.getUser().getStatus());
+            String userStatus = loggedInConnection.getUser().getStatus();
+            String[]status = userStatus.split(",");//user may have more than one status
+            reportList = new ArrayList<OnlineReport>();
+            for (int i=0;i<status.length; i++) {
+                reportList.addAll(onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getBusinessId(), loggedInConnection.getUser().getStatus()));
+            }
         }
         if (reportList != null){
              for (OnlineReport onlineReport:reportList) {
@@ -308,7 +324,7 @@ public class AdminService {
                  }
             }
         }else{
-            OnlineReport notFound = new OnlineReport(0,0,0,"","No reports found","","");
+            OnlineReport notFound = new OnlineReport(0,0,0,"","No reports found","","","");
             reportList.add(notFound);
         }
         return reportList;
@@ -320,7 +336,7 @@ public class AdminService {
         if (loggedInConnection.getUser().isAdministrator()) {
             for (User user : userList) {
                 User existingUser = userDao.findByEmail(user.getEmail());
-                if (existingUser != null && existingUser.getBusinessId() != loggedInConnection.getUser().getBusinessId()) {
+                if (existingUser != null && existingUser.getBusinessId() != loggedInConnection.getBusinessId()) {
                     return "error: cannot modify/create users for a different business! (" + existingUser.getEmail() + ")";
                 }
                 if (user.getEndDate().getYear() > 129){
@@ -359,7 +375,7 @@ public class AdminService {
                 } else { // a new one. Possibly need checks on required fields but for the moment just sort the password and store.
                     if (user.getPassword() != null) {
                         final String salt = shaHash(System.currentTimeMillis() + "salt");
-                        final User newUser = new User(0, new Date(), new Date(), loggedInConnection.getUser().getBusinessId(), user.getEmail(), user.getName(), user.getStatus(), encrypt(user.getPassword(), salt), salt);
+                        final User newUser = new User(0, new Date(), new Date(), loggedInConnection.getBusinessId(), user.getEmail(), user.getName(), user.getStatus(), encrypt(user.getPassword(), salt), salt);
                         userDao.store(newUser);
                     }
                  }
@@ -370,7 +386,7 @@ public class AdminService {
 
     public List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInConnection loggedInConnection) {
         if (loggedInConnection.getUser().isAdministrator()) {
-            List<UploadRecord> uploadRecords = uploadRecordDAO.findForBusinessId(loggedInConnection.getUser().getBusinessId());
+            List<UploadRecord> uploadRecords = uploadRecordDAO.findForBusinessId(loggedInConnection.getBusinessId());
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<UploadRecord.UploadRecordForDisplay>();
             for (UploadRecord uploadRecord : uploadRecords) {
                 uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, businessDao.findById(uploadRecord.getBusinessId()).getBusinessName(), databaseDao.findById(uploadRecord.getDatabaseId()).getName(), userDao.findById(uploadRecord.getUserId()).getName()));
@@ -382,7 +398,7 @@ public class AdminService {
 
     public List<Permission> getPermissionList(final LoggedInConnection loggedInConnection) {
         if (loggedInConnection.getUser().isAdministrator()) {
-            List<Permission> permissionsList = permissionDao.findByBusinessId(loggedInConnection.getUser().getBusinessId());
+            List<Permission> permissionsList = permissionDao.findByBusinessId(loggedInConnection.getBusinessId());
             for (Permission p : permissionsList) {
                 p.setEmail(userDao.findById(p.getUserId()).getEmail());
                 p.setDatabase(databaseDao.findById(p.getDatabaseId()).getName());
@@ -394,20 +410,20 @@ public class AdminService {
 
     // there is a constraint on here,only allow relevant user or database ids! Otherwise could cause all sort of trouble
     public String setPermissionListForBusiness(LoggedInConnection loggedInConnection, List<Permission> permissionList) throws Exception{
-        permissionDao.deleteForBusinessId(loggedInConnection.getUser().getBusinessId());
+        permissionDao.deleteForBusinessId(loggedInConnection.getBusinessId());
         for (Permission permission : permissionList) {
             if (permission.getEndDate().getYear() > 129){
                 permission.setEndDate(new Date(130,1,1));
             }
 
 
-            Database d = databaseDao.findForName(loggedInConnection.getUser().getBusinessId(), permission.getDatabase());
-            if (d == null || d.getBusinessId() != loggedInConnection.getUser().getBusinessId()) {
+            Database d = databaseDao.findForName(loggedInConnection.getBusinessId(), permission.getDatabase());
+            if (d == null || d.getBusinessId() != loggedInConnection.getBusinessId()) {
                 return "error: database name " + permission.getDatabase() + " is invalid";
             }
             permission.setDatabaseId(d.getId());
             User u = userDao.findByEmail(permission.getEmail());
-            if (u == null || u.getBusinessId() != loggedInConnection.getUser().getBusinessId()) {
+            if (u == null || u.getBusinessId() != loggedInConnection.getBusinessId()) {
                 return "error: user email " + permission.getEmail() + " is invalid";
             }
             final List<Set<Name>> names = new ArrayList<Set<Name>>();
