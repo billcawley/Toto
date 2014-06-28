@@ -54,7 +54,6 @@ public class OnlineController {
     // TODO : break up into separate functions
 
     private static final Logger logger = Logger.getLogger(OnlineController.class);
-    private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
     @RequestMapping
     public String handleRequest (ModelMap model,HttpServletRequest request, HttpServletResponse response)throws Exception{
@@ -288,6 +287,7 @@ public class OnlineController {
             int row = 0;
             try {
                 row = Integer.parseInt(rowStr);
+
             }catch(Exception e){
                 //rowStr can be blank or '0'
             }
@@ -297,25 +297,47 @@ public class OnlineController {
             ok, one could send the row and column headings at the same time as the data but looking at the export demo it's asking for rows headings then column headings then the context
 
              */
+            String sortRegion = "";
             if ((opcode.equals("sortcol") || opcode.equals("highlight") || opcode.equals("selectchosen")) && choiceName != null){
                 onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
+
                 opcode="loadsheet";
             }
             if (opcode.equals("valuesent")){
-                result = onlineService.changeValue(loggedInConnection, region, Integer.parseInt(rowStr), Integer.parseInt(colStr), changedValue);
+                result = onlineService.changeValue(loggedInConnection, region, row, Integer.parseInt(colStr), changedValue);
                 result = jsonFunction + "({\"changedvalues\":" + result + "})";
+            }
+            if (opcode.equals("nameidchosen")){
+                try {
+                    //TODO!!!
+                    //nameService.getStructureForNameSearch(loggedInConnection, choiceName);
+                    opcode="loadsheet";
+
+
+                }catch(Exception e){
+                }
+
             }
 
             if (opcode.equals("provenance")){
                 result = onlineService.getProvenance(loggedInConnection, row, Integer.parseInt(colStr), jsonFunction);
             }
             if (opcode.equals("savedata")){
-                result = onlineService.saveData(loggedInConnection, jsonFunction);
-            }
+                  result = onlineService.saveData(loggedInConnection, jsonFunction);
+             }
             if (opcode.equals("details")){
+
                 result = nameService.jsonNameDetails(loggedInConnection, Integer.parseInt(nameId));
                 result = jsonFunction + "({\"namedetails\":" + result + "})";
             }
+            if (opcode.equals("children")){
+
+                result = nameService.getStructureForNameSearch(loggedInConnection,"", Integer.parseInt(nameId));
+                result = jsonFunction + "(" + result + ")";
+            }
+
+
+
             if (opcode.equals("chart")){
                 if (chartParams.length() > 6){ //params start with 'chart '
                     chartParams = chartParams.substring(6);
@@ -344,7 +366,7 @@ public class OnlineController {
 
             /*
             BufferedReader br = new BufferedReader(new StringReader(result));
-            String line;
+           / String line;
             logger.error("----- sent result");
             while ((line = br.readLine()) != null) {
                 logger.info(line);
