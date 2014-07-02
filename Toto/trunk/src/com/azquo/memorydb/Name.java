@@ -476,7 +476,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     @Override
     public int compareTo(Name n) {
-        return getDefaultDisplayName().toLowerCase().compareTo(getDefaultDisplayName().toLowerCase()); // think that will give us a case insensitive sort!
+        return getDefaultDisplayName().toLowerCase().compareTo(n.getDefaultDisplayName().toLowerCase()); // think that will give us a case insensitive sort!
     }
 
     // for Jackson mapping, trying to attach to actual fields would be dangerous in terms of allowing unsafe access
