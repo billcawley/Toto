@@ -4,6 +4,7 @@ import com.azquo.admindao.DatabaseDAO;
 import com.azquo.admindao.OnlineReportDAO;
 import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OnlineReport;
+import com.azquo.memorydb.Name;
 import com.azquo.service.*;
 import com.azquo.util.Chart;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,10 +23,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
-import java.util.Enumeration;
-import java.util.Iterator;
-import java.util.List;
-import java.util.StringTokenizer;
+import java.util.*;
 
 
 /**
@@ -226,6 +224,7 @@ public class OnlineController {
         item = file;
         if (reportToLoad.length() > 0){
             reportId = reportToLoad;
+            opcode="loadsheet";
         }
 
         long startTime = System.currentTimeMillis();
@@ -309,8 +308,17 @@ public class OnlineController {
             }
             if (opcode.equals("nameidchosen")){
                 try {
-                    //TODO!!!
-                    //nameService.getStructureForNameSearch(loggedInConnection, choiceName);
+                    List<Set<Name>> names = new ArrayList<Set<Name>>();
+                    //this routine should accept much more than a single name....
+                    try{
+                        Name name =nameService.findById(loggedInConnection,Integer.parseInt(choiceName));
+                        Set<Name> names1 = new HashSet<Name>();
+                        names1.add(name);
+                        names.add(0, names1);
+                        loggedInConnection.setNamesToSearch(names);
+                    }catch(Exception e){
+                        //ignore - this is an internal parameter
+                    }
                     opcode="loadsheet";
 
 
