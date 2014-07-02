@@ -2,6 +2,7 @@ package com.azquo.service;
 
 import com.azquo.admindao.UserChoiceDAO;
 import com.azquo.adminentities.UserChoice;
+import com.azquo.memorydb.Value;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.poi.hssf.usermodel.HSSFCellStyle;
@@ -1222,7 +1223,7 @@ public  class AzquoBook {
 
         Sheet cellSheet = targetCell.getSheet();
         int chr = term.charAt(0);
-        if (chr < 'A' || term.length() < 2){
+        if ((chr != '$' && chr < 'A') || term.length() < 2){
             return null;
         }
         Name name = wb.getName(term);
@@ -1234,8 +1235,6 @@ public  class AzquoBook {
         //maybe this routine and 'adjustTerm' should be rationalised.
         int pos =1;
         if (chr == '$'){
-             pos++;
-            term = term.substring(1);
             chr = term.charAt(pos++);
             if (chr >= 'a'){
                 chr = chr-32;
@@ -1500,7 +1499,7 @@ public  class AzquoBook {
     }
 
 
-    private String loadAdminData(LoggedInConnection loggedInConnection, AdminService adminService)throws Exception{
+    private String loadAdminData(LoggedInConnection loggedInConnection, AdminService adminService, ValueService valueService)throws Exception{
 
 
         for (int i = 0; i < wb.getNumberOfNames(); i++) {
@@ -1508,7 +1507,7 @@ public  class AzquoBook {
             String rangeName = name.getNameName();
             if (rangeName.toLowerCase().startsWith("az_headings") && name.getSheetName().equals(azquoSheet.getSheetName())) {
                 String regionName = rangeName.substring(11).toLowerCase();
-                String error = fillAdminData(loggedInConnection, regionName, adminService);
+                String error = fillAdminData(loggedInConnection, regionName, adminService, valueService);
                 if (error.startsWith("error:")){
                     return error;
                 }
@@ -1596,15 +1595,45 @@ public  class AzquoBook {
         return sb.toString();
     }
 
-    public String fillAdminData(LoggedInConnection loggedInConnection, String regionName, AdminService adminService)throws Exception{
+    public String fillAdminData(LoggedInConnection loggedInConnection, String regionName, AdminService adminService, ValueService valueService)throws Exception{
 
 
         String data = null;
-        if (regionName.equals("data")){
-            int j=1;
-
-
-        }else {
+        String rangeFormula = rangeNames.get("az_headings" + regionName);
+        Range headingsRange = interpretRangeName(rangeFormula);
+        int headingsRow = headingsRange.startCell.getRowIndex();
+        int firstHeading = headingsRange.startCell.getColumnIndex();
+        if (regionName.equals("data") && loggedInConnection.getNamesToSearch() != null){
+            Map<Set<com.azquo.memorydb.Name>,Set<Value>>shownValues = valueService.getSearchValues(loggedInConnection.getNamesToSearch());
+            loggedInConnection.setValuesFound(shownValues);
+            LinkedHashSet<com.azquo.memorydb.Name> nameHeadings = valueService.getHeadings(shownValues);
+            int colNo = firstHeading + 1;
+            int rowNo = headingsRow;
+            Row row = azquoSheet.getRow(rowNo);
+            for (com.azquo.memorydb.Name name:nameHeadings){
+                if (row.getCell(colNo) == null) row.createCell(colNo);
+                row.getCell(colNo).setCellValue(name.getDefaultDisplayName());
+                colNo++;
+            }
+            for (Set<com.azquo.memorydb.Name>names:shownValues.keySet()) {
+                rowNo++;
+                colNo = firstHeading;
+                row = azquoSheet.getRow(rowNo);
+                if (row == null) row = azquoSheet.createRow(rowNo);
+                if (row.getCell(colNo) == null) row.createCell(colNo);
+                row.getCell(colNo).setCellValue(valueService.addValues(shownValues.get(names)));
+                colNo++;
+                for (com.azquo.memorydb.Name name : nameHeadings) {
+                    if (row.getCell(colNo) == null) row.createCell(colNo);
+                    for (com.azquo.memorydb.Name valueName : names) {
+                        if (valueName.findTopParent() == name) {
+                            row.getCell(colNo).setCellValue(valueName.getDefaultDisplayName());
+                        }
+                    }
+                    colNo++;
+                }
+            }
+         }else {
             if (regionName.equals("databases")) {
                 data = jacksonMapper.writeValueAsString(adminService.getDatabaseListForBusiness(loggedInConnection));
             } else if (regionName.equals("uploads")) {
@@ -1617,11 +1646,7 @@ public  class AzquoBook {
                 data = jacksonMapper.writeValueAsString(adminService.getReportList(loggedInConnection));
             }
             if (data == null) return "";
-            String rangeFormula = rangeNames.get("az_headings" + regionName);
-            Range headings = interpretRangeName(rangeFormula);
-            int headingsRow = headings.startCell.getRowIndex();
-            int firstHeading = headings.startCell.getColumnIndex();
-            int lastHeading = headings.endCell.getColumnIndex();
+            int lastHeading = headingsRange.endCell.getColumnIndex();
             int rowNo = headingsRow;
             //strip the square brackets
             while (data.length() > 2) {
@@ -1924,7 +1949,7 @@ public  class AzquoBook {
 
         }else {
            //admin data only loaded on admin sheets
-           error = loadAdminData(loggedInConnection, adminService);
+           error = loadAdminData(loggedInConnection, adminService, valueService);
            // still ignoring error.....
        }
        calcConditionalFormats(null);
@@ -2439,12 +2464,14 @@ public  class AzquoBook {
 
     public String changeValue(String region, int row, int col, String value, LoggedInConnection loggedInConnection, ValueService valueService) {
 
-        row = getUnsortRow(row);
-        String regionFormula = rangeNames.get(dataRegionPrefix + region.toLowerCase());
+         String regionFormula = rangeNames.get(dataRegionPrefix + region.toLowerCase());
         Range dataRange = interpretRangeName(regionFormula);
-        Cell cellChanged = azquoSheet.getRow(dataRange.startCell.getRowIndex() + row).getCell(dataRange.startCell.getColumnIndex() + col);
+        int rowChanged = dataRange.startCell.getRowIndex() + row;
+        rowChanged = getUnsortRow(rowChanged);
+
+        Cell cellChanged = azquoSheet.getRow(rowChanged).getCell(dataRange.startCell.getColumnIndex() + col);
         if (cellChanged==null){
-            cellChanged = azquoSheet.getRow(dataRange.startCell.getRowIndex() + row).createCell(dataRange.startCell.getColumnIndex() + col);
+            cellChanged = azquoSheet.getRow(rowChanged).createCell(dataRange.startCell.getColumnIndex() + col);
         }
         setCellValue(cellChanged, value);
         Set<Cell>cellSet = dependencies.get(cellChanged);
@@ -2482,35 +2509,60 @@ public  class AzquoBook {
             String nameName = name.getNameName().toLowerCase();
             if (name.getSheetName().equals(azquoSheet.getSheetName())){
                 Range r = interpretRangeName(name.getRefersToFormula());
-                if (r!= null && r.startCell != null && row >=r.startCell.getRowIndex() && row <= r.endCell.getRowIndex() && col >= r.startCell.getColumnIndex() && col <= r.endCell.getColumnIndex()){
-                    int rowOffset = row - r.startCell.getRowIndex();
-                    int colOffset = col - r.startCell.getColumnIndex();
-                    String region = "";
-                    com.azquo.memorydb.Name cellName = null;
-                    if (nameName.startsWith("az_displayrowheadings")){
-                        region = nameName.substring(21);
-                        cellName = loggedInConnection.getRowHeadings(region).get(rowOffset).get(colOffset);
-                        if (name!=null){
-                            return valueService.formatProvenanceForOutput(cellName.getProvenance(),jsonFunction);
+                if (name.getNameName().equals("az_HeadingsData")) {
+                    //Admin inspect names only
+                    int rowNo = row - r.startCell.getRowIndex() -1;
+                    int colNo = col - r.startCell.getColumnIndex();
+                    if (rowNo < 0) return null;
+                     for (Set<com.azquo.memorydb.Name> names:loggedInConnection.getValuesFound().keySet()){
+                        if (rowNo-- == 0){
+                            if (colNo==0){
+                                List<Value> tempList = new ArrayList<Value>();
+                                for (com.azquo.memorydb.Value value:loggedInConnection.getValuesFound().get(names)){
+                                    tempList.add(value);
+                                }
+                                return valueService.formatCellProvenanceForOutput(loggedInConnection, names, tempList, jsonFunction);
 
-                        }else{
-                            return "";
+                            }else{
+                                for (com.azquo.memorydb.Name tempname:names) {
+                                    if (--colNo == 0) {
+                                        return valueService.formatProvenanceForOutput(tempname.getProvenance(), jsonFunction);
+
+                                    }
+                                }
+                            }
                         }
-                    }else if (nameName.startsWith("az_displaycolumnheadings")){
-                        region = nameName.substring(24);
-                        cellName = loggedInConnection.getColumnHeadings(region).get(colOffset).get(rowOffset);//note that the array is transposed
-                        if (name!=null){
-                            return valueService.formatProvenanceForOutput(cellName.getProvenance(),jsonFunction);
-
-                        }else{
-                            return "";
-                        }
-                    }else if (nameName.startsWith(dataRegionPrefix)){
-                        region = nameName.substring(dataRegionPrefix.length());
-                        return valueService.formatDataRegionProvenanceForOutput(loggedInConnection, region, rowOffset, colOffset, jsonFunction);
-
                     }
+                }else{
+                    if (r!= null && r.startCell != null && row >=r.startCell.getRowIndex() && row <= r.endCell.getRowIndex() && col >= r.startCell.getColumnIndex() && col <= r.endCell.getColumnIndex()){
+                        int rowOffset = row - r.startCell.getRowIndex();
+                        int colOffset = col - r.startCell.getColumnIndex();
+                        String region = "";
+                        com.azquo.memorydb.Name cellName = null;
+                        if (nameName.startsWith("az_displayrowheadings")){
+                            region = nameName.substring(21);
+                            cellName = loggedInConnection.getRowHeadings(region).get(rowOffset).get(colOffset);
+                            if (name!=null){
+                                return valueService.formatProvenanceForOutput(cellName.getProvenance(),jsonFunction);
 
+                            }else{
+                                return "";
+                            }
+                        }else if (nameName.startsWith("az_displaycolumnheadings")){
+                            region = nameName.substring(24);
+                            cellName = loggedInConnection.getColumnHeadings(region).get(colOffset).get(rowOffset);//note that the array is transposed
+                            if (name!=null){
+                                return valueService.formatProvenanceForOutput(cellName.getProvenance(),jsonFunction);
+
+                            }else{
+                                return "";
+                            }
+                        }else if (nameName.startsWith(dataRegionPrefix)){
+                            region = nameName.substring(dataRegionPrefix.length());
+                            return valueService.formatDataRegionProvenanceForOutput(loggedInConnection, region, rowOffset, colOffset, jsonFunction);
+
+                        }
+                    }
                 }
             }
         }
@@ -2599,10 +2651,15 @@ public  class AzquoBook {
                     }
                     Cell cell = azquoSheet.getRow(rowNo).getCell(colNo);
                     if (cell != null) {
-                        CellStyle style = cell.getCellStyle();
-                        CellFormat cf = CellFormat.getInstance(style.getDataFormatString());
-                        CellFormatResult result = cf.apply(cell);
-                        sb.append(result.text);
+                        //if it's a number, don't format it - (keeps precision, and does not store commas
+                        try {
+                            sb.append(cell.getNumericCellValue());
+                        }catch(Exception e) {
+                            CellStyle style = cell.getCellStyle();
+                            CellFormat cf = CellFormat.getInstance(style.getDataFormatString());
+                            CellFormatResult result = cf.apply(cell);
+                            sb.append(result.text);
+                        }
                     }
                 }
             }
