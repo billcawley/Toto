@@ -51,6 +51,8 @@ public final class LoggedInConnection {
     private final Map<String, List<List<Set<Name>>>> sentDataNamesMaps; // As in a 2 d array (lists of lists) of sets of names, identifying each cell. Necessary if saving new data in that cell. SHould the values map use sets also???
     private List<Set<Name>>  readPermissions;
     private List<Set<Name>> writePermissions;
+    private List<Set<Name>> namesToSearch;
+    private Map<Set<Name>, Set<Value>> valuesFound;
     private AzquoBook azquoBook;
 
     private static final String defaultRegion = "default-region";
@@ -77,7 +79,10 @@ public final class LoggedInConnection {
         sentDataNamesMaps = new HashMap<String, List<List<Set<Name>>>>();
         readPermissions =  new ArrayList<Set<Name>>();
         writePermissions = new ArrayList<Set<Name>>();
+        namesToSearch = null;
+        valuesFound = null;
         azquoBook = null;
+
 
         if (timeOut > 0) {
             this.timeOut = timeOut;
@@ -368,6 +373,20 @@ public final class LoggedInConnection {
     public void setWritePermissions(List<Set<Name>> names){
         this.writePermissions = names;
     }
+
+    public List<Set<Name>> getNamesToSearch(){
+        return this.namesToSearch;
+    }
+
+    public void setNamesToSearch(List<Set<Name>> names){
+        this.namesToSearch = names;
+    }
+
+    public Map<Set<Name>, Set<Value>> getValuesFound(){
+        return this.valuesFound;
+    }
+
+    public void setValuesFound(Map<Set<Name>,Set<Value>> valuesFound){ this.valuesFound = valuesFound; }
 
     public AzquoBook getAzquoBook() { return this.azquoBook; }
 
