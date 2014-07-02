@@ -818,6 +818,7 @@ public final class NameService {
         final String levelString = getInstruction(setTerm, LEVEL);
         String fromString = getInstruction(setTerm, FROM);
         final String childrenString = getInstruction(setTerm, CHILDREN);
+        final String sorted = getInstruction(setTerm, SORTED);
         String toString = getInstruction(setTerm, TO);
         String countString = getInstruction(setTerm, COUNT);
         final String countbackString = getInstruction(setTerm, COUNTBACK);
@@ -842,7 +843,7 @@ public final class NameService {
             if (toString == null) toString = "";
             if (countString == null) countString = "";
             // SECOND  Sort if necessary
-            if (getInstruction(setTerm, SORTED) != null) {
+            if (sorted != null) {
                 Collections.sort(names);
             }
 
@@ -874,6 +875,9 @@ public final class NameService {
             totalName.setChildrenWillBePersisted(newChildren);
             namesFound.clear();
             namesFound.add(totalName);
+        }
+        if (sorted != null){
+            namesFound = sortNames((ArrayList)namesFound);
         }
         return "";
     }
