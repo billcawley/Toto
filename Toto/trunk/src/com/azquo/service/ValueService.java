@@ -888,45 +888,65 @@ seaports;children   container;children
     }
 
 
-    public Map<Set<Name>, String> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
+    public Map<Set<Name>, Set<Value>> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
+        if (searchNames==null) return null;
         Set<Value> values = findForSearchNamesIncludeChildren(searchNames, false);
         //The names on the values have been moved 'up' the tree to the name that was searched
         // e.g. if the search was 'England' and the name was 'London' then 'London' has been replaced with 'England'
         // so there may be duplicates in an unordered search - hence the consolidation below.
-        final Map<Set<Name>, String> showStrings = new HashMap<Set<Name>, String>();
+        final Map<Set<Name>, Set<Value>> showValues = new HashMap<Set<Name>, Set<Value>>();
         for (Value value : values) {
             Set<Name> sumNames = new HashSet<Name>();
             for (Name name : value.getNames()) {
                 sumNames.add(sumName(name, searchNames));
             }
-            String alreadyThere = showStrings.get(sumNames);
-            if (alreadyThere != null) {
-                //handle percentages, but not currency prefixes currently
-
-                if (NumberUtils.isNumber(alreadyThere) && NumberUtils.isNumber(value.getText())) {
-                    showStrings.put(sumNames, (Double.parseDouble(alreadyThere) + Double.parseDouble(value.getText())) + "");
-                } else if (alreadyThere.endsWith("%") && value.getText().endsWith("%")) {
-                    showStrings.put(sumNames, Double.parseDouble(alreadyThere.substring(0, alreadyThere.length() - 1)) + Double.parseDouble(value.getText().substring(0, value.getText().length() - 1)) + "%");
-                } else {
-                    showStrings.put(sumNames, alreadyThere + "+" + value.getText());
-                }
-            } else {
-                showStrings.put(sumNames, value.getText());
+            Set<Value> alreadyThere = showValues.get(sumNames);
+            if (alreadyThere != null){
+                alreadyThere.add(value);
+            }else{
+                Set<Value> newValues = new HashSet<Value>();
+                newValues.add(value);
+                showValues.put(sumNames, newValues);
             }
-            for (Set<Name> nameSet : showStrings.keySet()) {
-                String val = showStrings.get(nameSet);
-                if (NumberUtils.isNumber(val) && val.endsWith(".0")) {
-                    showStrings.put(nameSet, val.substring(0, val.length() - 2));
-                }
-            }
-        }
-        return showStrings;
+          }
+        return showValues;
     }
 
-    public String getExcelDataForNamesSearch(final List<Set<Name>> searchNames) throws Exception {
-        final StringBuilder sb = new StringBuilder();
-        Map<Set<Name>, String> showValues = getSearchValues(searchNames);
-        Set<String> headings = new LinkedHashSet<String>();
+    public String addValues(Set<Value>values){
+
+        String stringVal = null;
+        Double doubleVal = 0.0;
+        boolean percentage = false;
+        for (Value value:values) {
+            String thisVal = value.getText();
+            Double thisNum = 0.0;
+            if (NumberUtils.isNumber(thisVal)) {
+                thisNum = Double.parseDouble(thisVal);
+            } else {
+                if (thisVal.endsWith("%") && NumberUtils.isNumber(thisVal.substring(0, thisVal.length() - 1))) {
+                    thisNum = Double.parseDouble(thisVal.substring(0, thisVal.length() - 1)) / 100;
+                    percentage = true;
+                }
+            }
+            doubleVal += thisNum;
+            if (stringVal == null) {
+                stringVal = thisVal;
+            }
+        }
+        if (doubleVal != 0.0) {
+            if (percentage) doubleVal *= 100;
+            stringVal = doubleVal + "";
+            if (stringVal.endsWith(".0")) {
+                stringVal = stringVal.substring(0, stringVal.length() - 2);
+            }
+            if (percentage) stringVal += "%";
+        }
+        return stringVal;
+
+    }
+
+    public LinkedHashSet<Name> getHeadings(Map <Set<Name>, Set<Value>> showValues){
+        LinkedHashSet<Name> headings = new LinkedHashSet<Name>();
         // this may not be optimal, can sort later . . .
         int count = 0;
         for (Set<Name> valNames : showValues.keySet()) {
@@ -934,27 +954,36 @@ seaports;children   container;children
                 break;
             }
             for (Name name : valNames) {
-                if (!headings.contains(name.findTopParent().getDefaultDisplayName())) {
-                    headings.add(name.findTopParent().getDefaultDisplayName());
+                if (!headings.contains(name.findTopParent())) {
+                    headings.add(name.findTopParent());
                 }
             }
         }
+        return headings;
+
+    }
+
+
+    public String getExcelDataForNamesSearch(final List<Set<Name>> searchNames) throws Exception {
+        final StringBuilder sb = new StringBuilder();
+        Map<Set<Name>, Set<Value>> showValues = getSearchValues(searchNames);
         sb.append(" ");
-        for (String heading : headings) {
-            sb.append("\t").append(heading);
+        LinkedHashSet<Name> headings = getHeadings(showValues);
+        for (Name heading : headings) {
+            sb.append("\t").append(heading.getDefaultDisplayName());
         }
         sb.append("\n");
-        count = 0;
+        int count = 0;
         for (Set<Name> valNames : showValues.keySet()) {
             if (count++ == 2000) {
                 break;
             }
-            sb.append(showValues.get(valNames));
+            sb.append(addValues(showValues.get(valNames)));
             String[] names = new String[headings.size()];
             int i = 0;
-            for (String heading : headings) {
+            for (Name heading : headings) {
                 for (Name name : valNames) {
-                    if (name.findTopParent().getDefaultDisplayName().equals(heading)) {
+                    if (name.findTopParent() ==heading) {
                         names[i] = name.getDefaultDisplayName();
                     }
                 }
@@ -1600,9 +1629,9 @@ seaports;children   container;children
                                 numberOfValuesModified++;
                             }
                         } else {
-                            // TODO  WORK OUT WHAT TO BE DONE ON ERROR
+                            // TODO  WORK OUT WHAT TO BE DONE ON ERROR - what about calculated cells??
                             //result = "error:cannot edit locked cell " + columnCounter + ", " + rowCounter + " in region " + region;
-                            return "";
+
                         }
                     }
                     columnCounter++;
