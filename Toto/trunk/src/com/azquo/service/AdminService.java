@@ -4,6 +4,7 @@ import com.azquo.admindao.*;
 import com.azquo.adminentities.*;
 import com.azquo.memorydb.MemoryDBManager;
 import com.azquo.memorydb.Name;
+import com.azquo.memorydb.Value;
 import com.azquo.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
@@ -470,7 +471,8 @@ public class AdminService {
         //can't use 'nameService.decodeString as this may have multiple values in each list
         String error = nameService.decodeString(loggedInConnection,nameList, namesToTransfer);
         //find the data to transfer
-        Map<Set<Name>, String> showValues = valueService.getSearchValues(namesToTransfer);
+        Map<Set<Name>, Set<Value>> showValues = valueService.getSearchValues(namesToTransfer);
+
         //extract the names from this data
         final Set<Name> namesFound = new HashSet<Name>();
         for (Set<Name> nameValues:showValues.keySet()){
@@ -503,7 +505,7 @@ public class AdminService {
                 names2.add(dictionary.get(name));
 
             }
-            valueService.storeValueWithProvenanceAndNames(lic2,showValues.get(nameValues), names2);
+            valueService.storeValueWithProvenanceAndNames(lic2,valueService.addValues(showValues.get(nameValues)), names2);
         }
         nameService.persist(lic2);
 
