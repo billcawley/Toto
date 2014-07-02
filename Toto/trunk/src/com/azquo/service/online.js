@@ -95,7 +95,7 @@ function hideMenu(control){
     document.getElementById(control).style.display = "none";
 }
 
-function showMenu(control, e){
+function setClicked(e){
     clickedItem = e.target;
     if (clickedItem == null) clickedItem = e;
     if (clickedItem != null){
@@ -106,7 +106,12 @@ function showMenu(control, e){
             nameChosenNo = nextItem.innerHTML;
         }
     }
-    var selector = document.getElementById("selector");
+
+}
+
+function showMenu(control, e){
+    setClicked(e)
+     var selector = document.getElementById("selector");
     var left = getStyleInt(selector,"left");
     var top = getStyleInt(selector,"top");
     if (top > 100){
@@ -213,11 +218,10 @@ function noClick(e){
 }
 
 function onClick(e){
+    setClicked(e);
     hideMenu("popupmenu");
-    if (copyitem == null && cutitem==null && clickedItem!=null){
-        //clickedItem.className = ""; //for name lists this should be active
-    }
     var target = e.target;
+    if (target==null) target = e;
     var cellId = target.id
     while (cellId != undefined && cellId.substring(0, 4) != "cell" && target.parentNode != null) {
         target = target.parentNode;
@@ -235,9 +239,12 @@ function onClick(e){
 
 
 function toMenu(){
-    document.getElementById("reportToLoad").value = "1";
-    document.azquoform.submit();
-}
+    if (document.getElementById("spreadsheetname").value=="Reports"){
+        window.open("http://www.azquo.com");
+    }else{
+        loadsheet("Reports");
+    }
+ }
 
 function startEntry() {
 
@@ -564,7 +571,9 @@ document.onkeydown =function (e) {
             }
             break;
         case 13:
-            return false;//disable return key
+            cancelEntry();//accept new value
+            positionSelection();
+            return false;//disable return key as a 'submit' button
     }
    positionSelection();
     return true;
@@ -778,8 +787,14 @@ function azquojsonfeed(obj) {
         var style = "";
         if (level > 1) style = ' style="display:none;"';
         var output = "<ul" + style + ">";
+
         for (var i = 0; i < provDisplays.length; i++){
+
             var provDisplay = provDisplays[i];
+            if (provDisplay.who >""){
+                output+= "<li>" + provDisplay.when + " by " + provDisplay.who + "<br/>" + provDisplay.how + " " + provDisplay.where + "</li></ul>";
+                return output;
+            }
             if (provDisplay.heading) {
                  output += '<li onclick="tree_click(this);">' + provDisplay.heading + "</li>";
                 output += decodeProvenance(provDisplay.items, level + 1);
