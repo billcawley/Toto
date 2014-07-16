@@ -3,22 +3,9 @@ package com.azquo.service;
 import com.azquo.admindao.*;
 import com.azquo.adminentities.*;
 import com.azquo.memorydbdao.*;
+import com.azquo.view.AzquoBook;
 import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.lang.math.NumberUtils;
-import org.apache.poi.hssf.usermodel.HSSFCellStyle;
-import org.apache.poi.hssf.usermodel.HSSFRow;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.hssf.util.HSSFColor;
-import org.apache.poi.hssf.usermodel.HSSFPalette;
-
-
-import org.apache.poi.ss.format.CellFormat;
-import org.apache.poi.ss.format.CellFormatResult;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFColor;
-import org.apache.poi.xssf.usermodel.XSSFRow;
+//import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -28,10 +15,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static org.apache.poi.ss.usermodel.CellStyle.*;
-import static org.apache.poi.ss.usermodel.CellStyle.ALIGN_GENERAL;
-import static org.apache.poi.ss.usermodel.CellStyle.BORDER_THIN;
 
 public final class OnlineService {
 
@@ -75,7 +58,7 @@ public final class OnlineService {
     UserDAO userDAO;
 
 
-    public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message) {
+    public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message)throws Exception {
 
 
         if (onlineReport.getId()==1 && !loggedInConnection.getUser().isAdministrator()){
@@ -91,7 +74,7 @@ public final class OnlineService {
         StringBuffer worksheet = new StringBuffer();
         StringBuffer tabs = new StringBuffer();
         StringBuffer head = new StringBuffer();
-        AzquoBook azquoBook = new AzquoBook();
+        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, userChoiceDAO);
         loggedInConnection.setAzquoBook(azquoBook);
         String output = readFile("onlineReport.html").toString();
         if (spreadsheetName == null){
@@ -103,16 +86,15 @@ public final class OnlineService {
             output = output.replace("$enctype","");
         }
         try {
-            Workbook wb  = WorkbookFactory.create(new FileInputStream(onlineReport.getFilename()));
-            azquoBook.setWb(wb);
+            azquoBook.loadBook(onlineReport.getFilename());
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
             if (onlineReport.getId()==1 || onlineReport.getId()==-1){//this is the maintenance workbook
                 azquoBook.dataRegionPrefix = azquoBook.azInput;
 
             }
-            printTabs(azquoBook,tabs, spreadsheetName);
+            azquoBook.printTabs(tabs, spreadsheetName);
 
-            String error = convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), azquoBook, spreadsheetName, worksheet);
+            String error = azquoBook.convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), spreadsheetName, worksheet);
             if (error.length() > 0){
                 message = error;
             }
@@ -138,10 +120,11 @@ public final class OnlineService {
         output = output.replace("$maxrow",azquoBook.getMaxRow()+"").replace("$maxcol",azquoBook.getMaxCol()+"");
          output = output.replace("$reportid", onlineReport.getId() + "").replace("$connectionid", loggedInConnection.getConnectionId() +"");
          output = output.replace("$regions", azquoBook.getRegions(loggedInConnection, azquoBook.dataRegionPrefix));
-         if (azquoBook.dataRegionPrefix.equals(AzquoBook.azDataRegion)){
+        if (azquoBook.dataRegionPrefix.equals(AzquoBook.azDataRegion)){
+
              output=  output.replace("$menuitems","[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"},{\"position\":3,\"name\":\"Highlight changes\",\"enabled\":true,\"link\":\"showHighlight()\"}]");
          }else{
-             output = output.replace("$menuitems","[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"}," +
+              output = output.replace("$menuitems","[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"}," +
                      "{\"position\":2,\"name\":\"Edit\",\"enabled\":true,\"link\":\"edit()\"}," +
                      "{\"position\":3,\"name\":\"Cut\",\"enabled\":true,\"link\":\"cut()\"}," +
                      "{\"position\":4,\"name\":\"Copy\",\"enabled\":true,\"link\":\"copy()\"}," +
@@ -150,6 +133,7 @@ public final class OnlineService {
                      "{\"position\":7,\"name\":\"Paste into\",\"enabled\":true,\"link\":\"paste(2)\"}," +
                      "{\"position\":8,\"name\":\"Delete\",\"enabled\":true,\"link\":\"deleteName()\"}]");
          }
+
          output = output.replace("$styles", head.toString()).replace("$workbook", worksheet.toString());
          if (output.indexOf("$azquodatabaselist") > 0){
              output = output.replace("$azquodatabaselist", createDatabaseSelect(loggedInConnection));
@@ -162,42 +146,27 @@ public final class OnlineService {
         return output;
     }
 
-    private String tabImage(int left, int right){
-        return "<img alt=\"\" src = \"/images/tab" + left + right + ".png\"/>";
-    }
 
-    private String printTabs(AzquoBook azquoBook, StringBuffer tabs, String spreadsheetName){
+    public String executeSheet(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName) throws Exception{
         String error = "";
-        final int tabShift = 50;
-        int left = 0;
-        int right = 0;
-        String tabclass = null;
-        for (int sheetNo=0; sheetNo< azquoBook.getWb().getNumberOfSheets(); sheetNo++){
-            Sheet sheet = azquoBook.getWb().getSheetAt(sheetNo);
-            left = right;
-
-            if (sheet.getSheetName().equals(spreadsheetName)) {
-                right = 1;
-                tabclass="tabchosen";
-            } else{
-                right=2;
-                tabclass ="tabbackground";
-            }
-            //tabs.append("<div class=\"tab\" style=\"left:" + left + "px\"><a href=\"#\" onclick=\"loadsheet('" + sheet.getSheetName() + "')\">" + sheet.getSheetName() + "</a></div>\n");
-            tabs.append(tabImage(left, right) +"<span  class=\""+ tabclass + "\"><a href=\"#\" onclick=\"loadsheet('" + sheet.getSheetName() + "')\">" + sheet.getSheetName() + "</a></span>");
-          }
-          tabs.append(tabImage(right, 0));
-        return error;
+        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, userChoiceDAO);
+        loggedInConnection.setAzquoBook(azquoBook);
+        return azquoBook.executeSheet(loggedInConnection, onlineReport.getFilename(), spreadsheetName, onlineReport.getId());
     }
+
+
 
 
 
     private StringBuffer createTopMenu(LoggedInConnection loggedInConnection){
         StringBuffer sb = new StringBuffer();
         sb.append("<ul class=\"topmenu\">\n");
-        sb.append("<li><a href=\"/api/Download?connectionid=" + loggedInConnection.getConnectionId() + "\">Download</a></li>");
-        sb.append(menuItem("Draw chart", "drawChart()",""));
-        sb.append(menuItem("Save data", "saveData()"," id=\"savedata\" style=\"display:none;\""));
+        sb.append("<li><a href=\"#\" onclick=\"downloadWorkbook();\">Download</a></li>\n");
+        if (loggedInConnection.getAzquoBook().dataRegionPrefix.equals(AzquoBook.azDataRegion)) {
+            sb.append("<li><input type=\"checkbox\" id=\"withMacros\" value=\"\">with macros</li>\n");
+            sb.append(menuItem("Draw chart", "drawChart()", " id=\"drawChart\""));
+        }
+        sb.append(menuItem("Save data", "saveData()"," id=\"saveData\" style=\"display:none;\""));
         sb.append("</ul>");
         return sb;
 
@@ -219,45 +188,6 @@ public final class OnlineService {
     }
 
 
-    public String convertSpreadsheetToHTML(LoggedInConnection loggedInConnection, int reportId, AzquoBook azquoBook, String spreadsheetName,StringBuffer output) throws Exception {
-
-
-        azquoBook.setSheet(0);
-        if (spreadsheetName != null) {
-            for (int sheetNo = 0; sheetNo < azquoBook.getWb().getNumberOfSheets(); sheetNo++) {
-                Sheet sheet = azquoBook.getWb().getSheetAt(sheetNo);
-                if (sheet.getSheetName().toLowerCase().equals(spreadsheetName.toLowerCase())) {
-                    azquoBook.setSheet(sheetNo);
-                }
-            }
-        }
-        String error = azquoBook.prepareSheet(loggedInConnection, reportId, adminService, valueService, userChoiceDAO);
-        //TODO IGNORE ERROR CURRENTLY - SEND BACK IN MESSAGE
-        //if (error.startsWith("error:")){
-       //     return error;
-      //  }
-
-
-
-        output.append(azquoBook.convertToHTML(loggedInConnection, nameService));
-     /*
-          List lst = wb.getAllPictures();
-        for (Iterator it = lst.iterator(); it.hasNext(); ) {
-            PictureData pict = (PictureData) it.next();
-            String ext = pict.suggestFileExtension();
-            byte[] data = pict.getData();
-            if (ext.equals("jpeg")) {
-                int j = 1;
-                //FileOutputStream out = new FileOutputStream("pict.jpg");
-                //out.write(data);
-                //out.close();
-            }
-        }
-
-*/
-
-        return error;
-    }
 
 
 
@@ -305,15 +235,17 @@ public final class OnlineService {
 
     public void saveBook(HttpServletResponse response, LoggedInConnection loggedInConnection, String fileName)throws Exception{
 
-        Workbook wb = loggedInConnection.getAzquoBook().getWb();
+        loggedInConnection.getAzquoBook().saveBook(response, fileName);
 
-            response.setContentType("application/vnd.ms-excel"); // Set up mime type
-            response.addHeader("Content-Disposition", "attachment; filename=" + fileName);
-            OutputStream out = response.getOutputStream();
-            wb.write(out);
-            out.flush();
 
     }
+
+    public void saveBookActive(HttpServletResponse response, LoggedInConnection loggedInConnection, String fileName)throws Exception{
+         loggedInConnection.getAzquoBook().saveBookActive(response, fileName);
+    }
+
+
+
 
     public String getChart(LoggedInConnection loggedInConnection,String region){
 
@@ -328,12 +260,12 @@ public final class OnlineService {
     }
 
     public String changeValue(LoggedInConnection loggedInConnection, String region, int row, int col, String value){
-                return loggedInConnection.getAzquoBook().changeValue(region, row, col, value, loggedInConnection, valueService);
+                return loggedInConnection.getAzquoBook().changeValue(region, row, col, value, loggedInConnection);
 
     }
 
     public String getProvenance(LoggedInConnection loggedInConnection, int row, int col, String jsonFunction){
-                return loggedInConnection.getAzquoBook().getProvenance(loggedInConnection, valueService, row, col, jsonFunction);
+                return loggedInConnection.getAzquoBook().getProvenance(loggedInConnection, row, col, jsonFunction);
     }
 
     private String convertDatetoSQL(String dateSent){
@@ -435,7 +367,7 @@ public final class OnlineService {
         if (azquoBook.dataRegionPrefix.equals(AzquoBook.azInput)){
             result = saveAdminData(loggedInConnection, jsonFunction);
         }else {
-            result = azquoBook.saveData(loggedInConnection, valueService);
+            result = azquoBook.saveData(loggedInConnection);
         }
         if (result.length()==0){
             result = "data saved successfully";
