@@ -35,16 +35,15 @@ public class DownloadController {
         Enumeration<String> parameterNames = request.getParameterNames();
 
         String connectionId = null;
-        String reportId = null;
+        boolean withMacros =false;
 
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
             String paramValue = request.getParameterValues(paramName)[0];
             if (paramName.equals("connectionid")) {
                 connectionId = paramValue;
-            } else if (paramName.equals("reportid")) {
-                reportId = paramValue;
-
+            }else if (paramName.equals("macros")){
+                withMacros = true;
             }
         }
         LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
@@ -53,10 +52,10 @@ public class DownloadController {
             return;
         }
         OnlineReport onlineReport = null;
-
-        if (reportId != null) {
+        int reportId = loggedInConnection.getReportId();
+        if (reportId != 0) {
             try {
-                onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
+                onlineReport = onlineReportDAO.findById(reportId);
             } catch (Exception e) {
 
             }
@@ -68,7 +67,11 @@ public class DownloadController {
             fileName = onlineReport.getFilename();
         }
         fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
-        onlineService.saveBook(response, loggedInConnection, fileName);
+        if (withMacros){
+            onlineService.saveBookActive(response, loggedInConnection,fileName);
+        }else{
+            onlineService.saveBook(response, loggedInConnection, fileName);
+        }
         return;
     }
 }
