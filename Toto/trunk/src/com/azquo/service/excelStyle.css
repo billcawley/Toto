@@ -10,10 +10,10 @@ a, img {
 }
 
 #entryfield{
-    vertical-align:bottom;
+    vertical-align:top;
     position:relative;
     left:300px;
-    bottom:30px;
+    top:14px;
     height:20px;
     display:none;
     font-family:Arial;
@@ -42,7 +42,7 @@ a, img {
     padding-right:100;
     display:block;
     padding:10px;
-    width:90px;
+    color:#444444;
     text-align:center;
 
 }
@@ -186,7 +186,7 @@ a, img {
 .provenance{
     width:300px;
     border:1px solid black;
-    position:absolute;
+    position:fixed;
     top:100px;
     left:100px;
     display:none;
@@ -309,12 +309,20 @@ li{
 
 }
 
-.excelDefaults .sortable{
+.excelDefaults .sortdown{
     position:absolute;
-    bottom:5px;
-    right:5px;
+    bottom:2px;
+    right:2px;
     z-index:3;
 }
+
+.excelDefaults .sortup{
+    position:absolute;
+    bottom:10px;
+    right:2px;
+    z-index:3;
+}
+
 
 .excelDefaults .highlight{
     color:#ff0000;
