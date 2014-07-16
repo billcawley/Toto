@@ -502,7 +502,7 @@ seaports;children   container;children
         return "";
     }
 
-    public String createNameListsFromExcelRegion(final LoggedInConnection loggedInConnection, List<List<List<Name>>> nameLists, List<Name> supplementNames, final String excelRegionPasted) throws Exception {
+public String createNameListsFromExcelRegion(final LoggedInConnection loggedInConnection, List<List<List<Name>>> nameLists, List<Name> supplementNames, final String excelRegionPasted) throws Exception {
         //logger.info("excel region pasted : " + excelRegionPasted);
         int maxColCount = 1;
         CsvReader pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t');
@@ -1291,7 +1291,7 @@ seaports;children   container;children
     }
 
 
-    public int getAge(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt, String currentValue){
+    public int getAge(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt){
         Calendar cal = Calendar.getInstance();
         Date today = cal.getTime();
 
@@ -1309,13 +1309,13 @@ seaports;children   container;children
         }
         final List<Value> valuesForCell = rowValues.get(colInt);
         if (valuesForCell==null || valuesForCell.size() == 0){
-            if (currentValue.length() ==0) return age;
-            return 0;
+             return 0;
         }
         if (valuesForCell.size()==1){
             for (Value value:valuesForCell){
-                if (!compareStringValues(value.getText(),currentValue))
-                    return 0; //this cell has been changed
+                if (value == null){//cell has been changed
+                    return 0;
+                }
             }
         }
         for (Value value : valuesForCell) {
@@ -1366,17 +1366,22 @@ seaports;children   container;children
         }
     }
 
-    private Name getMostUsedName(Set<Value> values) {
+    private Name getMostUsedName(Set<Value> values, Name topParent) {
         Map<Name, Integer> nameCount = new HashMap<Name, Integer>();
         for (Value value : values) {
             for (Name name : value.getNames()) {
-                Integer origCount = nameCount.get(name);
-                if (origCount == null) {
-                    nameCount.put(name, 1);
-                } else {
-                    nameCount.put(name, origCount + 1);
+                if (topParent == null || name.findTopParent()==topParent) {
+                    Integer origCount = nameCount.get(name);
+                    if (origCount == null) {
+                        nameCount.put(name, 1);
+                    } else {
+                        nameCount.put(name, origCount + 1);
+                    }
                 }
             }
+        }
+        if (nameCount.size() == 0){
+            return getMostUsedName(values, null);
         }
         int maxCount = 0;
         Name maxName = null;
@@ -1440,8 +1445,10 @@ seaports;children   container;children
 
         if (headingNeeded) {
             boolean firstHeading = true;
+            Name topParent = null;
             while (values.size() > 0) {
-                Name heading = getMostUsedName(values);
+                Name heading = getMostUsedName(values, topParent);
+                topParent = heading.findTopParent();
                 Set<Value> extract = new HashSet<Value>();
                 Set<Value> slimExtract = new HashSet<Value>();
                 for (Value value : values) {
@@ -1513,7 +1520,7 @@ seaports;children   container;children
         StringBuffer output = new StringBuffer();
         output.append(jsonFunction + "({\"provenance\":[{");
         int count = 0;
-        if (values.size() > 0) {
+        if (values.size() > 1 || (values.size() > 0 && values.get(0) != null)) {
             sortValues(values);
 
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
@@ -1556,7 +1563,8 @@ seaports;children   container;children
     }
 
 
-    public String saveData(LoggedInConnection loggedInConnection, String region, String editedData) throws Exception {
+    public String
+    saveData(LoggedInConnection loggedInConnection, String region, String editedData) throws Exception {
         String result = "";
         logger.info("------------------");
         logger.info(loggedInConnection.getLockMap(region));
