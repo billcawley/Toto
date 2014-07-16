@@ -27,14 +27,9 @@ var origval = null;
 
 
 function az_clicklist(e) {
+    setClicked(e)
     e = e || window.event;
-    if (e.target) {
-        var azSet = e.target;
-    } else {
-        azSet = e;
-    }
-    clickedItem = azSet;
-    azSet = nextSibling(azSet);
+    var azSet = nextSibling(clickedItem);
     var nameId = azSet.innerHTML;
     var tag = azSet.tagName.toLowerCase();
     while (tag != "ul" && tag != "li" && nextSibling(azSet) != null){
@@ -96,11 +91,15 @@ function hideMenu(control){
 }
 
 function setClicked(e){
+    if (clickedItem != null && clickedItem.tagName.toLowerCase()=="li"){
+        clickedItem.className = "";
+    }
     clickedItem = e.target;
     if (clickedItem == null) clickedItem = e;
     if (clickedItem != null){
 
         if (clickedItem.tagName.toLowerCase() == "li") {
+
             clickedItem.className = "highlight";
             var nextItem = nextSibling(clickedItem);
             nameChosenNo = nextItem.innerHTML;
@@ -313,7 +312,7 @@ function cancelEntry() {
     document.getElementById("entryfield").style.display = "none";
     if (entered != origval){
         sendValue(entered)
-        document.getElementById("savedata").style.display="inline";
+        document.getElementById("saveData").style.display="inline";
     }
 
 
@@ -608,8 +607,13 @@ function loadsheet(sheetname){
     document.azquoform.submit();
 }
 
-function downloadSheet(){
-    azquojson("Download","reportid=" + document.getElementById("reportId").value);//not currently returning a status
+function downloadWorkbook(){
+    var withMacros = "";
+    if (document.getElementById("withMacros") != null && document.getElementById("withMacros").checked){
+        withMacros = "&macros=true"
+    }
+
+    window.open("/api/Download?connectionid=" + azquoform.connectionid.value + withMacros);
 }
 
 
@@ -787,20 +791,22 @@ function azquojsonfeed(obj) {
         var style = "";
         if (level > 1) style = ' style="display:none;"';
         var output = "<ul" + style + ">";
-
-        for (var i = 0; i < provDisplays.length; i++){
-
-            var provDisplay = provDisplays[i];
-            if (provDisplay.who >""){
-                output+= "<li>" + provDisplay.when + " by " + provDisplay.who + "<br/>" + provDisplay.how + " " + provDisplay.where + "</li></ul>";
-                return output;
-            }
-            if (provDisplay.heading) {
-                 output += '<li onclick="tree_click(this);">' + provDisplay.heading + "</li>";
-                output += decodeProvenance(provDisplay.items, level + 1);
-            } else {
-                output += "<li>" + provDisplay.value + " " + provDisplay.name + "</li>";
-            }
+         for (var i = 0; i < provDisplays.length; i++) {
+             var provDisplay = provDisplays[i];
+             if (provDisplay.hasOwnProperty("who")) {
+                  if (provDisplay.who > "") {
+                     output += "<li>" + provDisplay.when + " by " + provDisplay.who + "<br/>" + provDisplay.how + " " + provDisplay.where + "</li></ul>";
+                     return output;
+                 }
+                 if (provDisplay.heading) {
+                     output += '<li onclick="tree_click(this);">' + provDisplay.heading + "</li>";
+                     output += decodeProvenance(provDisplay.items, level + 1);
+                 } else {
+                     output += "<li>" + provDisplay.value + " " + provDisplay.name + "</li>";
+                 }
+             }else{
+                 output += "<li>New Data</li>";
+             }
         }
         output += "</ul>";
         return output;
