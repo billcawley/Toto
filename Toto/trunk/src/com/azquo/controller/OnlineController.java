@@ -224,7 +224,6 @@ public class OnlineController {
         item = file;
         if (reportToLoad.length() > 0){
             reportId = reportToLoad;
-            opcode="loadsheet";
         }
 
         long startTime = System.currentTimeMillis();
@@ -264,7 +263,7 @@ public class OnlineController {
             if (loggedInConnection == null) {
                 return "error:invalid or expired connection id";
             }
-            if (onlineReport != null && onlineReport.getId() > 1){
+            if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.getAzquoMemoryDB() != null){
                 loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(),"","","");
 
             }
@@ -359,8 +358,9 @@ public class OnlineController {
 
             if ((opcode.length()==0 || opcode.equals("loadsheet")) && onlineReport != null) {
                 if (onlineReport.getId()!=1 && spreadsheetName.length() > 0){
-                    loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName,"","","");
+                     loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName,"","","");
                 }
+                loggedInConnection.setReportId(onlineReport.getId());
                 result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName,"Right-click mouse for provenance");
             }
             if (opcode.equals("buttonpressed") && row > 0){//button pressed - follow instructions and reload admin sheet
