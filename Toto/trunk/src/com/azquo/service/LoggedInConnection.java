@@ -5,6 +5,7 @@ import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import com.azquo.memorydb.Value;
+import com.azquo.view.AzquoBook;
 import org.apache.log4j.Logger;
 
 import java.util.*;
@@ -37,13 +38,14 @@ public final class LoggedInConnection {
     private String language;
     private String spreadsheetName;
     private boolean loose;  // this flag is used to say whether names can be searched in other languages than the current default
+    private int reportId;
 
     private final Map<String, List<List<Name>>> rowHeadings;
     private final Map<String, List<List<Name>>> columnHeadings;
     private final Map<String, List<Name>> rowHeadingSupplements;//this will allow product classes to be included in the returned row headings, not used to define data.
     private final Map<String, List<Integer>> rowOrder;//for when top or bottom values need to be returned.
     private final Map<String, Integer> restrictCount; //as above
-    private final Map<String, Integer> sortCol; //when a region is to be sorted on a particular column
+    private final Map<String, Integer> sortCol; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
     private final Map<String, List<Name>> contexts;
     private final Map<String, String> lockMaps;
     private final Map<String, String> sentDataMaps;
@@ -66,6 +68,7 @@ public final class LoggedInConnection {
         lastAccessed = new Date();
         language = Name.DEFAULT_DISPLAY_NAME;
         loose = false;
+        reportId = 0;
         rowHeadings = new HashMap<String, List<List<Name>>>();
         columnHeadings = new HashMap<String, List<List<Name>>>();
         rowHeadingSupplements = new HashMap<String, List<Name>>();
@@ -133,6 +136,10 @@ public final class LoggedInConnection {
     public boolean getLoose() {
         return loose;
     }
+
+    public int getReportId() { return  reportId; }
+
+    public void setReportId(int reportId) { this.reportId = reportId; }
 
     public long getTimeOut() {
         return timeOut;
