@@ -11,9 +11,9 @@ a, img {
 
 #entryfield{
     vertical-align:top;
-    position:relative;
+    position:absolute;
     left:300px;
-    top:14px;
+    top:50px;
     height:20px;
     display:none;
     font-family:Arial;
