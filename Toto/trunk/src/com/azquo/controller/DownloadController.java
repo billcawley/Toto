@@ -1,6 +1,7 @@
 package com.azquo.controller;
 
 
+import com.aspose.cells.SaveFormat;
 import com.azquo.admindao.OnlineReportDAO;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.service.LoggedInConnection;
@@ -13,6 +14,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.*;
 import java.util.Enumeration;
 
 
@@ -36,6 +38,7 @@ public class DownloadController {
 
         String connectionId = null;
         boolean withMacros =false;
+        String image = "";
 
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
@@ -44,7 +47,53 @@ public class DownloadController {
                 connectionId = paramValue;
             }else if (paramName.equals("macros")){
                 withMacros = true;
+            }else if (paramName.equals("image")){
+                image = paramValue;
             }
+        }
+        if (image.length() > 0){
+            InputStream input = new BufferedInputStream((new FileInputStream("/home/azquo/temp/" + image)));
+            response.setContentType("image/png"); // Set up mime type
+            OutputStream out = response.getOutputStream();
+            byte[] bucket = new byte[32*1024];
+            ByteArrayOutputStream result = null;
+            int length = 0;
+            try  {
+                try {
+                    //Use buffering? No. Buffering avoids costly access to disk or network;
+                    //buffering to an in-memory stream makes no sense.
+                    int bytesRead = 0;
+                    while(bytesRead != -1){
+                        //aInput.read() returns -1, 0, or more :
+                        bytesRead = input.read(bucket);
+                        if(bytesRead > 0){
+                            out.write(bucket, 0, bytesRead);
+                            length += bytesRead;
+                        }
+                    }
+                }
+                finally {
+                    input.close();
+                    //result.close(); this is a no-operation for ByteArrayOutputStream
+                }
+                response.setHeader("Content-Disposition", "inline; filename=\"" + image + "\"");
+                response.setHeader("Content-Length", String.valueOf(length));
+                long track = System.currentTimeMillis();
+                while (System.currentTimeMillis() - track < 100){
+                    int j=1;
+                }
+
+                out.flush();;
+                return;
+            }
+            catch (IOException ex){
+                System.out.println(ex);
+            }
+
+
+            out.flush();
+
+            return;
         }
         LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
         if (loggedInConnection == null) {
@@ -74,6 +123,9 @@ public class DownloadController {
         }
         return;
     }
+
+
+
 }
 
 
