@@ -1527,15 +1527,24 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
             Date provdate = values.get(0).getProvenance().getTimeStamp();
             Set<Value> oneUpdate = new HashSet<Value>();
             Provenance p = null;
+            boolean firstHeading = true;
             for (Value value : values) {
                 if (value.getProvenance().getTimeStamp() == provdate) {
                     oneUpdate.add(value);
                     p = value.getProvenance();
                 } else {
+                    if (firstHeading){
+                        firstHeading= false;
+                    }else{
+                        output.append("},{");
+                    }
                     output.append(printExtract(loggedInConnection, oneUpdate, p));
                     oneUpdate = new HashSet<Value>();
                     provdate = value.getProvenance().getTimeStamp();
                 }
+            }
+            if (!firstHeading){
+                 output.append(",");
             }
             output.append(printExtract(loggedInConnection, oneUpdate, p));
         }
