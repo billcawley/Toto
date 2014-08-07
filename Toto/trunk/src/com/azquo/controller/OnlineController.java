@@ -6,7 +6,7 @@ import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.memorydb.Name;
 import com.azquo.service.*;
-import com.azquo.util.Chart;
+//import com.azquo.util.Chart;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -302,7 +302,7 @@ public class OnlineController {
                 opcode="loadsheet";
             }
             if (opcode.equals("valuesent")){
-                result = onlineService.changeValue(loggedInConnection, region, row, Integer.parseInt(colStr), changedValue);
+                result = onlineService.changeValue(loggedInConnection, row, Integer.parseInt(colStr), changedValue);
                 result = jsonFunction + "({\"changedvalues\":" + result + "})";
             }
             if (opcode.equals("nameidchosen")){
@@ -351,7 +351,7 @@ public class OnlineController {
                 }else{
                     chartParams="";
                 }
-                chart =  onlineService.getChart(loggedInConnection, chartParams);
+                //chart =  onlineService.getChart(loggedInConnection, chartParams);
                 result = jsonFunction + "({\"chart\":\"" + chart + "\"})";
 
             }
