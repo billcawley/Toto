@@ -60,7 +60,7 @@ public final class OnlineService {
 
     public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message)throws Exception {
 
-
+         String path = "/home/azquo/temp/";
         if (onlineReport.getId()==1 && !loggedInConnection.getUser().isAdministrator()){
             onlineReport = onlineReportDAO.findById(-1);//user report list replaces admin sheet
         }
@@ -141,6 +141,7 @@ public final class OnlineService {
           if (output.indexOf("$fileselect") > 0){
               output = output.replace("$fileselect", "<input type=\"file\" name=\"uploadfile\">");
           }
+          output = output.replace("$charts", azquoBook.drawCharts(loggedInConnection, path));
 
 
         return output;
@@ -164,7 +165,7 @@ public final class OnlineService {
         sb.append("<li><a href=\"#\" onclick=\"downloadWorkbook();\">Download</a></li>\n");
         if (loggedInConnection.getAzquoBook().dataRegionPrefix.equals(AzquoBook.azDataRegion)) {
             sb.append("<li><input type=\"checkbox\" id=\"withMacros\" value=\"\">with macros</li>\n");
-            sb.append(menuItem("Draw chart", "drawChart()", " id=\"drawChart\""));
+            //sb.append(menuItem("Draw chart", "drawChart()", " id=\"drawChart\""));
         }
         sb.append(menuItem("Save data", "saveData()"," id=\"saveData\" style=\"display:none;\""));
         sb.append("</ul>");
@@ -245,7 +246,7 @@ public final class OnlineService {
     }
 
 
-
+/*
 
     public String getChart(LoggedInConnection loggedInConnection,String region){
 
@@ -258,9 +259,9 @@ public final class OnlineService {
 
 
     }
-
-    public String changeValue(LoggedInConnection loggedInConnection, String region, int row, int col, String value){
-                return loggedInConnection.getAzquoBook().changeValue(region, row, col, value, loggedInConnection);
+*/
+    public String changeValue(LoggedInConnection loggedInConnection, int row, int col, String value){
+                return loggedInConnection.getAzquoBook().changeValue(row, col, value, loggedInConnection);
 
     }
 
