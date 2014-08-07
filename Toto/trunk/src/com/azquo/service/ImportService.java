@@ -933,7 +933,7 @@ public final class ImportService {
         file.getParentFile().mkdirs();
 
          FileOutputStream out = new FileOutputStream(fullPath);
-         azquoBook.saveBook(out);
+         azquoBook.saveBook(fullPath);
          out.close();
          or = new OnlineReport(reportId, businessId,databaseId ,"", reportName, "", fullPath,"");
          onlineReportDAO.store(or);
