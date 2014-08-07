@@ -13,8 +13,8 @@ var entryX = -1;
 var entryY = -1;
 var entryVal = null;
 var entryRegion = null;
-var entryRegionX = 0;
-var entryRegionY = 0;
+var entryX = 0;
+var entryY = 0;
 var controlKeyDown = false;
 var menuControls = $menuitems;
 var clickedItem = null;
@@ -197,9 +197,10 @@ function locked(cellX,cellY){
     for (var i = 0;i < regions.length;i++){
        var region = regions[i];
        if (cellX >= region.x && cellY >= region.y && cellX < region.x + region.cols && cellY < region.y + region.rows) {
-           entryRegion = region.name;
-           entryRegionX = cellX - region.x;
-           entryRegionY = cellY - region.y;
+           entryX = cellX;
+           entryY = cellY
+           var entryRegionX = cellX - region.x;
+           var entryRegionY = cellY - region.y;
            var locked = region.locks[entryRegionY][entryRegionX];
            return locked;
        }
@@ -307,13 +308,13 @@ function cancelEntry() {
     //container.setAttribute("contentEditable", false);
     container.innerHTML = entered;
 
-    entryX = -1;
-    entryY = -1;
-    document.getElementById("entryfield").style.display = "none";
+     document.getElementById("entryfield").style.display = "none";
     if (entered != origval){
         sendValue(entered)
         document.getElementById("saveData").style.display="inline";
     }
+    entryX = -1;
+    entryY = -1;
 
 
 }
@@ -649,7 +650,7 @@ function nextSibling(azSet){
 function sendValue(value){
 
     document.getElementById("message").innerHTML = "";
-    azquojson("Online","opcode=valuesent&region=" + entryRegion + "&row=" + entryRegionY + "&col=" + entryRegionX  + "&value=" + encodeURIComponent(value));
+    azquojson("Online","opcode=valuesent&row=" + entryY + "&col=" + entryX  + "&value=" + encodeURIComponent(value));
 }
 
 
@@ -793,7 +794,7 @@ function azquojsonfeed(obj) {
         var output = "<ul" + style + ">";
          for (var i = 0; i < provDisplays.length; i++) {
              var provDisplay = provDisplays[i];
-             if (provDisplay.hasOwnProperty("who")) {
+             if (provDisplay.hasOwnProperty("who") || provDisplay.hasOwnProperty("heading") || provDisplay.hasOwnProperty("value")) {
                   if (provDisplay.who > "") {
                      output += "<li>" + provDisplay.when + " by " + provDisplay.who + "<br/>" + provDisplay.how + " " + provDisplay.where + "</li></ul>";
                      return output;
