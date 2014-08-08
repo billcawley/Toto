@@ -32,32 +32,5 @@ public class AzquoMemoryDBTest {
     @Test
     public void testLoadData() throws Exception {
 
-        LoggedInConnection loggedInConnection = loginService.login("tototest", "bill", "thew1password", 0, null);
-
-        Name test1 = nameService.findByName(loggedInConnection, "www.examplesupplier.com");
-        Name test2 = nameService.findByName(loggedInConnection, "S++");
-//        Name test3 = nameService.findByName("Primary Strategy - Targeted Support");
-//        Name test4 = nameService.findByName("Lynne Swainston");
-
-        Set<Name> searchCriteria = new HashSet<Name>();
-        searchCriteria.add(test1);
-        searchCriteria.add(test2);
-//        searchCriteria.add(test3);
-//        searchCriteria.add(test4);
-        long track = System.nanoTime();
-        int count = 10000;
-        for (int i = 0; i < count; i++) {
-            List<Value> searchResults = valueService.findForNamesIncludeChildren(searchCriteria, false);
-/*            for (Value v : searchResults){
-                System.out.print("value ");
-                for (Name n : v.getNames()){
-                    System.out.print(n.getName() + " ");
-                }
-                System.out.println();
-            }*/
-            //System.out.println(searchResults.size() +  " records");
-        }
-        long average = (System.nanoTime() - track) / count;
-        System.out.println("average " + average + "ns");
     }
 }

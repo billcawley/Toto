@@ -54,6 +54,7 @@
     <bean name="openDatabaseDao" class="com.azquo.admindao.OpenDatabaseDAO"/>
     <bean name="onlineReportDao" class="com.azquo.admindao.OnlineReportDAO"/>
 
+    <bean name="magentoDataLoadService" class="com.azquo.app.magento.service.DataLoadService"/>
     <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
     <bean name="memoryDBManager" class="com.azquo.memorydb.MemoryDBManager">
         <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
