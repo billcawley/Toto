@@ -80,6 +80,18 @@ public final class DataLoadService {
                 magentoProduct.id = Integer.parseInt(entityTypeRecord.get("entity_id"));
                 magentoProduct.sku = entityTypeRecord.get("sku");
                 Map<String, String> productAttributesAndValues = new HashMap<String, String>();
+
+                Set<String> optionAttributeIds = new HashSet<String>(); // e.g. colour size etc
+
+                for (Map<String, String> optionAttribute : tableMap.get("catalog_product_super_attribute")) {
+                    if (optionAttribute.get("product_id").equals(entityTypeRecord.get("entity_id"))) { // an option for this product
+                        optionAttributeIds.add(optionAttribute.get("attribute_id"));
+                    }
+                }
+
+                Set<String> options = new HashSet<String>();
+
+
                 // ok now some brain ache to set up all the appropriate attributes . . .
                 for (Map<String, String> attribute : productAttributes){
                         String attributeName = attribute.get("frontend_label");
@@ -88,10 +100,15 @@ public final class DataLoadService {
                             for (Map<String, String> possibleValueRow : tableMap.get("catalog_product_entity" + "_" + attribute.get("backend_type"))){ // should (!) have us looking in teh right place
                                 if (possibleValueRow.get("attribute_id").equals(attribute.get("attribute_id")) && possibleValueRow.get("entity_id").equals(entityTypeRecord.get("entity_id"))){ // then it should (!) be the value we're looking for?
                                     productAttributesAndValues.put(attributeName, possibleValueRow.get("value"));
+                                    if (optionAttributeIds.contains(possibleValueRow.get("attribute_id"))){
+                                        options.add(attributeName);
+                                    }
                                 }
                             }
                         }
                 }
+
+                magentoProduct.options = options;
                 magentoProduct.attributes = productAttributesAndValues;
                 System.out.println("Adding product : " + magentoProduct.attributes.get("Name") + " atts : " + magentoProduct.attributes);
                 products.put(magentoProduct.id, magentoProduct);
@@ -199,11 +216,13 @@ public final class DataLoadService {
         public int id;
         public String sku;
         public Map<String, String> attributes;
+        public Set<String> options;
         public Set<MagentoProduct> getChildren(){
             Set<MagentoProduct> toReturn = new HashSet<MagentoProduct>();
-            for (Map<String, String> product_relation : tableMap.get("catalog_product_relation")){
+            //for (Map<String, String> product_relation : tableMap.get("catalog_product_relation")){
+            for (Map<String, String> product_relation : tableMap.get("catalog_product_super_link")){
                 if (product_relation.get("parent_id").equals(id + "")){
-                    toReturn.add(products.get(Integer.parseInt(product_relation.get("child_id"))));
+                    toReturn.add(products.get(Integer.parseInt(product_relation.get("product_id"))));
                 }
             }
             return toReturn;
@@ -216,6 +235,14 @@ public final class DataLoadService {
                 }
             }
             return toReturn;
+        }
+        public MagentoProduct getParent(){
+            for (Map<String, String> product_relation : tableMap.get("catalog_product_super_link")){
+                if (product_relation.get("product_id").equals(id + "")){
+                    return products.get(Integer.parseInt(product_relation.get("parent_id")));
+                }
+            }
+            return null;
         }
     }
 
@@ -295,7 +322,9 @@ public final class DataLoadService {
         }
         Set<MagentoProduct> products = category.getProducts();
         for (MagentoProduct product : products){
-            toReturn += getProductStructure(product, tab + 1);
+            if (product.getParent() == null){ // the product structure will show lover level products
+                toReturn += getProductStructure(product, tab + 1);
+            }
         }
 
         return toReturn.toString();
@@ -306,7 +335,16 @@ public final class DataLoadService {
         for (int i = 0; i <= tab; i++){
             toReturn += "\t";
         }
-        toReturn += "Product : " + product.attributes.get("Name") + "\n";
+        MagentoProduct parent = product.getParent();
+        if (parent != null){
+            toReturn += "Product : " + product.attributes.get("Name");
+            for (String option : parent.options){
+                toReturn += " " + option + " : " + product.attributes.get(option);
+            }
+            toReturn += "\n";
+        } else {
+            toReturn += "Product : " + product.attributes.get("Name") + (product.options.isEmpty() ? "" : ", options : " + product.options) + "\n";
+        }
         Set<MagentoProduct> children = product.getChildren();
         for (MagentoProduct product1 : children){
             toReturn += getProductStructure(product1, tab + 1);
