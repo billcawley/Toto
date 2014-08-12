@@ -14,12 +14,14 @@ public final class DataLoadService {
     final Map<Integer, MagentoProduct> products;
     final Map<Integer, MagentoCategory> categories;
     final Map<Integer, MagentoOrderLineItem> orderLineItems;
+    final Map<String, String> optionValueLookup;
 
     public DataLoadService() throws IOException {
         tableMap = new HashMap<String, List<Map<String, String>>>();
         products = new HashMap<Integer, MagentoProduct>();
         categories = new HashMap<Integer, MagentoCategory>();
         orderLineItems = new HashMap<Integer, MagentoOrderLineItem>();
+        optionValueLookup = new HashMap<String, String>();
         BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/home/cawley/magentodatadump.txt")));
 
         String line;
@@ -58,6 +60,15 @@ public final class DataLoadService {
                 }
             }
         }
+
+        // lookup for option values
+        // NOTE! I'm currently ignoring store id here
+
+        for (Map<String, String> optionValue : tableMap.get("eav_attribute_option_value")){
+            optionValueLookup.put(optionValue.get("option_id"), optionValue.get("value"));
+        }
+
+
         System.out.println("initial load of magento data done");
         System.out.println("Trying to make some product objects");
         Map<String, String> productEntityTypeRecord = null;
@@ -66,6 +77,8 @@ public final class DataLoadService {
                 productEntityTypeRecord = entityTypeRecord;
             }
         }
+
+
 
         List<Map<String, String>> productAttributes = new ArrayList<Map<String, String>>();
         for (Map<String, String> attribute : tableMap.get("eav_attribute")) {
@@ -339,7 +352,7 @@ public final class DataLoadService {
         if (parent != null){
             toReturn += "Product : " + product.attributes.get("Name");
             for (String option : parent.options){
-                toReturn += " " + option + " : " + product.attributes.get(option);
+                toReturn += " " + option + " : " + optionValueLookup.get(product.attributes.get(option));
             }
             toReturn += "\n";
         } else {
