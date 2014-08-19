@@ -176,7 +176,8 @@ public final class ImportService {
     }
 
     private String interpretClause(LoggedInConnection loggedInConnection, ImportHeading heading, String clause)throws Exception{
-         if (readClause(IDENTIFIER, clause)!= null){
+
+        if (readClause(IDENTIFIER, clause)!= null){
             heading.identifier = true;
         }
         if (readClause(PARENTOF, clause) != null){
@@ -269,7 +270,7 @@ public final class ImportService {
         heading.heading = clauses.nextToken();
         heading.name = nameService.findByName(loggedInConnection,heading.heading);//at this stage, look for a name, but don't create it unless necessary
         while (clauses.hasMoreTokens()){
-            String error = interpretClause(loggedInConnection, heading, clauses.nextToken());
+            String error = interpretClause(loggedInConnection, heading, clauses.nextToken().trim());
             if (error.length() > 0){
                 return error;
             }
@@ -346,7 +347,7 @@ public final class ImportService {
         if (child.name == null){
             child.name = nameService.findOrCreateName(loggedInConnection,child.heading);
         }
-        heading.topParent = child.name;
+        heading.topParent = child.name.findTopParent();
         return "";
     }
 
@@ -402,10 +403,10 @@ public final class ImportService {
 
                 final String result = interpretHeading(loggedInConnection, head, heading);
                 headings.add(heading);
-                col++;
             }else{
                 headings.add(new ImportHeading());
             }
+            col++;
         }
         for (ImportHeading importHeading:headings){
             if (importHeading.heading != null){
