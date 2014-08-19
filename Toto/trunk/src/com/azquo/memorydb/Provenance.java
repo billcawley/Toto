@@ -157,8 +157,8 @@ public final class Provenance extends AzquoMemoryDBEntity {
     }
 
     @Override
-    protected StandardDAO.PersistedTable getPersistTable() {
-        return StandardDAO.PersistedTable.provenance;
+    protected String getPersistTable() {
+        return StandardDAO.PersistedTable.provenance.name();
     }
 
     @Override

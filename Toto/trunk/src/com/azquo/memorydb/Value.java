@@ -144,8 +144,8 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     @Override
-    protected StandardDAO.PersistedTable getPersistTable() {
-        return StandardDAO.PersistedTable.value;
+    protected String getPersistTable() {
+        return StandardDAO.PersistedTable.value.name();
     }
 
     @Override

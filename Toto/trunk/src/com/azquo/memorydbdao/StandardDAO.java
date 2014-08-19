@@ -39,6 +39,9 @@ public class StandardDAO {
     private static final String ID = "id";
     private static final String JSON = "json";
 
+    // there will be others for app stuff, their table names will live in the service
+    // given how wonderfully generic this class is I could take these out . . .no harm here I suppose
+
     public enum PersistedTable {provenance, name, value}
 
     private final class JsonRecordTransportRowMapper implements RowMapper<JsonRecordTransport> {

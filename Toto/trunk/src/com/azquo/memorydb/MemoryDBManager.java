@@ -5,6 +5,7 @@ import com.azquo.admindao.OpenDatabaseDAO;
 import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OpenDatabase;
 import com.azquo.memorydbdao.StandardDAO;
+import com.azquo.service.AppEntityService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
@@ -19,6 +20,8 @@ public final class MemoryDBManager {
 
     @Autowired
     OpenDatabaseDAO openDatabaseDAO;
+    @Autowired
+    List<AppEntityService> appServices;
 
     private final HashMap<String, AzquoMemoryDB> memoryDatabaseMap;
     private DatabaseDAO databaseDAO;
@@ -37,7 +40,7 @@ public final class MemoryDBManager {
         if (loaded != null){
             return loaded;
         }
-        loaded = new AzquoMemoryDB(database, standardDAO);
+        loaded = new AzquoMemoryDB(database, standardDAO, appServices);
         memoryDatabaseMap.put(database.getMySQLName(), loaded);
         final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new Date(0,0,0));
         openDatabaseDAO.store(openDatabase);
@@ -63,7 +66,7 @@ public final class MemoryDBManager {
 
 
     public synchronized void addNewToDBMap(Database database) throws Exception {
-        AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(database, standardDAO);
+        AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(database, standardDAO, appServices);
         memoryDatabaseMap.put(database.getMySQLName(), azquoMemoryDB);
     }
 

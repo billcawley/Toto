@@ -29,7 +29,7 @@ public abstract class AzquoMemoryDBEntity {
     // I am going to hold a reference here, then we simply compare objects by == to check that objects are in their created databases
 
     private final AzquoMemoryDB azquoMemoryDB;
-    // final id, can on;y be set in the constructor, we like that!
+    // final id, can on;y be set in the constructor, we like that! Note I'm limiting to 2 billion entities total per database. Not a problem right now.
     private final int id;
     // it's a new object, this is private as all dealt with here
     private boolean needsInserting;
@@ -38,6 +38,13 @@ public abstract class AzquoMemoryDBEntity {
 
     //key with this is it makes the setting of an Id only in context of a memory db and hence one can only make one of these in this package (I think!)
     protected AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id) throws Exception {
+        this(azquoMemoryDB,id, false);
+    }
+
+    //key with this is it makes the setting of an Id only in context of a memory db and hence one can only make one of these in this package (I think!)
+    // ok that boolean is for the app entities, trying to set the persist flag before teh service has been set will result in a null pointer so I need this option
+    // kind of messy but not sure how to get around that
+    protected AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id, boolean dontSetPersistFlag) throws Exception {
         this.azquoMemoryDB = azquoMemoryDB;
         // This getNeedsLoading is important, an instance of AzquoMemoryDB should only be in needsloading during the constructor and hence it will stop
         // other bits of code overriding the entities ID
@@ -53,24 +60,26 @@ public abstract class AzquoMemoryDBEntity {
             // point of this is attempt at lockdown on entity constructors. Any entity that's instantiated is part of the
             // memory database and fair game for persistence
             // if it's not been built with an assigned ID then it needs to be persisted
-            setNeedsPersisting();
+            if (!dontSetPersistFlag){ // ergh, not ideal, maybe can sort later.
+                setNeedsPersisting();
+            }
             // we assume new, inserting true
             needsInserting = true;
         }
         needsDeleting = false;
     }
 
-    // each class will say where it's persisted - this seems to be the most simple way to indicate shich persistence set to put this in
-    protected abstract StandardDAO.PersistedTable getPersistTable();
+    // each class will say where it's persisted - this seems to be the most simple way to indicate which persistence set to put this in
+    protected abstract String getPersistTable();
 
     // all entities need this to save in the key/pair store
     public abstract String getAsJson();
 
-    // this seems to be the best way to constrain, others in teh package can get the instance but not reset it's value
-    // not that they could anyway, it's final
-    protected final AzquoMemoryDB getAzquoMemoryDB() {
+    // I've made this public due to the app entity requirements, currently it's all over the logged in connection so I'm not sure there's much harm
+    public final AzquoMemoryDB getAzquoMemoryDB() {
         return azquoMemoryDB;
     }
+
 
     // no setter for id, that should only be done by the constructor
     public final int getId() {

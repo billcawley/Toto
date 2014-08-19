@@ -503,8 +503,8 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     @Override
-    protected StandardDAO.PersistedTable getPersistTable() {
-        return StandardDAO.PersistedTable.name;
+    protected String getPersistTable() {
+        return StandardDAO.PersistedTable.name.name();
     }
 
     @Override

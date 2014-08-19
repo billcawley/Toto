@@ -3,12 +3,15 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:mvc="http://www.springframework.org/schema/mvc"
        xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:util="http://www.springframework.org/schema/util"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
        http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/mvc
        http://www.springframework.org/schema/mvc/spring-mvc.xsd
        http://www.springframework.org/schema/context
-       http://www.springframework.org/schema/context/spring-context.xsd">
+       http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/util
+       http://www.springframework.org/schema/util/spring-util.xsd">
 
     <!--
         Controllers are setup using annotations
@@ -21,6 +24,9 @@
     </bean>
     <mvc:annotation-driven/>
     <context:component-scan base-package="com.azquo.controller">
+    </context:component-scan>
+    <!-- for app conntrollers -->
+    <context:component-scan base-package="com.azquo.app.yousay.controller">
     </context:component-scan>
 
     <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
@@ -54,7 +60,13 @@
     <bean name="openDatabaseDao" class="com.azquo.admindao.OpenDatabaseDAO"/>
     <bean name="onlineReportDao" class="com.azquo.admindao.OnlineReportDAO"/>
 
-    <bean name="magentoDataLoadService" class="com.azquo.app.magento.service.DataLoadService"/>
+    <!--<bean name="magentoDataLoadService" class="com.azquo.app.magento.service.DataLoadService"/>-->
+
+    <!-- define app services and their load order in a list -->
+    <bean name="feedbackService" class="com.azquo.app.yousay.service.FeedbackService"/>
+    <util:list id="appServices" value-type="com.azquo.service.AppEntityService">
+        <ref bean="feedbackService"/>
+    </util:list>
     <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
     <bean name="memoryDBManager" class="com.azquo.memorydb.MemoryDBManager">
         <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>

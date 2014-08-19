@@ -5,6 +5,7 @@ import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OpenDatabase;
 import com.azquo.memorydbdao.JsonRecordTransport;
 import com.azquo.memorydbdao.StandardDAO;
+import com.azquo.service.AppEntityService;
 import com.azquo.service.LoggedInConnection;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,9 +49,9 @@ public final class AzquoMemoryDB {
 
     // when objects are modified they are added to these sets held in a map. AzquoMemoryDBEntity has all functions require to persist.
 
-    private final Map<StandardDAO.PersistedTable, Set<AzquoMemoryDBEntity>> entitiesToPersist;
+    private final Map<String, Set<AzquoMemoryDBEntity>> entitiesToPersist;
 
-    public AzquoMemoryDB(Database database, StandardDAO standardDAO) throws Exception {
+    public AzquoMemoryDB(Database database, StandardDAO standardDAO, List<AppEntityService> appServices) throws Exception {
         this.database = database;
         this.standardDAO = standardDAO;
         needsLoading = true;
@@ -59,13 +60,19 @@ public final class AzquoMemoryDB {
         nameByIdMap = new ConcurrentHashMap<Integer, Name>();
         valueByIdMap = new ConcurrentHashMap<Integer, Value>();
         provenanceByIdMap = new ConcurrentHashMap<Integer, Provenance>();
-        entitiesToPersist = new ConcurrentHashMap<StandardDAO.PersistedTable, Set<AzquoMemoryDBEntity>>();
+        entitiesToPersist = new ConcurrentHashMap<String, Set<AzquoMemoryDBEntity>>();
         // loop over the possible persisted tables making the empty sets, cunning
         for (StandardDAO.PersistedTable persistedTable : StandardDAO.PersistedTable.values()) {
-            entitiesToPersist.put(persistedTable, new HashSet<AzquoMemoryDBEntity>());
+            entitiesToPersist.put(persistedTable.name(), new HashSet<AzquoMemoryDBEntity>());
         }
 
-        loadData();
+        for (AppEntityService appEntityService : appServices) {
+            // seems a good a place as any to create the MySQL table if it doesn't exist
+            appEntityService.checkCreateMySQLTable(this);
+            entitiesToPersist.put(appEntityService.getTableName(), new HashSet<AzquoMemoryDBEntity>());
+        }
+
+        loadData(appServices);
 
         nextId = maxIdAtLoad + 1;
     }
@@ -83,7 +90,9 @@ public final class AzquoMemoryDB {
         return needsLoading;
     }
 
-    synchronized private void loadData() {
+    // now passing app services
+
+    synchronized private void loadData(List<AppEntityService> appServices) {
         if (needsLoading) { // only allow it once!
             System.out.println("loading data for " + getMySQLName());
 
@@ -121,12 +130,23 @@ public final class AzquoMemoryDB {
 
                 System.out.println(allNames.size() + allValues.size() + allProvenance.size() + " unlinked entities loaded in " + (System.currentTimeMillis() - track) + "ms");
 
-                track = System.currentTimeMillis();
 
                 // sort out the maps in names, they couldn't be fixed on load as names link to themselves
                 initNames();
                 System.out.println("names init in " + (System.currentTimeMillis() - track) + "ms");
-                //track = System.currentTimeMillis();
+
+                track = System.currentTimeMillis();
+                for (AppEntityService appEntityService : appServices) {
+                    final List<JsonRecordTransport> appEntities = standardDAO.findFromTable(this, appEntityService.getTableName());
+                    for (JsonRecordTransport appEntityRecord : appEntities) {
+                        if (appEntityRecord.id > maxIdAtLoad) {
+                            maxIdAtLoad = appEntityRecord.id;
+                        }
+                        appEntityService.loadEntityFromJson(this, appEntityRecord.id, appEntityRecord.json);
+                    }
+                }
+
+                System.out.println("app entities loaded in " + (System.currentTimeMillis() - track) + "ms");
 
                 System.out.println("loaded data for " + getMySQLName());
 
@@ -143,10 +163,10 @@ public final class AzquoMemoryDB {
         // this is where I need to think carefully about concurrency, azquodb has the last say when the sets are modified although the flags are another point
         // for the moment just make it work.
         // map of sets to persist means that should we add another object type then this code should not need to change
-        for (StandardDAO.PersistedTable tableToStoreIn : StandardDAO.PersistedTable.values()) { // run through 'em. Worth remembering this enum syntax
+        for (String tableToStoreIn : entitiesToPersist.keySet()) { // run through 'em was an enum of set table names, not it could be anything depending on app tables. See no harm in theh generic nature
             Set<AzquoMemoryDBEntity> entities = entitiesToPersist.get(tableToStoreIn);
             if (!entitiesToPersist.isEmpty()) {
-                System.out.println("entities to put in " + tableToStoreIn.name() + " : " + entities.size());
+                System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
                 List<JsonRecordTransport> recordsToStore = new ArrayList<JsonRecordTransport>();
                 for (AzquoMemoryDBEntity entity : new ArrayList<AzquoMemoryDBEntity>(entities)) { // we're taking a copy of the set before running through it.
                     JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
@@ -159,7 +179,7 @@ public final class AzquoMemoryDB {
                     recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state));
                     entity.setAsPersisted(); // is this dangerous here???
                 }
-                standardDAO.persistJsonRecords(this, tableToStoreIn.name(), recordsToStore);
+                standardDAO.persistJsonRecords(this, tableToStoreIn, recordsToStore);
             }
         }
     }
@@ -375,13 +395,13 @@ public final class AzquoMemoryDB {
     // trying for new more simplified persistence - make functions not linked to classes
     // maps will be set up in the constructor. Think about any concurrency issues here???
 
-    protected void setEntityNeedsPersisting(StandardDAO.PersistedTable tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
+    protected void setEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
         if (!needsLoading) {
             entitiesToPersist.get(tableToPersistIn).add(azquoMemoryDBEntity);
         }
     }
 
-    protected void removeEntityNeedsPersisting(StandardDAO.PersistedTable tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
+    protected void removeEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
         if (!needsLoading) {
             entitiesToPersist.get(tableToPersistIn).remove(azquoMemoryDBEntity);
         }
