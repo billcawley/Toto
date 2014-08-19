@@ -310,7 +310,7 @@ public final class LoggedInConnection {
         if (region == null || region.isEmpty()) {
             return sentDataValuesMaps.get(defaultRegion);
         } else {
-            return sentDataValuesMaps.get(region);
+            return sentDataValuesMaps.get(region.toLowerCase());
         }
     }
 
