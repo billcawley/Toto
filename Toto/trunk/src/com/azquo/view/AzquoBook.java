@@ -300,14 +300,24 @@ public  class AzquoBook {
 
 
     private void setCellValue(Cell currentCell, String val){
+        if (currentCell.getFormula()!=null){
+            return;
+        }
+        if (val.length()==0){
+            currentCell.setValue(null);
+            return;
+        }
         if (val.endsWith("%") && NumberUtils.isNumber(val.substring(0, val.length() - 1))){
             currentCell.setValue(Double.parseDouble(val.substring(0,val.length()-1))/100);
         }else{
+            if (val.startsWith("$") || val.startsWith("£")){//remove £ or $ prefix - what about other currencies???
+                val = val.substring(1);
+            }
             if (NumberUtils.isNumber(val)) {
                 currentCell.setValue(Double.parseDouble(val));
             } else {
                 currentCell.setValue(val);
-            }
+             }
         }
     }
 
@@ -316,7 +326,7 @@ public  class AzquoBook {
 
         for (int i = 0;i < wb.getWorksheets().getNames().getCount();i++){
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
-            if (name.getText().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
+            if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
                 Range range = name.getRange();
                 String region = name.getText().substring(dataRegionPrefix.length());
                 if (range == null) {
@@ -372,7 +382,7 @@ public  class AzquoBook {
                     locked = locks[col];
                 }
                 if (val.equals("0.0")) val = "";
-                Cell currentCell = range.getCellOrNull(rowNo, col);
+                Cell currentCell = azquoCells.get(range.getFirstRow() + rowNo, range.getFirstColumn() + col);
                 if (locked.equals("LOCKED")){
                     currentCell.getStyle().setLocked(true);
                 }
@@ -469,7 +479,7 @@ public  class AzquoBook {
         if (chartName!=null){
            for (int chartNo = 0;chartNo < azquoSheet.getCharts().getCount();chartNo++){
                     Chart chart = azquoSheet.getCharts().get(chartNo);
-/*
+
                 if (chart.getName().equalsIgnoreCase(chartName)){
                     boolean isVertical = chart.getNSeries().get(0).isVerticalValues();
                     Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
@@ -482,7 +492,7 @@ public  class AzquoBook {
 
 
                 }
-*/
+
             }
         }
 
@@ -1565,7 +1575,8 @@ public  class AzquoBook {
         row = getSortRow(row);
 
         Cell cellChanged = azquoCells.get(row,col);
-        cellChanged.setValue(value);
+        setCellValue(cellChanged,value);
+
 
         calculateAll();
         if (highlightDays>0){
@@ -1577,21 +1588,24 @@ public  class AzquoBook {
         sb.append("[");
         for (int rowNo = 0; rowNo < azquoCells.getMaxRow(); rowNo++){
             int sortedRow = rowNo;
-            if (unSortRows.get(rowNo) != null){
+            if (unSortRows != null && unSortRows.get(rowNo) != null){
                 sortedRow = unSortRows.get(rowNo);
             }
             List<String> rowValues = heldValues.get(sortedRow);
             for (int colNo = 0; colNo <= azquoCells.getMaxColumn(); colNo++){
                 Cell cell = azquoCells.get(rowNo, colNo);
-                String cellVal = cell.getStringValue();
-                if (rowValues.get(colNo)!=null && !cellVal.equals(rowValues.get(colNo))){
-                    rowValues.remove(colNo);
-                    rowValues.add(colNo, cellVal);
-                    //setValue(loggedInConnection, cell, null); orig value needed when saving.  Provenance must now check that the value in sheet is the same as value on file
-                    if (sb.length() > 1){
-                        sb.append(",");
+                if (cell!=null  && cell.getType()!= CellValueType.IS_NULL){
+                    String cellVal = cell.getStringValue();
+
+                    if (rowValues.get(colNo)!=null && !cellVal.equals(rowValues.get(colNo))) {
+                        rowValues.remove(colNo);
+                        rowValues.add(colNo, cellVal);
+                        //setValue(loggedInConnection, cell, null); orig value needed when saving.  Provenance must now check that the value in sheet is the same as value on file
+                        if (sb.length() > 1) {
+                            sb.append(",");
+                        }
+                        sb.append(cellInfo(cell));
                     }
-                    sb.append(cellInfo(cell));
 
                 }
             }
@@ -1957,15 +1971,15 @@ public  class AzquoBook {
         FileWriter fw = new FileWriter(tempName);
         BufferedWriter bw = new BufferedWriter(fw);
 
-        for (int r = 0; r < rows; r++) {
+        for (int r = 0; r <= rows; r++) {
             row = cells.getRow(r);
             if (row != null) {
                 //System.out.println("Excel row " + r);
                 int colCount = 0;
-                for (int c = 0; c < maxCol; c++) {
+                for (int c = 0; c <= maxCol; c++) {
                      cell = cells.get(r,c);
                     if (colCount++ > 0) bw.write('\t');
-                    if (cell != null) {
+                    if (cell != null && cell.getType()!= CellValueType.IS_NULL) {
 
                         String cellFormat = "";
                         cellFormat = cell.getStringValue();
