@@ -48,6 +48,7 @@ public final class ValueService {
 
     // one line function, much point??
 
+
     public Value createValue(final LoggedInConnection loggedInConnection, final Provenance provenance, final String text) throws Exception {
         return new Value(loggedInConnection.getAzquoMemoryDB(), provenance, text, null);
     }
@@ -80,7 +81,8 @@ public final class ValueService {
                     // use the latest value
                 }
             }
-            if (existingValue.getText().equals(valueString)) {
+
+            if (compareStringValues(existingValue.getText(),valueString)) {
                 toReturn += "  that value already exists, skipping";
                 alreadyInDatabase = true;
             } else {
@@ -1297,13 +1299,16 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
 
         final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
         final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
+        if (rowOrder != null){
+            rowInt = rowOrder.get(rowInt);
+        }
 
         int age = 10000;
         if (dataValueMap == null) return age;
         if (rowInt >= dataValueMap.size()) return age;
         if (dataValueMap.get(rowInt) == null) return age;
 
-        final List<List<Value>> rowValues = dataValueMap.get(rowOrder.get(rowInt));
+        final List<List<Value>> rowValues = dataValueMap.get(rowInt);
         if (colInt >=rowValues.size()){// a blank column
             return age;
         }
@@ -1590,8 +1595,8 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
             // going to parse the data here for the moment as parsing is controller stuff
             // I need to track column and Row
             int rowCounter = 0;
-            final CsvReader originalReader = new CsvReader(new StringReader(loggedInConnection.getSentDataMap(region)), '\t');
-            final CsvReader editedReader = new CsvReader(new StringReader(editedData), '\t');
+            final String[] originalReader = loggedInConnection.getSentDataMap(region).split("\n",-1);
+            final String[] editedReader = editedData.split("\n",-1);
             final String[] lockLines = loggedInConnection.getLockMap(region).split("\n",-1);
               // rows, columns, value lists
             final List<List<List<Value>>> dataValuesMap = loggedInConnection.getDataValueMap(region);
@@ -1605,10 +1610,8 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
                 int columnCounter = 0;
                 final List<List<Value>> rowValues = dataValuesMap.get(sortedRows.get(rowCounter));
                 final List<Set<Name>> rowNames = dataNamesMap.get(rowCounter);
-                originalReader.readRecord();
-                editedReader.readRecord();
-                final String[] originalValues = originalReader.getValues();
-                final String[] editedValues = editedReader.getValues();
+                final String[] originalValues = originalReader[rowNo].split("\t",-1);//NB Include trailing empty strings.
+                final String[] editedValues = editedReader[rowNo].split("\t",-1);
                 String[] locks = lockLine.split("\t", -1);
                 for (int colNo = 0; colNo < locks.length; colNo++) {
                     String locked = locks[colNo];
@@ -1640,7 +1643,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
                                     numberOfValuesModified++;
                                 }else
                                     deleteValue(theValue);
-                            } else if (valuesForCell.isEmpty()) {
+                            } else if (valuesForCell.isEmpty() && edited.length()> 0) {
                                 logger.info("storing new value here . . .");
                                 storeValueWithProvenanceAndNames(loggedInConnection, edited, namesForCell);
                                 numberOfValuesModified++;
