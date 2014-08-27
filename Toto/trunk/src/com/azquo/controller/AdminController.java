@@ -83,11 +83,13 @@ public class AdminController {
             , @RequestParam(value = "namelist", required = false) final String nameList
             , @RequestParam(value = "filename", required = false) final String fileName
             , @RequestParam(value = "filetype", required = false) final String fileType
+            , @RequestParam(value = "online", required = false) final String online
             , @RequestParam(value = "connectionid", required = false) String connectionId) throws Exception {
 
         logger.info("request to admin controller : " + op);
 
         if (op.equalsIgnoreCase(SIGNON)) {
+            String result = "";
             if (key != null && key.length() > 0 && businessName != null && businessName.length() > 0) {
                 return adminService.confirmKey(businessName
                         , email
@@ -98,7 +100,7 @@ public class AdminController {
                     && user != null && user.length() > 0
                     && businessName != null && businessName.length() > 0
                     && password != null && password.length() > 0) {
-                return adminService.registerBusiness(email
+                     result =  adminService.registerBusiness(email
                         , user
                         , password
                         , businessName
@@ -108,6 +110,27 @@ public class AdminController {
                         , address4 != null ? address4 : ""
                         , postcode != null ? postcode : ""
                         , telephone != null ? telephone : "");
+            }else{
+                String missing = "";
+
+                if (email == null){
+                    missing += "email address, ";
+                }
+                if (user == null){
+                    missing += "user name, ";
+                }
+                if (businessName == null || businessName.length()==0){
+                    missing += "business name, ";
+                }
+                if (password == null || password.length() == 0){
+                    missing += "password, ";
+                }
+                result = "error: Please send: " + missing;
+            }
+            if (online != null && online.toLowerCase().equals("true")){
+                return "azquojson({\"registrationreply\":\"" + result + "\"})";
+            }else{
+                return result;
             }
         } else {
             logger.info("connection id : " + connectionId);
