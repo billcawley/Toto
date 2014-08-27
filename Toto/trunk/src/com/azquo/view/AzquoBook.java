@@ -221,7 +221,7 @@ public  class AzquoBook {
         choiceMap = new HashMap<Cell, String>();
         for (int i = 0;i < wb.getWorksheets().getNames().getCount();i++){
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
-            if (name.getText().toLowerCase().endsWith("chosen") && name.getSheetIndex() == azquoSheet.getIndex()) {
+            if (name.getText().toLowerCase().endsWith("chosen") && name.getRange().getWorksheet() == azquoSheet) {
                 Range range = name.getRange();
                 if (range!=null) {
                     choiceMap.put(range.getCellOrNull(0, 0), name.getText().substring(0, name.getText().length() - 6).toLowerCase());
