@@ -7,7 +7,6 @@ import com.azquo.service.AppEntityService;
 import java.util.*;
 
 /**
- * Created by cawley on 18/08/14.
  */
 public class FeedbackService extends AppEntityService<Feedback> {
 

@@ -6,11 +6,9 @@ import com.azquo.app.yousay.entity.Feedback;
 import com.azquo.app.yousay.service.FeedbackService;
 import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.memorydb.MemoryDBManager;
-import com.azquo.service.LoginService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Date;
@@ -18,7 +16,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Created by bill on 01/04/14.
+ *
  */
 
 @Controller

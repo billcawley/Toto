@@ -4,6 +4,7 @@ import java.util.Date;
 
 /**
  * Created by bill on 22/04/14.
+ *
  */
 public class UserChoice extends StandardEntity {
 

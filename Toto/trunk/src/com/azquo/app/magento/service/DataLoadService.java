@@ -7,6 +7,7 @@ import java.util.*;
 
 /**
  * Created by cawley on 07/08/14.
+ *
  */
 public final class DataLoadService {
 
@@ -340,7 +341,7 @@ public final class DataLoadService {
             }
         }
 
-        return toReturn.toString();
+        return toReturn;
     }
 
     public String getProductStructure(MagentoProduct product, int tab){
@@ -370,7 +371,7 @@ public final class DataLoadService {
         }
 
 
-        return toReturn.toString();
+        return toReturn;
     }
 
 }

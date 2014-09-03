@@ -7,7 +7,6 @@ import com.azquo.adminentities.OnlineReport;
 import com.azquo.memorydb.Name;
 import com.azquo.service.*;
 //import com.azquo.util.Chart;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
@@ -16,18 +15,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.util.*;
 
 
 /**
  * Created by bill on 22/04/14.
+ *
  */
 
 @Controller
@@ -39,13 +36,9 @@ public class OnlineController {
     @Autowired
     private LoginService loginService;
     @Autowired
-    private ValueService valueService;
-    @Autowired
     private OnlineReportDAO onlineReportDAO;
     @Autowired
     private DatabaseDAO databaseDAO;
-    @Autowired
-    private ImportService importService;
     @Autowired
     private OnlineService onlineService;
 
@@ -54,7 +47,7 @@ public class OnlineController {
     private static final Logger logger = Logger.getLogger(OnlineController.class);
 
     @RequestMapping
-    public String handleRequest (ModelMap model,HttpServletRequest request, HttpServletResponse response)throws Exception{
+    public String handleRequest (ModelMap model,HttpServletRequest request)throws Exception{
 
     /*
     public String handleRequest(@RequestParam(value = "connectionid", required = false) String connectionId
@@ -72,10 +65,10 @@ public class OnlineController {
         String choiceName = null;
         String choiceValue = null;
         String reportId = null;
-        String chartParams = null;
+        //String chartParams = null;
         String chart = null;
         String jsonFunction = "azquojsonfeed";
-        String region = null;
+        //String region = null;
         String rowStr = "";
         String colStr = "";
         String changedValue = null;
@@ -104,12 +97,12 @@ public class OnlineController {
                 reportToLoad = paramValue;
             } else if (paramName.equals("jsonfunction")) {
                 jsonFunction = paramValue;
-            } else if (paramName.equals("chart")) {
-                chartParams = paramValue;
+            //} else if (paramName.equals("chart")) {
+              //  chartParams = paramValue;
             } else if (paramName.equals("opcode")) {
                 opcode = paramValue;
-            } else if (paramName.equals("region")) {
-                region = paramValue;
+            //} else if (paramName.equals("region")) {
+              //  region = paramValue;
             } else if (paramName.equals("row")) {
                 rowStr = paramValue;
             } else if (paramName.equals("col")) {
@@ -183,7 +176,8 @@ public class OnlineController {
                 }
 
                 if (!macMode){ // either mac or windows not sending what we want
-                    return "error: expecting parameters";
+                    model.addAttribute("content", "error: expecting parameters");
+                    return "utf8page";
                 }
             } else { // parameters file built on windows
                 String parameters = item.getString();
@@ -211,12 +205,13 @@ public class OnlineController {
                         }
                     }
                 }
-                if (it.hasNext()){
+                // don't get this, edd commenting
+                /*if (it.hasNext()){
                     item = (FileItem) it.next();
                 }else{
                     item = null;
 
-                }
+                } */
             }
 
         }
@@ -226,7 +221,7 @@ public class OnlineController {
             reportId = reportToLoad;
         }
 
-        long startTime = System.currentTimeMillis();
+        //long startTime = System.currentTimeMillis();
         String workbookName = null;
         Database db = null;
         try {
@@ -253,7 +248,8 @@ public class OnlineController {
                 LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, workbookName, false);
 
                 if (loggedInConnection == null) {
-                    return "error:no connection id";
+                    model.addAttribute("content", "error:no connection id");
+                    return "utf8page";
                 }
                 connectionId = loggedInConnection.getConnectionId();
 
@@ -261,7 +257,8 @@ public class OnlineController {
             final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
 
             if (loggedInConnection == null) {
-                return "error:invalid or expired connection id";
+                model.addAttribute("content", "error:invalid or expired connection id");
+                return "utf8page";
             }
             if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.getAzquoMemoryDB() != null){
                 loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(),"","","");
@@ -295,7 +292,7 @@ public class OnlineController {
             ok, one could send the row and column headings at the same time as the data but looking at the export demo it's asking for rows headings then column headings then the context
 
              */
-            String sortRegion = "";
+            //String sortRegion = "";
             if ((opcode.equals("sortcol") || opcode.equals("highlight") || opcode.equals("selectchosen")) && choiceName != null){
                 onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
 
@@ -321,7 +318,7 @@ public class OnlineController {
                     opcode="loadsheet";
 
 
-                }catch(Exception e){
+                }catch(Exception ignored){
                 }
 
             }
@@ -346,11 +343,11 @@ public class OnlineController {
 
 
             if (opcode.equals("chart")){
-                if (chartParams.length() > 6){ //params start with 'chart '
+                /*if (chartParams.length() > 6){ //params start with 'chart '
                     chartParams = chartParams.substring(6);
                 }else{
                     chartParams="";
-                }
+                }*/
                 //chart =  onlineService.getChart(loggedInConnection, chartParams);
                 result = jsonFunction + "({\"chart\":\"" + chart + "\"})";
 

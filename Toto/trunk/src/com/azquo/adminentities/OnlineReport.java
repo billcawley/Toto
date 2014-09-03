@@ -1,14 +1,11 @@
 package com.azquo.adminentities;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sun.xml.internal.bind.api.impl.NameConverter;
-
-import java.util.Date;
 
 /**
  * Created by bill on 15/04/14.
+ *
  */
 public class OnlineReport extends StandardEntity {
 

@@ -89,7 +89,7 @@ public class AdminController {
         logger.info("request to admin controller : " + op);
 
         if (op.equalsIgnoreCase(SIGNON)) {
-            String result = "";
+            String result;
             if (key != null && key.length() > 0 && businessName != null && businessName.length() > 0) {
                 return adminService.confirmKey(businessName
                         , email

@@ -8,11 +8,11 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
  * Created by bill on 22/04/14.
+ *
  */
 public final class UserChoiceDAO extends  StandardDAO<UserChoice> {
 

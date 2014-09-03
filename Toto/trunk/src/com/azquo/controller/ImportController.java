@@ -147,7 +147,7 @@ public class ImportController {
                 loggedInConnection.setLoose(false);
                 language = language.substring(0, language.length()-4).trim();
             }
-            if (language==null || language.length()==0 || language.equalsIgnoreCase("name")){
+            if (language.length()==0 || language.equalsIgnoreCase("name")){
                 language="DEFAULT_DISPLAY_NAME";
             }
 

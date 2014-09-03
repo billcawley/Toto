@@ -7,27 +7,14 @@ import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
 import com.azquo.service.OnlineService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
-import java.io.InputStream;
-import java.net.URLDecoder;
 import java.util.Enumeration;
-import java.util.Iterator;
-import java.util.List;
-import java.util.StringTokenizer;
 
 /**
  * Created with IntelliJ IDEA.
@@ -67,7 +54,7 @@ public class LoginController {
         String json=null;
         String database=null;
         String checkConnectionId = null;
-        String result = null;
+        String result;
         boolean online = false;
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
@@ -122,7 +109,7 @@ public class LoginController {
         if (!online && connectionId != null && connectionId.length() > 0 && loginService.getConnection(connectionId) != null) {
                 return connectionId;
         }
-        LoggedInConnection loggedInConnection = null;
+        LoggedInConnection loggedInConnection;
         if ((connectionId == null || connectionId.length()==0 || connectionId.equals("aborted")) && userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
             logger.info("spreadsheet name " + spreadsheetName);
             if (database == null || database.length() == 0) {

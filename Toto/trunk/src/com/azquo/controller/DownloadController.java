@@ -1,7 +1,6 @@
 package com.azquo.controller;
 
 
-import com.aspose.cells.SaveFormat;
 import com.azquo.admindao.OnlineReportDAO;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.service.LoggedInConnection;
@@ -10,7 +9,6 @@ import com.azquo.service.OnlineService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -56,7 +54,6 @@ public class DownloadController {
             response.setContentType("image/png"); // Set up mime type
             OutputStream out = response.getOutputStream();
             byte[] bucket = new byte[32*1024];
-            ByteArrayOutputStream result = null;
             int length = 0;
             try  {
                 try {
@@ -78,16 +75,11 @@ public class DownloadController {
                 }
                 response.setHeader("Content-Disposition", "inline; filename=\"" + image + "\"");
                 response.setHeader("Content-Length", String.valueOf(length));
-                long track = System.currentTimeMillis();
-                while (System.currentTimeMillis() - track < 100){
-                    int j=1;
-                }
-
-                out.flush();;
+                out.flush();
                 return;
             }
             catch (IOException ex){
-                System.out.println(ex);
+                ex.printStackTrace();
             }
 
 
@@ -105,7 +97,7 @@ public class DownloadController {
         if (reportId != 0) {
             try {
                 onlineReport = onlineReportDAO.findById(reportId);
-            } catch (Exception e) {
+            } catch (Exception ignored) {
 
             }
         }
@@ -121,7 +113,6 @@ public class DownloadController {
         }else{
             onlineService.saveBook(response, loggedInConnection, fileName);
         }
-        return;
     }
 
 
