@@ -11,6 +11,8 @@ import java.util.Date;
 
 /**
  * Created by cawley on 18/08/14.
+ *
+ * From dad's email needs rating feedback date response date sale date product
  */
 public class Feedback extends AppEntity<FeedbackService>{
 

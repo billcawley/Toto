@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -82,14 +81,6 @@ public final class NameService {
         return name.substring(commaPos + 1).trim();
     }
 
-    // without language uses the default display name
-
-    public ArrayList<Name> sortNames(final ArrayList<Name> namesList) {
-        Collections.sort(namesList);
-        return namesList;
-
-    }
-
     // untested!
 /*
     public ArrayList<Name> sortNames(final ArrayList<Name> namesList, final String language) {
@@ -104,22 +95,15 @@ public final class NameService {
 
     // get names from a comma separated list
 
-    public String decodeString(LoggedInConnection loggedInConnection, String searchByNames, final List<Set<Name>> names) throws Exception {
+    public void decodeString(LoggedInConnection loggedInConnection, String searchByNames, final List<Set<Name>> names) throws Exception {
         searchByNames = stripQuotes(loggedInConnection, searchByNames);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
             List<Name> nameList = new ArrayList<Name>();
-            String error = interpretSetTerm(loggedInConnection, nameList, nameName);
-
-            if (nameList != null) {
-                names.add(new HashSet<Name>(nameList));
-            } else {
-                return error;
-            }
+            interpretSetTerm(loggedInConnection, nameList, nameName);
+            names.add(new HashSet<Name>(nameList));
         }
-        return "";
-
     }
 
     public ArrayList<Name> findContainingName(final LoggedInConnection loggedInConnection, final String name) {
@@ -128,8 +112,9 @@ public final class NameService {
     }
 
     public ArrayList<Name> findContainingName(final LoggedInConnection loggedInConnection, final String name, String attribute) {
-        // go for the default for the moment
-        return sortNames(new ArrayList<Name>(loggedInConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name)));
+        ArrayList<Name> namesList =new ArrayList<Name>(loggedInConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name));
+        Collections.sort(namesList);
+        return namesList;
     }
 
 
@@ -275,7 +260,7 @@ public final class NameService {
 
 
         String storeName = name.replace(Name.QUOTE, ' ').trim();
-        Name existing = null;
+        Name existing;
         if (newparent != null) {
             //try for an existing name already with the same topparent
             existing = loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, storeName, newparent.findTopParent());
@@ -317,9 +302,8 @@ public final class NameService {
                 }
             }
             //if the parent already has peers, provisionally set the child peers to be the same.
-            Map<Name, Boolean> newPeers = null;
             if (newparent != null) {
-                newPeers = newparent.getPeers();
+                Map<Name, Boolean> newPeers = newparent.getPeers();
                 if (newPeers != null) {
                     LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
                     for (Name peer : newPeers.keySet()) {
@@ -387,8 +371,7 @@ public final class NameService {
 
     private int parseInt(final String string, int existing) {
         try {
-            int i = Integer.parseInt(string);
-            return i;
+            return Integer.parseInt(string);
         } catch (Exception e) {
             return existing;
         }
@@ -499,11 +482,12 @@ public final class NameService {
                             nextTerm = calc;
                         }
                         if (nextTerm.charAt(0) == NAMEMARKER) {
+                            // Edd added a few != null checks here based on IntelliJ, completely necessary??
                             Name termName = getNameByAttribute(loggedInConnection, nextTerm, null);
                             if (termName == null) {
-                                error += "the formula for " + peerName.getDefaultDisplayName() + " is not understood";
+                                error += "the formula for " + (peerName != null ? peerName.getDefaultDisplayName() : "null peer name!") + " is not understood";
                             }
-                            if (termName.getPeers().size() > peers.size()) {
+                            if (termName != null && termName.getPeers().size() > peers.size()) {
                                 peerName = name;
                                 peers.clear();
                                 for (Name peer : name.getPeers().keySet()) {
@@ -527,7 +511,8 @@ public final class NameService {
                                 peers.put(peer.findTopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
                             }
                         } else {
-                            error += "two names have peers: " + peerName.getDefaultDisplayName() + " and " + name.getDefaultDisplayName();
+                            // commented by edd, can't be used
+                            //error += "two names have peers: " + peerName.getDefaultDisplayName() + " and " + name.getDefaultDisplayName();
                             return toReturn;
                         }
                         validNameList.add(name); // the rest will be added below but we need to add this here as the peer defining name is not on the list of peers
@@ -660,9 +645,7 @@ public final class NameService {
 
     private boolean precededBy(String searchText, String testItem, int pos){
         int len = testItem.length();
-        if (pos < len + 2) return false;
-        if (searchText.substring(pos -len - 1, pos).toLowerCase().equals(testItem + " ")) return true;
-        return false;
+        return pos >= len + 2 && searchText.substring(pos - len - 1, pos).toLowerCase().equals(testItem + " ");
     }
 
 
@@ -692,7 +675,7 @@ public final class NameService {
 
         int pos = 0;
         int stackCount = 0;
-        int stringCount = 0;
+        //int stringCount = 0;
         while (pos < setFormula.length()) {
             Matcher m = p.matcher(setFormula.substring(pos + 2));
             // HANDLE SET INTERSECTIONS UNIONS AND EXCLUSIONS (* + - )
@@ -798,18 +781,17 @@ public final class NameService {
         }
         Name topParent = name.findTopParent();
         for (Set<Name> listNames : names) {
-            for (Name listName : listNames) {
+            if (!listNames.isEmpty()){
+                Name listName = listNames.iterator().next();//all names in each list have the same topparent, so don't try further (just get the first)
                 if (topParent == listName.findTopParent()) {
                     if (inParentSet(name, listNames) != null) {
                         return true;
                     }
                 }
-                break; //all names in each list have the same topparent, so don't try further
             }
         }
         String confidential = name.getAttribute("CONFIDENTIAL");
-        if (confidential == null || !confidential.equalsIgnoreCase("true")) return true;
-        return false;
+        return confidential == null || !confidential.equalsIgnoreCase("true");
     }
 
 
@@ -862,13 +844,13 @@ public final class NameService {
             namesFound.addAll(names);
         }
         if (totalledAsString!=null){
-            Name totalName = null;
+            Name totalName;
             if (totalledAsString.charAt(0) == NAMEMARKER){
                 totalName = findByName(loggedInConnection,totalledAsString);
             }else{
                 totalName = findOrCreateName(loggedInConnection,totalledAsString, namesFound.get(0).findTopParent());
             }
-            LinkedHashSet newChildren = new LinkedHashSet();
+            LinkedHashSet<Name> newChildren = new LinkedHashSet<Name>();
             for (Name child:namesFound){
                 newChildren.add(child);
             }
@@ -877,7 +859,7 @@ public final class NameService {
             namesFound.add(totalName);
         }
         if (sorted != null){
-            namesFound = sortNames((ArrayList)namesFound);
+            Collections.sort(namesFound);
         }
         return "";
     }
@@ -1190,7 +1172,7 @@ public final class NameService {
         if (name != null) {
             return "{\"names\":[" + getChildStructureFormattedForOutput(name, withChildren) + "]}";
         }else{
-            ArrayList<Name> names = new ArrayList<Name>();
+            List<Name> names = new ArrayList<Name>();
             if (nameId>0) {
                 name = findById(loggedInConnection, nameId);
                 //children is a set, so cannot be cast directly as a list.  WHY ISN'T CHILDREN A LIST?
@@ -1204,8 +1186,8 @@ public final class NameService {
                     names = findContainingName(loggedInConnection, nameSearch.replace("`", ""));
                 }
                 if (names.size() == 0) {
-                    names = (ArrayList<Name>) findTopNames(loggedInConnection);
-                    names = sortNames(names);
+                    names = findTopNames(loggedInConnection);
+                    Collections.sort(names);
                 }
             }
             StringBuilder sb = new StringBuilder();

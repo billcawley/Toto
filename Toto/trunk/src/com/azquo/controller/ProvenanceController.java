@@ -1,7 +1,6 @@
 package com.azquo.controller;
 
 import com.azquo.memorydb.Name;
-import com.azquo.memorydb.Provenance;
 import com.azquo.memorydb.Value;
 import com.azquo.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,8 +9,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -79,11 +76,14 @@ public class ProvenanceController {
             }
             if (searchNames != null && searchNames.length() > 0) {
                 final List<Set<Name>> nameSet = new ArrayList<Set<Name>>();
-                String error = nameService.decodeString(loggedInConnection, searchNames, nameSet);
+//                String error = nameService.decodeString(loggedInConnection, searchNames, nameSet);
+                nameService.decodeString(loggedInConnection, searchNames, nameSet);
 
-                if (error.length() > 0) {
+                // there never could be an error so I zapped it
+
+                /*if (error.length() > 0) {
                     return error;
-                }
+                }*/
                 //assumes here that each set is a single element
                 final Set<Name> names = new HashSet<Name>();
                 for (Set<Name> nameFound : nameSet) {
@@ -98,8 +98,7 @@ public class ProvenanceController {
                         return valueService.formatProvenanceForOutput(names.iterator().next().getProvenance(), jsonFunction);
                     } else {
                         final List<Value> values = valueService.findForNamesIncludeChildren(names, false);
-                        String result = valueService.formatCellProvenanceForOutput(loggedInConnection, names, values, jsonFunction);
-                        return result;
+                        return valueService.formatCellProvenanceForOutput(loggedInConnection, names, values, jsonFunction);
                     }
                 }
                 // should maybe be an error here?

@@ -528,10 +528,11 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
                         String withList = cellString.substring(withPos + 6);
                         cellString = cellString.substring(0, withPos);
                         List<Set<Name>> sNames = new ArrayList<Set<Name>>();
-                        String error = nameService.decodeString(loggedInConnection, withList, sNames);
-                        if (error.length() > 0) {
+                        // no longer returns error
+                        nameService.decodeString(loggedInConnection, withList, sNames);
+                        /*if (error.length() > 0) {
                             return error;
-                        }
+                        }*/
                         for (Set<Name> sName : sNames) {
                             supplementNames.addAll(sName); // sName should be a set of one element
                         }

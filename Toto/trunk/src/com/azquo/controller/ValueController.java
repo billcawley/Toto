@@ -1,11 +1,8 @@
 package com.azquo.controller;
 
-import com.azquo.jsonrequestentities.NameJsonRequest;
 import com.azquo.jsonrequestentities.ValueJsonRequest;
 import com.azquo.memorydb.Name;
-import com.azquo.memorydb.Value;
 import com.azquo.service.*;
-import com.csvreader.CsvReader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,9 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
-import java.io.StringReader;
 import java.net.URLDecoder;
 import java.util.*;
 
@@ -225,10 +220,12 @@ public class ValueController {
 
                 logger.info("search by names : " + searchByNames);
                 final List<Set<Name>> names = new ArrayList<Set<Name>>();
-                String error = nameService.decodeString(loggedInConnection, searchByNames, names);
-                if (error.length() > 0){
+//                String error = nameService.decodeString(loggedInConnection, searchByNames, names);
+                // no longer returns an error based on work Edd did cleaning up the name service, this may change
+                nameService.decodeString(loggedInConnection, searchByNames, names);
+                /*if (error.length() > 0){
                     return error;
-                }
+                }*/
 
                 if (!names.isEmpty()) {
                     result = valueService.getExcelDataForNamesSearch(names);
