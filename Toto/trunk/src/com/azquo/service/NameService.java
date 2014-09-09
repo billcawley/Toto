@@ -28,6 +28,7 @@ public final class NameService {
     public static final String COUNT = "count";
     public static final String SORTED = "sorted";
     public static final String CHILDREN = "children";
+    public static final String PARENTS = "parents";
     public static final String LOWEST = "lowest";
     public static final String ALL = "all";
     public static final char NAMEMARKER = '!';
@@ -112,7 +113,7 @@ public final class NameService {
     }
 
     public ArrayList<Name> findContainingName(final LoggedInConnection loggedInConnection, final String name, String attribute) {
-        ArrayList<Name> namesList =new ArrayList<Name>(loggedInConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name));
+        ArrayList<Name> namesList = new ArrayList<Name>(loggedInConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name));
         Collections.sort(namesList);
         return namesList;
     }
@@ -197,14 +198,14 @@ public final class NameService {
 
 
     public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
-        if (name.toLowerCase().endsWith(";plural")) {
-            return findOrCreateName(loggedInConnection, name.substring(0, name.length() - 7), false);
+        if (name.toLowerCase().endsWith(";local")) {
+            return findOrCreateName(loggedInConnection, name.substring(0, name.length() - 6), true);
         }
-        return findOrCreateName(loggedInConnection, name, true);
+        return findOrCreateName(loggedInConnection, name, false);
     }
 
 
-    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, boolean unique) throws Exception {
+    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, boolean local) throws Exception {
 
         /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
         This may not be an immediate hierarchy.
@@ -223,7 +224,7 @@ public final class NameService {
         String parentName = findParentFromList(name);
         String remainder = name;
         if (parentName == null) {
-            return findOrCreateName(loggedInConnection, name, null);
+            return findOrCreateNameInParent(loggedInConnection, name, null, false);//'local' is irrelevant
         }
 
 
@@ -239,21 +240,30 @@ public final class NameService {
             remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length() - 1));
             //if two commas in succession occur, ignore the blank parent
             if (parentName.length() > 0) {
-                parent = findOrCreateName(loggedInConnection, parentName, parent);
-                //the attribute 'PLURAL' means that the name cannot be used to identify as a parent
-                if (parent != null && (topParent == null || !unique) && (parent.getAttribute("PLURAL") == null || !parent.getAttribute("PLURAL").equalsIgnoreCase("true"))) {
-                    topParent = parent;
-                }
+                parent = findOrCreateNameInParent(loggedInConnection, parentName, parent, local);
             }
             parentName = findParentFromList(remainder);
         }
 
-        return findOrCreateName(loggedInConnection, remainder, parent);
+        return findOrCreateNameInParent(loggedInConnection, remainder, parent, local);
 
     }
 
+    public void includeInSet(Name name, Name newparent) throws Exception{
 
-    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, final Name newparent) throws Exception {
+    //only check if the new parent is not already in the parent hierarchy.
+    List<Name> newParents = newparent.findAllParents();
+    newparent.addChildWillBePersisted(name);//this will now check the descendants of the child for direct connections
+    for( Name parent:name.getParents()) {
+        if (newParents.contains(parent)) {
+            parent.removeFromChildrenWillBePersisted(name);
+            break;//only remove one!   The loop will be corrupted.
+        }
+    }
+
+}
+
+    public Name findOrCreateNameInParent(final LoggedInConnection loggedInConnection, final String name, final Name newparent, boolean local) throws Exception {
 
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import),and insert a structure into it
         */
@@ -262,8 +272,13 @@ public final class NameService {
         String storeName = name.replace(Name.QUOTE, ' ').trim();
         Name existing;
         if (newparent != null) {
-            //try for an existing name already with the same topparent
-            existing = loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, storeName, newparent.findTopParent());
+            //try for an existing name already with the same parent
+            if (local){
+                existing = loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, storeName, newparent);
+            }else{
+                existing = loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, storeName, newparent.findTopParent());
+
+            }
             // find an existing name with no parents. (note that if there are multiple such names, then the return will be null)
             if (existing == null) {
                 existing = loggedInConnection.getAzquoMemoryDB().getNameByAttribute(loggedInConnection, storeName, null);
@@ -280,14 +295,7 @@ public final class NameService {
             //NEW CONDITION ADDED - we are parent = child, but not bothering to put into the set.  This may need discussio - are the parent and child really the same?
             if (newparent != null && existing != newparent && !existing.findAllParents().contains(newparent)) {
                 //only check if the new parent is not already in the parent hierarchy.
-                List<Name> newParents = newparent.findAllParents();
-                newparent.addChildWillBePersisted(existing);//this will now check the descendants of the child for direct connections
-                for (Name parent : existing.getParents()) {
-                    if (newParents.contains(parent)) {
-                        parent.removeFromChildrenWillBePersisted(existing);
-                        break;//only remove one!   The loop will be corrupted.
-                    }
-                }
+                includeInSet(existing,newparent);
             }
             return existing;
         } else {
@@ -800,6 +808,7 @@ public final class NameService {
         final String levelString = getInstruction(setTerm, LEVEL);
         String fromString = getInstruction(setTerm, FROM);
         final String childrenString = getInstruction(setTerm, CHILDREN);
+        final String parentsString = getInstruction(setTerm, PARENTS);
         final String sorted = getInstruction(setTerm, SORTED);
         String toString = getInstruction(setTerm, TO);
         String countString = getInstruction(setTerm, COUNT);
@@ -848,7 +857,7 @@ public final class NameService {
             if (totalledAsString.charAt(0) == NAMEMARKER){
                 totalName = findByName(loggedInConnection,totalledAsString);
             }else{
-                totalName = findOrCreateName(loggedInConnection,totalledAsString, namesFound.get(0).findTopParent());
+                totalName = findOrCreateNameInParent(loggedInConnection,totalledAsString, namesFound.get(0).findTopParent(), false);//'local' is irrelevant
             }
             LinkedHashSet<Name> newChildren = new LinkedHashSet<Name>();
             for (Name child:namesFound){
@@ -857,6 +866,16 @@ public final class NameService {
             totalName.setChildrenWillBePersisted(newChildren);
             namesFound.clear();
             namesFound.add(totalName);
+        }
+        if (parentsString!=null){
+            Set <Name> parents = new HashSet<Name>();
+            for (Name child:namesFound){
+                parents.addAll(child.findAllParents());
+
+            }
+            namesFound.clear();
+            namesFound.addAll(parents);
+
         }
         if (sorted != null){
             Collections.sort(namesFound);
