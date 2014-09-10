@@ -25,6 +25,8 @@
           <element id="library" level="project" name="org.springframework:spring-test:3.2.4.RELEASE" />
           <element id="library" level="project" name="junit:junit:4.9" />
           <element id="library" level="project" name="org.apache.poi:poi-ooxml:3.10-FINAL" />
+          <element id="library" level="project" name="aspose-cells-8.1.1" />
+          <element id="library" level="project" name="apache-velocity:velocity:1.5" />
         </element>
       </element>
     </root>

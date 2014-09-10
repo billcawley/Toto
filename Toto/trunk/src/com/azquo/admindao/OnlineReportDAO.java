@@ -12,6 +12,7 @@ import java.util.Map;
 
 /**
  * Created by bill on 15/04/14.
+ *
  */
 public class OnlineReportDAO extends StandardDAO<OnlineReport>{
 
@@ -26,6 +27,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
 
     public static final String BUSINESSID = "business_id";
     public static final String DATABASEID = "database_id";
+    // edd: hmm, what's going on with database?
     public static final String DATABASE = "database";
     public static final String REPORTNAME = "report_name";
     public static final String USERSTATUS = "user_status";

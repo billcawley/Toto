@@ -39,6 +39,8 @@ public class MySQLDatabaseManager {
     }
 
     public void dropDatabase(String databaseName) throws IOException {
+        // we assume the database name is safe, should we???
+        databaseName = databaseName.replace("`", "oh no you don't");
         jdbcTemplate.update("drop database `" + databaseName + "`", new HashMap<String, Object>());
     }
 

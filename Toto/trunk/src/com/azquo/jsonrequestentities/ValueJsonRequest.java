@@ -1,9 +1,9 @@
 package com.azquo.jsonrequestentities;
 
-import java.util.Map;
 
 /**
  * Created by bill on 03/03/14.
+ *
  */
 public class ValueJsonRequest {
 

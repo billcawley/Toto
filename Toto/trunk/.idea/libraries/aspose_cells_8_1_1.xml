@@ -1,7 +1,7 @@
 <component name="libraryTable">
   <library name="aspose-cells-8.1.1">
     <CLASSES>
-      <root url="jar://$USER_HOME$/aspose/cells/JDK 1.6/lib/aspose-cells-8.1.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/aspose-cells-8.1.1.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />
