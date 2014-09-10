@@ -66,8 +66,8 @@
     try {
 
 
-        //FileInputStream fstream = new FileInputStream("/home/cawley/IdeaProjects/Toto/web/azquoinvoice.fop");
-        FileInputStream fstream = new FileInputStream("/usr/share/apache-tomcat-7.0.42/webapps/ROOT/azquoinvoice.fop");
+        FileInputStream fstream = new FileInputStream("/home/cawley/IdeaProjects/Toto/web/azquoinvoice.fop");
+        //FileInputStream fstream = new FileInputStream("/usr/share/apache-tomcat-7.0.42/webapps/ROOT/azquoinvoice.fop");
         DataInputStream in = new DataInputStream(fstream);
         BufferedReader br = new BufferedReader(new InputStreamReader(in));
         while ((inputLine = br.readLine()) != null) {
@@ -110,6 +110,32 @@
     invoiceFOP = invoiceFOP.replace("INVOICEQUANT1", quantity + "");
     invoiceFOP = invoiceFOP.replace("INVOICEMON1", dayrate + "");
     invoiceFOP = invoiceFOP.replace("INVOICEN1", nf.format(currencyValue));
+
+    lineNo = 2;
+
+    // hack for 2 lines . . .
+/*    currencyValue += 1100;
+    vat = currencyValue * 0.2;
+    total = currencyValue + vat;
+
+    invoiceFOP = invoiceFOP.replace("INVOICEL2", "");
+    invoiceFOP = invoiceFOP.replace("INVOICEPER2", month);
+    invoiceFOP = invoiceFOP.replace("INVOICEDESC2", "Days modifying daily_racing_stats.php and add_betfair_ids.php");
+    invoiceFOP = invoiceFOP.replace("INVOICEQUANT2", "2.0");
+    invoiceFOP = invoiceFOP.replace("INVOICEMON2", "550");
+    invoiceFOP = invoiceFOP.replace("INVOICEN2", nf.format(1100.0));
+
+    // hack for 2 lines . . .
+    currencyValue += 1833;
+    vat = currencyValue * 0.2;
+    total = currencyValue + vat;
+    lineNo = 4;
+    invoiceFOP = invoiceFOP.replace("INVOICEL3", "");
+    invoiceFOP = invoiceFOP.replace("INVOICEPER3", month);
+    invoiceFOP = invoiceFOP.replace("INVOICEDESC3", "InfusionSoft App Payment");
+    invoiceFOP = invoiceFOP.replace("INVOICEQUANT3", "1");
+    invoiceFOP = invoiceFOP.replace("INVOICEMON3", "1833");
+    invoiceFOP = invoiceFOP.replace("INVOICEN3", nf.format(1833.0));*/
 
     while (lineNo < 10) {
         invoiceFOP = invoiceFOP.replace("INVOICEL" + lineNo, "");
