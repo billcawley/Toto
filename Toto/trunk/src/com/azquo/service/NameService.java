@@ -42,6 +42,8 @@ public final class NameService {
     public static final String EDIT = "edit";
     public static final String NEW = "new";
     public static final String DELETE = "delete";
+    public static final String ASSOCIATED = "associated";
+    public static final String WHERE = "where";
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
     private static final Logger logger = Logger.getLogger(NameService.class);
@@ -98,11 +100,14 @@ public final class NameService {
 
     public void decodeString(LoggedInConnection loggedInConnection, String searchByNames, final List<Set<Name>> names) throws Exception {
         searchByNames = stripQuotes(loggedInConnection, searchByNames);
+        List<String> strings = new ArrayList<String>();
+        searchByNames = extractStrings(searchByNames, strings);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
             List<Name> nameList = new ArrayList<Name>();
-            interpretSetTerm(loggedInConnection, nameList, nameName);
+
+            interpretSetTerm(loggedInConnection, nameList, nameName, strings);
             names.add(new HashSet<Name>(nameList));
         }
     }
@@ -705,7 +710,7 @@ public final class NameService {
             if (op == NAMEMARKER) {
                 stackCount++;
                 List<Name> nextNames = new ArrayList<Name>();
-                String error = interpretSetTerm(loggedInConnection, nextNames, setFormula.substring(pos, nextTerm - 1));
+                String error = interpretSetTerm(loggedInConnection, nextNames, setFormula.substring(pos, nextTerm - 1), strings);
                 if (error.length() > 0) {
                     return error;
                 }
@@ -718,7 +723,7 @@ public final class NameService {
                 List<Name> baseNames = nameStack.get(stackCount-1);
                 for (Name name:baseNames) {
                     String nameToFind = name.getDefaultDisplayName() + strings.get(strings.size() - 1);
-                    String error = interpretSetTerm(loggedInConnection, nextNames, nameToFind);
+                    String error = interpretSetTerm(loggedInConnection, nextNames, nameToFind, strings);
                     if (error.length() > 0) {
                         return error;
                     }
@@ -753,7 +758,7 @@ public final class NameService {
         String calc = name.getAttribute(Name.CALCULATION);
         if (calc != null && calc.length() > 0) {
             List<String> strings = new ArrayList<String>();
-            String result = shuntingYardAlgorithm(loggedInConnection, calc, strings);//TODO work out if we will accept the strings in calcs......
+            String result = shuntingYardAlgorithm(loggedInConnection, calc, strings);//TODO work out if we will accept the strings in calcs (pass as parameter in calcReversePolish)......
             if (result != null && result.length() > 0) {
                 if (result.startsWith("error:")) {
                     return result;
@@ -802,12 +807,29 @@ public final class NameService {
         return confidential == null || !confidential.equalsIgnoreCase("true");
     }
 
+    private void getAssociations(LoggedInConnection loggedInConnection, Set<Name> names, String associatedString, Set<Name> namesFound){
+        /*
+        * this routine finds sets associated with the given name.  e.g. if the name is 'UK' and the associatedString is 'shops' the
+        * routine looks for 'UK shops'.  If it does not find that, it loops through subsets such as 'London shops', 'West End shops', 'Oxford Street shops', r
+        * returning the set of sets.  The required names will be the elements of these sets (e.g. the shops themselves)
+        *
+        * */
+        for (Name name:names){
+            Name associatedName = findByName(loggedInConnection, name.getDefaultDisplayName() + " " + associatedString);
+            if (associatedName != null){
+                namesFound.add(associatedName);
+            }else{
+                 getAssociations(loggedInConnection, name.getChildren(), associatedString, namesFound);
+            }
+        }
+    }
 
-    private String interpretSetTerm(LoggedInConnection loggedInConnection, List<Name> namesFound, String setTerm) throws Exception {
+
+    private String interpretSetTerm(LoggedInConnection loggedInConnection, List<Name> namesFound, String setTerm, List<String> strings) throws Exception {
 
         final String levelString = getInstruction(setTerm, LEVEL);
         String fromString = getInstruction(setTerm, FROM);
-        final String childrenString = getInstruction(setTerm, CHILDREN);
+        String childrenString = getInstruction(setTerm, CHILDREN);
         final String parentsString = getInstruction(setTerm, PARENTS);
         final String sorted = getInstruction(setTerm, SORTED);
         String toString = getInstruction(setTerm, TO);
@@ -815,6 +837,11 @@ public final class NameService {
         final String countbackString = getInstruction(setTerm, COUNTBACK);
         final String compareWithString = getInstruction(setTerm, COMPAREWITH);
         final String totalledAsString = getInstruction(setTerm, TOTALLEDAS);
+        final String associatedString = getInstruction(setTerm, ASSOCIATED);
+        final String whereString = getInstruction(setTerm, WHERE);
+        if (levelString !=null){
+            childrenString="true";
+        }
         List<Name> names = new ArrayList<Name>();
 
         String nameString = setTerm;
@@ -867,6 +894,20 @@ public final class NameService {
             namesFound.clear();
             namesFound.add(totalName);
         }
+        if (associatedString !=null){
+            Set<Name> associatedNames = new HashSet<Name>();
+            //convert the list to a set.....
+            Set<Name> originalNames = new HashSet<Name>();
+            for (Name name2:namesFound){
+                originalNames.add(name2);
+            }
+            getAssociations(loggedInConnection, originalNames, associatedString, associatedNames);
+            //and convert back to a list
+            namesFound.clear();
+            for (Name name2:associatedNames){
+                namesFound.addAll(name2.findAllChildren(false));
+            }
+        }
         if (parentsString!=null){
             Set <Name> parents = new HashSet<Name>();
             for (Name child:namesFound){
@@ -892,11 +933,12 @@ public final class NameService {
 
     //  NAMEMARKER is used to remove any contentious characters from expressions (e.g. operators that should not be there)
 
-    private String interpretTerm(final LoggedInConnection loggedInConnection, final String term, List<String> savedStrings) {
+    private String interpretTerm(final LoggedInConnection loggedInConnection, final String term) {
 
 
         if (term.startsWith("\"") && term.endsWith("\"")){
-            savedStrings.add(term.substring(1,term.length()-1));
+            //strings already saved, so comment out the line below
+            //savedStrings.add(term.substring(1,term.length()-1));
             return "";
         }
         if (term.charAt(0) == NAMEMARKER) return term + " ";
@@ -917,6 +959,52 @@ public final class NameService {
         return ("" + NAMEMARKER + nameFound.getId() + term.substring(nameEnd) + " ");
 
     }
+
+
+    private String setOfx(int len) {
+        StringBuffer set = new StringBuffer();
+        for (int i = 0; i < len; i++) {
+            set.append('x');
+        }
+        return set.toString();
+    }
+
+
+    private String extractStrings(String calc, List<String> strings){
+
+        int   quotePos = calc.indexOf("\"");
+
+        while (quotePos >= 0){
+            int quoteEnd = calc.indexOf("\"", quotePos + 1);
+            if (quoteEnd > 0){
+                strings.add(calc.substring(quotePos + 1, quoteEnd));
+                calc = calc.substring(0,quotePos +1) + setOfx(quoteEnd - quotePos -1) + calc.substring(quoteEnd);
+                quotePos = calc.indexOf("\"", quoteEnd + 1);
+            }else{
+                quotePos = -1;
+            }
+        }
+        return calc;
+    }
+
+    private String replaceStrings(String calc, List<String> strings) {
+
+        int quotePos = calc.indexOf("\"");
+        int constantNo = 0;
+        while (quotePos >= 0) {
+            int quoteEnd = calc.indexOf("\"", quotePos + 1);
+            if (quoteEnd > 0) {
+                calc = calc.substring(0, quotePos + 1) + strings.get(constantNo++) + calc.substring(quoteEnd);
+                quotePos = calc.indexOf("\"", quoteEnd + 1);
+            } else {
+                quotePos = -1;
+            }
+        }
+        return calc;
+    }
+
+
+
 
     // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
     // it's a list of values and operations
@@ -953,19 +1041,26 @@ public final class NameService {
         //start by replacing names in quotes (which may contain operators) with '!<name id>   - e.g.  '!1000'
         calc = stripQuotes(loggedInConnection, calc);
 
+
+        //save away constants as a separate array, replace temporarily with 'xxxxxxx'
+        calc = extractStrings(calc, strings);
+
+
         Pattern p = Pattern.compile("[\\+\\-/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
         String origCalc = calc;
-        int startPos = 0;
+          int startPos = 0;
+
+
         while (m.find()) {
             String opfound = m.group();
             char thisOp = opfound.charAt(0);
             int pos = m.start();
             String namefound = calc.substring(startPos, pos).trim();
             if (namefound.length() > 0) {
-                String result = interpretTerm(loggedInConnection, namefound, strings);
+                String result = interpretTerm(loggedInConnection, namefound);
                 if (result.startsWith("error:")) {
                     return result;
                 }
@@ -992,7 +1087,7 @@ public final class NameService {
         // the last term...
 
         if (calc.substring(startPos).trim().length() > 0) {
-            String result = interpretTerm(loggedInConnection, calc.substring(startPos).trim(), strings);
+            String result = interpretTerm(loggedInConnection, calc.substring(startPos).trim());
             if (result.startsWith("error:")) {
                 return result;
             }
@@ -1004,10 +1099,8 @@ public final class NameService {
             sb.append(stack.charAt(0)).append(" ");
             stack = stack.substring(1);
         }
-
-
-        return sb.toString();
-    }
+        return  sb.toString();
+     }
 
 
     private String jsonElement(String jsonName, String jsonValue){
