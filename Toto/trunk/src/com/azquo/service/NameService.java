@@ -601,20 +601,26 @@ public final class NameService {
             }
         }
         if (iPos >= 0) {
-            int commandStart = instructions.toLowerCase().indexOf(instructionName.toLowerCase()) + instructionName.length() + 1;
-            Pattern p = Pattern.compile("[^a-z A-Z\\-0-9!]");
-            int commandEnd;
+            //find to the next semicolon, or line end
+            int commandStart = iPos + instructionName.length() + 1;
+
             if (commandStart < instructions.length()) {
-                Matcher m = p.matcher(instructions.substring(commandStart));
+                int commandEnd =instructions.indexOf(";", commandStart + 1);
+                if (commandEnd < 0){
+                    commandEnd = instructions.length();
+                }
+                toReturn = instructions.substring(commandStart, commandEnd).trim();
+               /*
+                  Pattern p = Pattern.compile("[^a-z A-Z\\-0-9!]");
+                 Matcher m = p.matcher(instructions.substring(commandStart));
                 commandEnd = instructions.length();
                 if (m.find()) {
                     commandEnd = commandStart + m.start();
                 }
+                */
             } else {
-                commandStart = 0;
-                commandEnd = commandStart;
+                toReturn = "";
             }
-            toReturn = instructions.substring(commandStart, commandEnd).trim();
             //  if (toReturn.startsWith(Name.QUOTE)) {
             //      toReturn = toReturn.substring(1, toReturn.length() - 1); // trim quotes
             // }
@@ -824,6 +830,66 @@ public final class NameService {
         }
     }
 
+    private void filter(List<Name> names, String condition, List<String> strings){
+        //NOT HANDLING 'OR' AT PRESENT
+        int stringPos = 0;
+       int andPos = condition.toLowerCase().indexOf(" and ");
+       if (andPos < 0) {
+           andPos = condition.length();
+       }
+       int stringCount = 0;
+       Set<Name> namesToRemove = new HashSet<Name>();
+       int lastPos = 0;
+       while (andPos > 0){
+           String clause = condition.substring(0, andPos).trim();
+           Pattern p = Pattern.compile("[<=>]+"); //
+            Matcher m = p.matcher(clause);
+
+           if (m.find()) {
+               String opfound = m.group();
+               int pos = m.start();
+               String clauseLhs = clause.substring(0, pos).trim();
+               String clauseRhs = clause.substring(m.end()).trim();
+               String valRhs = "";
+               boolean fixed = false;
+               if (clauseRhs.charAt(0) == '"') {
+                   valRhs = strings.get(stringCount++);// ignore the value in the clause - it must be a
+                   fixed = true;
+               }
+
+               for (Name name : names) {
+                   String valLhs = name.getAttribute(clauseLhs);
+                   if (!fixed) {
+                       valRhs = name.getAttribute(clauseRhs);
+                   }
+                   boolean OK = false;
+                   int comp = valLhs.compareTo(valRhs);
+                   for (int i = 0; i < opfound.length(); i++) {
+                       char op = opfound.charAt(i);
+
+                       switch (op) {
+                           case '=':
+                               if (comp == 0) OK = true;
+                               break;
+                           case '<':
+                               if (comp < 0) OK = true;
+                               break;
+                           case '>':
+                               if (comp > 0) OK = true;
+                       }
+                   }
+                   if (!OK) {
+                       namesToRemove.add(name);
+                   }
+               }
+               names.removeAll(namesToRemove);
+           }
+           lastPos = andPos + 5;
+            andPos = condition.toLowerCase().indexOf(" and ", lastPos);
+
+       }
+
+    }
 
     private String interpretSetTerm(LoggedInConnection loggedInConnection, List<Name> namesFound, String setTerm, List<String> strings) throws Exception {
 
@@ -917,6 +983,9 @@ public final class NameService {
             namesFound.clear();
             namesFound.addAll(parents);
 
+        }
+        if (whereString != null){
+            filter(namesFound, whereString, strings);
         }
         if (sorted != null){
             Collections.sort(namesFound);
