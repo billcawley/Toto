@@ -387,7 +387,7 @@ public final class ImportService {
      // if (found != null){
      //      return found;
        // }
-        Name found = nameService.findOrCreateNameInParent(loggedInConnection, name, parent, local);
+        Name found = nameService.findOrCreateName(loggedInConnection, name + "," + parent.getDefaultDisplayName(), local);
         //namesFound.put(findName, found);
         return found;
 
@@ -642,6 +642,12 @@ public final class ImportService {
                         String itemName = getValue(headings.get(heading.structureHeading).column, csvReader, headings);
                         String category = getValue(heading.column, csvReader, headings);
                         if (category.trim().length() > 0) {
+                            String shortCategory = category;
+                            if (!heading.local && category.charAt(0) !=Name.QUOTE && category.indexOf(",") >0){
+                                //remove the sets
+                                shortCategory = category.substring(0,category.indexOf(","));
+
+                            }
                             if (heading.name == null) {
                                 heading.name = nameService.findOrCreateName(loggedInConnection, heading.heading);
                                 heading.heading = heading.name.getDefaultDisplayName();
@@ -663,10 +669,10 @@ public final class ImportService {
                                     testCategory.removeFromChildrenWillBePersisted(memberName);
                                 }
                             }
-                            Name thisSet = nameService.findOrCreateNameInParent(loggedInConnection, category + " " + plural, byCategory, heading.local);
+                            Name thisSet = nameService.findOrCreateNameInParent(loggedInConnection, shortCategory + " " + plural, byCategory, heading.local);
                             //don't use the importService 'includeInSet' as it pays attention to 'local'
                             nameService.includeInSet(memberName, thisSet);
-                            includeInSet(loggedInConnection, category, heading.name, namesFound, heading.local);
+                              includeInSet(loggedInConnection, category, heading.name, namesFound, heading.local);
                         }
                     }
                     if (heading.identityHeading >= 0) {
