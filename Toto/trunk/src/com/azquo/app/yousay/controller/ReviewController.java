@@ -4,6 +4,7 @@ package com.azquo.app.yousay.controller;
  * Created by bill on 09/09/14.
  */
 import com.azquo.admindao.DatabaseDAO;
+import com.azquo.app.yousay.service.ReviewService;
 import com.azquo.memorydb.MemoryDBManager;
 import com.azquo.memorydb.Name;
 import com.azquo.service.LoggedInConnection;
@@ -48,6 +49,9 @@ public class ReviewController {
     @Autowired
     private NameService nameService;
 
+    @Autowired
+    private ReviewService reviewService;
+
 
 
     @RequestMapping
@@ -63,7 +67,7 @@ public class ReviewController {
         String startDate = "2014-01-01";
         String division = "";//should be the division topparent
         String connectionId = null;
-        List<Map<String, String>> reviews = new ArrayList<Map<String, String>>();
+        String sendEmails = null;
 
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
@@ -76,6 +80,8 @@ public class ReviewController {
                 startDate = paramValue;
             } else if (paramName.equals("division")) {
                 division = paramValue;
+            } else if (paramName.equals("sendemails")) {
+                sendEmails = paramValue;
             } else if (paramName.equals("connectionid")) {
                 connectionId = paramValue;
             }
@@ -91,76 +97,15 @@ public class ReviewController {
         if (supplierDB != null) {
             loginService.switchDatabase(loggedInConnection, databaseDAO.findForName(loggedInConnection.getBusinessId(), supplierDB));
         }
-        List<Name> orderItems = new ArrayList<Name>();
-        String error = nameService.interpretName(loggedInConnection, orderItems, division + ";associated order items;WHERE `feedback date` >= \"" + startDate + "\" * Service Order Items;level lowest");
-        if (error.length() > 0) {
-            return error;
+        if (division.length()> 0){
+            return reviewService.showReviews(loggedInConnection,division, startDate);
         }
-        Name serviceRating = nameService.findByName(loggedInConnection, "Order Items by Rating");
-        int posCount = 0;
-        for (Name orderItem : orderItems) {
-            Map<String, String> r = new HashMap<String, String>();
-            List<Name> rating = orderItem.findAllParents();
-            rating.retainAll(serviceRating.getChildren());
-            String ratingStr = rating.get(0).getDefaultDisplayName().replace(" Order Items","");
-            r.put("rating", ratingStr);
-            if (ratingStr.contains("+")){
-                posCount++;
-            }
-            String comment = orderItem.getAttribute("Comment");
-            if (comment == null){
-                comment = "No comment";
-            }
-            if (comment.indexOf("|Supplier:") > 0){
-                comment = comment.replace("|Supplier:","<div class=\"suppliercomment\">") + "</div>";
-            }
-            r.put("comment", comment);
-            r.put("date", showDate(orderItem.getAttribute("Feedback date")));
-            reviews.add(r);
-
-
+        if (sendEmails != null){
+            return reviewService.sendEmails(loggedInConnection,1000);
         }
-
-
-        VelocityEngine ve = new VelocityEngine();
-        Properties properties = new Properties();
-        properties.setProperty("file.resource.loader.path", "/home/azquo/velocity");
-        ve.init(properties);
-
-        ve.init();
-        /*  next, get the Template  */
-        Template t = ve.getTemplate("form.vm");
-        /*  create a context and add data */
-        VelocityContext context = new VelocityContext();
-        int reviewCount = orderItems.size();
-
-        context.put("reviewcount", reviewCount);
-
-        context.put("overallrating", (posCount * 100 / reviewCount));
-        context.put("reviews", reviews);
-        /* now render the template into a StringWriter */
-        StringWriter writer = new StringWriter();
-        t.merge(context, writer);
-        /* show the World */
-        return writer.toString();
-    }
-
-
-    public String showDate(String fileDate){
-
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-        SimpleDateFormat outputFormat = new SimpleDateFormat("dd/MM/YY");
-
-        try{
-            Date date = df.parse(fileDate);
-            //checks needed here for '5 minutes ago'
-            return outputFormat.format(date);
-        }catch(Exception e){
-            return "unrecognised date";
-        }
-
-
-
+        return "";
      }
-}
+
+
+  }
 
