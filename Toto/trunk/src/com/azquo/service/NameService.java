@@ -202,15 +202,9 @@ public final class NameService {
     }
 
 
-    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name) throws Exception {
-        if (name.toLowerCase().endsWith(";local")) {
-            return findOrCreateName(loggedInConnection, name.substring(0, name.length() - 6), true);
-        }
-        return findOrCreateName(loggedInConnection, name, false);
-    }
+  
 
-
-    public Name findOrCreateName(final LoggedInConnection loggedInConnection, final String name, boolean local) throws Exception {
+    public Name findOrCreateNameStructure(final LoggedInConnection loggedInConnection, final String name, Name topParent, boolean local) throws Exception {
 
         /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
         This may not be an immediate hierarchy.
@@ -224,23 +218,20 @@ public final class NameService {
          */
 
 
-        // as I (Edd) understand this will be the top parent
-        Name topParent = null;
         String parentName = findParentFromList(name);
         String remainder = name;
         if (parentName == null) {
-            return findOrCreateNameInParent(loggedInConnection, name, null, false);//'local' is irrelevant
+            return findOrCreateNameInParent(loggedInConnection, name, topParent, local);
         }
 
-
-        /*
+       /*
         ok teh key here is to step through the parent -> child list as defined in the name string creating teh hierarchy as you go along
         the top parent is the context in which names should be searched for and created if not existing, the parent name and parent is the direct parent we may have just created
         so what unique is saying is : ok we have the parent we want to add a name to : the question is do we search under that parent to find or create or under the top parent?
         More specifically : if it is unique check for the name anywhere under the top parent to find it and then move it if necessary, if not unique then it could, for example, be another name called London
         I think maybe the names of variables could be clearer here!, maybe look into on second pass
         */
-        Name parent = null;
+        Name parent = topParent;
         while (parentName != null) {
             remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length() - 1));
             //if two commas in succession occur, ignore the blank parent
@@ -305,6 +296,9 @@ public final class NameService {
             return existing;
         } else {
             // actually creating a new one
+            String parentName = "";
+            if (newparent != null) parentName = newparent.getDefaultDisplayName();
+            System.out.println("New name: " + storeName + ", " + parentName);
             Provenance provenance = loggedInConnection.getProvenance();
             Name newName = new Name(loggedInConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
             newName.setAttributeWillBePersisted(loggedInConnection.getLanguage(), storeName);
@@ -859,8 +853,14 @@ public final class NameService {
 
                for (Name name : names) {
                    String valLhs = name.getAttribute(clauseLhs);
+                   if (valLhs == null){
+                       valLhs = "";
+                   }
                    if (!fixed) {
                        valRhs = name.getAttribute(clauseRhs);
+                       if (valRhs == null){
+                           valRhs = "";
+                       }
                    }
                    boolean OK = false;
                    int comp = valLhs.compareTo(valRhs);
