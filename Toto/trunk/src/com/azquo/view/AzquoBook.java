@@ -313,12 +313,13 @@ public  class AzquoBook {
             if (val.startsWith("$") || val.startsWith("£")){//remove £ or $ prefix - what about other currencies???
                 val = val.substring(1);
             }
-            if (NumberUtils.isNumber(val)) {
-                currentCell.setValue(Double.parseDouble(val));
-            } else {
+            try{
+                Double d = Double.parseDouble(val);
+                currentCell.setValue(d);
+            }catch(Exception e){
                 currentCell.setValue(val);
-             }
-        }
+            }
+         }
     }
 
     private void setHighlights(LoggedInConnection loggedInConnection){
