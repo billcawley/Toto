@@ -8,7 +8,6 @@ import com.azquo.memorydb.Value;
 import com.csvreader.CsvReader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -48,6 +47,13 @@ public final class ValueService {
 
     // one line function, much point??
 
+    private class MBoolean{
+        boolean isTrue;
+
+        MBoolean(){
+            isTrue = false;
+        }
+    }
 
     public Value createValue(final LoggedInConnection loggedInConnection, final Provenance provenance, final String text) throws Exception {
         return new Value(loggedInConnection.getAzquoMemoryDB(), provenance, text, null);
@@ -305,7 +311,7 @@ public final class ValueService {
 
     }
 
-    public double findValueForNames(final LoggedInConnection loggedInConnection, final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound) {
+    public double findValueForNames(final LoggedInConnection loggedInConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound) {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
 
@@ -327,10 +333,10 @@ public final class ValueService {
         }
         // no reverse polish converted formula, just sum
         if (!hasCalc) {
-            locked.setValue(false);
+            locked.isTrue = false;
             for (Name oneName : names) {
                 if ((oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) || !nameService.isAllowed(oneName, loggedInConnection.getWritePermissions()))
-                    locked.setValue(true);
+                    locked.isTrue = true;
             }
             return findSumForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound);
         } else {
@@ -378,7 +384,7 @@ public final class ValueService {
                     }
                 }
             }
-            locked.setValue(true);
+            locked.isTrue = true;
             return values[0];
         }
     }
@@ -1178,7 +1184,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
                 final Set<Name> namesForThisCell = new HashSet<Name>();
                 createCellNameList(namesForThisCell, rowName, columnName, contextNames);
                 // edd putting in peer check stuff here, should I not???
-                MutableBoolean locked = new MutableBoolean(false); // we can pass a mutable boolean in and have the function set it
+                MBoolean locked = new MBoolean(); // we can pass a mutable boolean in and have the function set it
                 // why bother?   Maybe leave it as 'on demand' when a data region doesn't work
                 // Map<String, String> result = nameService.isAValidNameSet(loggedInConnection, namesForThisCell, new HashSet<Name>());
                 // much simpler check - simply that the list is complete.
@@ -1208,7 +1214,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
                     if (values.size() > 0) {
                         hasValues = true;
                     }
-                    if (values.size() == 1 && !locked.isTrue()) {
+                    if (values.size() == 1 && !locked.isTrue) {
                         for (Value value : values) {
                             shownValues.add(value.getText());
                             if (sortCol == colNo && !NumberUtils.isNumber(value.getText())){
@@ -1222,7 +1228,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
                     } else {
                         shownValues.add(cellValue + "");
                     }
-                    if (locked.isTrue()) {
+                    if (locked.isTrue) {
                         lockedCells.add(true);
                     } else {
                         lockedCells.add(false);
