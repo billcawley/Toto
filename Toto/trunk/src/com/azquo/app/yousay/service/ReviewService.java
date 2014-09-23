@@ -9,6 +9,7 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.servlet.ServletContext;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -141,7 +142,7 @@ public class ReviewService {
     }
 
 
-    public String showReviews(LoggedInConnection loggedInConnection, String division, String startDate) throws Exception{
+    public String showReviews(ServletContext servletContext, LoggedInConnection loggedInConnection, String division, String startDate) throws Exception{
         List<Name> orderItems = new ArrayList<Name>();
         List<Map<String, String>> reviews = new ArrayList<Map<String, String>>();
         String error = nameService.interpretName(loggedInConnection, orderItems, division + ";level lowest;WHERE Feedback date >= \"" + startDate + "\" * order;level lowest");
@@ -173,13 +174,15 @@ public class ReviewService {
         int reviewCount = orderItems.size();
         if (reviewCount > 0) {
 
-
             VelocityEngine ve = new VelocityEngine();
             Properties properties = new Properties();
-            properties.setProperty("file.resource.loader.path", "/WEB-INF/velocity");
+            properties.setProperty("resource.loader", "webapp");
+            properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
+            properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
+            ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
             ve.init(properties);
 
-            ve.init();
+            //ve.init();
         /*  next, get the Template  */
             Template t = ve.getTemplate("form.vm");
         /*  create a context and add data */
