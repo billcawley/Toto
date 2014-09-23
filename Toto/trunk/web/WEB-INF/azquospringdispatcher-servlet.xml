@@ -64,6 +64,7 @@
 
     <!-- define app services and their load order in a list -->
     <bean name="feedbackService" class="com.azquo.app.yousay.service.FeedbackService"/>
+    <bean name="reviewService" class="com.azquo.app.yousay.service.ReviewService"/>
     <util:list id="appServices" value-type="com.azquo.service.AppEntityService">
         <ref bean="feedbackService"/>
     </util:list>
