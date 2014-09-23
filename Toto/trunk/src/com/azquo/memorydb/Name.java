@@ -305,12 +305,14 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         if (child.equals(this) || findAllParents().contains(child)) {
             throw new Exception("error cannot assign child due to circular reference, " + child + " cannot be added to " + this);
         }
+        /* SINGLE CHILDREN MAY NOW HAVE A DIFFERENT TOP PARENT (e.g. ORDER ITEM in PRODUCT)
         // now we need to check the top parent is not changing ont eh child
         if (child.getParents().size() > 0) { // it has parents so we need to check
             if (!child.findTopParent().equals(this) && parents.size() > 0 && !child.findTopParent().equals(findTopParent())) {
                 throw new Exception("error cannot assign child as it has a different top parent" + child + " has top parent " + child.findTopParent() + " " + this + " has or is a different top parent");
             }
         }
+        */
 
         if (position == 0 || (position > children.size() && !children.contains(child))) { // no position or it's off the end and the child isn't in there already
             if (children.add(child)) { // something actually changed :)
@@ -427,6 +429,14 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         // important, manage persistence, allowed name rules, db look ups
         // only care about ones in this set
         String existing = attributes.get(attributeName);
+        if (attributeValue == null || attributeValue.length()==0){
+            if (existing != null){
+                attributes.remove(attributeName);
+                getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
+                setNeedsPersisting();
+            }
+            return "";
+        }
         if (existing!= null && existing.equals(attributeValue)){
             return "";
         }
@@ -460,7 +470,14 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     public String getAttribute(String attributeName) {
-        return attributes.get(attributeName);
+        String attribute = attributes.get(attributeName);
+        if (attribute != null) return attribute;
+        //look up the chain for any parent with the attribute
+        for (Name parent:this.findAllParents()){
+            attribute = parent.getAttribute(attributeName);
+            if (attribute != null) return attribute;
+        }
+        return null;
     }
 
     // removal ok on linked lists
