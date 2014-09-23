@@ -443,18 +443,19 @@ public class AdminService {
         return "";
     }
 
-    private Name findToName(final LoggedInConnection lic2, final Name name, final String prefix) throws Exception{
+    private Name findToName(final LoggedInConnection lic2, final Name name, Name topParent, boolean local) throws Exception{
 
 
         //this routine transfers the name and all the parent paths to that name.  It then copies the name attributes  and peers (but not the attributes of the parents)
         Name name2 = null;
         if (name.getParents().size() == 0){
-            name2 = nameService.findOrCreateName(lic2, prefix + Name.QUOTE + name.getDefaultDisplayName() + Name.QUOTE);
+            name2 = nameService.findOrCreateNameInParent(lic2, name.getDefaultDisplayName(), null, local);
             return name2;
         }
         for (Name parent:name.getParents()){
             //will the the same name2 on each iteration, but the
-            name2 = findToName(lic2, parent, prefix + Name.QUOTE + name.getDefaultDisplayName() + Name.QUOTE + ",");
+            Name parent2 = findToName(lic2, parent, topParent, local);
+            name2 = nameService.findOrCreateNameInParent(lic2, name.getDefaultDisplayName(),parent2, local);
 
         }
         //never uses the return here...
@@ -484,13 +485,13 @@ public class AdminService {
         //transfer each name and its parents.
         Map<Name, Name> dictionary = new HashMap<Name, Name>();
         for (Name name:namesFound){
-            Name name2 = findToName(lic2, name, "");
+            Name name2 = findToName(lic2, name, null, false);//currently assuming no local name!!!!
             for (String attName : name.getAttributes().keySet()) {
                 name2.setAttributeWillBePersisted(attName, name.getAttribute(attName));
             }
             LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
             for (Name peer:name.getPeers().keySet()){
-                Name peer2 = nameService.findOrCreateName(lic2,Name.QUOTE  + peer.getDefaultDisplayName() + Name.QUOTE);
+                Name peer2 = nameService.findOrCreateNameInParent(lic2,peer.getDefaultDisplayName(),null, false);
                 peers2.put(peer2, name.getPeers().get(peer));
 
             }
