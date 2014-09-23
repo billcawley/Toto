@@ -176,7 +176,7 @@ public class ReviewService {
 
             VelocityEngine ve = new VelocityEngine();
             Properties properties = new Properties();
-            properties.setProperty("file.resource.loader.path", "/home/azquo/velocity");
+            properties.setProperty("file.resource.loader.path", "/WEB-INF/velocity");
             ve.init(properties);
 
             ve.init();
