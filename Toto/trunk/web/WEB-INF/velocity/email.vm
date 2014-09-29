@@ -1,0 +1,20 @@
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <style>
+
+    </style>
+</head>
+<body>
+<div id="wrapper">
+    <table>
+        <tr><td>Sale date</td><td>$saledate</td></tr>
+        <tr><td>You bought</td><td>$saledescription</td></tr>
+    </table>
+    <p>Dear $customername</p>
+    <p>$supplier would be delighted if you could ..........</p>
+    <p>to leave feedback click <a href=$feedbacklink>here</a></p>
+    <p>to see what others ahve said click <a href="$reviewslink">here</a></p>
+  </div>
+</body>
+</html>
+
