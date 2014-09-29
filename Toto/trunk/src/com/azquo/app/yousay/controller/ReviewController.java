@@ -89,7 +89,7 @@ public class ReviewController {
         LoggedInConnection loggedInConnection;
 
         if (connectionId == null) {
-            loggedInConnection = loginService.login("yousay1", "edd@azquo.com", "eddtest", 0, "", false);
+            loggedInConnection = loginService.login("yousay1", "bill@azquo.com", "password", 0, "", false);
 
         } else {
             loggedInConnection = loginService.getConnection(connectionId);
@@ -101,7 +101,7 @@ public class ReviewController {
             return reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate);
         }
         if (sendEmails != null){
-            return reviewService.sendEmails(loggedInConnection,1000);
+            return reviewService.sendEmails(request.getServletContext(), loggedInConnection,1000);
         }
         return "";
      }
