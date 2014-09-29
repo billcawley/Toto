@@ -35,9 +35,16 @@
 .reviewrating{
    position:relative;
    left:140px;
-   width:120px;
+   width:320px;
    top:0px;
 
+}
+
+.reviewproduct{
+    position:relative;
+    left:10px;
+    top:50px;
+    width:300px;
 }
 
 .reviewcomment{
@@ -67,6 +74,7 @@
   			#foreach($review in $reviews)
                 <div class="review">
                     <div class="reviewdate"> Date  $review.date</div>
+                    <div class="reviewproduct">$review.product</div>
                     <div class="reviewrating">Rating $review.rating</div>
                     <div class="reviewcomment">Comment $review.comment</div>
                  </div>
