@@ -27,81 +27,108 @@ public class ReviewService {
     @Autowired
     private AzquoMailer azquoMailer;
 
-    public String sendEmails(LoggedInConnection loggedInConnection, int maxCount)throws Exception{
+    public String sendEmails(ServletContext servletContext,LoggedInConnection loggedInConnection, int maxCount)throws Exception{
 
         String error = "";
         Name emailsToBeSent  = nameService.findByName(loggedInConnection,"Emails to be sent");
+        Name ordersWithEmailSent = nameService.findByName(loggedInConnection, "Orders with email sent");
+        Set<Name> emailsSent = new HashSet<Name>();
          String now = todayString();
         int count = 0;
+
         for (Name order:emailsToBeSent.getChildren()) {
             String feedbackDate = order.getAttribute("Feedback date");
-            if (feedbackDate.compareTo(now) < 0) {
-                error = sendEmail(loggedInConnection, order);
-                if (error.length() > 0) return error;
-                order.setAttributeWillBePersisted("Email sent", now);
-                emailsToBeSent.removeFromChildrenWillBePersisted(order);
-                count++;
-                if (count >= maxCount) {
-                    break;
+            if (feedbackDate == null){
+                error = "no feedback date for order " + order.getDefaultDisplayName();
+            }else{
+                if (feedbackDate.compareTo(now) < 0) {
+                    //todo  consider what happens if the server crashes
+                    error = sendEmail(servletContext, loggedInConnection, order);
+                    if (error.length() > 0) return error;
+                    order.setAttributeWillBePersisted("Email sent", now);
+                    emailsSent.add(order);
+                    ordersWithEmailSent.addChildWillBePersisted(order);
+                    count++;
+                    if (count >= maxCount) {
+
+                        break;
+                    }
                 }
 
             }
-            return error;
+
         }
         return "";
 
     }
 
-    public String sendEmail(LoggedInConnection loggedInConnection,Name order) throws Exception{
-        List<Name> orderItems = new ArrayList<Name>();
-        String error = nameService.interpretName(loggedInConnection, orderItems, order.getDefaultDisplayName() + " Order items");
-        if (error.length() > 0) return error;
+    public String sendEmail(ServletContext servletContext,LoggedInConnection loggedInConnection,Name order) throws Exception{
+        Set<Name> orderItems = order.getChildren();
         if (orderItems.size() == 0) return ("No items in order " + order.getDefaultDisplayName());
-        String description = "";
-        int itemCount = 0;
-        for (Name orderItem:orderItems){
-            //may need to create an order here....
-            String product = orderItem.getAttribute("product");
-            if (!product.equalsIgnoreCase("service")){
-                if (itemCount++ > 0) {
-                    description +=", ";
-                }
-                if (itemCount == 3){
-                    description += "etc.";
+        Name allProducts = nameService.findByName(loggedInConnection,"All products");
+        Name service = nameService.findByName(loggedInConnection,"Service");
+        Set<Name> productItems = new HashSet<Name>();
+        Set<Name> serviceItems = new HashSet<Name>();
+        for (Name name:orderItems){
+            //ASSUMING THAT 'service' HAS ONLY ONE LEVEL OF CHILDREN!
+            if (service.getChildren().contains(name)){
+                serviceItems.add(name);
+             }else{
+                productItems.add(name);
+            }
+        }
+        StringBuffer saledesc = new StringBuffer();
+        int productCount = 0;
+        for(Name orderItem:productItems){
+
+            if (productCount > 0){
+                saledesc.append(", ");
+                if (productCount == 2){
+                    saledesc.append("etc.");
                     break;
                 }
-                description += product;
             }
-            String supplierName = "Not yet set";
-
-            VelocityEngine ve = new VelocityEngine();
-            Properties properties = new Properties();
-            properties.setProperty("file.resource.loader.path", "/home/azquo/velocity");
-            ve.init(properties);
-
-
-            ve.init();
-        /*  next, get the Template  */
-            Template t = ve.getTemplate("email.vm");
-        /*  create a context and add data */
-            VelocityContext context = new VelocityContext();
-
-            String customerName = order.getAttribute("Customer name");
-            context.put("customername", customerName);
-            String email =  order.getAttribute("Customer email");
-            Name ordersByDate = nameService.findByName(loggedInConnection,"Orders by date");
-            String orderDate = showDate(getValueFromParent(order,ordersByDate));
-            context.put("orderdate", orderDate);
-            StringWriter writer = new StringWriter();
-            t.merge(context, writer);
-
-
-
-            azquoMailer.sendEMail(email,customerName,"Feedback request on behalf of " + supplierName, writer.toString());
-
-
-
+            saledesc.append(getValueFromParent(orderItem, allProducts));
+            productCount++;
         }
+         Name topSupplier = nameService.findByName(loggedInConnection,"supplier");
+        Name supplier = null;
+        for (Name name:topSupplier.getChildren()){
+            supplier = name;
+            break;
+        }
+
+
+
+        VelocityEngine ve = new VelocityEngine();
+        Properties properties = new Properties();
+        properties.setProperty("resource.loader", "webapp");
+        properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
+        properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
+        ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
+        ve.init(properties);
+
+        //ve.init();
+        /*  next, get the Template  */
+        Template t = ve.getTemplate("email.vm");
+        /*  create a context and add data */
+        VelocityContext context = new VelocityContext();
+        context.put("saledescription", saledesc.toString());
+        context.put("saledate", showDate(order.getAttribute("Sale Date")));
+        context.put("customername", order.getAttribute("Customer Name"));
+        context.put("supplier", supplier.getDefaultDisplayName());
+        context.put("feedbacklink", "http://bomorgan.co.uk:8080/api/Reviews/?supplierdb=yousay1&division=SUTTON&startdate=2014-01-06");
+        context.put("reviewslink", "http://bomorgan.co.uk:8080/api/Reviews/?supplierdb=yousay1&division=SUTTON&startdate=2014-01-06");
+    /* now render the template into a StringWriter */
+        StringWriter writer = new StringWriter();
+        t.merge(context, writer);
+        /* show the World */
+        if (order.getAttribute("Customer email").equals("bill@azquo.com")){
+            azquoMailer.sendEMail(order.getAttribute("Customer email"), order.getAttribute("Customer name"),"Feedback request on behalf of " + supplier.getDefaultDisplayName(), writer.toString());
+        }
+
+
+
         return "";
 
 
@@ -145,16 +172,20 @@ public class ReviewService {
     public String showReviews(ServletContext servletContext, LoggedInConnection loggedInConnection, String division, String startDate) throws Exception{
         List<Name> orderItems = new ArrayList<Name>();
         List<Map<String, String>> reviews = new ArrayList<Map<String, String>>();
-        String error = nameService.interpretName(loggedInConnection, orderItems, division + ";level lowest;WHERE Feedback date >= \"" + startDate + "\" * order;level lowest");
+        String error = nameService.interpretName(loggedInConnection, orderItems, division + ";level lowest;WHERE Feedback date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
         if (error.length() > 0) {
             return error;
         }
         Name rating = nameService.findByName(loggedInConnection, "All ratings");
+        Name product = nameService.findByName(loggedInConnection, "All Products");
         int posCount = 0;
         for (Name orderItem : orderItems) {
             Map<String, String> r = new HashMap<String, String>();
             String ratingStr = getValueFromParent(orderItem,rating);
+            String productStr = getValueFromParent(orderItem, product);
+
             r.put("rating", ratingStr);
+            r.put("product", productStr);
             if (ratingStr.contains("+")){
                 posCount++;
             }
