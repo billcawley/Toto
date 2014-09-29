@@ -33,6 +33,16 @@ public final class ImportService {
         }
     }
 
+    private class LineResult{
+        String error;
+        int valueCount;
+
+        LineResult(){
+            error="";
+            valueCount = 0;
+        }
+    }
+
     //private static final String reportPath = "/home/bill/apache-tomcat-7.0.47/import/";
     public static final String reportPath = "/home/azquo/onlinereports/";
 
@@ -80,6 +90,7 @@ public final class ImportService {
         boolean local;
         String composition;
         String equalsString;
+        String lineValue;
 
         public ImportHeading(){
             column=-1;
@@ -99,6 +110,7 @@ public final class ImportService {
             local = false;
             composition = null;
             equalsString = null;
+            lineValue = "";
 
 
         }
@@ -404,8 +416,10 @@ public final class ImportService {
     public String valuesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile) throws Exception {
 
         //TODO  SPLIT THIS UP!
-
+        // little local cache just to speed things up
         final HashMap<NameParent, Name> namesFound = new HashMap<NameParent, Name>();
+
+
         long track = System.currentTimeMillis();
 
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
@@ -417,15 +431,55 @@ public final class ImportService {
         // namesWithPeersHeaderMap is a map of the names which have peers, colums headed by such names will have the value in them, hence why we need to hold the header so we cna get the value
         final HashMap<Name, String> namesWithPeersHeaderMap = new HashMap<Name, String>();
         final List<ImportHeading> headings = new ArrayList<ImportHeading>();
+
+        String error = readHeaders(loggedInConnection, headers, headings);
+        if (error.length() > 0) return error;
+
+        error = fillInHeaderInformation(loggedInConnection, headings);
+        if (error.length() > 0) return error;
+
+        int valuecount = 0; // purely for logging
+        int lastReported = 0;
+        // having read the headers go through each record
+          int lineNo = 0;
+        while (csvReader.readRecord()) {
+            lineNo++;
+            ImportHeading contextPeersItem = null;
+            if (csvReader.get(0).length()==0)break;//break if the first line element is blank
+            for (ImportHeading heading:headings){
+                heading.lineValue = csvReader.get(heading.column);
+            }
+            getCompositeValues(headings);
+            LineResult result = interpretLine(loggedInConnection,headings,namesFound);
+            if (result.error.length()> 0) return result.error;
+            valuecount += result.valueCount;
+            if (valuecount - lastReported > 5000){
+                System.out.println("imported value count " + valuecount);
+                lastReported = valuecount;
+            }
+
+         }
+        System.out.println("csv import took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
+
+        nameService.persist(loggedInConnection);
+
+        return "";
+    }
+
+
+    private String readHeaders(LoggedInConnection loggedInConnection, String[] headers, List<ImportHeading> headings) throws Exception{
+
         int col = 0;
+        String error = "";
         for (String header : headers) {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 ImportHeading heading = new ImportHeading();
                 String head = header;
                 int dividerPos = head.lastIndexOf(headingDivider);
-                while (dividerPos > 0){
+                while (dividerPos > 0) {
                     ImportHeading contextHeading = new ImportHeading();
-                    String result = interpretHeading(loggedInConnection,head.substring(dividerPos + 1), contextHeading);
+                    error = interpretHeading(loggedInConnection, head.substring(dividerPos + 1), contextHeading);
+                    if (error.length()> 0) return error;
                     contextHeading.column = col;
                     contextHeading.contextItem = true;
                     headings.add(contextHeading);
@@ -436,51 +490,161 @@ public final class ImportService {
                 }
                 heading.column = col;
 
-                final String result = interpretHeading(loggedInConnection, head, heading);
+                error = interpretHeading(loggedInConnection, head, heading);
+                if (error.length() > 0) return error;
                 headings.add(heading);
-            }else{
+            } else {
                 headings.add(new ImportHeading());
             }
             col++;
         }
-        for (ImportHeading importHeading:headings){
-            if (importHeading.heading != null){
-                if (importHeading.name != null && importHeading.name.getPeers().size() > 0 && !importHeading.contextItem){
-                    for (Name peer:importHeading.name.getPeers().keySet()){
+        return error;
+    }
+
+
+    private LineResult interpretLine(LoggedInConnection loggedInConnection, List<ImportHeading> headings, HashMap<NameParent, Name> namesFound)throws Exception{
+        LineResult result = new LineResult();
+        Map<Name,Name> contextNames = new HashMap<Name,Name>();
+        String value = null;
+        ImportHeading contextPeersItem = null;
+        for (ImportHeading heading:headings) {
+            if (heading.contextItem){
+                contextNames.put(heading.name.findTopParent(),heading.name);
+                if (heading.name.getPeers().size() > 0){
+                    contextPeersItem = heading;
+                }
+            }else {
+                if (contextNames.size() > 0 && heading.name != null){
+                    contextNames.put(heading.name.findTopParent(),heading.name);
+                    if (contextPeersItem != null){
+                        final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
+                        namesForValue.add(contextPeersItem.name);
+                        boolean foundAll = true;
+                        for (Name peer:contextPeersItem.name.getPeers().keySet()){
+                            Name possiblePeer = contextNames.get(peer.findTopParent());
+                            if (possiblePeer == null){
+                                //look at the headings
+                                int colFound = findHeading(peer.getDefaultDisplayName(), headings);
+                                if (colFound<0){
+                                    foundAll = false;
+                                    break;
+                                }
+                                String peerValue = headings.get(colFound).lineValue;
+                                possiblePeer = includeInSet(loggedInConnection,namesFound,peerValue, peer, heading.local);
+                            }
+                            if (nameService.inParentSet(possiblePeer, peer.getChildren())!=null){
+                                namesForValue.add(possiblePeer);
+                            }else{
+                                foundAll = false;
+                                break;
+                            }
+
+
+                        }
+                        if (foundAll){
+                            // now we have the set of names for that name with peers get the value from that headingNo it's a header for
+                            value = heading.lineValue;
+                        } else {
+                            value = "";
+                        }
+                        if (value.trim().length() > 0) { // no point storing if there's no value!
+                            result.valueCount++;
+                            // finally store our value and names for it
+                            valueService.storeValueWithProvenanceAndNames(loggedInConnection, value, namesForValue);
+
+                        }
+
+                    }
+                }
+                if (heading.peerHeadings.size() > 0) {
+                    ImportHeading headingWithPeers = heading;
+                    if (heading.contextItem) {
+                        contextPeersItem = heading;
+                    }
+                    if (contextPeersItem != null) {
+                        headingWithPeers = contextPeersItem;
+                    }
+                    final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
+
+                    boolean hasRequiredPeers = findPeers(loggedInConnection,namesFound, heading, headings, namesForValue);
+                    if (hasRequiredPeers) {
+                        // now we have the set of names for that name with peers get the value from that headingNo it's a header for
+                        value = heading.lineValue;
+                    } else {
+                        value = "";
+                    }
+                    if (value.trim().length() > 0) { // no point storing if there's no value!
+                        result.valueCount++;
+                        // finally store our value and names for it
+                        valueService.storeValueWithProvenanceAndNames(loggedInConnection, value, namesForValue);
+                     }
+                }
+                if (heading.identityHeading >= 0) {
+                    result.error = handleAttribute(loggedInConnection, namesFound, heading, headings);
+                    if (result.error.length() > 0) return result;
+                }
+                if (heading.parentOf != null) {
+                    handleParent(loggedInConnection, namesFound, heading, headings);
+                }
+
+                if (heading.childOf != null) {
+                    String childName = heading.lineValue;
+                    if (childName.length() > 0) {
+                        Name name = includeInSet(loggedInConnection,namesFound, childName, heading.childOf, heading.local);
+                    }
+                }
+
+
+            }
+        }
+
+
+
+        return result;
+    }
+
+
+    private String fillInHeaderInformation(LoggedInConnection loggedInConnection, List<ImportHeading> headings)throws Exception{
+
+        String error = "";
+        for (ImportHeading importHeading:headings) {
+            if (importHeading.heading != null) {
+                if (importHeading.name != null && importHeading.name.getPeers().size() > 0 && !importHeading.contextItem) {
+                    for (Name peer : importHeading.name.getPeers().keySet()) {
                         //three possibilities to find the peer:
                         int peerHeading = findHeading(peer.getDefaultDisplayName(), headings);
                         if (peerHeading == -1) {
                             peerHeading = findContextHeading(peer, headings);
                             if (peerHeading == -1) {
-                                peerHeading = findLowerLevelHeading(loggedInConnection,peer.getDefaultDisplayName(), headings);
+                                peerHeading = findLowerLevelHeading(loggedInConnection, peer.getDefaultDisplayName(), headings);
                                 if (peerHeading == -1) {
                                     return "error: cannot find peer " + peer.getDefaultDisplayName() + " for " + importHeading.name.getDefaultDisplayName();
                                 }
 
                             }
                         }
-                        if (peerHeading>=0) {
+                        if (peerHeading >= 0) {
                             ImportHeading importPeer = headings.get(peerHeading);
                             if (importPeer.name == null) {
                                 importPeer.name = nameService.findOrCreateNameInParent(loggedInConnection, importPeer.heading, null, false);
                             }
                         }
                         importHeading.peerHeadings.add(peerHeading);
-                      }
+                    }
                 }
-                if (importHeading.attribute != null && !importHeading.attribute.equals(Name.DEFAULT_DISPLAY_NAME)){
+                if (importHeading.attribute != null && !importHeading.attribute.equals(Name.DEFAULT_DISPLAY_NAME)) {
                     //first remove the parent
-                    if (importHeading.equalsString != null){
-                        importHeading.name = nameService.findOrCreateNameInParent(loggedInConnection,importHeading.equalsString, null, false);//global name
-                    }else{
-                        importHeading.name = nameService.findOrCreateNameInParent(loggedInConnection,importHeading.heading, null, false);
+                    if (importHeading.equalsString != null) {
+                        importHeading.name = nameService.findOrCreateNameInParent(loggedInConnection, importHeading.equalsString, null, false);//global name
+                    } else {
+                        importHeading.name = nameService.findOrCreateNameInParent(loggedInConnection, importHeading.heading, null, false);
                     }
                     // not sure why this line below is in the code.  If it is to remove the commas then 'findHeading' caters for this.  Removed to cater for 'equals'
                     //importHeading.heading = importHeading.name.getDefaultDisplayName();
                     importHeading.identityHeading = findHeading(importHeading.name.getDefaultDisplayName(), headings);
-                    if (importHeading.identityHeading >=0){
+                    if (importHeading.identityHeading >= 0) {
                         headings.get(importHeading.identityHeading).identifier = true;//actively set the identifier as setting the attribute below might confuse the issue
-                        for (ImportHeading heading2:headings) {
+                        for (ImportHeading heading2 : headings) {
                             //this is for the cases where the default display name is not the identifier.
                             if (heading2.heading != null && heading2.heading.equals(importHeading.heading) && heading2.attribute == null) {
                                 heading2.attribute = Name.DEFAULT_DISPLAY_NAME;
@@ -490,19 +654,19 @@ public final class ImportService {
                         }
 
                     }
-                 }
-                if (importHeading.childOfString != null){
-                     importHeading.childOf = nameService.findOrCreateNameInParent(loggedInConnection, importHeading.childOfString, null, false);
                 }
-                if (importHeading.parentOf != null){
+                if (importHeading.childOfString != null) {
+                    importHeading.childOf = nameService.findOrCreateNameInParent(loggedInConnection, importHeading.childOfString, null, false);
+                }
+                if (importHeading.parentOf != null) {
                     importHeading.childHeading = findHeading(importHeading.parentOf, headings);
-                          if (importHeading.childHeading < 0){
+                    if (importHeading.childHeading < 0) {
                         return "error: cannot find column " + importHeading.parentOf + " for child of " + importHeading.heading;
                     }
-                    String error = findTopParent(loggedInConnection, importHeading, headings);
+                    error = findTopParent(loggedInConnection, importHeading, headings);
                     if (error.length() > 0) return error;
                 }
-             }
+            }
         }
         //attribute topparents must be found after the identity heading topparent is found
         for (ImportHeading importHeading:headings) {
@@ -514,248 +678,149 @@ public final class ImportService {
             }
         }
 
-
-        int valuecount = 0; // purely for logging
-        // little local cache just to speed things up
-        // having read the headers go through each record
-        ImportHeading contextPeersItem = null;
-        int lineNo = 0;
-        while (csvReader.readRecord()) {
-            lineNo++;
-            if (csvReader.get(0).length()==0)break;//break if the first line element is blank
-            Map<Name,Name> contextNames = new HashMap<Name,Name>();
-            String value;
-            for (int headingNo = 0; headingNo < headings.size();headingNo++) {
-                 ImportHeading heading = headings.get(headingNo);
-                if (heading.contextItem){
-                    contextNames.put(heading.name.findTopParent(),heading.name);
-                    if (heading.name.getPeers().size() > 0){
-                        contextPeersItem = heading;
-                    }
-                }else {
-                    if (contextNames.size() > 0 && heading.name != null){
-                        contextNames.put(heading.name.findTopParent(),heading.name);
-                        if (contextPeersItem != null){
-                            final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
-                            namesForValue.add(contextPeersItem.name);
-                            boolean foundAll = true;
-                            for (Name peer:contextPeersItem.name.getPeers().keySet()){
-                                Name possiblePeer = contextNames.get(peer.findTopParent());
-                                if (possiblePeer == null){
-                                    //look at the headings
-                                    int colFound = findHeading(peer.getDefaultDisplayName(), headings);
-                                    if (colFound<0){
-                                        foundAll = false;
-                                        break;
-                                    }
-                                    String peerValue = getValue(headings.get(colFound).column, csvReader, headings);
-                                    possiblePeer = includeInSet(loggedInConnection,namesFound,peerValue, peer, heading.local);
-                                }
-                                if (nameService.inParentSet(possiblePeer, peer.getChildren())!=null){
-                                    namesForValue.add(possiblePeer);
-                                }else{
-                                    foundAll = false;
-                                    break;
-                                }
+        return error;
 
 
-                            }
-                            if (foundAll){
-                                // now we have the set of names for that name with peers get the value from that headingNo it's a header for
-                                value = getValue(heading.column, csvReader, headings);
-                            } else {
-                                value = "";
-                            }
-                            if (value.trim().length() > 0) { // no point storing if there's no value!
-                                valuecount++;
-                                // finally store our value and names for it
-                                valueService.storeValueWithProvenanceAndNames(loggedInConnection, value, namesForValue);
-                                if (valuecount % 5000 == 0) {
-                                    System.out.println("storing value " + valuecount);
-                                }
 
-                            }
-
-                        }
-                    }
-                    if (heading.peerHeadings.size() > 0) {
-                        ImportHeading headingWithPeers = heading;
-                        if (heading.contextItem) {
-                            contextPeersItem = heading;
-                        }
-                        if (contextPeersItem != null) {
-                            headingWithPeers = contextPeersItem;
-                        }
-                        boolean hasRequiredPeers = true;
-                        final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
-                        namesForValue.add(heading.name); // the one at the top of this headingNo, the name with peers.
-                        for (int peerHeadingNo : headingWithPeers.peerHeadings) { // go looking for the peers
-                            ImportHeading peerHeading = headings.get(peerHeadingNo);
-                            if (peerHeading.contextItem) {
-                                namesForValue.add(peerHeading.name);
-                            } else {
-                                final String peerVal = getValue(peerHeading.column, csvReader, headings);
-                                if (peerVal == null || peerVal.length() == 0) { // the file specified
-                                    hasRequiredPeers = false;
-                                } else {
-                                    //storeStructuredName(peer,peerVal, loggedInConnection);
-                                    // lower level names first so the syntax is something like Knightsbridge, London, UK
-                                    // hence we're passing a multi level name lookup to the name service, whatever is in that headingNo with the header on the end
-                                    // sometimes quotes are used in the middle of names to indicate inches - e.g. '4" pipe'      - store as '4inch pipe'
-                                    final String nameToFind = Name.QUOTE + peerVal + Name.QUOTE + "," + Name.QUOTE + headings.get(peerHeadingNo).name.getDefaultDisplayName() + Name.QUOTE;
-                                    // check the local cache first
-                                    Name nameFound = namesFound.get(nameToFind);
-                                    if (nameFound == null) {
-                                        String origLanguage = loggedInConnection.getLanguage();
-                                        if (peerHeading.attribute != null) {
-                                            loggedInConnection.setLanguage(peerHeading.attribute);
-                                        }
-
-                                        nameFound = includeInSet(loggedInConnection,namesFound, peerVal, headings.get(peerHeadingNo).name, heading.local);
-                                        loggedInConnection.setLanguage(origLanguage);
-                                    }
-                                    // add to the set of names we're going to store against this value
-                                    if (nameFound != null) {
-                                        namesForValue.add(nameFound);
-                                    }
-                                }
-                                //namesForValue.add(nameService.findOrCreateName(loggedInConnection,peerVal + "," + peer.getName())) ;
-                            }
-                        }
-                        if (hasRequiredPeers) {
-                            // now we have the set of names for that name with peers get the value from that headingNo it's a header for
-                            value = getValue(heading.column, csvReader, headings);
-                        } else {
-                            value = "";
-                        }
-                        if (value.trim().length() > 0) { // no point storing if there's no value!
-                            valuecount++;
-                            // finally store our value and names for it
-                            valueService.storeValueWithProvenanceAndNames(loggedInConnection, value, namesForValue);
-                            if (valuecount % 5000 == 0) {
-                                System.out.println("storing value " + valuecount);
-                            }
-                        }
-                    }
-                      if (heading.identityHeading >= 0) {
-                        ImportHeading identity = headings.get(heading.identityHeading);
-                        String itemName = getValue(headings.get(heading.identityHeading).column, csvReader, headings);
-                        if (itemName.length() > 0) {
-                            String origLanguage = loggedInConnection.getLanguage();
-                            if (identity.identityHeading >= 0) {
-                                String attribute = identity.attribute;
-                                if (attribute == null){
-                                    attribute = Name.DEFAULT_DISPLAY_NAME;
-                                }
-                                loggedInConnection.setLanguage(attribute);
-                            }
-                            if (heading.topParent == null) {
-                                //may have escaped the checks...
-                                String error = findTopParent(loggedInConnection, identity, headings);
-                                if (error.length() > 0) return error;
-                            }
-
-                            Name name = includeInSet(loggedInConnection,namesFound, itemName, heading.topParent, heading.local);
-                            loggedInConnection.setLanguage(origLanguage);
-                            String attribute = heading.attribute;
-                            if (attribute==null){
-                                attribute= Name.DEFAULT_DISPLAY_NAME;
-                            }
-                            String attValue = getValue(heading.column, csvReader, headings);
-                            name.setAttributeWillBePersisted(attribute, attValue);
-                            nameService.calcReversePolish(loggedInConnection, name);
-
-                        }
-                    }
-                    if (heading.parentOf != null) {
-                        ImportHeading childHeading = headings.get(heading.childHeading);
-                        String childName = getValue(childHeading.column, csvReader, headings);
-                        String parentName = getValue(heading.column, csvReader, headings);
-                        if (parentName.length() > 0) {
-                            Name parentSet = null;
-                            parentSet = includeInSet(loggedInConnection,namesFound, parentName, heading.childOf, heading.local);
-                            String origLanguage = loggedInConnection.getLanguage();
-                            if (childHeading.attribute != null) {
-                                loggedInConnection.setLanguage(childHeading.attribute);
-                            }
-                            //the child name is not local to the parent set, so find it in the class first
-                            Name name = includeInSet(loggedInConnection,namesFound, childName, childHeading.topParent, false);
-
-                            for (Name parent:parentSet.findAllParents()){
-                                if (parent.getChildren().contains(name)){//remove any direct links that can be assumed through the new link
-                                    parent.removeFromChildrenWillBePersisted(name);
-                                }
-                            }
-                            parentSet.addChildWillBePersisted(name);
-
-                            loggedInConnection.setLanguage(origLanguage);
-                        }
-                    }
-
-                    if (heading.childOf != null) {
-                        String childName = getValue(heading.column, csvReader, headings);
-                        if (childName.length() > 0) {
-                            Name name = includeInSet(loggedInConnection,namesFound, childName, heading.childOf, heading.local);
-                        }
-                    }
+    }
 
 
+    private String handleParent(LoggedInConnection loggedInConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings)throws  Exception{
+
+        ImportHeading childHeading = headings.get(heading.childHeading);
+        String childName = childHeading.lineValue;
+        String parentName = heading.lineValue;
+        if (parentName.length() > 0) {
+            Name parentSet = null;
+            parentSet = includeInSet(loggedInConnection,namesFound, parentName, heading.childOf, heading.local);
+            String origLanguage = loggedInConnection.getLanguage();
+            if (childHeading.attribute != null) {
+                loggedInConnection.setLanguage(childHeading.attribute);
+            }
+            //the child name is not local to the parent set, so find it in the class first
+            Name name = includeInSet(loggedInConnection,namesFound, childName, childHeading.topParent, false);
+
+            for (Name parent:parentSet.findAllParents()){
+                if (parent.getChildren().contains(name)){//remove any direct links that can be assumed through the new link
+                    parent.removeFromChildrenWillBePersisted(name);
                 }
             }
+            parentSet.addChildWillBePersisted(name);
+
+            loggedInConnection.setLanguage(origLanguage);
         }
-        System.out.println("csv import took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
 
-        nameService.persist(loggedInConnection);
+        return "";
 
+
+    }
+
+
+    public String handleAttribute(LoggedInConnection loggedInConnection, HashMap<NameParent,Name> namesFound, ImportHeading heading, List<ImportHeading> headings)throws Exception{
+
+        ImportHeading identity = headings.get(heading.identityHeading);
+        String itemName = headings.get(heading.identityHeading).lineValue;
+        if (itemName.length() > 0) {
+            String origLanguage = loggedInConnection.getLanguage();
+            if (identity.identityHeading >= 0) {
+                String attribute = identity.attribute;
+                if (attribute == null){
+                    attribute = Name.DEFAULT_DISPLAY_NAME;
+                }
+                loggedInConnection.setLanguage(attribute);
+            }
+            if (heading.topParent == null) {
+                //may have escaped the checks...
+                String error = findTopParent(loggedInConnection, identity, headings);
+                if (error.length() > 0) return error;
+            }
+
+            Name name = includeInSet(loggedInConnection,namesFound, itemName, heading.topParent, heading.local);
+            loggedInConnection.setLanguage(origLanguage);
+            String attribute = heading.attribute;
+            if (attribute==null){
+                attribute= Name.DEFAULT_DISPLAY_NAME;
+            }
+            String attValue = heading.lineValue;
+            name.setAttributeWillBePersisted(attribute, attValue);
+            nameService.calcReversePolish(loggedInConnection, name);
+        }
         return "";
     }
 
-    public String getValue(int headingNo, CsvReader csvReader, List<ImportHeading> headings)throws Exception{
+    private boolean findPeers(LoggedInConnection loggedInConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, Set<Name> namesForValue)throws  Exception{
 
-        String result = csvReader.get(headingNo);
-        ImportHeading heading = headings.get(headingNo);
-        if ((result == null || result.length()==0) && heading.composition != null){
-            result = heading.composition;
-            int headingMarker =  result.indexOf("`");
-            while (headingMarker >=0){
-                int headingEnd = result.indexOf("`", headingMarker + 1);
-                if (headingEnd > 0) {
-                    int compItem = findHeading(result.substring(headingMarker + 1, headingEnd), headings);
-                    if (compItem >= 0){
-                        result = result.replace(result.substring(headingMarker, headingEnd + 1), getValue(compItem, csvReader, headings));
+        ImportHeading headingWithPeers = heading;
+        boolean hasRequiredPeers = true;
+        namesForValue.add(heading.name); // the one at the top of this headingNo, the name with peers.
+        for (int peerHeadingNo : headingWithPeers.peerHeadings) { // go looking for the peers
+            ImportHeading peerHeading = headings.get(peerHeadingNo);
+            if (peerHeading.contextItem) {
+                namesForValue.add(peerHeading.name);
+            } else {
+                final String peerVal = peerHeading.lineValue;
+                if (peerVal == null || peerVal.length() == 0) { // the file specified
+                    hasRequiredPeers = false;
+                } else {
+                    //storeStructuredName(peer,peerVal, loggedInConnection);
+                    // lower level names first so the syntax is something like Knightsbridge, London, UK
+                    // hence we're passing a multi level name lookup to the name service, whatever is in that headingNo with the header on the end
+                    // sometimes quotes are used in the middle of names to indicate inches - e.g. '4" pipe'      - store as '4inch pipe'
+                    final String nameToFind = Name.QUOTE + peerVal + Name.QUOTE + "," + Name.QUOTE + headings.get(peerHeadingNo).name.getDefaultDisplayName() + Name.QUOTE;
+                    // check the local cache first
+                    Name nameFound = namesFound.get(nameToFind);
+                    if (nameFound == null) {
+                        String origLanguage = loggedInConnection.getLanguage();
+                        if (peerHeading.attribute != null) {
+                            loggedInConnection.setLanguage(peerHeading.attribute);
+                        }
+
+                        nameFound = includeInSet(loggedInConnection,namesFound, peerVal, headings.get(peerHeadingNo).name, heading.local);
+                        loggedInConnection.setLanguage(origLanguage);
+                    }
+                    // add to the set of names we're going to store against this value
+                    if (nameFound != null) {
+                        namesForValue.add(nameFound);
                     }
                 }
-                if (headingMarker >= result.length()){
-                    int j=1;
+                //namesForValue.add(nameService.findOrCreateName(loggedInConnection,peerVal + "," + peer.getName())) ;
+            }
+        }
+        return hasRequiredPeers;
+    }
+
+
+    private void getCompositeValues(List<ImportHeading> headings){
+
+        int adjusted = 2;
+        //loops in case there are multiple levels of dependencies
+        while (adjusted > 1){
+            adjusted = 0;
+            for (ImportHeading heading:headings){
+                if (heading.composition != null) {
+                    String result = heading.composition;
+                    int headingMarker = result.indexOf("`");
+                    while (headingMarker >= 0) {
+                        int headingEnd = result.indexOf("`", headingMarker + 1);
+                        if (headingEnd > 0) {
+                            int compItem = findHeading(result.substring(headingMarker + 1, headingEnd), headings);
+                            if (compItem >= 0) {
+                                result = result.replace(result.substring(headingMarker, headingEnd + 1), headings.get(compItem).lineValue);
+                            }
+                        }
+                        headingMarker = result.indexOf("`", headingMarker + 1);
+                    }
+                    if (!result.equals(heading.lineValue)) {
+                        heading.lineValue = result;
+                        adjusted++;
+                    }
                 }
-                headingMarker = result.indexOf("`", headingMarker + 1);
             }
         }
-        return result;
     }
 
-    public String findExistingDate(LoggedInConnection loggedInConnection, String element) throws Exception{
-        //PROBABLY NOT NEEDED - HAD A PROBLEM WITH EXCEL IMPORTS, MAYBE SOLVED
-        Name name = nameService.findByName(loggedInConnection,element);
-        if (name == null){
-            String alternateDate = element;
-            //may need to add zeros
-            int firstSlash = element.indexOf("/");
-            int secondSlash = element.indexOf("/", firstSlash + 1);
-            if (secondSlash - firstSlash < 2){
-                alternateDate = element.substring(0,firstSlash + 1) + "0" + element.substring(firstSlash + 1);
-            }
-            if (firstSlash < 2){
-                alternateDate = "0" + alternateDate;
-            }
-            name = nameService.findByName(loggedInConnection,alternateDate);
-            if (name != null){
-                element = alternateDate;
-            }
-        }
-        return element;
 
-    }
+
 
     public String setsImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile) throws Exception {
 
