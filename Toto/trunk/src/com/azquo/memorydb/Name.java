@@ -435,21 +435,22 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
                 setNeedsPersisting();
             }
+               return "";
+        }
+       if (existing!= null && existing.equals(attributeValue)){
             return "";
         }
-        if (existing!= null && existing.equals(attributeValue)){
-            return "";
-        }
-
+        /* THERE SHOULD NOT BE A NEED TO CHECK AMONG SIBLINGS,  NOT SURE WHY THIS CHECK IS THERE - MAYBE CHECKING DEFAULT DISPLAY NAME FOR DUPLICATES
         for (Name parent : parents) {
             for (Name fellowChild : parent.getChildren()) {
                 if (fellowChild.getId() != getId() && fellowChild.getAttribute(attributeName) != null && fellowChild.getAttribute(attributeName).equalsIgnoreCase(attributeValue)) {
-                    return "error: value : " + attributeValue + " already exists among siblings of " + getAttribute(DEFAULT_DISPLAY_NAME);
+                     return "error: value : " + attributeValue + " already exists among siblings of " + getAttribute(DEFAULT_DISPLAY_NAME);
                 }
             }
         }
+        */
         attributes.put(attributeName, attributeValue);
-        // now deal with the DB maps!
+           // now deal with the DB maps!
         getAzquoMemoryDB().addNameToAttributeNameMap(this); // will overwrite but that's fine
         setNeedsPersisting();
         return "";
