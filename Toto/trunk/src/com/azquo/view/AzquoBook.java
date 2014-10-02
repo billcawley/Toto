@@ -1905,6 +1905,7 @@ public  class AzquoBook {
     public void loadBook(String fileName)throws Exception{
 
         License license = new License();
+        // todo - maybe a switch to only check for the license on the server?
         license.setLicense("/home/azquo/aspose/Aspose.Cells.lic");
         wb  = new Workbook(new FileInputStream(fileName));
 
@@ -1969,9 +1970,11 @@ public  class AzquoBook {
         String tempName = temp.getPath();
 
         temp.deleteOnExit();
-        FileWriter fw = new FileWriter(tempName);
-        BufferedWriter bw = new BufferedWriter(fw);
-
+        //FileWriter fw = new FileWriter(tempName);
+        //BufferedWriter bw = new BufferedWriter(fw);
+        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
+                new FileOutputStream(tempName), "UTF-8"
+        ));
         for (int r = 0; r <= rows; r++) {
             row = cells.getRow(r);
             if (row != null) {
@@ -1984,6 +1987,9 @@ public  class AzquoBook {
 
                         String cellFormat = "";
                         cellFormat = cell.getStringValue();
+                        if (cellFormat.contains("Love the smell")){
+                            logger.info("cell format : " + cellFormat);
+                        }
                         //Integers seem to have '.0' appended, so this is a manual chop.  It might cause problems if someone wanted to import a version '1.0'
                         bw.write(cellFormat);
 
