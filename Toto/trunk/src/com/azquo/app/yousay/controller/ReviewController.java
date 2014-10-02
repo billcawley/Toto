@@ -55,7 +55,6 @@ public class ReviewController {
 
 
     @RequestMapping
-    @ResponseBody
 
 
     public String handleRequest(ModelMap model,HttpServletRequest request) throws Exception {
@@ -97,13 +96,17 @@ public class ReviewController {
         if (supplierDB != null) {
             loginService.switchDatabase(loggedInConnection, databaseDAO.findForName(loggedInConnection.getBusinessId(), supplierDB));
         }
+        String result = "-";
         if (division.length()> 0){
-            return reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate);
+            result = reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate);
         }
         if (sendEmails != null){
-            return reviewService.sendEmails(request.getServletContext(), loggedInConnection,1000);
+            result = reviewService.sendEmails(request.getServletContext(), loggedInConnection,1000);
         }
-        return "";
+
+
+        model.addAttribute("content", result);
+        return "utf8page";
      }
 
 
