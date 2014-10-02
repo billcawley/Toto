@@ -1987,9 +1987,6 @@ public  class AzquoBook {
 
                         String cellFormat = "";
                         cellFormat = cell.getStringValue();
-                        if (cellFormat.contains("Love the smell")){
-                            logger.info("cell format : " + cellFormat);
-                        }
                         //Integers seem to have '.0' appended, so this is a manual chop.  It might cause problems if someone wanted to import a version '1.0'
                         bw.write(cellFormat);
 
