@@ -25,17 +25,17 @@ public class MySQLDatabaseManager {
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` mediumtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;", new HashMap<String, Object>());
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ;", new HashMap<String, Object>());
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`value` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` mediumtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;", new HashMap<String, Object>());
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ", new HashMap<String, Object>());
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`provenance` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` mediumtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;", new HashMap<String, Object>());
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1  ;", new HashMap<String, Object>());
     }
 
     public void dropDatabase(String databaseName) throws IOException {
