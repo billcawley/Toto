@@ -55,8 +55,6 @@ public class ReviewController {
 
 
     @RequestMapping
-
-
     public String handleRequest(ModelMap model,HttpServletRequest request) throws Exception {
 
         Enumeration<String> parameterNames = request.getParameterNames();
@@ -96,15 +94,14 @@ public class ReviewController {
         if (supplierDB != null) {
             loginService.switchDatabase(loggedInConnection, databaseDAO.findForName(loggedInConnection.getBusinessId(), supplierDB));
         }
-        String result = "-";
+        String result = "";
+
         if (division.length()> 0){
             result = reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate);
         }
         if (sendEmails != null){
             result = reviewService.sendEmails(request.getServletContext(), loggedInConnection,1000);
         }
-
-
         model.addAttribute("content", result);
         return "utf8page";
      }
