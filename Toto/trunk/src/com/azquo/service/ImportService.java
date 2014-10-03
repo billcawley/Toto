@@ -186,7 +186,7 @@ public final class ImportService {
             result = setsImport(loggedInConnection, uploadFile);
 
        }else{
-            result = valuesImport(loggedInConnection, uploadFile);
+            result = valuesImport(loggedInConnection, uploadFile, fileType);
        }
        loggedInConnection.setLanguage(origLanguage);
        return result;
@@ -413,7 +413,7 @@ public final class ImportService {
         
     }
  
-    public String valuesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile) throws Exception {
+    public String valuesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, String fileType) throws Exception {
 
         //TODO  SPLIT THIS UP!
         // little local cache just to speed things up
@@ -432,7 +432,7 @@ public final class ImportService {
         final HashMap<Name, String> namesWithPeersHeaderMap = new HashMap<Name, String>();
         final List<ImportHeading> headings = new ArrayList<ImportHeading>();
 
-        String error = readHeaders(loggedInConnection, headers, headings);
+        String error = readHeaders(loggedInConnection, headers, headings, fileType);
         if (error.length() > 0) return error;
 
         error = fillInHeaderInformation(loggedInConnection, headings);
@@ -467,14 +467,24 @@ public final class ImportService {
     }
 
 
-    private String readHeaders(LoggedInConnection loggedInConnection, String[] headers, List<ImportHeading> headings) throws Exception{
+    private String readHeaders(LoggedInConnection loggedInConnection, String[] headers, List<ImportHeading> headings, String fileType) throws Exception{
 
         int col = 0;
         String error = "";
+        //if the file is of type (e.g.) 'sales' and there is a name 'import sales', thisis uses as an interpreter.  It need not interpret every column heading, but
+        // any attribute of the same name as a column heading will be used.
+        Name importInterpreter = nameService.findByName(loggedInConnection, "import " + fileType);
         for (String header : headers) {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 ImportHeading heading = new ImportHeading();
-                String head = header;
+                String head = null;
+                if (importInterpreter != null){
+                    head = importInterpreter.getAttribute(header);
+                }
+                if (head == null){
+                    head=header;
+                }
+                head = head.replace(".",";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
                 int dividerPos = head.lastIndexOf(headingDivider);
                 while (dividerPos > 0) {
                     ImportHeading contextHeading = new ImportHeading();
