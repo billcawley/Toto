@@ -1,0 +1,89 @@
+<?doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"
+		doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" />
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <style>
+        .reviewsummary{
+            height:100px;
+            width:60%;
+            border:1px solid #222222;
+        }
+
+        .reviewswrapper{
+            height:600px;
+            width:60%;
+            border:1px solid #333333;
+            overflow:auto;
+        }
+
+
+        .review{
+            height:180px;
+            width:80%;
+            overflow:auto;
+            border:1px solid #666666;
+
+        }
+
+        .reviewdate{
+            position:relative;
+            left:10px;
+            top:20px;
+            width:100px;
+        }
+
+        .reviewrating{
+            position:relative;
+            left:140px;
+            width:320px;
+            top:0px;
+
+        }
+
+        .reviewproduct{
+            position:relative;
+            left:10px;
+            top:50px;
+            width:300px;
+        }
+
+        .reviewcomment{
+            position:relative;
+            top:30px;
+            left:10px;
+            height:80px;
+            width:500px;
+            overflow:auto;
+        }
+
+        .suppliercomment{
+            font-style:italic;
+        }
+
+
+    </style>
+</head>
+<body>
+<div id="wrapper">
+    <form  method="post" id="review" name="review">
+        <div class="reviewsummary">
+            <div class="reviewcount">Review count $reviewcount</div>
+            <div class="overallrating">Overall rating $overallrating</div>
+        </div>
+        <div class = "reviewswrapper">
+            #foreach($review in $reviews)
+                <div class="review">
+                    <div class="reviewdate"> Date  $review.date</div>
+                    <div class="reviewproduct">$review.product</div>
+                    <div class="reviewrating">Rating $review.rating</div>
+                    <div class="reviewcomment">Comment $review.comment</div>
+                </div>
+            #end
+            <div class="feedbackBottom">
+            </div>
+        </div>
+    </form>
+</div>
+</body>
+</html>
+
