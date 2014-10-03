@@ -49,7 +49,13 @@ public class LoginService {
     private final HashMap<Integer, Integer> openDBCount = new HashMap<Integer, Integer>();
 
 
-    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn) throws  Exception{
+    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn) throws  Exception {
+
+        return login(databaseName, userEmail, password, timeOutInMinutes, spreadsheetName, loggedIn, 0);
+    }
+
+
+        public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn, int businessId) throws  Exception{
 
         if (spreadsheetName == null) {
             spreadsheetName = "unknown";
@@ -69,11 +75,16 @@ public class LoginService {
                 }
             }
         }else{
-            user = userDao.findByEmail(userEmail);
+            if (businessId > 0){//this is someone who wants to leave a review
+
+                user = new User(0, null, null, businessId, "", "", "reviewer", "", "");
+            }else{
+                user = userDao.findByEmail(userEmail);
+            }
 
         }
         if (user != null) {
-            if (loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword())) {
+            if (businessId > 0 || loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword())) {
                 // ok user should be ok :)
                 final Map<String, Database> okDatabases = foundDatabases(user);
                 logger.info("ok databases size " + okDatabases.size());
