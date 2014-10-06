@@ -108,7 +108,7 @@ public class ReviewController {
             result = reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate, velocityTemplate);
         }
         if (sendEmails != null){
-            result = reviewService.sendEmails(request.getServletContext(), loggedInConnection,1000);
+            result = reviewService.sendEmails(request.getServletContext(), loggedInConnection,1000, velocityTemplate);
         }
         model.addAttribute("content", result);
         return "utf8page";

@@ -31,7 +31,7 @@ public class ReviewService {
     @Autowired
     private AzquoMailer azquoMailer;
 
-    public String sendEmails(ServletContext servletContext,LoggedInConnection loggedInConnection, int maxCount)throws Exception{
+    public String sendEmails(ServletContext servletContext,LoggedInConnection loggedInConnection, int maxCount, String velocityTemplate)throws Exception{
 
         String error = "";
         Name emailsToBeSent  = nameService.findByName(loggedInConnection,"Emails to be sent");
@@ -47,7 +47,7 @@ public class ReviewService {
             }else{
                 if (feedbackDate.compareTo(now) < 0) {
                     //todo  consider what happens if the server crashes
-                    error = sendEmail(servletContext, loggedInConnection, order);
+                    error = sendEmail(servletContext, loggedInConnection, order, velocityTemplate);
                     if (error.length() > 0) return error;
                     order.setAttributeWillBePersisted("Email sent", now);
                     emailsSent.add(order);
@@ -66,7 +66,7 @@ public class ReviewService {
 
     }
 
-    public String sendEmail(ServletContext servletContext,LoggedInConnection loggedInConnection,Name order) throws Exception{
+    public String sendEmail(ServletContext servletContext,LoggedInConnection loggedInConnection,Name order, String velocityTemplate) throws Exception{
         Set<Name> orderItems = order.getChildren();
         if (orderItems.size() == 0) return ("No items in order " + order.getDefaultDisplayName());
         Name allProducts = nameService.findByName(loggedInConnection,"All products");
@@ -106,15 +106,25 @@ public class ReviewService {
 
         VelocityEngine ve = new VelocityEngine();
         Properties properties = new Properties();
-        properties.setProperty("resource.loader", "webapp");
-        properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
-        properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
-        ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
-        ve.init(properties);
+        Template t;
+        if (velocityTemplate != null && (velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1){
+            properties.put("resource.loader","url");
+            properties.put("url.resource.loader.class", "org.apache.velocity.runtime.resource.loader.URLResourceLoader");
+            properties.put("url.resource.loader.root",velocityTemplate.substring(0, velocityTemplate.lastIndexOf("/") + 1));
+            ve.init(properties);
+            t = ve.getTemplate(velocityTemplate.substring(velocityTemplate.lastIndexOf("/") + 1));
+        } else {
+            properties.setProperty("resource.loader", "webapp");
+            properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
+            properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
+            ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
+            ve.init(properties);
 
-        //ve.init();
+            //ve.init();
         /*  next, get the Template  */
-        Template t = ve.getTemplate("email.vm");
+            t = ve.getTemplate("email.vm");
+        }
+
         /*  create a context and add data */
         VelocityContext context = new VelocityContext();
         context.put("saledescription", saledesc.toString());
@@ -253,7 +263,7 @@ public class ReviewService {
         }
     }
 
-    public String createReviewForm(ServletContext servletContext,LoggedInConnection loggedInConnection, String orderRef)throws Exception{
+    public String createReviewForm(ServletContext servletContext,LoggedInConnection loggedInConnection, String orderRef, String velocityTemplate)throws Exception{
 
         List<Map<String, String>> reviews = new ArrayList<Map<String, String>>();
 
@@ -288,19 +298,27 @@ public class ReviewService {
             intro = supplier.getAttribute("feedbackintrotext");
         }
 
-
         VelocityEngine ve = new VelocityEngine();
         Properties properties = new Properties();
-        properties.setProperty("resource.loader", "webapp");
-        properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
-        properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
-        ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
-        ve.init(properties);
-        StringBuffer validationScript = new StringBuffer();
-        //ve.init();
+        Template t;
+        if (velocityTemplate != null && (velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1){
+            properties.put("resource.loader","url");
+            properties.put("url.resource.loader.class", "org.apache.velocity.runtime.resource.loader.URLResourceLoader");
+            properties.put("url.resource.loader.root",velocityTemplate.substring(0, velocityTemplate.lastIndexOf("/") + 1));
+            ve.init(properties);
+            t = ve.getTemplate(velocityTemplate.substring(velocityTemplate.lastIndexOf("/") + 1));
+        } else {
+            properties.setProperty("resource.loader", "webapp");
+            properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
+            properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
+            ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
+            ve.init(properties);
+
+            //ve.init();
         /*  next, get the Template  */
-        Template t = ve.getTemplate("form.vm");
-        /*  create a context and add data */
+            t = ve.getTemplate("form.vm");
+        }
+        StringBuffer validationScript = new StringBuffer();
         VelocityContext context = new VelocityContext();
         context.put("supplierlogo", supplier.getAttribute("logo"));
         context.put("intro", intro);
