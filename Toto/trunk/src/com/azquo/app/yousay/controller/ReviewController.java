@@ -23,6 +23,7 @@ import org.apache.velocity.VelocityContext;
 
 
 import javax.servlet.http.HttpServletRequest;
+import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -65,12 +66,15 @@ public class ReviewController {
         String division = "";//should be the division topparent
         String connectionId = null;
         String sendEmails = null;
+        String velocityTemplate = null;
 
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
             String paramValue = request.getParameterValues(paramName)[0];
             if (paramName.equals("user")) {
                 user = paramValue;
+            } else if (paramName.equals("velocitytemplate")) {
+                velocityTemplate = paramValue;
             } else if (paramName.equals("supplierdb")) {
                 supplierDB = paramValue;
             } else if (paramName.equals("startdate")) {
@@ -86,7 +90,11 @@ public class ReviewController {
         LoggedInConnection loggedInConnection;
 
         if (connectionId == null) {
-            loggedInConnection = loginService.login("yousay1", "bill@azquo.com", "password", 0, "", false);
+            if (InetAddress.getLocalHost().getHostName().equalsIgnoreCase("linux-9m2a.site") || InetAddress.getLocalHost().getHostName().equalsIgnoreCase("edwards-air")){
+                loggedInConnection = loginService.login("yousay1", "edd@azquo.com", "eddtest", 0, "", false);
+            } else {
+                loggedInConnection = loginService.login("yousay1", "bill@azquo.com", "password", 0, "", false);
+            }
 
         } else {
             loggedInConnection = loginService.getConnection(connectionId);
@@ -97,7 +105,7 @@ public class ReviewController {
         String result = "";
 
         if (division.length()> 0){
-            result = reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate);
+            result = reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate, velocityTemplate);
         }
         if (sendEmails != null){
             result = reviewService.sendEmails(request.getServletContext(), loggedInConnection,1000);

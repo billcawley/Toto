@@ -191,7 +191,7 @@ public class ReviewService {
 
 
 
-    public String showReviews(ServletContext servletContext, LoggedInConnection loggedInConnection, String division, String startDate) throws Exception {
+    public String showReviews(ServletContext servletContext, LoggedInConnection loggedInConnection, String division, String startDate, String velocityTemplate) throws Exception {
         List<Name> orderItems = new ArrayList<Name>();
         List<Map<String, String>> reviews = new ArrayList<Map<String, String>>();
         String error = nameService.interpretName(loggedInConnection, orderItems, division + ";level lowest;WHERE Feedback date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
@@ -219,15 +219,24 @@ public class ReviewService {
 
             VelocityEngine ve = new VelocityEngine();
             Properties properties = new Properties();
-            properties.setProperty("resource.loader", "webapp");
-            properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
-            properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
-            ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
-            ve.init(properties);
+            Template t;
+            if (velocityTemplate != null && (velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1){
+                properties.put("resource.loader","url");
+                properties.put("url.resource.loader.class", "org.apache.velocity.runtime.resource.loader.URLResourceLoader");
+                properties.put("url.resource.loader.root",velocityTemplate.substring(0, velocityTemplate.lastIndexOf("/") + 1));
+                ve.init(properties);
+                t = ve.getTemplate(velocityTemplate.substring(velocityTemplate.lastIndexOf("/") + 1));
+            } else {
+                properties.setProperty("resource.loader", "webapp");
+                properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
+                properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
+                ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
+                ve.init(properties);
 
-            //ve.init();
+                //ve.init();
         /*  next, get the Template  */
-            Template t = ve.getTemplate("showreviews.vm");
+                t = ve.getTemplate("showreviews.vm");
+            }
         /*  create a context and add data */
             VelocityContext context = new VelocityContext();
             context.put("reviewcount", reviewCount);
