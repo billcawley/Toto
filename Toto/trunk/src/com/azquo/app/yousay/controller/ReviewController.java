@@ -136,12 +136,13 @@ public class ReviewController {
         if (businessId > 0){
             if (submit!=null){
                 reviewService.processReviewForm(loggedInConnection, orderRef, ratings, comments);
-                return reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate, velocityTemplate);
+                result = reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate, velocityTemplate);
             }
-            return reviewService.createReviewForm(request.getServletContext(), loggedInConnection, orderRef, velocityTemplate);
+            result = reviewService.createReviewForm(request.getServletContext(), loggedInConnection, orderRef, velocityTemplate);
         }
-        return "";
-     }
+        model.addAttribute("content", result);
+        return "utf8page";
+    }
 
 
   }
