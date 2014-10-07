@@ -70,6 +70,7 @@ public class ReviewService {
         Set<Name> orderItems = order.getChildren();
         if (orderItems.size() == 0) return ("No items in order " + order.getDefaultDisplayName());
         Name allProducts = nameService.findByName(loggedInConnection,"All products");
+        Name saleDate = nameService.findByName(loggedInConnection, "Sale date");
         Name service = nameService.findByName(loggedInConnection,"Service");
         Set<Name> productItems = new HashSet<Name>();
         Set<Name> serviceItems = new HashSet<Name>();
@@ -95,6 +96,7 @@ public class ReviewService {
             saledesc.append(getValueFromParent(orderItem, allProducts));
             productCount++;
         }
+        String orderSaleDate = getValueFromParent(order,saleDate);
          Name topSupplier = nameService.findByName(loggedInConnection,"supplier");
         Name supplier = null;
         for (Name name:topSupplier.getChildren()){
@@ -128,7 +130,7 @@ public class ReviewService {
         /*  create a context and add data */
         VelocityContext context = new VelocityContext();
         context.put("saledescription", saledesc.toString());
-        context.put("saledate", showDate(order.getAttribute("Sale Date")));
+        context.put("saledate", showDate(orderSaleDate));
         context.put("customername", order.getAttribute("Customer Name"));
         context.put("supplier", supplier.getDefaultDisplayName());
         context.put("feedbacklink", "http://bomorgan.co.uk:8080/api/Reviews/?supplierdb=yousay1&division=SUTTON&startdate=2014-01-06");
