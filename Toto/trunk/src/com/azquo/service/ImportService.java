@@ -415,10 +415,12 @@ public final class ImportService {
  
     public String valuesImport(final LoggedInConnection loggedInConnection, final InputStream uploadFile, String fileType) throws Exception {
 
-        //TODO  SPLIT THIS UP!
-        // little local cache just to speed things up
+          // little local cache just to speed things up
         final HashMap<NameParent, Name> namesFound = new HashMap<NameParent, Name>();
-
+        if (fileType.indexOf(" ") > 0){
+            //filetype should be first word only
+            fileType = fileType.substring(0, fileType.indexOf(" "));
+        }
 
         long track = System.currentTimeMillis();
 
