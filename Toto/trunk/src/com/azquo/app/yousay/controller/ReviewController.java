@@ -66,6 +66,11 @@ public class ReviewController {
         String division = "";//should be the division topparent
         String connectionId = null;
         String sendEmails = null;
+        String orderRef = null;
+        int businessId = 0;
+        String submit = null;
+        Map<String,String> ratings = new HashMap<String, String>();
+        Map<String,String> comments = new HashMap<String, String>();
         String velocityTemplate = null;
 
         while (parameterNames.hasMoreElements()) {
@@ -81,16 +86,34 @@ public class ReviewController {
                 startDate = paramValue;
             } else if (paramName.equals("division")) {
                 division = paramValue;
+            } else if (paramName.equals("businessid")) {
+                try{
+                    businessId = Integer.parseInt(paramValue);
+                }catch(Exception e){
+                    //ignore!
+                }
+             } else if (paramName.equals("orderref")) {
+                orderRef = paramValue;
             } else if (paramName.equals("sendemails")) {
                 sendEmails = paramValue;
             } else if (paramName.equals("connectionid")) {
                 connectionId = paramValue;
+            } else if (paramName.equals("submit")) {
+                submit = paramValue;
+            }else if (paramName.startsWith("rating")){
+                String rating = paramName.substring(6);
+                ratings.put(rating,paramValue);
+            }else if (paramName.startsWith("comment")){
+                String comment = paramName.substring(7);
+                ratings.put(comment, paramValue);
             }
         }
         LoggedInConnection loggedInConnection;
 
         if (connectionId == null) {
-            if (InetAddress.getLocalHost().getHostName().equalsIgnoreCase("linux-9m2a.site") || InetAddress.getLocalHost().getHostName().equalsIgnoreCase("edwards-air")){
+            if (businessId > 0){//someone filling in a review
+                loggedInConnection = loginService.login(supplierDB,"","",0,"",false,businessId);
+            }else if (InetAddress.getLocalHost().getHostName().equalsIgnoreCase("linux-9m2a.site") || InetAddress.getLocalHost().getHostName().equalsIgnoreCase("edwards-air")){
                 loggedInConnection = loginService.login("yousay1", "edd@azquo.com", "eddtest", 0, "", false);
             } else {
                 loggedInConnection = loginService.login("yousay1", "bill@azquo.com", "password", 0, "", false);
@@ -110,8 +133,14 @@ public class ReviewController {
         if (sendEmails != null){
             result = reviewService.sendEmails(request.getServletContext(), loggedInConnection,1000, velocityTemplate);
         }
-        model.addAttribute("content", result);
-        return "utf8page";
+        if (businessId > 0){
+            if (submit!=null){
+                reviewService.processReviewForm(loggedInConnection, orderRef, ratings, comments);
+                return reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate, velocityTemplate);
+            }
+            return reviewService.createReviewForm(request.getServletContext(), loggedInConnection, orderRef, velocityTemplate);
+        }
+        return "";
      }
 
 
