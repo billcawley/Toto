@@ -58,6 +58,7 @@
 
         .suppliercomment{
             font-style:italic;
+            color:blue;
         }
 
 
