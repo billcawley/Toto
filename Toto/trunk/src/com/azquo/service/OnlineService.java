@@ -74,7 +74,7 @@ public final class OnlineService {
         StringBuffer worksheet = new StringBuffer();
         StringBuffer tabs = new StringBuffer();
         StringBuffer head = new StringBuffer();
-        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, userChoiceDAO);
+        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO);
         loggedInConnection.setAzquoBook(azquoBook);
         String output = readFile("onlineReport.html").toString();
         if (spreadsheetName == null){
@@ -150,7 +150,7 @@ public final class OnlineService {
 
     public String executeSheet(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName) throws Exception{
         String error = "";
-        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, userChoiceDAO);
+        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO);
         loggedInConnection.setAzquoBook(azquoBook);
         return azquoBook.executeSheet(loggedInConnection, onlineReport.getFilename(), spreadsheetName, onlineReport.getId());
     }
