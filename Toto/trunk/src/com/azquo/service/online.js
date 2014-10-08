@@ -197,6 +197,9 @@ function locked(cellX,cellY){
     for (var i = 0;i < regions.length;i++){
        var region = regions[i];
        if (cellX >= region.x && cellY >= region.y && cellX < region.x + region.cols && cellY < region.y + region.rows) {
+           if (region.locks.length==0){
+               return "";
+           }
            entryX = cellX;
            entryY = cellY
            var entryRegionX = cellX - region.x;
