@@ -4,7 +4,6 @@ import com.aspose.cells.*;
 import com.azquo.admindao.UserChoiceDAO;
 import com.azquo.adminentities.UserChoice;
 import com.azquo.memorydb.*;
-import com.azquo.memorydb.Name;
 import com.azquo.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
@@ -16,8 +15,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
 
@@ -30,9 +27,11 @@ public  class AzquoBook {
 
     private static final Logger logger = Logger.getLogger(AzquoBook.class);
     private ValueService valueService;
+    private ImportService importService;
     private AdminService adminService;
     private NameService nameService;
     private UserChoiceDAO userChoiceDAO;
+    private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 
     public static final String azDataRegion = "az_dataregion";
     public static final String azInput = "az_input";
@@ -43,21 +42,7 @@ public  class AzquoBook {
         String region;
         int lastCol;
     }
-    class ShiftData{
-        int startRow;
-        int startCol;
-        int shiftRows;
-        int shiftCols;
-
-        ShiftData(int startRow, int startCol, int shiftRows, int shiftCols){
-            this.startRow = startRow;
-            this.startCol = startCol;
-            this.shiftRows = shiftRows;
-            this.shiftCols = shiftCols;
-        }
-    }
-
-    class RegionInfo{
+     class RegionInfo{
         String region;
         int row;
         int col;
@@ -71,7 +56,6 @@ public  class AzquoBook {
     private Worksheet azquoSheet = null;
     private Cells azquoCells;
     private List<List<String>> heldValues = new ArrayList<List<String>>();
-    private Appendable output = null;
     int maxWidth;
     public String dataRegionPrefix = null;
     public String nameChosenJson = null;  // used only for passing the parameter when admin/inspection chooses a name
@@ -151,11 +135,12 @@ public  class AzquoBook {
         return map;
     }
 
-    public AzquoBook(final ValueService valueService, AdminService adminService, NameService nameService, UserChoiceDAO userChoiceDAO) throws Exception {
+    public AzquoBook(final ValueService valueService, AdminService adminService, NameService nameService, ImportService importService, UserChoiceDAO userChoiceDAO) throws Exception {
         this.valueService = valueService;
         this.adminService = adminService;
         this.userChoiceDAO = userChoiceDAO;
         this.nameService = nameService;
+        this.importService = importService;
 
     }
 
@@ -425,7 +410,9 @@ public  class AzquoBook {
 
         Range rowHeadings = getRange("az_rowheadings" + region);
         if (rowHeadings == null) {
-            return "error: no range az_RowHeadings" + region;
+            //assume this is an import region
+            return "";
+            //return "error: no range az_RowHeadings" + region;
         }
         String headings = rangeToText(rowHeadings);
         if (headings.startsWith("error:")) {
@@ -1818,7 +1805,23 @@ public  class AzquoBook {
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
                 String region = name.getText().substring(dataRegionPrefix.length());
                 StringBuffer sb = rangeToText(name.getRange(), false);
-                String result = valueService.saveData(loggedInConnection,region.toLowerCase(), sb.toString());
+                String result = "";
+                if ( getRange("az_rowheadings" + region) == null){
+                    //assume this is an import region
+                    String tempName = convertSheetToCSV("fromscreen",azquoSheet,getRange("az_dataRegion" + region));
+                    InputStream uploadFile = new FileInputStream(tempName);
+                    String fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
+                    result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType);
+                    if (!result.startsWith("error:")){
+                        String saveFileName = "/home/azquo/uploads/" + loggedInConnection.getCurrentDBName()+"/" + azquoSheet.getName() + " " +  df.format(new Date());
+                        File file = new File(saveFileName);
+                        file.getParentFile().mkdirs();
+                        wb.save(saveFileName, SaveFormat.XLSX);
+                    }
+
+                }else{
+                    result = valueService.saveData(loggedInConnection,region.toLowerCase(), sb.toString());
+                }
                 if (result.startsWith("error:")){
                     return result;
                 }
@@ -1953,10 +1956,16 @@ public  class AzquoBook {
         return wb.getWorksheets().getCount();
     }
 
-    public String convertSheetToCSV(final String tempFileName, final int sheetNo) throws Exception{
+
+    public String convertSheetToCSV(final String tempFileName, final int sheetNo) throws Exception {
+        Worksheet sheet = wb.getWorksheets().get(sheetNo);
+        return convertSheetToCSV(tempFileName, sheet, null);
+    }
+
+
+    public String convertSheetToCSV(final String tempFileName, final Worksheet  sheet, Range range) throws Exception{
         Row row;
         Cell cell;
-        Worksheet sheet = wb.getWorksheets().get(sheetNo);
         Cells cells = sheet.getCells();
         String fileType = sheet.getName();
 
@@ -1972,9 +1981,16 @@ public  class AzquoBook {
         temp.deleteOnExit();
         //FileWriter fw = new FileWriter(tempName);
         //BufferedWriter bw = new BufferedWriter(fw);
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
-                new FileOutputStream(tempName), "UTF-8"
-        ));
+        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
+
+        int startRow = 0;
+        int startCol = 0;
+        if (range!=null){
+            startRow = range.getFirstRow();
+            startCol = range.getFirstColumn();
+            rows = startRow + range.getRowCount() - 1;
+            maxCol = startCol + range.getColumnCount() - 1;
+        }
         for (int r = 0; r <= rows; r++) {
             row = cells.getRow(r);
             if (row != null) {
