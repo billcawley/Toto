@@ -113,11 +113,11 @@ public class ReviewController {
         if (connectionId == null) {
             if (businessId > 0){//someone filling in a review
                 loggedInConnection = loginService.login(supplierDB,"","",0,"",false,businessId);
-            }else if (InetAddress.getLocalHost().getHostName().equalsIgnoreCase("linux-9m2a.site") || InetAddress.getLocalHost().getHostName().equalsIgnoreCase("edwards-air")){
-                loggedInConnection = loginService.login("yousay1", "edd@azquo.com", "eddtest", 0, "", false);
-            } else {
-                loggedInConnection = loginService.login("yousay1", "bill@azquo.com", "password", 0, "", false);
-            }
+            }else{
+                //temporary connection .. need to think about this
+                loggedInConnection = loginService.login(supplierDB,"","",0,"",false,1);
+
+             }
 
         } else {
             loggedInConnection = loginService.getConnection(connectionId);
