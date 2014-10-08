@@ -175,7 +175,7 @@ public final class ImportService {
         return error;
     }
 
-    private String readPreparedFile(LoggedInConnection loggedInConnection, InputStream uploadFile, String fileType) throws Exception {
+    public String readPreparedFile(LoggedInConnection loggedInConnection, InputStream uploadFile, String fileType) throws Exception {
 
 
         String origLanguage = loggedInConnection.getLanguage();
@@ -1064,7 +1064,7 @@ private String readBook (final LoggedInConnection loggedInConnection, final Stri
 
 
         try {
-            AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, userChoiceDAO);
+            AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, this, userChoiceDAO);
             azquoBook.loadBook(tempName);
             String reportName = azquoBook.getReportName();
             if (reportName!=null){
