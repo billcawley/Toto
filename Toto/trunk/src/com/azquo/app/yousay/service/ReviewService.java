@@ -10,6 +10,12 @@ import org.apache.velocity.app.VelocityEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.servlet.ServletContext;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.sax.SAXTransformerFactory;
+import javax.xml.transform.sax.TransformerHandler;
+import javax.xml.transform.stream.StreamResult;
+
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -67,6 +73,7 @@ public class ReviewService {
     }
 
     public String sendEmail(ServletContext servletContext,LoggedInConnection loggedInConnection,Name order, String velocityTemplate) throws Exception{
+        Map<String, String> context = new HashMap<String, String>();
         Set<Name> orderItems = order.getChildren();
         if (orderItems.size() == 0) return ("No items in order " + order.getDefaultDisplayName());
         Name allProducts = nameService.findByName(loggedInConnection,"All products");
@@ -106,41 +113,15 @@ public class ReviewService {
 
 
 
-        VelocityEngine ve = new VelocityEngine();
-        Properties properties = new Properties();
-        Template t;
-        if (velocityTemplate != null && (velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1){
-            properties.put("resource.loader","url");
-            properties.put("url.resource.loader.class", "org.apache.velocity.runtime.resource.loader.URLResourceLoader");
-            properties.put("url.resource.loader.root",velocityTemplate.substring(0, velocityTemplate.lastIndexOf("/") + 1));
-            ve.init(properties);
-            t = ve.getTemplate(velocityTemplate.substring(velocityTemplate.lastIndexOf("/") + 1));
-        } else {
-            properties.setProperty("resource.loader", "webapp");
-            properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
-            properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
-            ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
-            ve.init(properties);
-
-            //ve.init();
-        /*  next, get the Template  */
-            t = ve.getTemplate("email.vm");
-        }
-
-        /*  create a context and add data */
-        VelocityContext context = new VelocityContext();
         context.put("saledescription", saledesc.toString());
         context.put("saledate", showDate(orderSaleDate));
         context.put("customername", order.getAttribute("Customer Name"));
         context.put("supplier", supplier.getDefaultDisplayName());
         context.put("feedbacklink", "http://bomorgan.co.uk:8080/api/Reviews/?supplierdb=yousay1&division=SUTTON&startdate=2014-01-06");
         context.put("reviewslink", "http://bomorgan.co.uk:8080/api/Reviews/?supplierdb=yousay1&division=SUTTON&startdate=2014-01-06");
-    /* now render the template into a StringWriter */
-        StringWriter writer = new StringWriter();
-        t.merge(context, writer);
-        /* show the World */
+        String result = convertToVelocity(servletContext, context,"", null, velocityTemplate);
         if (order.getAttribute("Customer email").equals("bill@azquo.com")){
-            azquoMailer.sendEMail(order.getAttribute("Customer email"), order.getAttribute("Customer name"),"Feedback request on behalf of " + supplier.getDefaultDisplayName(), writer.toString());
+            azquoMailer.sendEMail(order.getAttribute("Customer email"), order.getAttribute("Customer name"),"Feedback request on behalf of " + supplier.getDefaultDisplayName(), result);
         }
 
 
@@ -201,10 +182,26 @@ public class ReviewService {
         return r;
     }
 
+    public static void addXmlElements(TransformerHandler hd, org.xml.sax.helpers.AttributesImpl atts, Map<String,String>items)        throws Exception {
+        for (String key:items.keySet()) {
+            String value = items.get(key);
+            if (value == null) value = "";
+            hd.startElement("", "", key, atts);
+            hd.characters(value.toCharArray(), 0, value.length());
+            hd.endElement("", "", key);
+        }
+
+    }
 
 
     public String showReviews(ServletContext servletContext, LoggedInConnection loggedInConnection, String division, String startDate, String velocityTemplate) throws Exception {
+
+        boolean XML = true;
+        if (velocityTemplate !=null){
+            XML = false;
+        }
         List<Name> orderItems = new ArrayList<Name>();
+        Map<String, String> context = new HashMap<String, String>();
         List<Map<String, String>> reviews = new ArrayList<Map<String, String>>();
         String error = nameService.interpretName(loggedInConnection, orderItems, division + ";level lowest;WHERE Feedback date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
         if (error.length() > 0) {
@@ -227,46 +224,57 @@ public class ReviewService {
 
         }
         int reviewCount = orderItems.size();
+        context.put("reviewcount", reviewCount + "");
+        context.put("overallrating", (posCount * 100 / reviewCount) + "");
         if (reviewCount > 0) {
+            if (XML) {
 
-            VelocityEngine ve = new VelocityEngine();
-            Properties properties = new Properties();
-            Template t;
-            if (velocityTemplate != null && (velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1){
-                properties.put("resource.loader","url");
-                properties.put("url.resource.loader.class", "org.apache.velocity.runtime.resource.loader.URLResourceLoader");
-                properties.put("url.resource.loader.root",velocityTemplate.substring(0, velocityTemplate.lastIndexOf("/") + 1));
-                ve.init(properties);
-                t = ve.getTemplate(velocityTemplate.substring(velocityTemplate.lastIndexOf("/") + 1));
-            } else {
-                properties.setProperty("resource.loader", "webapp");
-                properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
-                properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
-                ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
-                ve.init(properties);
+                  return convertToXML(context,"reviews", reviews);
 
-                //ve.init();
-        /*  next, get the Template  */
-                t = ve.getTemplate("showreviews.vm");
-            }
-        /*  create a context and add data */
-            VelocityContext context = new VelocityContext();
-            context.put("reviewcount", reviewCount);
 
-            context.put("overallrating", (posCount * 100 / reviewCount));
-            context.put("reviews", reviews);
-        /* now render the template into a StringWriter */
-            StringWriter writer = new StringWriter();
-            t.merge(context, writer);
-        /* show the World */
-            return writer.toString();
+
+            }else {
+                return convertToVelocity(servletContext, context,"reviews", reviews, velocityTemplate);
+                }
         } else {
             return "no reviews found";
         }
     }
 
+
+    private String convertToXML(Map<String, String> context, String itemName, List<Map<String, String>> items)throws Exception{
+
+        StringWriter sw = new StringWriter();
+
+        StreamResult streamResult = new StreamResult(sw);
+        SAXTransformerFactory tf = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
+        TransformerHandler hd = tf.newTransformerHandler();
+        Transformer serializer = hd.getTransformer();
+        serializer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+        serializer.setOutputProperty(OutputKeys.INDENT, "yes");
+        serializer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+        hd.setResult(streamResult);
+        hd.startDocument();
+        org.xml.sax.helpers.AttributesImpl atts = new org.xml.sax.helpers.AttributesImpl();
+        addXmlElements(hd, atts, context);
+        for (Map<String,String>item:items){
+            hd.startElement("","","review", atts);
+            addXmlElements(hd,atts, item);
+            hd.endElement("","","review");
+        }
+        hd.endDocument();
+        String result = sw.toString();
+        return result;
+
+
+    }
+
     public String createReviewForm(ServletContext servletContext,LoggedInConnection loggedInConnection, String orderRef, String velocityTemplate)throws Exception{
 
+
+        boolean XML = true;
+        if (velocityTemplate!=null) XML = false;
+        Map<String, String> context = new HashMap<String, String>();
         List<Map<String, String>> reviews = new ArrayList<Map<String, String>>();
 
 
@@ -300,28 +308,7 @@ public class ReviewService {
             intro = supplier.getAttribute("feedbackintrotext");
         }
 
-        VelocityEngine ve = new VelocityEngine();
-        Properties properties = new Properties();
-        Template t;
-        if (velocityTemplate != null && (velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1){
-            properties.put("resource.loader","url");
-            properties.put("url.resource.loader.class", "org.apache.velocity.runtime.resource.loader.URLResourceLoader");
-            properties.put("url.resource.loader.root",velocityTemplate.substring(0, velocityTemplate.lastIndexOf("/") + 1));
-            ve.init(properties);
-            t = ve.getTemplate(velocityTemplate.substring(velocityTemplate.lastIndexOf("/") + 1));
-        } else {
-            properties.setProperty("resource.loader", "webapp");
-            properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
-            properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
-            ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
-            ve.init(properties);
-
-            //ve.init();
-        /*  next, get the Template  */
-            t = ve.getTemplate("form.vm");
-        }
         StringBuffer validationScript = new StringBuffer();
-        VelocityContext context = new VelocityContext();
         context.put("supplierlogo", supplier.getAttribute("logo"));
         context.put("intro", intro);
         context.put("connectionid", loggedInConnection.getConnectionId());
@@ -348,22 +335,19 @@ public class ReviewService {
 
 
         }
-        context.put("reviews", reviews);
         context.put("validationscript", validationScript.toString());
-     /* now render the template into a StringWriter */
-        StringWriter writer = new StringWriter();
-        t.merge(context, writer);
-        /* show the World */
-
-
-
-        return writer.toString();
+        if (XML){
+            return convertToXML(context,"reviews", reviews);
+        }else{
+            return convertToVelocity(servletContext,context,"reviews", reviews, velocityTemplate);
+        }
 
 
 
 
 
     }
+
 
 
     public String processReviewForm(LoggedInConnection loggedInConnection, String orderRef, Map<String, String> ratings, Map<String, String> comments)throws Exception{
@@ -395,6 +379,52 @@ public class ReviewService {
 
 
         return "";
+    }
+
+    private void addVelocityElements(VelocityContext context, Map<String,String>items){
+        for (String key:items.keySet()){
+            String value = items.get(key);
+            if (value==null) value="";
+            context.put(key, value);
+        }
+    }
+
+    private String convertToVelocity(ServletContext servletContext, Map<String,String> context, String itemName, List<Map<String,String>> items, String velocityTemplate){
+
+        VelocityEngine ve = new VelocityEngine();
+        Properties properties = new Properties();
+        Template t;
+        if (velocityTemplate != null && (velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1) {
+            properties.put("resource.loader", "url");
+            properties.put("url.resource.loader.class", "org.apache.velocity.runtime.resource.loader.URLResourceLoader");
+            properties.put("url.resource.loader.root", velocityTemplate.substring(0, velocityTemplate.lastIndexOf("/") + 1));
+            ve.init(properties);
+            t = ve.getTemplate(velocityTemplate.substring(velocityTemplate.lastIndexOf("/") + 1));
+        } else {
+            properties.setProperty("resource.loader", "webapp");
+            properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
+            properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
+            ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
+            ve.init(properties);
+
+            //ve.init();
+        /*  next, get the Template  */
+            t = ve.getTemplate(velocityTemplate);
+        }
+        /*  create a context and add data */
+        VelocityContext vcontext = new VelocityContext();
+        addVelocityElements(vcontext,context);
+        if (items != null){
+            vcontext.put(itemName, items);
+        }
+        /* now render the template into a StringWriter */
+        StringWriter writer = new StringWriter();
+        t.merge(vcontext, writer);
+        /* show the World */
+        return writer.toString();
+
+
+
     }
 
 }
