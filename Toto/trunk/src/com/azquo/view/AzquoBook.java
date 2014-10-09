@@ -1807,18 +1807,7 @@ public  class AzquoBook {
                 StringBuffer sb = rangeToText(name.getRange(), false);
                 String result = "";
                 if ( getRange("az_rowheadings" + region) == null){
-                    //assume this is an import region
-                    String tempName = convertSheetToCSV("fromscreen",azquoSheet,getRange("az_dataRegion" + region));
-                    InputStream uploadFile = new FileInputStream(tempName);
-                    String fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
-                    result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType);
-                    if (!result.startsWith("error:")){
-                        String saveFileName = "/home/azquo/uploads/" + loggedInConnection.getCurrentDBName()+"/" + azquoSheet.getName() + " " +  df.format(new Date());
-                        File file = new File(saveFileName);
-                        file.getParentFile().mkdirs();
-                        wb.save(saveFileName, SaveFormat.XLSX);
-                    }
-
+                    result = importRangeFromScreen(loggedInConnection, region);
                 }else{
                     result = valueService.saveData(loggedInConnection,region.toLowerCase(), sb.toString());
                 }
@@ -1959,47 +1948,71 @@ public  class AzquoBook {
 
     public String convertSheetToCSV(final String tempFileName, final int sheetNo) throws Exception {
         Worksheet sheet = wb.getWorksheets().get(sheetNo);
-        return convertSheetToCSV(tempFileName, sheet, null);
+        String fileType = sheet.getName();
+
+        File temp = File.createTempFile(tempFileName.substring(0, tempFileName.length() - 4), "." + fileType);
+        String tempName = temp.getPath();
+        temp.deleteOnExit();
+
+        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
+        convertRangeToCSV(sheet, bw, null);
+        bw.close();
+        return tempName;
+
     }
 
+    private String importRangeFromScreen(LoggedInConnection loggedInConnection, String region)throws Exception{
+        String fileType = azquoSheet.getName();
 
-    public String convertSheetToCSV(final String tempFileName, final Worksheet  sheet, Range range) throws Exception{
+        File temp = File.createTempFile("fromscreen","." + fileType);
+        String tempName = temp.getPath();
+        temp.deleteOnExit();
+
+        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
+        convertRangeToCSV(azquoSheet, bw, getRange("az_columnheadings" + region));
+        convertRangeToCSV(azquoSheet, bw, getRange("az_dataRegion" + region));
+        bw.close();
+        InputStream uploadFile = new FileInputStream(tempName);
+        fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
+        String result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType);
+        if (!result.startsWith("error:")){
+            String saveFileName = "/home/azquo/uploads/" + loggedInConnection.getCurrentDBName()+"/" + azquoSheet.getName() + " " +  df.format(new Date()) + ".xlsx";
+            File file = new File(saveFileName);
+            file.getParentFile().mkdirs();
+            wb.save(saveFileName, SaveFormat.XLSX);
+        }
+        return result;
+
+
+    }
+
+    public String convertRangeToCSV(final Worksheet  sheet, final BufferedWriter bw, Range range) throws Exception {
         Row row;
         Cell cell;
         Cells cells = sheet.getCells();
-        String fileType = sheet.getName();
-
         int rows; // No of rows
         rows = cells.getMaxRow();
 
-          int maxCol = cells.getMaxColumn();
+        int maxCol = cells.getMaxColumn();
 
-        // This trick ensures that we get the data properly even if it doesn't start from first few rows
-        File temp = File.createTempFile(tempFileName.substring(0, tempFileName.length() - 4), "." + fileType);
-        String tempName = temp.getPath();
-
-        temp.deleteOnExit();
-        //FileWriter fw = new FileWriter(tempName);
-        //BufferedWriter bw = new BufferedWriter(fw);
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
 
         int startRow = 0;
         int startCol = 0;
-        if (range!=null){
+        if (range != null) {
             startRow = range.getFirstRow();
             startCol = range.getFirstColumn();
             rows = startRow + range.getRowCount() - 1;
             maxCol = startCol + range.getColumnCount() - 1;
         }
-        for (int r = 0; r <= rows; r++) {
+        for (int r = startRow; r <= rows; r++) {
             row = cells.getRow(r);
             if (row != null) {
                 //System.out.println("Excel row " + r);
                 int colCount = 0;
-                for (int c = 0; c <= maxCol; c++) {
-                     cell = cells.get(r,c);
+                for (int c = startCol; c <= maxCol; c++) {
+                    cell = cells.get(r, c);
                     if (colCount++ > 0) bw.write('\t');
-                    if (cell != null && cell.getType()!= CellValueType.IS_NULL) {
+                    if (cell != null && cell.getType() != CellValueType.IS_NULL) {
 
                         String cellFormat = "";
                         cellFormat = cell.getStringValue();
@@ -2012,8 +2025,7 @@ public  class AzquoBook {
                 bw.write('\n');
             }
         }
-        bw.close();
-        return tempName;
+        return "";
 
     }
 
