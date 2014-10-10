@@ -1,7 +1,7 @@
 package com.azquo.app.yousay.controller;
 
 /**
- * Created by bill on 09/09/14.
+ * Created by edd on 09/10/14.
  */
 import com.azquo.admindao.DatabaseDAO;
 import com.azquo.app.yousay.service.ReviewService;
@@ -31,81 +31,64 @@ import java.util.*;
 
 /**
  *
+ The supplier rep will need to be logged in
+
+ The form should show, on each line, the product, rating, comment, and space for the response
+
+ The response, together with the date of the response, should be added to the customer attribute.
+ The order item should be put in the set relating to that particular rep
+ The delay between comment and response should be stored as an attribute on the order item
+
+ A separate email should be sent to the customer for each response, with a link to respond to that thread
+
+ If you then have time, we need to create a form for that link.
+
+ works off the order
+
+
+
+ lots of pasted code from review controller initially
+
  */
 
 @Controller
-@RequestMapping("/Reviews")
+@RequestMapping("/SupplierResponse")
 
 
-public class ReviewController {
+public class SupplierResponseController {
 
     @Autowired
     private DatabaseDAO databaseDAO;
     @Autowired
     private LoginService loginService;
-
-    @Autowired
-    private MemoryDBManager memoryDBManager;
-
-    @Autowired
-    private NameService nameService;
-
     @Autowired
     private ReviewService reviewService;
-
-
 
     @RequestMapping
     public String handleRequest(ModelMap model,HttpServletRequest request) throws Exception {
 
         Enumeration<String> parameterNames = request.getParameterNames();
 
-        String user = null;
         String supplierDB = null;
-        String startDate = "2014-01-01";
-        String division = "";//should be the division topparent
         String connectionId = null;
-        String sendEmails = null;
         String orderRef = null;
         int businessId = 0;
         String submit = null;
-        Map<String,String> ratings = new HashMap<String, String>();
         Map<String,String> comments = new HashMap<String, String>();
         String velocityTemplate = null;
 
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
             String paramValue = request.getParameterValues(paramName)[0];
-            if (paramName.equals("user")) {
-                user = paramValue;
-            } else if (paramName.equals("velocitytemplate")) {
+            if (paramName.equals("velocityTemplate")) {
                 velocityTemplate = paramValue;
-            } else if (paramName.equals("supplierdb")) {
-                supplierDB = paramValue;
-            } else if (paramName.equals("startdate")) {
-                startDate = paramValue;
-            } else if (paramName.equals("division")) {
-                division = paramValue;
-            } else if (paramName.equals("businessid")) {
-                try{
-                    businessId = Integer.parseInt(paramValue);
-                }catch(Exception e){
-                    //ignore!
-                }
-             } else if (paramName.equals("orderref")) {
+            } else if (paramName.equals("orderref")) {
                 orderRef = paramValue;
-            } else if (paramName.equals("sendemails")) {
-                sendEmails = paramValue;
-            } else if (paramName.equals("connectionid")) {
-                connectionId = paramValue;
             } else if (paramName.equals("submit")) {
                 submit = paramValue;
-            }else if (paramName.startsWith("rating")){
-                String rating = paramName.substring(6);
-                ratings.put(rating,paramValue);
-            }else if (paramName.startsWith("comment")){
-                String comment = paramName.substring(7);
-                ratings.put(comment, paramValue);
+            } else if (paramName.startsWith("suppliercomment")){
+                String comment = paramName.substring("suppliercomment".length()); // probably not best practice :)
+                comments.put(comment, paramValue);
             }
         }
         LoggedInConnection loggedInConnection;
@@ -118,7 +101,7 @@ public class ReviewController {
                 loggedInConnection = loginService.login(supplierDB,"","",0,"",false,1);
                 // edd just wants it to work for the mo!
                 //loggedInConnection = loginService.login("yousay1", "edd@azquo.com", "eddtest", 0, "", false);
-             }
+            }
 
         } else {
             loggedInConnection = loginService.getConnection(connectionId);
@@ -128,23 +111,14 @@ public class ReviewController {
         }
         String result = "";
 
-        if (division.length()> 0){
-            result = reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate, velocityTemplate);
-        }
-        if (sendEmails != null){
-            result = reviewService.sendEmails(request.getServletContext(), loggedInConnection,1000, velocityTemplate);
-        }
-        if (businessId > 0){
             if (submit!=null){
-                reviewService.processReviewForm(loggedInConnection, orderRef, ratings, comments);
-                result = reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate, velocityTemplate);
+                reviewService.processSupplierResponseForm(loggedInConnection, orderRef, comments);
             }
-            result = reviewService.createReviewForm(request.getServletContext(), loggedInConnection, orderRef, velocityTemplate);
-        }
+                result = reviewService.createSupplierResponseForm(request.getServletContext(), loggedInConnection, orderRef, velocityTemplate);
         model.addAttribute("content", result);
         return "utf8page";
     }
 
 
-  }
+}
 

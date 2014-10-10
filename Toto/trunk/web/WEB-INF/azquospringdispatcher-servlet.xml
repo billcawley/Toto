@@ -4,6 +4,8 @@
        xmlns:mvc="http://www.springframework.org/schema/mvc"
        xmlns:context="http://www.springframework.org/schema/context"
        xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:security="http://www.springframework.org/schema/security"
+
        xsi:schemaLocation="http://www.springframework.org/schema/beans
        http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/mvc
@@ -11,7 +13,9 @@
        http://www.springframework.org/schema/context
        http://www.springframework.org/schema/context/spring-context.xsd
        http://www.springframework.org/schema/util
-       http://www.springframework.org/schema/util/spring-util.xsd">
+       http://www.springframework.org/schema/util/spring-util.xsd
+       http://www.springframework.org/schema/security
+       http://www.springframework.org/schema/security/spring-security.xsd">
 
     <!--
         Controllers are setup using annotations
@@ -73,4 +77,32 @@
         <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
         <constructor-arg type="com.azquo.memorydbdao.StandardDAO" ref="standardDao"/>
     </bean>
+
+    <security:http auto-config="true" use-expressions="true" >
+
+
+
+<!--        <security:intercept-url pattern="/phase1/login.html"       access="permitAll"            requires-channel="https" />
+        <security:intercept-url pattern="/phase1/errorPage.html"   access="permitAll"            requires-channel="http" />
+        <security:intercept-url pattern="/phase1/**"               access="hasRole('ROLE_USER')" requires-channel="https" />
+
+        <security:intercept-url pattern="/api/**"                  access="permitAll" requires-channel="http" /> -->
+        <security:intercept-url pattern="/api/MerchantAdmin"               access="hasRole('ROLE_USER')" requires-channel="http" />
+        <security:intercept-url pattern="/api/SupplierResponse*"               access="hasRole('ROLE_USER')" requires-channel="http" />
+        <security:intercept-url pattern="/api/SupplierResponse/*"               access="hasRole('ROLE_USER')" requires-channel="http" />
+        <security:logout logout-url="/logout" logout-success-url="/logoutSuccess.html" />
+        <!--<security:form-login login-page="/phase1/login.html" authentication-failure-url="/phase1/errorPage.html"  default-target-url="/phase1/test.html"/>-->
+
+    </security:http>
+
+
+
+    <security:authentication-manager>
+        <security:authentication-provider>
+            <security:user-service>
+                <security:user name="edd" password="edd" authorities="ROLE_USER"/>
+            </security:user-service>
+        </security:authentication-provider>
+
+    </security:authentication-manager>
 </beans>

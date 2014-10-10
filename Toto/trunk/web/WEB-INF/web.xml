@@ -4,7 +4,6 @@
          xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
 		  http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
          version="2.5">
-
     <filter>
         <filter-name>encodingFilter</filter-name>
         <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
@@ -17,8 +16,16 @@
             <param-value>true</param-value>
         </init-param>
     </filter>
+    <filter>
+        <filter-name>springSecurityFilterChain</filter-name>
+        <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+    </filter>
     <filter-mapping>
         <filter-name>encodingFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+    <filter-mapping>
+        <filter-name>springSecurityFilterChain</filter-name>
         <url-pattern>/*</url-pattern>
     </filter-mapping>
 
@@ -36,6 +43,14 @@
         <url-pattern>/api/*</url-pattern>
     </servlet-mapping>
 
+
+     <context-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>/WEB-INF/azquospringdispatcher-servlet.xml</param-value>
+    </context-param>
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
     <!--    <security-constraint>
             <web-resource-collection>
                 <web-resource-name>

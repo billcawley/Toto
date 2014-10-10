@@ -162,24 +162,76 @@ public class ReviewService {
 
     }
 
-    Map<String,String> velocityReview(Name orderItem, Name rating, Name product) {
+    public class VelocityReview {
+        public String rating;
+        public String ratingName;
+        public String product;
+        public String comment;
+        public String commentName;
+        public String formattedDate;
+        public String type;
 
-        Map<String, String> r = new HashMap<String, String>();
-        String ratingStr = getValueFromParent(orderItem, rating);
-        String productStr = getValueFromParent(orderItem, product);
+        //velocity wants getters
 
-        r.put("rating", ratingStr);
-        r.put("product", productStr);
-         String comment = orderItem.getAttribute("comment");
-        if (comment == null) {
-            comment = "";
+
+        public String getRating() {
+            return rating;
         }
-        if (comment.indexOf("|Supplier:") > 0) {
-            comment = comment.replace("|Supplier:", "<div class=\"suppliercomment\">") + "</div>";
+
+        public String getRatingName() {
+            return ratingName;
         }
-        r.put("comment", comment);
-        r.put("date", showDate(orderItem.getAttribute("Feedback date")));
-        return r;
+
+        public String getProduct() {
+            return product;
+        }
+
+        public String getComment() {
+            return comment;
+        }
+
+        public String getCommentName() {
+            return commentName;
+        }
+
+        public String getFormattedDate() {
+            return formattedDate;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        // for XML, ideally will remove later
+        public Map<String, String> toStringMap(){
+            Map<String, String> toReturn = new HashMap<String, String>();
+            toReturn.put("rating", rating);
+            toReturn.put("ratingName", ratingName);
+            toReturn.put("product", product);
+            toReturn.put("comment", comment);
+            toReturn.put("commentName", commentName);
+            toReturn.put("date", formattedDate);
+            toReturn.put("type", type);
+            return toReturn;
+        }
+    }
+
+    VelocityReview getVelocityReview(Name orderItem, Name rating, Name product) {
+
+        VelocityReview vr = new VelocityReview();
+
+        vr.rating = getValueFromParent(orderItem, rating);
+        vr.product = getValueFromParent(orderItem, product);
+       System.out.println("order item " + orderItem);
+        vr.comment = orderItem.getAttribute("Comment");
+        if (vr.comment == null) {
+            vr.comment = "";
+        }
+        if (vr.comment.indexOf("|Supplier:") > 0) {
+            vr.comment = vr.comment.replace("|Supplier:", "<div class=\"suppliercomment\">") + "</div>";
+        }
+        vr.formattedDate = showDate(orderItem.getAttribute("Feedback date"));
+        return vr;
     }
 
     public static void addXmlElements(TransformerHandler hd, org.xml.sax.helpers.AttributesImpl atts, Map<String,String>items)        throws Exception {
@@ -202,7 +254,7 @@ public class ReviewService {
         }
         List<Name> orderItems = new ArrayList<Name>();
         Map<String, String> context = new HashMap<String, String>();
-        List<Map<String, String>> reviews = new ArrayList<Map<String, String>>();
+        List<VelocityReview> reviews = new ArrayList<VelocityReview>();
         String error = nameService.interpretName(loggedInConnection, orderItems, division + ";level lowest;WHERE Feedback date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
         if (error.length() > 0) {
             return error;
@@ -212,14 +264,14 @@ public class ReviewService {
         int posCount = 0;
         for (Name orderItem : orderItems) {
 
-            Map<String, String> r = velocityReview(orderItem, rating, product);
-            if (r.get("comment").length()==0){
-                r.put("comment", "No comment");
+            VelocityReview vr = getVelocityReview(orderItem, rating, product);
+            if (vr.comment.length()==0){
+                vr.comment = "No comment";
             }
-            if (r.get("rating").contains("+")) {
+            if (vr.rating.contains("+")) {
                 posCount++;
             }
-           reviews.add(r);
+           reviews.add(vr);
 
 
         }
@@ -242,7 +294,7 @@ public class ReviewService {
     }
 
 
-    private String convertToXML(Map<String, String> context, String itemName, List<Map<String, String>> items)throws Exception{
+    private String convertToXML(Map<String, String> context, String itemName, List<VelocityReview> items)throws Exception{
 
         StringWriter sw = new StringWriter();
 
@@ -257,9 +309,9 @@ public class ReviewService {
         hd.startDocument();
         org.xml.sax.helpers.AttributesImpl atts = new org.xml.sax.helpers.AttributesImpl();
         addXmlElements(hd, atts, context);
-        for (Map<String,String>item:items){
+        for (VelocityReview item:items){
             hd.startElement("","","review", atts);
-            addXmlElements(hd,atts, item);
+            addXmlElements(hd,atts, item.toStringMap());
             hd.endElement("","","review");
         }
         hd.endDocument();
@@ -275,7 +327,7 @@ public class ReviewService {
         boolean XML = true;
         if (velocityTemplate!=null) XML = false;
         Map<String, String> context = new HashMap<String, String>();
-        List<Map<String, String>> reviews = new ArrayList<Map<String, String>>();
+        List<VelocityReview> reviews = new ArrayList<VelocityReview>();
 
 
         Name order = nameService.findByName(loggedInConnection, orderRef + ", Order");
@@ -318,20 +370,21 @@ public class ReviewService {
         for (Name orderItem:orderItems){
             String orderItemName = orderItem.getDefaultDisplayName();
             String productCode = orderItemName.substring(orderItemName.lastIndexOf(" ")+1);
-            Map<String, String> r = velocityReview(orderItem, rating, product);
+            VelocityReview vr = getVelocityReview(orderItem, rating, product);
             if (service.getChildren().contains(orderItem)) {
-                r.put("type", "service");
-                 validationScript.append("frmvalidator.addValidation(\"comment" + productCode + "\",\"req\",\"Please enter a comment for " + r.get("product") + "\");\n");
+                // todo, these from public static finals
+                vr.type = "service";
+                 validationScript.append("frmvalidator.addValidation(\"comment" + productCode + "\",\"req\",\"Please enter a comment for " + vr.product + "\");\n");
             }else{
-                r.put("type", "product");
+                vr.type = "product";
             }
-            r.put("ratingname", "rating" + productCode);
-            r.put("commentname", "comment" + productCode);
-            validationScript.append("frmvalidator.addValidation(\"rating" + productCode + "\",\"req\",\"Please enter a rating for " + r.get("product") + "\");\n");
+            vr.ratingName =  "rating" + productCode;
+            vr.commentName = "comment" + productCode;
+            validationScript.append("frmvalidator.addValidation(\"rating" + productCode + "\",\"req\",\"Please enter a rating for " + vr.product + "\");\n");
             validationScript.append("frmvalidator.EnableOnPageErrorDisplaySingleBox();\n");
             validationScript.append("frmvalidator.EnableMsgsTogether();\n");
 
-            reviews.add(r);
+            reviews.add(vr);
 
 
         }
@@ -389,7 +442,7 @@ public class ReviewService {
         }
     }
 
-    private String convertToVelocity(ServletContext servletContext, Map<String,String> context, String itemName, List<Map<String,String>> items, String velocityTemplate){
+    private String convertToVelocity(ServletContext servletContext, Map<String,String> context, String itemName, List<VelocityReview> items, String velocityTemplate){
 
         VelocityEngine ve = new VelocityEngine();
         Properties properties = new Properties();
@@ -426,5 +479,112 @@ public class ReviewService {
 
 
     }
+
+
+
+    public String createSupplierResponseForm(ServletContext servletContext,LoggedInConnection loggedInConnection, String orderRef, String velocityTemplate)throws Exception{
+        boolean XML = true;
+        if (velocityTemplate!=null) XML = false;
+        Map<String, String> context = new HashMap<String, String>();
+        List<VelocityReview> reviews = new ArrayList<VelocityReview>();
+
+        // note by edd, todo there should be a better way, ha!
+
+        Name order = nameService.findByName(loggedInConnection, orderRef + ", Order");
+        if (order==null){
+            // todo : this is what exceptions are for
+            return "error: unrecognised order ref " + orderRef;
+        }
+        // so the children of order will only ever be order items? I suppose this makes sense
+        Set<Name> orderItems = order.getChildren();
+        if (orderItems.size() == 0) return "error: No items in order " + order.getDefaultDisplayName();
+        // so just not using? I'll comment
+        //Name allProducts = nameService.findByName(loggedInConnection,"All products");
+        // interesting
+        Name service = nameService.findByName(loggedInConnection,"Service");
+        Set<Name> productItems = new HashSet<Name>();
+        Set<Name> serviceItems = new HashSet<Name>();
+        /* so we're going though the order items seeing if they're in the set service or not and categorising accordingly.
+        This truly is using the set principle. I wonder how fast .contains is. Probably pretty fast and if looking up by tree
+        the as the number increases the "cost" or extra set members will be minimal
+        hash function on the name objects is very important!
+         */
+        for (Name name : orderItems){
+            //ASSUMING THAT 'service' HAS ONLY ONE LEVEL OF CHILDREN!
+            if (service.getChildren().contains(name)){
+                serviceItems.add(name);
+            }else{
+                productItems.add(name);
+            }
+        }
+        Name topSupplier = nameService.findByName(loggedInConnection,"supplier");
+        /*Name supplier = null;
+        for (Name name:topSupplier.getChildren()){
+            supplier = name;
+            break;
+        }*/
+        Name supplier = topSupplier.getChildren().iterator().next();
+
+        StringBuffer validationScript = new StringBuffer();
+        context.put("supplierlogo", supplier.getAttribute("logo"));
+        // todo : connection id shoult NOT be in here, its a DB access connection. Deal with later.
+        context.put("connectionid", loggedInConnection.getConnectionId());
+        context.put("submit", "Submit");
+        // todo : probably should not look up this way, config file and cache the object?
+        Name rating = nameService.findByName(loggedInConnection, "All ratings");
+        Name product = nameService.findByName(loggedInConnection, "All Products");
+        for (Name orderItem:orderItems){
+            String orderItemName = orderItem.getDefaultDisplayName();
+            // this is very hacky, I think we need another way
+            String productCode = orderItemName.substring(orderItemName.lastIndexOf(" ")+1);
+
+
+
+
+            // I'm zapping the comment validation bits for the mo
+
+
+            VelocityReview vr = getVelocityReview(orderItem, rating, product);
+            if (service.getChildren().contains(orderItem)) {
+                // todo, these from public static finals
+                vr.type = "service";
+            }else{
+                vr.type = "product";
+            }
+            vr.ratingName =  "rating" + productCode;
+            vr.commentName = "suppliercomment" + productCode;
+            reviews.add(vr);
+
+
+        }
+        if (XML){
+            return convertToXML(context,"reviews", reviews);
+        }else{
+            return convertToVelocity(servletContext,context,"reviews", reviews, velocityTemplate);
+        }
+    }
+
+    public String processSupplierResponseForm(LoggedInConnection loggedInConnection, String orderRef, Map<String, String> comments)throws Exception{
+
+        Name order = nameService.findByName(loggedInConnection, orderRef + ", Order");
+
+        for (Name orderItem: order.getChildren()){
+            String orderItemName = orderItem.getDefaultDisplayName();
+            String productCode = orderItemName.substring(orderItemName.lastIndexOf(" ") + 1);
+            String comment = comments.get(productCode);
+            if (comment != null && orderItem.getAttribute("Comment") != null){
+                orderItem.setAttributeWillBePersisted("Comment", orderItem.getAttribute("Comment") + "|Supplier:" + comment);
+            }
+        }
+
+        nameService.persist(loggedInConnection);
+
+
+
+
+        return "";
+    }
+
+
 
 }
