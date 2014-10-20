@@ -42,7 +42,7 @@ public final class LoggedInConnection {
 
     private final Map<String, List<List<Name>>> rowHeadings;
     private final Map<String, List<List<Name>>> columnHeadings;
-    private final Map<String, List<Name>> rowHeadingSupplements;//this will allow product classes to be included in the returned row headings, not used to define data.
+    private final Map<String, List<Set<Name>>> rowHeadingSupplements;//this will allow product classes to be included in the returned row headings, not used to define data.
     private final Map<String, List<Integer>> rowOrder;//for when top or bottom values need to be returned.
     private final Map<String, Integer> restrictCount; //as above
     private final Map<String, Integer> sortCol; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
@@ -71,7 +71,7 @@ public final class LoggedInConnection {
         reportId = 0;
         rowHeadings = new HashMap<String, List<List<Name>>>();
         columnHeadings = new HashMap<String, List<List<Name>>>();
-        rowHeadingSupplements = new HashMap<String, List<Name>>();
+        rowHeadingSupplements = new HashMap<String, List<Set<Name>>>();
         rowOrder = new HashMap<String, List<Integer>>();
         restrictCount = new HashMap<String, Integer>();
         sortCol = new HashMap<String, Integer>();
@@ -189,7 +189,7 @@ public final class LoggedInConnection {
         }
     }
 
-    public List<Name> getRowHeadingSupplements(final String region) {
+    public List<Set<Name>> getRowHeadingSupplements(final String region) {
         if (region == null || region.isEmpty()) {
             return rowHeadingSupplements.get(defaultRegion);
         } else {
@@ -197,7 +197,7 @@ public final class LoggedInConnection {
         }
     }
 
-    public void setRowHeadingSupplements(final String region, final List<Name> rowHeadingSupplements) {
+    public void setRowHeadingSupplements(final String region, final List<Set<Name>> rowHeadingSupplements) {
         if (region == null || region.isEmpty()) {
             this.rowHeadingSupplements.put(defaultRegion, rowHeadingSupplements);
         } else {
