@@ -36,6 +36,7 @@ public class DownloadController {
 
         String connectionId = null;
         boolean withMacros =false;
+        boolean pdf = false;
         String image = "";
 
         while (parameterNames.hasMoreElements()) {
@@ -45,6 +46,8 @@ public class DownloadController {
                 connectionId = paramValue;
             }else if (paramName.equals("macros")){
                 withMacros = true;
+            }else if (paramName.equals("pdf")){
+                pdf = true;
             }else if (paramName.equals("image")){
                 image = paramValue;
             }
@@ -108,10 +111,14 @@ public class DownloadController {
             fileName = onlineReport.getFilename();
         }
         fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
-        if (withMacros){
-            onlineService.saveBookActive(response, loggedInConnection,fileName);
-        }else{
-            onlineService.saveBook(response, loggedInConnection, fileName);
+        if (pdf){
+            onlineService.saveBookasPDF(response, loggedInConnection, fileName);
+        }else {
+            if (withMacros) {
+                onlineService.saveBookActive(response, loggedInConnection, fileName);
+            } else {
+                onlineService.saveBook(response, loggedInConnection, fileName);
+            }
         }
     }
 
