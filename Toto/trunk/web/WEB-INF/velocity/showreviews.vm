@@ -78,6 +78,9 @@
                     <div class="reviewproduct">$review.product</div>
                     <div class="reviewrating">Rating $review.rating</div>
                     <div class="reviewcomment">Comment $review.comment</div>
+                    #if( $suppliercomment )
+                        <div class="suppliercomment">$suppliercomment</div>
+                    #end
                 </div>
             #end
             <div class="feedbackBottom">
