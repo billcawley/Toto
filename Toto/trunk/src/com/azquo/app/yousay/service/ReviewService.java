@@ -169,6 +169,7 @@ public class ReviewService {
         public String comment;
         public String commentName;
         public String formattedDate;
+        public String date;
         public String type;
 
         //velocity wants getters
@@ -197,6 +198,9 @@ public class ReviewService {
         public String getFormattedDate() {
             return formattedDate;
         }
+        public String getdate() {
+            return date;
+        }
 
         public String getType() {
             return type;
@@ -210,7 +214,7 @@ public class ReviewService {
             toReturn.put("product", product);
             toReturn.put("comment", comment);
             toReturn.put("commentName", commentName);
-            toReturn.put("date", formattedDate);
+            toReturn.put("date",date);
             toReturn.put("type", type);
             return toReturn;
         }
@@ -231,6 +235,8 @@ public class ReviewService {
             vr.comment = vr.comment.replace("|Supplier:", "<div class=\"suppliercomment\">") + "</div>";
         }
         vr.formattedDate = showDate(orderItem.getAttribute("Feedback date"));
+        vr.date = orderItem.getAttribute("Feedback date");
+
         return vr;
     }
 
@@ -238,6 +244,7 @@ public class ReviewService {
         for (String key:items.keySet()) {
             String value = items.get(key);
             if (value == null) value = "";
+
             hd.startElement("", "", key, atts);
             hd.characters(value.toCharArray(), 0, value.length());
             hd.endElement("", "", key);
@@ -416,13 +423,13 @@ public class ReviewService {
                 Name ratingSet = nameService.findByName(loggedInConnection,rating + ", Rating");
                 if (ratingSet != null) {
                     ratingSet.addChildWillBePersisted(orderItem);
-                    orderItem.setAttributeWillBePersisted("feedback date", feedbackDate);
+                    orderItem.setAttributeWillBePersisted("Review date", feedbackDate);
                 }
             }
             String comment = comments.get(productCode);
             if (comment != null){
                 orderItem.setAttributeWillBePersisted("comment", comment);
-                orderItem.setAttributeWillBePersisted("feedback date", feedbackDate);
+                orderItem.setAttributeWillBePersisted("Review date", feedbackDate);
             }
         }
 
@@ -447,6 +454,10 @@ public class ReviewService {
         VelocityEngine ve = new VelocityEngine();
         Properties properties = new Properties();
         Template t;
+        if (velocityTemplate==null){
+            velocityTemplate = "email.vm";
+        }
+
         if (velocityTemplate != null && (velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1) {
             properties.put("resource.loader", "url");
             properties.put("url.resource.loader.class", "org.apache.velocity.runtime.resource.loader.URLResourceLoader");
@@ -470,7 +481,7 @@ public class ReviewService {
         if (items != null){
             vcontext.put(itemName, items);
         }
-        /* now render the template into a StringWriter */
+         /* now render the template into a StringWriter */
         StringWriter writer = new StringWriter();
         t.merge(vcontext, writer);
         /* show the World */
