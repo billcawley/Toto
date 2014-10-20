@@ -165,6 +165,7 @@ public final class OnlineService {
         sb.append("<li><a href=\"#\" onclick=\"downloadWorkbook();\">Download</a></li>\n");
         if (loggedInConnection.getAzquoBook().dataRegionPrefix.equals(AzquoBook.azDataRegion)) {
             sb.append("<li><input type=\"checkbox\" id=\"withMacros\" value=\"\">with macros</li>\n");
+            sb.append("<li><input type=\"checkbox\" id=\"asPDF\" value=\"\">as PDF</li>\n");
             //sb.append(menuItem("Draw chart", "drawChart()", " id=\"drawChart\""));
         }
         sb.append(menuItem("Save data", "saveData()"," id=\"saveData\" style=\"display:none;\""));
@@ -240,6 +241,16 @@ public final class OnlineService {
 
 
     }
+
+
+    public void saveBookasPDF(HttpServletResponse response, LoggedInConnection loggedInConnection, String fileName)throws Exception{
+
+        loggedInConnection.getAzquoBook().saveBookAsPDF(response, fileName);
+
+
+    }
+
+
 
     public void saveBookActive(HttpServletResponse response, LoggedInConnection loggedInConnection, String fileName)throws Exception{
          loggedInConnection.getAzquoBook().saveBookActive(response, fileName);
