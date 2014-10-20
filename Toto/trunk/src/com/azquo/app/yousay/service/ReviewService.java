@@ -435,7 +435,7 @@ public class ReviewService {
             }
             vr.ratingName =  "rating" + productCode;
             vr.commentName = "comment" + productCode;
-            validationScript.append("frmvalidator.addValidation(\"rating" + productCode + "\",\"minlen=1\",\"Please enter a rating for " + vr.product + "\");\n");
+            validationScript.append("frmvalidator.addValidation(\"rating" + productCode + "\",\"selone_radio\",\"Please enter a rating for " + vr.product + "\");\n");
             validationScript.append("frmvalidator.EnableOnPageErrorDisplaySingleBox();\n");
             validationScript.append("frmvalidator.EnableMsgsTogether();\n");
 
