@@ -616,6 +616,9 @@ function downloadWorkbook(){
     if (document.getElementById("withMacros") != null && document.getElementById("withMacros").checked){
         withMacros = "&macros=true"
     }
+    if (document.getElementById("asPDF") != null && document.getElementById("asPDF").checked){
+        withMacros = "&pdf=true"
+    }
 
     window.open("/api/Download?connectionid=" + azquoform.connectionid.value + withMacros);
 }
