@@ -23,6 +23,7 @@ import org.apache.velocity.VelocityContext;
 
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.text.DateFormat;
@@ -56,11 +57,11 @@ public class ReviewController {
 
 
     @RequestMapping
-    public String handleRequest(ModelMap model,HttpServletRequest request) throws Exception {
+    public String handleRequest(ModelMap model,HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         Enumeration<String> parameterNames = request.getParameterNames();
 
-        String user = null;
+        String op = null;
         String supplierDB = null;
         String startDate = "2014-01-01";
         String division = "";//should be the division topparent
@@ -76,8 +77,8 @@ public class ReviewController {
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
             String paramValue = request.getParameterValues(paramName)[0];
-            if (paramName.equals("user")) {
-                user = paramValue;
+            if (paramName.equals("op")) {
+                op = paramValue;
             } else if (paramName.equals("velocitytemplate")) {
                 velocityTemplate = paramValue;
             } else if (paramName.equals("supplierdb")) {
@@ -94,8 +95,6 @@ public class ReviewController {
                 }
              } else if (paramName.equals("orderref")) {
                 orderRef = paramValue;
-            } else if (paramName.equals("sendemails")) {
-                sendEmails = paramValue;
             } else if (paramName.equals("connectionid")) {
                 connectionId = paramValue;
             } else if (paramName.equals("submit")) {
@@ -128,18 +127,18 @@ public class ReviewController {
         }
         String result = "";
 
-        if (division.length()> 0){
-            result = reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate, velocityTemplate);
+        if (op.equals("showreviews")){
+            result = reviewService.showReviews(request, loggedInConnection,division, startDate, velocityTemplate);
         }
-        if (sendEmails != null){
-            result = reviewService.sendEmails(request.getServletContext(), loggedInConnection,1000, velocityTemplate);
+        if (op.equals("sendemails")){
+            result = reviewService.sendEmails(request, loggedInConnection,1000, velocityTemplate);
         }
-        if (businessId > 0){
+        if (op.equals("reviewform")){
             if (submit!=null){
                 reviewService.processReviewForm(loggedInConnection, orderRef, ratings, comments);
-                result = reviewService.showReviews(request.getServletContext(), loggedInConnection,division, startDate, velocityTemplate);
+                result = reviewService.showReviews(request, loggedInConnection,division, startDate, velocityTemplate);
             }
-            result = reviewService.createReviewForm(request.getServletContext(), loggedInConnection, orderRef, velocityTemplate);
+            result = reviewService.createReviewForm(request, loggedInConnection, orderRef, velocityTemplate);
         }
         model.addAttribute("content", result);
         return "utf8page";
