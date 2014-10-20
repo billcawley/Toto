@@ -100,6 +100,7 @@ public class ReviewService {
     }
 
     public String sendEmail(String thisURL, ServletContext servletContext,LoggedInConnection loggedInConnection,Name order, String velocityTemplate, Name supplier) throws Exception{
+        String thisSite = thisURL.substring(0,thisURL.lastIndexOf("/",thisURL.length() -2));
         Map<String, String> context = new HashMap<String, String>();
         Set<Name> orderItems = order.getChildren();
         if (orderItems.size() == 0) return ("No items in order " + order.getDefaultDisplayName());
@@ -134,8 +135,7 @@ public class ReviewService {
             productCount++;
         }
         String orderSaleDate = getValueFromParent(order,saleDate);
-          String thisSite = thisURL.substring(0,thisURL.lastIndexOf("/",thisURL.length() -2));
-        context.put("supplierlogo",thisSite + "/Image/?supplierdb=" + loggedInConnection.getCurrentDBName() + "&image=" + supplier.getAttribute("logo"));
+         context.put("supplierlogo",thisSite + "/Image/?supplierdb=" + loggedInConnection.getCurrentDBName() + "&image=" + supplier.getAttribute("logo"));
         context.put("saledate", showDate(orderSaleDate));
         context.put("customername", order.getAttribute("Customer Name"));
         context.put("saledescription", saledesc.toString());
@@ -162,16 +162,23 @@ public class ReviewService {
 
     }
 
-    public String getValueFromParent(Name child, Name parent){
+
+
+    public Name getParent(Name child, Name parent){
         List<Name> parentName = child.findAllParents();
         parentName.retainAll(parent.getChildren());
         if (parentName.size()==0){
-            return "";
+            return null;
         }
-        return parentName.get(0).getDefaultDisplayName();
+        return parentName.get(0);
 
     }
 
+    private String getValueFromParent(Name child, Name parent){
+        Name name = getParent(child,parent);
+        if (name == null) return "";
+        return name.getDefaultDisplayName();
+    }
 
     public String showDate(String fileDate){
 
@@ -192,7 +199,9 @@ public class ReviewService {
         public String rating;
         public String ratingName;
         public String product;
+        public String productcode;
         public String comment;
+        public String supplierComment;
         public String commentName;
         public String formattedDate;
         public String date;
@@ -209,13 +218,17 @@ public class ReviewService {
             return ratingName;
         }
 
+        public String getProductCode() {
+            return productcode;
+        }
+
         public String getProduct() {
             return product;
         }
-
         public String getComment() {
             return comment;
         }
+        public String getSupplierComment() { return supplierComment;}
 
         public String getCommentName() {
             return commentName;
@@ -224,7 +237,7 @@ public class ReviewService {
         public String getFormattedDate() {
             return formattedDate;
         }
-        public String getdate() {
+        public String getDate() {
             return date;
         }
 
@@ -251,15 +264,19 @@ public class ReviewService {
         VelocityReview vr = new VelocityReview();
 
         vr.rating = getValueFromParent(orderItem, rating);
-        vr.product = getValueFromParent(orderItem, product);
-       System.out.println("order item " + orderItem);
-        vr.comment = orderItem.getAttribute("Comment");
-        if (vr.comment == null) {
-            vr.comment = "";
+        Name thisProd = getParent(orderItem, product);
+        vr.product = thisProd.getDefaultDisplayName();
+        vr.productcode = thisProd.getAttribute(("Product code"));
+        String comment = orderItem.getAttribute("Comment");
+        if (comment == null){
+            comment = "";
         }
-        if (vr.comment.indexOf("|Supplier:") > 0) {
-            vr.comment = vr.comment.replace("|Supplier:", "<div class=\"suppliercomment\">") + "</div>";
+        int supplierCommentPos = comment.indexOf("|Supplier:");
+        if (supplierCommentPos >= 0){
+            vr.supplierComment = comment.substring(supplierCommentPos + 10);
+            comment = comment.substring(0,supplierCommentPos);
         }
+        vr.comment = comment;
         vr.formattedDate = showDate(orderItem.getAttribute("Feedback date"));
         vr.date = orderItem.getAttribute("Feedback date");
 
@@ -394,8 +411,13 @@ public class ReviewService {
         }
 
         StringBuffer validationScript = new StringBuffer();
-        context.put("supplierlogo", supplier.getAttribute("logo"));
+        validationScript.append(" var frmvalidator  = new Validator(\"review\");\n");
+        String thisURL = request.getRequestURL().toString();
+        String thisSite = thisURL.substring(0,thisURL.lastIndexOf("/",thisURL.length() -2));
+        context.put("supplierlogo",thisSite + "/Image/?supplierdb=" + loggedInConnection.getCurrentDBName() + "&image=" + supplier.getAttribute("logo"));
+        context.put("suppliername", supplier.getDefaultDisplayName());
         context.put("intro", intro);
+        context.put("thisurl",thisURL);
         context.put("connectionid", loggedInConnection.getConnectionId());
         context.put("submit", "Submit");
         Name rating = nameService.findByName(loggedInConnection, "All ratings");
@@ -413,7 +435,7 @@ public class ReviewService {
             }
             vr.ratingName =  "rating" + productCode;
             vr.commentName = "comment" + productCode;
-            validationScript.append("frmvalidator.addValidation(\"rating" + productCode + "\",\"req\",\"Please enter a rating for " + vr.product + "\");\n");
+            validationScript.append("frmvalidator.addValidation(\"rating" + productCode + "\",\"minlen=1\",\"Please enter a rating for " + vr.product + "\");\n");
             validationScript.append("frmvalidator.EnableOnPageErrorDisplaySingleBox();\n");
             validationScript.append("frmvalidator.EnableMsgsTogether();\n");
 
