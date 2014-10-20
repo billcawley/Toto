@@ -67,7 +67,7 @@ public  class AzquoBook {
     Map <Style,Style> highlightStyles = new HashMap<Style, Style>();
 
 
-    Map<Cell, String> choiceMap = null;
+    Map<Range, String> choiceMap = null;
     Map<Cell, CellArea> mergedCells = null;
     //HSSFPalette Colors = null;
 
@@ -203,13 +203,13 @@ public  class AzquoBook {
 
 
     private void createChoiceMap() {
-        choiceMap = new HashMap<Cell, String>();
+        choiceMap = new HashMap<Range, String>();
         for (int i = 0;i < wb.getWorksheets().getNames().getCount();i++){
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().endsWith("chosen") && name.getRange().getWorksheet() == azquoSheet) {
                 Range range = name.getRange();
                 if (range!=null) {
-                    choiceMap.put(range.getCellOrNull(0, 0), name.getText().substring(0, name.getText().length() - 6).toLowerCase());
+                    choiceMap.put(range, name.getText().substring(0, name.getText().length() - 6).toLowerCase());
                 }
             }
         }
@@ -989,13 +989,15 @@ public  class AzquoBook {
     private void setChoices(LoggedInConnection loggedInConnection, int reportId) {
 
         createChoiceMap();
-        for (Cell cell : choiceMap.keySet()) {
-            String choiceName = choiceMap.get(cell);
-            Range choice = getRange(choiceName + "choice");
-            if (choice != null) {
-                UserChoice userChoice = userChoiceDAO.findForUserIdReportIdAndChoice(loggedInConnection.getUser().getId(), reportId, choiceName);
-                if (userChoice!=null){
-                    cell.setValue(userChoice.getChoiceValue());
+        for (Range range : choiceMap.keySet()) {
+            if (range.getRowCount() == 1 && range.getColumnCount() == 1) {
+                String choiceName = choiceMap.get(range);
+                Range choice = getRange(choiceName + "choice");
+                if (choice != null) {
+                    UserChoice userChoice = userChoiceDAO.findForUserIdReportIdAndChoice(loggedInConnection.getUser().getId(), reportId, choiceName);
+                    if (userChoice != null) {
+                        range.setValue(userChoice.getChoiceValue());
+                    }
                 }
             }
         }
@@ -1192,8 +1194,30 @@ public  class AzquoBook {
 
 
 
+   private String choiceCell(Cell cell){
+       int row = cell.getRow();
+       int col = cell.getColumn();
+       for (Range range:choiceMap.keySet()){
+             if (range.getFirstRow() <= row && range.getFirstRow() + range.getRowCount() > row
+                && range.getFirstColumn() <= col && range.getFirstColumn() + range.getColumnCount() > col){
+               return choiceMap.get(range);
+           }
+       }
+       return null;
+   }
 
 
+    boolean choiceIsUnique(Cell cell){
+        int row = cell.getRow();
+        int col = cell.getColumn();
+        for (Range range:choiceMap.keySet()){
+            if (range.getFirstRow() == row && range.getRowCount() ==1
+                    && range.getFirstColumn() == col && range.getColumnCount() ==1){
+                return true;
+            }
+        }
+        return false;
+    }
 
 
 
@@ -1277,14 +1301,15 @@ public  class AzquoBook {
                             addStyle("background-color", "white");
                             sizeInfo = " style=\"height:" + cellHeight + "px;width:" + cellWidth + "px;\"";
                         }
-                        if (choiceMap.get(cell) != null) {
+                        String choiceName = choiceCell(cell);
+                        if (choiceName != null){
                             //create a select list
                             StringBuffer selectClass = new StringBuffer();
                             selectClass.append("select ");
                             sOut = new Formatter(selectClass);
                             addStyle("width", cellWidth + "px");
                             addStyle("height",cellHeight + "px");
-                            String choiceName = choiceMap.get(cell);
+                            StyleColor("background-color", cell.getStyle().getForegroundColor());
                             Range choice = getRange(choiceName + "choice");
                             if (choice != null) {
 
@@ -1305,8 +1330,13 @@ public  class AzquoBook {
                                 if (constants.size() > 0 || choiceList.size() > 0) {
 
                                     String origContent = content;
+                                    String onChange = "";
+                                    if (choiceIsUnique(cell)){
+                                        onChange=  "onchange=\"selectChosen('" + choiceName + "')\" id=\"" + choiceName + "\"";
+                                    }
+                                    content = "<select class = \"" + selectClass + "\"" +  onChange + " class=\"" + cellClass + "\" >\n";
 
-                                    content = "<select class = \"" + selectClass + "\" onchange=\"selectChosen('" + choiceName + "')\" id=\"" + choiceMap.get(cell) + "\" class=\"" + cellClass + "\" >\n";
+                                    //content = "<select class = \"" + selectClass + "\" onchange=\"selectChosen('" + choiceName + "')\" id=\"" + choiceMap.get(cell) + "\" class=\"" + cellClass + "\" >\n";
                                     content += "<option value = \"\"></option>";
 
                                     for (String constant:constants){
@@ -1940,6 +1970,23 @@ public  class AzquoBook {
         out.flush();
 
     }
+
+
+    public void saveBookAsPDF(HttpServletResponse response, String fileName)throws Exception{
+
+        if (fileName.indexOf(".") > 0){
+            fileName= fileName.substring(0, fileName.indexOf("."));
+        }
+        fileName += ".pdf";
+        response.setContentType("application/pdf"); // Set up mime type
+        response.addHeader("Content-Disposition", "attachment; filename=" + fileName);
+        OutputStream out = response.getOutputStream();
+        wb.save(out, SaveFormat.PDF);
+        out.flush();
+
+    }
+
+
 
     public int getNumberOfSheets(){
         return wb.getWorksheets().getCount();
