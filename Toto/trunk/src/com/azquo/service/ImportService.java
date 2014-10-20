@@ -9,6 +9,7 @@ import com.azquo.adminentities.UploadRecord;
 import com.azquo.memorydb.Name;
 import com.azquo.view.AzquoBook;
 import com.csvreader.CsvReader;
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
@@ -128,9 +129,9 @@ public final class ImportService {
             return "error: no database set";
         }
         String tempFile = "";
-        boolean create = false;
-        if (strCreate != null && strCreate.equals("true")) {
-            create = true;
+        String lcName = fileName.toLowerCase();
+        if (lcName.endsWith(".jpg") || lcName.endsWith(".png") || lcName.endsWith(".gif")){
+            return imageImport(loggedInConnection, uploadFile, fileName);
         }
         if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")) {
             if (skipBase64) {
@@ -192,6 +193,20 @@ public final class ImportService {
        return result;
 
     }
+
+    private String imageImport(LoggedInConnection loggedInConnection, InputStream inputStream, String fileName)throws Exception{
+        String error = "";
+        String targetFileName = "/home/azquo/images/" + loggedInConnection.getCurrentDBName() + "/" + fileName;
+        File output = new File(targetFileName);
+        output.getParentFile().mkdirs();
+        if (!output.exists()){
+            output.createNewFile();
+        }
+        FileUtils.copyInputStreamToFile(inputStream, output);
+
+        return error;
+    }
+
 
     private String readClause(String keyName, String phrase){
         if (phrase.length() >= keyName.length() && phrase.toLowerCase().startsWith(keyName)){
