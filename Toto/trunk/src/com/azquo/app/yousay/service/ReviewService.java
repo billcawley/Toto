@@ -10,6 +10,8 @@ import org.apache.velocity.app.VelocityEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.sax.SAXTransformerFactory;
@@ -37,15 +39,35 @@ public class ReviewService {
     @Autowired
     private AzquoMailer azquoMailer;
 
-    public String sendEmails(ServletContext servletContext,LoggedInConnection loggedInConnection, int maxCount, String velocityTemplate)throws Exception{
 
+    public String sendEmails(HttpServletRequest request,LoggedInConnection loggedInConnection, int maxCount, String velocityTemplate)throws Exception{
+
+        Name topSupplier = nameService.findByName(loggedInConnection,"supplier");
+        Name supplier = null;
+        for (Name name:topSupplier.getChildren()){
+            supplier = name;
+            break;
+        }
+
+        if (velocityTemplate==null) {
+            velocityTemplate = supplier.getAttribute("email template");
+
+        }
+        if (velocityTemplate==null){
+            velocityTemplate="email.vm";
+        }else{
+            velocityTemplate = "/home/azquo/databases/" + loggedInConnection.getCurrentDBName() + "/velocitytemplates/" + velocityTemplate;
+        }
+        ServletContext servletContext = request.getServletContext();
+        String thisURL = request.getRequestURL().toString();
         String error = "";
         Name emailsToBeSent  = nameService.findByName(loggedInConnection,"Emails to be sent");
         Name ordersWithEmailSent = nameService.findByName(loggedInConnection, "Orders with email sent");
-        Set<Name> emailsSent = new HashSet<Name>();
+        Set<Name> emailsSentThisTime = new HashSet<Name>();
          String now = todayString();
         int count = 0;
-
+        String todaysEmailsSent = "Emails sent on " + df2.format(new Date());
+        Name todaysEmails = nameService.findOrCreateNameInParent(loggedInConnection,todaysEmailsSent,ordersWithEmailSent, false);
         for (Name order:emailsToBeSent.getChildren()) {
             String feedbackDate = order.getAttribute("Feedback date");
             if (feedbackDate == null){
@@ -53,11 +75,11 @@ public class ReviewService {
             }else{
                 if (feedbackDate.compareTo(now) < 0) {
                     //todo  consider what happens if the server crashes
-                    error = sendEmail(servletContext, loggedInConnection, order, velocityTemplate);
+                    error = sendEmail(thisURL, servletContext, loggedInConnection, order, velocityTemplate, supplier);
                     if (error.length() > 0) return error;
                     order.setAttributeWillBePersisted("Email sent", now);
-                    emailsSent.add(order);
-                    ordersWithEmailSent.addChildWillBePersisted(order);
+                    emailsSentThisTime.add(order);
+                    todaysEmails.addChildWillBePersisted(order);
                     count++;
                     if (count >= maxCount) {
 
@@ -68,11 +90,16 @@ public class ReviewService {
             }
 
         }
+        for (Name order:emailsSentThisTime){
+            emailsToBeSent.removeFromChildrenWillBePersisted(order);
+        }
+        nameService.persist(loggedInConnection);
+
         return "";
 
     }
 
-    public String sendEmail(ServletContext servletContext,LoggedInConnection loggedInConnection,Name order, String velocityTemplate) throws Exception{
+    public String sendEmail(String thisURL, ServletContext servletContext,LoggedInConnection loggedInConnection,Name order, String velocityTemplate, Name supplier) throws Exception{
         Map<String, String> context = new HashMap<String, String>();
         Set<Name> orderItems = order.getChildren();
         if (orderItems.size() == 0) return ("No items in order " + order.getDefaultDisplayName());
@@ -89,6 +116,9 @@ public class ReviewService {
                 productItems.add(name);
             }
         }
+        if (velocityTemplate==null){
+            velocityTemplate="email.vm";
+        }
         StringBuffer saledesc = new StringBuffer();
         int productCount = 0;
         for(Name orderItem:productItems){
@@ -104,23 +134,16 @@ public class ReviewService {
             productCount++;
         }
         String orderSaleDate = getValueFromParent(order,saleDate);
-         Name topSupplier = nameService.findByName(loggedInConnection,"supplier");
-        Name supplier = null;
-        for (Name name:topSupplier.getChildren()){
-            supplier = name;
-            break;
-        }
-
-
-
-        context.put("saledescription", saledesc.toString());
+          String thisSite = thisURL.substring(0,thisURL.lastIndexOf("/",thisURL.length() -2));
+        context.put("supplierlogo",thisSite + "/Image/?supplierdb=" + loggedInConnection.getCurrentDBName() + "&image=" + supplier.getAttribute("logo"));
         context.put("saledate", showDate(orderSaleDate));
         context.put("customername", order.getAttribute("Customer Name"));
+        context.put("saledescription", saledesc.toString());
         context.put("supplier", supplier.getDefaultDisplayName());
-        context.put("feedbacklink", "http://bomorgan.co.uk:8080/api/Reviews/?supplierdb=yousay1&division=SUTTON&startdate=2014-01-06");
-        context.put("reviewslink", "http://bomorgan.co.uk:8080/api/Reviews/?supplierdb=yousay1&division=SUTTON&startdate=2014-01-06");
+        context.put("feedbacklink", thisURL + "?op=reviewform&supplierdb=" + loggedInConnection.getCurrentDBName() + "&orderref=" + order.getDefaultDisplayName());
+        context.put("reviewslink", thisURL + "?op=showreviews&supplierdb=" + loggedInConnection.getCurrentDBName() + "&division=" + supplier.getDefaultDisplayName());
         String result = convertToVelocity(servletContext, context,"", null, velocityTemplate);
-        if (order.getAttribute("Customer email").equals("bill@azquo.com")){
+        if (!order.getAttribute("Customer email").equals("demo@azquo.com")){
             azquoMailer.sendEMail(order.getAttribute("Customer email"), order.getAttribute("Customer name"),"Feedback request on behalf of " + supplier.getDefaultDisplayName(), result);
         }
 
@@ -130,6 +153,9 @@ public class ReviewService {
 
 
     }
+
+
+
 
     public String todayString(){
         return df.format(new Date());
@@ -253,7 +279,7 @@ public class ReviewService {
     }
 
 
-    public String showReviews(ServletContext servletContext, LoggedInConnection loggedInConnection, String division, String startDate, String velocityTemplate) throws Exception {
+    public String showReviews(HttpServletRequest request, LoggedInConnection loggedInConnection, String division, String startDate, String velocityTemplate) throws Exception {
 
         boolean XML = true;
         if (velocityTemplate !=null){
@@ -293,7 +319,7 @@ public class ReviewService {
 
 
             }else {
-                return convertToVelocity(servletContext, context,"reviews", reviews, velocityTemplate);
+                return convertToVelocity(request.getServletContext(),context,"reviews", reviews, velocityTemplate);
                 }
         } else {
             return "no reviews found";
@@ -328,8 +354,8 @@ public class ReviewService {
 
     }
 
-    public String createReviewForm(ServletContext servletContext,LoggedInConnection loggedInConnection, String orderRef, String velocityTemplate)throws Exception{
 
+    public String createReviewForm(HttpServletRequest request,LoggedInConnection loggedInConnection, String orderRef, String velocityTemplate)throws Exception{
 
         boolean XML = true;
         if (velocityTemplate!=null) XML = false;
@@ -399,7 +425,7 @@ public class ReviewService {
         if (XML){
             return convertToXML(context,"reviews", reviews);
         }else{
-            return convertToVelocity(servletContext,context,"reviews", reviews, velocityTemplate);
+            return convertToVelocity(request.getServletContext(),context,"reviews", reviews, velocityTemplate);
         }
 
 
