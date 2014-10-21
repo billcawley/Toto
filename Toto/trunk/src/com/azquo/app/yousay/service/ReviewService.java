@@ -140,7 +140,7 @@ public class ReviewService {
         context.put("customername", order.getAttribute("Customer Name"));
         context.put("saledescription", saledesc.toString());
         context.put("supplier", supplier.getDefaultDisplayName());
-        context.put("feedbacklink", thisURL + "?op=reviewform&supplierdb=" + loggedInConnection.getCurrentDBName() + "&orderref=" + order.getDefaultDisplayName());
+        context.put("feedbacklink", thisURL + "?op=reviewform&supplierdb=" + loggedInConnection.getCurrentDBName() + "&orderref=" + order.getDefaultDisplayName() + "&businessid=" + loggedInConnection.getBusinessId() + "&velocitytemplate=form1.vm");
         context.put("reviewslink", thisURL + "?op=showreviews&supplierdb=" + loggedInConnection.getCurrentDBName() + "&division=" + supplier.getDefaultDisplayName() + "&businessid=" + loggedInConnection.getBusinessId());
         String result = convertToVelocity(servletContext, context,"", null, velocityTemplate);
         if (!order.getAttribute("Customer email").equals("demo@azquo.com")){
@@ -253,6 +253,7 @@ public class ReviewService {
             toReturn.put("product", product);
             toReturn.put("comment", comment);
             toReturn.put("commentName", commentName);
+            toReturn.put("productcode", productcode);
             toReturn.put("date",date);
             toReturn.put("type", type);
             return toReturn;
