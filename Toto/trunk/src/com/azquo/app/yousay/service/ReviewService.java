@@ -69,9 +69,9 @@ public class ReviewService {
         String todaysEmailsSent = "Emails sent on " + df2.format(new Date());
         Name todaysEmails = nameService.findOrCreateNameInParent(loggedInConnection,todaysEmailsSent,ordersWithEmailSent, false);
         for (Name order:emailsToBeSent.getChildren()) {
-            String feedbackDate = order.getAttribute("Feedback date");
+            String feedbackDate = order.getAttribute("Email date");
             if (feedbackDate == null){
-                error = "no feedback date for order " + order.getDefaultDisplayName();
+                error = "no email date for order " + order.getDefaultDisplayName();
             }else{
                 if (feedbackDate.compareTo(now) < 0) {
                     //todo  consider what happens if the server crashes
@@ -141,7 +141,7 @@ public class ReviewService {
         context.put("saledescription", saledesc.toString());
         context.put("supplier", supplier.getDefaultDisplayName());
         context.put("feedbacklink", thisURL + "?op=reviewform&supplierdb=" + loggedInConnection.getCurrentDBName() + "&orderref=" + order.getDefaultDisplayName());
-        context.put("reviewslink", thisURL + "?op=showreviews&supplierdb=" + loggedInConnection.getCurrentDBName() + "&division=" + supplier.getDefaultDisplayName());
+        context.put("reviewslink", thisURL + "?op=showreviews&supplierdb=" + loggedInConnection.getCurrentDBName() + "&division=" + supplier.getDefaultDisplayName() + "&businessid=" + loggedInConnection.getBusinessId());
         String result = convertToVelocity(servletContext, context,"", null, velocityTemplate);
         if (!order.getAttribute("Customer email").equals("demo@azquo.com")){
             azquoMailer.sendEMail(order.getAttribute("Customer email"), order.getAttribute("Customer name"),"Feedback request on behalf of " + supplier.getDefaultDisplayName(), result);
@@ -267,7 +267,7 @@ public class ReviewService {
         Name thisProd = getParent(orderItem, product);
         vr.product = thisProd.getDefaultDisplayName();
         vr.productcode = thisProd.getAttribute(("Product code"));
-        String comment = orderItem.getAttribute("Comment");
+        String comment = orderItem.getAttribute("comment");
         if (comment == null){
             comment = "";
         }
@@ -277,8 +277,8 @@ public class ReviewService {
             comment = comment.substring(0,supplierCommentPos);
         }
         vr.comment = comment;
-        vr.formattedDate = showDate(orderItem.getAttribute("Feedback date"));
-        vr.date = orderItem.getAttribute("Feedback date");
+        vr.formattedDate = showDate(orderItem.getAttribute("Review date"));
+        vr.date = orderItem.getAttribute("Review date");
 
         return vr;
     }
@@ -305,7 +305,7 @@ public class ReviewService {
         List<Name> orderItems = new ArrayList<Name>();
         Map<String, String> context = new HashMap<String, String>();
         List<VelocityReview> reviews = new ArrayList<VelocityReview>();
-        String error = nameService.interpretName(loggedInConnection, orderItems, division + ";level lowest;WHERE Feedback date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
+        String error = nameService.interpretName(loggedInConnection, orderItems, division + ";level lowest;WHERE Review date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
         if (error.length() > 0) {
             return error;
         }
@@ -318,18 +318,21 @@ public class ReviewService {
             if (vr.comment.length()==0){
                 vr.comment = "No comment";
             }
-            if (vr.rating.contains("+")) {
+            if (vr.rating.equals("4") || vr.rating.equals("5")) {
                 posCount++;
             }
-           reviews.add(vr);
+            if (vr.productcode.equals("S")){
+                reviews.add(vr);
+            }
 
 
         }
         int reviewCount = orderItems.size();
         context.put("reviewcount", reviewCount + "");
-        context.put("overallrating", (posCount * 100 / reviewCount) + "");
-        if (reviewCount > 0) {
-            if (XML) {
+
+         if (reviewCount > 0) {
+             context.put("overallrating", (posCount * 100 / reviewCount) + "");
+             if (XML) {
 
                   return convertToXML(context,"reviews", reviews);
 
@@ -358,12 +361,14 @@ public class ReviewService {
         hd.setResult(streamResult);
         hd.startDocument();
         org.xml.sax.helpers.AttributesImpl atts = new org.xml.sax.helpers.AttributesImpl();
+        hd.startElement("","","AZQUO",atts);
         addXmlElements(hd, atts, context);
         for (VelocityReview item:items){
             hd.startElement("","","review", atts);
             addXmlElements(hd,atts, item.toStringMap());
             hd.endElement("","","review");
         }
+        hd.endElement("","","AZQUO");
         hd.endDocument();
         String result = sw.toString();
         return result;
@@ -631,8 +636,8 @@ public class ReviewService {
             String orderItemName = orderItem.getDefaultDisplayName();
             String productCode = orderItemName.substring(orderItemName.lastIndexOf(" ") + 1);
             String comment = comments.get(productCode);
-            if (comment != null && orderItem.getAttribute("Comment") != null){
-                orderItem.setAttributeWillBePersisted("Comment", orderItem.getAttribute("Comment") + "|Supplier:" + comment);
+            if (comment != null && orderItem.getAttribute("comment") != null){
+                orderItem.setAttributeWillBePersisted("comment", orderItem.getAttribute("comment") + "|Supplier:" + comment);
             }
         }
 
