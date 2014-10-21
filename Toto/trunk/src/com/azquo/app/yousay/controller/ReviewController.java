@@ -45,11 +45,11 @@ public class ReviewController {
     @Autowired
     private LoginService loginService;
 
-    @Autowired
-    private MemoryDBManager memoryDBManager;
+/*    @Autowired
+    private MemoryDBManager memoryDBManager;*/
 
-    @Autowired
-    private NameService nameService;
+/*    @Autowired
+    private NameService nameService;*/
 
     @Autowired
     private ReviewService reviewService;
@@ -57,58 +57,39 @@ public class ReviewController {
 
 
     @RequestMapping
-    public String handleRequest(ModelMap model,HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public String handleRequest(ModelMap model,HttpServletRequest request) throws Exception {
 
-        Enumeration<String> parameterNames = request.getParameterNames();
+        Map<String, String[]> parameterMap = request.getParameterMap();
 
-        String op = null;
-        String supplierDB = null;
-        String startDate = "2014-01-01";
-        String division = "";//should be the division topparent
-        String connectionId = null;
-        String sendEmails = null;
-        String orderRef = null;
+        String op = request.getParameter("op");
+        String supplierDB = request.getParameter("supplierdb");
+        String startDate = request.getParameter("startdate") != null ? request.getParameter("startdate")  : "2014-01-01";
+        String division = request.getParameter("division") != null ? request.getParameter("division")  : "";//should be the division topparent
+        String connectionId = request.getParameter("connectionid");
+        String orderRef = request.getParameter("orderref");
         int businessId = 0;
-        String submit = null;
+        if (request.getParameter("businessid") != null) {
+            try {
+                businessId = Integer.parseInt(request.getParameter("businessid"));
+            } catch (Exception ignored) {
+                //ignore!
+            }
+        }
+        String submit = request.getParameter("submit");
         Map<String,String> ratings = new HashMap<String, String>();
         Map<String,String> comments = new HashMap<String, String>();
-        String velocityTemplate = null;
-        String user = null;
-        String password = null;
+        String velocityTemplate = request.getParameter("velocitytemplate");
+        String user = request.getParameter("user");
+        String password = request.getParameter("password");
 
-        while (parameterNames.hasMoreElements()) {
-            String paramName = parameterNames.nextElement();
-            String paramValue = request.getParameterValues(paramName)[0];
-            if (paramName.equals("op")) {
-                op = paramValue;
-            } else if (paramName.equals("velocitytemplate")) {
-                velocityTemplate = paramValue;
-            } else if (paramName.equals("supplierdb")) {
-                supplierDB = paramValue;
-            } else if (paramName.equals("startdate")) {
-                startDate = paramValue;
-            } else if (paramName.equals("division")) {
-                division = paramValue;
-            } else if (paramName.equals("user")) {
-                user = paramValue;
-            } else if (paramName.equals("password")) {
-                password = paramValue;
-             } else if (paramName.equals("businessid")) {
-                try{
-                    businessId = Integer.parseInt(paramValue);
-                }catch(Exception e){
-                    //ignore!
-                }
-             } else if (paramName.equals("orderref")) {
-                orderRef = paramValue;
-            } else if (paramName.equals("connectionid")) {
-                connectionId = paramValue;
-            } else if (paramName.equals("submit")) {
-                submit = paramValue;
-            }else if (paramName.startsWith("rating")){
+        // edd changing from getParameterNames as I wince a little seeing an enumeration . . .
+        // scan through for parameters rating1 rating2 comment1 comment2 etc. One could scan with a for loop but this seems as good a way as any.
+        for (String paramName : parameterMap.keySet()){
+            String paramValue = parameterMap.get(paramName)[0];
+            if (paramName.startsWith("rating")){
                 String rating = paramName.substring(6);
                 ratings.put(rating,paramValue);
-            }else if (paramName.startsWith("comment")){
+            } else if (paramName.startsWith("comment")){
                 String comment = paramName.substring(7);
                 ratings.put(comment, paramValue);
             }
@@ -147,8 +128,9 @@ public class ReviewController {
             if (submit!=null){
                 reviewService.processReviewForm(loggedInConnection, orderRef, ratings, comments);
                 result = reviewService.showReviews(request, loggedInConnection,division, startDate, velocityTemplate);
+            } else {
+                result = reviewService.createReviewForm(request, loggedInConnection, orderRef, velocityTemplate);
             }
-            result = reviewService.createReviewForm(request, loggedInConnection, orderRef, velocityTemplate);
         }
         model.addAttribute("content", result);
         return "utf8page";
