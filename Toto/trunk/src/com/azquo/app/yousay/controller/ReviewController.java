@@ -73,6 +73,8 @@ public class ReviewController {
         Map<String,String> ratings = new HashMap<String, String>();
         Map<String,String> comments = new HashMap<String, String>();
         String velocityTemplate = null;
+        String user = null;
+        String password = null;
 
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
@@ -87,7 +89,11 @@ public class ReviewController {
                 startDate = paramValue;
             } else if (paramName.equals("division")) {
                 division = paramValue;
-            } else if (paramName.equals("businessid")) {
+            } else if (paramName.equals("user")) {
+                user = paramValue;
+            } else if (paramName.equals("password")) {
+                password = paramValue;
+             } else if (paramName.equals("businessid")) {
                 try{
                     businessId = Integer.parseInt(paramValue);
                 }catch(Exception e){
@@ -110,14 +116,18 @@ public class ReviewController {
         LoggedInConnection loggedInConnection;
 
         if (connectionId == null) {
-            if (businessId > 0){//someone filling in a review
-                loggedInConnection = loginService.login(supplierDB,"","",0,"",false,businessId);
-            }else{
-                //temporary connection .. need to think about this
-                loggedInConnection = loginService.login(supplierDB,"","",0,"",false,1);
-                // edd just wants it to work for the mo!
-                //loggedInConnection = loginService.login("yousay1", "edd@azquo.com", "eddtest", 0, "", false);
-             }
+            if (user != null){
+                loggedInConnection = loginService.login(supplierDB,user,password,0,null,false);
+            }else {
+                if (businessId > 0) {//someone filling in a review
+                    loggedInConnection = loginService.login(supplierDB, "", "", 0, "", false, businessId);
+                } else {
+                    //temporary connection .. need to think about this
+                    loggedInConnection = loginService.login(supplierDB, "", "", 0, "", false, 1);
+                    // edd just wants it to work for the mo!
+                    //loggedInConnection = loginService.login("yousay1", "edd@azquo.com", "eddtest", 0, "", false);
+                }
+            }
 
         } else {
             loggedInConnection = loginService.getConnection(connectionId);
