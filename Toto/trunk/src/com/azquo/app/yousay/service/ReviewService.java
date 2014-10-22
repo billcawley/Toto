@@ -141,7 +141,7 @@ public class ReviewService {
         context.put("saledescription", saledesc.toString());
         context.put("supplier", supplier.getDefaultDisplayName());
         context.put("feedbacklink", thisURL + "?op=reviewform&supplierdb=" + loggedInConnection.getCurrentDBName() + "&orderref=" + order.getDefaultDisplayName() + "&businessid=" + loggedInConnection.getBusinessId() + "&velocitytemplate=form1.vm");
-        context.put("reviewslink", thisURL + "?op=showreviews&supplierdb=" + loggedInConnection.getCurrentDBName() + "&division=" + supplier.getDefaultDisplayName() + "&businessid=" + loggedInConnection.getBusinessId());
+        context.put("reviewslink", "http://www.azquoreviews.com/reviews/?op=showreviews&supplierdb=" + loggedInConnection.getCurrentDBName() + "&division=" + supplier.getDefaultDisplayName() + "&businessid=" + loggedInConnection.getBusinessId() + "&reviewtype=service");
         String result = convertToVelocity(servletContext, context,"", null, velocityTemplate);
         if (!order.getAttribute("Customer email").equals("demo@azquo.com")){
             azquoMailer.sendEMail(order.getAttribute("Customer email"), order.getAttribute("Customer name"),"Feedback request on behalf of " + supplier.getDefaultDisplayName(), result);
@@ -254,6 +254,7 @@ public class ReviewService {
             toReturn.put("comment", comment);
             toReturn.put("commentName", commentName);
             toReturn.put("productcode", productcode);
+            toReturn.put("suppliercomment", supplierComment);
             toReturn.put("date",date);
             toReturn.put("type", type);
             return toReturn;
@@ -297,38 +298,49 @@ public class ReviewService {
     }
 
 
-    public String showReviews(HttpServletRequest request, LoggedInConnection loggedInConnection, String division, String startDate, String velocityTemplate) throws Exception {
+    public String showReviews(HttpServletRequest request, LoggedInConnection loggedInConnection, String division, String startDate, String reviewType, String velocityTemplate) throws Exception {
 
         boolean XML = true;
         if (velocityTemplate !=null){
             XML = false;
         }
+        if (reviewType == null){
+            reviewType = "S";
+        }
         List<Name> orderItems = new ArrayList<Name>();
         Map<String, String> context = new HashMap<String, String>();
         List<VelocityReview> reviews = new ArrayList<VelocityReview>();
-        String error = nameService.interpretName(loggedInConnection, orderItems, division + ";level lowest;WHERE Review date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
+        if (division == null || division.length()==0) division="supplier";
+        String error = "";
+        if (startDate == null){
+            error = nameService.interpretName(loggedInConnection, orderItems, division + ";level lowest * All ratings;level lowest");
+
+        }else{
+            error = nameService.interpretName(loggedInConnection, orderItems, division + ";level lowest;WHERE Review date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
+        }
         if (error.length() > 0) {
             return error;
         }
         Name rating = nameService.findByName(loggedInConnection, "All ratings");
         Name product = nameService.findByName(loggedInConnection, "All Products");
         int posCount = 0;
+        int reviewCount = 0;
         for (Name orderItem : orderItems) {
 
             VelocityReview vr = getVelocityReview(orderItem, rating, product);
             if (vr.comment.length()==0){
                 vr.comment = "No comment";
             }
-            if (vr.rating.equals("4") || vr.rating.equals("5")) {
-                posCount++;
-            }
-            if (vr.productcode.equals("S")){
+             if ((reviewType.equals("S") && vr.productcode.equals("S")) || (!reviewType.equals("S") && !vr.productcode.equals("S"))){
+                reviewCount++;
+                if (vr.rating.equals("4") || vr.rating.equals("5")) {
+                    posCount++;
+                }
                 reviews.add(vr);
             }
 
 
         }
-        int reviewCount = orderItems.size();
         context.put("reviewcount", reviewCount + "");
 
          if (reviewCount > 0) {
@@ -340,6 +352,9 @@ public class ReviewService {
 
 
             }else {
+                 if (velocityTemplate.length()==0){
+                     velocityTemplate = "showreviews.vm";
+                 }
                 return convertToVelocity(request.getServletContext(),context,"reviews", reviews, velocityTemplate);
                 }
         } else {
