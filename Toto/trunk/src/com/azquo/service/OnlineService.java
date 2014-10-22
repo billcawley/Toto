@@ -392,7 +392,7 @@ public final class OnlineService {
         String chosen = "";
         Map<String, Database> foundDatabases = loginService.foundDatabases(loggedInConnection.getUser());
         if (foundDatabases.size() > 1){
-            if (loggedInConnection.getAzquoMemoryDB()!=null) chosen = loggedInConnection.getCurrentDBName();
+            if (loggedInConnection.getAzquoMemoryDB()!=null) chosen = loggedInConnection.getLocalCurrentDBName();
             sb.append("<select class=\"databaseselect\" name=\"database\" value=\"" + chosen + "\">\n");
             if (chosen.length() == 0) {
                 sb.append("<option value=\"\">No database chosen</option>");
