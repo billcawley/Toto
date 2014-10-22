@@ -52,6 +52,10 @@ public class AzquoMemoryDBConnection {
     }
 
     public String getCurrentDBName() {
+        return azquoMemoryDB.getDatabase().getMySQLName();
+    }
+
+    public String getLocalCurrentDBName(){
         return azquoMemoryDB.getDatabase().getName();
     }
 
