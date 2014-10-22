@@ -11,7 +11,7 @@ import org.apache.log4j.Logger;
 import java.util.*;
 
 /**
- * Created with IntelliJ IDEA.
+ * Created with IntelliJ IDEA.AzquoMemoryDBContainer
  * User: cawley
  * Date: 31/10/13
  * Time: 19:25
@@ -24,20 +24,15 @@ import java.util.*;
  * of lists of lists of names. Lists of lists due to mult level headings, e.g. London by container as two column headings above each other (the next one being london not by container)
  * Lockmaps and sent data maps are maps of the actual data sent to excel, this generally is read back by the csv reader
  */
-public final class LoggedInConnection {
+public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
     private static final Logger logger = Logger.getLogger(LoggedInConnection.class);
 
     private final String connectionId;
-    // ok I am gonna allow DB switching
-    private AzquoMemoryDB azquoMemoryDB;
-    private final User user;
     private Date loginTime;
     private Date lastAccessed;
     private long timeOut;
-    private String language;
     private String spreadsheetName;
-    private boolean loose;  // this flag is used to say whether names can be searched in other languages than the current default
     private int reportId;
 
     private final Map<String, List<List<Name>>> rowHeadings;
@@ -51,23 +46,18 @@ public final class LoggedInConnection {
     private final Map<String, String> sentDataMaps;
     private final Map<String, List<List<List<Value>>>> sentDataValuesMaps; // As in a 2 d array (lists of lists) of lists of valuer Useful for when data is saved
     private final Map<String, List<List<Set<Name>>>> sentDataNamesMaps; // As in a 2 d array (lists of lists) of sets of names, identifying each cell. Necessary if saving new data in that cell. SHould the values map use sets also???
-    private List<Set<Name>>  readPermissions;
-    private List<Set<Name>> writePermissions;
     private List<Set<Name>> namesToSearch;
     private Map<Set<Name>, Set<Value>> valuesFound;
     private AzquoBook azquoBook;
 
     private static final String defaultRegion = "default-region";
 
-    public LoggedInConnection(final String connectionId, final AzquoMemoryDB azquoMemoryDB, final User user, final long timeOut, String spreadsheetName) {
+    protected LoggedInConnection(final String connectionId, final AzquoMemoryDB azquoMemoryDB, final User user, final long timeOut, String spreadsheetName) {
+        super(azquoMemoryDB, user);
         this.connectionId = connectionId;
-        this.azquoMemoryDB = azquoMemoryDB;
         this.spreadsheetName = spreadsheetName;
-        this.user = user;
         loginTime = new Date();
         lastAccessed = new Date();
-        language = Name.DEFAULT_DISPLAY_NAME;
-        loose = false;
         reportId = 0;
         rowHeadings = new HashMap<String, List<List<Name>>>();
         columnHeadings = new HashMap<String, List<List<Name>>>();
@@ -80,8 +70,6 @@ public final class LoggedInConnection {
         sentDataMaps = new HashMap<String, String>();
         sentDataValuesMaps = new HashMap<String, List<List<List<Value>>>>();
         sentDataNamesMaps = new HashMap<String, List<List<Set<Name>>>>();
-        readPermissions =  new ArrayList<Set<Name>>();
-        writePermissions = new ArrayList<Set<Name>>();
         namesToSearch = null;
         valuesFound = null;
         azquoBook = null;
@@ -99,42 +87,12 @@ public final class LoggedInConnection {
         return connectionId;
     }
 
-    public AzquoMemoryDB getAzquoMemoryDB() {
-        return azquoMemoryDB;
-    }//was 'protected' but need to know if a database is loaded
-
-    public String getCurrentDBName() {
-        return azquoMemoryDB.getDatabase().getName();
-    }
-
-
-
-    protected void setAzquoMemoryDB(final AzquoMemoryDB azquoMemoryDB) {
-        this.azquoMemoryDB = azquoMemoryDB;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public int getBusinessId(){
-        return user.getBusinessId();
-    }
-
     public Date getLoginTime() {
         return loginTime;
     }
 
     public Date getLastAccessed() {
         return lastAccessed;
-    }
-
-    public String getLanguage() {
-        return language;
-    }
-
-    public boolean getLoose() {
-        return loose;
     }
 
     public int getReportId() { return  reportId; }
@@ -147,14 +105,6 @@ public final class LoggedInConnection {
 
     public void setLastAccessed(final Date lastAccessed) {
         this.lastAccessed = lastAccessed;
-    }
-
-    public void setLanguage(final String language) {
-        this.language = language;
-    }
-
-    public void setLoose(final boolean loose) {
-        this.loose = loose;
     }
 
     public List<List<Name>> getRowHeadings(final String region) {
@@ -340,9 +290,6 @@ public final class LoggedInConnection {
 
     // very basic, needs to be improved
 
-    private Provenance provenance = null;
-
-
     public Provenance getProvenance() {
         if (provenance == null) {
             try {
@@ -351,34 +298,6 @@ public final class LoggedInConnection {
             }
         }
         return provenance;
-    }
-
-    public void setNewProvenance(String provenanceMethod, String provenanceName){
-        setNewProvenance(provenanceMethod, provenanceName,"","","");
-    }
-
-    public void setNewProvenance(String provenanceMethod, String provenanceName, String rowHeadings, String columnHeadings, String context) {
-        try {
-            provenance = new Provenance(getAzquoMemoryDB(), user.getName(), new Date(), provenanceMethod, provenanceName, rowHeadings, columnHeadings, context);
-        } catch (Exception e) {
-            logger.error("can't set a new provenance", e);
-        }
-    }
-
-    public List<Set<Name>> getReadPermissions(){
-        return this.readPermissions;
-    }
-
-    public void setReadPermissions(List<Set<Name>> names){
-        this.readPermissions = names;
-    }
-
-    public List<Set<Name>> getWritePermissions(){
-        return this.writePermissions;
-    }
-
-    public void setWritePermissions(List<Set<Name>> names){
-        this.writePermissions = names;
     }
 
     public List<Set<Name>> getNamesToSearch(){

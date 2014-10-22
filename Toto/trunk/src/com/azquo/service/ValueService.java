@@ -1,18 +1,14 @@
 package com.azquo.service;
 
-import com.azquo.adminentities.OnlineReport;
-import com.azquo.jsonrequestentities.ValueJsonRequest;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import com.azquo.memorydb.Value;
 import com.csvreader.CsvReader;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.StringReader;
-import java.security.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -55,17 +51,17 @@ public final class ValueService {
         }
     }
 
-    public Value createValue(final LoggedInConnection loggedInConnection, final Provenance provenance, final String text) throws Exception {
-        return new Value(loggedInConnection.getAzquoMemoryDB(), provenance, text, null);
+    public Value createValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Provenance provenance, final String text) throws Exception {
+        return new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, text, null);
     }
 
     // this is passed a string for the value, not sure if that is the best practice, need to think on it.
 
-    public String storeValueWithProvenanceAndNames(final LoggedInConnection loggedInConnection, String valueString, final Set<Name> names) throws Exception {
+    public String storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
         String toReturn = "";
         final Set<Name> validNames = new HashSet<Name>();
 
-        final Map<String, String> nameCheckResult = nameService.isAValidNameSet(loggedInConnection, names, validNames);
+        final Map<String, String> nameCheckResult = nameService.isAValidNameSet(azquoMemoryDBConnection, names, validNames);
         final String error = nameCheckResult.get(NameService.ERROR);
         final String warning = nameCheckResult.get(NameService.WARNING);
         if (error != null) {
@@ -76,7 +72,7 @@ public final class ValueService {
         final List<Value> existingValues = findForNames(validNames);
         boolean alreadyInDatabase = false;
         for (Value existingValue : existingValues) { // really should only be one
-            if (existingValue.getProvenance().equals(loggedInConnection.getProvenance()) && existingValue.getProvenance().getMethod().equals("import")) {
+            if (existingValue.getProvenance().equals(azquoMemoryDBConnection.getProvenance()) && existingValue.getProvenance().getMethod().equals("import")) {
                 //new behaviour - add values from same import.
                 try {
                     Double existingDouble = Double.parseDouble(existingValue.getText());
@@ -99,7 +95,7 @@ public final class ValueService {
         }
         if (!alreadyInDatabase) {
             // create
-            Value value = createValue(loggedInConnection, loggedInConnection.getProvenance(), valueString);
+            Value value = createValue(azquoMemoryDBConnection, azquoMemoryDBConnection.getProvenance(), valueString);
             toReturn += "  stored";
             // and link to names
             value.setNamesWillBePersisted(validNames);
@@ -108,9 +104,9 @@ public final class ValueService {
     }
 
 
-    public boolean overWriteExistingValue(final LoggedInConnection loggedInConnection, final Value existingValue, final String newValueString) throws Exception {
+    public boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, final String newValueString) throws Exception {
 
-        Value newValue = new Value(loggedInConnection.getAzquoMemoryDB(), loggedInConnection.getProvenance(), newValueString, null);
+        Value newValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), newValueString, null);
         newValue.setNamesWillBePersisted(existingValue.getNames());
         deleteValue(existingValue);
         return true;
@@ -311,7 +307,7 @@ public final class ValueService {
 
     }
 
-    public double findValueForNames(final LoggedInConnection loggedInConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound) {
+    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound) {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
 
@@ -335,7 +331,7 @@ public final class ValueService {
         if (!hasCalc) {
             locked.isTrue = false;
             for (Name oneName : names) {
-                if ((oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) || !nameService.isAllowed(oneName, loggedInConnection.getWritePermissions()))
+                if ((oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) || !nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions()))
                     locked.isTrue = true;
             }
             return findSumForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound);
@@ -367,7 +363,7 @@ public final class ValueService {
                         // we assume it's a name id starting with NAMEMARKER
                         int id = Integer.parseInt(term.substring(1));
                         // so get the name and add it to the other names
-                        Name name = nameService.findById(loggedInConnection, id);
+                        Name name = nameService.findById(azquoMemoryDBConnection, id);
                         Set<Name> seekSet = new HashSet(calcnames);
                         if (name.getPeers().size() == 0 || name.getPeers().size() == calcnames.size()) {
                             seekSet.add(name);
@@ -378,7 +374,7 @@ public final class ValueService {
 
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
-                        values[valNo++] = findValueForNames(loggedInConnection, seekSet, locked, payAttentionToAdditive, valuesFound);
+                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound);
 
 
                     }
@@ -504,7 +500,7 @@ seaports;children   container;children
 
 
 
-public String createNameListsFromExcelRegion(final LoggedInConnection loggedInConnection, List<List<List<Name>>> nameLists, List<Set<Name>> supplementNames, final String excelRegionPasted) throws Exception {
+public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<List<Name>>> nameLists, List<Set<Name>> supplementNames, final String excelRegionPasted) throws Exception {
         //logger.info("excel region pasted : " + excelRegionPasted);
         int maxColCount = 1;
         CsvReader pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t');
@@ -529,13 +525,13 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
                         cellString = cellString.substring(0, withPos);
                         List<Set<Name>> sNames = new ArrayList<Set<Name>>();
                         // no longer returns error
-                        nameService.decodeString(loggedInConnection, withList, sNames);
+                        nameService.decodeString(azquoMemoryDBConnection, withList, sNames);
                         /*if (error.length() > 0) {
                             return error;
                         }*/
                         supplementNames.addAll(sNames); // sName should be a set of one element
                      }
-                    String error = nameService.interpretName(loggedInConnection, nameList, cellString);
+                    String error = nameService.interpretName(azquoMemoryDBConnection, nameList, cellString);
                     if (error.length() > 0) {
                         return error;
                     }
@@ -1151,7 +1147,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
         if (sortCol >=0 && restrictCount == 0){
             restrictCount = loggedInConnection.getRowHeadings(region).size();//this is a signal to sort the rows
         }
-        
+
         final List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
         loggedInConnection.setDataValueMap(region, dataValuesMap);
         final Map<Integer, Double> sortTotals = new HashMap<Integer, Double>();
@@ -1178,7 +1174,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
                 // edd putting in peer check stuff here, should I not???
                 MBoolean locked = new MBoolean(); // we can pass a mutable boolean in and have the function set it
                 // why bother?   Maybe leave it as 'on demand' when a data region doesn't work
-                // Map<String, String> result = nameService.isAValidNameSet(loggedInConnection, namesForThisCell, new HashSet<Name>());
+                // Map<String, String> result = nameService.isAValidNameSet(azquoMemoryDBConnection, namesForThisCell, new HashSet<Name>());
                 // much simpler check - simply that the list is complete.
                 boolean checked = true;
                 for (Name name : namesForThisCell) {
@@ -1420,7 +1416,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
     }
 
 
-    private StringBuffer printBatch(LoggedInConnection loggedInConnection, Set<Value> values) {
+    private StringBuffer printBatch(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values) {
         StringBuffer sb = new StringBuffer();
         int debugCount = 0;
         boolean headingNeeded = false;
@@ -1461,7 +1457,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
                         //creating a new 'value' with one less name for recursion
                         Value slimValue = null;
                         try {
-                            slimValue = new Value(loggedInConnection.getAzquoMemoryDB(), null, value.getText(), null);
+                            slimValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), null, value.getText(), null);
                         } catch (Exception e) {
                             //no reason for exceptions, so ignore.
                         }
@@ -1485,7 +1481,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
                 }
                 sb.append("{");
                 sb.append(jsonValue("heading", heading.getDefaultDisplayName(), false));
-                sb.append(",\"items\":[" + printBatch(loggedInConnection, slimExtract).toString() + "]");
+                sb.append(",\"items\":[" + printBatch(azquoMemoryDBConnection, slimExtract).toString() + "]");
                 sb.append("}");
             }
         }
@@ -1504,12 +1500,12 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
     }
 
 
-    private StringBuffer printExtract(LoggedInConnection loggedInConnection, Set<Value> values, Provenance p) {
+    private StringBuffer printExtract(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values, Provenance p) {
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
         StringBuffer sb = new StringBuffer();
         sb.append(jsonValue("heading", "<b>" +  df.format(p.getTimeStamp()) + "</b> by <b>" + p.getUser() + "</b><br/>Method:" + p.getMethod() + " " + p.getName(), false));
         sb.append(",\"items\":[");
-        sb.append(printBatch(loggedInConnection, values));
+        sb.append(printBatch(azquoMemoryDBConnection, values));
         sb.append("]");
         return sb;
     }
@@ -1519,7 +1515,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
     // not exactly sure why
     // this might make it a bit more difficult to jackson but we should aim to do it really
 
-    public String formatCellProvenanceForOutput(LoggedInConnection loggedInConnection, Set<Name> origNames, List<Value> values, String jsonFunction) {
+    public String formatCellProvenanceForOutput(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Name> origNames, List<Value> values, String jsonFunction) {
 
         StringBuffer output = new StringBuffer();
         output.append(jsonFunction + "({\"provenance\":[{");
@@ -1542,7 +1538,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
                     }else{
                         output.append("},{");
                     }
-                    output.append(printExtract(loggedInConnection, oneUpdate, p));
+                    output.append(printExtract(azquoMemoryDBConnection, oneUpdate, p));
                     oneUpdate = new HashSet<Value>();
                     provdate = value.getProvenance().getTimeStamp();
                 }
@@ -1550,7 +1546,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
             if (!firstHeading){
                  output.append(",");
             }
-            output.append(printExtract(loggedInConnection, oneUpdate, p));
+            output.append(printExtract(azquoMemoryDBConnection, oneUpdate, p));
         }
         output.append("}]})");
         return output.toString();
@@ -1576,8 +1572,7 @@ public String createNameListsFromExcelRegion(final LoggedInConnection loggedInCo
     }
 
 
-    public String
-    saveData(LoggedInConnection loggedInConnection, String region, String editedData) throws Exception {
+    public String saveData(LoggedInConnection loggedInConnection, String region, String editedData) throws Exception {
         String result = "";
         logger.info("------------------");
         logger.info(loggedInConnection.getLockMap(region));

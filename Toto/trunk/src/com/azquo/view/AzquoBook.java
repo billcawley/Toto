@@ -58,7 +58,8 @@ public  class AzquoBook {
     private List<List<String>> heldValues = new ArrayList<List<String>>();
     int maxWidth;
     public String dataRegionPrefix = null;
-    public String nameChosenJson = null;  // used only for passing the parameter when admin/inspection chooses a name
+    // edd commenting, will be deleted later if not used
+    //public String nameChosenJson = null;  // used only for passing the parameter when admin/inspection chooses a name
     int topCell = -1;
     int leftCell = -1;
     List<Integer> colWidth = new ArrayList<Integer>();
@@ -1928,7 +1929,7 @@ public  class AzquoBook {
 
         License license = new License();
         // todo - maybe a switch to only check for the license on the server?
-        license.setLicense("/home/azquo/aspose/Aspose.Cells.lic");
+        //license.setLicense("/home/azquo/aspose/Aspose.Cells.lic");
         wb  = new Workbook(new FileInputStream(fileName));
 
 

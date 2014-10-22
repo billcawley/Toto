@@ -1,14 +1,11 @@
 package com.azquo.memorydb;
 
-import com.azquo.admindao.OpenDatabaseDAO;
 import com.azquo.adminentities.Database;
-import com.azquo.adminentities.OpenDatabase;
 import com.azquo.memorydbdao.JsonRecordTransport;
 import com.azquo.memorydbdao.StandardDAO;
 import com.azquo.service.AppEntityService;
-import com.azquo.service.LoggedInConnection;
+import com.azquo.service.AzquoMemoryDBConnection;
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,7 +48,7 @@ public final class AzquoMemoryDB {
 
     private final Map<String, Set<AzquoMemoryDBEntity>> entitiesToPersist;
 
-    public AzquoMemoryDB(Database database, StandardDAO standardDAO, List<AppEntityService> appServices) throws Exception {
+    protected AzquoMemoryDB(Database database, StandardDAO standardDAO, List<AppEntityService> appServices) throws Exception {
         this.database = database;
         this.standardDAO = standardDAO;
         needsLoading = true;
@@ -158,6 +155,7 @@ public final class AzquoMemoryDB {
     }
 
     // reads from a list of changed objects
+    // todo : should this be public??
 
     public synchronized void saveDataToMySQL() {
         // this is where I need to think carefully about concurrency, azquodb has the last say when the sets are modified although the flags are another point
@@ -195,15 +193,15 @@ public final class AzquoMemoryDB {
         return nameByIdMap.get(id);
     }
 
-    public Name getNameByAttribute(final LoggedInConnection loggedInConnection, final String attributeValue, final Name parent) {
-        String attributeName = loggedInConnection.getLanguage();
+    public Name getNameByAttribute(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String attributeValue, final Name parent) {
+        String attributeName = azquoMemoryDBConnection.getLanguage();
         Map <String,Set<Name>> map = nameByAttributeMap.get(attributeName.toLowerCase().trim());
-        if (map != null || loggedInConnection.getLoose()) {// there is an attribute with that name in the whole db . . .
+        if (map != null || azquoMemoryDBConnection.getLoose()) {// there is an attribute with that name in the whole db . . .
             Set<Name> possibles = null;
             if (map != null){
                 possibles = map.get(attributeValue.toLowerCase().trim());
                 if (possibles == null) {
-                    if (!loggedInConnection.getLoose()) {
+                    if (!azquoMemoryDBConnection.getLoose()) {
                        return null;
                     }
                 //maybe if 'loose' we should look at ALL languages, but here will look at default language.

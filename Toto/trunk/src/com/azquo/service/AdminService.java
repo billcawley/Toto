@@ -123,8 +123,8 @@ public class AdminService {
 
     }
 
-    public String getBusinessPrefix(final LoggedInConnection loggedInConnection){
-        Business b = businessDao.findById(loggedInConnection.getBusinessId());
+    public String getBusinessPrefix(final AzquoMemoryDBConnection azquoMemoryDBConnection){
+        Business b = businessDao.findById(azquoMemoryDBConnection.getBusinessId());
         return (b.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "");
 
     }

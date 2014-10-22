@@ -260,7 +260,7 @@ public class OnlineController {
                 model.addAttribute("content", "error:invalid or expired connection id");
                 return "utf8page";
             }
-            if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.getAzquoMemoryDB() != null){
+            if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.hasAzquoMemoryDB()){
                 loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(),"","","");
 
             }
