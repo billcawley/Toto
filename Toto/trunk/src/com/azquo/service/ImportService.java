@@ -196,7 +196,7 @@ public final class ImportService {
 
     private String imageImport(AzquoMemoryDBConnection azquoMemoryDBConnection, InputStream inputStream, String fileName)throws Exception{
         String error = "";
-        String targetFileName = "/home/azquo/images/" + azquoMemoryDBConnection.getCurrentDBName() + "/" + fileName;
+        String targetFileName = "/home/azquo/databases/" + azquoMemoryDBConnection.getCurrentDBName() + "/images/" + fileName;
         File output = new File(targetFileName);
         output.getParentFile().mkdirs();
         if (!output.exists()){
