@@ -32,6 +32,7 @@ public  class AzquoBook {
     private NameService nameService;
     private UserChoiceDAO userChoiceDAO;
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+    private SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
 
     public static final String azDataRegion = "az_dataregion";
     public static final String azInput = "az_input";
@@ -2024,7 +2025,7 @@ public  class AzquoBook {
         fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
         String result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType);
         if (!result.startsWith("error:")){
-            String saveFileName = "/home/azquo/uploads/" + loggedInConnection.getCurrentDBName()+"/" + azquoSheet.getName() + " " +  df.format(new Date()) + ".xlsx";
+            String saveFileName = "/home/azquo/databases/" + loggedInConnection.getCurrentDBName()+"/uploads/" + azquoSheet.getName() + " " +  df.format(new Date()) + ".xlsx";
             File file = new File(saveFileName);
             file.getParentFile().mkdirs();
             wb.save(saveFileName, SaveFormat.XLSX);
@@ -2063,10 +2064,9 @@ public  class AzquoBook {
                     if (cell != null && cell.getType() != CellValueType.IS_NULL) {
 
                         String cellFormat = "";
-                        cellFormat = cell.getStringValue();
-                        //Integers seem to have '.0' appended, so this is a manual chop.  It might cause problems if someone wanted to import a version '1.0'
-                        bw.write(cellFormat);
+                        cellFormat = convertDates(cell.getStringValue());
 
+                        bw.write(cellFormat);
                     }
 
                 }
@@ -2077,6 +2077,18 @@ public  class AzquoBook {
 
     }
 
+    private String convertDates(String possibleDate){
+        int slashPos = possibleDate.indexOf("/");
+        if (slashPos < 0) return possibleDate;
+        Date date = null;
+        try{
+            date = ukdf.parse(possibleDate);
+        }catch(Exception e){
+            return possibleDate;
+        }
+        return df.format(date);
+
+    }
 
 
 
