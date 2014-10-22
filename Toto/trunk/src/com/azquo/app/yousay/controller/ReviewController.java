@@ -67,6 +67,7 @@ public class ReviewController {
         String division = request.getParameter("division") != null ? request.getParameter("division")  : "";//should be the division topparent
         String connectionId = request.getParameter("connectionid");
         String orderRef = request.getParameter("orderref");
+        String reviewType = request.getParameter("reviewtype");
         int businessId = 0;
         if (request.getParameter("businessid") != null) {
             try {
@@ -119,15 +120,15 @@ public class ReviewController {
         String result = "";
 
         if (op.equals("showreviews")){
-            result = reviewService.showReviews(request, loggedInConnection,division, startDate, velocityTemplate);
+            result = reviewService.showReviews(request, loggedInConnection,division, startDate, reviewType, velocityTemplate);
         }
         if (op.equals("sendemails")){
             result = reviewService.sendEmails(request, loggedInConnection,1000, velocityTemplate);
         }
         if (op.equals("reviewform")){
-            if (submit!=null){
+            if (ratings != null && ratings.size() > 0){
                 reviewService.processReviewForm(loggedInConnection, orderRef, ratings, comments);
-                result = reviewService.showReviews(request, loggedInConnection,division, startDate, velocityTemplate);
+                result = reviewService.showReviews(request, loggedInConnection,division, startDate, reviewType,velocityTemplate);
             } else {
                 result = reviewService.createReviewForm(request, loggedInConnection, orderRef, velocityTemplate);
             }
