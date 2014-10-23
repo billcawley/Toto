@@ -50,6 +50,9 @@ public class ReviewController {
                 ratings.put(comment, paramValue);
             }
         }
+        if (op==null){
+            op="showreviews";
+        }
         String result = "";
         if (op.equals("showreviews")){
             result = reviewService.showReviews(supplierDB,division, startDate, reviewType, velocityTemplate);
