@@ -114,7 +114,7 @@ public class SupplierResponseController {
             if (submit!=null){
                 reviewService.processSupplierResponseForm(loggedInConnection, orderRef, comments);
             }
-                result = reviewService.createSupplierResponseForm(request.getServletContext(), loggedInConnection, orderRef, velocityTemplate);
+                result = reviewService.createSupplierResponseForm(loggedInConnection, orderRef, velocityTemplate);
         model.addAttribute("content", result);
         return "utf8page";
     }

@@ -2,54 +2,22 @@ package com.azquo.app.yousay.controller;
 
 /**
  * Created by bill on 09/09/14.
+ *
  */
-import com.azquo.admindao.DatabaseDAO;
 import com.azquo.app.yousay.service.ReviewService;
-import com.azquo.memorydb.MemoryDBManager;
-import com.azquo.memorydb.Name;
-import com.azquo.service.LoggedInConnection;
-import com.azquo.service.LoginService;
-import com.azquo.service.NameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
-
-import java.io.StringWriter;
-import org.apache.velocity.app.VelocityEngine;
-import org.apache.velocity.Template;
-import org.apache.velocity.VelocityContext;
-
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.net.InetAddress;
-import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.*;
-
-/**
- *
- */
 
 @Controller
 @RequestMapping("/Reviews")
 
 
 public class ReviewController {
-
-    @Autowired
-    private DatabaseDAO databaseDAO;
-    @Autowired
-    private LoginService loginService;
-
-/*    @Autowired
-    private MemoryDBManager memoryDBManager;*/
-
-/*    @Autowired
-    private NameService nameService;*/
 
     @Autowired
     private ReviewService reviewService;
@@ -65,25 +33,12 @@ public class ReviewController {
         String supplierDB = request.getParameter("supplierdb");
         String startDate = request.getParameter("startdate") != null ? request.getParameter("startdate")  : "2014-01-01";
         String division = request.getParameter("division") != null ? request.getParameter("division")  : "";//should be the division topparent
-        String connectionId = request.getParameter("connectionid");
         String orderRef = request.getParameter("orderref");
         String reviewType = request.getParameter("reviewtype");
-        int businessId = 0;
-        if (request.getParameter("businessid") != null) {
-            try {
-                businessId = Integer.parseInt(request.getParameter("businessid"));
-            } catch (Exception ignored) {
-                //ignore!
-            }
-        }
-        String submit = request.getParameter("submit");
         Map<String,String> ratings = new HashMap<String, String>();
         Map<String,String> comments = new HashMap<String, String>();
         String velocityTemplate = request.getParameter("velocitytemplate");
-        String user = request.getParameter("user");
-        String password = request.getParameter("password");
 
-        // edd changing from getParameterNames as I wince a little seeing an enumeration . . .
         // scan through for parameters rating1 rating2 comment1 comment2 etc. One could scan with a for loop but this seems as good a way as any.
         for (String paramName : parameterMap.keySet()){
             String paramValue = parameterMap.get(paramName)[0];
@@ -97,15 +52,15 @@ public class ReviewController {
         }
         String result = "";
         if (op.equals("showreviews")){
-            result = reviewService.showReviews(request, supplierDB,division, startDate, reviewType, velocityTemplate);
+            result = reviewService.showReviews(supplierDB,division, startDate, reviewType, velocityTemplate);
         }
         if (op.equals("sendemails")){
-            result = reviewService.sendEmails(request, supplierDB,1000, velocityTemplate);
+            result = reviewService.sendEmails(request.getRequestURL().toString(), supplierDB,1000, velocityTemplate);
         }
         if (op.equals("reviewform")){
-            if (ratings != null && ratings.size() > 0){
+            if (ratings.size() > 0){
                 reviewService.processReviewForm(supplierDB, orderRef, ratings, comments);
-                result = reviewService.showReviews(request, supplierDB,division, startDate, reviewType,velocityTemplate);
+                result = reviewService.showReviews(supplierDB,division, startDate, reviewType,velocityTemplate);
             } else {
                 result = reviewService.createReviewForm(request, supplierDB, orderRef, velocityTemplate);
             }

@@ -39,51 +39,45 @@ public class ReviewService {
     @Autowired
     private AppDBConnectionMap reviewsConnectionMap;
 
-
     @Autowired
     private AzquoMailer azquoMailer;
 
+    @Autowired
+    ServletContext servletContext;
 
-    public String sendEmails(HttpServletRequest request,String supplierDb, int maxCount, String velocityTemplate)throws Exception{
+    public String sendEmails(String thisURL,String supplierDb, int maxCount, String velocityTemplate)throws Exception{
 
         AzquoMemoryDBConnection azquoMemoryDBConnection = reviewsConnectionMap.getConnection(supplierDb);
 
         // todo handle error if the supplier db is duff
 
         Name topSupplier = nameService.findByName(azquoMemoryDBConnection,"supplier");
-        Name supplier = null;
-        for (Name name:topSupplier.getChildren()){
-            supplier = name;
-            break;
-        }
+        Name supplier = topSupplier.getChildren().iterator().next();
 
-        if (velocityTemplate==null) {
+        if (velocityTemplate == null) {
             velocityTemplate = supplier.getAttribute("email template");
-
         }
-        if (velocityTemplate==null){
-            velocityTemplate="email.vm";
-        }else{
+        if (velocityTemplate == null){
+            velocityTemplate = "email.vm";
+        } else {
             velocityTemplate = "/home/azquo/databases/" + azquoMemoryDBConnection.getCurrentDBName() + "/velocitytemplates/" + velocityTemplate;
         }
-        ServletContext servletContext = request.getServletContext();
-        String thisURL = request.getRequestURL().toString();
         String error = "";
         Name emailsToBeSent  = nameService.findByName(azquoMemoryDBConnection,"Emails to be sent");
         Name ordersWithEmailSent = nameService.findByName(azquoMemoryDBConnection, "Orders with email sent");
         Set<Name> emailsSentThisTime = new HashSet<Name>();
-         String now = todayString();
+        String now = todayString();
         int count = 0;
         String todaysEmailsSent = "Emails sent on " + df2.format(new Date());
         Name todaysEmails = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,todaysEmailsSent,ordersWithEmailSent, false);
-        for (Name order:emailsToBeSent.getChildren()) {
+        for (Name order : emailsToBeSent.getChildren()) {
             String feedbackDate = order.getAttribute("Email date");
             if (feedbackDate == null){
                 error = "no email date for order " + order.getDefaultDisplayName();
             }else{
                 if (feedbackDate.compareTo(now) < 0) {
                     //todo  consider what happens if the server crashes
-                    error = sendEmail(thisURL, servletContext, supplierDb, order, velocityTemplate, supplier);
+                    error = sendEmail(thisURL, supplierDb, order, velocityTemplate, supplier);
                     if (error.length() > 0) return error;
                     order.setAttributeWillBePersisted("Email sent", now);
                     emailsSentThisTime.add(order);
@@ -102,12 +96,10 @@ public class ReviewService {
             emailsToBeSent.removeFromChildrenWillBePersisted(order);
         }
         nameService.persist(azquoMemoryDBConnection);
-
-        return "";
-
+        return error;
     }
 
-    public String sendEmail(String thisURL, ServletContext servletContext,String supplierDb,Name order, String velocityTemplate, Name supplier) throws Exception{
+    public String sendEmail(String thisURL,String supplierDb,Name order, String velocityTemplate, Name supplier) throws Exception{
         AzquoMemoryDBConnection azquoMemoryDBConnection = reviewsConnectionMap.getConnection(supplierDb);
 
         // todo handle error if the supplier db is duff
@@ -119,19 +111,17 @@ public class ReviewService {
         Name saleDate = nameService.findByName(azquoMemoryDBConnection, "Sale date");
         Name service = nameService.findByName(azquoMemoryDBConnection,"Service");
         Set<Name> productItems = new HashSet<Name>();
-        Set<Name> serviceItems = new HashSet<Name>();
+        //Set<Name> serviceItems = new HashSet<Name>();
         for (Name name:orderItems){
             //ASSUMING THAT 'service' HAS ONLY ONE LEVEL OF CHILDREN!
-            if (service.getChildren().contains(name)){
-                serviceItems.add(name);
-             }else{
+            if (!service.getChildren().contains(name)){
                 productItems.add(name);
             }
         }
         if (velocityTemplate==null){
             velocityTemplate="email.vm";
         }
-        StringBuffer saledesc = new StringBuffer();
+        StringBuilder saledesc = new StringBuilder();
         int productCount = 0;
         for(Name orderItem:productItems){
 
@@ -153,7 +143,7 @@ public class ReviewService {
         context.put("supplier", supplier.getDefaultDisplayName());
         context.put("feedbacklink", thisURL + "?op=reviewform&supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&orderref=" + order.getDefaultDisplayName() + "&businessid=" + azquoMemoryDBConnection.getBusinessId() + "&velocitytemplate=form1.vm");
         context.put("reviewslink", "http://www.azquoreviews.com/reviews/?op=showreviews&supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&division=" + supplier.getDefaultDisplayName() + "&businessid=" + azquoMemoryDBConnection.getBusinessId() + "&reviewtype=service");
-        String result = convertToVelocity(servletContext, context,"", null, velocityTemplate);
+        String result = convertToVelocity(context,"", null, velocityTemplate);
         if (!order.getAttribute("Customer email").equals("demo@azquo.com")){
             azquoMailer.sendEMail(order.getAttribute("Customer email"), order.getAttribute("Customer name"),"Feedback request on behalf of " + supplier.getDefaultDisplayName(), result);
         }
@@ -309,7 +299,7 @@ public class ReviewService {
     }
 
 
-    public String showReviews(HttpServletRequest request, String supplierDb, String division, String startDate, String reviewType, String velocityTemplate) throws Exception {
+    public String showReviews(String supplierDb, String division, String startDate, String reviewType, String velocityTemplate) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDbConnection = reviewsConnectionMap.getConnection(supplierDb);
 
         // todo handle error if the supplier db is duff
@@ -325,10 +315,9 @@ public class ReviewService {
         Map<String, String> context = new HashMap<String, String>();
         List<VelocityReview> reviews = new ArrayList<VelocityReview>();
         if (division == null || division.length()==0) division="supplier";
-        String error = "";
+        String error;
         if (startDate == null){
             error = nameService.interpretName(azquoMemoryDbConnection, orderItems, division + ";level lowest * All ratings;level lowest");
-
         }else{
             error = nameService.interpretName(azquoMemoryDbConnection, orderItems, division + ";level lowest;WHERE Review date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
         }
@@ -361,7 +350,7 @@ public class ReviewService {
              context.put("overallrating", (posCount * 100 / reviewCount) + "");
              if (XML) {
 
-                  return convertToXML(context,"reviews", reviews);
+                  return convertToXML(context, reviews);
 
 
 
@@ -369,7 +358,7 @@ public class ReviewService {
                  if (velocityTemplate.length()==0){
                      velocityTemplate = "showreviews.vm";
                  }
-                return convertToVelocity(request.getServletContext(),context,"reviews", reviews, velocityTemplate);
+                return convertToVelocity(context,"reviews", reviews, velocityTemplate);
                 }
         } else {
             return "no reviews found";
@@ -377,7 +366,7 @@ public class ReviewService {
     }
 
 
-    private String convertToXML(Map<String, String> context, String itemName, List<VelocityReview> items)throws Exception{
+    private String convertToXML(Map<String, String> context, List<VelocityReview> items)throws Exception{
 
         StringWriter sw = new StringWriter();
 
@@ -400,10 +389,7 @@ public class ReviewService {
         }
         hd.endElement("","","AZQUO");
         hd.endDocument();
-        String result = sw.toString();
-        return result;
-
-
+        return sw.toString();
     }
 
 
@@ -424,31 +410,15 @@ public class ReviewService {
         }
         Set<Name> orderItems = order.getChildren();
         if (orderItems.size() == 0) return "error: No items in order " + order.getDefaultDisplayName();
-        Name allProducts = nameService.findByName(azquoMemoryDBConnection,"All products");
         Name service = nameService.findByName(azquoMemoryDBConnection,"Service");
-        Set<Name> productItems = new HashSet<Name>();
-        Set<Name> serviceItems = new HashSet<Name>();
-        for (Name name:orderItems){
-            //ASSUMING THAT 'service' HAS ONLY ONE LEVEL OF CHILDREN!
-            if (service.getChildren().contains(name)){
-                serviceItems.add(name);
-            }else{
-                productItems.add(name);
-            }
-        }
         Name topSupplier = nameService.findByName(azquoMemoryDBConnection,"supplier");
-        Name supplier = null;
-        for (Name name:topSupplier.getChildren()){
-            supplier = name;
-            break;
-        }
-
+        Name supplier = topSupplier.getChildren().iterator().next();
         String intro = "<p>Thank you for taking the time to leave feedback for " + supplier.getDefaultDisplayName() + ".</p><p>Please note that your feedback is PUBLIC and will be displayed innediately on our site</p>";
         if (supplier.getAttribute("feedbackintrotext") != null){
             intro = supplier.getAttribute("feedbackintrotext");
         }
 
-        StringBuffer validationScript = new StringBuffer();
+        StringBuilder validationScript = new StringBuilder();
         validationScript.append(" var frmvalidator  = new Validator(\"review\");\n");
         String thisURL = request.getRequestURL().toString();
         String thisSite = thisURL.substring(0,thisURL.lastIndexOf("/",thisURL.length() -2));
@@ -484,9 +454,9 @@ public class ReviewService {
         }
         context.put("validationscript", validationScript.toString());
         if (XML){
-            return convertToXML(context,"reviews", reviews);
+            return convertToXML(context, reviews);
         }else{
-            return convertToVelocity(request.getServletContext(),context,"reviews", reviews, velocityTemplate);
+            return convertToVelocity(context,"reviews", reviews, velocityTemplate);
         }
 
 
@@ -539,16 +509,16 @@ public class ReviewService {
         }
     }
 
-    private String convertToVelocity(ServletContext servletContext, Map<String,String> context, String itemName, List<VelocityReview> items, String velocityTemplate){
+    private String convertToVelocity(Map<String,String> context, String itemName, List<VelocityReview> items, String velocityTemplate){
 
         VelocityEngine ve = new VelocityEngine();
         Properties properties = new Properties();
         Template t;
-        if (velocityTemplate==null){
+        if (velocityTemplate == null){
             velocityTemplate = "email.vm";
         }
 
-        if (velocityTemplate != null && (velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1) {
+        if ((velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1) {
             properties.put("resource.loader", "url");
             properties.put("url.resource.loader.class", "org.apache.velocity.runtime.resource.loader.URLResourceLoader");
             properties.put("url.resource.loader.root", velocityTemplate.substring(0, velocityTemplate.lastIndexOf("/") + 1));
@@ -583,7 +553,7 @@ public class ReviewService {
 
 
 
-    public String createSupplierResponseForm(ServletContext servletContext,LoggedInConnection loggedInConnection, String orderRef, String velocityTemplate)throws Exception{
+    public String createSupplierResponseForm(LoggedInConnection loggedInConnection, String orderRef, String velocityTemplate)throws Exception{
         boolean XML = true;
         if (velocityTemplate!=null) XML = false;
         Map<String, String> context = new HashMap<String, String>();
@@ -603,21 +573,6 @@ public class ReviewService {
         //Name allProducts = nameService.findByName(azquoMemoryDbConnection,"All products");
         // interesting
         Name service = nameService.findByName(loggedInConnection,"Service");
-        Set<Name> productItems = new HashSet<Name>();
-        Set<Name> serviceItems = new HashSet<Name>();
-        /* so we're going though the order items seeing if they're in the set service or not and categorising accordingly.
-        This truly is using the set principle. I wonder how fast .contains is. Probably pretty fast and if looking up by tree
-        the as the number increases the "cost" or extra set members will be minimal
-        hash function on the name objects is very important!
-         */
-        for (Name name : orderItems){
-            //ASSUMING THAT 'service' HAS ONLY ONE LEVEL OF CHILDREN!
-            if (service.getChildren().contains(name)){
-                serviceItems.add(name);
-            }else{
-                productItems.add(name);
-            }
-        }
         Name topSupplier = nameService.findByName(loggedInConnection,"supplier");
         /*Name supplier = null;
         for (Name name:topSupplier.getChildren()){
@@ -626,7 +581,6 @@ public class ReviewService {
         }*/
         Name supplier = topSupplier.getChildren().iterator().next();
 
-        StringBuffer validationScript = new StringBuffer();
         context.put("supplierlogo", supplier.getAttribute("logo"));
         // todo : connection id shoult NOT be in here, its a DB access connection. Deal with later.
         context.put("connectionid", loggedInConnection.getConnectionId());
@@ -659,9 +613,9 @@ public class ReviewService {
 
         }
         if (XML){
-            return convertToXML(context,"reviews", reviews);
+            return convertToXML(context, reviews);
         }else{
-            return convertToVelocity(servletContext,context,"reviews", reviews, velocityTemplate);
+            return convertToVelocity(context,"reviews", reviews, velocityTemplate);
         }
     }
 

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -49,6 +50,7 @@ public final class NameService {
     private static final Logger logger = Logger.getLogger(NameService.class);
 
     // hacky but testing for the moment
+    // should it be gaainst the conneciton??
 
     public void persist(final AzquoMemoryDBConnection azquoMemoryDBConnection) {
         azquoMemoryDBConnection.getAzquoMemoryDB().saveDataToMySQL();
@@ -1431,7 +1433,12 @@ public final class NameService {
             }
             for (String attName : name.getAttributes().keySet()) {
                 if (count > 0) sb.append(",");
-                sb.append(jsonElement(attName,URLEncoder.encode(name.getAttributes().get(attName).replace("\"","''"))));//replacing quotes again
+                try {
+                    sb.append(jsonElement(attName,URLEncoder.encode(name.getAttributes().get(attName).replace("\"","''"), "UTF-8")));//replacing quotes again
+                } catch (UnsupportedEncodingException e) {
+                    // this really should not happen!
+                    e.printStackTrace();
+                }
                 count++;
             }
             sb.append("}");
