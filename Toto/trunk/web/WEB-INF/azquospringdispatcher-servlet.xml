@@ -82,7 +82,7 @@
         <constructor-arg type="com.azquo.admindao.MySQLDatabaseManager" ref="mySQLDatabaseManager"/>
         <constructor-arg type="com.azquo.memorydb.MemoryDBManager" ref="memoryDBManager"/>
         <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
-        <constructor-arg type="int" value="1"/>
+        <constructor-arg type="int" value="11"/>
     </bean>
     <security:http auto-config="true" use-expressions="true" >
 
