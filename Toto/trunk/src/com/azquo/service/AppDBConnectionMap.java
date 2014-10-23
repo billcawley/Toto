@@ -36,19 +36,27 @@ public class AppDBConnectionMap {
         if (business != null){
             List<Database> databasesForBusiness = adminService.getDatabaseListForBusiness(business);
             for (Database database : databasesForBusiness){
-                try {
                     dbByNameMap.put(database.getMySQLName(), database);
-                    connectionMap.put(database.getMySQLName(),
-                            new AzquoMemoryDBConnection(memoryDBManager.getAzquoMemoryDB(database), new User(0, null, null, businessId, "", "connection pool", "", "", "" )));
+            }
+        }
+    }
+    // was a simple get but we#re going to lazy load
+    public AzquoMemoryDBConnection getConnection(String mysqlName){
+        AzquoMemoryDBConnection azquoMemoryDBConnection = connectionMap.get(mysqlName);
+        if (azquoMemoryDBConnection != null){
+            return azquoMemoryDBConnection;
+        } else {
+            if (dbByNameMap.get(mysqlName) != null){
+                try {
+                    connectionMap.put(dbByNameMap.get(mysqlName).getMySQLName(),
+                            new AzquoMemoryDBConnection(memoryDBManager.getAzquoMemoryDB(dbByNameMap.get(mysqlName)), new User(0, null, null, business.getId(), "", "connection pool", "", "", "" )));
+                    return connectionMap.get(mysqlName);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }
-    }
-
-    public AzquoMemoryDBConnection getConnection(String mysqlName){
-        return connectionMap.get(mysqlName);
+        return null;
     }
 
     public void deleteDatabase(String mysqlName){
