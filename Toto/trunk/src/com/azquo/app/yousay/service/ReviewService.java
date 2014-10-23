@@ -142,7 +142,7 @@ public class ReviewService {
         context.put("saledescription", saledesc.toString());
         context.put("supplier", supplier.getDefaultDisplayName());
         context.put("feedbacklink", thisURL + "?op=reviewform&supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&orderref=" + order.getDefaultDisplayName() + "&businessid=" + azquoMemoryDBConnection.getBusinessId() + "&velocitytemplate=form1.vm");
-        context.put("reviewslink", "http://www.azquoreviews.com/reviews/?op=showreviews&supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&division=" + supplier.getDefaultDisplayName() + "&businessid=" + azquoMemoryDBConnection.getBusinessId() + "&reviewtype=service");
+        context.put("reviewslink", "http://www.azquoreviews.com/reviews/?op=showreviews&supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() );
         String result = convertToVelocity(context,"", null, velocityTemplate);
         if (!order.getAttribute("Customer email").equals("demo@azquo.com")){
             azquoMailer.sendEMail(order.getAttribute("Customer email"), order.getAttribute("Customer name"),"Feedback request on behalf of " + supplier.getDefaultDisplayName(), result);
