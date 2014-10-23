@@ -1855,6 +1855,7 @@ public  class AzquoBook {
     public String executeSheet(LoggedInConnection loggedInConnection, String fileName, String spreadsheetName, int reportId) throws Exception{
         String error = "";
         try {
+            fileName = ImportService.dbPath  + loggedInConnection.getCurrentDBName() + "/onlinereports/" + fileName;
             wb = new Workbook(new FileInputStream(fileName));
 
             dataRegionPrefix = AzquoBook.azDataRegion;
@@ -1913,7 +1914,7 @@ public  class AzquoBook {
 
 
     public void saveBookActive(HttpServletResponse response, String fileName)throws Exception{
-        Workbook wbOut = new Workbook(new FileInputStream(ImportService.reportPath + "/Admin/Azquoblank.xls"));
+        Workbook wbOut = new Workbook(new FileInputStream(ImportService.homePath + "/onlinereports/Admin/Azquoblank.xls"));
 
          wbOut.combine(wb);
         if (fileName.endsWith(".xlsx")) fileName = fileName.replace(".xlsx",".xlsm");
