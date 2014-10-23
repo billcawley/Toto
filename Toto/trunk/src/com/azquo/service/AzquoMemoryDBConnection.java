@@ -41,6 +41,10 @@ public class AzquoMemoryDBConnection {
     protected AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, User user){
         this.azquoMemoryDB = azquoMemoryDB;
         this.user = user;
+        language = Name.DEFAULT_DISPLAY_NAME;
+        loose = false;
+        readPermissions = new ArrayList<Set<Name>>();
+        writePermissions = new ArrayList<Set<Name>>();
     }
 
     protected AzquoMemoryDB getAzquoMemoryDB() {
@@ -61,10 +65,6 @@ public class AzquoMemoryDBConnection {
 
     protected void setAzquoMemoryDB(final AzquoMemoryDB azquoMemoryDB) {
         this.azquoMemoryDB = azquoMemoryDB;
-        language = Name.DEFAULT_DISPLAY_NAME;
-        loose = false;
-        readPermissions = new ArrayList<Set<Name>>();
-        writePermissions = new ArrayList<Set<Name>>();
     }
 
     protected Provenance provenance = null;

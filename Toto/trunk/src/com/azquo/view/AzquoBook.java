@@ -1930,7 +1930,7 @@ public  class AzquoBook {
 
         License license = new License();
         // todo - maybe a switch to only check for the license on the server?
-        //license.setLicense("/home/azquo/aspose/Aspose.Cells.lic");
+        license.setLicense("/home/azquo/aspose/Aspose.Cells.lic");
         wb  = new Workbook(new FileInputStream(fileName));
 
 

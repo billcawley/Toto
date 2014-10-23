@@ -115,10 +115,10 @@ public class AdminService {
         return "error:  incorrect key";
     }
 
-    public String getSQLDatabaseName(final LoggedInConnection loggedInConnection, final String databaseName) {
-        Business b = businessDao.findById(loggedInConnection.getBusinessId());
+    public String getSQLDatabaseName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String databaseName) {
+        Business b = businessDao.findById(azquoMemoryDBConnection.getBusinessId());
         //TODO  Check name below is unique.
-        return getBusinessPrefix(loggedInConnection) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
+        return getBusinessPrefix(azquoMemoryDBConnection) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
 
 
     }
@@ -132,7 +132,6 @@ public class AdminService {
     public String dropDatabase(String mysqlName) throws Exception{
         mySQLDatabaseManager.dropDatabase(mysqlName);
         return "";
-
     }
 
     public String createDatabase(final String databaseName, final LoggedInConnection loggedInConnection) throws Exception {
@@ -229,11 +228,19 @@ public class AdminService {
     }
 
 
+    public Business getBusinessById(int id) {
+        return businessDao.findById(id);
+    }
+
     public List<Database> getDatabaseListForBusiness(final LoggedInConnection loggedInConnection) {
         if (loggedInConnection.getUser().isAdministrator()) {
             return databaseDao.findForBusinessId(loggedInConnection.getBusinessId());
         }
         return null;
+    }
+
+    public List<Database> getDatabaseListForBusiness(final Business business) {
+            return databaseDao.findForBusinessId(business.getId());
     }
 
     public List<User> getUserListForBusiness(final LoggedInConnection loggedInConnection) {

@@ -16,7 +16,6 @@
        http://www.springframework.org/schema/util/spring-util.xsd
        http://www.springframework.org/schema/security
        http://www.springframework.org/schema/security/spring-security.xsd">
-
     <!--
         Controllers are setup using annotations
         See   http://blog.springsource.org/2007/11/14/annotated-web-mvc-controllers-in-spring-25/
@@ -59,7 +58,7 @@
     <bean name="provenanceService" class="com.azquo.service.ProvenanceService"/>
     <bean name="loginService" class="com.azquo.service.LoginService"/>
     <bean name="importService" class="com.azquo.service.ImportService"/>
-    <bean name="businessService" class="com.azquo.service.AdminService"/>
+    <bean name="adminService" class="com.azquo.service.AdminService"/>
     <bean name="onlineService" class="com.azquo.service.OnlineService"/>
     <bean name="openDatabaseDao" class="com.azquo.admindao.OpenDatabaseDAO"/>
     <bean name="onlineReportDao" class="com.azquo.admindao.OnlineReportDAO"/>
@@ -77,7 +76,14 @@
         <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
         <constructor-arg type="com.azquo.memorydbdao.StandardDAO" ref="standardDao"/>
     </bean>
-
+    <!-- and now app conneciton maps, firs one will be for  -->
+    <bean name="reviewsConnectionMap" class="com.azquo.service.AppDBConnectionMap">
+        <constructor-arg type="com.azquo.service.AdminService" ref="adminService"/>
+        <constructor-arg type="com.azquo.admindao.MySQLDatabaseManager" ref="mySQLDatabaseManager"/>
+        <constructor-arg type="com.azquo.memorydb.MemoryDBManager" ref="memoryDBManager"/>
+        <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
+        <constructor-arg type="int" value="1"/>
+    </bean>
     <security:http auto-config="true" use-expressions="true" >
 
 
@@ -94,15 +100,11 @@
         <!--<security:form-login login-page="/phase1/login.html" authentication-failure-url="/phase1/errorPage.html"  default-target-url="/phase1/test.html"/>-->
 
     </security:http>
-
-
-
     <security:authentication-manager>
         <security:authentication-provider>
             <security:user-service>
                 <security:user name="edd" password="edd" authorities="ROLE_USER"/>
             </security:user-service>
         </security:authentication-provider>
-
     </security:authentication-manager>
 </beans>

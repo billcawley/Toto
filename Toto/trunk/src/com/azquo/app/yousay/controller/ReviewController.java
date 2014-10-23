@@ -95,42 +95,19 @@ public class ReviewController {
                 ratings.put(comment, paramValue);
             }
         }
-        LoggedInConnection loggedInConnection;
-
-        if (connectionId == null) {
-            if (user != null){
-                loggedInConnection = loginService.login(supplierDB,user,password,0,null,false);
-            }else {
-                if (businessId > 0) {//someone filling in a review
-                    loggedInConnection = loginService.login(supplierDB, "", "", 0, "", false, businessId);
-                } else {
-                    //temporary connection .. need to think about this
-                    loggedInConnection = loginService.login(supplierDB, "", "", 0, "", false, 1);
-                    // edd just wants it to work for the mo!
-                    //loggedInConnection = loginService.login("yousay1", "edd@azquo.com", "eddtest", 0, "", false);
-                }
-            }
-
-        } else {
-            loggedInConnection = loginService.getConnection(connectionId);
-        }
-        if (supplierDB != null) {
-            loginService.switchDatabase(loggedInConnection, databaseDAO.findForName(loggedInConnection.getBusinessId(), supplierDB));
-        }
         String result = "";
-
         if (op.equals("showreviews")){
-            result = reviewService.showReviews(request, loggedInConnection,division, startDate, reviewType, velocityTemplate);
+            result = reviewService.showReviews(request, supplierDB,division, startDate, reviewType, velocityTemplate);
         }
         if (op.equals("sendemails")){
-            result = reviewService.sendEmails(request, loggedInConnection,1000, velocityTemplate);
+            result = reviewService.sendEmails(request, supplierDB,1000, velocityTemplate);
         }
         if (op.equals("reviewform")){
             if (ratings != null && ratings.size() > 0){
-                reviewService.processReviewForm(loggedInConnection, orderRef, ratings, comments);
-                result = reviewService.showReviews(request, loggedInConnection,division, startDate, reviewType,velocityTemplate);
+                reviewService.processReviewForm(supplierDB, orderRef, ratings, comments);
+                result = reviewService.showReviews(request, supplierDB,division, startDate, reviewType,velocityTemplate);
             } else {
-                result = reviewService.createReviewForm(request, loggedInConnection, orderRef, velocityTemplate);
+                result = reviewService.createReviewForm(request, supplierDB, orderRef, velocityTemplate);
             }
         }
         model.addAttribute("content", result);
