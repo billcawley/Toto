@@ -110,7 +110,9 @@ public class DownloadController {
         if (onlineReport != null) {
             fileName = onlineReport.getFilename();
         }
-        fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+        if (fileName.indexOf("/") > 0) {
+            fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+        }
         if (pdf){
             onlineService.saveBookasPDF(response, loggedInConnection, fileName);
         }else {
