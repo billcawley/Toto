@@ -21,7 +21,7 @@ import java.util.Map;
  * persistence still dealt with by the main Azquo DB
  *
  *
- * E.g. the yousay feedback system. So we might start with Order/Product/Feedback as an example. I need to think carefully about this
+ * E.g. the reviews feedback system. So we might start with Order/Product/Feedback as an example. I need to think carefully about this
  *
  */
 public abstract class AppEntityService <EntityType extends AppEntity>{

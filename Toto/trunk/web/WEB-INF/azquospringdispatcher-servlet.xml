@@ -29,7 +29,7 @@
     <context:component-scan base-package="com.azquo.controller">
     </context:component-scan>
     <!-- for app conntrollers -->
-    <context:component-scan base-package="com.azquo.app.yousay.controller">
+    <context:component-scan base-package="com.azquo.app.reviews.controller">
     </context:component-scan>
 
     <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
@@ -66,8 +66,8 @@
     <!--<bean name="magentoDataLoadService" class="com.azquo.app.magento.service.DataLoadService"/>-->
 
     <!-- define app services and their load order in a list -->
-    <bean name="feedbackService" class="com.azquo.app.yousay.service.FeedbackService"/>
-    <bean name="reviewService" class="com.azquo.app.yousay.service.ReviewService"/>
+    <bean name="feedbackService" class="com.azquo.app.reviews.service.FeedbackService"/>
+    <bean name="reviewService" class="com.azquo.app.reviews.service.ReviewService"/>
     <util:list id="appServices" value-type="com.azquo.service.AppEntityService">
         <ref bean="feedbackService"/>
     </util:list>

@@ -1,4 +1,4 @@
-package com.azquo.app.yousay.service;
+package com.azquo.app.reviews.service;
 
 import com.azquo.memorydb.Name;
 import com.azquo.service.AppDBConnectionMap;

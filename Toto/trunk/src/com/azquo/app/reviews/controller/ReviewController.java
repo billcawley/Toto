@@ -1,10 +1,10 @@
-package com.azquo.app.yousay.controller;
+package com.azquo.app.reviews.controller;
 
 /**
  * Created by bill on 09/09/14.
  *
  */
-import com.azquo.app.yousay.service.ReviewService;
+import com.azquo.app.reviews.service.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;

@@ -1,6 +1,6 @@
-package com.azquo.app.yousay.service;
+package com.azquo.app.reviews.service;
 
-import com.azquo.app.yousay.entity.Feedback;
+import com.azquo.app.reviews.entity.Feedback;
 import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.service.AppEntityService;
 

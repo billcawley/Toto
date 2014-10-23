@@ -1,6 +1,6 @@
-package com.azquo.app.yousay.entity;
+package com.azquo.app.reviews.entity;
 
-import com.azquo.app.yousay.service.FeedbackService;
+import com.azquo.app.reviews.service.FeedbackService;
 import com.azquo.memorydb.AppEntity;
 import com.azquo.memorydb.AzquoMemoryDB;
 import com.fasterxml.jackson.annotation.JsonCreator;
