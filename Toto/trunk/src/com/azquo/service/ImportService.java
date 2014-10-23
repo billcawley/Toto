@@ -45,7 +45,8 @@ public final class ImportService {
     }
 
     //private static final String reportPath = "/home/bill/apache-tomcat-7.0.47/import/";
-    public static final String reportPath = "/home/azquo/onlinereports/";
+    public static final String homePath = "/home/azquo/";
+    public static final String dbPath = "/home/azquo/databases/";
 
     private static final String headingDivider = "|";
     @Autowired
@@ -1056,14 +1057,14 @@ public final class ImportService {
             reportId = or.getId();
         }
 
-        String fullPath = reportPath + adminService.getBusinessPrefix(azquoMemoryDBConnection) + "/" + fileName;
+        String fullPath = dbPath + azquoMemoryDBConnection.getCurrentDBName() + "/onlinereports/" + fileName;
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
 
          FileOutputStream out = new FileOutputStream(fullPath);
          azquoBook.saveBook(fullPath);
          out.close();
-         or = new OnlineReport(reportId, businessId,databaseId ,"", reportName, "", fullPath,"");
+         or = new OnlineReport(reportId, businessId,databaseId ,"", reportName, "", fileName,"");
          onlineReportDAO.store(or);
         return "";
 
