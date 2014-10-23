@@ -62,7 +62,7 @@ public class Feedback extends AppEntity<FeedbackService>{
         try {
             return jacksonMapper.writeValueAsString(new JsonTransport(timeStamp, rating,comment));
         } catch (Exception e) {
-            logger.error("can't get a provenance as json", e);
+            logger.error("can't get a feedback as json", e);
         }
         return "";
     }

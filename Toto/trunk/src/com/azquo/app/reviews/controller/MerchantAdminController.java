@@ -4,6 +4,9 @@ package com.azquo.app.reviews.controller;
  * Created by edd on 09/10/14.
  */
 import com.azquo.admindao.DatabaseDAO;
+import com.azquo.app.reviews.service.MerchantService;
+import com.azquo.app.reviews.service.UserService;
+import com.azquo.memorydb.Name;
 import com.azquo.service.LoginService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -21,14 +24,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class MerchantAdminController {
 
     @Autowired
-    private DatabaseDAO databaseDAO;
+    private MerchantService merchantService;
     @Autowired
-    private LoginService loginService;
+    private UserService userService;
 
     @RequestMapping
     public String handleRequest(ModelMap model) throws Exception {
-        model.addAttribute("content", "test");
-        return "utf8page";
+        //System.out.print("Creating a merchant " + merchantService.createMerchant("Test Merchant", "Test merchant's address", "test merhcants email", "2134567890"));
+        //System.out.print("Creating a user " + userService.createUser(merchant, "edd@azquo.com", "password24"));
+        return "merchantadmin";
     }
 
 

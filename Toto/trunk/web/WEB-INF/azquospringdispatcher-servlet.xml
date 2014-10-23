@@ -84,6 +84,15 @@
         <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
         <constructor-arg type="int" value="11"/>
     </bean>
+    <bean name="merchantService" class="com.azquo.app.reviews.service.MerchantService">
+        <constructor-arg index="0" ref="nameService"/>
+        <constructor-arg index="1" ref="reviewsConnectionMap"/>
+    </bean>
+    <bean name="userService" class="com.azquo.app.reviews.service.UserService">
+        <constructor-arg index="0" ref="nameService"/>
+        <constructor-arg index="1" ref="adminService"/>
+        <constructor-arg index="2" ref="reviewsConnectionMap"/>
+    </bean>
     <bean name="reviewsAuthenticationProvider" class="com.azquo.app.reviews.misc.ReviewsAuthenticationProvider"/>
     <security:http auto-config="true" use-expressions="true" >
 

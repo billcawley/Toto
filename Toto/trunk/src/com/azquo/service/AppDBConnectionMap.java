@@ -77,11 +77,12 @@ public class AppDBConnectionMap {
     public void newDatabase(String databaseName) throws Exception{
         Database existing = databaseDAO.findForName(business.getId(),databaseName);
         if (existing != null){
-        } else {
             throw new Exception("that database " + databaseName + "already exists");
         }
-        final String mysqlName = (business.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "");
+        // todo - factor this it's in two places at the moment
+        final String mysqlName = (business.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "") + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();;
         final Database database = new Database(0, new Date(), new Date(130, 1, 1), business.getId(), databaseName, mysqlName, 0, 0);
+        // todo here and elsewhere, stop mysql dbs overwriting each other
         try{
             mySQLDatabaseManager.createNewDatabase(mysqlName);
             databaseDAO.store(database);

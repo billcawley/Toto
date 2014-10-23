@@ -130,7 +130,9 @@ public final class NameService {
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(id);
     }
 
-    private Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String name, Name parent) {
+    // was private, why??
+
+    public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String name, Name parent) {
         if (name.charAt(0) == NAMEMARKER) {
             try {
                 int nameId = Integer.parseInt(name.substring(1).trim());

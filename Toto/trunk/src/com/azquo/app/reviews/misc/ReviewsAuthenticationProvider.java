@@ -1,6 +1,8 @@
 package com.azquo.app.reviews.misc;
 
 import com.azquo.app.reviews.service.ReviewService;
+import com.azquo.app.reviews.service.UserService;
+import com.azquo.memorydb.Name;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,7 +24,7 @@ public class ReviewsAuthenticationProvider implements AuthenticationProvider {
 
 
     @Autowired
-    private ReviewService reviewService;
+    private UserService userService;
 
     @Override
     public Authentication authenticate(Authentication authentication)
@@ -30,7 +32,13 @@ public class ReviewsAuthenticationProvider implements AuthenticationProvider {
         String email = authentication.getName(); // they call it name but it will be email
         String password = authentication.getCredentials().toString();
         // use the credentials to try to authenticate against the third party system
-        if (reviewService.authenticateUser(email, password)) {
+           Name user = null;
+           try {
+               user = userService.checkEmailAndPassword(email, password);
+           } catch (Exception e) {
+               e.printStackTrace();
+           }
+           if (user != null) {
             List<GrantedAuthority> grantedAuths = new ArrayList<GrantedAuthority>();
             grantedAuths.add(new SimpleGrantedAuthority("ROLE_USER"));
             return new UsernamePasswordAuthenticationToken(email, password, grantedAuths);
