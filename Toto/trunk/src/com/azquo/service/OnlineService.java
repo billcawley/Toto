@@ -86,7 +86,11 @@ public final class OnlineService {
             output = output.replace("$enctype","");
         }
         try {
-            azquoBook.loadBook(onlineReport.getFilename());
+            if (onlineReport.getId() < 2){
+                azquoBook.loadBook(onlineReport.getFilename());
+            }else{
+                azquoBook.loadBook(ImportService.dbPath  + loggedInConnection.getCurrentDBName() + "/onlinereports/" + onlineReport.getFilename());
+            }
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
             if (onlineReport.getId()==1 || onlineReport.getId()==-1){//this is the maintenance workbook
                 azquoBook.dataRegionPrefix = azquoBook.azInput;
