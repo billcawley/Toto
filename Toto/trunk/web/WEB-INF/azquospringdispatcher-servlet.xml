@@ -68,9 +68,9 @@
     <!-- define app services and their load order in a list -->
     <bean name="feedbackService" class="com.azquo.app.reviews.service.FeedbackService"/>
     <bean name="reviewService" class="com.azquo.app.reviews.service.ReviewService"/>
-    <util:list id="appServices" value-type="com.azquo.service.AppEntityService">
+<!--    <util:list id="appServices" value-type="com.azquo.service.AppEntityService">
         <ref bean="feedbackService"/>
-    </util:list>
+    </util:list> -->
     <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
     <bean name="memoryDBManager" class="com.azquo.memorydb.MemoryDBManager">
         <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
@@ -84,6 +84,7 @@
         <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
         <constructor-arg type="int" value="11"/>
     </bean>
+    <bean name="reviewsAuthenticationProvider" class="com.azquo.app.reviews.misc.ReviewsAuthenticationProvider"/>
     <security:http auto-config="true" use-expressions="true" >
 
 
@@ -101,10 +102,6 @@
 
     </security:http>
     <security:authentication-manager>
-        <security:authentication-provider>
-            <security:user-service>
-                <security:user name="edd" password="edd" authorities="ROLE_USER"/>
-            </security:user-service>
-        </security:authentication-provider>
+        <security:authentication-provider ref="reviewsAuthenticationProvider"/>
     </security:authentication-manager>
 </beans>

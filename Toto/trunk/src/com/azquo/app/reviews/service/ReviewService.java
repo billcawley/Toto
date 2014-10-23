@@ -633,11 +633,20 @@ public class ReviewService {
         }
 
         nameService.persist(loggedInConnection);
-
-
-
-
         return "";
+    }
+
+    public boolean authenticateUser(String email, String password){
+        if (email.equals("edd@azquo.com") && password.equals("password")){
+            return true;
+        }
+        if (email.equals("nic@azquo.com") && password.equals("password")){
+            return true;
+        }
+        if (email.equals("bill@azquo.com") && password.equals("password")){
+            return true;
+        }
+        return false;
     }
 
 
