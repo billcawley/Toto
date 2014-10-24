@@ -26,6 +26,9 @@ public class MerchantService {
     public MerchantService(NameService nameService, AppDBConnectionMap reviewsConnectionMap) throws Exception{
         this.nameService = nameService;
         this.reviewsConnectionMap = reviewsConnectionMap;
+        if (reviewsConnectionMap.getConnection(MASTERDBNAME) == null){ // should only happen once!
+            reviewsConnectionMap.newDatabase("master"); // note, I assume the main reviews business is called reviews!
+        }
         masterDBConnection = reviewsConnectionMap.getConnection(MASTERDBNAME);
         merchantSet = nameService.findOrCreateNameInParent(masterDBConnection, MERCHANT_SET, null, false);
     }
@@ -38,9 +41,6 @@ public class MerchantService {
     }
 
     public String createMerchant(String name, String address, String email, String telephoneno) throws Exception{
-        if (reviewsConnectionMap.getConnection(MASTERDBNAME) == null){ // should only happen once!
-            reviewsConnectionMap.newDatabase("master"); // note, I assume the main reviews business is called reviews!
-        }
         Name exists = nameService.getNameByAttribute(masterDBConnection, name, merchantSet);
         if (exists != null){
             return "error:a merchant with that name already exists";
