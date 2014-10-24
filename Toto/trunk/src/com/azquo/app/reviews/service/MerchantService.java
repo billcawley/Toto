@@ -7,6 +7,9 @@ import com.azquo.service.AzquoMemoryDBConnection;
 import com.azquo.service.NameService;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Created by cawley on 23/10/14.
  */
@@ -55,5 +58,14 @@ public class MerchantService {
 
     public Name getMerchantByName(String name) throws Exception{
         return nameService.getNameByAttribute(masterDBConnection, name, merchantSet);
+    }
+
+    public Name getMerchantForUser(Name user) throws Exception{
+        Set<Name> userParents = new HashSet<Name>(user.getParents());
+        userParents.retainAll(merchantSet.getChildren());
+        if (!userParents.isEmpty()){
+            return userParents.iterator().next();
+        }
+        return null;
     }
 }

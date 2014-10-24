@@ -4,8 +4,13 @@ package com.azquo.app.reviews.controller;
  * Created by bill on 09/09/14.
  *
  */
+import com.azquo.app.reviews.service.MerchantService;
 import com.azquo.app.reviews.service.ReviewService;
+import com.azquo.app.reviews.service.UserService;
+import com.azquo.memorydb.Name;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +26,10 @@ public class ReviewController {
 
     @Autowired
     private ReviewService reviewService;
+    @Autowired
+    private UserService userService;
+    @Autowired
+    private MerchantService merchantService;
 
 
 
@@ -68,6 +77,15 @@ public class ReviewController {
                 result = reviewService.createReviewForm(request, supplierDB, orderRef, velocityTemplate);
             }
         }
+        /*Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null){
+            Name user = userService.getUserByEmail(auth.getName());
+            if (user != null){
+                Name merchant = merchantService.getMerchantForUser(user);
+                result = "logged in user : " + user.getDefaultDisplayName() + " in " + (merchant != null ? merchant.getDefaultDisplayName() : "???") + result;
+            }
+        }*/
+
         model.addAttribute("content", result);
         return "utf8page";
     }
