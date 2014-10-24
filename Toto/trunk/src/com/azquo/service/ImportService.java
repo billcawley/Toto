@@ -166,7 +166,7 @@ public final class ImportService {
             }
             error = readPreparedFile(azquoMemoryDBConnection, uploadFile, fileType);
         }
-        nameService.persist(azquoMemoryDBConnection);
+        azquoMemoryDBConnection.persist();
         Database db = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase();
         if (fileType==null){
             fileType = "spreadsheet";
@@ -479,7 +479,7 @@ public final class ImportService {
          }
         System.out.println("csv import took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
 
-        nameService.persist(azquoMemoryDBConnection);
+        azquoMemoryDBConnection.persist();
 
         return "";
     }

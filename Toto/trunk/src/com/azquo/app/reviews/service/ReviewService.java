@@ -95,7 +95,7 @@ public class ReviewService {
         for (Name order:emailsSentThisTime){
             emailsToBeSent.removeFromChildrenWillBePersisted(order);
         }
-        nameService.persist(azquoMemoryDBConnection);
+        azquoMemoryDBConnection.persist();
         return error;
     }
 
@@ -493,7 +493,7 @@ public class ReviewService {
             }
         }
 
-        nameService.persist(azquoMemoryDBConnection);
+        azquoMemoryDBConnection.persist();
 
 
 
@@ -632,7 +632,7 @@ public class ReviewService {
             }
         }
 
-        nameService.persist(loggedInConnection);
+        loggedInConnection.persist();
         return "";
     }
 

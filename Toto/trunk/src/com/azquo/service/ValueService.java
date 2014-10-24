@@ -1655,7 +1655,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             result = numberOfValuesModified + " values modified";
             //putting in a 'persist' here for security.
             if (numberOfValuesModified > 0) {
-                nameService.persist(loggedInConnection);
+                loggedInConnection.persist();
             }
         } else {
             result = " no sent data/rows/columns/context";

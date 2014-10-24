@@ -131,6 +131,9 @@ public class AzquoMemoryDBConnection {
         return user.getBusinessId();
     }
 
+    public void persist() {
+        azquoMemoryDB.saveDataToMySQL();
+    }
 
 
 }

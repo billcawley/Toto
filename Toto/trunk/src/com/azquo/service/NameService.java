@@ -49,13 +49,6 @@ public final class NameService {
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
     private static final Logger logger = Logger.getLogger(NameService.class);
 
-    // hacky but testing for the moment
-    // should it be gaainst the conneciton??
-
-    public void persist(final AzquoMemoryDBConnection azquoMemoryDBConnection) {
-        azquoMemoryDBConnection.getAzquoMemoryDB().saveDataToMySQL();
-    }
-
     // replaces commas in quotes (e.g. "shop", "location", "region with a , in it's name" should become "shop", "location", "region with a - in it's name")  with -, useful for parsing name lists
 
     public String replaceCommasInQuotes(String s) {
@@ -830,7 +823,6 @@ public final class NameService {
 
     private void filter(List<Name> names, String condition, List<String> strings){
         //NOT HANDLING 'OR' AT PRESENT
-        int stringPos = 0;
        int andPos = condition.toLowerCase().indexOf(" and ");
        if (andPos < 0) {
            andPos = condition.length();
@@ -1035,7 +1027,7 @@ public final class NameService {
 
 
     private String setOfx(int len) {
-        StringBuffer set = new StringBuffer();
+        StringBuilder set = new StringBuilder();
         for (int i = 0; i < len; i++) {
             set.append('x');
         }
@@ -1060,7 +1052,7 @@ public final class NameService {
         return calc;
     }
 
-    private String replaceStrings(String calc, List<String> strings) {
+/*    private String replaceStrings(String calc, List<String> strings) {
 
         int quotePos = calc.indexOf("\"");
         int constantNo = 0;
@@ -1074,7 +1066,7 @@ public final class NameService {
             }
         }
         return calc;
-    }
+    }*/
 
 
 
@@ -1312,7 +1304,7 @@ public final class NameService {
                 // re set attributes, use single functions so checks happen
             }
         }
-        persist(azquoMemoryDBConnection);
+        azquoMemoryDBConnection.persist();
         return toReturn;
     }
 
@@ -1492,7 +1484,7 @@ public final class NameService {
 
     public String convertJsonToHTML(String json) {
 
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         sb.append("<ul class=\"namelist\">\n");
         try {
             NameListJson nameListJson = jacksonMapper.readValue(json, NameListJson.class);

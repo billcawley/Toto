@@ -34,6 +34,7 @@ public class MerchantService {
         String ADDRESS = "ADDRESS";
         String EMAIL = "EMAIL";
         String TELEPHONENO = "TELEPHONENO";
+        String SUPPLIERMYSQLDB = "SUPPLIERMYSQLDB";
     }
 
     public String createMerchant(String name, String address, String email, String telephoneno) throws Exception{
@@ -48,7 +49,7 @@ public class MerchantService {
         newMerchant.setAttributeWillBePersisted(MERCHANT_ATTRIBUTE.ADDRESS, address);
         newMerchant.setAttributeWillBePersisted(MERCHANT_ATTRIBUTE.EMAIL, email);
         newMerchant.setAttributeWillBePersisted(MERCHANT_ATTRIBUTE.TELEPHONENO, telephoneno);
-        nameService.persist(masterDBConnection);
+        masterDBConnection.persist();
         return "";
     }
 

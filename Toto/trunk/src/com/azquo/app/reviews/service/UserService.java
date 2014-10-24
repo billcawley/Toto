@@ -52,7 +52,7 @@ public class UserService {
         newUser.setAttributeWillBePersisted(USER_ATTRIBUTE.PASSWORD, encryptedPassword);
         newUser.setAttributeWillBePersisted(USER_ATTRIBUTE.SALT, salt);
         merchant.addChildWillBePersisted(newUser);
-        nameService.persist(masterDBConnection);
+        masterDBConnection.persist();
         return "";
     }
 

@@ -516,7 +516,7 @@ public class AdminService {
             }
             valueService.storeValueWithProvenanceAndNames(lic2,valueService.addValues(showValues.get(nameValues)), names2);
         }
-        nameService.persist(lic2);
+        lic2.persist();
 
         return "";
     }
