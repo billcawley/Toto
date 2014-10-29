@@ -31,6 +31,8 @@
     <!-- for app conntrollers -->
     <context:component-scan base-package="com.azquo.app.reviews.controller">
     </context:component-scan>
+    <context:component-scan base-package="com.azquo.app.magento.controller">
+    </context:component-scan>
 
     <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
         <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
@@ -68,9 +70,14 @@
     <!-- define app services and their load order in a list -->
     <bean name="feedbackService" class="com.azquo.app.reviews.service.FeedbackService"/>
     <bean name="reviewService" class="com.azquo.app.reviews.service.ReviewService"/>
-<!--    <util:list id="appServices" value-type="com.azquo.service.AppEntityService">
-        <ref bean="feedbackService"/>
-    </util:list> -->
+
+    <bean name="magentoService" class="com.azquo.app.magento.service.DataLoadService"/>
+
+
+
+    <!--    <util:list id="appServices" value-type="com.azquo.service.AppEntityService">
+            <ref bean="feedbackService"/>
+        </util:list> -->
     <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
     <bean name="memoryDBManager" class="com.azquo.memorydb.MemoryDBManager">
         <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
