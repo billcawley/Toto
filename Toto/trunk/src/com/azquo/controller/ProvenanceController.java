@@ -75,15 +75,9 @@ public class ProvenanceController {
                 }
             }
             if (searchNames != null && searchNames.length() > 0) {
-                final List<Set<Name>> nameSet = new ArrayList<Set<Name>>();
-//                String error = nameService.decodeString(loggedInConnection, searchNames, nameSet);
-                nameService.decodeString(loggedInConnection, searchNames, nameSet);
+                // not trying to catch an exception we assume no error
+                final List<Set<Name>> nameSet = nameService.decodeString(loggedInConnection, searchNames);
 
-                // there never could be an error so I zapped it
-
-                /*if (error.length() > 0) {
-                    return error;
-                }*/
                 //assumes here that each set is a single element
                 final Set<Name> names = new HashSet<Name>();
                 for (Set<Name> nameFound : nameSet) {

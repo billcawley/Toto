@@ -315,14 +315,15 @@ public class ReviewService {
         Map<String, String> context = new HashMap<String, String>();
         List<VelocityReview> reviews = new ArrayList<VelocityReview>();
         if (division == null || division.length()==0) division="supplier";
-        String error;
-        if (startDate == null){
-            error = nameService.interpretName(azquoMemoryDbConnection, orderItems, division + ";level lowest * All ratings;level lowest");
-        }else{
-            error = nameService.interpretName(azquoMemoryDbConnection, orderItems, division + ";level lowest;WHERE Review date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
-        }
-        if (error.length() > 0) {
-            return error;
+        try{
+            if (startDate == null){
+                orderItems = nameService.interpretName(azquoMemoryDbConnection, division + ";level lowest * All ratings;level lowest");
+            }else{
+                orderItems = nameService.interpretName(azquoMemoryDbConnection, division + ";level lowest;WHERE Review date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
+            }
+
+        } catch (Exception e){
+            return "error:" + e.getMessage();
         }
         Name rating = nameService.findByName(azquoMemoryDbConnection, "All ratings");
         Name product = nameService.findByName(azquoMemoryDbConnection, "All Products");

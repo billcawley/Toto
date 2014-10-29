@@ -218,10 +218,9 @@ public class ValueController {
 
 
                 logger.info("search by names : " + searchByNames);
-                final List<Set<Name>> names = new ArrayList<Set<Name>>();
 //                String error = nameService.decodeString(loggedInConnection, searchByNames, names);
                 // no longer returns an error based on work Edd did cleaning up the name service, this may change
-                nameService.decodeString(loggedInConnection, searchByNames, names);
+                final List<Set<Name>> names = nameService.decodeString(loggedInConnection, searchByNames);
                 /*if (error.length() > 0){
                     return error;
                 }*/

@@ -4,6 +4,7 @@ import com.aspose.cells.*;
 import com.azquo.admindao.UserChoiceDAO;
 import com.azquo.adminentities.UserChoice;
 import com.azquo.memorydb.*;
+import com.azquo.memorydb.Name;
 import com.azquo.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
@@ -1314,8 +1315,7 @@ public  class AzquoBook {
                             StyleColor("background-color", cell.getStyle().getForegroundColor());
                             Range choice = getRange(choiceName + "choice");
                             if (choice != null) {
-
-                                List<com.azquo.memorydb.Name> choiceList = new ArrayList<com.azquo.memorydb.Name>();
+                                List<com.azquo.memorydb.Name> choiceList = new ArrayList<Name>();
                                 String cellChoice = choice.get(0,0).getStringValue();
                                 List<String> constants = new ArrayList<String>();
                                 if (cellChoice.startsWith("\"")){
@@ -1324,8 +1324,9 @@ public  class AzquoBook {
 
                                 }else {
                                     try {
-                                        String error = nameService.interpretName(loggedInConnection, choiceList, choice.get(0,0).getStringValue());
+                                        choiceList = nameService.interpretName(loggedInConnection, choice.get(0,0).getStringValue());
                                     } catch (Exception e) {
+
                                         //TODO think what to do !
                                     }
                                 }

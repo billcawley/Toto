@@ -27,6 +27,8 @@ public final class ValueService {
     @Autowired
     private NameService nameService;
 
+    private StringUtils stringUtils = new StringUtils();
+
     // set the names in delete info and unlink - best I can come up with at the moment
     // unlike Name I don't think we're actually going to delete it - though whether the current name behavior is correct is another thing
     public void deleteValue(final Value value) throws Exception {
@@ -518,24 +520,20 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 if (cellString.length() == 0) {
                     row.add(null);
                 } else {
-                    List<Name> nameList = new ArrayList<Name>();
                     if (cellString.toLowerCase().contains(";with name in ")) {
                         int withPos = cellString.toLowerCase().indexOf(";with name in ");
                         String withList = cellString.substring(withPos + 14);
                         cellString = cellString.substring(0, withPos);
-                        List<Set<Name>> sNames = new ArrayList<Set<Name>>();
-                        // no longer returns error
-                        nameService.decodeString(azquoMemoryDBConnection, withList, sNames);
-                        /*if (error.length() > 0) {
-                            return error;
-                        }*/
+                        List<Set<Name>> sNames = nameService.decodeString(azquoMemoryDBConnection, withList);
                         supplementNames.addAll(sNames); // sName should be a set of one element
                      }
-                    String error = nameService.interpretName(azquoMemoryDBConnection, nameList, cellString);
-                    if (error.length() > 0) {
-                        return error;
+                    try{
+                        List<Name> nameList =  nameService.interpretName(azquoMemoryDBConnection, cellString);
+                        row.add(nameList);
+
+                    } catch (Exception e){
+                        return "error:" + e.getMessage();
                     }
-                    row.add(nameList);
                 }
             }
             while (row.size() < maxColCount) row.add(null);
@@ -752,7 +750,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
     }
 
     public String getFullRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        String language = nameService.getInstruction(headingsSent, "language");
+        String language = stringUtils.getInstruction(headingsSent, "language");
         final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
         List<Set<Name>> supplementNames = new ArrayList<Set<Name>>();
         loggedInConnection.getProvenance().setRowHeadings(headingsSent);
@@ -770,7 +768,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent, final int filterCount) throws Exception {
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
         // "here is what that 2d heading definition excel region looks like in names"
-        String language = nameService.getInstruction(headingsSent, "language");
+        String language = stringUtils.getInstruction(headingsSent, "language");
 
 
         if (filterCount > 0) {
@@ -837,7 +835,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             return error;
         }
         loggedInConnection.setColumnHeadings(region, (expandHeadings(transpose2DList(columnHeadingLists))));
-        String language = nameService.getInstruction(headingsSent, "language");
+        String language = stringUtils.getInstruction(headingsSent, "language");
         return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)), language, null);
     }
 

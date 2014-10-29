@@ -121,14 +121,14 @@ public class LoginService {
                 List<Set<Name>> names = new ArrayList<Set<Name>>();
                 if (permission != null){
 //                    String error = nameService.decodeString(lic,permission.getReadList(), names);
-                    nameService.decodeString(lic,permission.getReadList(), names);
+                    names = nameService.decodeString(lic,permission.getReadList());
                      //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
                 }
                 lic.setReadPermissions(names);
                 names = new ArrayList<Set<Name>>();
                 if (permission != null){
 //                    String error = nameService.decodeString(lic,permission.getWriteList(), names);
-                    nameService.decodeString(lic,permission.getWriteList(), names);
+                    names = nameService.decodeString(lic,permission.getWriteList());
                     //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
                 }
                 lic.setWritePermissions(names);

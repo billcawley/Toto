@@ -434,16 +434,13 @@ public class AdminService {
             if (u == null || u.getBusinessId() != loggedInConnection.getBusinessId()) {
                 return "error: user email " + permission.getEmail() + " is invalid";
             }
-            final List<Set<Name>> names = new ArrayList<Set<Name>>();
-//            String error = nameService.decodeString(loggedInConnection,permission.getReadList(), names);
-            nameService.decodeString(loggedInConnection,permission.getReadList(), names);
-            /*if (error.length() > 0){
-                return error;
-            }*/
-            nameService.decodeString(loggedInConnection, permission.getWriteList(), names);
-            /*if (error.length() > 0){
-                return error;
-            }*/
+            try{
+                nameService.decodeString(loggedInConnection,permission.getReadList());
+                nameService.decodeString(loggedInConnection, permission.getWriteList());
+
+            } catch (Exception e){
+                return "error:" + e.getMessage();
+            }
             permission.setUserId(u.getId());
             permissionDao.store(permission);
         }
@@ -476,9 +473,8 @@ public class AdminService {
             return "error:  cannot log in to " + database;
         }
         lic2.setNewProvenance("transfer from", database);
-        List<Set<Name>> namesToTransfer = new ArrayList<Set<Name>>();
         //can't use 'nameService.decodeString as this may have multiple values in each list
-        nameService.decodeString(loggedInConnection,nameList, namesToTransfer);
+        List<Set<Name>> namesToTransfer = nameService.decodeString(loggedInConnection,nameList);
         //find the data to transfer
         Map<Set<Name>, Set<Value>> showValues = valueService.getSearchValues(namesToTransfer);
 

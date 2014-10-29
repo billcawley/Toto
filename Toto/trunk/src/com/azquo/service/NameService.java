@@ -22,6 +22,14 @@ import java.util.regex.Pattern;
  */
 public final class NameService {
 
+    // ok attempt to work things out, Edd putting code he is happy with at the top
+
+    public StringUtils stringUtils = new StringUtils(); // just make it quickly like this for the mo
+    private static final ObjectMapper jacksonMapper = new ObjectMapper();
+    private static final Logger logger = Logger.getLogger(NameService.class);
+
+
+
 
     public static final String LEVEL = "level";
     public static final String FROM = "from";
@@ -46,65 +54,21 @@ public final class NameService {
     public static final String ASSOCIATED = "associated";
     public static final String WHERE = "where";
 
-    private static final ObjectMapper jacksonMapper = new ObjectMapper();
-    private static final Logger logger = Logger.getLogger(NameService.class);
-
-    // replaces commas in quotes (e.g. "shop", "location", "region with a , in it's name" should become "shop", "location", "region with a - in it's name")  with -, useful for parsing name lists
-
-    public String replaceCommasInQuotes(String s) {
-        boolean inQuotes = false;
-        StringBuilder withoutCommasInQuotes = new StringBuilder();
-        char[] charactersString = s.toCharArray();
-        for (char c : charactersString) {
-            if (c == Name.QUOTE) {
-                inQuotes = !inQuotes;
-            }
-            if (c == ',') {
-                withoutCommasInQuotes.append(inQuotes ? '-' : ',');
-            } else {
-                withoutCommasInQuotes.append(c);
-            }
-        }
-        return withoutCommasInQuotes.toString();
-    }
-
-    // when passed a name tries to find the last in the list e.g. london, ontario, canada gets canada
-    private String findParentFromList(final String name) {
-        // ok preprocess to remove commas in quotes, easiest way.
-        String nameWithoutCommasInQuotes = replaceCommasInQuotes(name);
-        if (!nameWithoutCommasInQuotes.contains(",")) return null;
-        // get the position from the string with commas in quotes removed
-        int commaPos = nameWithoutCommasInQuotes.lastIndexOf(",");
-        // but return from the unmodified string
-        return name.substring(commaPos + 1).trim();
-    }
-
-    // untested!
-/*
-    public ArrayList<Name> sortNames(final ArrayList<Name> namesList, final String language) {
-        Comparator<Name> compareName = new Comparator<Name>() {
-            public int compare(Name n1, Name n2) {
-            return n1.getAttribute(language).compareTo(n1.getAttribute(language));
-            }
-        };
-        Collections.sort(namesList, compareName);
-        return namesList;
-    }*/
 
     // get names from a comma separated list
 
-    public void decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, final List<Set<Name>> names) throws Exception {
+    public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames) throws Exception {
+        final List<Set<Name>> names = new ArrayList<Set<Name>>();
         searchByNames = stripQuotes(azquoMemoryDBConnection, searchByNames);
         List<String> strings = new ArrayList<String>();
-        searchByNames = extractStrings(searchByNames, strings);
+        searchByNames = stringUtils.extractStrings(searchByNames, strings);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            List<Name> nameList = new ArrayList<Name>();
-
-            interpretSetTerm(azquoMemoryDBConnection, nameList, nameName, strings);
+            List<Name> nameList = interpretSetTerm(azquoMemoryDBConnection, nameName, strings);
             names.add(new HashSet<Name>(nameList));
         }
+        return names;
     }
 
     public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) {
@@ -153,7 +117,7 @@ public final class NameService {
         // so london, ontario, canada
         // parent name would be canada
         if (name == null || name.length() == 0) return null;
-        String parentName = findParentFromList(name);
+        String parentName = stringUtils.findParentFromList(name);
         String remainder = name;
         Name parent = null;
         // keep chopping away at the string until we find the closest parent we can
@@ -168,7 +132,7 @@ public final class NameService {
             // the reason for this is to deal with quotes, we could have said simply the substring take off the parent name length but we don't know about quotes or spaces after the comma
             // remainder is the rest of the string, could be london, ontario - Canada was taken off
             remainder = name.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length()));
-            parentName = findParentFromList(remainder);
+            parentName = stringUtils.findParentFromList(remainder);
         }
 
         return getNameByAttribute(azquoMemoryDBConnection, remainder, parent);
@@ -215,7 +179,7 @@ public final class NameService {
          */
 
 
-        String parentName = findParentFromList(name);
+        String parentName = stringUtils.findParentFromList(name);
         String remainder = name;
         if (parentName == null) {
             return findOrCreateNameInParent(azquoMemoryDBConnection, name, topParent, local);
@@ -235,7 +199,7 @@ public final class NameService {
             if (parentName.length() > 0) {
                 parent = findOrCreateNameInParent(azquoMemoryDBConnection, parentName, parent, local);
             }
-            parentName = findParentFromList(remainder);
+            parentName = stringUtils.findParentFromList(remainder);
         }
 
         return findOrCreateNameInParent(azquoMemoryDBConnection, remainder, parent, local);
@@ -580,48 +544,7 @@ public final class NameService {
         return toReturn;
     }
 
-    // used to be in the controller, should it be back there???
-
-    public String getInstruction(final String instructions, final String instructionName) {
-        String toReturn = null;
-        //needs to detect that e.g. 'from' is an instruction, and not contained in a word
-        int iPos = instructions.toLowerCase().indexOf(instructionName.toLowerCase());
-        if (iPos >= 0) {
-            while (iPos > 0 && instructions.charAt(iPos - 1) != ';') {
-                iPos = instructions.toLowerCase().indexOf(instructionName.toLowerCase(), iPos + 1);
-            }
-        }
-        if (iPos >= 0) {
-            //find to the next semicolon, or line end
-            int commandStart = iPos + instructionName.length() + 1;
-
-            if (commandStart < instructions.length()) {
-                int commandEnd =instructions.indexOf(";", commandStart + 1);
-                if (commandEnd < 0){
-                    commandEnd = instructions.length();
-                }
-                toReturn = instructions.substring(commandStart, commandEnd).trim();
-               /*
-                  Pattern p = Pattern.compile("[^a-z A-Z\\-0-9!]");
-                 Matcher m = p.matcher(instructions.substring(commandStart));
-                commandEnd = instructions.length();
-                if (m.find()) {
-                    commandEnd = commandStart + m.start();
-                }
-                */
-            } else {
-                toReturn = "";
-            }
-            //  if (toReturn.startsWith(Name.QUOTE)) {
-            //      toReturn = toReturn.substring(1, toReturn.length() - 1); // trim quotes
-            // }
-            if (toReturn.length() > 0 && toReturn.charAt(0) == '=') {
-                toReturn = toReturn.substring(1).trim();
-            }
-        }
-        return toReturn;
-    }
-
+    // hmm, looks like a string function but there's checks agains a valid name in there. Come back to that later.
 
     private String stripQuotes(AzquoMemoryDBConnection azquoMemoryDBConnection, String instructions) throws Exception {
         int lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
@@ -650,18 +573,11 @@ public final class NameService {
     }
 
     // to find a set of names, a few bits that were part of the original set of functions
-    //seems a bit overkill in teh case where a name is just the name but works still I think
+    // edd wondering how to break this up.
 
 
-    private boolean precededBy(String searchText, String testItem, int pos){
-        int len = testItem.length();
-        return pos >= len + 2 && searchText.substring(pos - len - 1, pos).toLowerCase().equals(testItem + " ");
-    }
-
-
-
-    public String interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> nameList, String setFormula) throws Exception {
-
+    public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
+        final List<Name> nameList = new ArrayList<Name>();
 
         /*
         * This routine now amended to allow for union (+) and intersection (*) of sets.
@@ -676,11 +592,6 @@ public final class NameService {
         List<List<Name>> nameStack = new ArrayList<List<Name>>();
         List<String> strings = new ArrayList<String>();
         setFormula = shuntingYardAlgorithm(azquoMemoryDBConnection, setFormula, strings);
-        if (setFormula.startsWith("error:")) {
-            return setFormula;
-        }
-
-
         Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
         int pos = 0;
@@ -695,7 +606,7 @@ public final class NameService {
                 nextTerm = m.start() + pos + 2;
                 //PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
                 //  neet to check for this....
-                while (nextTerm < setFormula.length() && (precededBy(setFormula,TO, nextTerm) || precededBy(setFormula, FROM, nextTerm) || precededBy(setFormula,TOTALLEDAS, nextTerm))) {
+                while (nextTerm < setFormula.length() && (stringUtils.precededBy(setFormula,TO, nextTerm) || stringUtils.precededBy(setFormula, FROM, nextTerm) || stringUtils.precededBy(setFormula,TOTALLEDAS, nextTerm))) {
                     int startPos = nextTerm + 1;
                     nextTerm = setFormula.length() + 1;
                     m = p.matcher(setFormula.substring(startPos));
@@ -706,31 +617,24 @@ public final class NameService {
             }
             if (op == NAMEMARKER) {
                 stackCount++;
-                List<Name> nextNames = new ArrayList<Name>();
-                String error = interpretSetTerm(azquoMemoryDBConnection, nextNames, setFormula.substring(pos, nextTerm - 1), strings);
-                if (error.length() > 0) {
-                    return error;
-                }
+                List<Name> nextNames = interpretSetTerm(azquoMemoryDBConnection, setFormula.substring(pos, nextTerm - 1), strings);
                 nameStack.add(nextNames);
             } else if (op == '&') {
                 if (strings.size()==0){
-                    return "error: '&' without a string";
+                    throw new Exception("'&' without a string");
                 }
                 List<Name> nextNames = new ArrayList<Name>();
                 List<Name> baseNames = nameStack.get(stackCount-1);
                 for (Name name:baseNames) {
                     String nameToFind = name.getDefaultDisplayName() + strings.get(strings.size() - 1);
-                    String error = interpretSetTerm(azquoMemoryDBConnection, nextNames, nameToFind, strings);
-                    if (error.length() > 0) {
-                        return error;
-                    }
+                    nextNames.addAll(interpretSetTerm(azquoMemoryDBConnection, nameToFind, strings));
                 }
                 strings.remove(strings.size()-1);
                 nameStack.remove(stackCount-1);
                 nameStack.add(nextNames);
 
             }else if (stackCount-- < 2) {
-                return "error: not understood:  " + setFormula;
+                throw new Exception ("not understood:  " + setFormula);
 
             } else if (op == '*') {
                 nameStack.get(stackCount - 1).retainAll(nameStack.get(stackCount));
@@ -746,7 +650,7 @@ public final class NameService {
             pos = nextTerm;
         }
         nameList.addAll(nameStack.get(0));
-        return "";
+        return nameList;
     }
 
     // arguably should be called on store and the RPCALC stored as that attribute only changes when "CALCULATION" changes
@@ -887,20 +791,23 @@ public final class NameService {
 
     }
 
-    private String interpretSetTerm(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Name> namesFound, String setTerm, List<String> strings) throws Exception {
+    // edd trying to break up
 
-        final String levelString = getInstruction(setTerm, LEVEL);
-        String fromString = getInstruction(setTerm, FROM);
-        String childrenString = getInstruction(setTerm, CHILDREN);
-        final String parentsString = getInstruction(setTerm, PARENTS);
-        final String sorted = getInstruction(setTerm, SORTED);
-        String toString = getInstruction(setTerm, TO);
-        String countString = getInstruction(setTerm, COUNT);
-        final String countbackString = getInstruction(setTerm, COUNTBACK);
-        final String compareWithString = getInstruction(setTerm, COMPAREWITH);
-        final String totalledAsString = getInstruction(setTerm, TOTALLEDAS);
-        final String associatedString = getInstruction(setTerm, ASSOCIATED);
-        final String whereString = getInstruction(setTerm, WHERE);
+    private List<Name> interpretSetTerm(AzquoMemoryDBConnection azquoMemoryDBConnection, String setTerm, List<String> strings) throws Exception {
+        List<Name> namesFound = new ArrayList<Name>();
+
+        final String levelString = stringUtils.getInstruction(setTerm, LEVEL);
+        String fromString = stringUtils.getInstruction(setTerm, FROM);
+        String childrenString = stringUtils.getInstruction(setTerm, CHILDREN);
+        final String parentsString = stringUtils.getInstruction(setTerm, PARENTS);
+        final String sorted = stringUtils.getInstruction(setTerm, SORTED);
+        String toString = stringUtils.getInstruction(setTerm, TO);
+        String countString = stringUtils.getInstruction(setTerm, COUNT);
+        final String countbackString = stringUtils.getInstruction(setTerm, COUNTBACK);
+        final String compareWithString = stringUtils.getInstruction(setTerm, COMPAREWITH);
+        final String totalledAsString = stringUtils.getInstruction(setTerm, TOTALLEDAS);
+        final String associatedString = stringUtils.getInstruction(setTerm, ASSOCIATED);
+        final String whereString = stringUtils.getInstruction(setTerm, WHERE);
         if (levelString !=null){
             childrenString="true";
         }
@@ -912,7 +819,7 @@ public final class NameService {
         }
         final Name name = findByName(azquoMemoryDBConnection, nameString);
         if (name == null) {
-            return "error:  not understood: " + nameString;
+            throw new Exception("error:  not understood: " + nameString);
         }
         if (childrenString == null && fromString == null && toString == null && countString == null) {
             names.add(name);
@@ -986,7 +893,7 @@ public final class NameService {
         if (sorted != null){
             Collections.sort(namesFound);
         }
-        return "";
+        return namesFound;
     }
 
     // ok it seems the name is passed purely for debugging purposes
@@ -1023,33 +930,6 @@ public final class NameService {
         }
         return ("" + NAMEMARKER + nameFound.getId() + term.substring(nameEnd) + " ");
 
-    }
-
-
-    private String setOfx(int len) {
-        StringBuilder set = new StringBuilder();
-        for (int i = 0; i < len; i++) {
-            set.append('x');
-        }
-        return set.toString();
-    }
-
-
-    private String extractStrings(String calc, List<String> strings){
-
-        int   quotePos = calc.indexOf("\"");
-
-        while (quotePos >= 0){
-            int quoteEnd = calc.indexOf("\"", quotePos + 1);
-            if (quoteEnd > 0){
-                strings.add(calc.substring(quotePos + 1, quoteEnd));
-                calc = calc.substring(0,quotePos +1) + setOfx(quoteEnd - quotePos -1) + calc.substring(quoteEnd);
-                quotePos = calc.indexOf("\"", quoteEnd + 1);
-            }else{
-                quotePos = -1;
-            }
-        }
-        return calc;
     }
 
 /*    private String replaceStrings(String calc, List<String> strings) {
@@ -1108,7 +988,7 @@ public final class NameService {
 
 
         //save away constants as a separate array, replace temporarily with 'xxxxxxx'
-        calc = extractStrings(calc, strings);
+        calc = stringUtils.extractStrings(calc, strings);
 
 
         Pattern p = Pattern.compile("[\\+\\-/\\*\\(\\)&]"); // only simple maths allowed at present
@@ -1167,10 +1047,6 @@ public final class NameService {
         return  sb.toString();
      }
 
-
-    private String jsonElement(String jsonName, String jsonValue){
-        return("\"" + jsonName + "\":\"" + jsonValue + "\"");
-    }
     // pretty much replaced the original set of functions to do basic name manipulation
     // needs a logged in connection forn the structure return
 
@@ -1182,12 +1058,11 @@ public final class NameService {
             return getStructureForNameSearch(azquoMemoryDBConnection, nameJsonRequest.name, -1);//-1 indicates to show the children
         }
         if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)) {
-            List<Name> nameList = new ArrayList<Name>();
-            String error = interpretName(azquoMemoryDBConnection, nameList, nameJsonRequest.name);
-            if (error.length() > 0) {
-                return error;
+            try{
+                return getNamesFormattedForOutput(interpretName(azquoMemoryDBConnection, nameJsonRequest.name));
+            } catch (Exception e) {
+                return "Error:" + e.getMessage();
             }
-            return getNamesFormattedForOutput(nameList);
         }
 
         if (nameJsonRequest.operation.equalsIgnoreCase(DELETE)) {
@@ -1421,14 +1296,14 @@ public final class NameService {
                         peerList += "--";
                     }
                 }
-                sb.append(jsonElement("peers",peerList));
+                sb.append(stringUtils.jsonElement("peers",peerList));
                 count++;
 
             }
             for (String attName : name.getAttributes().keySet()) {
                 if (count > 0) sb.append(",");
                 try {
-                    sb.append(jsonElement(attName,URLEncoder.encode(name.getAttributes().get(attName).replace("\"","''"), "UTF-8")));//replacing quotes again
+                    sb.append(stringUtils.jsonElement(attName,URLEncoder.encode(name.getAttributes().get(attName).replace("\"","''"), "UTF-8")));//replacing quotes again
                 } catch (UnsupportedEncodingException e) {
                     // this really should not happen!
                     e.printStackTrace();
