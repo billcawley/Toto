@@ -6,6 +6,7 @@ import com.azquo.adminentities.UserChoice;
 import com.azquo.memorydb.*;
 import com.azquo.memorydb.Name;
 import com.azquo.service.*;
+import com.csvreader.CsvWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -2005,9 +2006,10 @@ public  class AzquoBook {
         String tempName = temp.getPath();
         temp.deleteOnExit();
 
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
-        convertRangeToCSV(sheet, bw, null);
-        bw.close();
+        //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
+        CsvWriter csvW = new CsvWriter(new FileWriter(tempName),'\t');
+        convertRangeToCSV(sheet, csvW, null);
+        csvW.close();
         return tempName;
 
     }
@@ -2019,10 +2021,10 @@ public  class AzquoBook {
         String tempName = temp.getPath();
         temp.deleteOnExit();
 
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
-        convertRangeToCSV(azquoSheet, bw, getRange("az_columnheadings" + region));
-        convertRangeToCSV(azquoSheet, bw, getRange("az_dataRegion" + region));
-        bw.close();
+        CsvWriter csvW = new CsvWriter(new FileWriter(tempName),'\t');
+        convertRangeToCSV(azquoSheet, csvW, getRange("az_columnheadings" + region));
+        convertRangeToCSV(azquoSheet, csvW, getRange("az_dataRegion" + region));
+        csvW.close();
         InputStream uploadFile = new FileInputStream(tempName);
         fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
         String result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType);
@@ -2037,7 +2039,7 @@ public  class AzquoBook {
 
     }
 
-    public String convertRangeToCSV(final Worksheet  sheet, final BufferedWriter bw, Range range) throws Exception {
+    public String convertRangeToCSV(final Worksheet  sheet, final CsvWriter csvW, Range range) throws Exception {
         Row row;
         Cell cell;
         Cells cells = sheet.getCells();
@@ -2062,17 +2064,17 @@ public  class AzquoBook {
                 int colCount = 0;
                 for (int c = startCol; c <= maxCol; c++) {
                     cell = cells.get(r, c);
-                    if (colCount++ > 0) bw.write('\t');
+                    //if (colCount++ > 0) bw.write('\t');
                     if (cell != null && cell.getType() != CellValueType.IS_NULL) {
 
                         String cellFormat = "";
                         cellFormat = convertDates(cell.getStringValue());
 
-                        bw.write(cellFormat);
+                        csvW.write(cellFormat);
                     }
 
                 }
-                bw.write('\n');
+                csvW.endRecord();
             }
         }
         return "";
