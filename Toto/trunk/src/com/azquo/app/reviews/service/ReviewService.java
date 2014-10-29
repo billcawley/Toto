@@ -166,12 +166,17 @@ public class ReviewService {
 
 
     public Name getParent(Name child, Name parent){
-        List<Name> parentName = child.findAllParents();
-        parentName.retainAll(parent.getChildren());
+
+        Set<Name> parentName = new HashSet<Name>();
+        parentName.addAll(child.getParents());
+        parentName.retainAll(parent.findAllChildren(true));
         if (parentName.size()==0){
             return null;
         }
-        return parentName.get(0);
+        if (parentName.size() > 0) {
+            return parentName.iterator().next();
+        }
+        return null;
 
     }
 
@@ -252,7 +257,7 @@ public class ReviewService {
             toReturn.put("rating", rating);
             toReturn.put("ratingName", ratingName);
             toReturn.put("product", product);
-            toReturn.put("comment", comment);
+            toReturn.put("comment", comment.replace("\n","<br>"));
             toReturn.put("commentName", commentName);
             toReturn.put("productcode", productcode);
             toReturn.put("suppliercomment", supplierComment);
@@ -314,7 +319,12 @@ public class ReviewService {
         List<Name> orderItems = new ArrayList<Name>();
         Map<String, String> context = new HashMap<String, String>();
         List<VelocityReview> reviews = new ArrayList<VelocityReview>();
-        if (division == null || division.length()==0) division="supplier";
+        Name supplier = nameService.findByName(azquoMemoryDbConnection,"supplier");
+        Name topSupplier = supplier.getChildren().iterator().next();
+        String supplierName = topSupplier.getDefaultDisplayName();
+        if (division == null || division.length()==0){
+            division = supplierName;
+        }
         try{
             if (startDate == null){
                 orderItems = nameService.interpretName(azquoMemoryDbConnection, division + ";level lowest * All ratings;level lowest");
@@ -346,6 +356,8 @@ public class ReviewService {
 
         }
         context.put("reviewcount", reviewCount + "");
+        context.put("suppliername", supplierName);
+        context.put("division", division);
 
          if (reviewCount > 0) {
              context.put("overallrating", (posCount * 100 / reviewCount) + "");
@@ -445,7 +457,7 @@ public class ReviewService {
             }
             vr.ratingName =  "rating" + productCode;
             vr.commentName = "comment" + productCode;
-            validationScript.append("frmvalidator.addValidation(\"rating" + productCode + "\",\"selone_radio\",\"Please enter a rating for " + vr.product + "\");\n");
+            validationScript.append("frmvalidator.addValidation(\"rating" + productCode + "\",\"gt=0\",\"Please enter a rating for " + vr.product + "\");\n");
             validationScript.append("frmvalidator.EnableOnPageErrorDisplaySingleBox();\n");
             validationScript.append("frmvalidator.EnableMsgsTogether();\n");
 
