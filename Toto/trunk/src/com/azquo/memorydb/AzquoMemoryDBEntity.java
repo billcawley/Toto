@@ -130,7 +130,9 @@ public abstract class AzquoMemoryDBEntity {
     }
 
     protected final void setNeedsPersisting() {
-        azquoMemoryDB.setEntityNeedsPersisting(getPersistTable(), this);
+        if (getPersistTable() != null){
+            azquoMemoryDB.setEntityNeedsPersisting(getPersistTable(), this);
+        }
     }
 
     // public for the DAOs
