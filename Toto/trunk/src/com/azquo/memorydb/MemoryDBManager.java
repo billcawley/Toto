@@ -20,8 +20,8 @@ public final class MemoryDBManager {
 
     @Autowired
     OpenDatabaseDAO openDatabaseDAO;
-    @Autowired
-    List<AppEntityService> appServices;
+    //@Autowired
+    List<AppEntityService> appServices = null;
 
     private final HashMap<String, AzquoMemoryDB> memoryDatabaseMap;
     private DatabaseDAO databaseDAO;
@@ -36,6 +36,9 @@ public final class MemoryDBManager {
     }
 
     public synchronized AzquoMemoryDB getAzquoMemoryDB(Database database) throws Exception {
+        if (database.getName().equals("temp")){
+            return new AzquoMemoryDB(database, null, null);
+        }
         AzquoMemoryDB loaded = memoryDatabaseMap.get(database.getMySQLName());
         if (loaded != null){
             return loaded;
