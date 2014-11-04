@@ -82,10 +82,10 @@ public class SupplierResponseController {
 
         if (connectionId == null) {
             if (businessId > 0){//someone filling in a review
-                loggedInConnection = loginService.login(supplierDB,"","",0,"",false,businessId);
+                loggedInConnection = loginService.login(supplierDB,"","",0,"",false);
             }else{
                 //temporary connection .. need to think about this
-                loggedInConnection = loginService.login(supplierDB,"","",0,"",false,1);
+                loggedInConnection = loginService.login(supplierDB,"","",0,"",false);
                 // edd just wants it to work for the mo!
                 //loggedInConnection = loginService.login("yousay1", "edd@azquo.com", "eddtest", 0, "", false);
             }
