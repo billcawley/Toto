@@ -59,18 +59,22 @@ public final class AzquoMemoryDB {
         provenanceByIdMap = new ConcurrentHashMap<Integer, Provenance>();
         entitiesToPersist = new ConcurrentHashMap<String, Set<AzquoMemoryDBEntity>>();
         // loop over the possible persisted tables making the empty sets, cunning
-        for (StandardDAO.PersistedTable persistedTable : StandardDAO.PersistedTable.values()) {
-            entitiesToPersist.put(persistedTable.name(), new HashSet<AzquoMemoryDBEntity>());
+        if (standardDAO != null) {
+            for (StandardDAO.PersistedTable persistedTable : StandardDAO.PersistedTable.values()) {
+                entitiesToPersist.put(persistedTable.name(), new HashSet<AzquoMemoryDBEntity>());
+            }
         }
+        if (appServices != null) {
+            for (AppEntityService appEntityService : appServices) {
+                // seems a good a place as any to create the MySQL table if it doesn't exist
+                appEntityService.checkCreateMySQLTable(this);
+                entitiesToPersist.put(appEntityService.getTableName(), new HashSet<AzquoMemoryDBEntity>());
+            }
 
-        for (AppEntityService appEntityService : appServices) {
-            // seems a good a place as any to create the MySQL table if it doesn't exist
-            appEntityService.checkCreateMySQLTable(this);
-            entitiesToPersist.put(appEntityService.getTableName(), new HashSet<AzquoMemoryDBEntity>());
+
+            loadData(appServices);
         }
-
-        loadData(appServices);
-
+        needsLoading = false;
         nextId = maxIdAtLoad + 1;
     }
 
@@ -324,7 +328,7 @@ public final class AzquoMemoryDB {
         newName.checkDatabaseMatches(this);
         synchronized (nameByIdMap) {
             // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-            if (nameByIdMap.get(newName.getId()) != null) {
+            if (newName.getId() > 0 && nameByIdMap.get(newName.getId()) != null) {
                 throw new Exception("tried to add a name to the database with an existing id! new id = " + newName.getId());
             } else {
                 nameByIdMap.put(newName.getId(), newName);
@@ -394,7 +398,7 @@ public final class AzquoMemoryDB {
     // maps will be set up in the constructor. Think about any concurrency issues here???
 
     protected void setEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
-        if (!needsLoading) {
+        if (!needsLoading  && entitiesToPersist.size() > 0) {
             entitiesToPersist.get(tableToPersistIn).add(azquoMemoryDBEntity);
         }
     }
