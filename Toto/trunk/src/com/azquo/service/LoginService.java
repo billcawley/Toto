@@ -208,14 +208,17 @@ public class LoginService {
                 // connection timed out
                 if (lic.getAzquoMemoryDB() != null) {
                     int databaseId = lic.getAzquoMemoryDB().getDatabase().getId();
+                    String dbName = lic.getAzquoMemoryDB().getDatabase().getName();
                     it.remove();
-                    Integer openCount = openDBCount.get(databaseId);
-                    if (openCount == 1) {
-                        memoryDBManager.removeDatabase(lic.getAzquoMemoryDB().getDatabase());
-                        openDBCount.remove(databaseId);
-                        openDatabaseDAO.closeForDatabaseId(databaseId);
-                    } else {
-                        openDBCount.put(databaseId, openCount - 1);
+                    if (!dbName.equals("temp")) {
+                        Integer openCount = openDBCount.get(databaseId);
+                        if (openCount == 1) {
+                            memoryDBManager.removeDatabase(lic.getAzquoMemoryDB().getDatabase());
+                            openDBCount.remove(databaseId);
+                            openDatabaseDAO.closeForDatabaseId(databaseId);
+                        } else {
+                            openDBCount.put(databaseId, openCount - 1);
+                        }
                     }
                 }
             }
