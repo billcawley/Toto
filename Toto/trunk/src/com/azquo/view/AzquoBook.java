@@ -423,6 +423,9 @@ public  class AzquoBook {
             return headings;
         }
         String result = valueService.getFullRowHeadings(loggedInConnection, region, headings);
+        if (result.length()==0){
+            result = "error: no row headings";
+        }
         if (result.startsWith("error:")) {
             return result;
         }
