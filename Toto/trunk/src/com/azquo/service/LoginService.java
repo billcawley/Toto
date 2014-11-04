@@ -49,19 +49,15 @@ public class LoginService {
     private final HashMap<Integer, Integer> openDBCount = new HashMap<Integer, Integer>();
 
 
-    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn) throws  Exception {
-
-        return login(databaseName, userEmail, password, timeOutInMinutes, spreadsheetName, loggedIn, 0);
-    }
 
 
-        public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn, int businessId) throws  Exception{
+        public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn) throws  Exception{
 
         if (spreadsheetName == null) {
             spreadsheetName = "unknown";
         }
 
-        User user;
+        User user=null;
 
         //for demo users, a new User id is made for each user.
         if (userEmail.startsWith("demo@user.com")){
@@ -75,16 +71,11 @@ public class LoginService {
                 }
             }
         }else{
-            if (businessId > 0){//this is someone who wants to leave a review
-
-                user = new User(0, null, null, businessId, "", "", "reviewer", "", "");
-            }else{
-                user = userDao.findByEmail(userEmail);
-            }
-
+            user = userDao.findByEmail(userEmail);
         }
+        boolean temporary = false;
         if (user != null) {
-            if (businessId > 0 || loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword())) {
+            if (loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword())) {
                 // ok user should be ok :)
                 final Map<String, Database> okDatabases = foundDatabases(user);
                 logger.info("ok databases size " + okDatabases.size());
@@ -105,7 +96,7 @@ public class LoginService {
 
                 final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
                 int databaseId = 0;
-                if (memoryDB != null){
+                if (memoryDB != null && !memoryDB.getDatabase().getName().equals("temp")){
                    databaseId = memoryDB.getDatabase().getId();
                    Integer openCount = openDBCount.get(databaseId);
                    if (openCount != null){
@@ -132,13 +123,14 @@ public class LoginService {
                     //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
                 }
                 lic.setWritePermissions(names);
-
-                loginRecordDAO.store(new LoginRecord(0,user.getId(),databaseId, new Date()));
+                if (!database.getName().equals("temp")){
+                    loginRecordDAO.store(new LoginRecord(0,user.getId(),databaseId, new Date()));
+                }
                 if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
                     //azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
                 }
                 connections.put(lic.getConnectionId(), lic);
-                if (lic.getAzquoMemoryDB()!=null){
+                if (database != null && lic.getAzquoMemoryDB()!=null){
                     anonymise(lic);
                 }
 
@@ -232,7 +224,12 @@ public class LoginService {
 
     public void switchDatabase(LoggedInConnection loggedInConnection, Database newDb)throws Exception{
         if (loggedInConnection.getAzquoMemoryDB()!= null){
-            if (newDb!= null && loggedInConnection.getAzquoMemoryDB().getDatabase().getName().equals(newDb.getName())) return;
+            Database oldDB = loggedInConnection.getAzquoMemoryDB().getDatabase();
+            if (oldDB.getName().equals("temp")){
+                //this is a temporary connection - no switching allowed
+                return;
+            }
+            if (newDb!= null && oldDB.getName().equals(newDb.getName())) return;
             int databaseId = loggedInConnection.getAzquoMemoryDB().getDatabase().getId();
             Integer openCount = openDBCount.get(databaseId);
             if (openCount == null){
