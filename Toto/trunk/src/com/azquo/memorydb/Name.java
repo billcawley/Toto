@@ -470,15 +470,31 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         }
     }
 
+    private String findParentAttributes(Name child, String attributeName){
+        for (Name parent:child.getParents()){
+            if (parent.getDefaultDisplayName().equals(attributeName)){
+                return child.getDefaultDisplayName();
+            }
+            String attribute = parent.getAttribute(attributeName);
+            if (attribute != null){
+                return attribute;
+
+            }
+            attribute = findParentAttributes(parent, attributeName);
+            if (attribute != null){
+                return attribute;
+            }
+        }
+        return null;
+
+    }
+
+
     public String getAttribute(String attributeName) {
         String attribute = attributes.get(attributeName);
         if (attribute != null) return attribute;
         //look up the chain for any parent with the attribute
-        for (Name parent:this.findAllParents()){
-            attribute = parent.getAttribute(attributeName);
-            if (attribute != null) return attribute;
-        }
-        return null;
+        return findParentAttributes(this, attributeName);
     }
 
     // removal ok on linked lists
