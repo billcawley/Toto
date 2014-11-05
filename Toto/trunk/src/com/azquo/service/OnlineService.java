@@ -105,6 +105,7 @@ public final class OnlineService {
 
         } catch (Exception e) {
             e.printStackTrace();
+            throw(e);
         }
 
         head.append("<style>\n");
