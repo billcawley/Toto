@@ -14,50 +14,50 @@
     <link rel="icon" type="image/png" href=""/>
 
     <!-- pingback -->
-    <link rel="pingback" href="http://www.azquoreviews.com/xmlrpc.php"/>
+    <link rel="pingback" href="https://www.azquoreviews.com/xmlrpc.php"/>
     <!--[if IE]><![endif]-->
 
     <!--styling-->
 
 
     <link rel="alternate" type="application/rss+xml" title="Azquo Reviews &raquo; Feed"
-          href="http://www.azquoreviews.com/feed/"/>
+          href="https://www.azquoreviews.com/feed/"/>
     <link rel="alternate" type="application/rss+xml" title="Azquo Reviews &raquo; Comments Feed"
-          href="http://www.azquoreviews.com/comments/feed/"/>
+          href="https://www.azquoreviews.com/comments/feed/"/>
     <link rel="alternate" type="application/rss+xml"
           title="Azquo Reviews &raquo; Please write your review for $suppliername Comments Feed"
-          href="http://www.azquoreviews.com/reviews/write/feed/"/>$suppliername
+          href="https://www.azquoreviews.com/reviews/write/feed/"/>$suppliername
     <link rel='stylesheet' id='bs_bootstrap-css'
-          href='http://www.azquoreviews.com/wp-content/plugins/bootstrap-shortcodes/css/bootstrap.css?ver=4.0'
+          href='https://www.azquoreviews.com/wp-content/plugins/bootstrap-shortcodes/css/bootstrap.css?ver=4.0'
           type='text/css' media='all'/>
     <link rel='stylesheet' id='bs_shortcodes-css'
-          href='http://www.azquoreviews.com/wp-content/plugins/bootstrap-shortcodes/css/shortcodes.css?ver=4.0'
+          href='https://www.azquoreviews.com/wp-content/plugins/bootstrap-shortcodes/css/shortcodes.css?ver=4.0'
           type='text/css' media='all'/>
     <link rel='stylesheet' id='contact-form-7-css'
-          href='http://www.azquoreviews.com/wp-content/plugins/contact-form-7/includes/css/styles.css?ver=3.9.3'
+          href='https://www.azquoreviews.com/wp-content/plugins/contact-form-7/includes/css/styles.css?ver=3.9.3'
           type='text/css' media='all'/>
     <link rel='stylesheet' id='style-name-css'
-          href='http://www.azquoreviews.com/wp-content/themes/azquo/style.css?ver=4.0' type='text/css' media='all'/>
+          href='https://www.azquoreviews.com/wp-content/themes/azquo/style.css?ver=4.0' type='text/css' media='all'/>
     <link rel='stylesheet' id='redux-google-fonts-css'
-          href='http://fonts.googleapis.com/css?family=Open+Sans%3A300%2C400%2C600%2C700%2C800%2C300italic%2C400italic%2C600italic%2C700italic%2C800italic&#038;subset=latin&#038;ver=1412910041'
+          href='https://fonts.googleapis.com/css?family=Open+Sans%3A300%2C400%2C600%2C700%2C800%2C300italic%2C400italic%2C600italic%2C700italic%2C800italic&#038;subset=latin&#038;ver=1412910041'
           type='text/css' media='all'/>
     <script type='text/javascript'
-            src='http://www.azquoreviews.com/wp-includes/js/jquery/jquery.js?ver=1.11.1'></script>
+            src='https://www.azquoreviews.com/wp-includes/js/jquery/jquery.js?ver=1.11.1'></script>
     <script type='text/javascript'
-            src='http://www.azquoreviews.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=1.2.1'></script>
+            src='https://www.azquoreviews.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=1.2.1'></script>
     <script type='text/javascript'
-            src='http://www.azquoreviews.com/wp-content/plugins/bootstrap-shortcodes/js/bootstrap.js?ver=4.0'></script>
+            src='https://www.azquoreviews.com/wp-content/plugins/bootstrap-shortcodes/js/bootstrap.js?ver=4.0'></script>
     <script type='text/javascript'
-            src='http://www.azquoreviews.com/wp-content/plugins/bootstrap-shortcodes/js/init.js?ver=4.0'></script>
+            src='https://www.azquoreviews.com/wp-content/plugins/bootstrap-shortcodes/js/init.js?ver=4.0'></script>
     <script type='text/javascript'
-            src='http://www.azquoreviews.com/wp-content/themes/azquo/js/gen_validatorv4.js?ver=4.0'></script>
-    <link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://www.azquoreviews.com/xmlrpc.php?rsd"/>
+            src='https://www.azquoreviews.com/wp-content/themes/azquo/js/gen_validatorv4.js?ver=4.0'></script>
+    <link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://www.azquoreviews.com/xmlrpc.php?rsd"/>
     <link rel="wlwmanifest" type="application/wlwmanifest+xml"
-          href="http://www.azquoreviews.com/wp-includes/wlwmanifest.xml"/>
+          href="https://www.azquoreviews.com/wp-includes/wlwmanifest.xml"/>
     <meta name="generator" content="WordPress 4.0"/>
-    <link rel='canonical' href='http://www.azquoreviews.com/reviews/write/'/>
-    <link rel='shortlink' href='http://www.azquoreviews.com/?p=73'/>
-    <link rel="stylesheet" id="dynamic-css" href="http://www.azquoreviews.com/wp-content/themes/azquo/css/azquo.css"
+    <link rel='canonical' href='https://www.azquoreviews.com/reviews/write/'/>
+    <link rel='shortlink' href='https://www.azquoreviews.com/?p=73'/>
+    <link rel="stylesheet" id="dynamic-css" href="https://www.azquoreviews.com/wp-content/themes/azquo/css/azquo.css"
           type="text/css" media="all"/>
 </head>
 <body class="page page-id-73 page-child parent-pageid-14 page-template page-template-template-write-review-php">
@@ -71,9 +71,9 @@
                     <div class="row">
                         <div class="col-md-3">
                             <div class="logo">
-                                <a href="http://www.azquoreviews.com" title="http://www.azquoreviews.com">
-                                    <img src="http://www.azquoreviews.com/wp-content/uploads/2014/10/azquo-logo-main.png "
-                                         data-at2x="http://www.azquoreviews.com/wp-content/uploads/2014/10/azquo-logo-main.png"/>
+                                <a href="https://www.azquoreviews.com" title="https://www.azquoreviews.com">
+                                    <img src="https://www.azquoreviews.com/wp-content/uploads/2014/10/azquo-logo-main.png "
+                                         data-at2x="https://www.azquoreviews.com/wp-content/uploads/2014/10/azquo-logo-main.png"/>
                                 </a>
                             </div>
                             <!--end logo-->
