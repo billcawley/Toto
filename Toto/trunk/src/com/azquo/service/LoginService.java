@@ -123,7 +123,7 @@ public class LoginService {
                     //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
                 }
                 lic.setWritePermissions(names);
-                if (!database.getName().equals("temp")){
+                if (database!=null && !database.getName().equals("temp")){
                     loginRecordDAO.store(new LoginRecord(0,user.getId(),databaseId, new Date()));
                 }
                 if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
@@ -235,16 +235,12 @@ public class LoginService {
             if (newDb!= null && oldDB.getName().equals(newDb.getName())) return;
             int databaseId = loggedInConnection.getAzquoMemoryDB().getDatabase().getId();
             Integer openCount = openDBCount.get(databaseId);
-            if (openCount == null){
-                logger.info("opencount cancelled for " + loggedInConnection.getAzquoMemoryDB().getDatabase().getName());
-                return;//this should be an error......
-            }
             if (newDb == null) openCount = 1;//if we're deleting the database, then close the memory, regardless of whether others have it open.
             if (openCount == 1) {
                 memoryDBManager.removeDatabase(loggedInConnection.getAzquoMemoryDB().getDatabase());
                 openDBCount.remove(databaseId);
                 openDatabaseDAO.closeForDatabaseId(databaseId);
-            } else {
+            } else if (openCount > 1){
                 openDBCount.put(databaseId, openCount - 1);
             }
         }
