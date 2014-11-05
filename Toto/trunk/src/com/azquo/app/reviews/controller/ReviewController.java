@@ -16,6 +16,7 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.*;
 
 @Controller
@@ -34,7 +35,7 @@ public class ReviewController {
 
 
     @RequestMapping
-    public String handleRequest(ModelMap model,HttpServletRequest request) throws Exception {
+    public String handleRequest(ModelMap model,HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         Map<String, String[]> parameterMap = request.getParameterMap();
 
@@ -56,7 +57,7 @@ public class ReviewController {
                 ratings.put(rating,paramValue);
             } else if (paramName.startsWith("comment")){
                 String comment = paramName.substring(7);
-                ratings.put(comment, paramValue);
+                comments.put(comment, paramValue);
             }
         }
         if (op==null){
@@ -72,7 +73,9 @@ public class ReviewController {
         if (op.equals("reviewform")){
             if (ratings.size() > 0){
                 reviewService.processReviewForm(supplierDB, orderRef, ratings, comments);
-                result = reviewService.showReviews(supplierDB,division, startDate, reviewType,velocityTemplate);
+                if (supplierDB.equals("Demo_fake")) supplierDB = "revie_test4";//debug!!
+                response.sendRedirect("http://www.azquoreviews.com/reviews/?reviewtype=S&supplierdb=" + supplierDB);
+                result = "";
             } else {
                 result = reviewService.createReviewForm(request, supplierDB, orderRef, velocityTemplate);
             }
