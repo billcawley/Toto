@@ -70,9 +70,9 @@ public final class AzquoMemoryDB {
                 appEntityService.checkCreateMySQLTable(this);
                 entitiesToPersist.put(appEntityService.getTableName(), new HashSet<AzquoMemoryDBEntity>());
             }
-
-
-            loadData(appServices);
+        }
+        if (standardDAO != null){
+           loadData(appServices);
         }
         needsLoading = false;
         nextId = maxIdAtLoad + 1;
