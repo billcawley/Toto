@@ -5,7 +5,6 @@ import com.azquo.service.AdminService;
 import com.azquo.service.AppDBConnectionMap;
 import com.azquo.service.AzquoMemoryDBConnection;
 import com.azquo.service.NameService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Created by cawley on 23/10/14.
@@ -13,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class UserService {
 
     public static final String MASTERDBNAME = "revie_master";
-    public static final String USER_SET = "user";
+    public static final String USER = "user";
 
     private NameService nameService;
 
@@ -30,7 +29,7 @@ public class UserService {
         this.adminService = adminService;
         this.reviewsConnectionMap = reviewsConnectionMap;
         masterDBConnection = reviewsConnectionMap.getConnection(MASTERDBNAME);
-        userSet = nameService.findOrCreateNameInParent(masterDBConnection, USER_SET, null, false);
+        userSet = nameService.findOrCreateNameInParent(masterDBConnection, USER, null, false);
     }
 
     public interface USER_ATTRIBUTE {
@@ -39,7 +38,7 @@ public class UserService {
         String SALT = "SALT";
     }
 
-    public String createUser(Name merchant, String email, String password) throws Exception{
+    public String createUser(Name reviewsCustomer, String email, String password) throws Exception{
         Name exists = nameService.getNameByAttribute(masterDBConnection, email, userSet);
         if (exists != null){
             return "error:a user with that name already exists";
@@ -51,7 +50,7 @@ public class UserService {
         newUser.setAttributeWillBePersisted(USER_ATTRIBUTE.EMAIL, email);
         newUser.setAttributeWillBePersisted(USER_ATTRIBUTE.PASSWORD, encryptedPassword);
         newUser.setAttributeWillBePersisted(USER_ATTRIBUTE.SALT, salt);
-        merchant.addChildWillBePersisted(newUser);
+        reviewsCustomer.addChildWillBePersisted(newUser);
         masterDBConnection.persist();
         return "";
     }

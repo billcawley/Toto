@@ -45,17 +45,48 @@ public class ReviewService {
     @Autowired
     ServletContext servletContext;
 
+    public static final String SUPPLIER = "SUPPLIER";
+    public static final String ALL_RATINGS = "ALL_RATINGS";
+    public static final String ALL_PRODUCTS = "ALL_PRODUCTS";
+    public static final String EMAILS_TO_BE_SENT = "EMAILS_TO_BE_SENT";
+    public static final String ORDERS_WITH_EMAIL_SENT = "ORDERS_WITH_EMAIL_SENT";
+    public static final String SALE_DATE = "SALE_DATE";
+    public static final String SERVICE = "SERVICE";
+
+    public interface SUPPLIER_ATTRIBUTE {
+        String EMAIL_TEMPLATE = "EMAIL_TEMPLATE";
+        String LOGO = "LOGO";
+    }
+
+    public interface ORDER_ATTRIBUTE {
+        String EMAIL_DATE = "EMAIL_DATE";
+        String EMAIL_SENT = "EMAIL_SENT";
+        String CUSTOMER_NAME = "CUSTOMER_NAME";
+        String CUSTOMER_EMAIL = "CUSTOMER_EMAIL";
+    }
+
+    public interface ORDER_ITEM_ATTRIBUTE {
+        String REVIEW_DATE = "REVIEW_DATE";
+        String COMMENT = "COMMENT";
+    }
+
+
+    public interface PRODUCT_ATTRIBUTE {
+        String PRODUCT_CODE = "PRODUCT_CODE";
+    }
+
+
     public String sendEmails(String thisURL,String supplierDb, int maxCount, String velocityTemplate)throws Exception{
 
         AzquoMemoryDBConnection azquoMemoryDBConnection = reviewsConnectionMap.getConnection(supplierDb);
 
         // todo handle error if the supplier db is duff
 
-        Name topSupplier = nameService.findByName(azquoMemoryDBConnection,"supplier");
+        Name topSupplier = nameService.findByName(azquoMemoryDBConnection, SUPPLIER);
         Name supplier = topSupplier.getChildren().iterator().next();
 
         if (velocityTemplate == null) {
-            velocityTemplate = supplier.getAttribute("email template");
+            velocityTemplate = supplier.getAttribute(SUPPLIER_ATTRIBUTE.EMAIL_TEMPLATE);
         }
         if (velocityTemplate == null){
             velocityTemplate = "email.vm";
@@ -63,15 +94,15 @@ public class ReviewService {
             velocityTemplate = "/home/azquo/databases/" + azquoMemoryDBConnection.getCurrentDBName() + "/velocitytemplates/" + velocityTemplate;
         }
         String error = "";
-        Name emailsToBeSent  = nameService.findByName(azquoMemoryDBConnection,"Emails to be sent");
-        Name ordersWithEmailSent = nameService.findByName(azquoMemoryDBConnection, "Orders with email sent");
+        Name emailsToBeSent  = nameService.findByName(azquoMemoryDBConnection,EMAILS_TO_BE_SENT);
+        Name ordersWithEmailSent = nameService.findByName(azquoMemoryDBConnection, ORDERS_WITH_EMAIL_SENT);
         Set<Name> emailsSentThisTime = new HashSet<Name>();
         String now = todayString();
         int count = 0;
         String todaysEmailsSent = "Emails sent on " + df2.format(new Date());
         Name todaysEmails = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,todaysEmailsSent,ordersWithEmailSent, false);
         for (Name order : emailsToBeSent.getChildren()) {
-            String feedbackDate = order.getAttribute("Email date");
+            String feedbackDate = order.getAttribute(ORDER_ATTRIBUTE.EMAIL_DATE);
             if (feedbackDate == null){
                 error = "no email date for order " + order.getDefaultDisplayName();
             }else{
@@ -79,12 +110,11 @@ public class ReviewService {
                     //todo  consider what happens if the server crashes
                     error = sendEmail(thisURL, supplierDb, order, velocityTemplate, supplier);
                     if (error.length() > 0) return error;
-                    order.setAttributeWillBePersisted("Email sent", now);
+                    order.setAttributeWillBePersisted(ORDER_ATTRIBUTE.EMAIL_SENT, now);
                     emailsSentThisTime.add(order);
                     todaysEmails.addChildWillBePersisted(order);
                     count++;
                     if (count >= maxCount) {
-
                         break;
                     }
                 }
@@ -95,6 +125,7 @@ public class ReviewService {
         for (Name order:emailsSentThisTime){
             emailsToBeSent.removeFromChildrenWillBePersisted(order);
         }
+
         azquoMemoryDBConnection.persist();
         return error;
     }
@@ -107,9 +138,9 @@ public class ReviewService {
         Map<String, String> context = new HashMap<String, String>();
         Set<Name> orderItems = order.getChildren();
         if (orderItems.size() == 0) return ("No items in order " + order.getDefaultDisplayName());
-        Name allProducts = nameService.findByName(azquoMemoryDBConnection,"All products");
-        Name saleDate = nameService.findByName(azquoMemoryDBConnection, "Sale date");
-        Name service = nameService.findByName(azquoMemoryDBConnection,"Service");
+        Name allProducts = nameService.findByName(azquoMemoryDBConnection,ALL_PRODUCTS);
+        Name saleDate = nameService.findByName(azquoMemoryDBConnection, SALE_DATE);
+        Name service = nameService.findByName(azquoMemoryDBConnection,SERVICE);
         Set<Name> productItems = new HashSet<Name>();
         //Set<Name> serviceItems = new HashSet<Name>();
         for (Name name:orderItems){
@@ -136,20 +167,17 @@ public class ReviewService {
             productCount++;
         }
         String orderSaleDate = getValueFromParent(order,saleDate);
-         context.put("supplierlogo",thisSite + "/Image/?supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&image=" + supplier.getAttribute("logo"));
+         context.put("supplierlogo",thisSite + "/Image/?supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&image=" + supplier.getAttribute(SUPPLIER_ATTRIBUTE.LOGO));
         context.put("saledate", showDate(orderSaleDate));
-        context.put("customername", order.getAttribute("Customer Name"));
+        context.put("customername", order.getAttribute(ORDER_ATTRIBUTE.CUSTOMER_NAME));
         context.put("saledescription", saledesc.toString());
         context.put("supplier", supplier.getDefaultDisplayName());
         context.put("feedbacklink", thisURL + "?op=reviewform&supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&orderref=" + order.getDefaultDisplayName() + "&businessid=" + azquoMemoryDBConnection.getBusinessId() + "&velocitytemplate=form1.vm");
         context.put("reviewslink", "http://www.azquoreviews.com/reviews/?op=showreviews&supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() );
         String result = convertToVelocity(context,"", null, velocityTemplate);
-        if (!order.getAttribute("Customer email").equals("demo@azquo.com")){
-            azquoMailer.sendEMail(order.getAttribute("Customer email"), order.getAttribute("Customer name"),"Feedback request on behalf of " + supplier.getDefaultDisplayName(), result);
+        if (!order.getAttribute(ORDER_ATTRIBUTE.CUSTOMER_EMAIL).equals("demo@azquo.com")){
+            azquoMailer.sendEMail(order.getAttribute(ORDER_ATTRIBUTE.CUSTOMER_EMAIL), order.getAttribute(ORDER_ATTRIBUTE.CUSTOMER_NAME),"Feedback request on behalf of " + supplier.getDefaultDisplayName(), result);
         }
-
-
-
         return "";
 
 
@@ -178,6 +206,7 @@ public class ReviewService {
         }
         return null;
 
+
     }
 
     private String getValueFromParent(Name child, Name parent){
@@ -187,8 +216,6 @@ public class ReviewService {
     }
 
     public String showDate(String fileDate){
-
-
         try{
             Date date = df2.parse(fileDate);
             //checks needed here for '5 minutes ago'
@@ -196,9 +223,6 @@ public class ReviewService {
         }catch(Exception e){
             return "unrecognised date";
         }
-
-
-
     }
 
     public class VelocityReview {
@@ -214,8 +238,6 @@ public class ReviewService {
         public String type;
 
         //velocity wants getters
-
-
         public String getRating() {
             return rating;
         }
@@ -274,8 +296,8 @@ public class ReviewService {
         vr.rating = getValueFromParent(orderItem, rating);
         Name thisProd = getParent(orderItem, product);
         vr.product = thisProd.getDefaultDisplayName();
-        vr.productcode = thisProd.getAttribute(("Product code"));
-        String comment = orderItem.getAttribute("comment");
+        vr.productcode = thisProd.getAttribute((PRODUCT_ATTRIBUTE.PRODUCT_CODE));
+        String comment = orderItem.getAttribute(ORDER_ITEM_ATTRIBUTE.COMMENT);
         if (comment == null){
             comment = "";
         }
@@ -285,8 +307,8 @@ public class ReviewService {
             comment = comment.substring(0,supplierCommentPos);
         }
         vr.comment = comment;
-        vr.formattedDate = showDate(orderItem.getAttribute("Review date"));
-        vr.date = orderItem.getAttribute("Review date");
+        vr.formattedDate = showDate(orderItem.getAttribute(ORDER_ITEM_ATTRIBUTE.REVIEW_DATE));
+        vr.date = orderItem.getAttribute(ORDER_ITEM_ATTRIBUTE.REVIEW_DATE);
 
         return vr;
     }
@@ -300,7 +322,6 @@ public class ReviewService {
             hd.characters(value.toCharArray(), 0, value.length());
             hd.endElement("", "", key);
         }
-
     }
 
 
@@ -319,7 +340,7 @@ public class ReviewService {
         List<Name> orderItems = new ArrayList<Name>();
         Map<String, String> context = new HashMap<String, String>();
         List<VelocityReview> reviews = new ArrayList<VelocityReview>();
-        Name supplier = nameService.findByName(azquoMemoryDbConnection,"supplier");
+        Name supplier = nameService.findByName(azquoMemoryDbConnection, SUPPLIER);
         Name topSupplier = supplier.getChildren().iterator().next();
         String supplierName = topSupplier.getDefaultDisplayName();
         if (division == null || division.length()==0){
@@ -335,8 +356,8 @@ public class ReviewService {
         } catch (Exception e){
             return "error:" + e.getMessage();
         }
-        Name rating = nameService.findByName(azquoMemoryDbConnection, "All ratings");
-        Name product = nameService.findByName(azquoMemoryDbConnection, "All Products");
+        Name rating = nameService.findByName(azquoMemoryDbConnection, ALL_RATINGS);
+        Name product = nameService.findByName(azquoMemoryDbConnection, ALL_PRODUCTS);
         int posCount = 0;
         int reviewCount = 0;
         for (Name orderItem : orderItems) {
@@ -648,20 +669,5 @@ public class ReviewService {
         loggedInConnection.persist();
         return "";
     }
-
-    public boolean authenticateUser(String email, String password){
-        if (email.equals("edd@azquo.com") && password.equals("password")){
-            return true;
-        }
-        if (email.equals("nic@azquo.com") && password.equals("password")){
-            return true;
-        }
-        if (email.equals("bill@azquo.com") && password.equals("password")){
-            return true;
-        }
-        return false;
-    }
-
-
 
 }

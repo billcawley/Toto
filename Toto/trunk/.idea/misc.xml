@@ -13,7 +13,7 @@
         <entry key="$PROJECT_DIR$">
           <value>
             <SvnBranchConfiguration>
-              <option name="trunkUrl" value="http://www.eddcawley.co.uk:1783/repos/toto/Toto/trunk" />
+              <option name="trunkUrl" value="http://localhost/repos/toto/Toto/trunk" />
             </SvnBranchConfiguration>
           </value>
         </entry>
