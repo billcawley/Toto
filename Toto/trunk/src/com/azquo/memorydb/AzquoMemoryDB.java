@@ -137,16 +137,17 @@ public final class AzquoMemoryDB {
                 System.out.println("names init in " + (System.currentTimeMillis() - track) + "ms");
 
                 track = System.currentTimeMillis();
-                for (AppEntityService appEntityService : appServices) {
-                    final List<JsonRecordTransport> appEntities = standardDAO.findFromTable(this, appEntityService.getTableName());
-                    for (JsonRecordTransport appEntityRecord : appEntities) {
-                        if (appEntityRecord.id > maxIdAtLoad) {
-                            maxIdAtLoad = appEntityRecord.id;
+                if (appServices != null){ // dunno why it wasn't there before
+                    for (AppEntityService appEntityService : appServices) {
+                        final List<JsonRecordTransport> appEntities = standardDAO.findFromTable(this, appEntityService.getTableName());
+                        for (JsonRecordTransport appEntityRecord : appEntities) {
+                            if (appEntityRecord.id > maxIdAtLoad) {
+                                maxIdAtLoad = appEntityRecord.id;
+                            }
+                            appEntityService.loadEntityFromJson(this, appEntityRecord.id, appEntityRecord.json);
                         }
-                        appEntityService.loadEntityFromJson(this, appEntityRecord.id, appEntityRecord.json);
                     }
                 }
-
                 System.out.println("app entities loaded in " + (System.currentTimeMillis() - track) + "ms");
 
                 System.out.println("loaded data for " + getMySQLName());
