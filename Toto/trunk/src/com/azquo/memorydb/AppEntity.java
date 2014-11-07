@@ -18,7 +18,7 @@ public abstract class AppEntity<ServiceType extends AppEntityService> extends Az
     protected AppEntity(AzquoMemoryDB azquoMemoryDB, int id, ServiceType service) throws Exception {
         super(azquoMemoryDB, id, true);
         this.service = service;
-        // this should be done inn the super constructor but it will null pointer without the service being set . . .
+        // this should be done in the super constructor but it will null pointer without the service being set . . .
         this.setNeedsPersisting();
         service.addToIdMap(this);
     }

@@ -3,6 +3,7 @@ package com.azquo.controller;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.adminentities.Permission;
 import com.azquo.adminentities.User;
+import com.azquo.memorydb.Name;
 import com.azquo.service.AdminService;
 import com.azquo.service.ImportService;
 import com.azquo.service.LoggedInConnection;
@@ -232,7 +233,7 @@ public class AdminController {
                 // just a quick way to load for WFC
                //InputStream uploadFile = new FileInputStream("/home/azquo/import/" + fileName);
                InputStream uploadFile = new FileInputStream("/home/bill/azquo/" + fileName);
-                 return  importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType,"true", true);
+                 return  importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType,"true", true, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
             }
 
 

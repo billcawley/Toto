@@ -26,10 +26,6 @@ public class AzquoMemoryDBConnection {
 
     private static final Logger logger = Logger.getLogger(AzquoMemoryDBConnection.class);
 
-    private String language;
-
-    private boolean loose;
-
     private AzquoMemoryDB azquoMemoryDB;
 
     private List<Set<Name>>  readPermissions;
@@ -41,8 +37,6 @@ public class AzquoMemoryDBConnection {
     protected AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, User user){
         this.azquoMemoryDB = azquoMemoryDB;
         this.user = user;
-        language = Name.DEFAULT_DISPLAY_NAME;
-        loose = false;
         readPermissions = new ArrayList<Set<Name>>();
         writePermissions = new ArrayList<Set<Name>>();
     }
@@ -89,22 +83,6 @@ public class AzquoMemoryDBConnection {
         } catch (Exception e) {
             logger.error("can't set a new provenance", e);
         }
-    }
-
-    public String getLanguage() {
-        return language;
-    }
-
-    public void setLanguage(String language) {
-        this.language = language;
-    }
-
-    public boolean getLoose() {
-        return loose;
-    }
-
-    public void setLoose(final boolean loose) {
-        this.loose = loose;
     }
 
     public List<Set<Name>> getReadPermissions(){

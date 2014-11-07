@@ -4,7 +4,6 @@ import com.azquo.adminentities.Database;
 import com.azquo.memorydbdao.JsonRecordTransport;
 import com.azquo.memorydbdao.StandardDAO;
 import com.azquo.service.AppEntityService;
-import com.azquo.service.AzquoMemoryDBConnection;
 import org.apache.log4j.Logger;
 
 import java.util.*;
@@ -198,50 +197,78 @@ public final class AzquoMemoryDB {
         return nameByIdMap.get(id);
     }
 
-    public Name getNameByAttribute(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String attributeValue, final Name parent) {
-        String attributeName = azquoMemoryDBConnection.getLanguage();
-        Map <String,Set<Name>> map = nameByAttributeMap.get(attributeName.toLowerCase().trim());
-        if (map != null || azquoMemoryDBConnection.getLoose()) {// there is an attribute with that name in the whole db . . .
-            Set<Name> possibles = null;
-            if (map != null){
-                possibles = map.get(attributeValue.toLowerCase().trim());
-                if (possibles == null) {
-                    if (!azquoMemoryDBConnection.getLoose()) {
-                       return null;
-                    }
-                //maybe if 'loose' we should look at ALL languages, but here will look at default language.
-                    possibles = nameByAttributeMap.get(Name.DEFAULT_DISPLAY_NAME.toLowerCase()).get(attributeValue.toLowerCase().trim());
-                    if (possibles == null) {
-                        return null;
-                    }
-                }
-            }else{
-                map = nameByAttributeMap.get(Name.DEFAULT_DISPLAY_NAME.toLowerCase());
-                if (map == null){
-                    return null;
-                }
-                possibles = map.get(attributeValue.toLowerCase().trim());
-                if (possibles == null) {
-                    return null;
-                }
+    //fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
 
+    private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue){
+        Map <String,Set<Name>> map = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+        if (map != null){ // that attribute is there
+            Set<Name> names = map.get(attributeValue.toLowerCase().trim());
+            if (names != null){ // were there any entries for that value?
+                return names;
             }
-            if (parent == null) {
-                if (possibles.size()==1){
-                    return possibles.iterator().next();
+        }
+        return Collections.emptySet(); // moving away from nulls
+    }
+
+    // same as above but then zap any not in the parent
+
+    private Set<Name> getNamesForAttributeAndParent(final String attributeName, final String attributeValue, Name parent){
+        Set<Name> possibles = getNamesForAttribute(attributeName, attributeValue);
+        for (Name possible : possibles) {
+            if (!possible.hasInParentTree(parent)) {
+                possibles.remove(possible);
+            }
+        }
+        return possibles;
+    }
+
+    // work through a list of possible names for a given attribute in order that the attribute names are listed. Parent optional
+
+    private Set<Name> getNamesForAttributeNamesAndParent(final List<String> attributeNames, final String attributeValue, Name parent){
+        if (parent != null){
+            for (String attributeName : attributeNames){
+                Set<Name> names = getNamesForAttributeAndParent(attributeName, attributeValue, parent);
+                if (!names.isEmpty()){
+                    return names;
                 }
-                for (Name possible:possibles){
-                    if (possible.getParents().size() == 0){
+            }
+        } else {
+            for (String attributeName : attributeNames){
+                Set<Name> names = getNamesForAttribute(attributeName, attributeValue);
+                if (!names.isEmpty()){
+                    return names;
+                }
+            }
+        }
+        return Collections.emptySet();
+    }
+
+/*    public Name getNameByDefaultDisplayName(final String attributeValue) {
+        return getNameByAttribute( Arrays.asList(Name.DEFAULT_DISPLAY_NAME), attributeValue, null);
+    }
+
+    public Name getNameByDefaultDisplayName(final String attributeValue, final Name parent) {
+        return getNameByAttribute( Arrays.asList(Name.DEFAULT_DISPLAY_NAME), attributeValue, parent);
+    }*/
+
+    public Name getNameByAttribute(final String attributeName, final String attributeValue, final Name parent) {
+        return getNameByAttribute( Arrays.asList(attributeName), attributeValue, parent);
+    }
+
+    public Name getNameByAttribute(final List<String> attributeNames, final String attributeValue, final Name parent) {
+        Set<Name> possibles = getNamesForAttributeNamesAndParent(attributeNames, attributeValue, parent);
+        // all well and good but now which one to return?
+        if(possibles.size() == 1){ // simple
+            return possibles.iterator().next();
+        } else if (possibles.size() > 1) { // more than one . . . try and replicate logic that was there before
+            if (parent == null){ // no parent criteria
+                for (Name possible : possibles){
+                    if (possible.getParents().size() == 0){ // we chuck back the first top level one. Not sure this is the best logic, more than one possible with no top levels means return null
                         return possible;
                     }
                 }
-                return null;
-             } else {
-                for (Name possible : possibles) {
-                    if (isInParentTreeOf(possible, parent)) {
-                        return possible;
-                    }
-                }
+            } else { // if there were more than one found taking into account parent criteria simply return the first
+                return possibles.iterator().next();
             }
         }
         return null;
@@ -277,17 +304,6 @@ public final class AzquoMemoryDB {
 
         }
         return names;
-    }
-
-    // should this somehow be against name??
-
-    public boolean isInParentTreeOf(final Name child, final Name testParent) {
-        for (Name parent : child.getParents()) {
-            if (testParent == parent || isInParentTreeOf(parent, testParent)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public void zapUnusedNames() throws Exception {

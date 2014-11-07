@@ -142,19 +142,17 @@ public class ImportController {
             logger.info("upload file size : " + item.getSize());
             InputStream uploadFile = item.getInputStream();
             origLanguage = loggedInConnection.getLanguage();
-            loggedInConnection.setLoose(true);//if a name is not found in the import language, look for a name in the default language
+
+            boolean loose = true;//if a name is not found in the import language, look for a name in the default language
             if (language.toLowerCase().endsWith("only")){
-                loggedInConnection.setLoose(false);
+                loose = false;
                 language = language.substring(0, language.length()-4).trim();
             }
             if (language.length()==0 || language.equalsIgnoreCase("name")){
-                language="DEFAULT_DISPLAY_NAME";
+                language=null;
             }
 
-            loggedInConnection.setLanguage(language);
-
-            result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, create, macMode);
-            loggedInConnection.setLanguage(origLanguage);
+            result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, create, macMode, language, loose);
             return result;
         } catch (Exception e) {
             e.printStackTrace();

@@ -12,6 +12,7 @@ package com.azquo.controller;
  */
 
 import com.azquo.jsonrequestentities.NameJsonRequest;
+import com.azquo.memorydb.Name;
 import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
 import com.azquo.service.NameService;
@@ -68,7 +69,7 @@ public class NameController {
                 if (loggedInConnection == null) {
                     return "error:invalid connection id or login credentials";
                 }
-                String result = nameService.processJsonRequest(loggedInConnection, nameJsonRequest);
+                String result = nameService.processJsonRequest(loggedInConnection, nameJsonRequest, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
                 return nameJsonRequest.jsonFunction != null && nameJsonRequest.jsonFunction.length() > 0 ? nameJsonRequest.jsonFunction + "(" + result + ")" : result;
             } else {
                 return "error: empty json string passed";

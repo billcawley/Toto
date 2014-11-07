@@ -1328,7 +1328,7 @@ public  class AzquoBook {
 
                                 }else {
                                     try {
-                                        choiceList = nameService.interpretName(loggedInConnection, choice.get(0,0).getStringValue());
+                                        choiceList = nameService.interpretName(loggedInConnection, choice.get(0,0).getStringValue(), !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
                                     } catch (Exception e) {
 
                                         //TODO think what to do !
@@ -2030,7 +2030,7 @@ public  class AzquoBook {
         csvW.close();
         InputStream uploadFile = new FileInputStream(tempName);
         fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
-        String result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType);
+        String result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
         if (!result.startsWith("error:")){
             String saveFileName = "/home/azquo/databases/" + loggedInConnection.getCurrentDBName()+"/uploads/" + azquoSheet.getName() + " " +  df.format(new Date()) + ".xlsx";
             File file = new File(saveFileName);

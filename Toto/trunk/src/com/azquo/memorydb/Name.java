@@ -497,6 +497,16 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         return findParentAttributes(this, attributeName);
     }
 
+    public boolean hasInParentTree(final Name testParent) {
+        for (Name parent : getParents()) {
+            if (testParent == parent || parent.hasInParentTree(testParent)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
     // removal ok on linked lists
 
     public synchronized void removeFromPeersWillBePersisted(Name name) throws Exception {

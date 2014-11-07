@@ -494,7 +494,7 @@ seaports;children   container;children
 
 
 
-public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<List<Name>>> nameLists, List<String> supplementNames, final String excelRegionPasted) throws Exception {
+public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<List<Name>>> nameLists, List<String> supplementNames, final String excelRegionPasted, String attributeName, boolean loose) throws Exception {
         //logger.info("excel region pasted : " + excelRegionPasted);
         int maxColCount = 1;
         CsvReader pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t');
@@ -522,7 +522,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                         }
                     }
                     try{
-                        List<Name> nameList =  nameService.interpretName(azquoMemoryDBConnection, cellString);
+                        List<Name> nameList =  nameService.interpretName(azquoMemoryDBConnection, cellString, attributeName, loose);
                         row.add(nameList);
 
                     } catch (Exception e){
@@ -748,7 +748,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
         List<String> supplementNames = new ArrayList<String>();
         loggedInConnection.getProvenance().setRowHeadings(headingsSent);
-        String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent);
+        String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
         //if (error.length() > 0) {
        //     return error;
        // }
@@ -824,7 +824,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         List<String> supplementNames = new ArrayList<String>();//not used for column headings, but needed for the interpretation routine
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
         // "here is what that 2d heading definition excel region looks like in names"
-        String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, supplementNames, headingsSent);
+        String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, supplementNames, headingsSent, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
         if (error.length() > 0) {
             return error;
         }
@@ -1119,7 +1119,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         final StringTokenizer st = new StringTokenizer(context, "\n");
         final List<Name> contextNames = new ArrayList<Name>();
         while (st.hasMoreTokens()) {
-            final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim());
+            final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
             if (contextName == null) {
                 return "error:I can't find a name for the context : " + context;
             }

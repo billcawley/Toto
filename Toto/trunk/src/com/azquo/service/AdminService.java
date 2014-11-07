@@ -435,8 +435,8 @@ public class AdminService {
                 return "error: user email " + permission.getEmail() + " is invalid";
             }
             try{
-                nameService.decodeString(loggedInConnection,permission.getReadList());
-                nameService.decodeString(loggedInConnection, permission.getWriteList());
+                nameService.decodeString(loggedInConnection,permission.getReadList(), !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+                nameService.decodeString(loggedInConnection, permission.getWriteList(), !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
 
             } catch (Exception e){
                 return "error:" + e.getMessage();
@@ -453,13 +453,13 @@ public class AdminService {
         //this routine transfers the name and all the parent paths to that name.  It then copies the name attributes  and peers (but not the attributes of the parents)
         Name name2 = null;
         if (name.getParents().size() == 0){
-            name2 = nameService.findOrCreateNameInParent(lic2, name.getDefaultDisplayName(), null, local);
+            name2 = nameService.findOrCreateNameInParent(lic2, name.getDefaultDisplayName(), null, local, !lic2.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? lic2.getLanguage() : null, lic2.getLoose());
             return name2;
         }
         for (Name parent:name.getParents()){
             //will the the same name2 on each iteration, but the
             Name parent2 = findToName(lic2, parent, topParent, local);
-            name2 = nameService.findOrCreateNameInParent(lic2, name.getDefaultDisplayName(),parent2, local);
+            name2 = nameService.findOrCreateNameInParent(lic2, name.getDefaultDisplayName(),parent2, local, !lic2.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? lic2.getLanguage() : null, lic2.getLoose());
 
         }
         //never uses the return here...
@@ -474,7 +474,7 @@ public class AdminService {
         }
         lic2.setNewProvenance("transfer from", database);
         //can't use 'nameService.decodeString as this may have multiple values in each list
-        List<Set<Name>> namesToTransfer = nameService.decodeString(loggedInConnection,nameList);
+        List<Set<Name>> namesToTransfer = nameService.decodeString(loggedInConnection,nameList, !lic2.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? lic2.getLanguage() : null, lic2.getLoose());
         //find the data to transfer
         Map<Set<Name>, Set<Value>> showValues = valueService.getSearchValues(namesToTransfer);
 
@@ -494,7 +494,7 @@ public class AdminService {
             }
             LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
             for (Name peer:name.getPeers().keySet()){
-                Name peer2 = nameService.findOrCreateNameInParent(lic2,peer.getDefaultDisplayName(),null, false);
+                Name peer2 = nameService.findOrCreateNameInParent(lic2,peer.getDefaultDisplayName(),null, false, !lic2.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? lic2.getLanguage() : null, lic2.getLoose());
                 peers2.put(peer2, name.getPeers().get(peer));
 
             }

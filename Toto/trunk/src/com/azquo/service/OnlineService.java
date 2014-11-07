@@ -2,6 +2,7 @@ package com.azquo.service;
 
 import com.azquo.admindao.*;
 import com.azquo.adminentities.*;
+import com.azquo.memorydb.Name;
 import com.azquo.memorydbdao.*;
 import com.azquo.view.AzquoBook;
 import org.apache.commons.fileupload.FileItem;
@@ -545,13 +546,13 @@ public final class OnlineService {
         if (op.equalsIgnoreCase("upload")){
             InputStream uploadFile = item.getInputStream();
             String fileName = item.getName();
-              message = importService.importTheFile(loggedInConnection, fileName, uploadFile, "", "", true);
+              message = importService.importTheFile(loggedInConnection, fileName, uploadFile, "", "", true, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
             if (message.length()==0){
                 message="file imported successfully";
             }
         }
         if (op.equalsIgnoreCase("inspect")){
-            message = nameService.getStructureForNameSearch(loggedInConnection,searchTerm, nameId);
+            message = nameService.getStructureForNameSearch(loggedInConnection,searchTerm, nameId, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
             if (message.startsWith("error:")) return message;
             return "popup:" + message;
 

@@ -66,7 +66,7 @@ public class ProvenanceController {
 
 
             if (name != null && name.length() > 0) {
-                Name theName = nameService.findByName(loggedInConnection, name);
+                Name theName = nameService.findByName(loggedInConnection, name, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
                 if (theName != null) {
                     //System.out.println("In provenance controller name found : " + name);
                     return valueService.formatProvenanceForOutput(theName.getProvenance(), jsonFunction);
@@ -76,7 +76,7 @@ public class ProvenanceController {
             }
             if (searchNames != null && searchNames.length() > 0) {
                 // not trying to catch an exception we assume no error
-                final List<Set<Name>> nameSet = nameService.decodeString(loggedInConnection, searchNames);
+                final List<Set<Name>> nameSet = nameService.decodeString(loggedInConnection, searchNames, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
 
                 //assumes here that each set is a single element
                 final Set<Name> names = new HashSet<Name>();

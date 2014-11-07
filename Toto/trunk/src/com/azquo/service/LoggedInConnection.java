@@ -50,6 +50,10 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private Map<Set<Name>, Set<Value>> valuesFound;
     private AzquoBook azquoBook;
 
+    private boolean loose;
+    private String language;
+
+
     private static final String defaultRegion = "default-region";
 
     protected LoggedInConnection(final String connectionId, final AzquoMemoryDB azquoMemoryDB, final User user, final long timeOut, String spreadsheetName) {
@@ -74,6 +78,8 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         valuesFound = null;
         azquoBook = null;
 
+        loose = false;
+        language = Name.DEFAULT_DISPLAY_NAME;
 
         if (timeOut > 0) {
             this.timeOut = timeOut;
@@ -317,6 +323,22 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     public AzquoBook getAzquoBook() { return this.azquoBook; }
 
     public void setAzquoBook(AzquoBook azquoBook){    this.azquoBook = azquoBook;  }
+
+    public boolean getLoose() {
+        return loose;
+    }
+
+    public void setLoose(final boolean loose) {
+        this.loose = loose;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
 
 
 

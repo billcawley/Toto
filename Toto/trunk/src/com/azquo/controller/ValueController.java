@@ -220,7 +220,7 @@ public class ValueController {
                 logger.info("search by names : " + searchByNames);
 //                String error = nameService.decodeString(loggedInConnection, searchByNames, names);
                 // no longer returns an error based on work Edd did cleaning up the name service, this may change
-                final List<Set<Name>> names = nameService.decodeString(loggedInConnection, searchByNames);
+                final List<Set<Name>> names = nameService.decodeString(loggedInConnection, searchByNames, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
                 /*if (error.length() > 0){
                     return error;
                 }*/
