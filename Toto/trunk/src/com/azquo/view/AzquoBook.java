@@ -1214,16 +1214,19 @@ public  class AzquoBook {
    }
 
 
-    boolean choiceIsUnique(Cell cell){
+    int choiceOffset(Cell cell){
         int row = cell.getRow();
         int col = cell.getColumn();
         for (Range range:choiceMap.keySet()){
-            if (range.getFirstRow() == row && range.getRowCount() ==1
-                    && range.getFirstColumn() == col && range.getColumnCount() ==1){
-                return true;
+            int rowOffset = row - range.getFirstRow();
+            if (range.getFirstColumn() == col && rowOffset >= 0 && rowOffset < range.getRowCount()){
+                if (range.getRowCount()==1) {
+                    return 0;
+                }
+                return rowOffset + 1;
             }
         }
-        return false;
+        return 0;//should never get here!
     }
 
 
@@ -1338,8 +1341,13 @@ public  class AzquoBook {
 
                                     String origContent = content;
                                     String onChange = "";
-                                    if (choiceIsUnique(cell)){
-                                        onChange=  "onchange=\"selectChosen('" + choiceName + "')\" id=\"" + choiceName + "\"";
+                                    int choiceOffset = choiceOffset(cell);
+                                    if (choiceOffset == 0){
+                                        onChange=  "onchange=\"selectChosen('" + choiceName + "', true)\" id=\"" + choiceName + "\"";
+                                    }else{
+                                        choiceName += choiceOffset;
+                                        onChange=  "onchange=\"selectChosen('" + choiceName + "', false)\" id=\"" + choiceName + "\"";
+
                                     }
                                     content = "<select class = \"" + selectClass + "\"" +  onChange + " class=\"" + cellClass + "\" >\n";
 
@@ -1622,7 +1630,7 @@ public  class AzquoBook {
                 if (cell!=null  && cell.getType()!= CellValueType.IS_NULL){
                     String cellVal = cell.getStringValue();
 
-                    if (rowValues.get(colNo)!=null && !cellVal.equals(rowValues.get(colNo))) {
+                    if (rowValues.size() > colNo && rowValues.get(colNo)!=null && !cellVal.equals(rowValues.get(colNo))) {
                         rowValues.remove(colNo);
                         rowValues.add(colNo, cellVal);
                         //setValue(loggedInConnection, cell, null); orig value needed when saving.  Provenance must now check that the value in sheet is the same as value on file
@@ -1772,6 +1780,7 @@ public  class AzquoBook {
         for (int i = 0;i < wb.getWorksheets().getNames().getCount();i++){
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(azInput) && name.getRange().getWorksheet() == azquoSheet) {
+                //NOTE - THis routine below will add an 'id' column to the start of the range returned, even when the id is not part of the range.
                 return rangeToText(name.getRange(), true);
                 //only one input range per sheet in the admin worksheet
 
@@ -1784,9 +1793,11 @@ public  class AzquoBook {
     private StringBuffer rangeToText(Range range, boolean withId){
         StringBuffer sb = new StringBuffer();
         int idCol = -1;
+        int aRowNo = range.getFirstRow();
+        int lastRow = aRowNo + range.getRowCount();
         if (withId){
-            for (int colNo = 0;colNo< range.getColumnCount();colNo++){
-                Cell cell = range.getCellOrNull(0,colNo);
+            for (int colNo = 0;colNo< lastRow;colNo++){
+                Cell cell = azquoCells.get(aRowNo, colNo);
                 if (cell!=null && cell.getStringValue().equalsIgnoreCase("id")){
                     idCol = colNo;
                     break;
@@ -1808,8 +1819,8 @@ public  class AzquoBook {
                         sb.append("id");
 
                     } else {
-                        Cell cell = range.getCellOrNull(rowNo, idCol);
-                        if (cell != null) {
+                        Cell cell = azquoCells.get(aRowNo + rowNo, idCol);
+                        if (cell != null && cell.getStringValue().length()> 0) {
                             sb.append(cell.getStringValue());
                         } else {
                             sb.append("0");
