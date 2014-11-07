@@ -1,0 +1,89 @@
+
+
+<?doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"
+		doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" />
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <script type="text/javascript">
+
+
+        function reportChosen(reportToLoad){
+            document.getElementById("reportToLoad").value = reportToLoad;
+            document.azquoform.submit();
+        }
+
+    </script>
+
+    <style>
+
+        .wrapper{
+            font-family:Arial;
+            font-color:#444444;
+            font-size:16px;
+        }
+        .heading {
+            height:100px;
+            border-bottom:4px solid #ff0000;
+        }
+
+        .welcome{
+            position:relative;
+            top:30px;
+            left:40px;
+            font-size:26px;
+
+        }
+
+        .report{
+            position:relative;
+            left:30px;
+            top:10px;
+            height:100px;
+         }
+
+        .reportname a{
+            position:relative;
+            left:0px;
+            top:5px;
+            font-size:20px;
+            text-decoration:none;
+            color:#444444;
+        }
+
+        .reportexplanation {
+            position:relative;
+            left:20px;
+            top:20px;
+            width:300px;
+            font-color:#666666
+        }
+
+
+    </style>
+</head>
+<body>
+<div id="wrapper">
+    <form  method="post" id="azquoform" name="azquoform">
+        <div class="heading">
+            <div class="welcome">$welcome</div>
+        </div>
+        <div class = "reportwrapper">
+            #foreach($report in $reports)
+                <div class="report">
+                    <div class="reportname"><a href="$report.link"> $report.name</a></div>
+                    <div class="reportexplanation">$report.explanation</div>
+                    #if($report.image)
+                         <div class="reportimage>$report.image</div>
+                    #end
+
+                </div>
+            #end
+            <div class="feedbackBottom">
+            </div>
+        </div>
+    </form>
+</div>
+</body>
+</html>
+
+
