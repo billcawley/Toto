@@ -472,7 +472,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     private String findParentAttributes(Name child, String attributeName){
         for (Name parent:child.getParents()){
-            if (parent.getDefaultDisplayName().equals(attributeName)){
+            if (parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)){
                 return child.getDefaultDisplayName();
             }
             String attribute = parent.getAttribute(attributeName);
