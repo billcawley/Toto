@@ -220,6 +220,15 @@ function noClick(e){
     return true;
 }
 
+function setSelection(cellId){
+    var dashPos = cellId.indexOf("-");
+    var yStr = cellId.substr(4, dashPos);
+    var xStr = cellId.substr(dashPos + 1);
+    selectionX = parseInt(xStr);
+    selectionY = parseInt(yStr);
+
+}
+
 function onClick(e){
     setClicked(e);
     hideMenu("popupmenu");
@@ -231,11 +240,7 @@ function onClick(e){
         cellId = target.id;
     }
     if (cellId != null && cellId.substr(0, 4) == "cell") {
-        var dashPos = cellId.indexOf("-");
-        var yStr = cellId.substr(4, dashPos);
-        var xStr = cellId.substr(dashPos + 1);
-        selectionX = parseInt(xStr);
-        selectionY = parseInt(yStr);
+        setSelection(cellId);
     }
     positionSelection();
  }
@@ -313,7 +318,7 @@ function cancelEntry() {
 
      document.getElementById("entryfield").style.display = "none";
     if (entered != origval){
-        sendValue(entered)
+        sendValue(entered, entryX, entryY)
         document.getElementById("saveData").style.display="inline";
     }
     entryX = -1;
@@ -589,11 +594,18 @@ function reportChosen(reportToLoad){
      document.azquoform.submit();
 }
 
-function selectChosen(divName){
-    document.getElementById("editedName").value = divName;
-    document.getElementById("editedValue").value = document.getElementById(divName).value;
-    document.getElementById("opcode").value="selectchosen"
-    document.azquoform.submit();
+function selectChosen(divName, inContext){
+    var entered = document.getElementById(divName);
+
+    if (inContext) {
+        document.getElementById("editedName").value = divName;
+        document.getElementById("editedValue").value = entered.value;
+        document.getElementById("opcode").value = "selectchosen"
+        document.azquoform.submit();
+    }else{
+        setSelection(entered.parentElement.id);
+        sendValue(entered.value, selectionX, selectionY);
+    }
 }
 
 
@@ -653,10 +665,10 @@ function nextSibling(azSet){
 
 
 
-function sendValue(value){
+function sendValue(value, x, y){
 
     document.getElementById("message").innerHTML = "";
-    azquojson("Online","opcode=valuesent&row=" + entryY + "&col=" + entryX  + "&value=" + encodeURIComponent(value));
+    azquojson("Online","opcode=valuesent&row=" + y + "&col=" + x  + "&value=" + encodeURIComponent(value));
 }
 
 
@@ -714,7 +726,9 @@ function azquojsonfeed(obj) {
         for (var i = 0; i < obj.changedvalues.length; i++) {
             var val = obj.changedvalues[i];
             var elem = document.getElementById(val.id);
-            elem.innerHTML = val.value;
+            if (elem.childElementCount == 0){//don't overwrite selection cells
+                elem.innerHTML = val.value;
+            }
             elem.className = val.class;
 
         }
