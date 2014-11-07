@@ -7,9 +7,13 @@ import com.azquo.memorydbdao.*;
 import com.azquo.view.AzquoBook;
 import org.apache.commons.fileupload.FileItem;
 //import org.apache.poi.ss.usermodel.*;
+import org.apache.velocity.Template;
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.VelocityEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -58,12 +62,16 @@ public final class OnlineService {
     @Autowired
     UserDAO userDAO;
 
+    @Autowired
+    ServletContext servletContext;
+
 
     public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message)throws Exception {
 
          String path = "/home/azquo/temp/";
         if (onlineReport.getId()==1 && !loggedInConnection.getUser().isAdministrator()){
-            onlineReport = onlineReportDAO.findById(-1);//user report list replaces admin sheet
+            return showUserMenu(loggedInConnection);
+           //onlineReport = onlineReportDAO.findById(-1);//user report list replaces admin sheet
         }
 
         String popup = "";
@@ -599,7 +607,75 @@ public final class OnlineService {
 
     }
 
+    public String showUserMenu(LoggedInConnection loggedInConnection){
+        List<OnlineReport> onlineReports = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getBusinessId(),loggedInConnection.getUser().getStatus());
+        Map<String,String> context = new HashMap<String, String>();
+        context.put("welcome","Welcome to Azquo!");
+        Set<Map<String,String>> reports = new HashSet<Map<String, String>>();
+        for (OnlineReport onlineReport:onlineReports){
+            Map<String,String> vReport = new HashMap<String, String>();
+            vReport.put("name",onlineReport.getReportName());
+            vReport.put("explanation", onlineReport.getExplanation());
+            vReport.put("link","/api/Online/?opcode=loadsheet&connectionid=" + loggedInConnection.getConnectionId() + "&reportid=" + onlineReport.getId());
+            reports.add(vReport);
+        }
+        return convertToVelocity(context,"reports",reports,"azquoReports.vm");
 
+
+
+
+    }
+
+
+    private String convertToVelocity(Map<String,String> context, String itemName, Set<Map<String,String>> items, String velocityTemplate){
+
+        VelocityEngine ve = new VelocityEngine();
+        Properties properties = new Properties();
+        Template t;
+        if (velocityTemplate == null){
+            velocityTemplate = "email.vm";
+        }
+
+        if ((velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1) {
+            properties.put("resource.loader", "url");
+            properties.put("url.resource.loader.class", "org.apache.velocity.runtime.resource.loader.URLResourceLoader");
+            properties.put("url.resource.loader.root", velocityTemplate.substring(0, velocityTemplate.lastIndexOf("/") + 1));
+            ve.init(properties);
+            t = ve.getTemplate(velocityTemplate.substring(velocityTemplate.lastIndexOf("/") + 1));
+        } else {
+            properties.setProperty("resource.loader", "webapp");
+            properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
+            properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
+            ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
+            ve.init(properties);
+
+            //ve.init();
+        /*  next, get the Template  */
+            t = ve.getTemplate(velocityTemplate);
+        }
+        /*  create a context and add data */
+        VelocityContext vcontext = new VelocityContext();
+        addVelocityElements(vcontext,context);
+        if (items != null){
+            vcontext.put(itemName, items);
+        }
+         /* now render the template into a StringWriter */
+        StringWriter writer = new StringWriter();
+        t.merge(vcontext, writer);
+        /* show the World */
+        return writer.toString();
+
+
+
+    }
+
+    private void addVelocityElements(VelocityContext context, Map<String,String>items){
+        for (String key:items.keySet()){
+            String value = items.get(key);
+            if (value==null) value="";
+            context.put(key, value);
+        }
+    }
 
 
 
