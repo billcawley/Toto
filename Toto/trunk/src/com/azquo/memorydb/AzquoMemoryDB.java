@@ -47,6 +47,8 @@ public final class AzquoMemoryDB {
 
     private final Map<String, Set<AzquoMemoryDBEntity>> entitiesToPersist;
 
+    // Initialising maps concurrently here,
+
     protected AzquoMemoryDB(Database database, StandardDAO standardDAO, List<AppEntityService> appServices) throws Exception {
         this.database = database;
         this.standardDAO = standardDAO;
@@ -214,9 +216,11 @@ public final class AzquoMemoryDB {
 
     private Set<Name> getNamesForAttributeAndParent(final String attributeName, final String attributeValue, Name parent){
         Set<Name> possibles = getNamesForAttribute(attributeName, attributeValue);
-        for (Name possible : possibles) {
+        Iterator<Name> iterator = possibles.iterator();
+        while (iterator.hasNext()) {
+            Name possible = iterator.next();
             if (!possible.hasInParentTree(parent)) {
-                possibles.remove(possible);
+                iterator.remove();
             }
         }
         return possibles;
@@ -308,7 +312,7 @@ public final class AzquoMemoryDB {
 
     public void zapUnusedNames() throws Exception {
         for (Name name : nameByIdMap.values()) {
-            // remove everything except top layer and names with values.   Change parents to top layer where sets deleted
+            // remove everything except top layer and names with values. Change parents to top layer where sets deleted
             if (name.getParents().size() > 0 && name.getValues().size() == 0) {
                 Name topParent = name.findTopParent();
                 for (Name child : name.getChildren()) {
