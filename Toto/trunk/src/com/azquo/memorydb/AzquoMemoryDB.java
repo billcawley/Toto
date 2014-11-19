@@ -206,7 +206,7 @@ public final class AzquoMemoryDB {
         if (map != null){ // that attribute is there
             Set<Name> names = map.get(attributeValue.toLowerCase().trim());
             if (names != null){ // were there any entries for that value?
-                return names;
+                return new HashSet<Name>(names);
             }
         }
         return Collections.emptySet(); // moving away from nulls
