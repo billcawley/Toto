@@ -191,7 +191,7 @@ public class ValueController {
              }
               if (rowheadings != null && (rowheadings.length() > 0 || filterCount !=0 || restrictCount!=0)) {
                 result =  valueService.getRowHeadings(loggedInConnection, region, rowheadings, filterCount);
-                 logger.info("time for row headings in region " + region + " is " + (System.currentTimeMillis() - startTime) + " on database " + loggedInConnection.getCurrentDBName() + " in language " + loggedInConnection.getLanguage());
+                 logger.info("time for row headings in region " + region + " is " + (System.currentTimeMillis() - startTime) + " on database " + loggedInConnection.getCurrentDBName() + " in language " + loggedInConnection.getLanguages().get(0));
               }
 
             if (columnheadings != null && columnheadings.length() > 0) {
@@ -220,7 +220,7 @@ public class ValueController {
                 logger.info("search by names : " + searchByNames);
 //                String error = nameService.decodeString(loggedInConnection, searchByNames, names);
                 // no longer returns an error based on work Edd did cleaning up the name service, this may change
-                final List<Set<Name>> names = nameService.decodeString(loggedInConnection, searchByNames, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+                final List<Set<Name>> names = nameService.decodeString(loggedInConnection, searchByNames, loggedInConnection.getLanguages());
                 /*if (error.length() > 0){
                     return error;
                 }*/

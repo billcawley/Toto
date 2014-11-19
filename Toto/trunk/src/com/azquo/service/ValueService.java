@@ -494,7 +494,7 @@ seaports;children   container;children
 
 
 
-public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<List<Name>>> nameLists, List<String> supplementNames, final String excelRegionPasted, String attributeName, boolean loose) throws Exception {
+public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<List<Name>>> nameLists, List<String> supplementNames, final String excelRegionPasted, List<String> attributeNames) throws Exception {
         //logger.info("excel region pasted : " + excelRegionPasted);
         int maxColCount = 1;
         CsvReader pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t');
@@ -522,7 +522,8 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                         }
                     }
                     try{
-                        List<Name> nameList =  nameService.interpretName(azquoMemoryDBConnection, cellString, attributeName, loose);
+
+                        List<Name> nameList =  nameService.interpretName(azquoMemoryDBConnection, cellString, attributeNames);
                         row.add(nameList);
 
                     } catch (Exception e){
@@ -748,7 +749,8 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
         List<String> supplementNames = new ArrayList<String>();
         loggedInConnection.getProvenance().setRowHeadings(headingsSent);
-        String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+
+        String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent, loggedInConnection.getLanguages());
         //if (error.length() > 0) {
        //     return error;
        // }
@@ -824,7 +826,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         List<String> supplementNames = new ArrayList<String>();//not used for column headings, but needed for the interpretation routine
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
         // "here is what that 2d heading definition excel region looks like in names"
-        String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, supplementNames, headingsSent, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+        String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, supplementNames, headingsSent, loggedInConnection.getLanguages());
         if (error.length() > 0) {
             return error;
         }
@@ -1024,8 +1026,8 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 }
             }
         }
-        if (peers.size() > 0 && peers.size() != namesForThisCell.size()) {
-            // we must discard some names
+        if (peers.size() > 0 && peers.size() + 1 != namesForThisCell.size()) {//TODO  sort out when more than one topparent contains elements
+            // we may discard some names
             List<Name> surplusNames = new ArrayList<Name>();
             for (Name name : namesForThisCell) {
                 if (name.getPeers().size() == 0 && !isInPeers(name, peers)) {
@@ -1119,7 +1121,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         final StringTokenizer st = new StringTokenizer(context, "\n");
         final List<Name> contextNames = new ArrayList<Name>();
         while (st.hasMoreTokens()) {
-            final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+            final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
             if (contextName == null) {
                 return "error:I can't find a name for the context : " + context;
             }
