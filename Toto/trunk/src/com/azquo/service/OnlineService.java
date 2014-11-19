@@ -85,14 +85,15 @@ public final class OnlineService {
         StringBuffer head = new StringBuffer();
         AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO);
         loggedInConnection.setAzquoBook(azquoBook);
-        String output = readFile("onlineReport.html").toString();
+        Map <String,String> velocityContext = new HashMap<String, String>();
+        //String output = readFile("onlineReport.html").toString();
         if (spreadsheetName == null){
             spreadsheetName = "";
         }
         if (onlineReport.getId()==1 && spreadsheetName.equals("Upload")) {
-            output = output.replace("$enctype", " enctype=\"multipart/form-data\" ");
+            velocityContext.put("enctype", " enctype=\"multipart/form-data\" ");
         }else{
-            output = output.replace("$enctype","");
+            velocityContext.put("enctype","");
         }
         try {
             if (onlineReport.getId() < 2){
@@ -121,24 +122,29 @@ public final class OnlineService {
         head.append(azquoBook.printAllStyles());
         head.append(readFile("excelStyle.css"));
         head.append("</style>\n");
-        output = output.replace("$script",readFile("online.js"));
-        output = output.replace("$topmenu",createTopMenu(loggedInConnection));
-        output = output.replace("$tabs", tabs.toString());
-        output=output.replace("$topmessage",message);
+        velocityContext.put("script",readFile("online.js").toString());
+        velocityContext.put("topmenu",createTopMenu(loggedInConnection).toString());
+        velocityContext.put("tabs", tabs.toString());
+        velocityContext.put("topmessage",message);
         if (spreadsheetName==null){
             spreadsheetName = "";
         }
-        output = output.replace("$popup", popup);
-        output=output.replace("$spreadsheetname",spreadsheetName);
-        output = output.replace("$topcell", azquoBook.getTopCell()+"").replace("$leftcell",azquoBook.getLeftCell()+"").replace("$maxheight",azquoBook.getMaxHeight() + "px").replace("$maxwidth",azquoBook.getMaxWidth() + "px");
-        output = output.replace("$maxrow",azquoBook.getMaxRow()+"").replace("$maxcol",azquoBook.getMaxCol()+"");
-         output = output.replace("$reportid", onlineReport.getId() + "").replace("$connectionid", loggedInConnection.getConnectionId() +"");
-         output = output.replace("$regions", azquoBook.getRegions(loggedInConnection, azquoBook.dataRegionPrefix));
+        velocityContext.put("popup", popup);
+        velocityContext.put("spreadsheetname",spreadsheetName);
+        velocityContext.put("topcell", azquoBook.getTopCell()+"");
+        velocityContext.put("leftcell",azquoBook.getLeftCell()+"");
+        velocityContext.put("maxheight",azquoBook.getMaxHeight() + "px");
+        velocityContext.put("maxwidth",azquoBook.getMaxWidth() + "px");
+        velocityContext.put("maxrow",azquoBook.getMaxRow()+"");
+        velocityContext.put("maxcol",azquoBook.getMaxCol()+"");
+         velocityContext.put("reportid", onlineReport.getId() + "");
+        velocityContext.put("connectionid", loggedInConnection.getConnectionId() +"");
+         velocityContext.put("regions", azquoBook.getRegions(loggedInConnection, azquoBook.dataRegionPrefix).toString());
         if (azquoBook.dataRegionPrefix.equals(AzquoBook.azDataRegion)){
 
-             output=  output.replace("$menuitems","[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"},{\"position\":3,\"name\":\"Highlight changes\",\"enabled\":true,\"link\":\"showHighlight()\"}]");
+             velocityContext.put("menuitems","[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"},{\"position\":3,\"name\":\"Highlight changes\",\"enabled\":true,\"link\":\"showHighlight()\"}]");
          }else{
-              output = output.replace("$menuitems","[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"}," +
+              velocityContext.put("menuitems","[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"}," +
                      "{\"position\":2,\"name\":\"Edit\",\"enabled\":true,\"link\":\"edit()\"}," +
                      "{\"position\":3,\"name\":\"Cut\",\"enabled\":true,\"link\":\"cut()\"}," +
                      "{\"position\":4,\"name\":\"Copy\",\"enabled\":true,\"link\":\"copy()\"}," +
@@ -148,17 +154,19 @@ public final class OnlineService {
                      "{\"position\":8,\"name\":\"Delete\",\"enabled\":true,\"link\":\"deleteName()\"}]");
          }
 
-         output = output.replace("$styles", head.toString()).replace("$workbook", worksheet.toString());
-         if (output.indexOf("$azquodatabaselist") > 0){
-             output = output.replace("$azquodatabaselist", createDatabaseSelect(loggedInConnection));
+         velocityContext.put("styles", head.toString());
+         String ws = worksheet.toString();
+          if (worksheet.indexOf("$azquodatabaselist") > 0){
+             ws = ws.replace("$azquodatabaselist", createDatabaseSelect(loggedInConnection));
          }
-          if (output.indexOf("$fileselect") > 0){
-              output = output.replace("$fileselect", "<input type=\"file\" name=\"uploadfile\">");
+          if (ws.indexOf("$fileselect") > 0){
+              ws = ws.replace("$fileselect", "<input type=\"file\" name=\"uploadfile\">");
           }
-          output = output.replace("$charts", azquoBook.drawCharts(loggedInConnection, path));
+        velocityContext.put("workbook", ws);
+        velocityContext.put("charts", azquoBook.drawCharts(loggedInConnection, path).toString());
 
 
-        return output;
+        return convertToVelocity(velocityContext,null,null,"onlineReport.vm");
     }
 
 
@@ -554,13 +562,13 @@ public final class OnlineService {
         if (op.equalsIgnoreCase("upload")){
             InputStream uploadFile = item.getInputStream();
             String fileName = item.getName();
-              message = importService.importTheFile(loggedInConnection, fileName, uploadFile, "", "", true, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+              message = importService.importTheFile(loggedInConnection, fileName, uploadFile, "", "", true, loggedInConnection.getLanguages());
             if (message.length()==0){
                 message="file imported successfully";
             }
         }
         if (op.equalsIgnoreCase("inspect")){
-            message = nameService.getStructureForNameSearch(loggedInConnection,searchTerm, nameId, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+            message = nameService.getStructureForNameSearch(loggedInConnection,searchTerm, nameId, loggedInConnection.getLanguages());
             if (message.startsWith("error:")) return message;
             return "popup:" + message;
 

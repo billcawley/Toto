@@ -336,7 +336,7 @@ public class OnlineController {
             }
             if (opcode.equals("children")){
 
-                result = nameService.getStructureForNameSearch(loggedInConnection,"", Integer.parseInt(nameId), !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+                result = nameService.getStructureForNameSearch(loggedInConnection,"", Integer.parseInt(nameId), loggedInConnection.getLanguages());
                 result = jsonFunction + "(" + result + ")";
             }
 

@@ -57,15 +57,15 @@ public final class NameService {
 
     // get names from a comma separated list
 
-    public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, String attributeName, boolean loose) throws Exception {
+    public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
         final List<Set<Name>> names = new ArrayList<Set<Name>>();
-        searchByNames = stripQuotes(azquoMemoryDBConnection, searchByNames, attributeName, loose);
+        searchByNames = stripQuotes(azquoMemoryDBConnection, searchByNames, attributeNames);
         List<String> strings = new ArrayList<String>();
         searchByNames = stringUtils.extractStrings(searchByNames, strings);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            List<Name> nameList = interpretSetTerm(azquoMemoryDBConnection, nameName, strings, attributeName, loose);
+            List<Name> nameList = interpretSetTerm(azquoMemoryDBConnection, nameName, strings, attributeNames);
             names.add(new HashSet<Name>(nameList));
         }
         return names;
@@ -87,11 +87,8 @@ public final class NameService {
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(id);
     }
 
-    public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent) {
-        return getNameByAttribute(azquoMemoryDBConnection,attributeValue,parent, null, false);
-    }
 
-    public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection,String attributeValue, Name parent, String attributeName,  boolean loose) {
+    public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection,String attributeValue, Name parent) {
         if (attributeValue.charAt(0) == NAMEMARKER) {
             try {
                 int nameId = Integer.parseInt(attributeValue.substring(1).trim());
@@ -100,17 +97,16 @@ public final class NameService {
                 return null;
             }
         }
-        List<String> AttNamesToUse = new ArrayList<String>();
 
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, attributeValue.replace(Name.QUOTE, ' ').trim(), parent);
 
     }
 
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) {
-        return findByName(azquoMemoryDBConnection, name, null, false);
+        return findByName(azquoMemoryDBConnection, name, null);
     }
 
-    public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final String attributeName, boolean loose) {
+    public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final List<String> attributeNames) {
 
      /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
         This may not be an immediate hierarchy.
@@ -132,7 +128,7 @@ public final class NameService {
         // the point of all of this is to be able to ask for a name with the nearest parent but we can't just try and get it from the string directly e.g. get me WHsmiths on High street
         // we need to look from the top to distinguish high street in different towns
         while (parentName != null) {
-            parent = getNameByAttribute(azquoMemoryDBConnection, parentName, parent, attributeName,loose);
+            parent = getNameByAttribute(azquoMemoryDBConnection, parentName, parent);
             if (parent == null) { // parent was null, since we're just trying to find that stops us right here
                 return null;
             }
@@ -174,10 +170,10 @@ public final class NameService {
 
 
     public Name findOrCreateNameStructure(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, Name topParent, boolean local) throws Exception {
-        return findOrCreateNameStructure(azquoMemoryDBConnection, name, topParent, local, null, false);
+        return findOrCreateNameStructure(azquoMemoryDBConnection, name, topParent, local, null);
     }
 
-    public Name findOrCreateNameStructure(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, Name topParent, boolean local, String attributeName, boolean loose) throws Exception {
+    public Name findOrCreateNameStructure(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, Name topParent, boolean local, List<String> attributeNames) throws Exception {
 
         /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
         This may not be an immediate hierarchy.
@@ -194,7 +190,7 @@ public final class NameService {
         String parentName = stringUtils.findParentFromList(name);
         String remainder = name;
         if (parentName == null) {
-            return findOrCreateNameInParent(azquoMemoryDBConnection, name, topParent, local, attributeName, loose);
+            return findOrCreateNameInParent(azquoMemoryDBConnection, name, topParent, local, attributeNames);
         }
 
        /*
@@ -209,12 +205,12 @@ public final class NameService {
             remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length() - 1));
             //if two commas in succession occur, ignore the blank parent
             if (parentName.length() > 0) {
-                parent = findOrCreateNameInParent(azquoMemoryDBConnection, parentName, parent, local, attributeName, loose);
+                parent = findOrCreateNameInParent(azquoMemoryDBConnection, parentName, parent, local, attributeNames);
             }
             parentName = stringUtils.findParentFromList(remainder);
         }
 
-        return findOrCreateNameInParent(azquoMemoryDBConnection, remainder, parent, local, attributeName, loose);
+        return findOrCreateNameInParent(azquoMemoryDBConnection, remainder, parent, local, attributeNames);
 
     }
 
@@ -232,23 +228,19 @@ public final class NameService {
 
 }
     public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name newparent, boolean local) throws Exception {
-        return findOrCreateNameInParent(azquoMemoryDBConnection, name, newparent, local, null, false);
+        return findOrCreateNameInParent(azquoMemoryDBConnection, name, newparent, local, null);
     }
 
 
-        public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name newparent, boolean local, String attributeName, boolean loose) throws Exception {
+        public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name newparent, boolean local, List<String> attributeNames) throws Exception {
 
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import),and insert a structure into it*/
 
-        List<String> attributeNames = new ArrayList<String>();
-        attributeNames.add(Name.DEFAULT_DISPLAY_NAME);
-        if (attributeName != null){
-            if (!loose){
-                attributeNames.remove(Name.DEFAULT_DISPLAY_NAME);
-            }
-            attributeNames.add(attributeName);
+         if (attributeNames == null) {
+             attributeNames = new ArrayList<String>();
+             attributeNames.add(Name.DEFAULT_DISPLAY_NAME);
         }
-
+              
 
         String storeName = name.replace(Name.QUOTE, ' ').trim();
         Name existing;
@@ -281,13 +273,16 @@ public final class NameService {
             return existing;
         } else {
             // actually creating a new one
+            if (storeName.equals("237")){
+                int j= 1;
+            }
             String parentName = "";
             if (newparent != null) parentName = newparent.getDefaultDisplayName();
             System.out.println("New name: " + storeName + ", " + parentName);
             Provenance provenance = azquoMemoryDBConnection.getProvenance();
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
-            if (attributeName != null){
-                newName.setAttributeWillBePersisted(attributeName, storeName);
+            if (attributeNames.get(0) != Name.DEFAULT_DISPLAY_NAME){
+                newName.setAttributeWillBePersisted(attributeNames.get(0), storeName);
             }
             newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName);
             //if the parent already has peers, provisionally set the child peers to be the same.
@@ -366,7 +361,7 @@ public final class NameService {
         }
     }
 
-    public List<Name> findChildrenFromToCount(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, String fromString, String toString, final String countString, final String countbackString, final String compareWithString, String attributeName, boolean loose) throws Exception {
+    public List<Name> findChildrenFromToCount(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, String fromString, String toString, final String countString, final String countbackString, final String compareWithString, List<String> attributeNames) throws Exception {
         final ArrayList<Name> toReturn = new ArrayList<Name>();
         int to = -10000;
         int from = 1;
@@ -382,7 +377,7 @@ public final class NameService {
                 from = Integer.parseInt(fromString);
             } catch (NumberFormatException nfe) {// may be a number, may not . . .
                 if (fromString.charAt(0) == NAMEMARKER) {
-                    Name fromName = findByName(azquoMemoryDBConnection, fromString, attributeName, loose);
+                    Name fromName = findByName(azquoMemoryDBConnection, fromString, attributeNames);
                     fromString = fromName.getDefaultDisplayName();
                 }
             }
@@ -399,7 +394,7 @@ public final class NameService {
                 if (fromEnd) to = names.size() - to;
             } catch (NumberFormatException nfe) {// may be a number, may not . . .
                 if (toString.charAt(0) == NAMEMARKER) {
-                    Name toName = findByName(azquoMemoryDBConnection, toString, attributeName, loose);
+                    Name toName = findByName(azquoMemoryDBConnection, toString, attributeNames);
                     toString = toName.getDefaultDisplayName();
                 }
             }
@@ -567,7 +562,7 @@ public final class NameService {
 
     // hmm, looks like a string function but there's checks agains a valid name in there. Come back to that later.
 
-    private String stripQuotes(AzquoMemoryDBConnection azquoMemoryDBConnection, String instructions, String attributeName, boolean loose) throws Exception {
+    private String stripQuotes(AzquoMemoryDBConnection azquoMemoryDBConnection, String instructions, List<String> attributeNames) throws Exception {
         int lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
         while (lastQuoteEnd >= 0) {
             int lastQuoteStart = instructions.lastIndexOf(Name.QUOTE, lastQuoteEnd - 1);
@@ -581,7 +576,7 @@ public final class NameService {
                     nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd);
                 }
             }
-            Name quoteName = findByName(azquoMemoryDBConnection, nameToFind, attributeName, loose);
+            Name quoteName = findByName(azquoMemoryDBConnection, nameToFind, attributeNames);
             if (quoteName != null) {
                 instructions = instructions.substring(0, lastQuoteStart) + NAMEMARKER + quoteName.getId() + " " + instructions.substring(lastQuoteEnd + 1);
                 lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
@@ -596,11 +591,11 @@ public final class NameService {
     // to find a set of names, a few bits that were part of the original set of functions
     // edd wondering how to break this up.
     public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
-        return interpretName(azquoMemoryDBConnection, setFormula, null, false);
+        return interpretName(azquoMemoryDBConnection, setFormula);
     }
 
 
-    public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, String attributeName, boolean loose) throws Exception {
+    public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
         final List<Name> nameList = new ArrayList<Name>();
 
         /*
@@ -615,7 +610,7 @@ public final class NameService {
         * */
         List<List<Name>> nameStack = new ArrayList<List<Name>>();
         List<String> strings = new ArrayList<String>();
-        setFormula = shuntingYardAlgorithm(azquoMemoryDBConnection, setFormula, strings, attributeName, loose);
+        setFormula = shuntingYardAlgorithm(azquoMemoryDBConnection, setFormula, strings, attributeNames);
         Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
         int pos = 0;
@@ -641,7 +636,7 @@ public final class NameService {
             }
             if (op == NAMEMARKER) {
                 stackCount++;
-                List<Name> nextNames = interpretSetTerm(azquoMemoryDBConnection, setFormula.substring(pos, nextTerm - 1), strings, attributeName, loose);
+                List<Name> nextNames = interpretSetTerm(azquoMemoryDBConnection, setFormula.substring(pos, nextTerm - 1), strings, attributeNames);
                 nameStack.add(nextNames);
             } else if (op == '&') {
                 if (strings.size()==0){
@@ -651,7 +646,7 @@ public final class NameService {
                 List<Name> baseNames = nameStack.get(stackCount-1);
                 for (Name name:baseNames) {
                     String nameToFind = name.getDefaultDisplayName() + strings.get(strings.size() - 1);
-                    nextNames.addAll(interpretSetTerm(azquoMemoryDBConnection, nameToFind, strings, attributeName, loose));
+                    nextNames.addAll(interpretSetTerm(azquoMemoryDBConnection, nameToFind, strings, attributeNames));
                 }
                 strings.remove(strings.size()-1);
                 nameStack.remove(stackCount-1);
@@ -679,11 +674,11 @@ public final class NameService {
 
     // arguably should be called on store and the RPCALC stored as that attribute only changes when "CALCULATION" changes
 
-    public String calcReversePolish(AzquoMemoryDBConnection azquoMemoryDBConnection, Name name, String attributeName, boolean loose) throws Exception {
+    public String calcReversePolish(AzquoMemoryDBConnection azquoMemoryDBConnection, Name name) throws Exception {
         String calc = name.getAttribute(Name.CALCULATION);
         if (calc != null && calc.length() > 0) {
             List<String> strings = new ArrayList<String>();
-            String result = shuntingYardAlgorithm(azquoMemoryDBConnection, calc, strings, attributeName, loose);//TODO work out if we will accept the strings in calcs (pass as parameter in calcReversePolish)......
+            String result = shuntingYardAlgorithm(azquoMemoryDBConnection, calc, strings, null);//TODO work out if we will accept the strings in calcs (pass as parameter in calcReversePolish)......
             if (result != null && result.length() > 0) {
                 if (result.startsWith("error:")) {
                     return result;
@@ -732,7 +727,7 @@ public final class NameService {
         return confidential == null || !confidential.equalsIgnoreCase("true");
     }
 
-    private void getAssociations(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Name> names, String associatedString, Set<Name> namesFound, String attributeName, boolean loose){
+    private void getAssociations(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Name> names, String associatedString, Set<Name> namesFound, List<String> attributeNames){
         /*
         * this routine finds sets associated with the given name.  e.g. if the name is 'UK' and the associatedString is 'shops' the
         * routine looks for 'UK shops'.  If it does not find that, it loops through subsets such as 'London shops', 'West End shops', 'Oxford Street shops', r
@@ -740,11 +735,11 @@ public final class NameService {
         *
         * */
         for (Name name:names){
-            Name associatedName = findByName(azquoMemoryDBConnection, name.getDefaultDisplayName() + " " + associatedString, attributeName, loose);
+            Name associatedName = findByName(azquoMemoryDBConnection, name.getDefaultDisplayName() + " " + associatedString, attributeNames);
             if (associatedName != null){
                 namesFound.add(associatedName);
             }else{
-                 getAssociations(azquoMemoryDBConnection, name.getChildren(), associatedString, namesFound, attributeName, loose);
+                 getAssociations(azquoMemoryDBConnection, name.getChildren(), associatedString, namesFound, attributeNames);
             }
         }
     }
@@ -817,7 +812,7 @@ public final class NameService {
 
     // edd trying to break up
 
-    private List<Name> interpretSetTerm(AzquoMemoryDBConnection azquoMemoryDBConnection, String setTerm, List<String> strings, String attributeName, boolean loose) throws Exception {
+    private List<Name> interpretSetTerm(AzquoMemoryDBConnection azquoMemoryDBConnection, String setTerm, List<String> strings, List<String> attributeNames) throws Exception {
         List<Name> namesFound = new ArrayList<Name>();
 
         final String levelString = stringUtils.getInstruction(setTerm, LEVEL);
@@ -841,7 +836,7 @@ public final class NameService {
         if (setTerm.indexOf(';') > 0) {
             nameString = setTerm.substring(0, setTerm.indexOf(';')).trim();
         }
-        final Name name = findByName(azquoMemoryDBConnection, nameString, attributeName, loose);
+        final Name name = findByName(azquoMemoryDBConnection, nameString, attributeNames);
         if (name == null) {
             throw new Exception("error:  not understood: " + nameString);
         }
@@ -860,7 +855,7 @@ public final class NameService {
 
             //THIRD  trim that down to the subset defined by from, to, count
             if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
-                names = findChildrenFromToCount(azquoMemoryDBConnection, names, fromString, toString, countString, countbackString, compareWithString, attributeName, loose);
+                names = findChildrenFromToCount(azquoMemoryDBConnection, names, fromString, toString, countString, countbackString, compareWithString, attributeNames);
             }
         }
         if (azquoMemoryDBConnection.getReadPermissions() != null) {
@@ -875,9 +870,9 @@ public final class NameService {
         if (totalledAsString!=null){
             Name totalName;
             if (totalledAsString.charAt(0) == NAMEMARKER){
-                totalName = findByName(azquoMemoryDBConnection,totalledAsString, attributeName, loose);
+                totalName = findByName(azquoMemoryDBConnection,totalledAsString, attributeNames);
             }else{
-                totalName = findOrCreateNameInParent(azquoMemoryDBConnection,totalledAsString, namesFound.get(0).findTopParent(), false, attributeName, loose);//'local' is irrelevant
+                totalName = findOrCreateNameInParent(azquoMemoryDBConnection,totalledAsString, namesFound.get(0).findTopParent(), false, attributeNames);//'local' is irrelevant
             }
             LinkedHashSet<Name> newChildren = new LinkedHashSet<Name>();
             for (Name child:namesFound){
@@ -894,7 +889,7 @@ public final class NameService {
             for (Name name2:namesFound){
                 originalNames.add(name2);
             }
-            getAssociations(azquoMemoryDBConnection, originalNames, associatedString, associatedNames, attributeName, loose);
+            getAssociations(azquoMemoryDBConnection, originalNames, associatedString, associatedNames, attributeNames);
             //and convert back to a list
             namesFound.clear();
             for (Name name2:associatedNames){
@@ -929,7 +924,7 @@ public final class NameService {
 
     //  NAMEMARKER is used to remove any contentious characters from expressions (e.g. operators that should not be there)
 
-    private String interpretTerm(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String term, String attributeName, boolean loose) {
+    private String interpretTerm(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String term, List<String> attributeNames) {
 
 
         if (term.startsWith("\"") && term.endsWith("\"")){
@@ -948,7 +943,7 @@ public final class NameService {
         if (nameEnd < 0) {
             nameEnd = term.length();
         }
-        Name nameFound = findByName(azquoMemoryDBConnection, term.substring(0, nameEnd), attributeName, loose);
+        Name nameFound = findByName(azquoMemoryDBConnection, term.substring(0, nameEnd), attributeNames);
         if (nameFound == null) {
             return "error: formula not understood: " + term;
         }
@@ -979,7 +974,7 @@ public final class NameService {
     // it's a list of values and operations
     // ok, edd here, I don't 100% understand  the exact logic but I do know what it's doing. Maybe some more checking into it later.
 
-    private String shuntingYardAlgorithm(AzquoMemoryDBConnection azquoMemoryDBConnection, String calc, List<String> strings, String attributeName, boolean loose) throws Exception {
+    private String shuntingYardAlgorithm(AzquoMemoryDBConnection azquoMemoryDBConnection, String calc, List<String> strings, List<String> attributeNames) throws Exception {
 /*   TODO SORT OUT ACTION ON ERROR
         Routine to convert a formula (if it exists) to reverse polish.
 
@@ -1008,7 +1003,7 @@ public final class NameService {
 */
 
         //start by replacing names in quotes (which may contain operators) with '!<name id>   - e.g.  '!1000'
-        calc = stripQuotes(azquoMemoryDBConnection, calc, attributeName, loose);
+        calc = stripQuotes(azquoMemoryDBConnection, calc, attributeNames);
 
 
         //save away constants as a separate array, replace temporarily with 'xxxxxxx'
@@ -1029,7 +1024,7 @@ public final class NameService {
             int pos = m.start();
             String namefound = calc.substring(startPos, pos).trim();
             if (namefound.length() > 0) {
-                String result = interpretTerm(azquoMemoryDBConnection, namefound, attributeName, loose);
+                String result = interpretTerm(azquoMemoryDBConnection, namefound, attributeNames);
                 if (result.startsWith("error:")) {
                     return result;
                 }
@@ -1056,7 +1051,7 @@ public final class NameService {
         // the last term...
 
         if (calc.substring(startPos).trim().length() > 0) {
-            String result = interpretTerm(azquoMemoryDBConnection, calc.substring(startPos).trim(), attributeName, loose);
+            String result = interpretTerm(azquoMemoryDBConnection, calc.substring(startPos).trim(), attributeNames);
             if (result.startsWith("error:")) {
                 return result;
             }
@@ -1074,16 +1069,16 @@ public final class NameService {
     // pretty much replaced the original set of functions to do basic name manipulation
     // needs a logged in connection forn the structure return
 
-    public String processJsonRequest(AzquoMemoryDBConnection azquoMemoryDBConnection, NameJsonRequest nameJsonRequest, String attributeName, boolean loose) throws Exception {
+    public String processJsonRequest(AzquoMemoryDBConnection azquoMemoryDBConnection, NameJsonRequest nameJsonRequest, List<String> attributeNames) throws Exception {
         String toReturn = "";
 
         // type; elements level 1; from a to b
         if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)) {
-            return getStructureForNameSearch(azquoMemoryDBConnection, nameJsonRequest.name, -1, attributeName, loose);//-1 indicates to show the children
+            return getStructureForNameSearch(azquoMemoryDBConnection, nameJsonRequest.name, -1, attributeNames);//-1 indicates to show the children
         }
         if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)) {
             try{
-                return getNamesFormattedForOutput(interpretName(azquoMemoryDBConnection, nameJsonRequest.name, attributeName, loose));
+                return getNamesFormattedForOutput(interpretName(azquoMemoryDBConnection, nameJsonRequest.name, attributeNames));
             } catch (Exception e) {
                 return "Error:" + e.getMessage();
             }
@@ -1199,7 +1194,7 @@ public final class NameService {
                         }
                     }
                 }
-                calcReversePolish(azquoMemoryDBConnection, name, attributeName, loose);
+                calcReversePolish(azquoMemoryDBConnection, name);
                 // re set attributes, use single functions so checks happen
             }
         }
@@ -1241,11 +1236,11 @@ public final class NameService {
 
     // use jackson?
 
-    public String getStructureForNameSearch(AzquoMemoryDBConnection azquoMemoryDBconnection, String nameSearch, int nameId, String attributeName, boolean loose) {
+    public String getStructureForNameSearch(AzquoMemoryDBConnection azquoMemoryDBconnection, String nameSearch, int nameId, List<String> attributeNames) {
 
         boolean withChildren = false;
         if (nameId==-1) withChildren = true;
-        Name name = findByName(azquoMemoryDBconnection, nameSearch, attributeName, loose);
+        Name name = findByName(azquoMemoryDBconnection, nameSearch, attributeNames);
         if (name != null) {
             return "{\"names\":[" + getChildStructureFormattedForOutput(name, withChildren) + "]}";
         }else{

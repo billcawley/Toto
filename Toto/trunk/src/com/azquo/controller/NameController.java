@@ -69,7 +69,7 @@ public class NameController {
                 if (loggedInConnection == null) {
                     return "error:invalid connection id or login credentials";
                 }
-                String result = nameService.processJsonRequest(loggedInConnection, nameJsonRequest, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+                String result = nameService.processJsonRequest(loggedInConnection, nameJsonRequest, loggedInConnection.getLanguages());
                 return nameJsonRequest.jsonFunction != null && nameJsonRequest.jsonFunction.length() > 0 ? nameJsonRequest.jsonFunction + "(" + result + ")" : result;
             } else {
                 return "error: empty json string passed";
