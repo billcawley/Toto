@@ -32,6 +32,10 @@ public final class DataLoadService {
 
     public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, String data) throws Exception {
         BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8))));
+        if (data==null){
+            //testing
+            br = new BufferedReader(new FileReader("/home/bill/Sear/magento/testdata_dump.txt"));
+        }
 
         String line;
         List<Map<String, String>> currentTableDataMap = null;
@@ -97,6 +101,7 @@ public final class DataLoadService {
         //now start the real work - categories first
         Map<String, Name> azquoCategoriesFound = new HashMap<String, Name>();
         Map<String, Name> azquoProductsFound = new HashMap<String, Name>();
+        List<String> languages = new ArrayList<String>();
 
         for (Map<String, String> entityTypeRecord : tableMap.get("catalog_category_entity")) {
             //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1`
@@ -105,7 +110,8 @@ public final class DataLoadService {
             while (pathBits.hasMoreTokens()) {
                 path = "`" + pathBits.nextToken() + "`," + path;
             }
-            azquoCategoriesFound.put(entityTypeRecord.get("entity_id"), nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), allCategoriesName, true, "MagentoCategoryID", false));
+            languages.add("MagentoCategoryID");
+            azquoCategoriesFound.put(entityTypeRecord.get("entity_id"), nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), allCategoriesName, true, languages));
 
         }
         //now name the categories
@@ -117,9 +123,11 @@ public final class DataLoadService {
                 azquoCategoriesFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attributeRow.get("value"));
             }
         }
+        languages.clear();
+        languages.add("MagentoProductID");
 
         for (Map<String, String> entityRow : tableMap.get("catalog_product_entity")) {
-            Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("entity_id"), allProducts, true,"MagentoProductID", false);
+            Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("entity_id"), allProducts, true,languages);
             uncategorisedProducts.addChildWillBePersisted(magentoName);
             magentoName.setAttributeWillBePersisted("SKU", entityRow.get("sku"));
             azquoProductsFound.put(entityRow.get("entity_id"), magentoName);
@@ -128,7 +136,7 @@ public final class DataLoadService {
         for (Map<String, String> attributeRow : tableMap.get("catalog_product_entity_varchar")) {
             //only picking the name from all the category attributes
             if (attributeRow.get("attribute_id").equals(productNameId)) {
-                Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeRow.get("entity_id"), topProduct, true,"MagentoProductID", false);
+                Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeRow.get("entity_id"), topProduct, true,languages);
                 azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attributeRow.get("value"));
             }
         }
@@ -175,10 +183,10 @@ public final class DataLoadService {
             String attVal = attVals.get("attribute_id");
             if (attributes.contains(attVal)) {
                 Name magentoName = azquoProductsFound.get(attVals.get("entity_id"));
-                Name magentoProductCategory = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeNames.get(attVal), productAttributesName, true,"MagentoProductID", false);
+                Name magentoProductCategory = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeNames.get(attVal), productAttributesName, true,languages);
                 String val = attVals.get("value");
                 if (optionValues.get(val) != null) {
-                    Name magentoOptionName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, optionValues.get(val), magentoProductCategory, true,"MagentoProductID", false);
+                    Name magentoOptionName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, optionValues.get(val), magentoProductCategory, true,languages);
                     magentoOptionName.addChildWillBePersisted(magentoName);
                 } else {
                     System.out.println("found an option value " + val + " for " + magentoProductCategory.getDefaultDisplayName());
@@ -227,13 +235,15 @@ public final class DataLoadService {
                 }
                 configLine = null;
             }
+            languages.clear();
+            languages.add("MagentoOrderID");
             if (configLine == null) {
                 //store the values.   Qty and price have attributes order, product.  order is in all orders, and in the relevant date
                 String orderNo = salesRow.get("order_id");
-                Name orderName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,orderNo, allOrdersName,true,"MagentoOrderId", false);
+                Name orderName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,orderNo, allOrdersName,true,languages);
                 azquoOrdersFound.put(orderNo, orderName);
                 //adding 'I' to the item number so as not to confuse with order number for the developer - the system should be happy without it.
-                Name orderItemName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "I" + salesRow.get("item_id"), orderName, true,"MagentoOrderId", false);
+                Name orderItemName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "I" + salesRow.get("item_id"), orderName, true,languages);
                 Set<Name> namesForValue = new HashSet<Name>();
                 Name productName = azquoProductsFound.get(salesRow.get("product_id"));
                 if (productName == null){
@@ -243,7 +253,7 @@ public final class DataLoadService {
                 }
 
                 String orderDate = salesRow.get("created_at").substring(0,10);
-                Name dateName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderDate, allDates, true,"MagentOrderID", false);
+                Name dateName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderDate, allDates, true,languages);
                 dateName.addChildWillBePersisted(orderName);
                 productName.addChildWillBePersisted(orderItemName);
                 //namesForValue.add(productName);
@@ -261,7 +271,9 @@ public final class DataLoadService {
 
 
 
-        Name allCustomersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection,"All customers, customer",null, false,"MagentoCustomerID", false);
+        languages.clear();
+        languages.add("MagentoCustomerID");
+        Name allCustomersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection,"All customers, customer",null, false,languages);
 
         for (Map<String, String> orderRow : tableMap.get("sales_flat_order")) {
             //only importing the IDs at present
@@ -269,14 +281,14 @@ public final class DataLoadService {
             if (orderName != null){
                 String customer = orderRow.get("customer_id");
                 if (customer == null || customer.length()== 0) customer="Unknown";
-                Name customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,customer, allCustomersName, true,"MagentoCustomerID", false);
+                Name customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,customer, allCustomersName, true,languages);
                 customerName.addChildWillBePersisted(orderName);
             }
 
 
 
         }
-        azquoMemoryDBConnection.persist();
+        //azquoMemoryDBConnection.persist();
     }
 
 
