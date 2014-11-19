@@ -233,7 +233,7 @@ public class AdminController {
                 // just a quick way to load for WFC
                //InputStream uploadFile = new FileInputStream("/home/azquo/import/" + fileName);
                InputStream uploadFile = new FileInputStream("/home/bill/azquo/" + fileName);
-                 return  importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType,"true", true, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+                 return  importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType,"true", true, loggedInConnection.getLanguages());
             }
 
 
