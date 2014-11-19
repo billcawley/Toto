@@ -49,9 +49,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private List<Set<Name>> namesToSearch;
     private Map<Set<Name>, Set<Value>> valuesFound;
     private AzquoBook azquoBook;
-
-    private boolean loose;
-    private String language;
+    private List<String>  languages;
 
 
     private static final String defaultRegion = "default-region";
@@ -78,8 +76,8 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         valuesFound = null;
         azquoBook = null;
 
-        loose = false;
-        language = Name.DEFAULT_DISPLAY_NAME;
+        languages = new ArrayList<String>();
+        languages.add(Name.DEFAULT_DISPLAY_NAME);
 
         if (timeOut > 0) {
             this.timeOut = timeOut;
@@ -324,20 +322,13 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
     public void setAzquoBook(AzquoBook azquoBook){    this.azquoBook = azquoBook;  }
 
-    public boolean getLoose() {
-        return loose;
+
+    public List<String> getLanguages() {
+        return languages;
     }
 
-    public void setLoose(final boolean loose) {
-        this.loose = loose;
-    }
-
-    public String getLanguage() {
-        return language;
-    }
-
-    public void setLanguage(String language) {
-        this.language = language;
+    public void setLanguages(List<String> languages) {
+        this.languages = languages;
     }
 
 

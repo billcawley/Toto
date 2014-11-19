@@ -93,6 +93,7 @@ public final class ImportService {
         String composition;
         String equalsString;
         String lineValue;
+        Name lineName;
 
         public ImportHeading(){
             column=-1;
@@ -113,6 +114,7 @@ public final class ImportService {
             composition = null;
             equalsString = null;
             lineValue = "";
+            lineName = null;
 
 
         }
@@ -123,10 +125,10 @@ public final class ImportService {
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public String importTheFile(final AzquoMemoryDBConnection azquoMemoryDBConnection, String fileName, InputStream uploadFile, String fileType, final String strCreate,
-                                boolean skipBase64, String attributeName, boolean loose)
+                                boolean skipBase64, List<String> attributeNames)
             throws Exception {
 
-        azquoMemoryDBConnection.setNewProvenance("import", fileName);
+           azquoMemoryDBConnection.setNewProvenance("import", fileName);
         if (azquoMemoryDBConnection.getAzquoMemoryDB() == null) {
             return "error: no database set";
         }
@@ -156,16 +158,16 @@ public final class ImportService {
         }
         String error = "";
         if (fileName.contains(".xlsx")) {
-            error = readBook(azquoMemoryDBConnection, fileName, tempFile, attributeName, loose);
+            error = readBook(azquoMemoryDBConnection, fileName, tempFile, attributeNames);
 
         }else if (fileName.contains(".xls")){
-            error = readBook(azquoMemoryDBConnection, fileName, tempFile, attributeName, loose);
+            error = readBook(azquoMemoryDBConnection, fileName, tempFile, attributeNames);
 
         } else {
             if (tempFile.length() > 0) {
                 uploadFile = new FileInputStream(tempFile);
             }
-            error = readPreparedFile(azquoMemoryDBConnection, uploadFile, fileType, attributeName, loose);
+            error = readPreparedFile(azquoMemoryDBConnection, uploadFile, fileType, attributeNames);
         }
         azquoMemoryDBConnection.persist();
         Database db = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase();
@@ -178,17 +180,17 @@ public final class ImportService {
         return error;
     }
 
-    public String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, InputStream uploadFile, String fileType, String attributeName, boolean loose) throws Exception {
+    public String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, InputStream uploadFile, String fileType, List<String> attributeNames) throws Exception {
         // todo : language here!
 
         String result = "";
                 // we will pay attention onn the attribute import and replicate
 
        if (fileType.toLowerCase().startsWith("sets")) {
-            result = setsImport(azquoMemoryDBConnection, uploadFile, attributeName, loose);
+            result = setsImport(azquoMemoryDBConnection, uploadFile, attributeNames);
 
        }else{
-            result = valuesImport(azquoMemoryDBConnection, uploadFile, fileType, attributeName, loose);
+            result = valuesImport(azquoMemoryDBConnection, uploadFile, fileType, attributeNames);
        }
        return result;
 
@@ -312,12 +314,12 @@ public final class ImportService {
        return "";
     }
 
-    private String interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, ImportHeading heading, String attributeName, boolean loose) throws Exception{
+    private String interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, ImportHeading heading, List<String> attributeNames) throws Exception{
 
         StringTokenizer clauses = new StringTokenizer(headingString, ";");
 
         heading.heading = clauses.nextToken();
-        heading.name = nameService.findByName(azquoMemoryDBConnection,heading.heading, attributeName, loose);//at this stage, look for a name, but don't create it unless necessary
+        heading.name = nameService.findByName(azquoMemoryDBConnection,heading.heading, attributeNames);//at this stage, look for a name, but don't create it unless necessary
         while (clauses.hasMoreTokens()){
             String error = interpretClause(azquoMemoryDBConnection, heading, clauses.nextToken().trim());
             if (error.length() > 0){
@@ -380,7 +382,7 @@ public final class ImportService {
 
 
 
-    public String findTopParent(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportHeading heading, List<ImportHeading> headings, String attributeName, boolean loose) throws Exception{
+    public String findTopParent(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception{
         //need to work out the topparent for use when classifing names found in this column
         ImportHeading identity = heading;
         if (heading.identityHeading >=0) {
@@ -392,7 +394,7 @@ public final class ImportService {
         }
 
         if (identity.name == null){
-            identity.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,identity.heading, null, false, attributeName, loose);
+            identity.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,identity.heading, null, false, attributeNames);
         }
         heading.topParent = identity.name;//if no other parent found, this is the top parent.
         if (identity.childOf != null){
@@ -412,7 +414,7 @@ public final class ImportService {
         return "";
     }
 
-    public Name includeInSet(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<NameParent, Name> namesFound, String name, Name parent, boolean local, String attributeName, boolean loose) throws Exception{
+    public Name includeInSet(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<NameParent, Name> namesFound, String name, Name parent, boolean local, List<String> attributeNames) throws Exception{
 
 
         //namesFound is a quick lookup to avoid going to findOrCreateNameInParent
@@ -421,14 +423,14 @@ public final class ImportService {
         if (found != null) {
             return found;
         }
-        found = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, name, parent, local, attributeName, loose);
+        found = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, name, parent, local, attributeNames);
         namesFound.put(np, found);
         return found;
 
 
     }
 
-    public String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, String fileType, String attributeName, boolean loose) throws Exception {
+    public String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, String fileType, List<String> attributeNames) throws Exception {
 
           // little local cache just to speed things up
         final HashMap<NameParent, Name> namesFound = new HashMap<NameParent, Name>();
@@ -449,10 +451,10 @@ public final class ImportService {
         final HashMap<Name, String> namesWithPeersHeaderMap = new HashMap<Name, String>();
         final List<ImportHeading> headings = new ArrayList<ImportHeading>();
 
-        String error = readHeaders(azquoMemoryDBConnection, headers, headings, fileType, attributeName, loose);
+        String error = readHeaders(azquoMemoryDBConnection, headers, headings, fileType, attributeNames);
         if (error.length() > 0) return error;
 
-        error = fillInHeaderInformation(azquoMemoryDBConnection, headings, attributeName, loose);
+        error = fillInHeaderInformation(azquoMemoryDBConnection, headings, attributeNames);
         if (error.length() > 0) return error;
 
         int valuecount = 0; // purely for logging
@@ -465,9 +467,10 @@ public final class ImportService {
             if (csvReader.get(0).length()==0)break;//break if the first line element is blank
             for (ImportHeading heading:headings){
                 heading.lineValue = csvReader.get(heading.column);
+                heading.lineName = null;
             }
             getCompositeValues(headings);
-            LineResult result = interpretLine(azquoMemoryDBConnection,headings,namesFound, attributeName, loose);
+            LineResult result = interpretLine(azquoMemoryDBConnection,headings,namesFound, attributeNames);
             if (result.error.length()> 0) return result.error;
             valuecount += result.valueCount;
             if (valuecount - lastReported > 5000){
@@ -484,13 +487,13 @@ public final class ImportService {
     }
 
 
-    private String readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<ImportHeading> headings, String fileType, String attributeName, boolean loose) throws Exception{
+    private String readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<ImportHeading> headings, String fileType, List<String> attributeNames) throws Exception{
 
         int col = 0;
         String error = "";
         //if the file is of type (e.g.) 'sales' and there is a name 'import sales', thisis uses as an interpreter.  It need not interpret every column heading, but
         // any attribute of the same name as a column heading will be used.
-        Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "import " + fileType, attributeName, loose);
+        Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "import " + fileType, attributeNames);
         for (String header : headers) {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 ImportHeading heading = new ImportHeading();
@@ -505,7 +508,7 @@ public final class ImportService {
                 int dividerPos = head.lastIndexOf(headingDivider);
                 while (dividerPos > 0) {
                     ImportHeading contextHeading = new ImportHeading();
-                    error = interpretHeading(azquoMemoryDBConnection, head.substring(dividerPos + 1), contextHeading, attributeName, loose);
+                    error = interpretHeading(azquoMemoryDBConnection, head.substring(dividerPos + 1), contextHeading, attributeNames);
                     if (error.length()> 0) return error;
                     contextHeading.column = col;
                     contextHeading.contextItem = true;
@@ -517,7 +520,7 @@ public final class ImportService {
                 }
                 heading.column = col;
 
-                error = interpretHeading(azquoMemoryDBConnection, head, heading, attributeName, loose);
+                error = interpretHeading(azquoMemoryDBConnection, head, heading, attributeNames);
                 if (error.length() > 0) return error;
                 headings.add(heading);
             } else {
@@ -529,11 +532,16 @@ public final class ImportService {
     }
 
 
-    private LineResult interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings, HashMap<NameParent, Name> namesFound, String attributeName, boolean loose)throws Exception{
+    private LineResult interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings, HashMap<NameParent, Name> namesFound, List<String> attributeNames)throws Exception{
         LineResult result = new LineResult();
         Map<Name,Name> contextNames = new HashMap<Name,Name>();
         String value = null;
         ImportHeading contextPeersItem = null;
+        for (ImportHeading importHeading:headings){
+            if (importHeading.local && importHeading.parentOf != null){
+                handleParent(azquoMemoryDBConnection,namesFound, importHeading, headings,attributeNames);
+            }
+        }
         for (ImportHeading heading:headings) {
             if (heading.contextItem){
                 contextNames.put(heading.name.findTopParent(),heading.name);
@@ -556,8 +564,14 @@ public final class ImportService {
                                     foundAll = false;
                                     break;
                                 }
-                                String peerValue = headings.get(colFound).lineValue;
-                                possiblePeer = includeInSet(azquoMemoryDBConnection,namesFound,peerValue, peer, heading.local,attributeName, loose);
+                                ImportHeading peerHeading = headings.get(colFound);
+                                if (peerHeading.lineName != null){
+                                     peer.addChildWillBePersisted(peerHeading.lineName);   
+                                }else {
+                                    String peerValue = peerHeading.lineValue;
+                                    peerHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, peerValue, peer, heading.local, attributeNames);
+                                }
+                                possiblePeer = peerHeading.lineName;
                             }
                             if (nameService.inParentSet(possiblePeer, peer.getChildren())!=null){
                                 namesForValue.add(possiblePeer);
@@ -583,7 +597,7 @@ public final class ImportService {
 
                     }
                 }
-                if (heading.peerHeadings.size() > 0) {
+                if (heading.peerHeadings.size() > 0 ) {
                     ImportHeading headingWithPeers = heading;
                     if (heading.contextItem) {
                         contextPeersItem = heading;
@@ -593,7 +607,7 @@ public final class ImportService {
                     }
                     final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
 
-                    boolean hasRequiredPeers = findPeers(azquoMemoryDBConnection,namesFound, heading, headings, namesForValue, attributeName, loose);
+                    boolean hasRequiredPeers = findPeers(azquoMemoryDBConnection,namesFound, heading, headings, namesForValue, attributeNames);
                     if (hasRequiredPeers) {
                         // now we have the set of names for that name with peers get the value from that headingNo it's a header for
                         value = heading.lineValue;
@@ -607,17 +621,21 @@ public final class ImportService {
                      }
                 }
                 if (heading.identityHeading >= 0) {
-                    result.error = handleAttribute(azquoMemoryDBConnection, namesFound, heading, headings, attributeName, loose);
+                    result.error = handleAttribute(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
                     if (result.error.length() > 0) return result;
                 }
-                if (heading.parentOf != null) {
-                    handleParent(azquoMemoryDBConnection, namesFound, heading, headings, attributeName, loose);
+                if (heading.parentOf != null && !heading.local) {
+                    handleParent(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
                 }
 
                 if (heading.childOf != null) {
-                    String childName = heading.lineValue;
-                    if (childName.length() > 0) {
-                        Name name = includeInSet(azquoMemoryDBConnection,namesFound, childName, heading.childOf, heading.local, attributeName, loose);
+                     if (heading.lineName != null){
+                        heading.childOf.addChildWillBePersisted(heading.lineName);
+                    }else {
+                        String childNameString = heading.lineValue;
+                        if (childNameString.length() > 0) {
+                            heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childNameString, heading.childOf, heading.local, attributeNames);
+                        }
                     }
                 }
 
@@ -631,7 +649,7 @@ public final class ImportService {
     }
 
 
-    private String fillInHeaderInformation(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings, String attributeName, boolean loose)throws Exception{
+    private String fillInHeaderInformation(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings, List<String> attributeNames)throws Exception{
 
         String error = "";
         for (ImportHeading importHeading:headings) {
@@ -690,7 +708,7 @@ public final class ImportService {
                     if (importHeading.childHeading < 0) {
                         return "error: cannot find column " + importHeading.parentOf + " for child of " + importHeading.heading;
                     }
-                    error = findTopParent(azquoMemoryDBConnection, importHeading, headings, attributeName, loose);
+                    error = findTopParent(azquoMemoryDBConnection, importHeading, headings, attributeNames);
                     if (error.length() > 0) return error;
                 }
             }
@@ -699,7 +717,7 @@ public final class ImportService {
         for (ImportHeading importHeading:headings) {
             if (importHeading.heading != null) {
                 if (importHeading.attribute != null) {
-                    findTopParent(azquoMemoryDBConnection, importHeading, headings, attributeName, loose);
+                    findTopParent(azquoMemoryDBConnection, importHeading, headings, attributeNames);
 
                 }
             }
@@ -712,64 +730,54 @@ public final class ImportService {
     }
 
 
-    private String handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, String attributeName, boolean loose)throws  Exception{
+    private String handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames)throws  Exception{
 
         ImportHeading childHeading = headings.get(heading.childHeading);
-        String childName = childHeading.lineValue;
-        String parentName = heading.lineValue;
-        if (parentName.length() > 0) {
-            Name parentSet = null;
-            parentSet = includeInSet(azquoMemoryDBConnection,namesFound, parentName, heading.childOf, heading.local, attributeName, loose);
-
-            String language = null;
-            if (childHeading.attribute != null) {
-                language = childHeading.attribute;
-            }
-            //the child name is not local to the parent set, so find it in the class first
-            Name name = includeInSet(azquoMemoryDBConnection,namesFound, childName, childHeading.topParent, false, attributeName, loose);
-
-            for (Name parent:parentSet.findAllParents()){
-                if (parent.getChildren().contains(name)){//remove any direct links that can be assumed through the new link
-                    parent.removeFromChildrenWillBePersisted(name);
-                }
-            }
-            parentSet.addChildWillBePersisted(name);
-
+       if (heading.lineValue.length() == 0) return "";
+        if (heading.lineName != null && heading.childOf != null){
+            heading.childOf.addChildWillBePersisted(heading.lineName);
+        }else {
+            heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, attributeNames);
         }
+        if (childHeading.lineName == null) {
+            childHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childHeading.lineValue, heading.lineName, heading.local, attributeNames);
+        }
+        heading.lineName.addChildWillBePersisted(childHeading.lineName);
 
+  
         return "";
 
 
     }
 
 
-    public String handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent,Name> namesFound, ImportHeading heading, List<ImportHeading> headings, String attributeName, boolean loose)throws Exception{
+    public String handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent,Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames)throws Exception{
 
         ImportHeading identity = headings.get(heading.identityHeading);
-        String itemName = headings.get(heading.identityHeading).lineValue;
-        if (itemName.length() > 0) {
-            if (identity.identityHeading >= 0) {
-                attributeName = identity.attribute;
-            }
+        ImportHeading identityHeading = headings.get(heading.identityHeading);
+        if (identityHeading.lineName == null) {
+            if (identityHeading.lineValue.length() == 0) return "";
+            List<String> localAttributes = new ArrayList<String>();
+            localAttributes.add(identity.attribute);
+            localAttributes.addAll(attributeNames);
             if (heading.topParent == null) {
                 //may have escaped the checks...
-                String error = findTopParent(azquoMemoryDBConnection, identity, headings, attributeName, loose);
+                String error = findTopParent(azquoMemoryDBConnection, identity, headings, localAttributes);
                 if (error.length() > 0) return error;
             }
 
-            Name name = includeInSet(azquoMemoryDBConnection,namesFound, itemName, heading.topParent, heading.local,attributeName, loose);
-            String attribute = heading.attribute;
-            if (attribute==null){
-                attribute= Name.DEFAULT_DISPLAY_NAME;
-            }
-            String attValue = heading.lineValue;
-            name.setAttributeWillBePersisted(attribute, attValue);
-            nameService.calcReversePolish(azquoMemoryDBConnection, name, attributeName, loose);
+            identityHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, identityHeading.lineValue, heading.topParent, false, localAttributes);
         }
+        String attribute = heading.attribute;
+        if (attribute==null){
+            attribute= Name.DEFAULT_DISPLAY_NAME;
+        }
+        identityHeading.lineName.setAttributeWillBePersisted(attribute, heading.lineValue);
+        nameService.calcReversePolish(azquoMemoryDBConnection, identityHeading.lineName);
         return "";
     }
 
-    private boolean findPeers(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, Set<Name> namesForValue, String attributeName, boolean loose)throws  Exception{
+    private boolean findPeers(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, Set<Name> namesForValue, List<String> attributeNames)throws  Exception{
 
         ImportHeading headingWithPeers = heading;
         boolean hasRequiredPeers = true;
@@ -779,27 +787,24 @@ public final class ImportService {
             if (peerHeading.contextItem) {
                 namesForValue.add(peerHeading.name);
             } else {
-                final String peerVal = peerHeading.lineValue;
-                if (peerVal == null || peerVal.length() == 0) { // the file specified
-                    hasRequiredPeers = false;
-                } else {
-                    //storeStructuredName(peer,peerVal, azquoMemoryDBConnection);
-                    // lower level names first so the syntax is something like Knightsbridge, London, UK
-                    // hence we're passing a multi level name lookup to the name service, whatever is in that headingNo with the header on the end
-                    // sometimes quotes are used in the middle of names to indicate inches - e.g. '4" pipe'      - store as '4inch pipe'
-                    final String nameToFind = Name.QUOTE + peerVal + Name.QUOTE + "," + Name.QUOTE + headings.get(peerHeadingNo).name.getDefaultDisplayName() + Name.QUOTE;
-                    // check the local cache first
-                    Name nameFound = namesFound.get(nameToFind);
-                    if (nameFound == null) {
+                if (peerHeading.lineName==null) {
+                    if (peerHeading.lineValue.length() == 0) {
+                        hasRequiredPeers = false;
+                    } else {
+                        List<String> peerLanguages = new ArrayList<String>();
+                        //looking up in the correct language
                         if (peerHeading.attribute != null) {
-                             attributeName = peerHeading.attribute;
+                            peerLanguages.add(peerHeading.attribute);
+                            if (attributeNames.size() > 1) {
+                                peerLanguages.addAll(attributeNames);
+                            }
                         }
-                        nameFound = includeInSet(azquoMemoryDBConnection,namesFound, peerVal, headings.get(peerHeadingNo).name, heading.local, attributeName, loose);
+                        peerHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, peerHeading.lineValue, headings.get(peerHeadingNo).name, false, peerLanguages);
                     }
+                }
                     // add to the set of names we're going to store against this value
-                    if (nameFound != null) {
-                        namesForValue.add(nameFound);
-                    }
+                    if (peerHeading.lineName != null) {
+                        namesForValue.add(peerHeading.lineName);
                 }
                 //namesForValue.add(nameService.findOrCreateName(azquoMemoryDBConnection,peerVal + "," + peer.getName())) ;
             }
@@ -840,7 +845,7 @@ public final class ImportService {
 
 
 
-    public String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, String attributeName, boolean loose) throws Exception {
+    public String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames) throws Exception {
 
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
         String line;
@@ -851,8 +856,8 @@ public final class ImportService {
             if (st.hasMoreTokens()) {
                 String setName = st.nextToken();
                 if (setName.length() > 0) {
-                    String error = interpretHeading(azquoMemoryDBConnection, setName, importHeading, attributeName, loose);
-                    importHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, importHeading.heading, null, false, attributeName, loose);
+                    String error = interpretHeading(azquoMemoryDBConnection, setName, importHeading, attributeNames);
+                    importHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, importHeading.heading, null, false, attributeNames);
                     if (error.length() > 0) {
                         return error;
                     }
@@ -861,7 +866,7 @@ public final class ImportService {
                     while (st.hasMoreTokens()) {
                         String element = st.nextToken();
                         if (element.length() > 0) {
-                             nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, set, false, attributeName, loose);//this import currently not importing local names
+                             nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, set, false, attributeNames);//this import currently not importing local names
                         }
                     }
                 }
@@ -1066,7 +1071,7 @@ public final class ImportService {
 
 
 
-private String readBook (final AzquoMemoryDBConnection azquoMemoryDBConnection, final String fileName, final String tempName, String attributeName, boolean loose) {
+private String readBook (final AzquoMemoryDBConnection azquoMemoryDBConnection, final String fileName, final String tempName, List<String> attributeNames) {
 
 
         try {
@@ -1080,7 +1085,7 @@ private String readBook (final AzquoMemoryDBConnection azquoMemoryDBConnection, 
             int sheetNo = 0;
 
             while (sheetNo < azquoBook.getNumberOfSheets()) {
-                String error = readSheet(azquoMemoryDBConnection, azquoBook, tempName, sheetNo, attributeName, loose);
+                String error = readSheet(azquoMemoryDBConnection, azquoBook, tempName, sheetNo, attributeNames);
                 if (error.startsWith("error:")){
                     return error;
                 }
@@ -1095,14 +1100,14 @@ private String readBook (final AzquoMemoryDBConnection azquoMemoryDBConnection, 
 
 
 
-    private String readSheet(final AzquoMemoryDBConnection azquoMemoryDBConnection, AzquoBook azquoBook, final String tempFileName, final int sheetNo, String attributeName, boolean loose) throws Exception{
+    private String readSheet(final AzquoMemoryDBConnection azquoMemoryDBConnection, AzquoBook azquoBook, final String tempFileName, final int sheetNo, List<String> attributeNames) throws Exception{
 
 
         String tempName = azquoBook.convertSheetToCSV(tempFileName, sheetNo);
 
          InputStream uploadFile = new FileInputStream(tempName);
         String fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
-        return readPreparedFile(azquoMemoryDBConnection, uploadFile, fileType, attributeName, loose);
+        return readPreparedFile(azquoMemoryDBConnection, uploadFile, fileType, attributeNames);
 
      }
 

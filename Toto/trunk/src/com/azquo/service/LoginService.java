@@ -112,14 +112,14 @@ public class LoginService {
                 List<Set<Name>> names = new ArrayList<Set<Name>>();
                 if (permission != null){
 //                    String error = nameService.decodeString(lic,permission.getReadList(), names);
-                    names = nameService.decodeString(lic,permission.getReadList(), !lic.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? lic.getLanguage() : null, lic.getLoose());
+                    names = nameService.decodeString(lic,permission.getReadList(), lic.getLanguages());
                      //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
                 }
                 lic.setReadPermissions(names);
                 names = new ArrayList<Set<Name>>();
                 if (permission != null){
 //                    String error = nameService.decodeString(lic,permission.getWriteList(), names);
-                    names = nameService.decodeString(lic,permission.getWriteList(), !lic.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? lic.getLanguage() : null, lic.getLoose());
+                    names = nameService.decodeString(lic,permission.getWriteList(), lic.getLanguages());
                     //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
                 }
                 lic.setWritePermissions(names);
@@ -236,7 +236,7 @@ public class LoginService {
             int databaseId = loggedInConnection.getAzquoMemoryDB().getDatabase().getId();
             Integer openCount = openDBCount.get(databaseId);
             if (newDb == null) openCount = 1;//if we're deleting the database, then close the memory, regardless of whether others have it open.
-            if (openCount == 1) {
+            if (openCount != null && openCount == 1) {
                 memoryDBManager.removeDatabase(loggedInConnection.getAzquoMemoryDB().getDatabase());
                 openDBCount.remove(databaseId);
                 openDatabaseDAO.closeForDatabaseId(databaseId);

@@ -1,5 +1,6 @@
 package com.azquo.controller;
 
+import com.azquo.memorydb.Name;
 import com.azquo.service.*;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -15,6 +16,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -63,7 +65,6 @@ public class ImportController {
         'create' will indicate if new names are to be created.  If 'create' is not specified, any name that is not understood will be rejected
 
          */
-        String origLanguage = "";
         String fileName = "";
         String fileType = "";
         String language = "";
@@ -141,24 +142,27 @@ public class ImportController {
             logger.info("upload file : " + item.getName());
             logger.info("upload file size : " + item.getSize());
             InputStream uploadFile = item.getInputStream();
-            origLanguage = loggedInConnection.getLanguage();
+            List<String>origLanguages = loggedInConnection.getLanguages();
+            List<String> langs = new ArrayList<String>();
 
-            boolean loose = true;//if a name is not found in the import language, look for a name in the default language
             if (language.toLowerCase().endsWith("only")){
-                loose = false;
                 language = language.substring(0, language.length()-4).trim();
+                langs.add(language);
+            }else{
+                if (language.length() > 0){
+                    langs.add(language);
+                    langs.add(Name.DEFAULT_DISPLAY_NAME);
+                }
+             }
+            if (langs.size() == 0){
+                langs = loggedInConnection.getLanguages();
             }
-            if (language.length()==0 || language.equalsIgnoreCase("name")){
-                language=null;
-            }
-
-            result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, create, macMode, language, loose);
+            loggedInConnection.setLanguages(langs);
+            result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, create, macMode, langs);
+            loggedInConnection.setLanguages(origLanguages);
             return result;
         } catch (Exception e) {
             e.printStackTrace();
-            if (origLanguage.length() > 0 && loggedInConnection != null) {
-                loggedInConnection.setLanguage(origLanguage);
-            }
             return "error:" + e.getMessage();
         }
     }
