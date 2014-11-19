@@ -75,7 +75,8 @@ public class MagentoController {
          }
          if (loggedInConnection == null) {
              //for testing only
-             loggedInConnection = loginService.login("temporary","tempuser", "password",0,"",false);
+             loggedInConnection = loginService.login("temp","tempuser","password",0,"",false);
+             //loggedInConnection = loginService.login("test","magentobill","password",0,"",false);
         }
         if (op.equals("tempdb")) {
             dataLoadService.loadData(loggedInConnection, data);
