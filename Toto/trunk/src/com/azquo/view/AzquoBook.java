@@ -15,6 +15,7 @@ import org.apache.poi.ss.usermodel.CellValue;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -38,6 +39,7 @@ public  class AzquoBook {
 
     public static final String azDataRegion = "az_dataregion";
     public static final String azInput = "az_input";
+    public static final String azNext = "az_next";
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
@@ -1331,7 +1333,7 @@ public  class AzquoBook {
 
                                 }else {
                                     try {
-                                        choiceList = nameService.interpretName(loggedInConnection, choice.get(0,0).getStringValue(), !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+                                        choiceList = nameService.interpretName(loggedInConnection, choice.get(0,0).getStringValue(), loggedInConnection.getLanguages());
                                     } catch (Exception e) {
 
                                         //TODO think what to do !
@@ -1781,7 +1783,7 @@ public  class AzquoBook {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(azInput) && name.getRange().getWorksheet() == azquoSheet) {
                 //NOTE - THis routine below will add an 'id' column to the start of the range returned, even when the id is not part of the range.
-                return rangeToText(name.getRange(), true);
+                return rangeToText(name.getRange(), true);//no new names to be allocated
                 //only one input range per sheet in the admin worksheet
 
 
@@ -1838,7 +1840,8 @@ public  class AzquoBook {
                     }
                     Cell cell =  range.getCellOrNull(rowNo, colNo);
                     if (cell != null) {
-                        sb.append(cell.getStringValue());
+                        String cellVal = cell.getStringValue();
+                        sb.append(cellVal);
                     }
                 }
             }
@@ -1847,16 +1850,64 @@ public  class AzquoBook {
 
     }
 
+    private String subsequent(String nameText){
+        //adds one on to any name (e.g.   Sale 001234  _> Sale 001235)
+        int i = -1;
+        for (i = nameText.length() - 1; i >= 0; i--){
+            char c = nameText.charAt(i);
+            if (c < '0' || c > '9') break;
+        }
+        if (i < nameText.length() - 1){
+            try {
+                int formatLen = nameText.length() - i - 1;
+                if (formatLen > 9) formatLen = 9;
+
+                int num = Integer.parseInt(nameText.substring(i + 1)) + 1;
+                String numText = ("000000000" + num);
+                if (numText.charAt(numText.length() - formatLen - 1) == '1'){
+                    //overflow (e.g. 9999 ->10000)
+                    numText = num + "";
+
+                }else{
+                    numText = numText.substring(numText.length() - formatLen);
+                }
+
+                nameText = nameText.substring(0, i+1) + numText.substring(numText.length() - formatLen);
+            }catch(Exception e){
+                //will not get here
+            }
+
+        }
+        return nameText;
+    }
+
+
     public String saveData(LoggedInConnection loggedInConnection)throws Exception{
+        Map<String, String> newNames = new HashMap<String, String>();// if there are ranges starting 'az_next' then substitute these names for the latest number
+        for (int i = 0;i < wb.getWorksheets().getNames().getCount();i++){
+            com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
+            if (name.getText().toLowerCase().startsWith(azNext) && name.getRange().getWorksheet() == azquoSheet) {
+                String nameText = name.getText().substring(azNext.length()).replace("_"," ");
+                Name nextName = nameService.findByName(loggedInConnection,nameText);
+                if (nextName != null){
+                    String nextNameName = nextName.getAttribute("next");
+                    if (nextNameName != null){
+                        nextName.setAttributeWillBePersisted("next", subsequent(nextNameName));
+                        newNames.put(rangeToText(name.getRange()), nextNameName);
+                    }
+                }
+             }
+
+        }
         for (int i = 0;i < wb.getWorksheets().getNames().getCount();i++){
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
                 String region = name.getText().substring(dataRegionPrefix.length());
-                StringBuffer sb = rangeToText(name.getRange(), false);
-                String result = "";
+                 String result = "";
                 if ( getRange("az_rowheadings" + region) == null){
-                    result = importRangeFromScreen(loggedInConnection, region);
+                    result = importRangeFromScreen(loggedInConnection, region, newNames);
                 }else{
+                    StringBuffer sb = rangeToText(name.getRange(), false);
                     result = valueService.saveData(loggedInConnection,region.toLowerCase(), sb.toString());
                 }
                 if (result.startsWith("error:")){
@@ -1909,7 +1960,8 @@ public  class AzquoBook {
         int left = 0;
         int right = 0;
         String tabclass = null;
-        for (int i = 0; i < wb.getWorksheets().getCount(); i++){
+        int lastSheet = wb.getWorksheets().getCount();
+        for (int i = 0; i < lastSheet; i++){
             Worksheet sheet = wb.getWorksheets().get(i);
             left = right;
 
@@ -1917,13 +1969,16 @@ public  class AzquoBook {
                 right = 1;
                 tabclass="tabchosen";
             } else{
-                right=2;
+                if (i < lastSheet - 1){
+                    right = 2;
+                }else{
+                    right = 0;
+                }
                 tabclass ="tabbackground";
             }
             //tabs.append("<div class=\"tab\" style=\"left:" + left + "px\"><a href=\"#\" onclick=\"loadsheet('" + sheet.getSheetName() + "')\">" + sheet.getSheetName() + "</a></div>\n");
             tabs.append(tabImage(left, right) +"<span  class=\""+ tabclass + "\"><a href=\"#\" onclick=\"loadsheet('" + sheet.getName() + "')\">" + sheet.getName() + "</a></span>");
         }
-        tabs.append(tabImage(right, 0));
         return error;
     }
 
@@ -2022,13 +2077,13 @@ public  class AzquoBook {
 
         //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
         CsvWriter csvW = new CsvWriter(new FileWriter(tempName),'\t');
-        convertRangeToCSV(sheet, csvW, null);
+        convertRangeToCSV(sheet, csvW, null, null);
         csvW.close();
         return tempName;
 
     }
 
-    private String importRangeFromScreen(LoggedInConnection loggedInConnection, String region)throws Exception{
+    private String importRangeFromScreen(LoggedInConnection loggedInConnection, String region, Map<String, String>newNames)throws Exception{
         String fileType = azquoSheet.getName();
 
         File temp = File.createTempFile("fromscreen","." + fileType);
@@ -2036,12 +2091,12 @@ public  class AzquoBook {
         temp.deleteOnExit();
 
         CsvWriter csvW = new CsvWriter(new FileWriter(tempName),'\t');
-        convertRangeToCSV(azquoSheet, csvW, getRange("az_columnheadings" + region));
-        convertRangeToCSV(azquoSheet, csvW, getRange("az_dataRegion" + region));
+        convertRangeToCSV(azquoSheet, csvW, getRange("az_columnheadings" + region), null);
+        convertRangeToCSV(azquoSheet, csvW, getRange("az_dataRegion" + region), newNames);
         csvW.close();
         InputStream uploadFile = new FileInputStream(tempName);
         fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
-        String result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType, !loggedInConnection.getLanguage().equals(Name.DEFAULT_DISPLAY_NAME) ? loggedInConnection.getLanguage() : null, loggedInConnection.getLoose());
+        String result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType, loggedInConnection.getLanguages());
         if (!result.startsWith("error:")){
             String saveFileName = "/home/azquo/databases/" + loggedInConnection.getCurrentDBName()+"/uploads/" + azquoSheet.getName() + " " +  df.format(new Date()) + ".xlsx";
             File file = new File(saveFileName);
@@ -2053,7 +2108,7 @@ public  class AzquoBook {
 
     }
 
-    public String convertRangeToCSV(final Worksheet  sheet, final CsvWriter csvW, Range range) throws Exception {
+    public String convertRangeToCSV(final Worksheet  sheet, final CsvWriter csvW, Range range, Map<String, String> newNames) throws Exception {
         Row row;
         Cell cell;
         Cells cells = sheet.getCells();
@@ -2083,8 +2138,11 @@ public  class AzquoBook {
 
                         String cellFormat = "";
                         cellFormat = convertDates(cell.getStringValue());
-
-                        csvW.write(cellFormat);
+                        if (newNames != null && newNames.get(cellFormat) != null){
+                            csvW.write(newNames.get(cellFormat));
+                        }else {
+                            csvW.write(cellFormat);
+                        }
                     }
 
                 }
