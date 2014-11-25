@@ -44,9 +44,9 @@
     </servlet-mapping>
 
 
-     <context-param>
+    <context-param>
         <param-name>contextConfigLocation</param-name>
-        <param-value>/WEB-INF/azquospringdispatcher-servlet.xml</param-value>
+        <param-value>/WEB-INF/rootcontext.xml</param-value>
     </context-param>
     <listener>
         <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
