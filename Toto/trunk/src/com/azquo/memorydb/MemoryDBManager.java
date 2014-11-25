@@ -61,7 +61,7 @@ public final class MemoryDBManager {
         */
     }
 
-
+// todo : what if referenced to the memory db held in memory still??
     public synchronized void removeDatabase(Database db){
         memoryDatabaseMap.remove(db.getMySQLName());
 
@@ -69,6 +69,9 @@ public final class MemoryDBManager {
 
 
     public synchronized void addNewToDBMap(Database database) throws Exception {
+        if (memoryDatabaseMap.get(database.getMySQLName()) != null){
+            throw new Exception("cannot create new memory database one attached to that mysql database already exists");
+        }
         AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(database, standardDAO, appServices);
         memoryDatabaseMap.put(database.getMySQLName(), azquoMemoryDB);
     }
