@@ -70,6 +70,7 @@ public final class ImportService {
     public final String PLURAL = "plural ";
     public final String PEERS = "peers";
     public final String LOCAL = "local";
+    public final String GLOBAL = "global";
     public final String EQUALS = "equals";
     public final String COMPOSITION = "composition";
 
@@ -90,6 +91,7 @@ public final class ImportService {
         boolean identifier;
         boolean contextItem;
         boolean local;
+        boolean global;
         String composition;
         String equalsString;
         String lineValue;
@@ -111,6 +113,8 @@ public final class ImportService {
             identifier = false;
             contextItem = false;
             local = false;
+            global = false;
+
             composition = null;
             equalsString = null;
             lineValue = "";
@@ -251,6 +255,10 @@ public final class ImportService {
        }
        if (readClause(LOCAL, clause) !=null){
             heading.local = true;
+        }
+
+        if (readClause(GLOBAL, clause) != null){
+            heading.global = true;
         }
 
         if (readClause(PLURAL, clause) !=null){
@@ -538,7 +546,7 @@ public final class ImportService {
         String value = null;
         ImportHeading contextPeersItem = null;
         for (ImportHeading importHeading:headings){
-            if (importHeading.local && importHeading.parentOf != null){
+            if ((importHeading.local || importHeading.global) && importHeading.parentOf != null){
                 handleParent(azquoMemoryDBConnection,namesFound, importHeading, headings,attributeNames);
             }
         }
@@ -642,6 +650,11 @@ public final class ImportService {
 
             }
         }
+        for (ImportHeading importHeading:headings){
+            if (importHeading.global && importHeading.parentOf != null){
+                handleParent(azquoMemoryDBConnection,namesFound, importHeading, headings,attributeNames);
+            }
+        }
 
 
 
@@ -737,7 +750,11 @@ public final class ImportService {
         if (heading.lineName != null && heading.childOf != null){
             heading.childOf.addChildWillBePersisted(heading.lineName);
         }else {
-            heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, attributeNames);
+            if (heading.global){
+                heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, heading.lineValue, null, false, attributeNames);
+            }else{
+                heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, attributeNames);
+            }
         }
         if (childHeading.lineName == null) {
             childHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childHeading.lineValue, heading.lineName, heading.local, attributeNames);
@@ -800,8 +817,7 @@ public final class ImportService {
                             }
                         }
                         peerHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, peerHeading.lineValue, headings.get(peerHeadingNo).name, false, peerLanguages);
-                    }
-                }
+                    }                }
                     // add to the set of names we're going to store against this value
                     if (peerHeading.lineName != null) {
                         namesForValue.add(peerHeading.lineName);
@@ -866,7 +882,13 @@ public final class ImportService {
                     while (st.hasMoreTokens()) {
                         String element = st.nextToken();
                         if (element.length() > 0) {
-                             nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, set, false, attributeNames);//this import currently not importing local names
+                            if (importHeading.global){
+                                Name child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, null, false, attributeNames);
+                                set.addChildWillBePersisted(child);
+
+                            }else{
+                                nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, set, false, attributeNames);//this import currently not importing local names
+                            }
                         }
                     }
                 }
@@ -1022,8 +1044,7 @@ public final class ImportService {
                 }
                 count = data.read(b);
                 if (count <= 0) {
-                    if (shift > 0) {
-                        //not sure here....
+                    if (shift > 0) {                        //not sure here....
                         b[0] = ' ';
                     }
                 }
