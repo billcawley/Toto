@@ -2143,6 +2143,8 @@ public  class AzquoBook {
                         }else {
                             csvW.write(cellFormat);
                         }
+                    }else{
+                        csvW.write("");
                     }
 
                 }
