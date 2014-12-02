@@ -296,7 +296,7 @@ public final class ValueService {
         Set<Name> applicableNames = new HashSet<Name>();
         for (Name peer : name.getPeers().keySet()) {
             for (Name listName : nameSet) {
-                if (listName.findTopParent() == peer.findTopParent()) {
+                if (listName.findATopParent() == peer.findATopParent()) {
                     applicableNames.add(listName);
                     if (--required == 0) {
                         return applicableNames;
@@ -945,8 +945,8 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 break;
             }
             for (Name name : valNames) {
-                if (!headings.contains(name.findTopParent())) {
-                    headings.add(name.findTopParent());
+                if (!headings.contains(name.findATopParent())) {
+                    headings.add(name.findATopParent());
                 }
             }
         }
@@ -974,7 +974,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             int i = 0;
             for (Name heading : headings) {
                 for (Name name : valNames) {
-                    if (name.findTopParent() ==heading) {
+                    if (name.findATopParent() ==heading) {
                         names[i] = name.getDefaultDisplayName();
                     }
                 }
@@ -1364,7 +1364,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         Map<Name, Integer> nameCount = new HashMap<Name, Integer>();
         for (Value value : values) {
             for (Name name : value.getNames()) {
-                if (topParent == null || name.findTopParent()==topParent) {
+                if (topParent == null || name.findATopParent()==topParent) {
                     Integer origCount = nameCount.get(name);
                     if (origCount == null) {
                         nameCount.put(name, 1);
@@ -1442,7 +1442,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             Name topParent = null;
             while (values.size() > 0) {
                 Name heading = getMostUsedName(values, topParent);
-                topParent = heading.findTopParent();
+                topParent = heading.findATopParent();
                 Set<Value> extract = new HashSet<Value>();
                 Set<Value> slimExtract = new HashSet<Value>();
                 for (Value value : values) {

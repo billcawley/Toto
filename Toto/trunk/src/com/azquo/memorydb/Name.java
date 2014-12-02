@@ -3,7 +3,6 @@ package com.azquo.memorydb;
 import com.azquo.memorydbdao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.*;
@@ -180,9 +179,9 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         return allParents;
     }
 
-    // since we're not going to allow a name to exist in two top "root" names one should be able to just get the first from parent lists and get there
+    // we are low allowing a name to be in more than one top parent, hence the name change
 
-    public Name findTopParent() {
+    public Name findATopParent() {
         if (parents.size() > 0) {
             Name parent = parents.iterator().next();
             while (parent != null) {
@@ -264,8 +263,8 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             }
             // now we need to check the top parent is not changing on the child
             if (newChild.getParents().size() > 0) { // it has parents so we need to check
-                if (!newChild.findTopParent().equals(this) && parents.size() > 0 && !newChild.findTopParent().equals(findTopParent())) {
-                    throw new Exception("error cannot assign child as it has a different top parent" + newChild + " has top parent " + newChild.findTopParent() + " " + this + " has or is a different top parent");
+                if (!newChild.findATopParent().equals(this) && parents.size() > 0 && !newChild.findATopParent().equals(findATopParent())) {
+                    throw new Exception("error cannot assign child as it has a different top parent" + newChild + " has top parent " + newChild.findATopParent() + " " + this + " has or is a different top parent");
                 }
             }
         }
@@ -308,8 +307,8 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         /* SINGLE CHILDREN MAY NOW HAVE A DIFFERENT TOP PARENT (e.g. ORDER ITEM in PRODUCT)
         // now we need to check the top parent is not changing ont eh child
         if (child.getParents().size() > 0) { // it has parents so we need to check
-            if (!child.findTopParent().equals(this) && parents.size() > 0 && !child.findTopParent().equals(findTopParent())) {
-                throw new Exception("error cannot assign child as it has a different top parent" + child + " has top parent " + child.findTopParent() + " " + this + " has or is a different top parent");
+            if (!child.findATopParent().equals(this) && parents.size() > 0 && !child.findATopParent().equals(findATopParent())) {
+                throw new Exception("error cannot assign child as it has a different top parent" + child + " has top parent " + child.findATopParent() + " " + this + " has or is a different top parent");
             }
         }
         */
@@ -363,7 +362,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         }
         //don't allow names that have previously had parents to fall out of topparent set
         if (name.parents.size() == 0){
-           this.findTopParent().addChildWillBePersisted(name);//revert to top parent (Note that, if 'this' is top parent, then it will be re-instated!
+           this.findATopParent().addChildWillBePersisted(name);//revert to top parent (Note that, if 'this' is top parent, then it will be re-instated!
         }
         if (children.remove(name)) { // it changed the set
             findAllChildrenCache = null;

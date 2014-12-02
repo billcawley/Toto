@@ -314,7 +314,7 @@ public final class AzquoMemoryDB {
         for (Name name : nameByIdMap.values()) {
             // remove everything except top layer and names with values. Change parents to top layer where sets deleted
             if (name.getParents().size() > 0 && name.getValues().size() == 0) {
-                Name topParent = name.findTopParent();
+                Name topParent = name.findATopParent();
                 for (Name child : name.getChildren()) {
                     topParent.addChildWillBePersisted(child);
                 }

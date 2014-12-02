@@ -406,7 +406,7 @@ public final class ImportService {
         }
         heading.topParent = identity.name;//if no other parent found, this is the top parent.
         if (identity.childOf != null){
-            heading.topParent = identity.childOf.findTopParent();
+            heading.topParent = identity.childOf.findATopParent();
         }else {
             while (identity.parentOf != null){
                 identity.childHeading = findHeading(identity.parentOf, headings);
@@ -416,7 +416,7 @@ public final class ImportService {
                 identity = headings.get(identity.childHeading);
             }
             if (identity.name.getParents().size() > 0) {
-                heading.topParent = identity.name.findTopParent();
+                heading.topParent = identity.name.findATopParent();
             }
         }
         return "";
@@ -552,19 +552,19 @@ public final class ImportService {
         }
         for (ImportHeading heading:headings) {
             if (heading.contextItem){
-                contextNames.put(heading.name.findTopParent(),heading.name);
+                contextNames.put(heading.name.findATopParent(),heading.name);
                 if (heading.name.getPeers().size() > 0){
                     contextPeersItem = heading;
                 }
             }else {
                 if (contextNames.size() > 0 && heading.name != null){
-                    contextNames.put(heading.name.findTopParent(),heading.name);
+                    contextNames.put(heading.name.findATopParent(),heading.name);
                     if (contextPeersItem != null){
                         final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
                         namesForValue.add(contextPeersItem.name);
                         boolean foundAll = true;
                         for (Name peer:contextPeersItem.name.getPeers().keySet()){
-                            Name possiblePeer = contextNames.get(peer.findTopParent());
+                            Name possiblePeer = contextNames.get(peer.findATopParent());
                             if (possiblePeer == null){
                                 //look at the headings
                                 int colFound = findHeading(peer.getDefaultDisplayName(), headings);

@@ -10,12 +10,10 @@ import com.csvreader.CsvWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
-import org.apache.poi.ss.usermodel.CellValue;
 
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -889,7 +887,7 @@ public  class AzquoBook {
                 colNo++;
                 for (com.azquo.memorydb.Name name : nameHeadings) {
                     for (com.azquo.memorydb.Name valueName : names) {
-                        if (valueName.findTopParent() == name) {
+                        if (valueName.findATopParent() == name) {
                             azquoCells.get(headingsRow + rowNo, headingsCol + colNo).setValue(valueName.getDefaultDisplayName());
                         }
                     }

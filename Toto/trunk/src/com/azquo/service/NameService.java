@@ -29,8 +29,6 @@ public final class NameService {
     private static final Logger logger = Logger.getLogger(NameService.class);
 
 
-
-
     public static final String LEVEL = "level";
     public static final String FROM = "from";
     public static final String TO = "to";
@@ -56,6 +54,7 @@ public final class NameService {
 
 
     // get names from a comma separated list
+    // edd: this is fine in principle, I'm concerned by the interpreter
 
     public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
         final List<Set<Name>> names = new ArrayList<Set<Name>>();
@@ -88,7 +87,7 @@ public final class NameService {
     }
 
 
-    public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection,String attributeValue, Name parent) {
+    public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent) {
         if (attributeValue.charAt(0) == NAMEMARKER) {
             try {
                 int nameId = Integer.parseInt(attributeValue.substring(1).trim());
@@ -152,11 +151,7 @@ public final class NameService {
             //can't clear from topparent
             return;
         }
-        Set<Name> children = new HashSet<Name>();
-        for (Name child : name.getChildren()) {
-            children.add(child);
-        }
-        for (Name child : children) {
+        for (Name child : new ArrayList<Name>(name.getChildren())) { // loop over a copy
             name.removeFromChildrenWillBePersisted(child);
         }
 
@@ -165,8 +160,6 @@ public final class NameService {
     public List<Name> findTopNames(final AzquoMemoryDBConnection azquoMemoryDBConnection) {
         return azquoMemoryDBConnection.getAzquoMemoryDB().findTopNames();
     }
-
-
 
 
     public Name findOrCreateNameStructure(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, Name topParent, boolean local) throws Exception {
@@ -214,93 +207,95 @@ public final class NameService {
 
     }
 
-    public void includeInSet(Name name, Name newparent) throws Exception{
-
-    //only check if the new parent is not already in the parent hierarchy.
-    List<Name> newParents = newparent.findAllParents();
-    newparent.addChildWillBePersisted(name);//this will now check the descendants of the child for direct connections
-    for( Name parent:name.getParents()) {
-        if (newParents.contains(parent)) {
-            parent.removeFromChildrenWillBePersisted(name);
-            break;//only remove one!   The loop will be corrupted.
+    public void includeInSet(Name name, Name set) throws Exception {
+        set.addChildWillBePersisted(name);//ok add as asked
+        List<Name> setParents = set.findAllParents();
+        for (Name parent : name.getParents()) { // now check the direct parents and see that none are in the parents of the set we just put it in.
+            // e.g the name was Ludlow in in places. We decided to add Ludlow to Shropshire which is all well and good.
+            // Among Shropshire's parents is places so remove Ludlow from Places as it's now in places via Shropshire.
+            if (setParents.contains(parent)) {
+                parent.removeFromChildrenWillBePersisted(name);// following my above example, take Ludlow out of places
+                break;
+            }
         }
     }
 
-}
-    public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name newparent, boolean local) throws Exception {
-        return findOrCreateNameInParent(azquoMemoryDBConnection, name, newparent, local, null);
+    public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name newParent, boolean local) throws Exception {
+        return findOrCreateNameInParent(azquoMemoryDBConnection, name, newParent, local, null);
     }
 
 
-        public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name newparent, boolean local, List<String> attributeNames) throws Exception {
+    public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name parent, boolean local, List<String> attributeNames) throws Exception {
 
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import),and insert a structure into it*/
 
-         if (attributeNames == null) {
-             attributeNames = new ArrayList<String>();
-             attributeNames.add(Name.DEFAULT_DISPLAY_NAME);
+        if (attributeNames == null) {
+            attributeNames = new ArrayList<String>();
+            attributeNames.add(Name.DEFAULT_DISPLAY_NAME);
         }
-              
 
         String storeName = name.replace(Name.QUOTE, ' ').trim();
         Name existing;
-        if (newparent != null) {
-            //try for an existing name already with the same parent
-            if (local){
-                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, newparent);
-            }else{
-                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, newparent.findTopParent());
 
+        if (parent != null) { // ok try to find it in that parent
+            //try for an existing name already with the same parent
+            if (local) {// ok looking only below that parent or just in it's whole set or top parent.
+                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, parent);
+            } else {
+                // Note the new name find A top parent. If names are in more than one top parent criteria to find the name might be a bit random - which top parent do you mean?
+                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, parent.findATopParent());
             }
             // find an existing name with no parents. (note that if there are multiple such names, then the return will be null)
+            // if we cant' find the name in parent then it's acceptable to find one with no parents
             if (existing == null) {
                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
                 if (existing != null && existing.getParents().size() > 0) {
                     existing = null;
                 }
             }
-        } else {
+        } else { // no parent passed go for a vanilla lookup
             existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
         }
         if (existing != null) {
             // direct parents may be moved up the hierarchy (e.g. if existing parent is 'Europe' and new parent is 'London', which is in 'Europe' then
             // remove 'Europe' from the direct parent list.
-            //NEW CONDITION ADDED - we are parent = child, but not bothering to put into the set.  This may need discussio - are the parent and child really the same?
-            if (newparent != null && existing != newparent && !existing.findAllParents().contains(newparent)) {
+            //NEW CONDITION ADDED - we are parent = child, but not bothering to put into the set.  This may need discussion - are the parent and child really the same?
+            // I think I was just avoiding a circular reference
+            if (parent != null && existing != parent && !existing.findAllParents().contains(parent)) {
                 //only check if the new parent is not already in the parent hierarchy.
-                includeInSet(existing,newparent);
+                includeInSet(existing, parent);
             }
             return existing;
         } else {
             // actually creating a new one
-            if (storeName.equals("237")){
-                int j= 1;
-            }
-            String parentName = "";
-            if (newparent != null) parentName = newparent.getDefaultDisplayName();
-            System.out.println("New name: " + storeName + ", " + parentName);
+            System.out.println("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
+            // todo - we should not be getting the provenance from the conneciton
             Provenance provenance = azquoMemoryDBConnection.getProvenance();
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
-            if (attributeNames.get(0) != Name.DEFAULT_DISPLAY_NAME){
+            if (attributeNames.get(0) != Name.DEFAULT_DISPLAY_NAME) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
                 newName.setAttributeWillBePersisted(attributeNames.get(0), storeName);
             }
-            newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName);
+            newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName); // and set the default regardless
             //if the parent already has peers, provisionally set the child peers to be the same.
-            if (newparent != null) {
-                Map<Name, Boolean> newPeers = newparent.getPeers();
+            if (parent != null) {
+                Map<Name, Boolean> newPeers = parent.getPeers();
                 if (newPeers != null) {
                     LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
                     for (Name peer : newPeers.keySet()) {
-                        peers2.put(peer, newparent.getPeers().get(peer));
+                        peers2.put(peer, parent.getPeers().get(peer));
 
                     }
                     newName.setPeersWillBePersisted(peers2);
                 }
-                newparent.addChildWillBePersisted(newName);
+                // and add the new name to the parent of course :)
+                parent.addChildWillBePersisted(newName);
             }
             return newName;
         }
     }
+
+    public static final int LOWEST_LEVEL_INT = -1;
+    public static final int ALL_LEVEL_INT = -2;
 
     // needs to be a list to preserve order when adding. Or could use a linked set, don't see much advantage
 
@@ -313,9 +308,9 @@ public final class NameService {
         if (levelString != null) {
             if (levelString.equalsIgnoreCase(LOWEST)) {
                 System.out.println("lowest");
-                level = -1;
+                level = LOWEST_LEVEL_INT;
             } else if (levelString.equalsIgnoreCase(ALL)) {
-                level = -2;
+                level = ALL_LEVEL_INT;
             } else {
                 try {
                     level = Integer.parseInt(levelString);
@@ -332,14 +327,14 @@ public final class NameService {
     }
 
     public void addNames(final Name name, List<Name> namesFound, final int currentLevel, final int level) throws Exception {
-        if (currentLevel == level || level == -2) {
+        if (currentLevel == level || level == ALL_LEVEL_INT) {
             namesFound.add(name);
         }
         if (currentLevel == level) {
             return;
         }
         if (name.getChildren().size() == 0) {
-            if (level == -1) {
+            if (level == LOWEST_LEVEL_INT) {
                 namesFound.add(name);
             }
             return;
@@ -350,8 +345,7 @@ public final class NameService {
 
     }
 
-    // since we need different from the standard set ordering use a list, I see no real harm in that in these functions
-    // note : in default language!
+    // edd : I wonder a little about this but will leave it for the mo
 
     private int parseInt(final String string, int existing) {
         try {
@@ -360,6 +354,9 @@ public final class NameService {
             return existing;
         }
     }
+
+    // since we need different from the standard set ordering use a list, I see no real harm in that in these functions
+    // note : in default language!
 
     public List<Name> findChildrenFromToCount(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, String fromString, String toString, final String countString, final String countbackString, final String compareWithString, List<String> attributeNames) throws Exception {
         final ArrayList<Name> toReturn = new ArrayList<Name>();
@@ -475,7 +472,7 @@ public final class NameService {
                                 peerName = name;
                                 peers.clear();
                                 for (Name peer : name.getPeers().keySet()) {
-                                    peers.put(peer.findTopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
+                                    peers.put(peer.findATopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
                                 }
                             }
                         }
@@ -492,7 +489,7 @@ public final class NameService {
                         if (peerName == null) {
                             peerName = name;
                             for (Name peer : name.getPeers().keySet()) {
-                                peers.put(peer.findTopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
+                                peers.put(peer.findATopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
                             }
                         } else {
                             // commented by edd, can't be used
@@ -625,7 +622,7 @@ public final class NameService {
                 nextTerm = m.start() + pos + 2;
                 //PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
                 //  neet to check for this....
-                while (nextTerm < setFormula.length() && (stringUtils.precededBy(setFormula,TO, nextTerm) || stringUtils.precededBy(setFormula, FROM, nextTerm) || stringUtils.precededBy(setFormula,TOTALLEDAS, nextTerm))) {
+                while (nextTerm < setFormula.length() && (stringUtils.precededBy(setFormula, TO, nextTerm) || stringUtils.precededBy(setFormula, FROM, nextTerm) || stringUtils.precededBy(setFormula, TOTALLEDAS, nextTerm))) {
                     int startPos = nextTerm + 1;
                     nextTerm = setFormula.length() + 1;
                     m = p.matcher(setFormula.substring(startPos));
@@ -639,21 +636,21 @@ public final class NameService {
                 List<Name> nextNames = interpretSetTerm(azquoMemoryDBConnection, setFormula.substring(pos, nextTerm - 1), strings, attributeNames);
                 nameStack.add(nextNames);
             } else if (op == '&') {
-                if (strings.size()==0){
+                if (strings.size() == 0) {
                     throw new Exception("'&' without a string");
                 }
                 List<Name> nextNames = new ArrayList<Name>();
-                List<Name> baseNames = nameStack.get(stackCount-1);
-                for (Name name:baseNames) {
+                List<Name> baseNames = nameStack.get(stackCount - 1);
+                for (Name name : baseNames) {
                     String nameToFind = name.getDefaultDisplayName() + strings.get(strings.size() - 1);
                     nextNames.addAll(interpretSetTerm(azquoMemoryDBConnection, nameToFind, strings, attributeNames));
                 }
-                strings.remove(strings.size()-1);
-                nameStack.remove(stackCount-1);
+                strings.remove(strings.size() - 1);
+                nameStack.remove(stackCount - 1);
                 nameStack.add(nextNames);
 
-            }else if (stackCount-- < 2) {
-                throw new Exception ("not understood:  " + setFormula);
+            } else if (stackCount-- < 2) {
+                throw new Exception("not understood:  " + setFormula);
 
             } else if (op == '*') {
                 nameStack.get(stackCount - 1).retainAll(nameStack.get(stackCount));
@@ -712,11 +709,11 @@ public final class NameService {
         if (name == null) {
             return true;
         }
-        Name topParent = name.findTopParent();
+        Name topParent = name.findATopParent();
         for (Set<Name> listNames : names) {
-            if (!listNames.isEmpty()){
+            if (!listNames.isEmpty()) {
                 Name listName = listNames.iterator().next();//all names in each list have the same topparent, so don't try further (just get the first)
-                if (topParent == listName.findTopParent()) {
+                if (topParent == listName.findATopParent()) {
                     if (inParentSet(name, listNames) != null) {
                         return true;
                     }
@@ -727,86 +724,86 @@ public final class NameService {
         return confidential == null || !confidential.equalsIgnoreCase("true");
     }
 
-    private void getAssociations(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Name> names, String associatedString, Set<Name> namesFound, List<String> attributeNames){
+    private void getAssociations(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Name> names, String associatedString, Set<Name> namesFound, List<String> attributeNames) {
         /*
         * this routine finds sets associated with the given name.  e.g. if the name is 'UK' and the associatedString is 'shops' the
         * routine looks for 'UK shops'.  If it does not find that, it loops through subsets such as 'London shops', 'West End shops', 'Oxford Street shops', r
         * returning the set of sets.  The required names will be the elements of these sets (e.g. the shops themselves)
         *
         * */
-        for (Name name:names){
+        for (Name name : names) {
             Name associatedName = findByName(azquoMemoryDBConnection, name.getDefaultDisplayName() + " " + associatedString, attributeNames);
-            if (associatedName != null){
+            if (associatedName != null) {
                 namesFound.add(associatedName);
-            }else{
-                 getAssociations(azquoMemoryDBConnection, name.getChildren(), associatedString, namesFound, attributeNames);
+            } else {
+                getAssociations(azquoMemoryDBConnection, name.getChildren(), associatedString, namesFound, attributeNames);
             }
         }
     }
 
-    private void filter(List<Name> names, String condition, List<String> strings){
+    private void filter(List<Name> names, String condition, List<String> strings) {
         //NOT HANDLING 'OR' AT PRESENT
-       int andPos = condition.toLowerCase().indexOf(" and ");
-       if (andPos < 0) {
-           andPos = condition.length();
-       }
-       int stringCount = 0;
-       Set<Name> namesToRemove = new HashSet<Name>();
-       int lastPos = 0;
-       while (andPos > 0){
-           String clause = condition.substring(0, andPos).trim();
-           Pattern p = Pattern.compile("[<=>]+"); //
+        int andPos = condition.toLowerCase().indexOf(" and ");
+        if (andPos < 0) {
+            andPos = condition.length();
+        }
+        int stringCount = 0;
+        Set<Name> namesToRemove = new HashSet<Name>();
+        int lastPos = 0;
+        while (andPos > 0) {
+            String clause = condition.substring(0, andPos).trim();
+            Pattern p = Pattern.compile("[<=>]+"); //
             Matcher m = p.matcher(clause);
 
-           if (m.find()) {
-               String opfound = m.group();
-               int pos = m.start();
-               String clauseLhs = clause.substring(0, pos).trim();
-               String clauseRhs = clause.substring(m.end()).trim();
-               String valRhs = "";
-               boolean fixed = false;
-               if (clauseRhs.charAt(0) == '"') {
-                   valRhs = strings.get(stringCount++);// ignore the value in the clause - it must be a
-                   fixed = true;
-               }
+            if (m.find()) {
+                String opfound = m.group();
+                int pos = m.start();
+                String clauseLhs = clause.substring(0, pos).trim();
+                String clauseRhs = clause.substring(m.end()).trim();
+                String valRhs = "";
+                boolean fixed = false;
+                if (clauseRhs.charAt(0) == '"') {
+                    valRhs = strings.get(stringCount++);// ignore the value in the clause - it must be a
+                    fixed = true;
+                }
 
-               for (Name name : names) {
-                   String valLhs = name.getAttribute(clauseLhs);
-                   if (valLhs == null){
-                       valLhs = "";
-                   }
-                   if (!fixed) {
-                       valRhs = name.getAttribute(clauseRhs);
-                       if (valRhs == null){
-                           valRhs = "";
-                       }
-                   }
-                   boolean OK = false;
-                   int comp = valLhs.compareTo(valRhs);
-                   for (int i = 0; i < opfound.length(); i++) {
-                       char op = opfound.charAt(i);
+                for (Name name : names) {
+                    String valLhs = name.getAttribute(clauseLhs);
+                    if (valLhs == null) {
+                        valLhs = "";
+                    }
+                    if (!fixed) {
+                        valRhs = name.getAttribute(clauseRhs);
+                        if (valRhs == null) {
+                            valRhs = "";
+                        }
+                    }
+                    boolean OK = false;
+                    int comp = valLhs.compareTo(valRhs);
+                    for (int i = 0; i < opfound.length(); i++) {
+                        char op = opfound.charAt(i);
 
-                       switch (op) {
-                           case '=':
-                               if (comp == 0) OK = true;
-                               break;
-                           case '<':
-                               if (comp < 0) OK = true;
-                               break;
-                           case '>':
-                               if (comp > 0) OK = true;
-                       }
-                   }
-                   if (!OK) {
-                       namesToRemove.add(name);
-                   }
-               }
-               names.removeAll(namesToRemove);
-           }
-           lastPos = andPos + 5;
+                        switch (op) {
+                            case '=':
+                                if (comp == 0) OK = true;
+                                break;
+                            case '<':
+                                if (comp < 0) OK = true;
+                                break;
+                            case '>':
+                                if (comp > 0) OK = true;
+                        }
+                    }
+                    if (!OK) {
+                        namesToRemove.add(name);
+                    }
+                }
+                names.removeAll(namesToRemove);
+            }
+            lastPos = andPos + 5;
             andPos = condition.toLowerCase().indexOf(" and ", lastPos);
 
-       }
+        }
 
     }
 
@@ -827,8 +824,8 @@ public final class NameService {
         final String totalledAsString = stringUtils.getInstruction(setTerm, TOTALLEDAS);
         final String associatedString = stringUtils.getInstruction(setTerm, ASSOCIATED);
         final String whereString = stringUtils.getInstruction(setTerm, WHERE);
-        if (levelString !=null){
-            childrenString="true";
+        if (levelString != null) {
+            childrenString = "true";
         }
         List<Name> names = new ArrayList<Name>();
 
@@ -867,38 +864,38 @@ public final class NameService {
         } else {
             namesFound.addAll(names);
         }
-        if (totalledAsString!=null){
+        if (totalledAsString != null) {
             Name totalName;
-            if (totalledAsString.charAt(0) == NAMEMARKER){
-                totalName = findByName(azquoMemoryDBConnection,totalledAsString, attributeNames);
-            }else{
-                totalName = findOrCreateNameInParent(azquoMemoryDBConnection,totalledAsString, namesFound.get(0).findTopParent(), false, attributeNames);//'local' is irrelevant
+            if (totalledAsString.charAt(0) == NAMEMARKER) {
+                totalName = findByName(azquoMemoryDBConnection, totalledAsString, attributeNames);
+            } else {
+                totalName = findOrCreateNameInParent(azquoMemoryDBConnection, totalledAsString, namesFound.get(0).findATopParent(), false, attributeNames);//'local' is irrelevant
             }
             LinkedHashSet<Name> newChildren = new LinkedHashSet<Name>();
-            for (Name child:namesFound){
+            for (Name child : namesFound) {
                 newChildren.add(child);
             }
             totalName.setChildrenWillBePersisted(newChildren);
             namesFound.clear();
             namesFound.add(totalName);
         }
-        if (associatedString !=null){
+        if (associatedString != null) {
             Set<Name> associatedNames = new HashSet<Name>();
             //convert the list to a set.....
             Set<Name> originalNames = new HashSet<Name>();
-            for (Name name2:namesFound){
+            for (Name name2 : namesFound) {
                 originalNames.add(name2);
             }
             getAssociations(azquoMemoryDBConnection, originalNames, associatedString, associatedNames, attributeNames);
             //and convert back to a list
             namesFound.clear();
-            for (Name name2:associatedNames){
+            for (Name name2 : associatedNames) {
                 namesFound.addAll(name2.findAllChildren(false));
             }
         }
-        if (parentsString!=null){
-            Set <Name> parents = new HashSet<Name>();
-            for (Name child:namesFound){
+        if (parentsString != null) {
+            Set<Name> parents = new HashSet<Name>();
+            for (Name child : namesFound) {
                 parents.addAll(child.findAllParents());
 
             }
@@ -906,10 +903,10 @@ public final class NameService {
             namesFound.addAll(parents);
 
         }
-        if (whereString != null){
+        if (whereString != null) {
             filter(namesFound, whereString, strings);
         }
-        if (sorted != null){
+        if (sorted != null) {
             Collections.sort(namesFound);
         }
         return namesFound;
@@ -927,7 +924,7 @@ public final class NameService {
     private String interpretTerm(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String term, List<String> attributeNames) {
 
 
-        if (term.startsWith("\"") && term.endsWith("\"")){
+        if (term.startsWith("\"") && term.endsWith("\"")) {
             //strings already saved, so comment out the line below
             //savedStrings.add(term.substring(1,term.length()-1));
             return "";
@@ -966,8 +963,6 @@ public final class NameService {
         }
         return calc;
     }*/
-
-
 
 
     // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
@@ -1015,7 +1010,7 @@ public final class NameService {
         String stack = "";
         Matcher m = p.matcher(calc);
         String origCalc = calc;
-          int startPos = 0;
+        int startPos = 0;
 
 
         while (m.find()) {
@@ -1063,8 +1058,8 @@ public final class NameService {
             sb.append(stack.charAt(0)).append(" ");
             stack = stack.substring(1);
         }
-        return  sb.toString();
-     }
+        return sb.toString();
+    }
 
     // pretty much replaced the original set of functions to do basic name manipulation
     // needs a logged in connection forn the structure return
@@ -1077,7 +1072,7 @@ public final class NameService {
             return getStructureForNameSearch(azquoMemoryDBConnection, nameJsonRequest.name, -1, attributeNames);//-1 indicates to show the children
         }
         if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)) {
-            try{
+            try {
                 return getNamesFormattedForOutput(interpretName(azquoMemoryDBConnection, nameJsonRequest.name, attributeNames));
             } catch (Exception e) {
                 return "Error:" + e.getMessage();
@@ -1239,20 +1234,20 @@ public final class NameService {
     public String getStructureForNameSearch(AzquoMemoryDBConnection azquoMemoryDBconnection, String nameSearch, int nameId, List<String> attributeNames) {
 
         boolean withChildren = false;
-        if (nameId==-1) withChildren = true;
+        if (nameId == -1) withChildren = true;
         Name name = findByName(azquoMemoryDBconnection, nameSearch, attributeNames);
         if (name != null) {
             return "{\"names\":[" + getChildStructureFormattedForOutput(name, withChildren) + "]}";
-        }else{
+        } else {
             List<Name> names = new ArrayList<Name>();
-            if (nameId>0) {
+            if (nameId > 0) {
                 name = findById(azquoMemoryDBconnection, nameId);
                 //children is a set, so cannot be cast directly as a list.  WHY ISN'T CHILDREN A LIST?
                 names = new ArrayList<Name>();
-                for (Name child:name.getChildren()){
+                for (Name child : name.getChildren()) {
                     names.add(child);
                 }
-            }else {
+            } else {
 
                 if (nameSearch.length() > 0) {
                     names = findContainingName(azquoMemoryDBconnection, nameSearch.replace("`", ""));
@@ -1288,12 +1283,12 @@ public final class NameService {
     }
 
 
-        private String getChildStructureFormattedForOutput(final Name name, boolean showChildren) {
+    private String getChildStructureFormattedForOutput(final Name name, boolean showChildren) {
         int totalValues = getTotalValues(name);
         //if (totalValues > 0) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"name\":");
-        sb.append("\"").append(name.getDefaultDisplayName().replace("\"","''")).append("\"");//trapping quotes in name - should not be there
+        sb.append("\"").append(name.getDefaultDisplayName().replace("\"", "''")).append("\"");//trapping quotes in name - should not be there
         sb.append(", \"id\":\"" + name.getId() + "\"");
 
         sb.append(", \"dataitems\":\"" + totalValues + "\"");
@@ -1315,14 +1310,14 @@ public final class NameService {
                         peerList += "--";
                     }
                 }
-                sb.append(stringUtils.jsonElement("peers",peerList));
+                sb.append(stringUtils.jsonElement("peers", peerList));
                 count++;
 
             }
             for (String attName : name.getAttributes().keySet()) {
                 if (count > 0) sb.append(",");
                 try {
-                    sb.append(stringUtils.jsonElement(attName,URLEncoder.encode(name.getAttributes().get(attName).replace("\"","''"), "UTF-8")));//replacing quotes again
+                    sb.append(stringUtils.jsonElement(attName, URLEncoder.encode(name.getAttributes().get(attName).replace("\"", "''"), "UTF-8")));//replacing quotes again
                 } catch (UnsupportedEncodingException e) {
                     // this really should not happen!
                     e.printStackTrace();
@@ -1331,7 +1326,7 @@ public final class NameService {
             }
             sb.append("}");
         }
-         final Set<Name> children = name.getChildren();
+        final Set<Name> children = name.getChildren();
         sb.append(", \"elements\":\"" + children.size() + "\"");
         if (showChildren && !children.isEmpty()) {
             sb.append(", \"children\":[");
@@ -1353,14 +1348,14 @@ public final class NameService {
     }
 
 
-    private StringBuffer printJsonName(NameListJson nameListJson){
+    private StringBuffer printJsonName(NameListJson nameListJson) {
         StringBuffer sb = new StringBuffer();
         sb.append("<li");
         if (nameListJson.elements > 0) sb.append(" onclick=\"az_clicklist(this)\"");
         sb.append(">" + nameListJson.name + "\n");
         sb.append("</li>");
 
-        sb.append("<div class=\"notseen\">" + nameListJson.id +"</div>\n");
+        sb.append("<div class=\"notseen\">" + nameListJson.id + "</div>\n");
         //ignoring the rest of the info for the moment....
         /*
 
@@ -1382,7 +1377,7 @@ public final class NameService {
         sb.append("<ul class=\"namelist\">\n");
         try {
             NameListJson nameListJson = jacksonMapper.readValue(json, NameListJson.class);
-            for (NameListJson child:nameListJson.names){
+            for (NameListJson child : nameListJson.names) {
                 sb.append(printJsonName(child));
             }
             sb.append("</ul>\n");
@@ -1392,11 +1387,11 @@ public final class NameService {
             logger.error("name json parse problem", e);
             return "error:badly formed json " + e.getMessage();
         }
-         return sb.toString();
+        return sb.toString();
     }
 
-    public String jsonNameDetails(AzquoMemoryDBConnection azquoMemoryDBConnection, int nameId){
-         Name name = findById(azquoMemoryDBConnection, nameId);
+    public String jsonNameDetails(AzquoMemoryDBConnection azquoMemoryDBConnection, int nameId) {
+        Name name = findById(azquoMemoryDBConnection, nameId);
         return getChildStructureFormattedForOutput(name, false);
     }
 }
