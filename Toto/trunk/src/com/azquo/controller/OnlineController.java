@@ -329,10 +329,10 @@ public class OnlineController {
             if (opcode.equals("savedata")){
                   result = onlineService.saveData(loggedInConnection, jsonFunction);
              }
-            if (opcode.equals("details")){
-
-                result = nameService.jsonNameDetails(loggedInConnection, Integer.parseInt(nameId));
-                result = jsonFunction + "({\"namedetails\":" + result + "})";
+            if (opcode.equals("inspect")){
+                result = onlineService.showNameDetails(loggedInConnection, database);
+               // result = nameService.jsonNameDetails(loggedInConnection, Integer.parseInt(nameId));
+                //result = jsonFunction + "({\"namedetails\":" + result + "})";
             }
             if (opcode.equals("children")){
 
