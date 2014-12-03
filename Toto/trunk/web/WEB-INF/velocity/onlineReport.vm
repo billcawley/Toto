@@ -25,9 +25,8 @@
     var menuControls = $menuitems;
     var clickedItem = null;
     var nameChosenNo = 0
-    var cutitem = null;
-    var copyitem = null;
     var origval = null;
+    var lastentered = null;
 
 
 
@@ -310,6 +309,7 @@
 
 
         if (entryX < 0) return;
+        lastentered = null;
         if (document.getElementById("entered")==null){
             //entry field has been overwritten already by changed values
             entryX=-1;
@@ -363,22 +363,6 @@
         hideMenu("popupmenu");
     }
 
-    function edit(){
-        hideMenu("popupmenu");
-        clickedItem.className = "highlight";
-        azquojson("Online","opcode=details&nameid=" + nameChosenNo);
-    }
-
-
-    function cut(){
-        cutitem = clickedItem;
-        copyitem = null;
-    }
-
-    function copy(){
-        copyitem = clickedItem;
-        cutitem = null;
-    }
 
     function nameIdChosen(){
         document.getElementById("editedName").value = nameChosenNo;
@@ -411,91 +395,6 @@
         return findId(findParent(item));
     }
 
-    function paste(offset) {
-
-        var anchorNode = clickedItem;
-        //each LI item is followed by an unseen 'div' containing the name id
-        if (cutitem == null && copyitem == null) return;
-        var cutting = false;
-        if (cutitem != null) {
-            var source = cutitem;
-        } else {
-            source = copyitem;
-        }
-        if (offset==2) {//paste into}
-            while (anchorNode.nextElementSibling != null && anchorNode.nextElementSibling.tagName.toLowerCase()!="li"){
-                anchorNode = anchorNode.nextElementSibling;
-            }
-
-            anchorNode.parentNode.insertBefore(document.createElement("ul"),anchorNode.nextElementSibling);
-            var ulTag = anchorNode.nextElementSibling;
-            ulTag.appendChild(source.cloneNode(true));
-            ulTag.appendChild(source.nextElementSibling.cloneNode(true));
-            var nextEl = source.nextElementSibling.nextElementSibling;
-            if (nextEl != null && nextEl.tagName.toLowerCase()=="ul"){
-                ulTag.appendChild(nextEl.cloneNode(true));
-            }
-
-        }else {
-            var divNode = anchorNode.nextElementSibling;
-            var pos = findPos(anchorNode);
-            var parent = findParent(anchorNode);
-            if (parent == null) return
-            if (offset==1){
-                pos++;
-                anchorNode = anchorNode.nextElementSibling
-                while (anchorNode.nextElementSibling != null && anchorNode.tagName.toLowerCase()!="li") {
-                    anchorNode = anchorNode.nextElementSibling;
-
-
-                }
-            }
-            var nextEl = source.nextElementSibling.nextElementSibling;
-            if (anchorNode.nextElementSibling != null) {
-                anchorNode.parentNode.insertBefore(source.cloneNode(true), anchorNode);
-                anchorNode.parentNode.insertBefore(source.nextElementSibling.cloneNode(true),anchorNode);
-                if (nextEl != null && nextEl.tagName.toLowerCase()=="ul"){
-                    anchorNode.parentNode.insertBefore(nextEl.cloneNode(true), anchorNode);
-                }
-
-            } else {
-                //put in the elements backwards,as the first will then become  anchorNode.nextElementSibling
-                if (nextEl != null && nextEl.tagName.toLowerCase()=="ul"){
-                    anchorNode.parentNode.insertBefore(nextEl.cloneNode(true), anchorNode.nextElementSibling);
-                }
-
-                anchorNode.parentNode.insertBefore(source.nextElementSibling.cloneNode(true), anchorNode.nextElementSibling);
-                anchorNode.parentNode.insertBefore(source.cloneNode(true), anchorNode.nextElementSibling);
-
-            }
-        }
-        var sourceId = findId(source);
-        if (offset < 2 && findParentId(source) == findParentId(clickedItem)){//replacing into the same set.  If we delete first,may need to adjust pos down
-            var oldPos = findPos(clickedItem);
-            if (oldPos < newPos + offset) {
-                pos--;
-            }
-        }
-        if (cutitem != null){
-            tellAzquoNameShift(sourceId, findParentId(source), 0);
-        }
-        if (offset<2) {
-            tellAzquoNameShift(sourceId, findParentId(clickedItem), pos)
-        }else{
-            tellAzquoNameShift(sourceId, findId(clickedItem), 1000000);
-        }
-        if (cutitem!=null){
-            cutitem.parentNode.removeChild(cutitem.nextElementSibling);
-            if (cutitem.nextElementSibling.tagName.toLowerCase()=="ul"){
-                cutitem.parentNode.removeChild(cutitem.nextElementSibling);
-            }
-            cutitem.parentNode.removeChild(cutitem);
-
-        }
-        copyitem = null;
-        cutitem = null;
-
-    }
 
 
     function tellAzquoNameShift(source, parent, newPosition){
@@ -603,6 +502,7 @@
     function selectChosen(divName, inContext){
         var entered = document.getElementById(divName);
 
+        lastentered = divName;
         if (inContext) {
             document.getElementById("editedName").value = divName;
             document.getElementById("editedValue").value = entered.value;
@@ -620,6 +520,15 @@
         document.getElementById("col").value = colNo;
         document.getElementById("opcode").value = "buttonpressed";
         document.azquoform.submit();
+    }
+
+    function inspectDatabase(){
+        var databasechosen = document.getElementById("databasechosen");
+        var db = "";
+        if (databasechosen!=null){
+            db = databasechosen.value;
+        }
+        window.open("/api/Online?opcode=inspect&database=" + db + "&connectionid=" + document.getElementById("connectionId").value, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=400, height=400")
     }
 
     function loadsheet(sheetname){
@@ -732,7 +641,7 @@
             for (var i = 0; i < obj.changedvalues.length; i++) {
                 var val = obj.changedvalues[i];
                 var elem = document.getElementById(val.id);
-                if (elem.childElementCount == 0){//don't overwrite selection cells
+                if (val.id != lastentered){//don't overwrite entered selection cells
                     elem.innerHTML = val.value;
                 }
                 elem.className = val.class;
@@ -750,10 +659,7 @@
         if (obj.message > ""){
             document.getElementById("message").innerHTML = obj.message;
         }
-        if (obj.namedetails >""){
-            showNameDetails(obj.namedetails);
-        }
-        if (obj.names > ""){
+         if (obj.names > ""){
             showSubset(obj.names);
         }
     }
@@ -784,34 +690,6 @@
     }
 
 
-    function addAttribute(i, attname, attvalue){
-        var htmlAtts = document.getElementById("htmlatts");
-        htmlAtts.innerHTML += "<div class=\"namedetailsline\">" +
-                "<div class = \"name\"><input id=\"attname" + i + "\" class=\"attname\" type=\"text\" value=\"" + attname + "\"/></div>" +
-                "<div class=\"value\"><input class=\"attvalue\" id=\"attvalue" + i + "\" type=\"text\" value=\"" + attvalue + "\"/></div>" +
-                "</div>"
-
-    }
-
-    function showNameDetails(nameDetails){
-        document.getElementById("htmlatts").innerHTML = "";
-        //currently ignoring the 'dataelements' 'elements'  'mydataelements'  values
-        var keys = Object.keys(nameDetails.attributes);
-        for (var i=0;i < keys.length;i++){
-            var attname = keys[i];
-            var attvalue =  decodeURIComponent((nameDetails.attributes[attname]+'').replace(/\+/g, '%20'));
-            if (attname== "DEFAULT_DISPLAY_NAME"){
-                document.getElementById("DEFAULT_DISPLAY_NAME").value = attvalue;
-            }else{
-                if (attname!="RPCALC"){
-                    addAttribute(i, attname, attvalue)
-                }
-            }
-
-        }
-        addAttribute(i,"","");
-        document.getElementById("namedetails").style.display = "block";
-    }
 
 
     function decodeProvenance(provDisplays, level) {
@@ -856,27 +734,6 @@
         hideMenu("namelistpopup");
     }
 
-    function hideDetails(){
-        hideMenu("namedetails");
-        //clickedItem.className = "";  //good for name lists, but not for data regions!
-    }
-
-    function submitNameDetails(){
-        var json = "\"operation\":\"edit\",\"id\":" + nameChosenNo + ",\"attributes\":{\"DEFAULT_DISPLAY_NAME\":\"" + document.getElementById("DEFAULT_DISPLAY_NAME").value + "\"";
-        for (var i= 0; i<20;i++){//max number of attributes = 20 - arbitrary
-            var attname = document.getElementById("attname" + i);
-            if (attname != null) {
-                if (attname.value > ""){
-                    json += ",\"" + attname.value + "\":\"" + document.getElementById("attvalue" + i).value + "\"";
-                }
-            }
-        }
-        json +="}";
-        hideDetails();
-        azquojson("Name", json);
-        clickedItem.innerHTML = document.getElementById("DEFAULT_DISPLAY_NAME").value;
-
-    }
 
     function setSpreadsheetSize(){
         var ss = document.getElementById("spreadsheet");
@@ -945,20 +802,7 @@
             $charts
         </div>
     </form>
-    <div class="namedetails" id="namedetails">
-        <div class="closebutton"><a href="#" onclick="hideDetails();"><img src="https://data.azquo.com:8443/images/closebutton.png" alt="close button"/></a></div>
-        <div class="namedetailsline">
-            Name
-            <div class="value">
-                <input name="DEFAULT_DISPLAY_NAME" id="DEFAULT_DISPLAY_NAME" type="text" value="" class="attvalue">
-            </div>
-        </div>
-        <p>Attributes:</p>
-        <div id="htmlatts"></div>
-        <div class="namedetailssubmit"><p><a href="#" onclick="submitNameDetails()">Submit</a></p></div>
-    </div>
     <div class="tabs" id="tabs">$tabs</div>
-    $popup
 </div>
 <script type="text/javascript">
 
