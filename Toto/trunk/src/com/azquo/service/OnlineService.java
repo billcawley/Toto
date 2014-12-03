@@ -74,12 +74,6 @@ public final class OnlineService {
            //onlineReport = onlineReportDAO.findById(-1);//user report list replaces admin sheet
         }
 
-        String popup = "";
-        if (message.startsWith("popup:")){
-            popup = "<div id=\"namelistpopup\" class=\"namelistpopup\"> <div class=\"closebutton\"><a href=\"#\" onclick=\"hideNameList();\"><img src=\"/images/closebutton.png\" alt=\"close button\"/></a></div>\n" +
-                    "<div class=\"content\"> " + nameService.convertJsonToHTML(message.substring(6)) + "</div>   <div id=\"namedetailssubmit\"><a href=\"#\" onclick=\"nameIdChosen()\">Submit</a></div></div>";
-            message = "";
-        }
         StringBuffer worksheet = new StringBuffer();
         StringBuffer tabs = new StringBuffer();
         StringBuffer head = new StringBuffer();
@@ -99,7 +93,10 @@ public final class OnlineService {
             if (onlineReport.getId() < 2){
                 azquoBook.loadBook(onlineReport.getFilename());
             }else{
-                azquoBook.loadBook(ImportService.dbPath  + loggedInConnection.getCurrentDBName() + "/onlinereports/" + onlineReport.getFilename());
+                int reportDB = onlineReport.getDatabaseId();
+                //note - the database specified in the report may not be the current database (as in applications such as Magento and reviews), but be 'temp'
+                String filepath = ImportService.dbPath + databaseDAO.findById(reportDB).getMySQLName() +"/onlinereports/" + onlineReport.getFilename();
+                azquoBook.loadBook(filepath);
             }
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
             if (onlineReport.getId()==1 || onlineReport.getId()==-1){//this is the maintenance workbook
@@ -129,8 +126,7 @@ public final class OnlineService {
         if (spreadsheetName==null){
             spreadsheetName = "";
         }
-        velocityContext.put("popup", popup);
-        velocityContext.put("spreadsheetname",spreadsheetName);
+         velocityContext.put("spreadsheetname",spreadsheetName);
         velocityContext.put("topcell", azquoBook.getTopCell()+"");
         velocityContext.put("leftcell",azquoBook.getLeftCell()+"");
         velocityContext.put("maxheight",azquoBook.getMaxHeight() + "px");
@@ -415,7 +411,7 @@ public final class OnlineService {
         Map<String, Database> foundDatabases = loginService.foundDatabases(loggedInConnection.getUser());
         if (foundDatabases.size() > 1){
             if (loggedInConnection.getAzquoMemoryDB()!=null) chosen = loggedInConnection.getLocalCurrentDBName();
-            sb.append("<select class=\"databaseselect\" name=\"database\" value=\"" + chosen + "\">\n");
+            sb.append("<select class=\"databaseselect\" name=\"database\" id=\"databasechosen\" value=\"" + chosen + "\">\n");
             if (chosen.length() == 0) {
                 sb.append("<option value=\"\">No database chosen</option>");
             }
@@ -464,6 +460,17 @@ public final class OnlineService {
 
 
     }
+
+    public String switchDatabase(LoggedInConnection loggedInConnection, String newDBName)throws  Exception{
+        Database db = databaseDAO.findForName(loggedInConnection.getBusinessId(), newDBName);
+        if (db == null) {
+            return newDBName + " - no such database";
+        }
+        loginService.switchDatabase(loggedInConnection, db);
+        return "";
+
+    }
+
 
     public String followInstructionsAt(LoggedInConnection loggedInConnection, String jsonFunction, int rowNo, int colNo, String database, FileItem item)throws Exception{
         //this routine is called when a button on the maintenance spreadsheet is pressed
@@ -517,11 +524,7 @@ public final class OnlineService {
 
         }
         if (database.length()>0) {
-            Database db = databaseDAO.findForName(loggedInConnection.getBusinessId(), database);
-            if (db == null) {
-                return database + " - no such database";
-            }
-            loginService.switchDatabase(loggedInConnection, db);
+            switchDatabase(loggedInConnection, database);
         }
         if (op.equalsIgnoreCase("newdatabase")){
             if (newdatabase.length() > 0) {
@@ -568,9 +571,8 @@ public final class OnlineService {
             }
         }
         if (op.equalsIgnoreCase("inspect")){
-            message = nameService.getStructureForNameSearch(loggedInConnection,searchTerm, nameId, loggedInConnection.getLanguages());
-            if (message.startsWith("error:")) return message;
-            return "popup:" + message;
+           message = nameService.getStructureForNameSearch(loggedInConnection,searchTerm, nameId, loggedInConnection.getLanguages());
+           if (message.startsWith("error:")) return message;
 
         }
 
@@ -632,6 +634,19 @@ public final class OnlineService {
 
 
 
+    }
+
+    public String showNameDetails(LoggedInConnection loggedInConnection, String database)throws  Exception{
+        if (database!= null && database.length() > 0){
+            Database newDB = databaseDAO.findForName(loggedInConnection.getBusinessId(), database);
+            if (newDB == null){
+                return "no database chosen";
+            }
+            loginService.switchDatabase(loggedInConnection,newDB);
+        }
+        Map<String,String> context = new HashMap<String, String>();
+        context.put("connectionid", loggedInConnection.getConnectionId() + "");
+        return convertToVelocity(context,null,null,"jstree.vm");
     }
 
 
