@@ -93,8 +93,11 @@ public class LoginService {
                 }
                 // could be a null memory db . . .
                 //TODO : ask tomcat for a session id . . .
-
-                final LoggedInConnection lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
+                LoggedInConnection lic = existingConnection(user);
+                if (lic!=null){
+                    return lic;
+                }
+                lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
                 int databaseId = 0;
                 if (memoryDB != null && !memoryDB.getDatabase().getName().equals("temp")){
                    databaseId = memoryDB.getDatabase().getId();
@@ -228,8 +231,9 @@ public class LoginService {
     public void switchDatabase(LoggedInConnection loggedInConnection, Database newDb)throws Exception{
         if (loggedInConnection.getAzquoMemoryDB()!= null){
             Database oldDB = loggedInConnection.getAzquoMemoryDB().getDatabase();
-            if (oldDB.getName().equals("temp")){
-                //this is a temporary connection - no switching allowed
+            if (newDb!= null && newDb.getName().equals("temp")){
+
+                //don't switch to a temporary connection if you've been moved off it
                 return;
             }
             if (newDb!= null && oldDB.getName().equals(newDb.getName())) return;
@@ -240,7 +244,7 @@ public class LoginService {
                 memoryDBManager.removeDatabase(loggedInConnection.getAzquoMemoryDB().getDatabase());
                 openDBCount.remove(databaseId);
                 openDatabaseDAO.closeForDatabaseId(databaseId);
-            } else if (openCount > 1){
+            } else if (openCount != null && openCount > 1){
                 openDBCount.put(databaseId, openCount - 1);
             }
         }
@@ -259,6 +263,16 @@ public class LoginService {
         loggedInConnection.setAzquoMemoryDB(memoryDB);
 
 
+    }
+
+    private LoggedInConnection existingConnection(final User user){
+        for (String lic:connections.keySet()){
+            LoggedInConnection loggedInConnection = connections.get(lic);
+            if (loggedInConnection.getUser().getId()==user.getId()){
+                return loggedInConnection;
+            }
+        }
+        return null;
     }
 
 
