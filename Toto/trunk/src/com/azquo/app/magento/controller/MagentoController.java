@@ -1,5 +1,6 @@
 package com.azquo.app.magento.controller;
 
+import com.azquo.admindao.DatabaseDAO;
 import com.azquo.admindao.OnlineReportDAO;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.app.magento.service.DataLoadService;
@@ -47,6 +48,9 @@ public class MagentoController {
     @Autowired
     LoginService loginService;
 
+    @Autowired
+    DatabaseDAO databaseDAO;
+
     private static final Logger logger = Logger.getLogger(MagentoController.class);
 
 
@@ -55,7 +59,7 @@ public class MagentoController {
     public String handleRequest(HttpServletRequest request) throws Exception {
      LoggedInConnection loggedInConnection = null;
      try {
-        DiskFileItemFactory factory = new DiskFileItemFactory();
+          DiskFileItemFactory factory = new DiskFileItemFactory();
 
 // Configure a repository (to ensure a secure temp location is used)
         ServletContext servletContext = request.getServletContext();
@@ -69,16 +73,25 @@ public class MagentoController {
         String connectionId = request.getParameter("connectionid");
         String data = request.getParameter("data");
         String op = request.getParameter("op");
+         String db = request.getParameter("db");
          if (op==null) op = "";
          if (connectionId != null){
              loggedInConnection = loginService.getConnection(connectionId);
          }
          if (loggedInConnection == null) {
              //for testing only
-             loggedInConnection = loginService.login("temp","tempuser","password",0,"",false);
+             if (db == null) db = "temp";
+             loggedInConnection = loginService.login(db,"tempuser","password",0,"",false);//will automatically switch the database to 'temp' if that's the only one
+             if (!db.equals("temp")){
+                 String result = onlineService.switchDatabase(loggedInConnection, db);
+                 //todo  consider what happens if there's an error here
+             }
              //loggedInConnection = loginService.login("test","magentobill","password",0,"",false);
         }
-        if (op.equals("tempdb")) {
+         if (op.equals("lastupdate")){
+             return dataLoadService.findLastUpdate(loggedInConnection);
+         }
+         if (op.equals("updatedb")) {
             dataLoadService.loadData(loggedInConnection, data);
              return loggedInConnection.getConnectionId() + "";
             //return onlineService.readExcel(loggedInConnection, onlineReport, null, "");
