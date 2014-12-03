@@ -7,6 +7,8 @@ package com.azquo.app.reviews.controller;
 import com.azquo.app.reviews.service.ReviewsCustomerService;
 import com.azquo.app.reviews.service.ReviewService;
 import com.azquo.app.reviews.service.UserService;
+import com.azquo.memorydb.Name;
+import com.azquo.service.NameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -28,6 +30,9 @@ public class ReviewController {
     private UserService userService;
     @Autowired
     private ReviewsCustomerService reviewsCustomerService;
+    @Autowired
+    private NameService nameService;
+
 
 
 
@@ -61,6 +66,14 @@ public class ReviewController {
             op="showreviews";
         }
         String result = "";
+        if (op.equals("inituser")){
+            result = reviewsCustomerService.createReviewsCustomer("Test Business1", "Test merchant's address", "test merchants email", "2134567890");
+            result = userService.createUser("Test Business1","testuser5","password");
+            if (result.length() == 0){
+                result = "testuser created successfully";
+            }
+
+        }
         if (op.equals("showreviews")){
             result = reviewService.showReviews(supplierDB,division, startDate, reviewType, velocityTemplate);
         }
