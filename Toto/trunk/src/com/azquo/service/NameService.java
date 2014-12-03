@@ -566,11 +566,11 @@ public final class NameService {
             //find the parents - if they exist
             String nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd + 1);
             if (lastQuoteEnd < instructions.length() - 1 && instructions.charAt(lastQuoteEnd + 1) == ',') {
-                Pattern p = Pattern.compile("[ ;\\+\\*]");
+                Pattern p = Pattern.compile("[;\\+\\*]");
                 Matcher m = p.matcher(instructions.substring(lastQuoteEnd + 1));
                 if (m.find()) {
-                    lastQuoteEnd += m.start();
-                    nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd);
+                    lastQuoteEnd += m.start();//one too little....
+                    nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd + 1);//adding one in here to be consistent with line adjustment below
                 }
             }
             Name quoteName = findByName(azquoMemoryDBConnection, nameToFind, attributeNames);
@@ -588,7 +588,9 @@ public final class NameService {
     // to find a set of names, a few bits that were part of the original set of functions
     // edd wondering how to break this up.
     public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
-        return interpretName(azquoMemoryDBConnection, setFormula);
+        List<String> langs = new ArrayList<String>();
+        langs.add(Name.DEFAULT_DISPLAY_NAME);
+        return interpretName(azquoMemoryDBConnection, setFormula, langs);
     }
 
 
@@ -1259,15 +1261,15 @@ public final class NameService {
             }
             StringBuilder sb = new StringBuilder();
             sb.append("{\"names\":[");
-            int count = 0;
-            for (Name outputName : names) {
-                String nameJson = getChildStructureFormattedForOutput(outputName, withChildren);
-                if (nameJson.length() > 0) {
-                    if (count > 0) sb.append(",");
-                    sb.append(nameJson);
-                    count++;
+                int count = 0;
+                for (Name outputName : names) {
+                    String nameJson = getChildStructureFormattedForOutput(outputName, withChildren);
+                    if (nameJson.length() > 0) {
+                        if (count > 0) sb.append(",");
+                        sb.append(nameJson);
+                        count++;
+                    }
                 }
-            }
             sb.append("]}");
 /*            if (azquoMemoryDBconnection.getAzquoBook()!=null){
                 azquoMemoryDBconnection.getAzquoBook().nameChosenJson = sb.toString();
