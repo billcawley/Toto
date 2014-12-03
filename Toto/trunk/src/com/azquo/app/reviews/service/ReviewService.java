@@ -10,6 +10,9 @@ import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.xml.sax.helpers.AttributesImpl;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -44,6 +47,12 @@ public class ReviewService {
 
     @Autowired
     ServletContext servletContext;
+
+    @Autowired
+    ReviewsCustomerService reviewsCustomerService;
+
+    @Autowired
+    UserService userService;
 
     public static final String SUPPLIER = "SUPPLIER";
     public static final String ALL_RATINGS = "ALL_RATINGS";
@@ -400,12 +409,9 @@ public class ReviewService {
     }
 
 
-    private String convertToXML(Map<String, String> context, List<VelocityReview> items)throws Exception{
-
-        StringWriter sw = new StringWriter();
-
+    private TransformerHandler initHd(StringWriter sw)throws Exception{
         StreamResult streamResult = new StreamResult(sw);
-        SAXTransformerFactory tf = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
+         SAXTransformerFactory tf = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
         TransformerHandler hd = tf.newTransformerHandler();
         Transformer serializer = hd.getTransformer();
         serializer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
@@ -413,7 +419,15 @@ public class ReviewService {
         serializer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
         hd.setResult(streamResult);
         hd.startDocument();
+         return hd;
+
+    }
+
+    private String convertToXML(Map<String, String> context, List<VelocityReview> items)throws Exception{
+
+        StringWriter sw = new StringWriter();
         org.xml.sax.helpers.AttributesImpl atts = new org.xml.sax.helpers.AttributesImpl();
+        TransformerHandler hd = initHd(sw);
         hd.startElement("","","AZQUO",atts);
         addXmlElements(hd, atts, context);
         for (VelocityReview item:items){
@@ -668,6 +682,190 @@ public class ReviewService {
 
         loggedInConnection.persist();
         return "";
+    }
+
+    private void addElement(TransformerHandler hd, AttributesImpl atts, String type, String value)throws Exception{
+        hd.startElement("","",type, atts);
+        hd.characters(value.toCharArray(), 0, value.length());
+        hd.endElement("","",type);
+
+    }
+
+    public void setToXML(TransformerHandler hd, org.xml.sax.helpers.AttributesImpl atts, Name set, String itemname)        throws Exception {
+         addElement(hd,atts, "NAME", set.getDefaultDisplayName());
+        String link = set.getAttribute("link");
+        if (link == null){
+            if (set.getChildren().size()> 0) {
+                hd.startElement("", "", itemname, atts);
+                for (Name child : set.getChildren()) {
+                    hd.startElement("", "", "ITEM", atts);
+                    setToXML(hd, atts, child, itemname);
+                    hd.endElement("", "", "ITEM");
+                }
+                hd.endElement("", "", itemname);
+            }
+        }else{
+            addElement(hd, atts, "LINK", link);
+
+        }
+    }
+
+
+
+
+    public String createPageSpec(String itemName, String type, String itemNo)throws Exception{
+        /// either type or itemNo, not both.
+
+        //first create the menu,
+        int itemToEdit = -1;
+        if (itemNo!=null){
+            try{
+                itemToEdit = Integer.parseInt(itemNo);
+                type="form";
+            }catch(Exception e){
+                type="list";
+            }
+        }
+
+
+        AzquoMemoryDBConnection masterDBConnection = reviewsConnectionMap.getConnection(UserService.MASTERDBNAME);
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String result = "";
+        Name user = userService.getUserByEmail(auth.getName());
+        user = userService.getUserByEmail("testuser5");
+        Name business = reviewsCustomerService.getReviewsCustomerForUser(user);
+
+
+
+
+
+        Name menu = nameService.findByName(masterDBConnection,"Main menu");
+        StringWriter sw = new StringWriter();
+        org.xml.sax.helpers.AttributesImpl atts = new org.xml.sax.helpers.AttributesImpl();
+        TransformerHandler hd = initHd(sw);
+        hd.startElement("","","AZQUO",atts);
+        setToXML(hd, atts, menu, "MENU");
+         //then find the requirements for the page
+        Name menuItem = nameService.findByName(masterDBConnection,itemName);
+        if (menuItem!=null){
+             addElement(hd, atts, "TYPE", type);
+
+            if (type.equals("list")){
+                String listToShow = menuItem.getAttribute("list");
+                if (listToShow != null) {
+                    listToShow = listToShow.replace("[business]",business.getDefaultDisplayName());
+                    List<Name> namesFound = nameService.interpretName(masterDBConnection, listToShow);
+                    hd.startElement("", "", "LIST", atts);
+                    for (Name lineName : namesFound) {
+                        hd.startElement("", "", "LISTITEM", atts);
+                        hd.startElement("", "", "LINEITEM", atts);
+                        addElement(hd, atts, "NAME", lineName.getDefaultDisplayName());
+                        addElement(hd, atts, "LINK", "itemname=" + menuItem.getDefaultDisplayName().replace(" ","_") + "&nameid = " + lineName.getId());
+                                hd.endElement("", "", "LINEITEM");
+                        for (Name fieldName : menuItem.getChildren()) {
+                            if (fieldName.getAttribute("SummaryScreenItem") != null) {
+                                hd.startElement("", "", "LINEITEM", atts);
+                                String attribute = lineName.getAttribute(fieldName.getDefaultDisplayName());
+                                if (attribute == null) attribute = "";
+                                addElement(hd, atts, "NAME", attribute);
+                                hd.endElement("", "", "LINEITEM");
+                            }
+                        }
+
+                        hd.endElement("", "", "LISTITEM");
+                    }
+                    hd.startElement("", "", "LISTITEM", atts);
+                    hd.startElement("", "", "LINEITEM", atts);
+                    addElement(hd, atts, "NAME", "NEW");
+                    addElement(hd, atts, "LINK", "nameid=0");
+                    hd.endElement("", "", "LINEITEM");
+                    hd.endElement("", "", "LISTITEM");
+
+                    hd.endElement("", "", "LIST");
+                }
+
+
+            }
+            String validation = "//validation script here";
+            if (type.equals("form")){
+                Name nameToEdit = nameService.findById(masterDBConnection,itemToEdit);
+                int tabno = 0;
+                int fieldNo = 0;
+                String tabname = "";
+                for (Name fieldName:menuItem.getChildren()){
+                    if (!fieldName.getAttribute("tab").equals(tabname)) {
+                        if (tabname.length() > 0) {
+                            hd.endElement("", "", "TAB" + tabno++);
+                        }
+                        hd.startElement("","","TAB", atts);
+                        tabname = fieldName.getAttribute("tab");
+                        addElement(hd, atts,"TABNAME", tabname);
+                        addElement(hd, atts, "TABNO", tabno + "");
+                    }
+                    hd.startElement("", "", "LISTITEM", atts);
+                    String field = fieldName.getDefaultDisplayName();
+                    addElement(hd,atts,"ITEMNO",++fieldNo + "");
+                    addElement(hd,atts,"ITEMNAME",field);
+                    String fieldType = fieldName.getAttribute("type");
+                    String clause = "";
+                    int nameEnd = fieldType.indexOf(";");
+                    if (nameEnd > 0){
+                        clause = fieldType.substring(nameEnd + 1);
+                        fieldType = fieldType.substring(0,nameEnd);
+
+                    }
+                    if (clause.contains("[business]")){
+                        clause = clause.replace("[business]", business.getDefaultDisplayName());
+                    }
+                    if (fieldType.equals("y/n")|| fieldType.equals("select") || fieldType.equals("file")){
+                        addElement(hd,atts,"ITEMTYPE", fieldType);
+                    }else{
+                        addElement(hd,atts,"ITEMTYPE","text");
+                    }
+                    if (fieldType.equals("select")){
+                        Name selectName = nameService.findByName(masterDBConnection, clause);
+                        if (selectName != null) {
+                            hd.startElement("", "", "SELECT", atts);
+                            for (Name child : selectName.getChildren()) {
+                                addElement(hd, atts, "OPTION", child.getDefaultDisplayName());
+                            }
+                            hd.endElement("", "", "SELECT");
+                        }
+                    }
+                    if (fieldNo == 1){
+                        addElement(hd,atts,"VALUE",nameToEdit.getDefaultDisplayName());
+
+                    }else{
+                        String fieldVal = nameToEdit.getAttribute(field);
+                        if (fieldVal!=null){
+                            addElement(hd, atts,"VALUE", fieldVal);
+                        }
+                    }
+
+                    String help = fieldName.getAttribute("help");
+                    if (help != null){
+                        addElement(hd,atts,"HELP", help);
+                    }
+
+                    hd.endElement("","","LISTITEM");
+                }
+                if (tabno++ > 0) {
+                    hd.endElement("", "", "TAB");
+                }
+
+            }
+            addElement(hd, atts, "JAVASCRIPTVALIDATION", validation);
+        }
+
+        hd.endElement("","","AZQUO");
+
+        hd.endDocument();
+        return sw.toString();
+
+
+
+
     }
 
 }
