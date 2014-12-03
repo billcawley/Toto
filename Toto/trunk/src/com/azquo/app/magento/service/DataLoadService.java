@@ -1,5 +1,6 @@
 package com.azquo.app.magento.service;
 
+import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.memorydb.Name;
 import com.azquo.service.AzquoMemoryDBConnection;
 import com.azquo.service.NameService;
@@ -18,17 +19,37 @@ import java.util.*;
  */
 public final class DataLoadService {
 
+    private final String latestupdate = "Latest update";
+
     @Autowired
     private NameService nameService;
 
     @Autowired
     private ValueService valueService;
 
+
+
     private final Map<String, List<Map<String, String>>> tableMap = new HashMap<String, List<Map<String, String>>>();
     final Map<Integer, Name> products = new HashMap<Integer, Name>();
     final Map<Integer, Name> categories = new HashMap<Integer, Name>();
     //final Map<Integer, MagentoOrderLineItem> orderLineItems = new HashMap<Integer, MagentoOrderLineItem>();
     final Map<String, String> optionValueLookup = new HashMap<String, String>();
+
+
+
+    public String findLastUpdate(AzquoMemoryDBConnection azquoMemoryDBConnection){
+        String date = "never";
+        Name order = nameService.findByName(azquoMemoryDBConnection, "order");
+        if (order!=null){
+            String lastUpdate = order.getAttribute(latestupdate);
+            if (lastUpdate!=null){
+                date = lastUpdate;
+            }
+        }
+        return date;
+    }
+
+
 
     public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, String data) throws Exception {
         BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8))));
@@ -288,7 +309,12 @@ public final class DataLoadService {
 
 
         }
-        //azquoMemoryDBConnection.persist();
+        Name order = nameService.findByName(azquoMemoryDBConnection,"order");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        order.setAttributeWillBePersisted(latestupdate, sdf.format(new Date()));
+        if (!azquoMemoryDBConnection.getCurrentDBName().equals("temp")){
+            azquoMemoryDBConnection.persist();
+        }
     }
 
 
