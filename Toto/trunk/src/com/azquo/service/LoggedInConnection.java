@@ -50,7 +50,8 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private Map<Set<Name>, Set<Value>> valuesFound;
     private AzquoBook azquoBook;
     private List<String>  languages;
-
+    private Map<String, Integer> jsTreeIds;
+    int lastJstreeId;
 
     private static final String defaultRegion = "default-region";
 
@@ -78,6 +79,8 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
         languages = new ArrayList<String>();
         languages.add(Name.DEFAULT_DISPLAY_NAME);
+        jsTreeIds = null;
+        lastJstreeId = 0;
 
         if (timeOut > 0) {
             this.timeOut = timeOut;
@@ -331,7 +334,21 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         this.languages = languages;
     }
 
+    public Map<String,Integer> getJsTreeIds(){
+        return jsTreeIds;
+    }
+
+    public void setJsTreeIds(Map<String, Integer>jsTreeIds){
+        this.jsTreeIds = jsTreeIds;
+    }
+
+    public int getLastJstreeId(){
+        return lastJstreeId;
+    }
 
 
+    public void setLastJstreeId(int lastJstreeId){
+        this.lastJstreeId = lastJstreeId;
+    }
 }
 
