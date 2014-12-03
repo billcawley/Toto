@@ -71,6 +71,7 @@ public  class AzquoBook {
     Map <Style,Style> highlightStyles = new HashMap<Style, Style>();
 
 
+    Map<Range, String> chosenMap = null;
     Map<Range, String> choiceMap = null;
     Map<Cell, CellArea> mergedCells = null;
     //HSSFPalette Colors = null;
@@ -206,11 +207,24 @@ public  class AzquoBook {
     }
 
 
+    private void createChosenMap() {
+        chosenMap = new HashMap<Range, String>();
+        for (int i = 0;i < wb.getWorksheets().getNames().getCount();i++){
+            com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
+            if (name.getText().toLowerCase().endsWith("chosen") && name.getRange().getWorksheet() == azquoSheet) {
+                Range range = name.getRange();
+                if (range!=null) {
+                    chosenMap.put(range, name.getText().substring(0, name.getText().length() - 6).toLowerCase());
+                }
+            }
+        }
+    }
+
     private void createChoiceMap() {
         choiceMap = new HashMap<Range, String>();
         for (int i = 0;i < wb.getWorksheets().getNames().getCount();i++){
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
-            if (name.getText().toLowerCase().endsWith("chosen") && name.getRange().getWorksheet() == azquoSheet) {
+            if (name.getText().toLowerCase().endsWith("choice") && name.getRange().getWorksheet() == azquoSheet) {
                 Range range = name.getRange();
                 if (range!=null) {
                     choiceMap.put(range, name.getText().substring(0, name.getText().length() - 6).toLowerCase());
@@ -218,7 +232,6 @@ public  class AzquoBook {
             }
         }
     }
-
 
 
     public void calculateAll() {
@@ -569,7 +582,7 @@ public  class AzquoBook {
     }
 
     private String addOption(String item, String selected){
-        String content = "<option value = \"" + item + "\"";
+        String content = "<option value = '" + item + "'";
         if (item.toLowerCase().equals(selected.toLowerCase())) {
             content += " selected";
 
@@ -928,7 +941,7 @@ public  class AzquoBook {
                             linkStart = "<a href=";
                         } else if (link.startsWith("onclick=")) {
                             link = link.substring(8);
-                            linkStart = "<a href=\"#\" onclick=";
+                            linkStart = "<a href='#' onclick=";
                         } else {
                             link = null;
                         }
@@ -995,10 +1008,11 @@ public  class AzquoBook {
 
     private void setChoices(LoggedInConnection loggedInConnection, int reportId) {
 
-        createChoiceMap();
-        for (Range range : choiceMap.keySet()) {
+        createChosenMap();
+        createChoiceMap();//to check when choice cells may be changed
+        for (Range range : chosenMap.keySet()) {
             if (range.getRowCount() == 1 && range.getColumnCount() == 1) {
-                String choiceName = choiceMap.get(range);
+                String choiceName = chosenMap.get(range);
                 Range choice = getRange(choiceName + "choice");
                 if (choice != null) {
                     UserChoice userChoice = userChoiceDAO.findForUserIdReportIdAndChoice(loggedInConnection.getUser().getId(), reportId, choiceName);
@@ -1076,11 +1090,11 @@ public  class AzquoBook {
     }
 
     public String getCellContent(int rowNo, int colNo){
-        return createCellContent(azquoCells.get(rowNo, colNo));
+        return getCellContentAsString(azquoCells.get(rowNo, colNo));
 
     }
 
-    private String createCellContent(Cell cell) {
+    private String getCellContentAsString(Cell cell) {
         String content = "";
         if (cell != null) {
             content =  cell.getStringValue();
@@ -1198,16 +1212,22 @@ public  class AzquoBook {
     }
 
 
+   private Range chosenRange(Cell cell){
+       return cellInMap(cell, chosenMap);
+   }
+
+    private Range choiceRange(Cell cell){
+        return cellInMap(cell, choiceMap);
+    }
 
 
-
-   private String choiceCell(Cell cell){
+   private Range cellInMap(Cell cell, Map<Range,String> map){
        int row = cell.getRow();
        int col = cell.getColumn();
-       for (Range range:choiceMap.keySet()){
+       for (Range range:map.keySet()){
              if (range.getFirstRow() <= row && range.getFirstRow() + range.getRowCount() > row
                 && range.getFirstColumn() <= col && range.getFirstColumn() + range.getColumnCount() > col){
-               return choiceMap.get(range);
+               return range;
            }
        }
        return null;
@@ -1217,7 +1237,7 @@ public  class AzquoBook {
     int choiceOffset(Cell cell){
         int row = cell.getRow();
         int col = cell.getColumn();
-        for (Range range:choiceMap.keySet()){
+        for (Range range:chosenMap.keySet()){
             int rowOffset = row - range.getFirstRow();
             if (range.getFirstColumn() == col && rowOffset >= 0 && rowOffset < range.getRowCount()){
                 if (range.getRowCount()==1) {
@@ -1229,7 +1249,106 @@ public  class AzquoBook {
         return 0;//should never get here!
     }
 
+    
+    
+    private int getCellHeight(Cell cell){
+        int cellHeight = azquoCells.getRowHeightPixel(cell.getRow()) -1;//the reduction is to cater for a border of width 1 px.cell.getRow().rowHeight;
+        if (mergedCells.get(cell) != null) {
+            CellArea mergeRange = mergedCells.get(cell);
+            for (int r=mergeRange.StartRow + 1; r <= mergeRange.EndRow; r++) {
+                cellHeight += azquoCells.getRowHeightPixel(r);
 
+            }
+         }
+        return cellHeight;
+
+
+    }
+    
+    private int getCellWidth(Cell cell){
+         int cellWidth = colWidth.get(cell.getColumn());
+        if (mergedCells.get(cell) != null) {
+            CellArea mergeRange = mergedCells.get(cell);
+            for (int c=mergeRange.StartColumn + 1; c <= mergeRange.EndColumn;c++) {
+                cellWidth += azquoCells.getColumnWidthPixel(c);
+            }
+        }
+        return cellWidth;
+
+    }
+    
+    private String createCellContentHTML(LoggedInConnection loggedInConnection, Cell cell, String cellClass){
+        String content = getCellContentAsString(cell);
+        if (cell.getStyle().getRotation() == 90) {
+            content = "<div class='r90'>" + content + "</div>";
+        }
+
+        Range chosenRange = chosenRange(cell);
+        String choiceName = chosenMap.get(chosenRange);
+        if (choiceName != null){
+            //create a select list
+            StringBuffer selectClass = new StringBuffer();
+            selectClass.append("select ");
+            sOut = new Formatter(selectClass);
+            addStyle("width", getCellWidth(cell) + "px");
+            addStyle("height",getCellHeight(cell) + "px");
+            StyleColor("background-color", cell.getStyle().getForegroundColor());
+            Range choice = getRange(choiceName + "choice");
+            if (choice != null) {
+                int choiceRow = 0;
+                if (choice.getRowCount()>1) choiceRow = cell.getRow() - chosenRange.getFirstRow();
+                List<com.azquo.memorydb.Name> choiceList = new ArrayList<Name>();
+                String cellChoice = choice.get(choiceRow,0).getStringValue();
+                List<String> constants = new ArrayList<String>();
+                if (cellChoice.startsWith("\"")){
+                    constants = interpretList(cellChoice);
+
+
+                }else {
+                    try {
+                        choiceList = nameService.interpretName(loggedInConnection, cellChoice, loggedInConnection.getLanguages());
+                    } catch (Exception e) {
+
+                        //TODO think what to do !
+                    }
+                }
+                if (constants.size() > 0 || choiceList.size() > 0) {
+
+                    String origContent = content;
+                    String onChange = "";
+                    int choiceOffset = choiceOffset(cell);
+                    if (choiceOffset == 0){
+                        onChange=  "onchange='selectChosen(\"" + choiceName + "\", true)' id='" + choiceName + "'";
+                    }else{
+                        choiceName += choiceOffset;
+                        onChange=  "onchange='selectChosen(\"" + choiceName + "\", false)' id='" + choiceName + "'";
+
+                    }
+                    content = "<select class = '" + selectClass + "'" +  onChange + " class='" + cellClass + "' >\n";
+
+                    //content = "<select class = \"" + selectClass + "\" onchange=\"selectChosen('" + choiceName + "')\" id=\"" + ChosenMap.get(cell) + "\" class=\"" + cellClass + "\" >\n";
+                    content += "<option value = ''></option>";
+
+                    for (String constant:constants){
+                        content += addOption(constant, origContent);
+                    }
+                    for (com.azquo.memorydb.Name name : choiceList) {
+                        if (name!=null){
+                            content += addOption(name.getDefaultDisplayName(), origContent);
+                        }
+                    }
+                    content += "</select>";
+
+                }else{
+                    content = "";
+                    cell.setValue("");
+                }
+            }
+        }
+        return content;
+
+    }
+    
 
     public StringBuffer convertToHTML(LoggedInConnection loggedInConnection){
 
@@ -1258,17 +1377,17 @@ public  class AzquoBook {
                 int sortableStart = 0;
                 int sortableEnd = 0;
                 Integer sortCol = 0;
-                for (int i = 0; i <= maxCol; i++) {
+                for (int colNo = 0; colNo <= maxCol; colNo++) {
                     Cell cell = null;
                     if (row != lastRow) {
-                        cell = azquoCells.get(sortedRowNo, i);
+                        cell = azquoCells.get(sortedRowNo, colNo);
                     }
-                    if (!azquoCells.getColumn(i).isHidden()){
+                    if (!azquoCells.getColumn(colNo).isHidden()){
                         if (headingsRegion == null){
                             SortableInfo si = sortableHeadings.get(cell);
                             if (si !=null){
                                 headingsRegion = si.region;
-                                sortableStart = i;
+                                sortableStart = colNo;
                                 sortableEnd = si.lastCol;
                                 sortCol = loggedInConnection.getSortCol(headingsRegion);//may be negative!
                                 if (sortCol == null){
@@ -1277,106 +1396,39 @@ public  class AzquoBook {
                             }
                         }
                         if (leftCell == -1){
-                            leftCell = i;
+                            leftCell = colNo;
                         }
-                        if (sortableEnd > 0 && i > sortableEnd){
+                        if (sortableEnd > 0 && colNo > sortableEnd){
                             sortableStart = 0;
                             sortableEnd = 0;
                             headingsRegion = null;
                         }
-                        String attrs = "";
-                        attrs = "";
-                        String content = createCellContent(cell);
+                        String content = getCellContentAsString(cell);
                         rowValues.add(content);//saved for when cells are changed
                         if (cell.getStyle().getRotation() == 90) {
-                            content = "<div class=\"r90\">" + content + "</div>";
+                            content = "<div class='r90'>" + content + "</div>";
                         }
 
-                        StringBuffer cellClass = createCellClass(sortedRowNo, i , cell, (content.length()>0));
-
-                        int cellHeight = rowHeight;
-                        int cellWidth = colWidth.get(i);
+                        StringBuffer cellClass = createCellClass(sortedRowNo, colNo , cell, (content.length()>0));
+                        content = createCellContentHTML(loggedInConnection,cell,cellClass.toString());
                         String sizeInfo = "";
                         if (mergedCells.get(cell) != null) {
-                            CellArea mergeRange = mergedCells.get(cell);
-                            for (int r=mergeRange.StartRow + 1; r <= mergeRange.EndRow; r++) {
-                                cellHeight += azquoCells.getRowHeightPixel(r);
-
-                            }
-                            for (int c=mergeRange.StartColumn + 1; c <= mergeRange.EndColumn;c++) {
-                                cellWidth += azquoCells.getColumnWidthPixel(c);
-                            }
-                            addStyle("z-index", "1");
+                             addStyle("z-index", "1");
                             //needs a background color to blot out cells underneath (probably we should not show the cells underneath)
                             addStyle("background-color", "white");
-                            sizeInfo = " style=\"height:" + cellHeight + "px;width:" + cellWidth + "px;\"";
+                            sizeInfo = " style='height:" + getCellHeight(cell) + "px;width:" + getCellWidth(cell) + "px;'";
                         }
-                        String choiceName = choiceCell(cell);
-                        if (choiceName != null){
-                            //create a select list
-                            StringBuffer selectClass = new StringBuffer();
-                            selectClass.append("select ");
-                            sOut = new Formatter(selectClass);
-                            addStyle("width", cellWidth + "px");
-                            addStyle("height",cellHeight + "px");
-                            StyleColor("background-color", cell.getStyle().getForegroundColor());
-                            Range choice = getRange(choiceName + "choice");
-                            if (choice != null) {
-                                List<com.azquo.memorydb.Name> choiceList = new ArrayList<Name>();
-                                String cellChoice = choice.get(0,0).getStringValue();
-                                List<String> constants = new ArrayList<String>();
-                                if (cellChoice.startsWith("\"")){
-                                    constants = interpretList(cellChoice);
 
 
-                                }else {
-                                    try {
-                                        choiceList = nameService.interpretName(loggedInConnection, choice.get(0,0).getStringValue(), loggedInConnection.getLanguages());
-                                    } catch (Exception e) {
 
-                                        //TODO think what to do !
-                                    }
-                                }
-                                if (constants.size() > 0 || choiceList.size() > 0) {
 
-                                    String origContent = content;
-                                    String onChange = "";
-                                    int choiceOffset = choiceOffset(cell);
-                                    if (choiceOffset == 0){
-                                        onChange=  "onchange=\"selectChosen('" + choiceName + "', true)\" id=\"" + choiceName + "\"";
-                                    }else{
-                                        choiceName += choiceOffset;
-                                        onChange=  "onchange=\"selectChosen('" + choiceName + "', false)\" id=\"" + choiceName + "\"";
-
-                                    }
-                                    content = "<select class = \"" + selectClass + "\"" +  onChange + " class=\"" + cellClass + "\" >\n";
-
-                                    //content = "<select class = \"" + selectClass + "\" onchange=\"selectChosen('" + choiceName + "')\" id=\"" + choiceMap.get(cell) + "\" class=\"" + cellClass + "\" >\n";
-                                    content += "<option value = \"\"></option>";
-
-                                    for (String constant:constants){
-                                        content += addOption(constant, origContent);
-                                    }
-                                    for (com.azquo.memorydb.Name name : choiceList) {
-                                        if (name!=null){
-                                            content += addOption(name.getDefaultDisplayName(), origContent);
-                                        }
-                                    }
-                                    content += "</select>";
-
-                                }else{
-                                    content = "";
-                                    cell.setValue("");
-                                }
-                            }
-                        }
                         if (sortableStart > 0 && content.length() > 0){
-                            if (i!=sortCol + sortableStart - 1){//sort is currently up
-                                content +="<div class=\"sortup\"><a href=\"#\" onclick='sortCol(\"" + headingsRegion.trim() + "\"," + (i-sortableStart + 1) + ");'><img src=\"/images/sortup.png\"></a></div>";
+                            if (colNo!=sortCol + sortableStart - 1){//sort is currently up
+                                content +="<div class='sortup'><a href='#' onclick='sortCol('" + headingsRegion.trim() + "'," + (colNo-sortableStart + 1) + ");'><img src='/images/sortup.png'></a></div>";
 
                             }
-                            if (i != sortableStart - sortCol - 1){
-                                content +="<div class=\"sortdown\"><a href=\"#\" onclick='sortCol(\"" + headingsRegion.trim() + "\"," + (sortableStart - i - 1) + ");'><img src=\"/images/sortdown.png\"></a></div>";
+                            if (colNo != sortableStart - sortCol - 1){
+                                content +="<div class='sortdown'><a href='#' onclick='sortCol('" + headingsRegion.trim() + "'," + (sortableStart - colNo - 1) + ");'><img src='/images/sortdown.png'></a></div>";
                             }
 
                         }
@@ -1384,15 +1436,19 @@ public  class AzquoBook {
                             int nameEnd = content.substring(13).indexOf(";");
                             if (nameEnd > 0) {
                                 String buttonTitle = content.substring(13, 13 + nameEnd);
-                                content = "<div class=\"button\"><a href=\"#\" onclick=\"buttonPressed(" + rowNo + "," + i + ")\">" + buttonTitle + "</a></div>";
+                                if (content.contains("javascript:")){
+                                    content = "<div class='button'><a href='#' onclick='" + content.substring(nameEnd + 25) + "'>" + buttonTitle + "</a></div>";
+                                }else{
+                                    content = "<div class='button'><a href='#' onclick='buttonPressed(" + rowNo + "," + colNo + ")'>" + buttonTitle + "</a></div>";
+                                }
                             }
                         }
-                        output.append("   <div class=\"" + cellClass + "\" " + sizeInfo + " id=\"cell" + rowNo + "-" + i + "\">" + content.trim()  + "</div>\n");
+                        output.append("   <div class='" + cellClass + "' " + sizeInfo + " id='cell" + rowNo + "-" + colNo + "'>" + content.trim()  + "</div>\n");
                         //out.format("    <td class=%s %s>%s</td>%n", styleName(style),
                         //        attrs, content);
-                        cellLeft += colWidth.get(i);
+                        cellLeft += colWidth.get(colNo);
                     }else{
-                        rowValues.add(null);
+                        rowValues.add(getCellContentAsString(cell));
                     }
                 }
                 cellTop += rowHeight + 1;
@@ -1415,7 +1471,7 @@ public  class AzquoBook {
 
               chart.toImage(basePath + tempname );
               int topOffset = 0; //not sure why we should need this!
-              sb.append("<div id=\"chart" + name + "\" style=\"position:absolute;top:" + (chart.getChartObject().getY() + topOffset) + "px;left:" + chart.getChartObject().getX() + "px;\"><img src=\"/api/Download?image=" + tempname + "\"/></div>\n");
+              sb.append("<div id='chart" + name + "' style='position:absolute;top:" + (chart.getChartObject().getY() + topOffset) + "px;left:" + chart.getChartObject().getX() + "px;'><img src='/api/Download?image=" + tempname + "'/></div>\n");
          }
         return sb;
     }
@@ -1588,19 +1644,22 @@ public  class AzquoBook {
         return sb;
 
     }
-    private StringBuffer cellInfo(Cell cell){
+    private StringBuffer cellInfo(LoggedInConnection loggedInConnection, Cell cell){
         StringBuffer sb = new StringBuffer();
-        String content = createCellContent(cell);
+        String cellClass = createCellClass(cell.getRow(), cell.getColumn(), cell, getCellContentAsString(cell).length() > 0).toString();
+        String content = createCellContentHTML(loggedInConnection,cell, cellClass);
         if (content.startsWith("$button;name=")){//don't show button info
             return sb;
         }
         sb.append("{");
-        sb.append(jsonValue("class", createCellClass(cell.getRow(), cell.getColumn(), cell, content.length() > 0).toString(), false));
-        sb.append(jsonValue("value", content, true));
+        sb.append(jsonValue("class", cellClass, false));
+        sb.append(jsonValue("value", content.replace("\"","\\\"").replace("\n","\\\n"), true));
         sb.append(jsonValue("id", createCellId(cell), true));
         sb.append("}");
         return sb;
     }
+
+
 
 
     public String changeValue(int row, int col, String value, LoggedInConnection loggedInConnection) {
@@ -1630,21 +1689,42 @@ public  class AzquoBook {
                 if (cell!=null  && cell.getType()!= CellValueType.IS_NULL){
                     String cellVal = cell.getStringValue();
 
-                    if (rowValues.size() > colNo && rowValues.get(colNo)!=null && !cellVal.equals(rowValues.get(colNo))) {
+                    if (rowValues.size() > colNo && !cellVal.equals(rowValues.get(colNo))) {
                         rowValues.remove(colNo);
                         rowValues.add(colNo, cellVal);
-                        //setValue(loggedInConnection, cell, null); orig value needed when saving.  Provenance must now check that the value in sheet is the same as value on file
-                        if (sb.length() > 1) {
-                            sb.append(",");
+                            //setValue(loggedInConnection, cell, null); orig value needed when saving.  Provenance must now check that the value in sheet is the same as value on file
+                        if (!azquoCells.getColumn(colNo).isHidden()) {
+                            if (sb.length() > 1) {
+                                sb.append(",");
+                            }
+                            sb.append(cellInfo(loggedInConnection, cell));
                         }
-                        sb.append(cellInfo(cell));
+                        //and check that no 'selects' have changed
+                        Range choiceRange = choiceRange(cell);
+                        if (choiceRange != null){
+                            String choiceName = choiceMap.get(choiceRange);
+                            Range chosen = getRange(choiceName + "chosen");
+                            if (chosen != null) {
+                                Cell chosenCell = chosen.get(cell.getRow() - choiceRange.getFirstRow(), 0);
+                                //assume this is on the same row!!!!
+                                int chosenCol = chosenCell.getColumn();
+                                rowValues.remove(chosenCol);
+                                rowValues.add(chosenCol,"");
+                                if (sb.length() > 1) {
+                                    sb.append(",");
+                                }
+                                sb.append(cellInfo(loggedInConnection,chosenCell));
+
+                            }
+                        }
+                        
                     }
 
                 }
             }
         }
-        sb.append("]");
-        return sb.toString();
+        String output = sb.append("]").toString();
+        return output;
 
     }
 
@@ -1949,7 +2029,7 @@ public  class AzquoBook {
 
 
     private String tabImage(int left, int right){
-        return "<img alt=\"\" src = \"/images/tab" + left + right + ".png\"/>";
+        return "<img alt='' src = '/images/tab" + left + right + ".png'/>";
     }
 
     public String printTabs(StringBuffer tabs, String spreadsheetName){
