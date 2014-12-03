@@ -22,6 +22,7 @@ var nameChosenNo = 0
 var cutitem = null;
 var copyitem = null;
 var origval = null;
+var lastEntered = null;
 
 
 
@@ -304,6 +305,7 @@ function cancelEntry() {
 
 
     if (entryX < 0) return;
+    lastEntered = null;
     if (document.getElementById("entered")==null){
         //entry field has been overwritten already by changed values
         entryX=-1;
@@ -596,6 +598,7 @@ function reportChosen(reportToLoad){
 
 function selectChosen(divName, inContext){
     var entered = document.getElementById(divName);
+    lastEntered = divName;
 
     if (inContext) {
         document.getElementById("editedName").value = divName;
@@ -726,7 +729,7 @@ function azquojsonfeed(obj) {
         for (var i = 0; i < obj.changedvalues.length; i++) {
             var val = obj.changedvalues[i];
             var elem = document.getElementById(val.id);
-            if (elem.childElementCount == 0){//don't overwrite selection cells
+            if (val.id != lastEntered){//don't overwrite selection cells entered
                 elem.innerHTML = val.value;
             }
             elem.className = val.class;
