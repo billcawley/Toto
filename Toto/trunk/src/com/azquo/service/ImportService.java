@@ -546,7 +546,12 @@ public final class ImportService {
         String value = null;
         ImportHeading contextPeersItem = null;
         for (ImportHeading importHeading:headings){
-            if ((importHeading.local || importHeading.global) && importHeading.parentOf != null){
+             if (importHeading.global){
+                importHeading.lineName = includeInSet(azquoMemoryDBConnection,namesFound,importHeading.lineValue,null,false,attributeNames);
+            }
+        }
+        for (ImportHeading importHeading:headings){
+            if (importHeading.local && importHeading.parentOf != null){
                 handleParent(azquoMemoryDBConnection,namesFound, importHeading, headings,attributeNames);
             }
         }
@@ -650,11 +655,6 @@ public final class ImportService {
 
             }
         }
-        for (ImportHeading importHeading:headings){
-            if (importHeading.global && importHeading.parentOf != null){
-                handleParent(azquoMemoryDBConnection,namesFound, importHeading, headings,attributeNames);
-            }
-        }
 
 
 
@@ -750,11 +750,7 @@ public final class ImportService {
         if (heading.lineName != null && heading.childOf != null){
             heading.childOf.addChildWillBePersisted(heading.lineName);
         }else {
-            if (heading.global){
-                heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, heading.lineValue, null, false, attributeNames);
-            }else{
-                heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, attributeNames);
-            }
+            heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, attributeNames);
         }
         if (childHeading.lineName == null) {
             childHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childHeading.lineValue, heading.lineName, heading.local, attributeNames);
@@ -881,10 +877,14 @@ public final class ImportService {
                     nameService.clearChildren(set);
                     while (st.hasMoreTokens()) {
                         String element = st.nextToken();
-                        if (element.length() > 0) {
-                            if (importHeading.global){
-                                Name child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, null, false, attributeNames);
-                                set.addChildWillBePersisted(child);
+                          if (element.length() > 0) {
+                              int globalPos  = element.toLowerCase().indexOf(";global");
+                              if (globalPos > 0 || importHeading.global){
+                                  if (globalPos > 0){
+                                      element = element.substring(0,globalPos);
+                                  }
+                                 Name child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, null, false, attributeNames);
+                                  set.addChildWillBePersisted(child);
 
                             }else{
                                 nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, set, false, attributeNames);//this import currently not importing local names
