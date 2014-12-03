@@ -24,12 +24,12 @@ public final class MemoryDBManager {
     List<AppEntityService> appServices = null;
 
     private final HashMap<String, AzquoMemoryDB> memoryDatabaseMap;
-    private DatabaseDAO databaseDAO;
+//    private DatabaseDAO databaseDAO;
     private StandardDAO standardDAO;
 
 
     public MemoryDBManager(DatabaseDAO databaseDAO, StandardDAO standardDAO) throws Exception {
-        this.databaseDAO = databaseDAO;
+        //this.databaseDAO = databaseDAO;
         this.standardDAO = standardDAO;
         memoryDatabaseMap = new HashMap<String, AzquoMemoryDB>(); // by mysql name. Will be unique.
         loadMemoryDBMap();

@@ -72,8 +72,8 @@ public final class AzquoMemoryDB {
                 entitiesToPersist.put(appEntityService.getTableName(), new HashSet<AzquoMemoryDBEntity>());
             }
         }
-        if (standardDAO != null){
-           loadData(appServices);
+        if (standardDAO != null) {
+            loadData(appServices);
         }
         needsLoading = false;
         nextId = maxIdAtLoad + 1;
@@ -138,7 +138,7 @@ public final class AzquoMemoryDB {
                 System.out.println("names init in " + (System.currentTimeMillis() - track) + "ms");
 
                 track = System.currentTimeMillis();
-                if (appServices != null){ // dunno why it wasn't there before
+                if (appServices != null) { // dunno why it wasn't there before
                     for (AppEntityService appEntityService : appServices) {
                         final List<JsonRecordTransport> appEntities = standardDAO.findFromTable(this, appEntityService.getTableName());
                         for (JsonRecordTransport appEntityRecord : appEntities) {
@@ -161,10 +161,11 @@ public final class AzquoMemoryDB {
     }
 
     // reads from a list of changed objects
-    // todo : should this be public??
+    // should we syncronize on a write lock object?? I think it might be a plan.
 
     public synchronized void saveDataToMySQL() {
         // this is where I need to think carefully about concurrency, azquodb has the last say when the sets are modified although the flags are another point
+        // just a simple DB write lock should to it
         // for the moment just make it work.
         // map of sets to persist means that should we add another object type then this code should not need to change
         for (String tableToStoreIn : entitiesToPersist.keySet()) { // run through 'em was an enum of set table names, not it could be anything depending on app tables. See no harm in theh generic nature
@@ -201,11 +202,11 @@ public final class AzquoMemoryDB {
 
     //fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
 
-    private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue){
-        Map <String,Set<Name>> map = nameByAttributeMap.get(attributeName.toLowerCase().trim());
-        if (map != null){ // that attribute is there
+    private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
+        Map<String, Set<Name>> map = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+        if (map != null) { // that attribute is there
             Set<Name> names = map.get(attributeValue.toLowerCase().trim());
-            if (names != null){ // were there any entries for that value?
+            if (names != null) { // were there any entries for that value?
                 return new HashSet<Name>(names);
             }
         }
@@ -214,7 +215,7 @@ public final class AzquoMemoryDB {
 
     // same as above but then zap any not in the parent
 
-    private Set<Name> getNamesForAttributeAndParent(final String attributeName, final String attributeValue, Name parent){
+    private Set<Name> getNamesForAttributeAndParent(final String attributeName, final String attributeValue, Name parent) {
         Set<Name> possibles = getNamesForAttribute(attributeName, attributeValue);
         Iterator<Name> iterator = possibles.iterator();
         while (iterator.hasNext()) {
@@ -228,18 +229,18 @@ public final class AzquoMemoryDB {
 
     // work through a list of possible names for a given attribute in order that the attribute names are listed. Parent optional
 
-    private Set<Name> getNamesForAttributeNamesAndParent(final List<String> attributeNames, final String attributeValue, Name parent){
-        if (parent != null){
-            for (String attributeName : attributeNames){
+    private Set<Name> getNamesForAttributeNamesAndParent(final List<String> attributeNames, final String attributeValue, Name parent) {
+        if (parent != null) {
+            for (String attributeName : attributeNames) {
                 Set<Name> names = getNamesForAttributeAndParent(attributeName, attributeValue, parent);
-                if (!names.isEmpty()){
+                if (!names.isEmpty()) {
                     return names;
                 }
             }
         } else {
-            for (String attributeName : attributeNames){
+            for (String attributeName : attributeNames) {
                 Set<Name> names = getNamesForAttribute(attributeName, attributeValue);
-                if (!names.isEmpty()){
+                if (!names.isEmpty()) {
                     return names;
                 }
             }
@@ -256,18 +257,18 @@ public final class AzquoMemoryDB {
     }*/
 
     public Name getNameByAttribute(final String attributeName, final String attributeValue, final Name parent) {
-        return getNameByAttribute( Arrays.asList(attributeName), attributeValue, parent);
+        return getNameByAttribute(Arrays.asList(attributeName), attributeValue, parent);
     }
 
     public Name getNameByAttribute(final List<String> attributeNames, final String attributeValue, final Name parent) {
         Set<Name> possibles = getNamesForAttributeNamesAndParent(attributeNames, attributeValue, parent);
         // all well and good but now which one to return?
-        if(possibles.size() == 1){ // simple
+        if (possibles.size() == 1) { // simple
             return possibles.iterator().next();
         } else if (possibles.size() > 1) { // more than one . . . try and replicate logic that was there before
-            if (parent == null){ // no parent criteria
-                for (Name possible : possibles){
-                    if (possible.getParents().size() == 0){ // we chuck back the first top level one. Not sure this is the best logic, more than one possible with no top levels means return null
+            if (parent == null) { // no parent criteria
+                for (Name possible : possibles) {
+                    if (possible.getParents().size() == 0) { // we chuck back the first top level one. Not sure this is the best logic, more than one possible with no top levels means return null
                         return possible;
                     }
                 }
@@ -288,7 +289,7 @@ public final class AzquoMemoryDB {
         final String lctAttributeName = attributeName.toLowerCase().trim();
         final String lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
         final Set<Name> names = new HashSet<Name>();
-        if (nameByAttributeMap.get(lctAttributeName) == null){
+        if (nameByAttributeMap.get(lctAttributeName) == null) {
             return names;
         }
         for (String attributeValue : nameByAttributeMap.get(lctAttributeName).keySet()) {
@@ -343,64 +344,56 @@ public final class AzquoMemoryDB {
         return provenanceByIdMap.get(id);
     }
 
-    // synchronise against the map for the moment, I'm worried about all this!
+    // ok, I'm taking OFF the syncronizeation on the map, using a concurrent map should stop concurrent modification exceptions
 
     protected void addNameToDb(final Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
-        synchronized (nameByIdMap) {
-            // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-            if (newName.getId() > 0 && nameByIdMap.get(newName.getId()) != null) {
-                throw new Exception("tried to add a name to the database with an existing id! new id = " + newName.getId());
-            } else {
-                nameByIdMap.put(newName.getId(), newName);
-            }
+        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
+        if (newName.getId() > 0 && nameByIdMap.get(newName.getId()) != null) {
+            throw new Exception("tried to add a name to the database with an existing id! new id = " + newName.getId());
+        } else {
+            nameByIdMap.put(newName.getId(), newName);
         }
     }
 
     protected void removeNameFromDb(final Name toRemove) throws Exception {
         toRemove.checkDatabaseMatches(this);
-        synchronized (nameByIdMap) {
-            nameByIdMap.remove(toRemove.getId());
-        }
+        nameByIdMap.remove(toRemove.getId());
     }
 
     // ok I'd have liked this to be part of add name to db but the name won't have been initialised, add name to db is called in the name constructor
     // before the attributes have been initialised
 
     protected void addNameToAttributeNameMap(final Name newName) throws Exception {
-        synchronized (nameByAttributeMap) {
-            newName.checkDatabaseMatches(this);
-            final Map<String, String> attributes = newName.getAttributes();
+        newName.checkDatabaseMatches(this);
+        final Map<String, String> attributes = newName.getAttributes();
 
-            for (String attributeName : attributes.keySet()) {
-                if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) == null) { // make a new map for the attributes
-                    nameByAttributeMap.put(attributeName.toLowerCase().trim(), new HashMap<String, Set<Name>>());
-                }
-                final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
-                String attributeValue = attributes.get(attributeName).toLowerCase().trim();
-                if (attributeValue.indexOf(Name.QUOTE) >= 0 && !attributeName.equals(Name.CALCULATION)) {
-                     attributeValue = attributeValue.replace(Name.QUOTE,'\'');
-                  }
-                if (namesForThisAttribute.get(attributeValue) != null) {
-                    namesForThisAttribute.get(attributeValue).add(newName);
-                } else {
-                    final Set<Name> possibles = new HashSet<Name>();
-                    possibles.add(newName);
-                    namesForThisAttribute.put(attributeValue, possibles);
-                }
+        for (String attributeName : attributes.keySet()) {
+            if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) == null) { // make a new map for the attributes
+                nameByAttributeMap.put(attributeName.toLowerCase().trim(), new ConcurrentHashMap<String, Set<Name>>());
+            }
+            final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+            String attributeValue = attributes.get(attributeName).toLowerCase().trim();
+            if (attributeValue.indexOf(Name.QUOTE) >= 0 && !attributeName.equals(Name.CALCULATION)) {
+                attributeValue = attributeValue.replace(Name.QUOTE, '\'');
+            }
+            if (namesForThisAttribute.get(attributeValue) != null) {
+                namesForThisAttribute.get(attributeValue).add(newName);
+            } else {
+                final Set<Name> possibles = new HashSet<Name>();
+                possibles.add(newName);
+                namesForThisAttribute.put(attributeValue, possibles);
             }
         }
     }
 
     protected void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
         name.checkDatabaseMatches(this);
-        synchronized (nameByAttributeMap) {
-            if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null) {// the map we care about
-                final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
-                final Set<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase().trim());
-                if (namesForThatAttributeAndAttributeValue != null) {
-                    namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the set . . .
-                }
+        if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null) {// the map we care about
+            final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+            final Set<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase().trim());
+            if (namesForThatAttributeAndAttributeValue != null) {
+                namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the set . . .
             }
         }
     }
@@ -419,7 +412,7 @@ public final class AzquoMemoryDB {
     // maps will be set up in the constructor. Think about any concurrency issues here???
 
     protected void setEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
-        if (!needsLoading  && entitiesToPersist.size() > 0) {
+        if (!needsLoading && entitiesToPersist.size() > 0) {
             entitiesToPersist.get(tableToPersistIn).add(azquoMemoryDBEntity);
         }
     }
@@ -432,25 +425,21 @@ public final class AzquoMemoryDB {
 
     protected void addValueToDb(final Value newValue) throws Exception {
         newValue.checkDatabaseMatches(this);
-        synchronized (valueByIdMap) {
-            // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-            if (valueByIdMap.get(newValue.getId()) != null) {
-                throw new Exception("tried to add a value to the database with an existing id!");
-            } else {
-                valueByIdMap.put(newValue.getId(), newValue);
-            }
+        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
+        if (valueByIdMap.get(newValue.getId()) != null) {
+            throw new Exception("tried to add a value to the database with an existing id!");
+        } else {
+            valueByIdMap.put(newValue.getId(), newValue);
         }
     }
 
     protected void addProvenanceToDb(final Provenance newProvenance) throws Exception {
         newProvenance.checkDatabaseMatches(this);
-        synchronized (provenanceByIdMap) {
-            // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-            if (provenanceByIdMap.get(newProvenance.getId()) != null) {
-                throw new Exception("tried to add a value to the database with an existing id!");
-            } else {
-                provenanceByIdMap.put(newProvenance.getId(), newProvenance);
-            }
+        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
+        if (provenanceByIdMap.get(newProvenance.getId()) != null) {
+            throw new Exception("tried to add a value to the database with an existing id!");
+        } else {
+            provenanceByIdMap.put(newProvenance.getId(), newProvenance);
         }
     }
 }
