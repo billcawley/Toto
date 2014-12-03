@@ -98,9 +98,10 @@
                 <security:intercept-url pattern="/phase1/**"               access="hasRole('ROLE_USER')" requires-channel="https" />
 
                 <security:intercept-url pattern="/api/**"                  access="permitAll" requires-channel="http" /> -->
-        <security:intercept-url pattern="/api/MerchantAdmin"               access="hasRole('ROLE_USER')" requires-channel="https" />
-        <security:intercept-url pattern="/api/SupplierResponse*"               access="hasRole('ROLE_USER')" requires-channel="https" />
-        <security:intercept-url pattern="/api/SupplierResponse/*"               access="hasRole('ROLE_USER')" requires-channel="https" />
+        <security:intercept-url pattern="/api/MerchantAdmin*"               access="hasRole('ROLE_USER')" requires-channel="http" />
+        <security:intercept-url pattern="/api/MerchantAdmin/*"               access="hasRole('ROLE_USER')" requires-channel="http" />
+        <security:intercept-url pattern="/api/SupplierResponse*"               access="hasRole('ROLE_USER')" requires-channel="http" />
+        <security:intercept-url pattern="/api/SupplierResponse/*"               access="hasRole('ROLE_USER')" requires-channel="http" />
         <security:logout logout-url="/logout" logout-success-url="/logoutSuccess.html" />
         <!--<security:form-login login-page="/phase1/login.html" authentication-failure-url="/phase1/errorPage.html"  default-target-url="/phase1/test.html"/>-->
 
