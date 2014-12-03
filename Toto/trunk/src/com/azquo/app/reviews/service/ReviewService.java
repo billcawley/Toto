@@ -55,33 +55,33 @@ public class ReviewService {
     UserService userService;
 
     public static final String SUPPLIER = "SUPPLIER";
-    public static final String ALL_RATINGS = "ALL_RATINGS";
-    public static final String ALL_PRODUCTS = "ALL_PRODUCTS";
-    public static final String EMAILS_TO_BE_SENT = "EMAILS_TO_BE_SENT";
-    public static final String ORDERS_WITH_EMAIL_SENT = "ORDERS_WITH_EMAIL_SENT";
-    public static final String SALE_DATE = "SALE_DATE";
+    public static final String ALL_RATINGS = "ALL RATINGS";
+    public static final String ALL_PRODUCTS = "ALL PRODUCTS";
+    public static final String EMAILS_TO_BE_SENT = "EMAILS TO BE SENT";
+    public static final String ORDERS_WITH_EMAIL_SENT = "ORDERS WITH EMAIL SENT";
+    public static final String SALE_DATE = "SALE DATE";
     public static final String SERVICE = "SERVICE";
 
     public interface SUPPLIER_ATTRIBUTE {
-        String EMAIL_TEMPLATE = "EMAIL_TEMPLATE";
+        String EMAIL_TEMPLATE = "EMAIL TEMPLATE";
         String LOGO = "LOGO";
     }
 
     public interface ORDER_ATTRIBUTE {
-        String EMAIL_DATE = "EMAIL_DATE";
-        String EMAIL_SENT = "EMAIL_SENT";
-        String CUSTOMER_NAME = "CUSTOMER_NAME";
-        String CUSTOMER_EMAIL = "CUSTOMER_EMAIL";
+        String EMAIL_DATE = "EMAIL DATE";
+        String EMAIL_SENT = "EMAIL SENT";
+        String CUSTOMER_NAME = "CUSTOMER NAME";
+        String CUSTOMER_EMAIL = "CUSTOMER EMAIL";
     }
 
     public interface ORDER_ITEM_ATTRIBUTE {
-        String REVIEW_DATE = "REVIEW_DATE";
+        String REVIEW_DATE = "REVIEW DATE";
         String COMMENT = "COMMENT";
     }
 
 
     public interface PRODUCT_ATTRIBUTE {
-        String PRODUCT_CODE = "PRODUCT_CODE";
+        String PRODUCT_CODE = "Product code";
     }
 
 
