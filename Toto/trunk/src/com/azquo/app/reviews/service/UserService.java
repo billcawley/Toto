@@ -28,6 +28,9 @@ public class UserService {
         this.nameService = nameService;
         this.adminService = adminService;
         this.reviewsConnectionMap = reviewsConnectionMap;
+        if (reviewsConnectionMap.getConnection(MASTERDBNAME) == null){ // should only happen once!
+            reviewsConnectionMap.newDatabase("master"); // note, I assume the main reviews business is called reviews!
+        }
         masterDBConnection = reviewsConnectionMap.getConnection(MASTERDBNAME);
         userSet = nameService.findOrCreateNameInParent(masterDBConnection, USER, null, false);
     }
@@ -38,7 +41,7 @@ public class UserService {
         String SALT = "SALT";
     }
 
-    public String createUser(Name reviewsCustomer, String email, String password) throws Exception{
+    public String createUser(String reviewsCustomer, String email, String password) throws Exception{
         Name exists = nameService.getNameByAttribute(masterDBConnection, email, userSet);
         if (exists != null){
             return "error:a user with that name already exists";
@@ -50,7 +53,8 @@ public class UserService {
         newUser.setAttributeWillBePersisted(USER_ATTRIBUTE.EMAIL, email);
         newUser.setAttributeWillBePersisted(USER_ATTRIBUTE.PASSWORD, encryptedPassword);
         newUser.setAttributeWillBePersisted(USER_ATTRIBUTE.SALT, salt);
-        reviewsCustomer.addChildWillBePersisted(newUser);
+        Name merchant = nameService.findByName(masterDBConnection,reviewsCustomer);
+        merchant.addChildWillBePersisted(newUser);
         masterDBConnection.persist();
         return "";
     }
