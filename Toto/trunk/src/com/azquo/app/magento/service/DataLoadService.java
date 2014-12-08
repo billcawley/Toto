@@ -50,11 +50,16 @@ public final class DataLoadService {
     }
 
 
-
     public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, String data) throws Exception {
-        BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8))));
-        if (data==null){
-            //testing
+        loadData(azquoMemoryDBConnection, data != null ? new BufferedReader(new InputStreamReader(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)))) : null);
+    }
+
+    public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, InputStream data) throws Exception {
+        loadData(azquoMemoryDBConnection, data != null ? new BufferedReader(new InputStreamReader(data, StandardCharsets.UTF_8)) : null);
+    }
+
+    public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, BufferedReader br) throws Exception {
+        if (br == null){
             br = new BufferedReader(new FileReader("/home/bill/Sear/magento/testdata_dump.txt"));
         }
 
