@@ -29,6 +29,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     public static final String CALCULATION = "CALCULATION";
     public static final String RPCALC = "RPCALC";
     public static final String ANON = "ANON";
+    public static final String LOCAL = "LOCAL";
 
     public static final char QUOTE = '`';
 
@@ -185,7 +186,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         if (parents.size() > 0) {
             Name parent = parents.iterator().next();
             while (parent != null) {
-                if (parent.getParents().size() > 0) {
+                if (parent.getParents().size() > 0 && parent.getAttribute(LOCAL) == null) {
                     parent = parent.getParents().iterator().next();
                 } else {
                     return parent; // it has no parents, must be top
