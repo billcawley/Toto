@@ -621,6 +621,7 @@ public final class OnlineService {
         List<OnlineReport> onlineReports = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getBusinessId(),loggedInConnection.getUser().getStatus());
         Map<String,String> context = new HashMap<String, String>();
         context.put("welcome","Welcome to Azquo!");
+        context.put("database", loggedInConnection.getAzquoMemoryDB().getDatabase().getName());
         Set<Map<String,String>> reports = new HashSet<Map<String, String>>();
         for (OnlineReport onlineReport:onlineReports){
             Map<String,String> vReport = new HashMap<String, String>();
@@ -636,7 +637,7 @@ public final class OnlineService {
 
     }
 
-    public String showNameDetails(LoggedInConnection loggedInConnection, String database)throws  Exception{
+    public String showNameDetails(LoggedInConnection loggedInConnection, String database, int nameId, String parents)throws  Exception{
         if (database!= null && database.length() > 0){
             Database newDB = databaseDAO.findForName(loggedInConnection.getBusinessId(), database);
             if (newDB == null){
@@ -646,6 +647,8 @@ public final class OnlineService {
         }
         Map<String,String> context = new HashMap<String, String>();
         context.put("connectionid", loggedInConnection.getConnectionId() + "");
+        context.put("parents", parents);
+        context.put("rootid",nameId + "");
         return convertToVelocity(context,null,null,"jstree.vm");
     }
 
