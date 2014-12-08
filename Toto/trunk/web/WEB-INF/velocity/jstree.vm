@@ -1,0 +1,291 @@
+<?doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"
+		doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" />
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jstree/3.0.4/themes/default/style.min.css" />
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jstree/3.0.4/jstree.min.js"></script>
+    <style>
+        #container {
+            font-family:Arial;
+            font-size:10pt;
+
+        }
+        .namedetails{
+            position: absolute;
+            top: 100px;
+            left: 100px;
+            width: 390px;
+            height: 200px;
+            display: none;
+            background-color: #eeeeee;
+            z-index: 12;
+            padding: 5px;
+            border: 1px solid silver;
+            font-family: Arial;
+            font-size: 12px;
+        }
+
+        #namedetailssubmit{
+            position:relative;
+            vertical-align: bottom;
+            text-align:center;
+            bottom:20px;
+        }
+
+        #htmlatts{
+            position:relative;
+        }
+
+        .namedetailsline{
+            position:relative;
+            width:340px;
+            height:21px;
+        }
+
+        .namedetails .name{
+            position:absolute;
+            top:0px;
+            left:2px;
+            width:180px;
+            height:25px;
+        }
+
+        .namedetails .value {
+            position: absolute;
+            top: 0px;
+            left: 185px;
+            width: 180px;
+            height: 20px;
+        }
+
+        .closebutton{
+            align:right;
+            position:absolute;
+            right:-15px;
+            top:-15px;
+        }
+    </style>
+
+
+</head>
+<body>
+<div id="wrapper">
+    <div id="container"></div>
+    <div class="namedetails" id="namedetails" style="display:none">
+        <div class="closebutton"><a href="#" onclick="hideDetails();"><img src="https://data.azquo.com:8443/images/closebutton.png" alt="close button"/></a></div>
+        <div class="namedetailsline">
+            Name
+            <div class="value">
+                <input name="DEFAULT_DISPLAY_NAME" id="DEFAULT_DISPLAY_NAME" type="text" value="" class="attvalue">
+            </div>
+        </div>
+        <p>Attributes:</p>
+        <div id="htmlatts"></div>
+        <div class="namedetailssubmit"><p><a href="#" onclick="submitNameDetails()">Submit</a></p></div>
+    </div>
+
+    <script>
+        var parents = $parents;
+        var seeParents = "See parents";
+        if (parents==true){
+           seeParents="See children";
+        }
+        var nameChosenNo = 0;
+        $.jstree.defaults.dnd.check_while_dragging = false;
+        $.jstree.defaults.dnd.inside_pos = "last";
+        $(function() {
+            $('#container').jstree({
+                'core' : {
+                    'data' : {
+                        "state" : {"opened" : true },
+                        "url" : "/api/Jstree?op=children&connectionid=$connectionid&topnode=$rootid&parents=" + parents,
+                        "dataType": "JSON",
+                        "data" : function (node) {
+                            return { "id" : node.id };
+                        }
+                    },
+                    "check_callback" : function (operation, node, parent, position, more) {
+                        azquojson("Jstree","op=" + operation + "&id=" + node.id + "&position=" + position + "&parent=" + parent.id);
+                        //carry on, but let the json feed flag the errors
+                        return true; // allow everything else
+                    }
+
+                },
+                "plugins" : ["dnd","contextmenu"],
+                "contextmenu":{
+                    "items": function($node) {
+                        var tree = $("#container").jstree(true)
+                        var menu =  {
+                            createItem : {
+                                "label" : "New Name",
+                                "action" : function(obj) {
+                                    newNode = tree.create_node($node);
+                                    tree.edit(newNode)},
+                                "_class" : "class"
+                            },
+                            renameItem : {
+                                "label" : "Rename",
+                                "action": function (obj) {
+                                    tree.edit($node);
+                                }
+                            },
+                            deleteItem : {
+                                "label" : "Remove Name",
+                                "action" : function(obj) { tree.delete_node($node)}
+                            },
+                            cutItem:{
+                                "label" : "Cut Name",
+                                "action" : function(obj) { tree.cut($node)}
+                            },
+                            copyItem:{
+                                "label" : "Copy Name",
+                                "action" : function(obj) { tree.copy($node)}
+                            },
+                            pasteItem:{
+                                "label" : "Paste Name",
+                                "action" : function(obj) {
+                                    var newNode=tree.paste($node);
+                                    tree.edit(newNode);
+                                }
+                            },
+                            editAttributes:{
+                                "label" : "Edit attributes",
+                                "action" :function(obj){editAttributes($node)}
+                            },
+                            seeParents:{
+                                "label":  seeParents,
+                                "action" :function(obj) {
+                                    var url = "/api/Jstree?op=new&id=" + $node.id +"&connectionid=$connectionid";
+                                    if (!parents) {
+                                        url += "&parents=true";
+                                    }
+
+                                    window.open(url, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=400, height=400")
+                                }
+
+                            }
+                        };
+                        return menu;
+                    }
+                }
+
+            });
+        });
+
+
+        $('#container').on("create_node.jstree", function (e, data) {
+            console.log(data.instance.get_selected(true)[0].text);
+        });
+
+
+        function submitNameDetails(){
+            var json = "\"operation\":\"edit\",\"id\":" + nameChosenNo + ",\"attributes\":{\"DEFAULT_DISPLAY_NAME\":\"" + document.getElementById("DEFAULT_DISPLAY_NAME").value + "\"";
+            for (var i= 0; i<20;i++){//max number of attributes = 20 - arbitrary
+                var attname = document.getElementById("attname" + i);
+                if (attname != null) {
+                    if (attname.value > ""){
+                        json += ",\"" + attname.value + "\":\"" + document.getElementById("attvalue" + i).value + "\"";
+                    }
+                }
+            }
+            json +="}";
+            hideDetails();
+            azquojson("Jstree", json);
+
+        }
+
+        function hideDetails(){
+            document.getElementById("namedetails").style.display='none';
+        }
+
+        function addAttribute(i, attname, attvalue){
+            var htmlAtts = document.getElementById("htmlatts");
+            htmlAtts.innerHTML += "<div class=\"namedetailsline\">" +
+                    "<div class = \"name\"><input id=\"attname" + i + "\" class=\"attname\" type=\"text\" value=\"" + attname + "\"/></div>" +
+                    "<div class=\"value\"><input class=\"attvalue\" id=\"attvalue" + i + "\" type=\"text\" value=\"" + attvalue + "\"/></div>" +
+                    "</div>"
+
+        }
+
+        function editAttributes($node){
+            azquojson("Jstree","op=details&id="+$node.id);
+            nameChosenNo = $node.id;
+        }
+
+        function showNameDetails(nameDetails){
+            document.getElementById("htmlatts").innerHTML = "";
+            //currently ignoring the 'dataelements' 'elements'  'mydataelements'  values
+            var keys = Object.keys(nameDetails.attributes);
+            for (var i=0;i < keys.length;i++){
+                var attname = keys[i];
+                var attvalue =  decodeURIComponent((nameDetails.attributes[attname]+'').replace(/\+/g, '%20'));
+                if (attname== "DEFAULT_DISPLAY_NAME"){
+                    document.getElementById("DEFAULT_DISPLAY_NAME").value = attvalue;
+                }else{
+                    if (attname!="RPCALC"){
+                        addAttribute(i, attname, attvalue)
+                    }
+                }
+
+            }
+            addAttribute(i,"","");
+            document.getElementById("namedetails").style.display = "block";
+        }
+
+
+        function submitNameDetails(){
+            var json = "\"operation\":\"edit\",\"id\":" + nameChosenNo + ",\"attributes\":{\"DEFAULT_DISPLAY_NAME\":\"" + document.getElementById("DEFAULT_DISPLAY_NAME").value + "\"";
+            for (var i= 0; i<20;i++){//max number of attributes = 20 - arbitrary
+                var attname = document.getElementById("attname" + i);
+                if (attname != null) {
+                    if (attname.value > ""){
+                        json += ",\"" + attname.value + "\":\"" + document.getElementById("attvalue" + i).value + "\"";
+                    }
+                }
+            }
+            json +="}";
+            hideDetails();
+            azquojson("Jstree", "json={" + json + "}");
+
+        }
+
+
+        function azquojson(functionName, params){
+            params +="&connectionid=$connectionid";
+            var htmlText = "/api/" + functionName + "?" + params;
+            var script = document.createElement('script'),
+                    head = document.getElementsByTagName('head')[0] || document.documentElement;
+            script.src = htmlText;
+            head.appendChild(script);
+        }
+
+
+        function azquojsonfeed(obj) {
+
+
+            if (obj==null) return;
+            if (obj.response > ""){
+                 if (obj.response!=true){
+                    alert("Server " + obj.response)
+                }
+            }
+            if (obj.namedetails >""){
+                showNameDetails(obj.namedetails);
+            }
+        }
+
+
+
+
+
+    </script>
+
+
+
+</div>
+</body>
+</html>
+
+
