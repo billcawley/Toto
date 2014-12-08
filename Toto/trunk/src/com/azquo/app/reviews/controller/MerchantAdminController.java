@@ -40,7 +40,7 @@ public class MerchantAdminController {
         String op = request.getParameter("op");
         String itemName = request.getParameter("itemname").replace("_"," ");
         String type = request.getParameter("itemtype");
-        String itemNo = request.getParameter("itemno");
+        String nameId = request.getParameter("nameid");
         Map<String,String> fieldnames = new HashMap<String, String>();
         Map<String,String> fieldvalues = new HashMap<String, String>();
         String velocityTemplate = request.getParameter("velocitytemplate");
@@ -64,7 +64,7 @@ public class MerchantAdminController {
         }
         String result = "";
         if(op.equals("displaypage")){
-            result = reviewService.createPageSpec(itemName,type, itemNo);
+            result = reviewService.createPageSpec(itemName,type, nameId);
 
         }
 
