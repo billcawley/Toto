@@ -1392,8 +1392,7 @@ public final class NameService {
         return sb.toString();
     }
 
-    public String jsonNameDetails(AzquoMemoryDBConnection azquoMemoryDBConnection, int nameId) {
-        Name name = findById(azquoMemoryDBConnection, nameId);
+    public String jsonNameDetails(Name name) {
         return getChildStructureFormattedForOutput(name, false);
     }
 }
