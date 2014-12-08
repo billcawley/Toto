@@ -26,6 +26,17 @@ import java.util.*;
  */
 public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
+    public static final class JsTreeNode{
+        public Name child;
+        public Name parent;
+
+        public JsTreeNode(Name child, Name parent){
+            this.child = child;
+            this.parent = parent;
+
+        }
+    }
+
     private static final Logger logger = Logger.getLogger(LoggedInConnection.class);
 
     private final String connectionId;
@@ -50,7 +61,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private Map<Set<Name>, Set<Value>> valuesFound;
     private AzquoBook azquoBook;
     private List<String>  languages;
-    private Map<String, Integer> jsTreeIds;
+    private Map<String, JsTreeNode> jsTreeIds;
     int lastJstreeId;
 
     private static final String defaultRegion = "default-region";
@@ -79,7 +90,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
         languages = new ArrayList<String>();
         languages.add(Name.DEFAULT_DISPLAY_NAME);
-        jsTreeIds = null;
+        jsTreeIds = new HashMap<String, JsTreeNode>();
         lastJstreeId = 0;
 
         if (timeOut > 0) {
@@ -334,13 +345,10 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         this.languages = languages;
     }
 
-    public Map<String,Integer> getJsTreeIds(){
+    public Map<String,JsTreeNode> getJsTreeIds(){
         return jsTreeIds;
     }
 
-    public void setJsTreeIds(Map<String, Integer>jsTreeIds){
-        this.jsTreeIds = jsTreeIds;
-    }
 
     public int getLastJstreeId(){
         return lastJstreeId;
