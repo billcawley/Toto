@@ -57,31 +57,31 @@ public class ReviewService {
     public static final String SUPPLIER = "SUPPLIER";
     public static final String ALL_RATINGS = "ALL RATINGS";
     public static final String ALL_PRODUCTS = "ALL PRODUCTS";
-    public static final String EMAILS_TO_BE_SENT = "EMAILS TO BE SENT";
-    public static final String ORDERS_WITH_EMAIL_SENT = "ORDERS WITH EMAIL SENT";
-    public static final String SALE_DATE = "SALE DATE";
+    public static final String EMAILS_TO_BE_SENT = "EMAILS_TO_BE_SENT";
+    public static final String ORDERS_WITH_EMAIL_SENT = "ORDERS_WITH_EMAIL_SENT";
+    public static final String SALE_DATE = "SALE_DATE";
     public static final String SERVICE = "SERVICE";
 
     public interface SUPPLIER_ATTRIBUTE {
-        String EMAIL_TEMPLATE = "EMAIL TEMPLATE";
+        String EMAIL_TEMPLATE = "EMAIL_TEMPLATE";
         String LOGO = "LOGO";
     }
 
     public interface ORDER_ATTRIBUTE {
-        String EMAIL_DATE = "EMAIL DATE";
-        String EMAIL_SENT = "EMAIL SENT";
-        String CUSTOMER_NAME = "CUSTOMER NAME";
-        String CUSTOMER_EMAIL = "CUSTOMER EMAIL";
+        String EMAIL_DATE = "EMAIL_DATE";
+        String EMAIL_SENT = "EMAIL_SENT";
+        String CUSTOMER_NAME = "CUSTOMER_NAME";
+        String CUSTOMER_EMAIL = "CUSTOMER_EMAIL";
     }
 
     public interface ORDER_ITEM_ATTRIBUTE {
-        String REVIEW_DATE = "REVIEW DATE";
+        String REVIEW_DATE = "REVIEW_DATE";
         String COMMENT = "COMMENT";
     }
 
 
     public interface PRODUCT_ATTRIBUTE {
-        String PRODUCT_CODE = "Product code";
+        String PRODUCT_CODE = "PRODUCT_CODE";
     }
 
 
@@ -761,7 +761,7 @@ public class ReviewService {
                         hd.startElement("", "", "LISTITEM", atts);
                         hd.startElement("", "", "LINEITEM", atts);
                         addElement(hd, atts, "NAME", lineName.getDefaultDisplayName());
-                        addElement(hd, atts, "LINK", "itemname=" + menuItem.getDefaultDisplayName().replace(" ","_") + "&nameid = " + lineName.getId());
+                        addElement(hd, atts, "LINK", "itemname=" + menuItem.getDefaultDisplayName().replace(" ","_") + "&nameid=" + lineName.getId());
                                 hd.endElement("", "", "LINEITEM");
                         for (Name fieldName : menuItem.getChildren()) {
                             if (fieldName.getAttribute("SummaryScreenItem") != null) {
@@ -796,16 +796,17 @@ public class ReviewService {
                 for (Name fieldName:menuItem.getChildren()){
                     if (!fieldName.getAttribute("tab").equals(tabname)) {
                         if (tabname.length() > 0) {
-                            hd.endElement("", "", "TAB" + tabno++);
+                            hd.endElement("", "", "TAB");
                         }
                         hd.startElement("","","TAB", atts);
                         tabname = fieldName.getAttribute("tab");
                         addElement(hd, atts,"TABNAME", tabname);
-                        addElement(hd, atts, "TABNO", tabno + "");
+                        addElement(hd, atts, "TABNO", tabno++ + "");
                     }
                     hd.startElement("", "", "LISTITEM", atts);
                     String field = fieldName.getDefaultDisplayName();
                     addElement(hd,atts,"ITEMNO",++fieldNo + "");
+                    addElement(hd, atts, "ITEMID", "item" + fieldNo);
                     addElement(hd,atts,"ITEMNAME",field);
                     String fieldType = fieldName.getAttribute("type");
                     String clause = "";
@@ -818,7 +819,7 @@ public class ReviewService {
                     if (clause.contains("[business]")){
                         clause = clause.replace("[business]", business.getDefaultDisplayName());
                     }
-                    if (fieldType.equals("y/n")|| fieldType.equals("select") || fieldType.equals("file")){
+                    if (fieldType.equals("boolean")|| fieldType.equals("select") || fieldType.equals("file")){
                         addElement(hd,atts,"ITEMTYPE", fieldType);
                     }else{
                         addElement(hd,atts,"ITEMTYPE","text");
@@ -850,7 +851,7 @@ public class ReviewService {
 
                     hd.endElement("","","LISTITEM");
                 }
-                if (tabno++ > 0) {
+                if (tabno > 0) {
                     hd.endElement("", "", "TAB");
                 }
 
