@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.Part;
 import java.io.File;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -65,15 +66,38 @@ public class MagentoController {
         ServletContext servletContext = request.getServletContext();
         File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
         factory.setRepository(repository);
-
+        FileItem item = null;
+        FileItem data = null;
 // Create a new file upload handler
         ServletFileUpload upload = new ServletFileUpload(factory);
 
+         List<FileItem> items = upload.parseRequest(request);
+         Iterator it = items.iterator();
+         String op = null;
+         String db = null;
+         String connectionId = null;
+
+         while (it.hasNext()){
+              item = (FileItem) it.next();
+
+             if (item.getFieldName().equals("db")) {
+                 db = item.getString();
+             } else if (item.getFieldName().equals("op")) {
+                 op = item.getString();
+             } else if (item.getFieldName().equals("connectionid")) {
+                 connectionId = item.getString();
+             }
+             // ok this is a bit hacky but we assume the last item is the file and let the code below deal with it
+             data = item;
+         }
+
+
+
+
 // Parse the request
-        String connectionId = request.getParameter("connectionid");
-        String data = request.getParameter("data");
-        String op = request.getParameter("op");
-         String db = request.getParameter("db");
+
+
+
          if (op==null) op = "";
          if (connectionId != null){
              loggedInConnection = loginService.getConnection(connectionId);
@@ -92,7 +116,7 @@ public class MagentoController {
              return dataLoadService.findLastUpdate(loggedInConnection);
          }
          if (op.equals("updatedb")) {
-            dataLoadService.loadData(loggedInConnection, data);
+            dataLoadService.loadData(loggedInConnection, data.getInputStream());
              return loggedInConnection.getConnectionId() + "";
             //return onlineService.readExcel(loggedInConnection, onlineReport, null, "");
         }
