@@ -81,7 +81,7 @@ public final class ValueService {
     public String storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
         //long marker = System.currentTimeMillis();
         String toReturn = "";
-        /*
+
         final Set<Name> validNames = new HashSet<Name>();
 
         final Map<String, String> nameCheckResult = nameService.isAValidNameSet(azquoMemoryDBConnection, names, validNames);
@@ -94,7 +94,7 @@ public final class ValueService {
         } else if (warning != null) {
             toReturn += warning;
         }
-        */
+
         final List<Value> existingValues = findForNames(names);
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
@@ -132,7 +132,7 @@ public final class ValueService {
             Value value = createValue(azquoMemoryDBConnection, azquoMemoryDBConnection.getProvenance(), valueString);
             toReturn += "  stored";
             // and link to names
-            value.setNamesWillBePersisted(names);
+            value.setNamesWillBePersisted(validNames);
         }
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames5", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
@@ -205,8 +205,15 @@ public final class ValueService {
     long part3NanoCallTime1 = 0;
     int numberOfTimesCalled1 = 0;
 
+    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
+        return findForNamesIncludeChildren(names, payAttentionToAdditive, null);
+    }
 
-    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive, Map<Name, Integer> totalSetSize) {
+    // setsize cache is a temporary cache of set sizes. Passed through as typically it would only be used for the scope of an operation
+    // it is requires as we enumerate though the set a lot. A question : should a set record something like "numvaluesincludingchildren"
+    // a possible TODO
+
+    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive, Map<Name, Integer> setSizeCache) {
         long start = System.nanoTime();
 
         final List<Value> values = new ArrayList<Value>();
@@ -215,16 +222,16 @@ public final class ValueService {
         Name smallestName = null;
         for (Name name : names) {
             Integer setSizeIncludingChildren = null;
-            if (totalSetSize!= null){
-                setSizeIncludingChildren = totalSetSize.get(name);
+            if (setSizeCache != null){
+                setSizeIncludingChildren = setSizeCache.get(name);
             }
             if (setSizeIncludingChildren == null) {
                 setSizeIncludingChildren = name.getValues().size();
                 for (Name child : name.findAllChildren(payAttentionToAdditive)) {
                     setSizeIncludingChildren += child.getValues().size();
                 }
-                if (totalSetSize!=null){
-                    totalSetSize.put(name,setSizeIncludingChildren);
+                if (setSizeCache != null){
+                    setSizeCache.put(name,setSizeIncludingChildren);
                 }
             }
 
