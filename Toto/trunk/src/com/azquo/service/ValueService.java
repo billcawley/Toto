@@ -223,7 +223,9 @@ public final class ValueService {
                 for (Name child : name.findAllChildren(payAttentionToAdditive)) {
                     setSizeIncludingChildren += child.getValues().size();
                 }
-                totalSetSize.put(name,setSizeIncludingChildren);
+                if (totalSetSize!=null){
+                    totalSetSize.put(name,setSizeIncludingChildren);
+                }
             }
 
             if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
