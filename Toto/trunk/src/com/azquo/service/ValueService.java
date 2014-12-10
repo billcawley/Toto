@@ -81,6 +81,7 @@ public final class ValueService {
     public String storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
         //long marker = System.currentTimeMillis();
         String toReturn = "";
+        /*
         final Set<Name> validNames = new HashSet<Name>();
 
         final Map<String, String> nameCheckResult = nameService.isAValidNameSet(azquoMemoryDBConnection, names, validNames);
@@ -93,7 +94,8 @@ public final class ValueService {
         } else if (warning != null) {
             toReturn += warning;
         }
-        final List<Value> existingValues = findForNames(validNames);
+        */
+        final List<Value> existingValues = findForNames(names);
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
         boolean alreadyInDatabase = false;
@@ -130,7 +132,7 @@ public final class ValueService {
             Value value = createValue(azquoMemoryDBConnection, azquoMemoryDBConnection.getProvenance(), valueString);
             toReturn += "  stored";
             // and link to names
-            value.setNamesWillBePersisted(validNames);
+            value.setNamesWillBePersisted(names);
         }
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames5", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
@@ -204,7 +206,7 @@ public final class ValueService {
     int numberOfTimesCalled1 = 0;
 
 
-    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
+    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive, Map<Name, Integer> totalSetSize) {
         long start = System.nanoTime();
 
         final List<Value> values = new ArrayList<Value>();
@@ -212,10 +214,18 @@ public final class ValueService {
         int smallestNameSetSize = -1;
         Name smallestName = null;
         for (Name name : names) {
-            int setSizeIncludingChildren = name.getValues().size();
-            for (Name child : name.findAllChildren(payAttentionToAdditive)) {
-                setSizeIncludingChildren += child.getValues().size();
+            Integer setSizeIncludingChildren = null;
+            if (totalSetSize!= null){
+                setSizeIncludingChildren = totalSetSize.get(name);
             }
+            if (setSizeIncludingChildren == null) {
+                setSizeIncludingChildren = name.getValues().size();
+                for (Name child : name.findAllChildren(payAttentionToAdditive)) {
+                    setSizeIncludingChildren += child.getValues().size();
+                }
+                totalSetSize.put(name,setSizeIncludingChildren);
+            }
+
             if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
                 smallestNameSetSize = setSizeIncludingChildren;
                 smallestName = name;
@@ -341,7 +351,7 @@ public final class ValueService {
 
     }
 
-    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound) {
+    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name,Integer> totalSetSize) {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
 
@@ -368,7 +378,7 @@ public final class ValueService {
                 if ((oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) || !nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions()))
                     locked.isTrue = true;
             }
-            return findSumForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound);
+            return findSumForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, totalSetSize);
         } else {
             // ok I think I know why an array was used, to easily reference the entry before
             double[] values = new double[20];//should be enough!!
@@ -408,7 +418,7 @@ public final class ValueService {
 
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
-                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound);
+                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound, totalSetSize);
 
 
                     }
@@ -419,11 +429,11 @@ public final class ValueService {
         }
     }
 
-    public double findSumForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound) {
+    public double findSumForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize) {
         //System.out.println("findSumForNamesIncludeChildren");
         long start = System.nanoTime();
 
-        List<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive);
+        List<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive, totalSetSize);
         part1NanoCallTime += (System.nanoTime() - start);
         long point = System.nanoTime();
         double sumValue = 0;
@@ -1191,6 +1201,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         List<List<String>> shownValueArray = new ArrayList<List<String>>();
         List<List<Boolean>> lockArray = new ArrayList<List<Boolean>>();
         int rowNo = 0;
+        Map<Name,Integer> totalSetSize = new HashMap<Name, Integer>();
         for (List<Name> rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
             ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(loggedInConnection.getColumnHeadings(region).size());
             ArrayList<Set<Name>> thisRowNames = new ArrayList<Set<Name>>(loggedInConnection.getColumnHeadings(region).size());
@@ -1200,6 +1211,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             dataNamesMap.add(thisRowNames);
             shownValueArray.add(shownValues);
             lockArray.add(lockedCells);
+
 
             double sortTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total.
             boolean hasValues = false;
@@ -1226,7 +1238,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                     thisRowValues.add(values);
                     thisRowNames.add(namesForThisCell);
                     // TODO - peer additive check. If using peers and not additive, don't include children
-                    double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values); // true = pay attention to names additive flag
+                    double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values, totalSetSize); // true = pay attention to names additive flag
                     //if there's only one value, treat it as text (it may be text, or may include £,$,%)
                     if (sortCol==-1 || sortCol == colNo) {
                         if (restrictCount < 0) {
