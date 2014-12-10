@@ -91,7 +91,7 @@ public class ProvenanceController {
                     if (names.size() == 1) {
                         return valueService.formatProvenanceForOutput(names.iterator().next().getProvenance(), jsonFunction);
                     } else {
-                        final List<Value> values = valueService.findForNamesIncludeChildren(names, false);
+                        final List<Value> values = valueService.findForNamesIncludeChildren(names, false, null);
                         return valueService.formatCellProvenanceForOutput(loggedInConnection, names, values, jsonFunction);
                     }
                 }
