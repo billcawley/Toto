@@ -57,13 +57,35 @@ public final class ValueService {
         return new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, text, null);
     }
 
+    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<AzquoMemoryDBConnection, Map<String, Long>>();
+
+    private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd){
+        long current = 0;
+        if (timeTrack.get(azquoMemoryDBConnection) != null) {
+            if (timeTrack.get(azquoMemoryDBConnection).get(trackName) != null) {
+                current = timeTrack.get(azquoMemoryDBConnection).get(trackName);
+            }
+        } else {
+            timeTrack.put(azquoMemoryDBConnection, new HashMap<String, Long>());
+        }
+        timeTrack.get(azquoMemoryDBConnection).put(trackName, current + toAdd);
+    }
+
+    public Map<String, Long> getTimeTrackMapForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection){
+        return timeTrack.get(azquoMemoryDBConnection);
+    }
+
+
     // this is passed a string for the value, not sure if that is the best practice, need to think on it.
 
     public String storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
+        //long marker = System.currentTimeMillis();
         String toReturn = "";
         final Set<Name> validNames = new HashSet<Name>();
 
         final Map<String, String> nameCheckResult = nameService.isAValidNameSet(azquoMemoryDBConnection, names, validNames);
+        //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames1", marker - System.currentTimeMillis());
+        //marker = System.currentTimeMillis();
         final String error = nameCheckResult.get(NameService.ERROR);
         final String warning = nameCheckResult.get(NameService.WARNING);
         if (error != null) {
@@ -72,6 +94,8 @@ public final class ValueService {
             toReturn += warning;
         }
         final List<Value> existingValues = findForNames(validNames);
+        //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
+        //marker = System.currentTimeMillis();
         boolean alreadyInDatabase = false;
         for (Value existingValue : existingValues) { // really should only be one
             if (existingValue.getProvenance().equals(azquoMemoryDBConnection.getProvenance()) && existingValue.getProvenance().getMethod().equals("import")) {
@@ -85,6 +109,8 @@ public final class ValueService {
                     // use the latest value
                 }
             }
+            //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
+            //marker = System.currentTimeMillis();
 
             if (compareStringValues(existingValue.getText(),valueString)) {
                 toReturn += "  that value already exists, skipping";
@@ -94,7 +120,11 @@ public final class ValueService {
                 // provenance table : person, time, method, name
                 toReturn += "  deleting old value entered on put old timestamp here, need provenance table";
             }
+            //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames3", marker - System.currentTimeMillis());
+            //marker = System.currentTimeMillis();
         }
+        //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames4", marker - System.currentTimeMillis());
+        //marker = System.currentTimeMillis();
         if (!alreadyInDatabase) {
             // create
             Value value = createValue(azquoMemoryDBConnection, azquoMemoryDBConnection.getProvenance(), valueString);
@@ -102,6 +132,8 @@ public final class ValueService {
             // and link to names
             value.setNamesWillBePersisted(validNames);
         }
+        //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames5", marker - System.currentTimeMillis());
+        //marker = System.currentTimeMillis();
         return toReturn;
     }
 
@@ -425,6 +457,16 @@ public final class ValueService {
     public List<Value> findValuesForNameIncludeAllChildren(final Name name, boolean payAttentionToAdditive) {
         List<Value> toReturn = new ArrayList<Value>();
         toReturn.addAll(name.getValues());
+        // TODO : concurrent errror here !!!
+        /*
+
+        java.util.ConcurrentModificationException
+        at java.util.HashMap$HashIterator.nextEntry(HashMap.java:926)
+        at java.util.HashMap$KeyIterator.next(HashMap.java:960)
+        at com.azquo.service.ValueService.findValuesForNameIncludeAllChildren(ValueService.java:460)
+        at com.azquo.service.ValueService.findForNamesIncludeChildren(ValueService.java:228)
+
+         */
         for (Name child : name.findAllChildren(payAttentionToAdditive)) {
             toReturn.addAll(child.getValues());
         }

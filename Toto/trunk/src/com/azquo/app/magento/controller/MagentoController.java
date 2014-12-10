@@ -102,9 +102,11 @@ public class MagentoController {
          if (connectionId != null){
              loggedInConnection = loginService.getConnection(connectionId);
          }
+         System.out.println("==================== db sent  : " + db);
          if (loggedInConnection == null) {
              //for testing only
              if (db == null) db = "temp";
+             db = "swimshop";
              loggedInConnection = loginService.login(db,"tempuser","password",0,"",false);//will automatically switch the database to 'temp' if that's the only one
              if (!db.equals("temp")){
                  String result = onlineService.switchDatabase(loggedInConnection, db);
@@ -116,6 +118,7 @@ public class MagentoController {
              return dataLoadService.findLastUpdate(loggedInConnection);
          }
          if (op.equals("updatedb")) {
+             System.out.println("RUnning a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
             dataLoadService.loadData(loggedInConnection, data.getInputStream());
              return loggedInConnection.getConnectionId() + "";
             //return onlineService.readExcel(loggedInConnection, onlineReport, null, "");

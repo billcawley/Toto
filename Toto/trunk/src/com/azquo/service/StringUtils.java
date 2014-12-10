@@ -85,10 +85,7 @@ public class StringUtils {
         return pos >= len + 2 && searchText.substring(pos - len - 1, pos).toLowerCase().equals(testItem + " ");
     }
 
-
-    public String jsonElement(String jsonName, String jsonValue){
-        return("\"" + jsonName + "\":\"" + jsonValue + "\"");
-    }
+    // when you see things like WHERE Review date >= "xxxxxxxxxx" this is what did that.
 
     public String extractStrings(String calc, List<String> strings){
 
@@ -106,6 +103,8 @@ public class StringUtils {
         }
         return calc;
     }
+
+    // simply returns a string of x of that length
 
     public String setOfx(int len) {
         StringBuilder set = new StringBuilder();

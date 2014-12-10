@@ -59,6 +59,8 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
      name object. A name may be an additive peer in one scenario and not in another.
 
      These sets are the ones which define data structure and the ones persisted, parents and peerParents above are derived from these
+
+     I'm not currently using thread safe objects so I need to syncronize modifiers. I also make copies of returned lists.
      */
     private LinkedHashSet<Name> children;
     private LinkedHashMap<Name, Boolean> peers;

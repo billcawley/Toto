@@ -20,6 +20,10 @@ import java.util.zip.ZipInputStream;
 /**
  * Created by bill on 13/12/13.
  * service to process files used to import data into the database
+ *
+ *
+ * edd : I don't really understand all this code but for the moment I'm not that concerned by that.
+ *
  */
 
 public final class ImportService {

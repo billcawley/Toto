@@ -12,12 +12,18 @@ import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.SynchronousQueue;
 
 /**
  * Created by cawley on 07/08/14.
  *
  */
 public final class DataLoadService {
+
+    //Getting the runtime reference from system
+    Runtime runtime = Runtime.getRuntime();
+    int mb = 1024*1024;
+
 
     private final String latestupdate = "Latest update";
 
@@ -29,11 +35,10 @@ public final class DataLoadService {
 
 
 
-    private final Map<String, List<Map<String, String>>> tableMap = new HashMap<String, List<Map<String, String>>>();
-    final Map<Integer, Name> products = new HashMap<Integer, Name>();
+/*    final Map<Integer, Name> products = new HashMap<Integer, Name>();
     final Map<Integer, Name> categories = new HashMap<Integer, Name>();
     //final Map<Integer, MagentoOrderLineItem> orderLineItems = new HashMap<Integer, MagentoOrderLineItem>();
-    final Map<String, String> optionValueLookup = new HashMap<String, String>();
+    final Map<String, String> optionValueLookup = new HashMap<String, String>();*/
 
 
 
@@ -59,9 +64,12 @@ public final class DataLoadService {
     }
 
     public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, BufferedReader br) throws Exception {
+        Map<String, List<Map<String, String>>> tableMap = new HashMap<String, List<Map<String, String>>>();
         if (br == null){
             br = new BufferedReader(new FileReader("/home/bill/Sear/magento/testdata_dump.txt"));
         }
+
+        long marker = System.currentTimeMillis();
 
         String line;
         List<Map<String, String>> currentTableDataMap = null;
@@ -82,7 +90,7 @@ public final class DataLoadService {
                     String[] lineValues = line.split("\t", -1);
                     Map<String, String> dataRowMap = new HashMap<String, String>();
                     for (int i = 0; i < lineValues.length;i++) {
-                         dataRowMap.put(currentColumnNames[i],lineValues[i]);
+                         dataRowMap.put(new String(currentColumnNames[i]),new String(lineValues[i]));
                     }
                     currentTableDataMap.add(dataRowMap);
                 }
@@ -220,6 +228,9 @@ public final class DataLoadService {
             }
         }
 
+        System.out.println("time to do initial non taxing bit " + (System.currentTimeMillis() - marker));
+        marker = System.currentTimeMillis();
+
         double price = 0.0;
         double qty = 0.0;
         String configLine = null;
@@ -236,8 +247,24 @@ public final class DataLoadService {
 
         Map<String, Name> azquoOrdersFound = new HashMap<String, Name>();
 
+        System.out.println("about to go into sales flat order item " + (System.currentTimeMillis() - marker));
+        marker = System.currentTimeMillis();
+        long part1 = 0;
+        long part2 = 0;
+        long part3 = 0;
+        long part4 = 0;
+        long part5 = 0;
+        long part51 = 0;
+        long part52 = 0;
+        long part53 = 0;
+        long part6 = 0;
+        long part7 = 0;
+        long part71 = 0;
+        long part72 = 0;
+        long part8 = 0;
+        int counter = 0;
         for (Map<String, String> salesRow : tableMap.get("sales_flat_order_item")) {
-
+            long thisCycleMarker = System.currentTimeMillis();
             if (configLine == null) {
                 price = 0.0;
                 qty = 0.0;
@@ -261,16 +288,24 @@ public final class DataLoadService {
                 }
                 configLine = null;
             }
+            part1 += (thisCycleMarker - System.currentTimeMillis());
+            thisCycleMarker = System.currentTimeMillis();
             languages.clear();
             languages.add("MagentoOrderID");
+            part2 += (thisCycleMarker - System.currentTimeMillis());
+            thisCycleMarker = System.currentTimeMillis();
             if (configLine == null) {
                 //store the values.   Qty and price have attributes order, product.  order is in all orders, and in the relevant date
                 String orderNo = salesRow.get("order_id");
                 Name orderName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,orderNo, allOrdersName,true,languages);
+                part3 += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
                 azquoOrdersFound.put(orderNo, orderName);
                 //adding 'I' to the item number so as not to confuse with order number for the developer - the system should be happy without it.
                 Name orderItemName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "I" + salesRow.get("item_id"), orderName, true,languages);
                 Set<Name> namesForValue = new HashSet<Name>();
+                part4 += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
                 Name productName = azquoProductsFound.get(salesRow.get("product_id"));
                 if (productName == null){
                     //not on the product list!!  in the demo database there was a giftcard in the sales that was not in the product list
@@ -278,18 +313,77 @@ public final class DataLoadService {
                     productName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME,salesRow.get("product_type"));
                 }
 
+                part5 += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
                 String orderDate = salesRow.get("created_at").substring(0,10);
+                part51 += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
                 Name dateName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderDate, allDates, true,languages);
+                part52 += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
                 dateName.addChildWillBePersisted(orderName);
                 productName.addChildWillBePersisted(orderItemName);
+                part53 += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
                 //namesForValue.add(productName);
                 namesForValue.add(orderItemName);
                 namesForValue.add(priceName);
+                part6 += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, price + "", namesForValue);
+                part7 += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
                 namesForValue.remove(priceName);
+                part71 += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
                 namesForValue.add(qtyName);
+                part72 += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, qty + "", namesForValue);
+                part8 += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
 
+
+            }
+            counter++;
+            if (counter == 10000){
+                System.out.println("10000 lines sales flat order item " + (System.currentTimeMillis() - marker));
+                System.out.println("Total part breakdown");
+                System.out.println("part 1 " + part1);
+                System.out.println("part 2 " + part2);
+                System.out.println("part 3 " + part3);
+                System.out.println("part 4 " + part4);
+                System.out.println("part 5 " + part5);
+                System.out.println("part 51 " + part51);
+                System.out.println("part 52 " + part52);
+                System.out.println("part 53 " + part53);
+                System.out.println("part 6 " + part6);
+                System.out.println("part 7 " + part7);
+                System.out.println("part 71 " + part71);
+                System.out.println("part 72 " + part72);
+                System.out.println("part 8 " + part8);
+                marker = System.currentTimeMillis();
+                counter = 0;
+
+                System.out.println("name service time track" + nameService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
+                System.out.println("value service time track" + valueService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
+
+
+                System.out.println("##### Heap utilization statistics [MB] #####");
+
+                //Print used memory
+                System.out.println("Used Memory:"
+                        + (runtime.totalMemory() - runtime.freeMemory()) / mb);
+
+                //Print free memory
+                System.out.println("Free Memory:"
+                        + runtime.freeMemory() / mb);
+
+                //Print total available memory
+                System.out.println("Total Memory:" + runtime.totalMemory() / mb);
+
+                //Print Maximum available memory
+                System.out.println("Max Memory:" + runtime.maxMemory() / mb);
 
             }
 

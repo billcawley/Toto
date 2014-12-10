@@ -2,6 +2,7 @@ package com.azquo.service;
 
 import com.azquo.jsonrequestentities.NameJsonRequest;
 import com.azquo.jsonrequestentities.NameListJson;
+import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +12,7 @@ import org.apache.log4j.Logger;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,6 +21,10 @@ import java.util.regex.Pattern;
  * User: cawley
  * Date: 17/10/13
  * Time: 14:18
+ *
+ * Ok, outside of the memorydb package this may be the the most fundamental class.
+ * Edd trying to understand it properly and trying to get string parsing out of it but not sure how easy that will be
+ *
  */
 public final class NameService {
 
@@ -55,19 +61,25 @@ public final class NameService {
 
     // get names from a comma separated list
     // edd: this is fine in principle, I'm concerned by the interpreter
+    // interpret name list?
 
     public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
-        final List<Set<Name>> names = new ArrayList<Set<Name>>();
+        final List<Set<Name>> toReturn = new ArrayList<Set<Name>>();
+        //System.out.println("search by names before strip quotes : " + searchByNames);
         searchByNames = stripQuotes(azquoMemoryDBConnection, searchByNames, attributeNames);
+        //System.out.println("search by names after strip quotes : " + searchByNames);
         List<String> strings = new ArrayList<String>();
+        //System.out.println("search by names before extract strings : " + searchByNames);
         searchByNames = stringUtils.extractStrings(searchByNames, strings);
+        //System.out.println("search by names after extract strings : " + searchByNames);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
+            //System.out.println("new name in decode string : " + nameName);
             List<Name> nameList = interpretSetTerm(azquoMemoryDBConnection, nameName, strings, attributeNames);
-            names.add(new HashSet<Name>(nameList));
+            toReturn.add(new HashSet<Name>(nameList));
         }
-        return names;
+        return toReturn;
     }
 
     public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) {
@@ -224,9 +236,27 @@ public final class NameService {
         return findOrCreateNameInParent(azquoMemoryDBConnection, name, newParent, local, null);
     }
 
+    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<AzquoMemoryDBConnection, Map<String, Long>>();
+
+    private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd){
+        long current = 0;
+        if (timeTrack.get(azquoMemoryDBConnection) != null) {
+            if (timeTrack.get(azquoMemoryDBConnection).get(trackName) != null) {
+                current = timeTrack.get(azquoMemoryDBConnection).get(trackName);
+            }
+        } else {
+            timeTrack.put(azquoMemoryDBConnection, new HashMap<String, Long>());
+        }
+        timeTrack.get(azquoMemoryDBConnection).put(trackName, current + toAdd);
+    }
+
+    public Map<String, Long> getTimeTrackMapForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection){
+        return timeTrack.get(azquoMemoryDBConnection);
+    }
 
     public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name parent, boolean local, List<String> attributeNames) throws Exception {
 
+        //long marker = System.currentTimeMillis();
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import),and insert a structure into it*/
 
         if (attributeNames == null) {
@@ -237,6 +267,8 @@ public final class NameService {
         String storeName = name.replace(Name.QUOTE, ' ').trim();
         Name existing;
 
+        //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent1", marker - System.currentTimeMillis());
+        //marker = System.currentTimeMillis();
         if (parent != null) { // ok try to find it in that parent
             //try for an existing name already with the same parent
             if (local) {// ok looking only below that parent or just in it's whole set or top parent.
@@ -245,6 +277,8 @@ public final class NameService {
                 // Note the new name find A top parent. If names are in more than one top parent criteria to find the name might be a bit random - which top parent do you mean?
                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, parent.findATopParent());
             }
+            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker - System.currentTimeMillis());
+            //marker = System.currentTimeMillis();
             // find an existing name with no parents. (note that if there are multiple such names, then the return will be null)
             // if we cant' find the name in parent then it's acceptable to find one with no parents
             if (existing == null) {
@@ -253,8 +287,12 @@ public final class NameService {
                     existing = null;
                 }
             }
+            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent3", marker - System.currentTimeMillis());
+            //marker = System.currentTimeMillis();
         } else { // no parent passed go for a vanilla lookup
             existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent4", marker - System.currentTimeMillis());
+            //marker = System.currentTimeMillis();
         }
         if (existing != null) {
             // direct parents may be moved up the hierarchy (e.g. if existing parent is 'Europe' and new parent is 'London', which is in 'Europe' then
@@ -265,10 +303,12 @@ public final class NameService {
                 //only check if the new parent is not already in the parent hierarchy.
                 includeInSet(existing, parent);
             }
+            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent5", marker - System.currentTimeMillis());
+            //marker = System.currentTimeMillis();
             return existing;
         } else {
             // actually creating a new one
-            System.out.println("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
+            //System.out.println("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
             // todo - we should not be getting the provenance from the conneciton
             Provenance provenance = azquoMemoryDBConnection.getProvenance();
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
@@ -276,6 +316,8 @@ public final class NameService {
                 newName.setAttributeWillBePersisted(attributeNames.get(0), storeName);
             }
             newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName); // and set the default regardless
+            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent6", marker - System.currentTimeMillis());
+            //marker = System.currentTimeMillis();
             //if the parent already has peers, provisionally set the child peers to be the same.
             if (parent != null) {
                 Map<Name, Boolean> newPeers = parent.getPeers();
@@ -290,6 +332,8 @@ public final class NameService {
                 // and add the new name to the parent of course :)
                 parent.addChildWillBePersisted(newName);
             }
+            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent7", marker - System.currentTimeMillis());
+            //marker = System.currentTimeMillis();
             return newName;
         }
     }
@@ -558,8 +602,10 @@ public final class NameService {
     }
 
     // hmm, looks like a string function but there's checks agains a valid name in there. Come back to that later.
+    // I want to move this or rationalise it or something.
 
     private String stripQuotes(AzquoMemoryDBConnection azquoMemoryDBConnection, String instructions, List<String> attributeNames) throws Exception {
+        //System.out.println("strip quotes : " + instructions + " attribute names  " + attributeNames);
         int lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
         while (lastQuoteEnd >= 0) {
             int lastQuoteStart = instructions.lastIndexOf(Name.QUOTE, lastQuoteEnd - 1);
@@ -593,12 +639,15 @@ public final class NameService {
         return interpretName(azquoMemoryDBConnection, setFormula, langs);
     }
 
+    // todo : rename - this is pretty much the start of expression parsing
 
     public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
+        //System.out.println("interpret name : " + setFormula + " attribute names " + attributeNames);
+
         final List<Name> nameList = new ArrayList<Name>();
 
         /*
-        * This routine now amended to allow for union (+) and intersection (*) of sets.
+        * This routine now amended t        o allow for union (+) and intersection (*) of sets.
         *
         * This entails first sorting out the names in quotes (which may contain the reserved characters),
         * starting from the end (there may be "name","parent" in the list)
@@ -743,6 +792,8 @@ public final class NameService {
         }
     }
 
+    //
+
     private void filter(List<Name> names, String condition, List<String> strings) {
         //NOT HANDLING 'OR' AT PRESENT
         int andPos = condition.toLowerCase().indexOf(" and ");
@@ -812,6 +863,8 @@ public final class NameService {
     // edd trying to break up
 
     private List<Name> interpretSetTerm(AzquoMemoryDBConnection azquoMemoryDBConnection, String setTerm, List<String> strings, List<String> attributeNames) throws Exception {
+
+        //System.out.println("interpret set term . . ." + setTerm);
         List<Name> namesFound = new ArrayList<Name>();
 
         final String levelString = stringUtils.getInstruction(setTerm, LEVEL);
@@ -925,6 +978,7 @@ public final class NameService {
 
     private String interpretTerm(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String term, List<String> attributeNames) {
 
+        //System.out.println("interpret term : " + term + " attribute names : " + attributeNames);
 
         if (term.startsWith("\"") && term.endsWith("\"")) {
             //strings already saved, so comment out the line below
@@ -1312,14 +1366,15 @@ public final class NameService {
                         peerList += "--";
                     }
                 }
-                sb.append(stringUtils.jsonElement("peers", peerList));
+                // here and a few lines below is a bit of manual JSON building. Not sure how much this is a good idea or not. Jackson?
+                sb.append("\"peers\":\"" + peerList + "\"");
                 count++;
 
             }
             for (String attName : name.getAttributes().keySet()) {
                 if (count > 0) sb.append(",");
                 try {
-                    sb.append(stringUtils.jsonElement(attName, URLEncoder.encode(name.getAttributes().get(attName).replace("\"", "''"), "UTF-8")));//replacing quotes again
+                    sb.append("\"" + attName + "\":\"" + URLEncoder.encode(name.getAttributes().get(attName).replace("\"", "''"), "UTF-8") + "\"");//replacing quotes again
                 } catch (UnsupportedEncodingException e) {
                     // this really should not happen!
                     e.printStackTrace();

@@ -73,7 +73,7 @@ public class LoginService {
         }else{
             user = userDao.findByEmail(userEmail);
         }
-        boolean temporary = false;
+        //boolean temporary = false;
         if (user != null) {
             if (loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword())) {
                 // ok user should be ok :)
@@ -266,10 +266,12 @@ public class LoginService {
     }
 
     private LoggedInConnection existingConnection(final User user){
-        for (String lic:connections.keySet()){
-            LoggedInConnection loggedInConnection = connections.get(lic);
-            if (loggedInConnection.getUser().getId()==user.getId()){
-                return loggedInConnection;
+        if (!user.getEmail().equals("tempuser")){ // edd : not really happy about these sring literlas, fix later . . .
+            for (String lic:connections.keySet()){
+                LoggedInConnection loggedInConnection = connections.get(lic);
+                if (loggedInConnection.getUser().getId()==user.getId()){
+                    return loggedInConnection;
+                }
             }
         }
         return null;

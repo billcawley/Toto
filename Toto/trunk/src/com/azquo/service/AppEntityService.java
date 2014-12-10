@@ -23,6 +23,8 @@ import java.util.Map;
  *
  * E.g. the reviews feedback system. So we might start with Order/Product/Feedback as an example. I need to think carefully about this
  *
+ * as mentioned in the app entity type this may be redundant since we're now able to do a  lot with sets and attributes
+ *
  */
 public abstract class AppEntityService <EntityType extends AppEntity>{
 
