@@ -68,7 +68,7 @@ public class StandardDAO {
                 count++;
             }
             insertSql.delete(insertSql.length() - 2, insertSql.length());
-            System.out.println(insertSql.toString());
+            //System.out.println(insertSql.toString());
             jdbcTemplate.update(insertSql.toString(), namedParams);
             System.out.println("bulk inserted " + records.size() + " into " + tableName + " in " + (System.currentTimeMillis() - track));
         }
