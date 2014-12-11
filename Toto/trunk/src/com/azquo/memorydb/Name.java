@@ -437,7 +437,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
                 setNeedsPersisting();
             }
-               return "";
+            return "";
         }
        if (existing!= null && existing.equals(attributeValue)){
             return "";
@@ -451,6 +451,11 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             }
         }
         */
+        if (existing != null){
+            attributes.remove(attributeName);
+            getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
+            setNeedsPersisting();
+        }
         attributes.put(attributeName, attributeValue);
            // now deal with the DB maps!
         getAzquoMemoryDB().addNameToAttributeNameMap(this); // will overwrite but that's fine
