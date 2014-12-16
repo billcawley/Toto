@@ -4,6 +4,9 @@ import com.azquo.adminentities.Database;
 import com.azquo.memorydbdao.JsonRecordTransport;
 import com.azquo.memorydbdao.StandardDAO;
 import com.azquo.service.AppEntityService;
+import com.github.holodnov.calculator.ObjectSizeCalculator;
+import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
+import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 import org.apache.log4j.Logger;
 
 import java.util.*;
@@ -16,6 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Time: 10:33
  * created after it became apparent that Mysql in the way I'd arranged the objects didn't have a hope in hell of
  * delivering data fast enough. Leverage collections to implement Azquo spec.
+ * <p/>
+ * TODO - this whole intern business, not sure if it matters so much on the get, it's the set I care about
  */
 public final class AzquoMemoryDB {
 
@@ -26,7 +31,7 @@ public final class AzquoMemoryDB {
 
     private final StandardDAO standardDAO;
 
-    private final Map<String, Map<String, Set<Name>>> nameByAttributeMap; // a map of maps of sets of names. Fun!
+    private final Map<String, Map<String, List<Name>>> nameByAttributeMap; // a map of maps of sets of names. Fun!
 
     // simple by id maps, if an object is in one of these three it's in the database
     private final Map<Integer, Name> nameByIdMap;
@@ -54,7 +59,10 @@ public final class AzquoMemoryDB {
         this.standardDAO = standardDAO;
         needsLoading = true;
         maxIdAtLoad = 0;
-        nameByAttributeMap = new ConcurrentHashMap<String, Map<String, Set<Name>>>();
+        nameByAttributeMap = new ConcurrentHashMap<String, Map<String, List<Name>>>();
+/*        nameByIdMap = HashIntObjMaps.newMutableMap();
+        valueByIdMap = HashIntObjMaps.newMutableMap();
+        provenanceByIdMap = HashIntObjMaps.newMutableMap();*/
         nameByIdMap = new ConcurrentHashMap<Integer, Name>();
         valueByIdMap = new ConcurrentHashMap<Integer, Value>();
         provenanceByIdMap = new ConcurrentHashMap<Integer, Provenance>();
@@ -208,11 +216,12 @@ public final class AzquoMemoryDB {
     }
 
     //fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
+    // TODO - collection this up later? What hsould be returned?
 
     private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
-        Map<String, Set<Name>> map = nameByAttributeMap.get(attributeName.toLowerCase().trim().intern());
+        Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toLowerCase().trim());
         if (map != null) { // that attribute is there
-            Set<Name> names = map.get(attributeValue.toLowerCase().trim().intern());
+            List<Name> names = map.get(attributeValue.toLowerCase().trim());
             if (names != null) { // were there any entries for that value?
                 return new HashSet<Name>(names);
             }
@@ -293,7 +302,7 @@ public final class AzquoMemoryDB {
     // get names containing an attribute using wildcards, start end both
 
     private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
-        final String lctAttributeName = attributeName.toLowerCase().trim().intern();
+        final String lctAttributeName = attributeName.toLowerCase().trim();
         final String lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
         final Set<Name> names = new HashSet<Name>();
         if (nameByAttributeMap.get(lctAttributeName) == null) {
@@ -301,15 +310,15 @@ public final class AzquoMemoryDB {
         }
         for (String attributeValue : nameByAttributeMap.get(lctAttributeName).keySet()) {
             if (startsWith && endsWith) {
-                if (attributeValue.toLowerCase().intern().contains(lctAttributeValueSearch.toLowerCase())) {
+                if (attributeValue.toLowerCase().contains(lctAttributeValueSearch.toLowerCase())) {
                     names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
                 }
             } else if (startsWith) {
-                if (attributeValue.toLowerCase().intern().startsWith(lctAttributeValueSearch.toLowerCase())) {
+                if (attributeValue.toLowerCase().startsWith(lctAttributeValueSearch.toLowerCase())) {
                     names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
                 }
             } else if (endsWith) {
-                if (attributeValue.toLowerCase().intern().endsWith(lctAttributeValueSearch.toLowerCase())) {
+                if (attributeValue.toLowerCase().endsWith(lctAttributeValueSearch.toLowerCase())) {
                     names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
                 }
             }
@@ -351,7 +360,7 @@ public final class AzquoMemoryDB {
         return provenanceByIdMap.get(id);
     }
 
-    // ok, I'm taking OFF the syncronizeation on the map, using a concurrent map should stop concurrent modification exceptions
+    // syncronized back on for fast maps
 
     protected void addNameToDb(final Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
@@ -359,13 +368,17 @@ public final class AzquoMemoryDB {
         if (newName.getId() > 0 && nameByIdMap.get(newName.getId()) != null) {
             throw new Exception("tried to add a name to the database with an existing id! new id = " + newName.getId());
         } else {
-            nameByIdMap.put(newName.getId(), newName);
+            //synchronized (nameByIdMap){
+                nameByIdMap.put(newName.getId(), newName);
+            //}
         }
     }
 
     protected void removeNameFromDb(final Name toRemove) throws Exception {
         toRemove.checkDatabaseMatches(this);
-        nameByIdMap.remove(toRemove.getId());
+        //synchronized (nameByIdMap) {
+            nameByIdMap.remove(toRemove.getId());
+        //}
     }
 
     // ok I'd have liked this to be part of add name to db but the name won't have been initialised, add name to db is called in the name constructor
@@ -376,29 +389,38 @@ public final class AzquoMemoryDB {
         final Map<String, String> attributes = newName.getAttributes();
 
         for (String attributeName : attributes.keySet()) {
-            if (nameByAttributeMap.get(attributeName.toLowerCase().intern().trim()) == null) { // make a new map for the attributes
-                nameByAttributeMap.put(attributeName.toLowerCase().intern().trim(), new ConcurrentHashMap<String, Set<Name>>());
-            }
-            final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim().intern());
-            String attributeValue = attributes.get(attributeName).toLowerCase().trim().intern();
-            if (attributeValue.indexOf(Name.QUOTE) >= 0 && !attributeName.equals(Name.CALCULATION)) {
-                attributeValue = attributeValue.replace(Name.QUOTE, '\'');
-            }
-            if (namesForThisAttribute.get(attributeValue) != null) {
-                namesForThisAttribute.get(attributeValue).add(newName);
-            } else {
-                final Set<Name> possibles = new HashSet<Name>();
-                possibles.add(newName);
-                namesForThisAttribute.put(attributeValue, possibles);
-            }
+            setAttributeForNameInAttributeNameMap(attributeName, attributes.get(attributeName), newName);
         }
     }
 
+    // like above but for one attribute
+
+    public void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
+        if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) == null) { // make a new map for the attributes
+            nameByAttributeMap.put(attributeName.toLowerCase().trim().intern(), new ConcurrentHashMap<String, List<Name>>());
+        }
+        final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+        if (attributeValue.indexOf(Name.QUOTE) >= 0 && !attributeName.equals(Name.CALCULATION)) {
+            attributeValue = attributeValue.replace(Name.QUOTE, '\'');
+        }
+        List<Name> names = namesForThisAttribute.get(attributeValue);
+        if (names != null) {
+            if (!names.contains(name)){
+                names.add(name);
+            }
+        } else {
+            final List<Name> possibles = new ArrayList<Name>();
+            possibles.add(name);
+            namesForThisAttribute.put(attributeValue.intern(), possibles);
+        }
+    }
+
+
     protected void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
         name.checkDatabaseMatches(this);
-        if (nameByAttributeMap.get(attributeName.toLowerCase().trim().intern()) != null) {// the map we care about
-            final Map<String, Set<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim().intern());
-            final Set<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase().trim().intern());
+        if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null) {// the map we care about
+            final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+            final List<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase().trim());
             if (namesForThatAttributeAndAttributeValue != null) {
                 namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the set . . .
             }
@@ -447,6 +469,56 @@ public final class AzquoMemoryDB {
             throw new Exception("tried to add a value to the database with an existing id!");
         } else {
             provenanceByIdMap.put(newProvenance.getId(), newProvenance);
+        }
+    }
+
+    public void memoryReport() {
+        try {
+            /*System.out.println("sizing names");
+            int count = 0;
+            for (Name n : nameByIdMap.values()) {
+                n.size = (int) ObjectSizeCalculator.sizeOfForAzquo(n, new ArrayList<StringBuilder>());
+                count++;
+                if (count%5000 == 0){
+                    System.out.println(count);
+                }
+            }
+            count = 0;
+            for (Value v : valueByIdMap.values()) {
+                v.size = (int) ObjectSizeCalculator.sizeOfForAzquo(v, new ArrayList<StringBuilder>());
+                count++;
+                if (count%5000 == 0){
+                    System.out.println(count);
+                }
+            }
+            ArrayList<Name> allNames = new ArrayList<Name>(nameByIdMap.values());
+            ArrayList<Value> allValues = new ArrayList<Value>(valueByIdMap.values());
+            System.out.println("sorting names/values");
+            Collections.sort(allNames, new Comparator<Name>() {
+                public int compare(Name o1, Name o2) {
+                    return -Integer.compare(o1.size, o2.size);
+                }
+            });
+            Collections.sort(allValues, new Comparator<Value>() {
+                public int compare(Value o1, Value o2) {
+                    return -Integer.compare(o1.size, o2.size);
+                }
+            });
+            for (int i = 0; i < allNames.size() && i < 500; i++) {
+                Name name = allNames.get(i);
+                System.out.println(name.size + " " + name.getDefaultDisplayName() + " children " + name.getChildren().size() + " parents " + name.getParents().size() + " values " + name.getValues().size() + " peers " + name.getPeers().size());
+            }
+            for (int i = 0; i < allValues.size() && i < 100; i++) {
+                Value value = allValues.get(i);
+                System.out.println(value.size + " " + value.getText() + " names " + value.getNames().size());
+            }*/
+            // simple by id maps, if an object is in one of these three it's in the database
+            System.out.println("size of nameByIdMap : " + ObjectSizeCalculator.sizeOfForAzquo(nameByIdMap, null));
+            System.out.println("size of nameByAttributeMap : " + ObjectSizeCalculator.sizeOfForAzquo(nameByAttributeMap, null));
+            System.out.println("size of valueByIdMap : " + ObjectSizeCalculator.sizeOfForAzquo(valueByIdMap, null));
+            System.out.println("size of provenanceByIdMap : " + ObjectSizeCalculator.sizeOfForAzquo(provenanceByIdMap, null));
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
         }
     }
 }
