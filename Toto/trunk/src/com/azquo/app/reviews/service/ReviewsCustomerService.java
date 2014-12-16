@@ -5,6 +5,7 @@ import com.azquo.service.AppDBConnectionMap;
 import com.azquo.service.AzquoMemoryDBConnection;
 import com.azquo.service.NameService;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -60,7 +61,7 @@ public class ReviewsCustomerService {
     }
 
     public Name getReviewsCustomerForUser(Name user) throws Exception{
-        List<Name> userParents = user.findAllParents();
+        Collection<Name> userParents = user.findAllParents();
         userParents.retainAll(reviewsCustomer.getChildren());
         if (!userParents.isEmpty()){
             return userParents.iterator().next();

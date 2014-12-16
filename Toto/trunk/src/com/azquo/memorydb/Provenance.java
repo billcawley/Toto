@@ -46,6 +46,8 @@ public final class Provenance extends AzquoMemoryDBEntity {
         this.rowHeadings = rowHeadings;
         this.columnHeadings = columnHeadings;
         this.context = context;
+        // added 10/12/2014, wasn't there before, why??? I suppose it just worked. Inconsistent though!
+        getAzquoMemoryDB().addProvenanceToDb(this);
     }
 
     // protected as only to be called by azquo memorydb, populates from JSON

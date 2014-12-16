@@ -1,0 +1,16 @@
+<component name="libraryTable">
+  <library name="net.openhft:koloboke-impl-jdk6-7:0.6.5" type="repository">
+    <properties maven-id="net.openhft:koloboke-impl-jdk6-7:0.6.5" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/net/openhft/koloboke-impl-jdk6-7/0.6.5/koloboke-impl-jdk6-7-0.6.5.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/com/google/code/findbugs/jsr305/2.0.3/jsr305-2.0.3.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/net/openhft/koloboke-api-jdk6-7/0.6.5/koloboke-api-jdk6-7-0.6.5.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/com/google/auto/value/auto-value/1.0-rc1/auto-value-1.0-rc1.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/com/google/auto/service/auto-service/1.0-rc1/auto-service-1.0-rc1.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/com/google/guava/guava/16.0/guava-16.0.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/ow2/asm/asm/4.1/asm-4.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

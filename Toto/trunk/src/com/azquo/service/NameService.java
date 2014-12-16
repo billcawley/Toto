@@ -12,7 +12,7 @@ import org.apache.log4j.Logger;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+//import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -221,7 +221,7 @@ public final class NameService {
 
     public void includeInSet(Name name, Name set) throws Exception {
         set.addChildWillBePersisted(name);//ok add as asked
-        List<Name> setParents = set.findAllParents();
+        Collection<Name> setParents = set.findAllParents();
         for (Name parent : name.getParents()) { // now check the direct parents and see that none are in the parents of the set we just put it in.
             // e.g the name was Ludlow in in places. We decided to add Ludlow to Shropshire which is all well and good.
             // Among Shropshire's parents is places so remove Ludlow from Places as it's now in places via Shropshire.
@@ -321,7 +321,7 @@ public final class NameService {
             //if the parent already has peers, provisionally set the child peers to be the same.
             if (parent != null) {
                 Map<Name, Boolean> newPeers = parent.getPeers();
-                if (newPeers != null) {
+                if (newPeers != null && !newPeers.isEmpty()) {
                     LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
                     for (Name peer : newPeers.keySet()) {
                         peers2.put(peer, parent.getPeers().get(peer));
@@ -741,7 +741,7 @@ public final class NameService {
     }
 
 
-    public Name inParentSet(Name name, Set<Name> maybeParents) {
+    public Name inParentSet(Name name, Collection<Name> maybeParents) {
         if (maybeParents.contains(name)) {
             return name;
         }
@@ -775,7 +775,7 @@ public final class NameService {
         return confidential == null || !confidential.equalsIgnoreCase("true");
     }
 
-    private void getAssociations(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Name> names, String associatedString, Set<Name> namesFound, List<String> attributeNames) {
+    private void getAssociations(AzquoMemoryDBConnection azquoMemoryDBConnection, Collection<Name> names, String associatedString, Set<Name> namesFound, List<String> attributeNames) {
         /*
         * this routine finds sets associated with the given name.  e.g. if the name is 'UK' and the associatedString is 'shops' the
         * routine looks for 'UK shops'.  If it does not find that, it loops through subsets such as 'London shops', 'West End shops', 'Oxford Street shops', r
@@ -1383,7 +1383,7 @@ public final class NameService {
             }
             sb.append("}");
         }
-        final Set<Name> children = name.getChildren();
+        final Collection<Name> children = name.getChildren();
         sb.append(", \"elements\":\"" + children.size() + "\"");
         if (showChildren && !children.isEmpty()) {
             sb.append(", \"children\":[");

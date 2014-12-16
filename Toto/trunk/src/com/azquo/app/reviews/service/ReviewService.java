@@ -145,7 +145,7 @@ public class ReviewService {
         // todo handle error if the supplier db is duff
         String thisSite = thisURL.substring(0,thisURL.lastIndexOf("/",thisURL.length() -2));
         Map<String, String> context = new HashMap<String, String>();
-        Set<Name> orderItems = order.getChildren();
+        Collection<Name> orderItems = order.getChildren();
         if (orderItems.size() == 0) return ("No items in order " + order.getDefaultDisplayName());
         Name allProducts = nameService.findByName(azquoMemoryDBConnection,ALL_PRODUCTS);
         Name saleDate = nameService.findByName(azquoMemoryDBConnection, SALE_DATE);
@@ -456,7 +456,7 @@ public class ReviewService {
         if (order==null){
             return "error: unrecognised order ref " + orderRef;
         }
-        Set<Name> orderItems = order.getChildren();
+        Collection<Name> orderItems = order.getChildren();
         if (orderItems.size() == 0) return "error: No items in order " + order.getDefaultDisplayName();
         Name service = nameService.findByName(azquoMemoryDBConnection,"Service");
         Name topSupplier = nameService.findByName(azquoMemoryDBConnection,"supplier");
@@ -615,7 +615,7 @@ public class ReviewService {
             return "error: unrecognised order ref " + orderRef;
         }
         // so the children of order will only ever be order items? I suppose this makes sense
-        Set<Name> orderItems = order.getChildren();
+        Collection<Name> orderItems = order.getChildren();
         if (orderItems.size() == 0) return "error: No items in order " + order.getDefaultDisplayName();
         // so just not using? I'll comment
         //Name allProducts = nameService.findByName(azquoMemoryDbConnection,"All products");

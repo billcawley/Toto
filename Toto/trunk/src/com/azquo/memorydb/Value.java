@@ -36,6 +36,8 @@ public final class Value extends AzquoMemoryDBEntity {
         this.text = text;
         this.deletedInfo = deletedInfo;
         names = new HashSet<Name>();
+        // added 10/12/2014, wasn't there before, why??? I suppose it just worked. Inconsistent though!
+        getAzquoMemoryDB().addValueToDb(this);
     }
 
     // only to be used by azquomemory db, hence protected. What is notable is the setting of the id from the record in mysql
