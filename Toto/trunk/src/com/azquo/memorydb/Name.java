@@ -54,16 +54,17 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     private Map<String, String> attributes;
 
     // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
-    // ok they're all sets, but some need ordering :)
     // these 3 are for quick lookup, must be modified appropriately e.g.add a peer add to that peer's peer parents
     // to be clear, these are not used when persisting, they are derived from the name sets in values and the two below
     // Edd note 11/04/2014 : Sets are expensive in terms of memory, will use lists instead unless they get really big
     // need the atomic reference for thread safety
-    private final Set<Value> values;
+    // Hmm I thought I could get away with values as just a list, it slowed right down, will follow the pattern for children and parents
+    private volatile Set<Value> valuesAsSet;
+    private final List<Value> values;
     // we want thread safe != null test hence volatile
     private volatile Set<Name> parentsAsSet;
     private final ArrayList<Name> parents;
-    private final Set<Name> peerParents;
+    private final List<Name> peerParents;
 
     /* these two have position which we'll reflect by the place in the list. WHen modifying these sets one has to recreate teh set anyway
     and when doing so changes to the order are taken into account.
@@ -78,6 +79,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // we want thread safe != null test hence volatile
     private volatile Set<Name> childrenAsSet;
     private final List<Name> children;
+    // how often is peers used??
     private LinkedHashMap<Name, Boolean> peers;
 
     // for the code to make new names
@@ -95,10 +97,11 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         super(azquoMemoryDB, id);
         jsonCache = jsonFromDB;
         additive = true; // by default
-        values = new HashSet<Value>();
+        valuesAsSet = null;
+        values = new ArrayList<Value>(0);
         parentsAsSet = null;
         parents = new ArrayList<Name>(0); // keep overhead low
-        peerParents = new HashSet<Name>();
+        peerParents = new ArrayList<Name>(0);
         childrenAsSet = null;
         children = new ArrayList<Name>(0); // keep overhead low
         peers = new LinkedHashMap<Name, Boolean>();
@@ -145,37 +148,54 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 '}';
     }
 
-    public Set<Value> getValues() {
-        return Collections.unmodifiableSet(values);
+    public Collection<Value> getValues() {
+        return  Collections.unmodifiableCollection(valuesAsSet != null ? valuesAsSet : values);
     }
 
     // these two are becoming protected so they can be set by Value.
     // Value will be the reference point for the value name link, the ones here are for fast lookup, no need for persistence
+    // following parent pattern re switching to sets etc
 
-    // turns out recreating sets is not so efficient so it's better to allow it to be changed but not externally - means values can be final
-
-    // synchronized here along with Collections.unmodifiableSet should provide some basic thread safety.
 
     protected void addToValues(final Value value) throws Exception {
         checkDatabaseMatches(value);
-        synchronized (values) {
-            values.add(value);
+        synchronized (values) { // we can sync on this object whether it's used or not
+            if (valuesAsSet != null){
+                valuesAsSet.add(value);
+            } else {
+                if (!values.contains(value)){ // it's this contains expense that means we should stop using arraylists over a certain size
+                    // OK, here it may get interesting, what about size???
+                    if (values.size() >= ARRAYLISTTHRESHOLD){ // we need to convert. copy the array to a new hashset then set it
+                        valuesAsSet = new HashSet<Value>(values);
+                        valuesAsSet.add(value);
+                        // TODO - what about the possibility the get above just misses this set and then gets a clear collection? Maybe don't blank it? By this point the set will be eating way more memory anyway
+                        //parents.clear();
+                        //parents.trimToSize();
+                    } else {
+                        values.add(value);
+                    }
+                }
+            }
         }
     }
 
     protected void removeFromValues(final Value value) throws Exception {
-        checkDatabaseMatches(value);// even if not needed throw the damn exception!
-        synchronized (values) {
-            values.remove(value);
+        synchronized (values) { // we can sync on this object whether it's used or not
+            if (valuesAsSet != null){
+                valuesAsSet.remove(value);
+            } else {
+                values.remove(value);
+            }
         }
     }
+
 
     public Collection<Name> getParents() {
         return  Collections.unmodifiableCollection(parentsAsSet != null ? parentsAsSet : parents);
     }
 
-    public Set<Name> getPeerParents() {
-        return Collections.unmodifiableSet(peerParents);
+    public Collection<Name> getPeerParents() {
+        return Collections.unmodifiableCollection(peerParents);
     }
 
     // don't allow external classes to set the parents I mean by function or otherwise, Name can manage this based on set children
@@ -484,7 +504,9 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         // add the adjusted back in back in :)
         for (Name existingPeer : this.peers.keySet()) {
             synchronized (existingPeer.peerParents) {
-                existingPeer.peerParents.add(this);
+                if (!existingPeer.peerParents.contains(this)){ // I think this check is all that's required for peerparents to be changed to a list
+                    existingPeer.peerParents.add(this);
+                }
             }
         }
         setNeedsPersisting();
