@@ -1,6 +1,7 @@
 package com.azquo.memorydb;
 
 import com.azquo.memorydbdao.StandardDAO;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Set;
@@ -24,7 +25,7 @@ import java.util.Set;
 
 public abstract class AzquoMemoryDBEntity {
 
-    protected static final ObjectMapper jacksonMapper = new ObjectMapper();
+    protected static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     // I am going to hold a reference here, then we simply compare objects by == to check that objects are in their created databases
 
