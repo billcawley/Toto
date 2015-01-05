@@ -5,10 +5,10 @@ import com.azquo.memorydbdao.JsonRecordTransport;
 import com.azquo.memorydbdao.StandardDAO;
 import com.azquo.service.AppEntityService;
 import com.github.holodnov.calculator.ObjectSizeCalculator;
-import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 import org.apache.log4j.Logger;
 
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -517,6 +517,52 @@ public final class AzquoMemoryDB {
             System.out.println("size of nameByAttributeMap : " + ObjectSizeCalculator.sizeOfForAzquo(nameByAttributeMap, null));
             System.out.println("size of valueByIdMap : " + ObjectSizeCalculator.sizeOfForAzquo(valueByIdMap, null));
             System.out.println("size of provenanceByIdMap : " + ObjectSizeCalculator.sizeOfForAzquo(provenanceByIdMap, null));
+            // ok I want to size all the names here
+
+            long totalNameSize = 0;
+            Collection<Name> names = nameByIdMap.values();
+            int count = 0;
+            DecimalFormat df = new DecimalFormat("###,###,###,###");
+            for (Name name : names){
+                //System.out.println("trying for " + name);
+                long nameSize = ObjectSizeCalculator.sizeOfForAzquo(name, null);
+                totalNameSize += nameSize;
+                count++;
+                /*if (count%10000 == 0){
+                    System.out.println("Example name size : " + name.getDefaultDisplayName() + ", " + df.format(nameSize));
+                    List<StringBuilder> report = new ArrayList<StringBuilder>();
+                    ObjectSizeCalculator.sizeOfForAzquo(name, report);
+                    for (StringBuilder sb : report){
+                        System.out.println(sb);
+                    }*/
+
+            }
+            System.out.println("total names size : " + df.format(totalNameSize));
+            System.out.println("size per name : " + totalNameSize / nameByIdMap.size());
+
+
+
+
+
+            long totalValuesSize = 0;
+            Collection<Value> values = valueByIdMap.values();
+            count = 0;
+            for (Value value : values){
+                long valueSize = ObjectSizeCalculator.sizeOfForAzquo(value, null);
+                totalValuesSize += valueSize;
+                count++;
+/*                if (count%10000 == 0){
+                    System.out.println("Example value size : " + value + ", " + df.format(valueSize));
+                    List<StringBuilder> report = new ArrayList<StringBuilder>();
+                    ObjectSizeCalculator.sizeOfForAzquo(value, report);
+                    for (StringBuilder sb : report){
+                        System.out.println(sb);
+                    }
+                }*/
+            }
+            System.out.println("total values size : " + df.format(totalValuesSize));
+            System.out.println("size per value : " + totalValuesSize / valueByIdMap.size());
+
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         }
