@@ -870,7 +870,7 @@ public final class ImportService {
             //clear the set before re-instating
             ImportHeading importHeading = new ImportHeading();
             if (st.hasMoreTokens()) {
-                String setName = st.nextToken();
+                String setName = st.nextToken().replace("\"","");//sometimes the last line of imported spreadsheets has come up as ""
                 if (setName.length() > 0) {
                     String error = interpretHeading(azquoMemoryDBConnection, setName, importHeading, attributeNames);
                     importHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, importHeading.heading, null, false, attributeNames);
