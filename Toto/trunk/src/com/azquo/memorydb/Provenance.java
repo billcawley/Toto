@@ -23,8 +23,6 @@ public final class Provenance extends AzquoMemoryDBEntity {
     private Date timeStamp;
     String method;
     String name;
-    private String rowHeadings;
-    private String columnHeadings;
     private String context;
 
 
@@ -35,16 +33,12 @@ public final class Provenance extends AzquoMemoryDBEntity {
             , final Date timeStamp
             , final String method
             , final String name
-            , final String rowHeadings
-            , final String columnHeadings
             , final String context) throws Exception {
         super(azquoMemoryDB, 0);
         this.user = user;
         this.timeStamp = timeStamp;
         this.method = method;
         this.name = name;
-        this.rowHeadings = rowHeadings;
-        this.columnHeadings = columnHeadings;
         this.context = context;
         // added 10/12/2014, wasn't there before, why??? I suppose it just worked. Inconsistent though!
         getAzquoMemoryDB().addProvenanceToDb(this);
@@ -60,8 +54,6 @@ public final class Provenance extends AzquoMemoryDBEntity {
         this.timeStamp = transport.timeStamp;
         this.method = transport.method;
         this.name = transport.name;
-        this.rowHeadings = transport.rowHeadings;
-        this.columnHeadings = transport.columnHeadings;
         this.context = transport.context;
         getAzquoMemoryDB().addProvenanceToDb(this);
     }
@@ -90,22 +82,6 @@ public final class Provenance extends AzquoMemoryDBEntity {
 
     public void  setName(String name){ this.name = name; }
 
-    public String getRowHeadings() {
-        return rowHeadings;
-    }
-
-    public void setRowHeadings(String rowHeadings){
-        this.rowHeadings = rowHeadings;
-    }
-
-    public String getColumnHeadings() {
-        return columnHeadings;
-    }
-
-    public void setColumnHeadings(String columnHeadings){
-        this.columnHeadings = columnHeadings;
-    }
-
     public String getContext() {
         return context;
     }
@@ -121,8 +97,6 @@ public final class Provenance extends AzquoMemoryDBEntity {
                 ", timeStamp=" + timeStamp +
                 ", method='" + method + '\'' +
                 ", name='" + name + '\'' +
-                ", rowHeadings='" + rowHeadings + '\'' +
-                ", columnHeadings='" + columnHeadings + '\'' +
                 ", context='" + context + '\'' +
                 '}';
     }
@@ -136,8 +110,6 @@ public final class Provenance extends AzquoMemoryDBEntity {
         public final Date timeStamp;
         public final String method;
         public final String name;
-        public final String rowHeadings;
-        public final String columnHeadings;
         public final String context;
 
         @JsonCreator
@@ -145,15 +117,11 @@ public final class Provenance extends AzquoMemoryDBEntity {
                 , @JsonProperty("timeStamp") Date timeStamp
                 , @JsonProperty("method") String method
                 , @JsonProperty("name") String name
-                , @JsonProperty("rowHeadings") String rowHeadings
-                , @JsonProperty("columnHeadings") String columnHeadings
                 , @JsonProperty("context") String context) {
             this.user = user;
             this.timeStamp = timeStamp;
             this.method = method;
             this.name = name;
-            this.rowHeadings = rowHeadings;
-            this.columnHeadings = columnHeadings;
             this.context = context;
         }
     }
@@ -166,7 +134,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
     @Override
     public String getAsJson() {
         try {
-            return jacksonMapper.writeValueAsString(new JsonTransport(user, timeStamp, method, name, rowHeadings, columnHeadings, context));
+            return jacksonMapper.writeValueAsString(new JsonTransport(user, timeStamp, method, name, context));
         } catch (Exception e) {
             logger.error("can't get a provenance as json", e);
         }
