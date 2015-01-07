@@ -809,7 +809,6 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         String language = stringUtils.getInstruction(headingsSent, "language");
         final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
         List<String> supplementNames = new ArrayList<String>();
-        loggedInConnection.getProvenance().setRowHeadings(headingsSent);
 
         String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent, loggedInConnection.getLanguages());
         //if (error.length() > 0) {
@@ -882,7 +881,6 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        loggedInConnection.getProvenance().setColumnHeadings(headingsSent);
         List<List<List<Name>>> columnHeadingLists = new ArrayList<List<List<Name>>>();
         List<String> supplementNames = new ArrayList<String>();//not used for column headings, but needed for the interpretation routine
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
@@ -1073,6 +1071,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         namesForThisCell.addAll(columnName);
         namesForThisCell.addAll(rowName);
         //now check that all names are needed
+        /*  THERE MAY BE INTERSECTIONS OF SETS IN CONTEXT WITH OTHER SETS,
 
         Map<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>();
         for (Name peerCell : columnName) {
@@ -1087,7 +1086,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 }
             }
         }
-        if (peers.size() > 0 && peers.size() + 1 != namesForThisCell.size()) {//TODO  sort out when more than one topparent contains elements
+        if (peers.size() > 0 && peers.size() + 1 != namesForThisCell.size()) {
             // we may discard some names
             List<Name> surplusNames = new ArrayList<Name>();
             for (Name name : namesForThisCell) {
@@ -1097,7 +1096,9 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             }
             namesForThisCell.removeAll(surplusNames);
         }
+        */
     }
+
 
     private void formatLockMap(LoggedInConnection loggedInConnection, String region, List<List<Boolean>> lockMap) {
         StringBuffer sb = new StringBuffer();
@@ -1177,16 +1178,19 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         }
 
 
-        loggedInConnection.getProvenance().setContext(context);
+        loggedInConnection.getProvenance("in spreadsheet").setContext(context);
 
         final StringTokenizer st = new StringTokenizer(context, "\n");
         final List<Name> contextNames = new ArrayList<Name>();
         while (st.hasMoreTokens()) {
-            final Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
-            if (contextName == null) {
-                return "error:I can't find a name for the context : " + context;
+            final List<Name> thisContextNames = nameService.interpretName(loggedInConnection,st.nextToken().trim());
+            if (thisContextNames.size() > 1){
+                return "error: context names must be individual - use 'as' to put sets in context";
             }
-            contextNames.add(contextName);
+            if (thisContextNames.size() > 0) {
+                 //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
+                contextNames.add(thisContextNames.get(0));
+            }
         }
         return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows);
     }
