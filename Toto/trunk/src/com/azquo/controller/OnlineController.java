@@ -261,7 +261,7 @@ public class OnlineController {
                 return "utf8page";
             }
             if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.hasAzquoMemoryDB()){
-                loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(),"","","");
+                loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(),"");
 
             }
             if (db!=null){
@@ -350,7 +350,7 @@ public class OnlineController {
 
             if ((opcode.length()==0 || opcode.equals("loadsheet")) && onlineReport != null) {
                 if (onlineReport.getId()!=1 && spreadsheetName.length() > 0){
-                     loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName,"","","");
+                     loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName,"");
                 }
                 loggedInConnection.setReportId(onlineReport.getId());
                 result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName,"Right-click mouse for provenance");
