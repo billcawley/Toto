@@ -308,10 +308,10 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
     // very basic, needs to be improved
 
-    public Provenance getProvenance() {
+    public Provenance getProvenance(String where) {
         if (provenance == null) {
             try {
-                provenance = new Provenance(getAzquoMemoryDB(), user.getName(), new Date(), "in spreadsheet", spreadsheetName, "row heading", "column headings", "context");
+                provenance = new Provenance(getAzquoMemoryDB(), user.getName(), new Date(), where, spreadsheetName, "");
             } catch (Exception e) {
             }
         }
