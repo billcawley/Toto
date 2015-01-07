@@ -250,7 +250,9 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             allParents.addAll(foundAtCurrentLevel);
             final Set<Name> nextLevelSet = new HashSet<Name>();
             for (Name n : foundAtCurrentLevel) {
-                nextLevelSet.addAll(n.getParents());
+                if (!allParents.contains(n)){//same name may occur more than once
+                    nextLevelSet.addAll(n.getParents());
+                }
             }
             if (nextLevelSet.isEmpty()) { // no more parents to find
                 break;
@@ -329,7 +331,9 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 findAllChildren.addAll(foundAtCurrentLevel);
                 Set<Name> nextLevelSet = new HashSet<Name>();
                 for (Name n : foundAtCurrentLevel) {
-                    nextLevelSet.addAll(n.getChildren());
+                    if (!findAllChildrenCache.contains(n)){
+                        nextLevelSet.addAll(n.getChildren());
+                    }
                 }
                 if (nextLevelSet.isEmpty()) { // no more parents to find
                     break;
@@ -358,14 +362,14 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // as mentioned above, force the set to a linked set, we want it to be ordered, BUT internally it may not stay as a linked set . . .
     //should we just use a damn list???
 
-    public synchronized void setChildrenWillBePersisted(LinkedHashSet<Name> children) throws Exception {
-        checkDatabaseForSet(children);
+    public synchronized void setChildrenWillBePersisted(List<Name> children) throws Exception {
+        //removed this check - the only use of this function is in creating temporary names in the same database....
 
+        //checkDatabaseForSet(children);
+        /*
+        We're taking a much more flexible view of sets now, so it is possible for a name to have another name as both child and parent.  Need to check in 'findAllParents
         // check for circular references
         for (Name newChild : children) {
-            if (newChild.equals(this) || findAllParents().contains(newChild)) {
-                throw new Exception("error cannot assign child due to circular reference, " + newChild + " cannot be added to " + this);
-            }
             // now we need to check the top parent is not changing on the child
             if (newChild.getParents().size() > 0) { // it has parents so we need to check
                 Name newChildFindATopParent = newChild.findATopParent();
@@ -376,23 +380,21 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 }
             }
         }
-
+        */
         // remove all parents on the old one
-        for (Name oldChild : this.getChildren()) {
-            // now it does use a function let's trust it
-            oldChild.removeFromParents(this);
+        if (this.getChildren()!=null) {
+            for (Name oldChild : this.getChildren()) {
+                //no check for loose names - this routine is only called when making up temporary sets
+                oldChild.removeFromParents(this);
+            }
+            this.children.clear();
         }
+         for (Name child:children){
+            addChildWillBePersisted(child);
+         }
 
 
-        findAllChildrenCache = null;
-        // set the parents based of the children
 
-        // set all parents on the new list, again trust the function as thread safe
-        for (Name newChild : getChildren()) {
-            newChild.addToParents(this);
-        }
-
-        setNeedsPersisting();
 
     }
 
@@ -475,7 +477,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     public synchronized void removeFromChildrenWillBePersisted(Name name) throws Exception {
         checkDatabaseMatches(name);// even if not needed throw the damn exception!
         if (getChildren().contains(name)){ // then something to remove
-            name.removeFromParents(name);
+            name.removeFromParents(this);
             //don't allow names that have previously had parents to fall out of topparent set
             if (name.getParents().size() == 0){
                 this.findATopParent().addChildWillBePersisted(name);//revert to top parent (Note that, if 'this' is top parent, then it will be re-instated!
