@@ -106,7 +106,6 @@ public class MagentoController {
          if (loggedInConnection == null) {
              //for testing only
              if (db == null) db = "temp";
-             db = "swimshop";
              loggedInConnection = loginService.login(db,"tempuser","password",0,"",false);//will automatically switch the database to 'temp' if that's the only one
              if (!db.equals("temp")){
                  String result = onlineService.switchDatabase(loggedInConnection, db);
