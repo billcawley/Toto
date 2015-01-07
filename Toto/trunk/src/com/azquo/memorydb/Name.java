@@ -27,6 +27,8 @@ import java.util.*;
  *
  * TODO : cleanup and check thread safety and comments, ongoing.
  *
+ * attributes case insensitive . . .not entirely happy about this
+ *
  */
 public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> {
 
@@ -284,13 +286,13 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // todo - check whether we need a set returned or not . . .
 
     // switching to lists as better on the memory
-    private Name[] findAllChildrenCache = null;
-    private Name[] findAllChildrenPayAttentionToAdditiveCache = null;
+    private List<Name> findAllChildrenCache = null;
+    private List<Name> findAllChildrenPayAttentionToAdditiveCache = null;
 
     public Collection<Name> findAllChildren(boolean payAttentionToAdditive) {
         if (payAttentionToAdditive) {
             if (findAllChildrenPayAttentionToAdditiveCache != null) {
-                return Arrays.asList(findAllChildrenPayAttentionToAdditiveCache);
+                return findAllChildrenPayAttentionToAdditiveCache;
             }
             Set<Name> findAllChildrenPayAttentionToAdditive = new HashSet<Name>();
             Collection<Name> foundAtCurrentLevel = getChildren();
@@ -313,17 +315,12 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             // the set will have taken care of duplicates turn it into an array, cache and return
             // seems to be no typed toArray, do this instead
             if (!findAllChildrenPayAttentionToAdditive.isEmpty()){ // only cache if there's something to cache!
-                findAllChildrenPayAttentionToAdditiveCache = new Name[findAllChildrenPayAttentionToAdditive.size()];
-                int index = 0;
-                for (Name name : findAllChildrenPayAttentionToAdditive){
-                    findAllChildrenPayAttentionToAdditiveCache[index] = name;
-                    index++;
-                }
+                findAllChildrenPayAttentionToAdditiveCache = new ArrayList<Name>(findAllChildrenPayAttentionToAdditive);
             }
             return findAllChildrenPayAttentionToAdditive; // just return the set , don't se the harm
         } else {
             if (findAllChildrenCache != null) {
-                return Arrays.asList(findAllChildrenCache);
+                return findAllChildrenCache;
             }
             Set<Name> findAllChildren = new HashSet<Name>();
             Collection<Name> foundAtCurrentLevel = getChildren();
@@ -331,7 +328,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 findAllChildren.addAll(foundAtCurrentLevel);
                 Set<Name> nextLevelSet = new HashSet<Name>();
                 for (Name n : foundAtCurrentLevel) {
-                    if (!findAllChildrenCache.contains(n)){
+                    if (!findAllChildren.contains(n)){
                         nextLevelSet.addAll(n.getChildren());
                     }
                 }
@@ -343,12 +340,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             // the set will have taken care of duplicates turn it into an array, cache and return
             // seems to be no typed toArray, do this instead
             if (!findAllChildren.isEmpty()){
-                findAllChildrenCache = new Name[findAllChildren.size()];
-                int index = 0;
-                for (Name name : findAllChildren){
-                    findAllChildrenCache[index] = name;
-                    index++;
-                }
+                findAllChildrenCache = new ArrayList<Name>(findAllChildren);
             }
             return findAllChildren; // just return the set , don't se the harm
         }
@@ -558,6 +550,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     public synchronized void setTemporaryAttribute(String attributeName, String attributeValue)throws Exception{
+        attributeName = attributeName.toUpperCase();
         int index = attributeKeys.indexOf(attributeName);
         if (index != -1){
             attributeValues.remove(index);
@@ -577,7 +570,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // todo - addname to attribute mapo . . . not efficient???
 
     public synchronized String setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
-
+        attributeName = attributeName.toUpperCase();
         // important, manage persistence, allowed name rules, db look ups
         // only care about ones in this set
 
@@ -631,6 +624,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     public synchronized void removeAttributeWillBePersisted(String attributeName) throws Exception {
+        attributeName = attributeName.toUpperCase();
         int index = attributeKeys.indexOf(attributeName);
         if (index != -1) {
             getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, attributeValues.get(index), this);
@@ -648,6 +642,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     private String findParentAttributes(Name child, String attributeName){
+        attributeName = attributeName.toUpperCase();
         for (Name parent:child.getParents()){
             if (parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)){
                 return child.getDefaultDisplayName();
@@ -670,7 +665,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // todo : what happens if attributes changed? An exception is not a biggy but what if the lists go out of sync temporarily???
 
     public String getAttribute(String attributeName) {
-
+        attributeName = attributeName.toUpperCase();
         String attribute = null;
         int index = attributeKeys.indexOf(attributeName);
         if (index != -1){
@@ -710,7 +705,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     @Override
     public int compareTo(Name n) {
-        return getDefaultDisplayName().toLowerCase().compareTo(n.getDefaultDisplayName().toLowerCase()); // think that will give us a case insensitive sort!
+        return getDefaultDisplayName().toUpperCase().compareTo(n.getDefaultDisplayName().toUpperCase()); // think that will give us a case insensitive sort!
     }
 
     // for Jackson mapping, trying to attach to actual fields would be dangerous in terms of allowing unsafe access
@@ -773,7 +768,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 this.additive = transport.additive;
                 //this.attributes = transport.attributes;
                 for (String key : transport.attributes.keySet()){
-                    attributeKeys.add(key);
+                    attributeKeys.add(key.toUpperCase());
                     attributeValues.add(transport.attributes.get(key));
                 }
                 LinkedHashMap<Integer, Boolean> peerIds = transport.peerIds;
