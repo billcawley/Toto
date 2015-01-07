@@ -411,7 +411,7 @@ public final class AzquoMemoryDB {
         } else {
             final List<Name> possibles = new ArrayList<Name>();
             possibles.add(name);
-            namesForThisAttribute.put(attributeValue.intern(), possibles);
+            namesForThisAttribute.put(attributeValue.toLowerCase().intern(), possibles);
         }
     }
 
