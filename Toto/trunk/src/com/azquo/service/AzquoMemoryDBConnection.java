@@ -70,10 +70,15 @@ public class AzquoMemoryDBConnection {
 
     protected Provenance provenance = null;
 
-    public Provenance getProvenance() {
+    public Provenance getProvenance(){
+        return getProvenance("in spreadsheet");
+
+    }
+
+    public Provenance getProvenance(String where) {
         if (provenance == null) {
             try {
-                provenance = new Provenance(getAzquoMemoryDB(), "app connection probably", new Date(), "", "", "-", "-", "-");
+                provenance = new Provenance(getAzquoMemoryDB(), where, new Date(), "", "", "-");
             } catch (Exception e) {
             }
         }
@@ -81,12 +86,12 @@ public class AzquoMemoryDBConnection {
     }
 
     public void setNewProvenance(String provenanceMethod, String provenanceName){
-        setNewProvenance(provenanceMethod, provenanceName,"","","");
+        setNewProvenance(provenanceMethod, provenanceName,"");
     }
 
-    public void setNewProvenance(String provenanceMethod, String provenanceName, String rowHeadings, String columnHeadings, String context) {
+    public void setNewProvenance(String provenanceMethod, String provenanceName, String context) {
         try {
-            provenance = new Provenance(getAzquoMemoryDB(), user.getName(), new Date(), provenanceMethod, provenanceName, rowHeadings, columnHeadings, context);
+            provenance = new Provenance(getAzquoMemoryDB(), user.getName(), new Date(), provenanceMethod, provenanceName,  context);
         } catch (Exception e) {
             logger.error("can't set a new provenance", e);
         }
