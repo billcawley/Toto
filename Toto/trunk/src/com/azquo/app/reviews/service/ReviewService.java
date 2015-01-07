@@ -1,11 +1,10 @@
 package com.azquo.app.reviews.service;
 
 import com.azquo.memorydb.Name;
-import com.azquo.service.AppDBConnectionMap;
-import com.azquo.service.AzquoMemoryDBConnection;
-import com.azquo.service.LoggedInConnection;
-import com.azquo.service.NameService;
+import com.azquo.memorydb.Provenance;
+import com.azquo.service.*;
 import com.azquo.util.AzquoMailer;
+import org.apache.commons.io.FileUtils;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -16,13 +15,15 @@ import org.xml.sax.helpers.AttributesImpl;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.sax.SAXTransformerFactory;
 import javax.xml.transform.sax.TransformerHandler;
 import javax.xml.transform.stream.StreamResult;
 
-import java.io.StringWriter;
+import java.io.*;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -57,37 +58,40 @@ public class ReviewService {
     public static final String SUPPLIER = "SUPPLIER";
     public static final String ALL_RATINGS = "ALL RATINGS";
     public static final String ALL_PRODUCTS = "ALL PRODUCTS";
-    public static final String EMAILS_TO_BE_SENT = "EMAILS_TO_BE_SENT";
-    public static final String ORDERS_WITH_EMAIL_SENT = "ORDERS_WITH_EMAIL_SENT";
-    public static final String SALE_DATE = "SALE_DATE";
-    public static final String SERVICE = "SERVICE";
+    public static final String EMAILS_TO_BE_SENT = "EMAILS TO BE SENT";
+    public static final String ORDERS_WITH_EMAIL_SENT = "ORDERS WITH EMAIL SENT";
+    public static final String SALE_DATE = "Sale date";
+    public static final String SERVICE = "Service";
 
     public interface SUPPLIER_ATTRIBUTE {
-        String EMAIL_TEMPLATE = "EMAIL_TEMPLATE";
+        String EMAIL_TEMPLATE = "EMAIL TEMPLATE";
         String LOGO = "LOGO";
     }
 
     public interface ORDER_ATTRIBUTE {
-        String EMAIL_DATE = "EMAIL_DATE";
-        String EMAIL_SENT = "EMAIL_SENT";
-        String CUSTOMER_NAME = "CUSTOMER_NAME";
-        String CUSTOMER_EMAIL = "CUSTOMER_EMAIL";
+        String FEEDBACK_DATE = "Feedback date";
+        String EMAIL_SENT = "Email sent";
+        String CUSTOMER_NAME = "Customer name";
+        String CUSTOMER_EMAIL = "Customer email";
     }
 
     public interface ORDER_ITEM_ATTRIBUTE {
-        String REVIEW_DATE = "REVIEW_DATE";
-        String COMMENT = "COMMENT";
+        String REVIEW_DATE = "Review date";
+        String COMMENT = "Comment";
     }
 
 
     public interface PRODUCT_ATTRIBUTE {
-        String PRODUCT_CODE = "PRODUCT_CODE";
+        String PRODUCT_CODE = "PRODUCT CODE";
     }
 
 
     public String sendEmails(String thisURL,String supplierDb, int maxCount, String velocityTemplate)throws Exception{
 
         AzquoMemoryDBConnection azquoMemoryDBConnection = reviewsConnectionMap.getConnection(supplierDb);
+        if (azquoMemoryDBConnection==null){
+            return "error: cannot find " + supplierDb;
+        }
 
         // todo handle error if the supplier db is duff
 
@@ -111,9 +115,9 @@ public class ReviewService {
         String todaysEmailsSent = "Emails sent on " + df2.format(new Date());
         Name todaysEmails = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,todaysEmailsSent,ordersWithEmailSent, false);
         for (Name order : emailsToBeSent.getChildren()) {
-            String feedbackDate = order.getAttribute(ORDER_ATTRIBUTE.EMAIL_DATE);
+            String feedbackDate = order.getAttribute(ORDER_ATTRIBUTE.FEEDBACK_DATE);
             if (feedbackDate == null){
-                error = "no email date for order " + order.getDefaultDisplayName();
+                error = "no feedback date for order " + order.getDefaultDisplayName();
             }else{
                 if (feedbackDate.compareTo(now) < 0) {
                     //todo  consider what happens if the server crashes
@@ -154,7 +158,7 @@ public class ReviewService {
         //Set<Name> serviceItems = new HashSet<Name>();
         for (Name name:orderItems){
             //ASSUMING THAT 'service' HAS ONLY ONE LEVEL OF CHILDREN!
-            if (!service.getChildren().contains(name)){
+            if (service==null || !service.getChildren().contains(name)){
                 productItems.add(name);
             }
         }
@@ -181,7 +185,7 @@ public class ReviewService {
         context.put("customername", order.getAttribute(ORDER_ATTRIBUTE.CUSTOMER_NAME));
         context.put("saledescription", saledesc.toString());
         context.put("supplier", supplier.getDefaultDisplayName());
-        context.put("feedbacklink", thisURL + "?op=reviewform&supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&orderref=" + order.getDefaultDisplayName() + "&businessid=" + azquoMemoryDBConnection.getBusinessId() + "&velocitytemplate=form1.vm");
+        context.put("feedbacklink", thisURL + "?op=reviewform&supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&orderref=" + order.getDefaultDisplayName() + "&businessid=" + azquoMemoryDBConnection.getBusinessId() + "&velocitytemplate=form2.vm");
         context.put("reviewslink", "http://www.azquoreviews.com/reviews/?op=showreviews&supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() );
         String result = convertToVelocity(context,"", null, velocityTemplate);
         if (!order.getAttribute(ORDER_ATTRIBUTE.CUSTOMER_EMAIL).equals("demo@azquo.com")){
@@ -483,7 +487,7 @@ public class ReviewService {
             String orderItemName = orderItem.getDefaultDisplayName();
             String productCode = orderItemName.substring(orderItemName.lastIndexOf(" ")+1);
             VelocityReview vr = getVelocityReview(orderItem, rating, product);
-            if (service.getChildren().contains(orderItem)) {
+            if (service != null && service.getChildren().contains(orderItem)) {
                 // todo, these from public static finals
                 vr.type = "service";
                  validationScript.append("frmvalidator.addValidation(\"comment" + productCode + "\",\"req\",\"Please enter a comment for " + vr.product + "\");\n");
@@ -748,14 +752,25 @@ public class ReviewService {
         setToXML(hd, atts, menu, "MENU");
          //then find the requirements for the page
         Name menuItem = nameService.findByName(masterDBConnection,itemName);
+        Name editset = nameService.findByName(masterDBConnection, menuItem.getAttribute("Choice set"));
         if (menuItem!=null){
              addElement(hd, atts, "TYPE", type);
 
             if (type.equals("list")){
-                String listToShow = menuItem.getAttribute("list");
-                if (listToShow != null) {
-                    listToShow = listToShow.replace("[business]",business.getDefaultDisplayName());
+                String choiceset = menuItem.getAttribute("Choice set");
+                if (choiceset != null) {
+                    String listToShow = choiceset + ";children * " + business.getDefaultDisplayName() + ";level all";
                     List<Name> namesFound = nameService.interpretName(masterDBConnection, listToShow);
+                    hd.startElement("","","HEADING",atts);
+                    for (Name fieldName : menuItem.getChildren()) {
+                        if (fieldName.getAttribute("SummaryScreenItem") != null) {
+                            hd.startElement("", "", "LINEITEM", atts);
+                            String attribute = fieldName.getDefaultDisplayName();
+                            addElement(hd, atts, "NAME", attribute);
+                            hd.endElement("", "", "LINEITEM");
+                        }
+                    }
+                    hd.endElement("","","HEADING");
                     hd.startElement("", "", "LIST", atts);
                     for (Name lineName : namesFound) {
                         hd.startElement("", "", "LISTITEM", atts);
@@ -778,7 +793,7 @@ public class ReviewService {
                     hd.startElement("", "", "LISTITEM", atts);
                     hd.startElement("", "", "LINEITEM", atts);
                     addElement(hd, atts, "NAME", "NEW");
-                    addElement(hd, atts, "LINK", "nameid=0");
+                    addElement(hd, atts, "LINK", "itemname=" + menuItem.getDefaultDisplayName().replace(" ","_") + "&nameid=0");
                     hd.endElement("", "", "LINEITEM");
                     hd.endElement("", "", "LISTITEM");
 
@@ -787,9 +802,18 @@ public class ReviewService {
 
 
             }
-            String validation = "//validation script here";
+            StringBuilder validationScript = new StringBuilder();
+            validationScript.append(" var frmvalidator  = new Validator(\"form\");\n");
+            validationScript.append("frmvalidator.EnableOnPageErrorDisplaySingleBox();\n");
+            validationScript.append("frmvalidator.EnableMsgsTogether();\n");
             if (type.equals("form")){
-                Name nameToEdit = nameService.findById(masterDBConnection,itemToEdit);
+                Name nameToEdit = null;
+                if (itemToEdit> 0){
+                    nameToEdit = nameService.findById(masterDBConnection,itemToEdit);
+                }else{
+                    Provenance provenance = masterDBConnection.getProvenance("in app");
+                    nameToEdit = nameService.findOrCreateNameInParent(masterDBConnection,"new "+ itemName, editset,true);
+                }
                 int tabno = 0;
                 int fieldNo = 0;
                 String tabname = "";
@@ -810,7 +834,7 @@ public class ReviewService {
                     addElement(hd,atts,"ITEMNAME",field);
                     String fieldType = fieldName.getAttribute("type");
                     String clause = "";
-                    int nameEnd = fieldType.indexOf(";");
+                    int nameEnd = fieldType.indexOf(" ");
                     if (nameEnd > 0){
                         clause = fieldType.substring(nameEnd + 1);
                         fieldType = fieldType.substring(0,nameEnd);
@@ -825,25 +849,60 @@ public class ReviewService {
                         addElement(hd,atts,"ITEMTYPE","text");
                     }
                     if (fieldType.equals("select")){
-                        Name selectName = nameService.findByName(masterDBConnection, clause);
-                        if (selectName != null) {
-                            hd.startElement("", "", "SELECT", atts);
-                            for (Name child : selectName.getChildren()) {
-                                addElement(hd, atts, "OPTION", child.getDefaultDisplayName());
+                        String fieldVal = nameToEdit.getAttribute(field);
+                        hd.startElement("", "", "OPTIONS", atts);
+                        String options = fieldName.getAttribute("options");
+                        if (options != null){
+                            String[] option = options.split(",");
+                            for (String opt:option){
+                                addElement(hd,atts,"OPTION", opt);
                             }
-                            hd.endElement("", "", "SELECT");
+
+                        }else {
+                            List<Name> selectName = nameService.interpretName(masterDBConnection, clause);
+                            if (selectName != null) {
+                                hd.startElement("", "", "SELECT", atts);
+                                for (Name child : selectName) {
+                                    addElement(hd, atts, "OPTION", child.getDefaultDisplayName());
+                                }
+                             }
                         }
+                        hd.endElement("", "", "OPTIONS");
                     }
+                    String fieldVal = null;
                     if (fieldNo == 1){
                         addElement(hd,atts,"VALUE",nameToEdit.getDefaultDisplayName());
 
                     }else{
-                        String fieldVal = nameToEdit.getAttribute(field);
+                         fieldVal = nameToEdit.getAttribute(field);
+                        if (fieldVal==null){
+                            fieldVal = fieldName.getAttribute("default");
+                        }
                         if (fieldVal!=null){
                             addElement(hd, atts,"VALUE", fieldVal);
                         }
                     }
 
+                    String fieldValidation = fieldName.getAttribute("validation");
+                    if (fieldType.equals("file") && fieldVal != null && fieldVal.length() > 0){
+                        fieldValidation = null;
+                    }
+                    while (fieldValidation != null && fieldValidation.length() > 0){
+                        String thisTest = "";
+                        if (fieldValidation.contains(";")){
+                            thisTest = fieldValidation.substring(0, fieldValidation.indexOf(";"));
+                            fieldValidation = fieldValidation.substring(thisTest.length() + 1);
+                        }else{
+                            thisTest = fieldValidation;
+                            fieldValidation = "";
+                        }
+                        if (thisTest.indexOf(",") < 0){
+                            thisTest = thisTest + ",Please enter " + field;
+                        }
+
+                        validationScript.append("frmvalidator.addValidation(\"field" + fieldNo + "\",\"" + thisTest.replace(",","\",\"") + "\");\n");
+
+                    }
                     String help = fieldName.getAttribute("help");
                     if (help != null){
                         addElement(hd,atts,"HELP", help);
@@ -856,7 +915,7 @@ public class ReviewService {
                 }
 
             }
-            addElement(hd, atts, "JAVASCRIPTVALIDATION", validation);
+            addElement(hd, atts, "JAVASCRIPTVALIDATION", validationScript.toString());
         }
 
         hd.endElement("","","AZQUO");
@@ -865,6 +924,120 @@ public class ReviewService {
         return sw.toString();
 
 
+
+
+    }
+
+
+    public void download(HttpServletResponse response, String itemName, int nameId, String fieldNameStr) throws Exception{
+
+
+        AzquoMemoryDBConnection masterDBConnection = reviewsConnectionMap.getConnection(UserService.MASTERDBNAME);
+        Name menuItem = nameService.findByName(masterDBConnection, itemName);
+
+        List<Name> fieldNames = nameService.interpretName(masterDBConnection, itemName + ";children;from " + fieldNameStr + ";to " + fieldNameStr);
+        Name fieldName = fieldNames.iterator().next();
+        Name nameToEdit = nameService.findById(masterDBConnection, nameId);
+        String uploadDir = menuItem.getAttribute("uploaddir");
+        if (uploadDir == null){
+            uploadDir = menuItem.getDefaultDisplayName().replace(" ","");
+        }
+
+        String dbName = nameToEdit.getAttribute("dbname");
+        if (dbName==null){
+            dbName = "revie_" + nameToEdit.getDefaultDisplayName().replace(" ","");
+        }
+
+        String fName = nameToEdit.getAttribute(fieldName.getDefaultDisplayName());
+        if (fName == null){
+            fName = fieldName.getAttribute("default");
+            dbName = "revie_default";
+            if (fName == null){
+                return;
+            }
+        }
+        String fullPath = ImportService.dbPath + dbName + "/" + uploadDir + "/" + fName;
+        InputStream input = new BufferedInputStream((new FileInputStream(fullPath)));
+        response.setContentType("application/force-download"); // Set up mime type
+        OutputStream out = response.getOutputStream();
+        byte[] bucket = new byte[32*1024];
+        int length = 0;
+        try  {
+            try {
+                //Use buffering? No. Buffering avoids costly access to disk or network;
+                //buffering to an in-memory stream makes no sense.
+                int bytesRead = 0;
+                while(bytesRead != -1){
+                    //aInput.read() returns -1, 0, or more :
+                    bytesRead = input.read(bucket);
+                    if(bytesRead > 0){
+                        out.write(bucket, 0, bytesRead);
+                        length += bytesRead;
+                    }
+                }
+            }
+            finally {
+                input.close();
+                //result.close(); this is a no-operation for ByteArrayOutputStream
+            }
+            response.setHeader("Content-Disposition", "attachment;filename=\"" +fName + "\"");
+            response.setHeader("Content-Length", String.valueOf(length));
+            out.flush();
+            return;
+        }catch(Exception e){
+            throw e;
+        }
+
+
+
+    }
+
+    public void saveData(HttpServletResponse response, String itemName, List<String>  values, int itemToEdit)throws  Exception{
+        AzquoMemoryDBConnection masterDBConnection = reviewsConnectionMap.getConnection(UserService.MASTERDBNAME);
+        Name nameToEdit = nameService.findById(masterDBConnection,itemToEdit);
+
+        int fieldNo = 0;
+        Name menuItem = nameService.findByName(masterDBConnection,itemName);
+        for (Name fieldName:menuItem.getChildren()){
+            String uploadDir = menuItem.getAttribute("uploaddir");
+            if (uploadDir == null){
+                uploadDir = menuItem.getDefaultDisplayName().replace(" ","");
+            }
+
+            //the array of values starts at 0 (though fields on screen start at 1)
+            if (fieldNo == 0){
+                nameToEdit.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, values.get(fieldNo));
+
+            }else{
+                String oldVal = nameToEdit.getAttribute(fieldName.getDefaultDisplayName());
+                if (oldVal == null || !oldVal.equals(values.get(fieldNo))) {
+                    if (fieldName.getAttribute("type").equals("file")) {
+                        String fileName = values.get(fieldNo);
+                        String dbName = nameToEdit.getAttribute("dbname");
+                        if (dbName == null) {
+                            dbName = "revie_" + nameToEdit.getDefaultDisplayName().replace(" ", "");
+                        }
+                        String fName = fileName.substring(fileName.lastIndexOf("_") + 1);
+                        if (fileName != null) {
+                            URL input = new URL(fileName);
+                            String fullPath = ImportService.dbPath + dbName + "/" + uploadDir + "/" + fName;
+
+                            File output = new File(fullPath);
+                            FileUtils.copyURLToFile(input, output, 5000, 5000);
+                            nameToEdit.setAttributeWillBePersisted(fieldName.getDefaultDisplayName(), fName);
+
+
+                        }
+
+                    } else {
+                        nameToEdit.setAttributeWillBePersisted(fieldName.getDefaultDisplayName(), values.get(fieldNo));
+                    }
+                }
+            }
+            fieldNo++;
+
+        }
+        masterDBConnection.persist();
 
 
     }
