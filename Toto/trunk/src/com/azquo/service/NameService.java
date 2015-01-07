@@ -49,6 +49,7 @@ public final class NameService {
     public static final String COUNTBACK = "count back";
     public static final String COMPAREWITH = "compare with";
     public static final String TOTALLEDAS = "totalled as";
+    public static final String AS = "as";
     public static final String STRUCTURE = "structure";
     public static final String NAMELIST = "namelist";
     public static final String CREATE = "create";
@@ -258,6 +259,9 @@ public final class NameService {
 
         //long marker = System.currentTimeMillis();
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import),and insert a structure into it*/
+        if (name.equalsIgnoreCase("field")){
+            int j=1;
+        }
 
         if (attributeNames == null) {
             attributeNames = new ArrayList<String>();
@@ -307,10 +311,13 @@ public final class NameService {
             //marker = System.currentTimeMillis();
             return existing;
         } else {
-            // actually creating a new one
+               // actually creating a new one
             //System.out.println("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
+            if (storeName.contains("\"")){
+                int j=1;
+            }
             // todo - we should not be getting the provenance from the conneciton
-            Provenance provenance = azquoMemoryDBConnection.getProvenance();
+            Provenance provenance = azquoMemoryDBConnection.getProvenance("imported");
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
             if (attributeNames.get(0) != Name.DEFAULT_DISPLAY_NAME) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
                 newName.setAttributeWillBePersisted(attributeNames.get(0), storeName);
@@ -657,6 +664,7 @@ public final class NameService {
         *
         * */
         List<List<Name>> nameStack = new ArrayList<List<Name>>();
+        List<List<Name>> namStack = new ArrayList<List<Name>>();
         List<String> strings = new ArrayList<String>();
         setFormula = shuntingYardAlgorithm(azquoMemoryDBConnection, setFormula, strings, attributeNames);
         Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
@@ -716,7 +724,17 @@ public final class NameService {
 
             pos = nextTerm;
         }
-        nameList.addAll(nameStack.get(0));
+
+        if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
+            for (Name possible : nameStack.get(0)) {
+                if (isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())) {
+                    nameList.add(possible);
+                }
+            }
+        } else {
+            nameList.addAll(nameStack.get(0));
+        }
+
         return nameList;
     }
 
@@ -760,6 +778,11 @@ public final class NameService {
         if (name == null) {
             return true;
         }
+        /*
+         * check if name is in one relevant set from names.  If so then OK  (e.g. if name is a date, then only check dates in 'names')
+         * If not, then depends if the name is confidential.
+          *
+          * */
         Name topParent = name.findATopParent();
         for (Set<Name> listNames : names) {
             if (!listNames.isEmpty()) {
@@ -876,7 +899,12 @@ public final class NameService {
         String countString = stringUtils.getInstruction(setTerm, COUNT);
         final String countbackString = stringUtils.getInstruction(setTerm, COUNTBACK);
         final String compareWithString = stringUtils.getInstruction(setTerm, COMPAREWITH);
-        final String totalledAsString = stringUtils.getInstruction(setTerm, TOTALLEDAS);
+        String totalledAsString = stringUtils.getInstruction(setTerm, TOTALLEDAS);
+        final String asString = stringUtils.getInstruction(setTerm, AS);//'as' and 'totalled as' are the same - create a new name of the set.
+        if (asString != null){
+            totalledAsString = asString;
+        }
+
         final String associatedString = stringUtils.getInstruction(setTerm, ASSOCIATED);
         final String whereString = stringUtils.getInstruction(setTerm, WHERE);
         if (levelString != null) {
@@ -910,7 +938,8 @@ public final class NameService {
                 names = findChildrenFromToCount(azquoMemoryDBConnection, names, fromString, toString, countString, countbackString, compareWithString, attributeNames);
             }
         }
-        if (azquoMemoryDBConnection.getReadPermissions() != null) {
+        /* don't check allowed here - wait until the end of 'interpret term'
+        if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
             for (Name possible : names) {
                 if (isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())) {
                     namesFound.add(possible);
@@ -919,6 +948,8 @@ public final class NameService {
         } else {
             namesFound.addAll(names);
         }
+        */
+        namesFound.addAll(names);
         if (totalledAsString != null) {
             Name totalName;
             if (totalledAsString.charAt(0) == NAMEMARKER) {
@@ -926,11 +957,7 @@ public final class NameService {
             } else {
                 totalName = findOrCreateNameInParent(azquoMemoryDBConnection, totalledAsString, namesFound.get(0).findATopParent(), false, attributeNames);//'local' is irrelevant
             }
-            LinkedHashSet<Name> newChildren = new LinkedHashSet<Name>();
-            for (Name child : namesFound) {
-                newChildren.add(child);
-            }
-            totalName.setChildrenWillBePersisted(newChildren);
+            totalName.setChildrenWillBePersisted(namesFound);
             namesFound.clear();
             namesFound.add(totalName);
         }
@@ -1165,7 +1192,7 @@ public final class NameService {
                     name = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameJsonRequest.id);
                 } else {
                     // new name . . .
-                    name = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), true);
+                    name = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance("imported"), true);
                 }
                 if (name == null) {
                     return "error: name for id not found : " + nameJsonRequest.id;
