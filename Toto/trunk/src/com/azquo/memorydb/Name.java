@@ -3,11 +3,9 @@ package com.azquo.memorydb;
 import com.azquo.memorydbdao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created with IntelliJ IDEA.
@@ -20,14 +18,14 @@ import java.util.concurrent.atomic.AtomicReference;
  * OK we want this object to only be modified if explicit functions are called, hence getters must not return mutable objects
  * and setters must make it clear what is going on
  * <p/>
- * ok I've been trying to make this class more thread safe with synchronized, not sure if I'm using it in the best way.
- * <p/>
- * Should I  be using synchronized hash sets e.g.     Set s = Collections.synchronizedSet(new HashSet(...)); ?? Need to read up on concurrency.
- * Brain melting stuff!
  *
+ * Of course we care about thread safety even if crude but we have another concern now : this object was weighing in at over 2k average in an example magento db
+ * the goal is to bring it to sub 500 bytes. THis means in some cases variables being null until used and using arraylists instead of sets switching for performance
+ * when the list gets too big.
  *
- * Important note 11/12/2014,when there are relatively small numbers of children or parents we're now using an arraylist, this should save on memory
- * TODO : cleanup and check threadsafety and comments given this change!
+ * Update on memory : got it to about 850 bytes (magento example DB). Will park for the mo, further change would probably involve changes to attributes.
+ *
+ * TODO : cleanup and check thread safety and comments, ongoing.
  *
  */
 public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> {
@@ -51,7 +49,10 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     private Provenance provenance;
     private boolean additive;
-    private Map<String, String> attributes;
+    // going to try for attributes as two arraylists as this should save a lot of space vs a linked hash map
+    private final List<String> attributeKeys;
+    private final List<String> attributeValues;
+
 
     // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
     // these 3 are for quick lookup, must be modified appropriately e.g.add a peer add to that peer's peer parents
@@ -64,7 +65,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // we want thread safe != null test hence volatile
     private volatile Set<Name> parentsAsSet;
     private final ArrayList<Name> parents;
-    private final List<Name> peerParents;
+    private volatile List<Name> peerParents;
 
     /* these two have position which we'll reflect by the place in the list. WHen modifying these sets one has to recreate teh set anyway
     and when doing so changes to the order are taken into account.
@@ -79,7 +80,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // we want thread safe != null test hence volatile
     private volatile Set<Name> childrenAsSet;
     private final List<Name> children;
-    // how often is peers used??
+    // how often is peers used?? - gonna make null by default
     private LinkedHashMap<Name, Boolean> peers;
 
     // for the code to make new names
@@ -101,12 +102,14 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         values = new ArrayList<Value>(0);
         parentsAsSet = null;
         parents = new ArrayList<Name>(0); // keep overhead low
-        peerParents = new ArrayList<Name>(0);
+        peerParents = null;
         childrenAsSet = null;
         children = new ArrayList<Name>(0); // keep overhead low
-        peers = new LinkedHashMap<Name, Boolean>();
-        attributes = new LinkedHashMap<String, String>();
-//        attributes = HashObjObjMaps.<String, String>newUpdatableMap();
+        peers = null; // keep overhead really low! I'm assuming this won't be used often - gets over the problem of linked hash map being expensive
+
+        attributeKeys = new ArrayList<String>(1);// a name will have at least one attribute we cna assume
+        attributeValues = new ArrayList<String>(1);
+
         getAzquoMemoryDB().addNameToDb(this);
     }
 
@@ -144,9 +147,12 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     public String toString() {
         return "Name{" +
                 "id='" + getId() + '\'' +
-                "attributes='" + attributes + '\'' +
+                "attributes='" + attributeKeys + '\'' +
+                "attribute values='" + attributeValues + '\'' +
                 '}';
     }
+
+    // I'm assuming (Ha!) that this collection copying is thread safe enough
 
     public Collection<Value> getValues() {
         return  Collections.unmodifiableCollection(valuesAsSet != null ? valuesAsSet : values);
@@ -195,7 +201,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     public Collection<Name> getPeerParents() {
-        return Collections.unmodifiableCollection(peerParents);
+        return peerParents != null ? Collections.unmodifiableCollection(peerParents) : new ArrayList<Name>();
     }
 
     // don't allow external classes to set the parents I mean by function or otherwise, Name can manage this based on set children
@@ -239,7 +245,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     public Collection<Name> findAllParents() {
         final List<Name> allParents = new ArrayList<Name>();
-        Set<Name> foundAtCurrentLevel = new HashSet<Name>(getParents());
+        Set<Name> foundAtCurrentLevel = new HashSet<Name>(getParents()); // make a new one, stop modification while iterating
         while (!foundAtCurrentLevel.isEmpty()) {
             allParents.addAll(foundAtCurrentLevel);
             final Set<Name> nextLevelSet = new HashSet<Name>();
@@ -254,7 +260,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         return allParents;
     }
 
-    // we are low allowing a name to be in more than one top parent, hence the name change
+    // we are now allowing a name to be in more than one top parent, hence the name change
 
     public Name findATopParent() {
         if (getParents().size() > 0) {
@@ -275,21 +281,22 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // also we have the option to use additive or not
     // todo - check whether we need a set returned or not . . .
 
-    private Set<Name> findAllChildrenCache = null;
-    private Set<Name> findAllChildrenPayAttentionToAdditiveCache = null;
+    // switching to lists as better on the memory
+    private Name[] findAllChildrenCache = null;
+    private Name[] findAllChildrenPayAttentionToAdditiveCache = null;
 
-    public Set<Name> findAllChildren(boolean payAttentionToAdditive) {
+    public Collection<Name> findAllChildren(boolean payAttentionToAdditive) {
         if (payAttentionToAdditive) {
             if (findAllChildrenPayAttentionToAdditiveCache != null) {
-                return findAllChildrenPayAttentionToAdditiveCache;
+                return Arrays.asList(findAllChildrenPayAttentionToAdditiveCache);
             }
-            findAllChildrenPayAttentionToAdditiveCache = new HashSet<Name>();
+            Set<Name> findAllChildrenPayAttentionToAdditive = new HashSet<Name>();
             Collection<Name> foundAtCurrentLevel = getChildren();
             if (!additive) { // stop it at the first hurdle
                 foundAtCurrentLevel = new HashSet<Name>();
             }
             while (!foundAtCurrentLevel.isEmpty()) {
-                findAllChildrenPayAttentionToAdditiveCache.addAll(foundAtCurrentLevel);
+                findAllChildrenPayAttentionToAdditive.addAll(foundAtCurrentLevel);
                 final Set<Name> nextLevelSet = new HashSet<Name>();
                 for (Name n : foundAtCurrentLevel) {
                     if (n.additive) {
@@ -301,15 +308,25 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 }
                 foundAtCurrentLevel = nextLevelSet;
             }
-            return findAllChildrenPayAttentionToAdditiveCache;
+            // the set will have taken care of duplicates turn it into an array, cache and return
+            // seems to be no typed toArray, do this instead
+            if (!findAllChildrenPayAttentionToAdditive.isEmpty()){ // only cache if there's something to cache!
+                findAllChildrenPayAttentionToAdditiveCache = new Name[findAllChildrenPayAttentionToAdditive.size()];
+                int index = 0;
+                for (Name name : findAllChildrenPayAttentionToAdditive){
+                    findAllChildrenPayAttentionToAdditiveCache[index] = name;
+                    index++;
+                }
+            }
+            return findAllChildrenPayAttentionToAdditive; // just return the set , don't se the harm
         } else {
             if (findAllChildrenCache != null) {
-                return findAllChildrenCache;
+                return Arrays.asList(findAllChildrenCache);
             }
-            findAllChildrenCache = new HashSet<Name>();
+            Set<Name> findAllChildren = new HashSet<Name>();
             Collection<Name> foundAtCurrentLevel = getChildren();
             while (!foundAtCurrentLevel.isEmpty()) {
-                findAllChildrenCache.addAll(foundAtCurrentLevel);
+                findAllChildren.addAll(foundAtCurrentLevel);
                 Set<Name> nextLevelSet = new HashSet<Name>();
                 for (Name n : foundAtCurrentLevel) {
                     nextLevelSet.addAll(n.getChildren());
@@ -319,7 +336,17 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 }
                 foundAtCurrentLevel = nextLevelSet;
             }
-            return findAllChildrenCache;
+            // the set will have taken care of duplicates turn it into an array, cache and return
+            // seems to be no typed toArray, do this instead
+            if (!findAllChildren.isEmpty()){
+                findAllChildrenCache = new Name[findAllChildren.size()];
+                int index = 0;
+                for (Name name : findAllChildren){
+                    findAllChildrenCache[index] = name;
+                    index++;
+                }
+            }
+            return findAllChildren; // just return the set , don't se the harm
         }
     }
 
@@ -466,16 +493,24 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     public Map<Name, Boolean> getPeers() {
-        return Collections.unmodifiableMap(peers);
+        return peers != null ? Collections.unmodifiableMap(peers) : new HashMap<Name, Boolean>();
     }
 
     public Map<String, String> getAttributes() {
-        return Collections.unmodifiableMap(attributes);
+        HashMap attributesAsMap = new HashMap();
+        int count = 0;
+        // if I'm going to for loop I should probably copy
+        ArrayList valuesCopy = new ArrayList(attributeValues);
+        for (String key : new ArrayList<String>(attributeKeys)){
+            attributesAsMap.put(key, valuesCopy.get(count));
+            count++;
+        }
+        return Collections.unmodifiableMap(attributesAsMap);
     }
 
     public synchronized void setPeersWillBePersisted(LinkedHashMap<Name, Boolean> peers) throws Exception {
         //check if identical to existing
-        if (this.getPeers().size()== peers.size()){
+        if (this.peers != null && this.getPeers().size()== peers.size()){ // not null check as it will be on init
             boolean identical = true;
             for (Name peer:this.getPeers().keySet()){
                 Boolean newAdditive = peers.get(peer);
@@ -495,14 +530,22 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         }
 
         // we're ok, now before assigning remove this name form the member of peers look ups map
-        for (Name existingPeer : this.peers.keySet()) {
-            synchronized (existingPeer.peerParents) {
-                existingPeer.peerParents.remove(this);
+        if (this.peers != null){ // added not null chekc as it will be on init
+            for (Name existingPeer : this.peers.keySet()) {
+                    if (existingPeer.peerParents != null){
+                        synchronized (existingPeer.peerParents) {
+                            existingPeer.peerParents.remove(this);
+                        }
+                    }
             }
         }
+        System.out.println("setting peers for " + this);
         this.peers = peers;
         // add the adjusted back in back in :)
         for (Name existingPeer : this.peers.keySet()) {
+                if (existingPeer.peerParents == null){ // I think this check is all that's required for peerparents to be changed to a list
+                    existingPeer.peerParents = new ArrayList<Name>();
+                }
             synchronized (existingPeer.peerParents) {
                 if (!existingPeer.peerParents.contains(this)){ // I think this check is all that's required for peerparents to be changed to a list
                     existingPeer.peerParents.add(this);
@@ -512,8 +555,17 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         setNeedsPersisting();
     }
 
-    public void setTemporaryAttribute(String attributeName, String attributeValue)throws Exception{
-        attributes.put(attributeName, attributeValue);
+    public synchronized void setTemporaryAttribute(String attributeName, String attributeValue)throws Exception{
+        int index = attributeKeys.indexOf(attributeName);
+        if (index != -1){
+            attributeValues.remove(index);
+            attributeValues.add(index, attributeValue);
+        } else {
+            attributeKeys.add(attributeName);
+            attributeValues.add(attributeValue);
+        }
+
+//        attributes.put(attributeName, attributeValue);
         getAzquoMemoryDB().addNameToAttributeNameMap(this); // will overwrite but that's fine
 
     }
@@ -526,10 +578,21 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
         // important, manage persistence, allowed name rules, db look ups
         // only care about ones in this set
-        String existing = attributes.get(attributeName);
+
+        // code adapted from map based code to lists, may need rewriting
+
+        int index = attributeKeys.indexOf(attributeName);
+        String existing = null;
+        if (index != -1){
+            // we want an index out of bounds to be thrown here if they don't match
+            existing = attributeValues.get(index);
+        }
         if (attributeValue == null || attributeValue.length()==0){
+            // delete it
             if (existing != null){
-                attributes.remove(attributeName);
+                attributeKeys.remove(index);
+                attributeValues.remove(index);
+                //attributes.remove(attributeName);
                 getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
                 setNeedsPersisting();
             }
@@ -548,11 +611,16 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         }
         */
         if (existing != null){
-            attributes.remove(attributeName);
+            // just update the values
+            attributeValues.remove(index);
+            attributeValues.add(index, attributeValue);
             getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
-            setNeedsPersisting();
+        } else {
+            // a new one
+            attributeKeys.add(attributeName);
+            attributeValues.add(attributeValue);
         }
-        attributes.put(attributeName, attributeValue);
+//        attributes.put(attributeName, attributeValue);
         // now deal with the DB maps!
         // ok here I did say addNameToAttributeNameMap but that is inefficient, it uses every attribute, we've only changed one
         getAzquoMemoryDB().setAttributeForNameInAttributeNameMap(attributeName, attributeValue, this);
@@ -561,15 +629,18 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     public synchronized void removeAttributeWillBePersisted(String attributeName) throws Exception {
-        if (attributes.containsKey(attributeName)) {
-            getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, attributes.remove(attributeName), this);
+        int index = attributeKeys.indexOf(attributeName);
+        if (index != -1) {
+            getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, attributeValues.get(index), this);
+            attributeKeys.remove(index);
+            attributeValues.remove(index);
         }
         setNeedsPersisting();
     }
 
     // convenience
     public synchronized void clearAttributes() throws Exception {
-        for (String attribute : new ArrayList<String>(attributes.keySet())) { // need to wrap the keyset in an arraylist as removeAttributeWillBePersisted will modify the keyset
+        for (String attribute : new ArrayList<String>(attributeKeys)) { // need to wrap the keyset in an arraylist as removeAttributeWillBePersisted will modify the keyset
             removeAttributeWillBePersisted(attribute);
         }
     }
@@ -594,8 +665,15 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
 
+    // todo : what happens if attributes changed? An exception is not a biggy but what if the lists go out of sync temporarily???
+
     public String getAttribute(String attributeName) {
-        String attribute = attributes.get(attributeName);
+
+        String attribute = null;
+        int index = attributeKeys.indexOf(attributeName);
+        if (index != -1){
+            attribute = attributeValues.get(index);
+        }
         if (attribute != null) return attribute;
         //look up the chain for any parent with the attribute
         return findParentAttributes(this, attributeName);
@@ -614,10 +692,16 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // removal ok on linked lists
 
     public synchronized void removeFromPeersWillBePersisted(Name name) throws Exception {
-        checkDatabaseMatches(name);// even if not needed throw the damn exception!
-        peers.remove(name);
-        name.peerParents.remove(this);
-        setNeedsPersisting();
+        if (peers != null){
+            checkDatabaseMatches(name);// even if not needed throw the damn exception!
+            peers.remove(name);
+            if (name.peerParents != null){
+                synchronized (name.peerParents){
+                    name.peerParents.remove(this);
+                }
+            }
+            setNeedsPersisting();
+        }
     }
 
     // assign a comparator if wanted for a specific language!
@@ -658,8 +742,10 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     @Override
     public String getAsJson() {
         LinkedHashMap<Integer, Boolean> peerIds = new LinkedHashMap<Integer, Boolean>();
-        for (Name peer : peers.keySet()) {
-            peerIds.put(peer.getId(), peers.get(peer));
+        if (peers != null){
+            for (Name peer : peers.keySet()) {
+                peerIds.put(peer.getId(), peers.get(peer));
+            }
         }
         // yes could probably use list but lets match collection types . . .
         LinkedHashSet<Integer> childrenIds = new LinkedHashSet<Integer>();
@@ -667,7 +753,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             childrenIds.add(child.getId());
         }
         try {
-            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(), additive, attributes, peerIds, childrenIds));
+            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(), additive, getAttributes(), peerIds, childrenIds));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -683,8 +769,15 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 jsonCache = null;// free the memory
                 this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
                 this.additive = transport.additive;
-                this.attributes = transport.attributes;
+                //this.attributes = transport.attributes;
+                for (String key : transport.attributes.keySet()){
+                    attributeKeys.add(key);
+                    attributeValues.add(transport.attributes.get(key));
+                }
                 LinkedHashMap<Integer, Boolean> peerIds = transport.peerIds;
+                if (!peerIds.isEmpty()){
+                    peers = new LinkedHashMap<Name, Boolean>();
+                }
                 for (Integer peerId : peerIds.keySet()) {
                     peers.put(getAzquoMemoryDB().getNameById(peerId), peerIds.get(peerId));
                 }
@@ -727,12 +820,13 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             parent.removeFromChildrenWillBePersisted(this);
         }
         // peers - new lookup to use
-        for (Name peerParent : peerParents) {
-            peerParent.removeFromPeersWillBePersisted(this);
+        if (peerParents != null){
+            for (Name peerParent : peerParents) {
+                peerParent.removeFromPeersWillBePersisted(this);
+            }
         }
         getAzquoMemoryDB().removeNameFromDb(this);
         needsDeleting = true;
         setNeedsPersisting();
     }
-
 }
