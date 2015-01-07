@@ -286,8 +286,8 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // todo - check whether we need a set returned or not . . .
 
     // switching to lists as better on the memory
-    private List<Name> findAllChildrenCache = null;
-    private List<Name> findAllChildrenPayAttentionToAdditiveCache = null;
+    private Set<Name> findAllChildrenCache = null;
+    private Set<Name> findAllChildrenPayAttentionToAdditiveCache = null;
 
     public Collection<Name> findAllChildren(boolean payAttentionToAdditive) {
         if (payAttentionToAdditive) {
@@ -315,7 +315,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             // the set will have taken care of duplicates turn it into an array, cache and return
             // seems to be no typed toArray, do this instead
             if (!findAllChildrenPayAttentionToAdditive.isEmpty()){ // only cache if there's something to cache!
-                findAllChildrenPayAttentionToAdditiveCache = new ArrayList<Name>(findAllChildrenPayAttentionToAdditive);
+                findAllChildrenPayAttentionToAdditiveCache = findAllChildrenPayAttentionToAdditive;
             }
             return findAllChildrenPayAttentionToAdditive; // just return the set , don't se the harm
         } else {
@@ -340,7 +340,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             // the set will have taken care of duplicates turn it into an array, cache and return
             // seems to be no typed toArray, do this instead
             if (!findAllChildren.isEmpty()){
-                findAllChildrenCache = new ArrayList<Name>(findAllChildren);
+                findAllChildrenCache = findAllChildren;
             }
             return findAllChildren; // just return the set , don't se the harm
         }
