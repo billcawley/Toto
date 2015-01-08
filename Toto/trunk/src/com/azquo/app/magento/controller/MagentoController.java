@@ -75,6 +75,8 @@ public class MagentoController {
          Iterator it = items.iterator();
          String op = null;
          String db = null;
+         String logon = null;
+         String password = null;
          String connectionId = null;
 
          while (it.hasNext()){
@@ -84,6 +86,10 @@ public class MagentoController {
                  db = item.getString();
              } else if (item.getFieldName().equals("op")) {
                  op = item.getString();
+             } else if (item.getFieldName().equals("logon")) {
+                 logon = item.getString();
+             } else if (item.getFieldName().equals("password")) {
+                 password = item.getString();
              } else if (item.getFieldName().equals("connectionid")) {
                  connectionId = item.getString();
              }
@@ -106,7 +112,12 @@ public class MagentoController {
          if (loggedInConnection == null) {
              //for testing only
              if (db == null) db = "temp";
-             loggedInConnection = loginService.login(db,"tempuser","password",0,"",false);//will automatically switch the database to 'temp' if that's the only one
+             if (logon==null || logon.equals("guest")) logon="tempuser";
+             if (password==null || password.equals("guest")) password = "password";
+             loggedInConnection = loginService.login(db,logon,password,0,"",false);//will automatically switch the database to 'temp' if that's the only one
+             if (loggedInConnection==null){
+                 return "error: user " + logon + " with this password does not exist";
+             }
              if (!db.equals("temp")){
                  String result = onlineService.switchDatabase(loggedInConnection, db);
                  //todo  consider what happens if there's an error here
