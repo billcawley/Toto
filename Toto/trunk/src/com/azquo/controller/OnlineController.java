@@ -41,6 +41,8 @@ public class OnlineController {
     private DatabaseDAO databaseDAO;
     @Autowired
     private OnlineService onlineService;
+    @Autowired
+    private AdminService adminService;
 
     // TODO : break up into separate functions
 
@@ -231,12 +233,7 @@ public class OnlineController {
                 onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
                 if (onlineReport != null){
                     workbookName = onlineReport.getReportName();
-                    if (onlineReport.getId()!=1) {
-                        db = databaseDAO.findById(onlineReport.getDatabaseId());
-                        onlineReport.setDatabase(db.getName());
-                        database = onlineReport.getDatabase();
-                    }
-                }
+                 }
             }
             if (workbookName == null){
                 workbookName = "unknown";
@@ -260,14 +257,26 @@ public class OnlineController {
                 model.addAttribute("content", "error:invalid or expired connection id");
                 return "utf8page";
             }
+            if (onlineReport!=null) {
+                if (onlineReport.getId() != 1) {
+                    if (onlineReport.getDatabaseId() > 0) {
+                        db = databaseDAO.findById(onlineReport.getDatabaseId());
+                        loginService.switchDatabase(loggedInConnection, db);
+                        onlineReport.setPathname(loggedInConnection.getCurrentDBName());
+                    } else {
+                        db=loggedInConnection.getCurrentDatabase();
+                          onlineReport.setPathname(adminService.getBusinessPrefix(loggedInConnection));
+
+                    }
+                    onlineReport.setDatabase(db.getName());
+                    database = onlineReport.getDatabase();
+                  }
+            }
             if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.hasAzquoMemoryDB()){
                 loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(),"");
 
             }
-            if (db!=null){
-                loginService.switchDatabase(loggedInConnection,db);
-            }
-            /*
+             /*
             THIS GIVES A NULL POINTER EXCEPTION - NOT SURE WHY I PUT IT IN!
             if (loggedInConnection.getProvenance()==null){
                 //will not have been set for online reports
