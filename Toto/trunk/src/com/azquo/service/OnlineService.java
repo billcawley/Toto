@@ -95,7 +95,7 @@ public final class OnlineService {
             }else{
                 int reportDB = onlineReport.getDatabaseId();
                 //note - the database specified in the report may not be the current database (as in applications such as Magento and reviews), but be 'temp'
-                String filepath = ImportService.dbPath + databaseDAO.findById(reportDB).getMySQLName() +"/onlinereports/" + onlineReport.getFilename();
+                String filepath = ImportService.dbPath + onlineReport.getPathname() +"/onlinereports/" + onlineReport.getFilename();
                 azquoBook.loadBook(filepath);
             }
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
