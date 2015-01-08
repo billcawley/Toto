@@ -109,6 +109,9 @@ public final class DataLoadService {
         //find out the name attribute numbers ....
         String categoryEntityId = null;
         String productEntityId = null;
+        String customerEntityId = null;
+        String firstNameId = null;
+        String lastNameId = null;
         Map<String, String> categoryEntityTypeRecord = null;
         for (Map<String, String> entityTypeRecord : tableMap.get("eav_entity_type")) {
             if (entityTypeRecord.get("entity_type_code").equals("catalog_category")) {
@@ -117,6 +120,10 @@ public final class DataLoadService {
             if (entityTypeRecord.get("entity_type_code").equals("catalog_product")) {
                 productEntityId = entityTypeRecord.get("entity_type_id");
             }
+            if (entityTypeRecord.get("entity_type_code").equals("customer")) {
+                customerEntityId = entityTypeRecord.get("entity_type_id");
+            }
+
         }
 
         String categoryNameId = null;
@@ -410,7 +417,7 @@ public final class DataLoadService {
 
         for (Map<String, String> orderRow : tableMap.get("sales_flat_order")) {
             //only importing the IDs at present
-            Name orderName = azquoOrdersFound.get(orderRow.get("entity_id"));
+            Name orderName = azquoOrdersFound.get("Order " + orderRow.get("entity_id"));
             if (orderName != null){
                 String customer = orderRow.get("customer_id");
                 if (customer == null || customer.length()== 0) customer="Unknown";
@@ -421,7 +428,66 @@ public final class DataLoadService {
 
 
         }
-        Name order = nameService.findByName(azquoMemoryDBConnection,"order");
+        //NOW THE CUSTOMERS!
+        for (Map<String, String> attribute : tableMap.get("eav_attribute")) {
+            if (attribute.get("entity_type_id").equals(customerEntityId)){
+                String attCode = attribute.get("attribute_code");
+                if (attCode.equals("firstname")){
+                    firstNameId = attribute.get("attribute_id");
+                }
+                if (attCode.equals("lastname")){
+                    lastNameId = attribute.get("attribute_id");
+                }
+            }
+         }
+
+        for (Map<String, String> customerRec : tableMap.get("customer_entity")) {
+            String customerId = customerRec.get("entity_id");
+            String email = customerRec.get("email");
+            Name customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Customer " + customerId, allCustomersName, true, languages);
+            customer.setAttributeWillBePersisted("email", email);
+
+        }
+
+        for (Map<String, String> attributeRow : tableMap.get("customer_entity_varchar")) {
+            //only picking the name from all the category attributes, and only choosing store 0 - other stores assumed to be different languages
+            String attId =attributeRow.get("attribute_id");
+            if (attId.equals(firstNameId) || attId.equals(lastNameId)){
+                String valFound = attributeRow.get("value");
+                String attFound;
+                if (attId.equals(firstNameId)){
+                    attFound = "First name";
+                }else{
+                    attFound = "Last name";
+                }
+                String customerId = attributeRow.get("entity_id");
+                Name customer = nameService.findByName(azquoMemoryDBConnection,"Customer " + customerId, languages);
+                if (customer != null){
+                    customer.setAttributeWillBePersisted(attFound, valFound);
+                    String firstName = customer.getAttribute("First name");
+                    String lastName = customer.getAttribute("Last name");
+                    String customerName = "";
+                    if (firstName != null){
+                        if (lastName!=null){
+                            customerName = firstName + " " + lastName;
+                        }else{
+                            customerName = firstName;
+                        }
+                    }else{
+                        customerName = lastName;
+                    }
+                    customer.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, customerName);
+                }
+            }
+        }
+
+
+
+        languages.clear();
+        languages.add(Name.DEFAULT_DISPLAY_NAME);
+
+
+        Name order = nameService.findByName(azquoMemoryDBConnection,"order", languages);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         order.setAttributeWillBePersisted(latestupdate, sdf.format(new Date()));
         if (!azquoMemoryDBConnection.getCurrentDBName().equals("temp")){
