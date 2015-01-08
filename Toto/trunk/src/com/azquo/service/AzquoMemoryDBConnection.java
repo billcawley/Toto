@@ -52,6 +52,10 @@ public class AzquoMemoryDBConnection {
     public String getCurrentDBName() {
         return azquoMemoryDB.getDatabase().getMySQLName();
     }
+
+    public com.azquo.adminentities.Database getCurrentDatabase() {
+        return azquoMemoryDB.getDatabase();
+    }
     public int getMaxIdOnCurrentDB() {
         return azquoMemoryDB.getCurrentMaximumId();
     }
