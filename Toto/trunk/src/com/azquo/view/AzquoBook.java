@@ -2039,11 +2039,19 @@ public  class AzquoBook {
         int right = 0;
         String tabclass = null;
         int lastSheet = wb.getWorksheets().getCount();
+        int chosenSheet = 0;
+        for (int i = 0; i < lastSheet; i++) {
+            Worksheet sheet = wb.getWorksheets().get(i);
+            if (sheet.getName().equals(spreadsheetName)) {
+                chosenSheet = i;
+                break;
+            }
+        }
         for (int i = 0; i < lastSheet; i++){
             Worksheet sheet = wb.getWorksheets().get(i);
             left = right;
 
-            if (sheet.getName().equals(spreadsheetName)) {
+            if (i==chosenSheet) {
                 right = 1;
                 tabclass="tabchosen";
             } else{
@@ -2057,6 +2065,7 @@ public  class AzquoBook {
             //tabs.append("<div class=\"tab\" style=\"left:" + left + "px\"><a href=\"#\" onclick=\"loadsheet('" + sheet.getSheetName() + "')\">" + sheet.getSheetName() + "</a></div>\n");
             tabs.append(tabImage(left, right) +"<span  class=\""+ tabclass + "\"><a href=\"#\" onclick=\"loadsheet('" + sheet.getName() + "')\">" + sheet.getName() + "</a></span>");
         }
+        tabs.append(tabImage(right,0));
         return error;
     }
 
