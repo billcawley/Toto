@@ -17,6 +17,7 @@ public class OnlineReport extends StandardEntity {
     private String reportName;
     private String userStatus;
     private String filename;
+    private String pathName; //internal use
     private String explanation;
 
      @JsonCreator
@@ -27,6 +28,7 @@ public class OnlineReport extends StandardEntity {
             , @JsonProperty("reportName") String reportName
             , @JsonProperty("userStatus") String userStatus
             , @JsonProperty("filename") String filename
+            , @JsonProperty("pathName") String pathName
             , @JsonProperty("explanation") String explanation) {
         this.id = id;
         this.businessId = businessId;
@@ -35,6 +37,7 @@ public class OnlineReport extends StandardEntity {
         this.reportName = reportName;
         this.userStatus = userStatus;
         this.filename = filename;
+        this.pathName = pathName;
         this.explanation = explanation;
     }
 
@@ -81,6 +84,15 @@ public class OnlineReport extends StandardEntity {
     public void setFilename(String filename) {
         this.filename = filename;
     }
+
+    public String getPathname() {
+        return pathName;
+    }
+
+    public void setPathname(String pathName) {
+        this.pathName = pathName;
+    }
+
 
     public String getExplanation() {
         return explanation;
