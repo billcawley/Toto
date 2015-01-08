@@ -5,10 +5,7 @@ import com.azquo.service.AppDBConnectionMap;
 import com.azquo.service.AzquoMemoryDBConnection;
 import com.azquo.service.NameService;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by cawley on 23/10/14.
@@ -44,7 +41,7 @@ public class ReviewsCustomerService {
     }
 
     public String createReviewsCustomer(String name, String address, String email, String telephoneno) throws Exception{
-        Name exists = nameService.getNameByAttribute(masterDBConnection, name, reviewsCustomer);
+        Name exists = getReviewsCustomerByName(name);
         if (exists != null){
             return "error:a reviews customer with that name already exists";
         }
@@ -57,7 +54,9 @@ public class ReviewsCustomerService {
     }
 
     public Name getReviewsCustomerByName(String name) throws Exception{
-        return nameService.getNameByAttribute(masterDBConnection, name, reviewsCustomer);
+        List<String> languages = new ArrayList<String>();
+        languages.add(Name.DEFAULT_DISPLAY_NAME);
+        return nameService.getNameByAttribute(masterDBConnection, name, reviewsCustomer, languages);
     }
 
     public Name getReviewsCustomerForUser(Name user) throws Exception{
