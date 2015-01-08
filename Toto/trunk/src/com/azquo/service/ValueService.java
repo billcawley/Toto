@@ -363,17 +363,29 @@ public final class ValueService {
 
     }
 
-    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name,Integer> totalSetSize) {
+    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name,Integer> totalSetSize) throws Exception{
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
 
-        String calcString = "";
+        String calcString = null;
+        List<String> strings = new ArrayList<String>();
+        List<Name> formulaNames = new ArrayList<Name>();
         boolean hasCalc = false;
         // add all names to calcnames except the the one with RPCALC
         // and here's a thing : if more than one name has RPcalc then only the first will be used
+        // changed from using rpcalc to making it from calculation. Might need to improve the code later.
         for (Name name : names) {
             if (!hasCalc) {
-                calcString = name.getAttribute(Name.RPCALC);
+
+                String calc = name.getAttribute(Name.CALCULATION);
+                if (calc != null){
+                    // then get the result of it, this used to be stored in RPCALC
+                    calc = nameService.shuntingYardAlgorithm(azquoMemoryDBConnection, calc, strings, null);
+                    if (!calc.startsWith("error")){ // there should be a better way to deal with errors
+                        calcString = calc;
+                        hasCalc = true;
+                    }
+                }
                 if (calcString != null) {
                     hasCalc = true;
                 } else {

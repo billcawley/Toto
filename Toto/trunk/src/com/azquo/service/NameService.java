@@ -66,17 +66,17 @@ public final class NameService {
 
     public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
         final List<Set<Name>> toReturn = new ArrayList<Set<Name>>();
-        //System.out.println("search by names before strip quotes : " + searchByNames);
+//        System.out.println("search by names before strip quotes : " + searchByNames);
         searchByNames = stripQuotes(azquoMemoryDBConnection, searchByNames, attributeNames);
-        //System.out.println("search by names after strip quotes : " + searchByNames);
+//        System.out.println("search by names after strip quotes : " + searchByNames);
         List<String> strings = new ArrayList<String>();
-        //System.out.println("search by names before extract strings : " + searchByNames);
+//        System.out.println("search by names before extract strings : " + searchByNames);
         searchByNames = stringUtils.extractStrings(searchByNames, strings);
-        //System.out.println("search by names after extract strings : " + searchByNames);
+//        System.out.println("search by names after extract strings : " + searchByNames);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            //System.out.println("new name in decode string : " + nameName);
+//            System.out.println("new name in decode string : " + nameName);
             List<Name> nameList = interpretSetTerm(azquoMemoryDBConnection, nameName, strings, attributeNames);
             toReturn.add(new HashSet<Name>(nameList));
         }
@@ -503,7 +503,18 @@ public final class NameService {
 
         for (Name name : names) {
             if (name != null) {
-                String calc = name.getAttribute(Name.RPCALC);
+                //
+                String calc = name.getAttribute(Name.CALCULATION);
+                List<String> strings = new ArrayList<String>();
+                List<Name> formulaNames = new ArrayList<Name>();
+                if (calc != null){
+                    // then get the result of it, this used to be stored in RPCALC
+                    calc = shuntingYardAlgorithm(azquoMemoryDBConnection, calc, strings, null);
+                    if (calc.startsWith("error")){ // there should be a better way to deal with errors
+                        calc = null;
+                    }
+                }
+
                 // if one term is calculated, the required peers will be the largest of any set of peers in the calculation
                 // if one term has peers, then all should have peers, and all should be a subset of the largest set, but I'm not checking this currently
                 if (calc != null && calc.length() > 0 && peers.isEmpty()) {
@@ -651,12 +662,12 @@ public final class NameService {
     // todo : rename - this is pretty much the start of expression parsing
 
     public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
-        //System.out.println("interpret name : " + setFormula + " attribute names " + attributeNames);
+        System.out.println("interpret name : " + setFormula + " attribute names " + attributeNames);
 
         final List<Name> nameList = new ArrayList<Name>();
 
         /*
-        * This routine now amended t        o allow for union (+) and intersection (*) of sets.
+        * This routine now amended to allow for union (+) and intersection (*) of sets.
         *
         * This entails first sorting out the names in quotes (which may contain the reserved characters),
         * starting from the end (there may be "name","parent" in the list)
@@ -666,9 +677,9 @@ public final class NameService {
         *
         * */
         List<List<Name>> nameStack = new ArrayList<List<Name>>();
-        List<List<Name>> namStack = new ArrayList<List<Name>>();
-        List<String> strings = new ArrayList<String>();
-        setFormula = shuntingYardAlgorithm(azquoMemoryDBConnection, setFormula, strings, attributeNames);
+        List<String> formulaStrings = new ArrayList<String>();
+        List<Name> formulaNames = new ArrayList<Name>();
+        setFormula = shuntingYardAlgorithm(azquoMemoryDBConnection, setFormula, formulaStrings, attributeNames);
         Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
         int pos = 0;
@@ -682,7 +693,7 @@ public final class NameService {
             if (m.find()) {
                 nextTerm = m.start() + pos + 2;
                 //PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
-                //  neet to check for this....
+                //  need to check for this....
                 while (nextTerm < setFormula.length() && (stringUtils.precededBy(setFormula, TO, nextTerm) || stringUtils.precededBy(setFormula, FROM, nextTerm) || stringUtils.precededBy(setFormula, TOTALLEDAS, nextTerm))) {
                     int startPos = nextTerm + 1;
                     nextTerm = setFormula.length() + 1;
@@ -694,19 +705,19 @@ public final class NameService {
             }
             if (op == NAMEMARKER) {
                 stackCount++;
-                List<Name> nextNames = interpretSetTerm(azquoMemoryDBConnection, setFormula.substring(pos, nextTerm - 1), strings, attributeNames);
+                List<Name> nextNames = interpretSetTerm(azquoMemoryDBConnection, setFormula.substring(pos, nextTerm - 1), formulaStrings, attributeNames);
                 nameStack.add(nextNames);
             } else if (op == '&') {
-                if (strings.size() == 0) {
+                if (formulaStrings.size() == 0) {
                     throw new Exception("'&' without a string");
                 }
                 List<Name> nextNames = new ArrayList<Name>();
                 List<Name> baseNames = nameStack.get(stackCount - 1);
                 for (Name name : baseNames) {
-                    String nameToFind = name.getDefaultDisplayName() + strings.get(strings.size() - 1);
-                    nextNames.addAll(interpretSetTerm(azquoMemoryDBConnection, nameToFind, strings, attributeNames));
+                    String nameToFind = name.getDefaultDisplayName() + formulaStrings.get(formulaStrings.size() - 1);
+                    nextNames.addAll(interpretSetTerm(azquoMemoryDBConnection, nameToFind, formulaStrings, attributeNames));
                 }
-                strings.remove(strings.size() - 1);
+                formulaStrings.remove(formulaStrings.size() - 1);
                 nameStack.remove(stackCount - 1);
                 nameStack.add(nextNames);
 
@@ -739,27 +750,6 @@ public final class NameService {
 
         return nameList;
     }
-
-    // arguably should be called on store and the RPCALC stored as that attribute only changes when "CALCULATION" changes
-
-    public String calcReversePolish(AzquoMemoryDBConnection azquoMemoryDBConnection, Name name) throws Exception {
-        String calc = name.getAttribute(Name.CALCULATION);
-        if (calc != null && calc.length() > 0) {
-            List<String> strings = new ArrayList<String>();
-            String result = shuntingYardAlgorithm(azquoMemoryDBConnection, calc, strings, null);//TODO work out if we will accept the strings in calcs (pass as parameter in calcReversePolish)......
-            if (result != null && result.length() > 0) {
-                if (result.startsWith("error:")) {
-                    return result;
-                } else {
-                    if (name.getAttribute(Name.RPCALC) == null || !name.getAttribute(Name.RPCALC).equals(result)) {
-                        name.setAttributeWillBePersisted(Name.RPCALC, result);
-                    }
-                }
-            }
-        }
-        return "";
-    }
-
 
     public Name inParentSet(Name name, Collection<Name> maybeParents) {
         if (maybeParents.contains(name)) {
@@ -1053,8 +1043,9 @@ public final class NameService {
     // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
     // it's a list of values and operations
     // ok, edd here, I don't 100% understand  the exact logic but I do know what it's doing. Maybe some more checking into it later.
+    // I'm beginning to understand. Practically speaking this is where parsing starts.
 
-    private String shuntingYardAlgorithm(AzquoMemoryDBConnection azquoMemoryDBConnection, String calc, List<String> strings, List<String> attributeNames) throws Exception {
+    protected String shuntingYardAlgorithm(AzquoMemoryDBConnection azquoMemoryDBConnection, String calc, List<String> strings, List<String> attributeNames) throws Exception {
 /*   TODO SORT OUT ACTION ON ERROR
         Routine to convert a formula (if it exists) to reverse polish.
 
@@ -1274,7 +1265,6 @@ public final class NameService {
                         }
                     }
                 }
-                calcReversePolish(azquoMemoryDBConnection, name);
                 // re set attributes, use single functions so checks happen
             }
         }

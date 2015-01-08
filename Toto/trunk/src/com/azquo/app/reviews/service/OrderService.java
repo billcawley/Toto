@@ -31,10 +31,10 @@ public class OrderService {
         orderSet = nameService.findOrCreateNameInParent(masterDBConnection, ORDER, null, false);
     }
 
-    public Name getOrder(String supplierDb, String orderNumber) throws Exception{
+/*    public Name getOrder(String supplierDb, String orderNumber) throws Exception{
 
         return nameService.getNameByAttribute(masterDBConnection, orderNumber, orderSet);
-    }
+    }*/
 
 
 }

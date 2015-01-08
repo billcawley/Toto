@@ -34,7 +34,6 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
     public static final String CALCULATION = "CALCULATION";
-    public static final String RPCALC = "RPCALC";
     public static final String ANON = "ANON";
     public static final String LOCAL = "LOCAL";
 

@@ -790,7 +790,6 @@ public final class ImportService {
             attribute= Name.DEFAULT_DISPLAY_NAME;
         }
         identityHeading.lineName.setAttributeWillBePersisted(attribute, heading.lineValue);
-        nameService.calcReversePolish(azquoMemoryDBConnection, identityHeading.lineName);
         return "";
     }
 
