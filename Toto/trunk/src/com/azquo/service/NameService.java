@@ -100,7 +100,7 @@ public final class NameService {
     }
 
 
-    public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent) {
+    public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent,final List<String> attributeNames) {
         if (attributeValue.charAt(0) == NAMEMARKER) {
             try {
                 int nameId = Integer.parseInt(attributeValue.substring(1).trim());
@@ -110,12 +110,12 @@ public final class NameService {
             }
         }
 
-        return azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, attributeValue.replace(Name.QUOTE, ' ').trim(), parent);
+        return azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, attributeValue.replace(Name.QUOTE, ' ').trim(), parent);
 
     }
 
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) {
-        return findByName(azquoMemoryDBConnection, name, null);
+         return findByName(azquoMemoryDBConnection, name, null);
     }
 
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final List<String> attributeNames) {
@@ -140,7 +140,7 @@ public final class NameService {
         // the point of all of this is to be able to ask for a name with the nearest parent but we can't just try and get it from the string directly e.g. get me WHsmiths on High street
         // we need to look from the top to distinguish high street in different towns
         while (parentName != null) {
-            parent = getNameByAttribute(azquoMemoryDBConnection, parentName, parent);
+            parent = getNameByAttribute(azquoMemoryDBConnection, parentName, parent, attributeNames);
             if (parent == null) { // parent was null, since we're just trying to find that stops us right here
                 return null;
             }
@@ -151,7 +151,7 @@ public final class NameService {
             parentName = stringUtils.findParentFromList(remainder);
         }
 
-        return getNameByAttribute(azquoMemoryDBConnection, remainder, parent);
+        return getNameByAttribute(azquoMemoryDBConnection, remainder, parent, attributeNames);
     }
 
 /*    public List<Name> searchNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String search) {
@@ -487,6 +487,7 @@ public final class NameService {
     public static final String ERROR = "ERROR";
     public static final String WARNING = "WARNING";
 
+    /*
     public Map<String, String> isAValidNameSet(AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final Set<Name> validNameList) throws Exception {
 
         //long track = System.currentTimeMillis();
@@ -608,6 +609,7 @@ public final class NameService {
         return toReturn;
     }
 
+*/
     // hmm, looks like a string function but there's checks agains a valid name in there. Come back to that later.
     // I want to move this or rationalise it or something.
 
