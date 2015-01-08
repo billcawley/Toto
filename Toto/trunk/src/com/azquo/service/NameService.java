@@ -659,6 +659,46 @@ public final class NameService {
         return interpretName(azquoMemoryDBConnection, setFormula, langs);
     }
 
+    public final List<FormulaTerm> initialParse(String command) throws Exception{
+        boolean inQuotes = false;
+
+        List<FormulaTerm> terms = new ArrayList<FormulaTerm>();
+
+        StringTokenizer st = new StringTokenizer(command.trim(), " ");
+        String inQuotesString = "";
+        while (st.hasMoreTokens()){
+            String nextToken = st.nextToken();
+            if (inQuotes){
+                inQuotesString += (" " + nextToken);
+            }
+            if (nextToken.startsWith("\"")){
+                if (inQuotes){
+                    throw new Exception("misplaced \" : " + command);
+                } else if(nextToken.endsWith("\"")){
+                    terms.add(new FormulaTerm(nextToken.substring(1, nextToken.length() - 2)));
+                } else {
+                    inQuotes = true;
+                    inQuotesString = nextToken.substring(1); // chop the first "
+                }
+            } else if (nextToken.endsWith("\"")){
+                if (!inQuotes){
+                    throw new Exception("misplaced \" : " + command);
+                } else {
+                    terms.add(new FormulaTerm(inQuotesString.substring(0, inQuotesString.length() - 1))); // already added on above
+                    inQuotes = false;
+                }
+            } else if(nextToken.contains("\"")){ // " in the middle of the string, think on how to support that?
+                throw new Exception("misplaced \" : " + command);
+            } else if (!inQuotes){ // vanilla
+                terms.add(new FormulaTerm(nextToken));
+            }
+        }
+
+
+
+        return terms;
+    }
+
     // todo : rename - this is pretty much the start of expression parsing
 
     public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
@@ -678,7 +718,6 @@ public final class NameService {
         * */
         List<List<Name>> nameStack = new ArrayList<List<Name>>();
         List<String> formulaStrings = new ArrayList<String>();
-        List<Name> formulaNames = new ArrayList<Name>();
         setFormula = shuntingYardAlgorithm(azquoMemoryDBConnection, setFormula, formulaStrings, attributeNames);
         Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
