@@ -84,16 +84,19 @@ public final class ValueService {
 
         final Set<Name> validNames = new HashSet<Name>();
 
-        final Map<String, String> nameCheckResult = nameService.isAValidNameSet(azquoMemoryDBConnection, names, validNames);
+        //removed check - caveat saver! WFC.
+        validNames.addAll(names);
+
+        //final Map<String, String> nameCheckResult = nameService.isAValidNameSet(azquoMemoryDBConnection, names, validNames);
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames1", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
-        final String error = nameCheckResult.get(NameService.ERROR);
-        final String warning = nameCheckResult.get(NameService.WARNING);
-        if (error != null) {
-            return error;
-        } else if (warning != null) {
-            toReturn += warning;
-        }
+       // final String error = nameCheckResult.get(NameService.ERROR);
+        //final String warning = nameCheckResult.get(NameService.WARNING);
+        //if (error != null) {
+       //     return error;
+       // } else if (warning != null) {
+       //     toReturn += warning;
+       // }
 
         final List<Value> existingValues = findForNames(names);
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
