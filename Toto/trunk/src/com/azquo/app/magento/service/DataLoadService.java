@@ -102,7 +102,8 @@ public final class DataLoadService {
         Name topProduct = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "product", null, false);
         Name productAttributesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product Attributes", topProduct, false);
         Name allCategoriesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All product categories", topProduct, false);
-        Name allProducts = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All products", topProduct, false);
+        Name allSKUs = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All SKUs", topProduct, false);
+        Name allProducts = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All Products", topProduct, false);
         Name uncategorisedProducts = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Uncategorised Products", topProduct, false);
 
         //find out the name attribute numbers ....
@@ -161,7 +162,8 @@ public final class DataLoadService {
         languages.add("MagentoProductID");
 
         for (Map<String, String> entityRow : tableMap.get("catalog_product_entity")) {
-            Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("entity_id"), allProducts, true,languages);
+            Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("entity_id"), allSKUs, true,languages);
+            allProducts.addChildWillBePersisted(magentoName);
             if (!magentoName.findAllParents().contains(allCategoriesName) && !magentoName.findAllParents().contains(uncategorisedProducts)) {
                 uncategorisedProducts.addChildWillBePersisted(magentoName);
             }
@@ -180,7 +182,7 @@ public final class DataLoadService {
         for (Map<String, String> relationRow : tableMap.get("catalog_product_super_link")) {
             Name child = azquoProductsFound.get(relationRow.get("product_id"));
             azquoProductsFound.get(relationRow.get("parent_id")).addChildWillBePersisted(child);
-            allProducts.removeFromChildrenWillBePersisted(child);
+            //allProducts.removeFromChildrenWillBePersisted(child);
         }
         // and put products into categories
 
@@ -228,7 +230,8 @@ public final class DataLoadService {
                     //note - this is NOT a product id, so don't use the product id to find it!
                     Name magentoOptionName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, optionValues.get(val), magentoProductCategory, true,null);
                     if (!magentoName.findAllParents().contains(magentoOptionName)) {
-                        magentoOptionName.addChildWillBePersisted(magentoName);
+                         magentoOptionName.addChildWillBePersisted(magentoName);
+                        allProducts.removeFromChildrenWillBePersisted(magentoName);
                     }
                 } else {
                     System.out.println("found an option value " + val + " for " + magentoProductCategory.getDefaultDisplayName());
@@ -317,7 +320,8 @@ public final class DataLoadService {
                 Name productName = azquoProductsFound.get(salesRow.get("product_id"));
                 if (productName == null){
                     //not on the product list!!  in the demo database there was a giftcard in the sales that was not in the product list
-                    productName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Product " + salesRow.get("product_id"), allProducts,true);
+                    productName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Product " + salesRow.get("product_id"), allSKUs,true);
+                    allProducts.addChildWillBePersisted(productName);
                     //productName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME,salesRow.get("product_type"));
                 }
 
