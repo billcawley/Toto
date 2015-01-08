@@ -59,6 +59,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
                         , rs.getString(REPORTNAME)
                         , rs.getString(USERSTATUS)
                         , rs.getString(FILENAME)
+                        ,""
                         , rs.getString(EXPLANATION));
             } catch (Exception e) {
                 e.printStackTrace();
