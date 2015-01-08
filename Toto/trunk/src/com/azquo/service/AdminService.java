@@ -332,7 +332,7 @@ public class AdminService {
                  }
             }
         }else{
-            OnlineReport notFound = new OnlineReport(0,0,0,"","No reports found","","","");
+            OnlineReport notFound = new OnlineReport(0,0,0,"","No reports found","","","","");
             reportList.add(notFound);
         }
         return reportList;
@@ -397,7 +397,12 @@ public class AdminService {
             List<UploadRecord> uploadRecords = uploadRecordDAO.findForBusinessId(loggedInConnection.getBusinessId());
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<UploadRecord.UploadRecordForDisplay>();
             for (UploadRecord uploadRecord : uploadRecords) {
-                uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, businessDao.findById(uploadRecord.getBusinessId()).getBusinessName(), databaseDao.findById(uploadRecord.getDatabaseId()).getName(), userDao.findById(uploadRecord.getUserId()).getName()));
+                String dbName = "";
+                if (uploadRecord.getDatabaseId()> 0){
+                    dbName = databaseDao.findById(uploadRecord.getDatabaseId()).getName();
+                }
+
+                uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, businessDao.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userDao.findById(uploadRecord.getUserId()).getName()));
             }
             return uploadRecordsForDisplay;
         }
