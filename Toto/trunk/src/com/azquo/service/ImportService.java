@@ -137,7 +137,7 @@ public final class ImportService {
             throws Exception {
 
            azquoMemoryDBConnection.setNewProvenance("import", fileName);
-        if (azquoMemoryDBConnection.getAzquoMemoryDB() == null) {
+        if (azquoMemoryDBConnection.getAzquoMemoryDB() == null && !fileName.endsWith(".xls") && !fileName.endsWith(".xlsx")) {
             return "error: no database set";
         }
         String tempFile = "";
@@ -165,11 +165,8 @@ public final class ImportService {
 
         }
         String error = "";
-        if (fileName.contains(".xlsx")) {
-            error = readBook(azquoMemoryDBConnection, fileName, tempFile, attributeNames);
-
-        }else if (fileName.contains(".xls")){
-            error = readBook(azquoMemoryDBConnection, fileName, tempFile, attributeNames);
+        if (fileName.contains(".xls")) {
+             error = readBook(azquoMemoryDBConnection, fileName, tempFile, attributeNames);
 
         } else {
             if (tempFile.length() > 0) {
@@ -177,12 +174,15 @@ public final class ImportService {
             }
             error = readPreparedFile(azquoMemoryDBConnection, uploadFile, fileType, attributeNames);
         }
-        azquoMemoryDBConnection.persist();
-        Database db = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase();
-        if (fileType==null){
+        int databaseId = 0;
+        if (azquoMemoryDBConnection.getAzquoMemoryDB() != null){
+            azquoMemoryDBConnection.persist();
+            databaseId = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase().getId();
+        }
+         if (fileType==null){
             fileType = "spreadsheet";
         }
-        UploadRecord uploadRecord = new UploadRecord(0, new Date(), db.getBusinessId(), db.getId(), azquoMemoryDBConnection.getUser().getId(), fileName, fileType, error);
+        UploadRecord uploadRecord = new UploadRecord(0, new Date(), azquoMemoryDBConnection.getBusinessId(), databaseId, azquoMemoryDBConnection.getUser().getId(), fileName, fileType, error);
         uploadRecordDAO.store(uploadRecord);
 
         return error;
@@ -1070,21 +1070,26 @@ public final class ImportService {
 
     private String uploadReport(AzquoMemoryDBConnection azquoMemoryDBConnection,AzquoBook azquoBook, String fileName, String reportName) throws Exception{
         int businessId = azquoMemoryDBConnection.getBusinessId();
-        int databaseId = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase().getId();
+        int databaseId = 0;
+        String pathName = adminService.getBusinessPrefix(azquoMemoryDBConnection);
+        if (azquoMemoryDBConnection.getAzquoMemoryDB() != null){
+            databaseId = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase().getId();
+            pathName = azquoMemoryDBConnection.getCurrentDBName();
+        }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         int reportId = 0;
         if (or!=null){
             reportId = or.getId();
         }
 
-        String fullPath = dbPath + azquoMemoryDBConnection.getCurrentDBName() + "/onlinereports/" + fileName;
+        String fullPath = dbPath + pathName + "/onlinereports/" + fileName;
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
 
          FileOutputStream out = new FileOutputStream(fullPath);
          azquoBook.saveBook(fullPath);
          out.close();
-         or = new OnlineReport(reportId, businessId,databaseId ,"", reportName, "", fileName,"");
+         or = new OnlineReport(reportId, businessId,databaseId ,"", reportName, "", fileName,"","");
          onlineReportDAO.store(or);
         return "";
 
@@ -1106,7 +1111,9 @@ private String readBook (final AzquoMemoryDBConnection azquoMemoryDBConnection, 
             if (reportName!=null){
                 return uploadReport(azquoMemoryDBConnection, azquoBook, fileName, reportName);
             }
-
+            if (azquoMemoryDBConnection.getAzquoMemoryDB() == null){
+                return "error: no database set";
+            }
             int sheetNo = 0;
 
             while (sheetNo < azquoBook.getNumberOfSheets()) {
