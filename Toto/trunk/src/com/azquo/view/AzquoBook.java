@@ -1468,10 +1468,13 @@ public  class AzquoBook {
                 //File tempchart = File.createTempFile(loggedInConnection.getConnectionId() + name ,".jpg");
 
               String tempname = (loggedInConnection.getUser().getId() + "." + loggedInConnection.getReportId() + "." + name + ".png").replace(" ","");
-
-              chart.toImage(basePath + tempname );
-              int topOffset = 0; //not sure why we should need this!
-              sb.append("<div id='chart" + name + "' style='position:absolute;top:" + (chart.getChartObject().getY() + topOffset) + "px;left:" + chart.getChartObject().getX() + "px;'><img src='/api/Download?image=" + tempname + "'/></div>\n");
+            try {
+                chart.toImage(basePath + tempname);
+                int topOffset = 0; //not sure why we should need this!
+                sb.append("<div id='chart" + name + "' style='position:absolute;top:" + (chart.getChartObject().getY() + topOffset) + "px;left:" + chart.getChartObject().getX() + "px;'><img src='/api/Download?image=" + tempname + "'/></div>\n");
+            }catch(Exception e){
+                sb.append("chart " + tempname + " not found");
+            }
          }
         return sb;
     }
