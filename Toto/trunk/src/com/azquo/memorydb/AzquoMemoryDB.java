@@ -254,10 +254,12 @@ public final class AzquoMemoryDB {
                 }
             }
         } else {
-            for (String attributeName : attributeNames) {
-                Set<Name> names = getNamesForAttribute(attributeName, attributeValue);
-                if (!names.isEmpty()) {
-                    return names;
+            if (attributeNames != null) {
+                for (String attributeName : attributeNames) {
+                    Set<Name> names = getNamesForAttribute(attributeName, attributeValue);
+                    if (!names.isEmpty()) {
+                        return names;
+                    }
                 }
             }
         }
