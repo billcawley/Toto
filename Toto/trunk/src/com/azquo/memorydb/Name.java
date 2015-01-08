@@ -245,22 +245,21 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // todo - check use of this and then whether we use sets internally or not
     // these two functions moved here from the service
 
-    public Collection<Name> findAllParents() {
-        final List<Name> allParents = new ArrayList<Name>();
-        Set<Name> foundAtCurrentLevel = new HashSet<Name>(getParents()); // make a new one, stop modification while iterating
-        while (!foundAtCurrentLevel.isEmpty()) {
-            allParents.addAll(foundAtCurrentLevel);
-            final Set<Name> nextLevelSet = new HashSet<Name>();
-            for (Name n : foundAtCurrentLevel) {
-                if (!allParents.contains(n)){//same name may occur more than once
-                    nextLevelSet.addAll(n.getParents());
-                }
+    private void findAllParents(Name name, final Set<Name>allParents){
+        for (Name parent:name.getParents()){
+            if (!allParents.contains(parent)){
+                allParents.add(parent);
+                findAllParents(parent,allParents);
             }
-            if (nextLevelSet.isEmpty()) { // no more parents to find
-                break;
-            }
-            foundAtCurrentLevel = nextLevelSet;
         }
+
+    }
+
+
+
+    public Collection<Name> findAllParents() {
+        final Set<Name> allParents = new HashSet<Name>();
+        findAllParents(this,allParents);
         return allParents;
     }
 
