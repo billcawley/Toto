@@ -6,6 +6,9 @@ import com.azquo.service.AppDBConnectionMap;
 import com.azquo.service.AzquoMemoryDBConnection;
 import com.azquo.service.NameService;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by cawley on 23/10/14.
  */
@@ -42,7 +45,7 @@ public class UserService {
     }
 
     public String createUser(String reviewsCustomer, String email, String password) throws Exception{
-        Name exists = nameService.getNameByAttribute(masterDBConnection, email, userSet);
+        Name exists = getUserByEmail(email);
         if (exists != null){
             return "error:a user with that name already exists";
         }
@@ -60,7 +63,9 @@ public class UserService {
     }
 
     public Name getUserByEmail(String email) throws Exception{
-        return nameService.getNameByAttribute(masterDBConnection, email, userSet);
+        List<String> languages = new ArrayList<String>();
+        languages.add(Name.DEFAULT_DISPLAY_NAME);
+        return nameService.getNameByAttribute(masterDBConnection, email, userSet, languages);
     }
 
     public Name checkEmailAndPassword(String email, String password) throws Exception{
