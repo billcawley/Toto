@@ -87,7 +87,7 @@ public class StringUtils {
 
     // when you see things like WHERE Review date >= "xxxxxxxxxx" this is what did that.
 
-    public String extractStrings(String calc, List<String> strings){
+    public String extractQuotedTerms(String calc, List<String> strings){
 
         int   quotePos = calc.indexOf("\"");
 

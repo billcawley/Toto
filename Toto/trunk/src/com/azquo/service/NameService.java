@@ -2,7 +2,6 @@ package com.azquo.service;
 
 import com.azquo.jsonrequestentities.NameJsonRequest;
 import com.azquo.jsonrequestentities.NameListJson;
-import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,11 +66,11 @@ public final class NameService {
     public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
         final List<Set<Name>> toReturn = new ArrayList<Set<Name>>();
 //        System.out.println("search by names before strip quotes : " + searchByNames);
-        searchByNames = stripQuotes(azquoMemoryDBConnection, searchByNames, attributeNames);
+        searchByNames = replaceQuotedNamesWithMarkers(azquoMemoryDBConnection, searchByNames, attributeNames);
 //        System.out.println("search by names after strip quotes : " + searchByNames);
         List<String> strings = new ArrayList<String>();
 //        System.out.println("search by names before extract strings : " + searchByNames);
-        searchByNames = stringUtils.extractStrings(searchByNames, strings);
+        searchByNames = stringUtils.extractQuotedTerms(searchByNames, strings);
 //        System.out.println("search by names after extract strings : " + searchByNames);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
@@ -115,7 +114,10 @@ public final class NameService {
     }
 
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) {
-         return findByName(azquoMemoryDBConnection, name, null);
+        // aha, not null passed here now, jam in a default display name I think
+        List<String> attNames = new ArrayList<String>();
+        attNames.add(Name.DEFAULT_DISPLAY_NAME);
+         return findByName(azquoMemoryDBConnection, name, attNames);
     }
 
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final List<String> attributeNames) {
@@ -624,7 +626,7 @@ public final class NameService {
     // hmm, looks like a string function but there's checks agains a valid name in there. Come back to that later.
     // I want to move this or rationalise it or something.
 
-    private String stripQuotes(AzquoMemoryDBConnection azquoMemoryDBConnection, String instructions, List<String> attributeNames) throws Exception {
+    private String replaceQuotedNamesWithMarkers(AzquoMemoryDBConnection azquoMemoryDBConnection, String instructions, List<String> attributeNames) throws Exception {
         //System.out.println("strip quotes : " + instructions + " attribute names  " + attributeNames);
         int lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
         while (lastQuoteEnd >= 0) {
@@ -702,7 +704,6 @@ public final class NameService {
     // todo : rename - this is pretty much the start of expression parsing
 
     public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
-        System.out.println("interpret name : " + setFormula + " attribute names " + attributeNames);
 
         final List<Name> nameList = new ArrayList<Name>();
 
@@ -718,7 +719,10 @@ public final class NameService {
         * */
         List<List<Name>> nameStack = new ArrayList<List<Name>>();
         List<String> formulaStrings = new ArrayList<String>();
+        System.out.println("what happens on a vanilla string replace : " + stringUtils.extractQuotedTerms(setFormula, new ArrayList<String>()));
+        System.out.println("interpret name before sya : " + setFormula);
         setFormula = shuntingYardAlgorithm(azquoMemoryDBConnection, setFormula, formulaStrings, attributeNames);
+        System.out.println("interpret name after sya : " + setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
         int pos = 0;
@@ -1085,6 +1089,12 @@ public final class NameService {
     // I'm beginning to understand. Practically speaking this is where parsing starts.
 
     protected String shuntingYardAlgorithm(AzquoMemoryDBConnection azquoMemoryDBConnection, String calc, List<String> strings, List<String> attributeNames) throws Exception {
+        // these two make the string suitable for this function.
+        //start by replacing names in quotes (which may contain operators) with '!<name id>   - e.g.  '!1000'
+        calc = replaceQuotedNamesWithMarkers(azquoMemoryDBConnection, calc, attributeNames);
+        //save away constants as a separate array, replace temporarily with 'xxxxxxx'
+        calc = stringUtils.extractQuotedTerms(calc, strings);
+
 /*   TODO SORT OUT ACTION ON ERROR
         Routine to convert a formula (if it exists) to reverse polish.
 
@@ -1112,12 +1122,6 @@ public final class NameService {
                 Exit.
 */
 
-        //start by replacing names in quotes (which may contain operators) with '!<name id>   - e.g.  '!1000'
-        calc = stripQuotes(azquoMemoryDBConnection, calc, attributeNames);
-
-
-        //save away constants as a separate array, replace temporarily with 'xxxxxxx'
-        calc = stringUtils.extractStrings(calc, strings);
 
 
         Pattern p = Pattern.compile("[\\+\\-/\\*\\(\\)&]"); // only simple maths allowed at present
