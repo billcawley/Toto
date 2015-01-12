@@ -476,33 +476,38 @@ public  class AzquoBook {
         if (headings.startsWith("error:")) {
             return headings;
         }
-        result = valueService.getDataRegion(loggedInConnection, headings, region, filterCount, maxRows);
-        if (result.startsWith("error:")) return result;
-        fillRange(dataRegionPrefix + region, result,loggedInConnection.getLockMap(region));
-        result = valueService.getRowHeadings(loggedInConnection, region, headings, filterCount);
-        fillRange("az_displayrowheadings" + region, result, "LOCKED");
+        try {
+            result = valueService.getDataRegion(loggedInConnection, headings, region, filterCount, maxRows);
+            if (result.startsWith("error:")) return result;
+            fillRange(dataRegionPrefix + region, result,loggedInConnection.getLockMap(region));
+            result = valueService.getRowHeadings(loggedInConnection, region, headings, filterCount);
+            fillRange("az_displayrowheadings" + region, result, "LOCKED");
 
-        //then percentage, sort, trimrowheadings, trimcolumnheadings, setchartdata
-        String chartName =hasOption(region,"chart");
-        if (chartName!=null){
-           for (int chartNo = 0;chartNo < azquoSheet.getCharts().getCount();chartNo++){
+            //then percentage, sort, trimrowheadings, trimcolumnheadings, setchartdata
+            String chartName =hasOption(region,"chart");
+            if (chartName!=null){
+                for (int chartNo = 0;chartNo < azquoSheet.getCharts().getCount();chartNo++){
                     Chart chart = azquoSheet.getCharts().get(chartNo);
 
-                if (chart.getName().equalsIgnoreCase(chartName)){
-                    boolean isVertical = chart.getNSeries().get(0).isVerticalValues();
-                    Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
-                    Range displayRowHeadings = getRange("az_displayrowheadings" + region);
-                    chart.getNSeries().clear();
-                    chart.getNSeries().addR1C1("R[" + (displayColumnHeadings.getFirstRow()) + "]C["
-                                                    + (displayRowHeadings.getFirstColumn()) + "]:R["
-                                                    + (displayRowHeadings.getFirstRow() + displayRowHeadings.getRowCount()-1) + "]C["
-                                                    + (displayColumnHeadings.getFirstColumn() + displayColumnHeadings.getColumnCount()-1) + "]",isVertical);
+                    if (chart.getName().equalsIgnoreCase(chartName)){
+                        boolean isVertical = chart.getNSeries().get(0).isVerticalValues();
+                        Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
+                        Range displayRowHeadings = getRange("az_displayrowheadings" + region);
+                        chart.getNSeries().clear();
+                        chart.getNSeries().addR1C1("R[" + (displayColumnHeadings.getFirstRow()) + "]C["
+                                + (displayRowHeadings.getFirstColumn()) + "]:R["
+                                + (displayRowHeadings.getFirstRow() + displayRowHeadings.getRowCount()-1) + "]C["
+                                + (displayColumnHeadings.getFirstColumn() + displayColumnHeadings.getColumnCount()-1) + "]",isVertical);
 
+
+                    }
 
                 }
-
             }
+        }catch (Exception e){
+            return e.getMessage();
         }
+
 
         return "";
 
