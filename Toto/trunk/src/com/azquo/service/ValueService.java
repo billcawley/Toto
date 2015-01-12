@@ -1740,4 +1740,44 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
     }
 
+
+
+    public static Date interpretDate(String dateString){
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat dateFormat2 = new SimpleDateFormat("dd/MM/yy");
+        SimpleDateFormat dateFormat3 = new SimpleDateFormat("dd/MM/yyyy");
+        SimpleDateFormat dateFormat4 = new SimpleDateFormat("dd-MM-yyyy");
+        Date dateFound = null;
+        if (dateString.length() > 5) {
+            if (dateString.substring(2, 3).equals("/")) {
+                if (dateString.length() > 8) {
+                    try {
+                        dateFound = dateFormat3.parse(dateString);
+                    } catch (Exception ignored) {
+                    }
+
+                } else {
+                    try {
+                        dateFound = dateFormat2.parse(dateString);
+                    } catch (Exception ignored) {
+                    }
+                }
+            } else {
+                if (dateString.substring(2, 3).equals("-")) {
+                    try{
+                        dateFound = dateFormat4.parse(dateString);
+                    }catch (Exception ignored){
+                    }
+                }else{
+                    try {
+                        dateFound = simpleDateFormat.parse(dateString);
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+        }
+        return dateFound;
+
+    }
+
 }
