@@ -65,17 +65,17 @@ public final class NameService {
 
     public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
         final List<Set<Name>> toReturn = new ArrayList<Set<Name>>();
-//        System.out.println("search by names before strip quotes : " + searchByNames);
+        //System.out.println("search by names before strip quotes : " + searchByNames);
         searchByNames = replaceQuotedNamesWithMarkers(azquoMemoryDBConnection, searchByNames, attributeNames);
-//        System.out.println("search by names after strip quotes : " + searchByNames);
+        //System.out.println("search by names after strip quotes : " + searchByNames);
         List<String> strings = new ArrayList<String>();
-//        System.out.println("search by names before extract strings : " + searchByNames);
+        //System.out.println("search by names before extract strings : " + searchByNames);
         searchByNames = stringUtils.extractQuotedTerms(searchByNames, strings);
-//        System.out.println("search by names after extract strings : " + searchByNames);
+        //System.out.println("search by names after extract strings : " + searchByNames);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-//            System.out.println("new name in decode string : " + nameName);
+            //System.out.println("new name in decode string : " + nameName);
             List<Name> nameList = interpretSetTerm(azquoMemoryDBConnection, nameName, strings, attributeNames);
             toReturn.add(new HashSet<Name>(nameList));
         }
@@ -708,7 +708,7 @@ public final class NameService {
         final List<Name> nameList = new ArrayList<Name>();
 
         /*
-        * This routine now amended to allow for union (+) and intersection (*) of sets.
+        * This routine now amended t        o allow for union (+) and intersection (*) of sets.
         *
         * This entails first sorting out the names in quotes (which may contain the reserved characters),
         * starting from the end (there may be "name","parent" in the list)
@@ -1092,6 +1092,9 @@ public final class NameService {
         // these two make the string suitable for this function.
         //start by replacing names in quotes (which may contain operators) with '!<name id>   - e.g.  '!1000'
         calc = replaceQuotedNamesWithMarkers(azquoMemoryDBConnection, calc, attributeNames);
+        if (calc.contains(Name.QUOTE + "")){
+            throw new Exception("unknown names in " + calc);
+        }
         //save away constants as a separate array, replace temporarily with 'xxxxxxx'
         calc = stringUtils.extractQuotedTerms(calc, strings);
 
