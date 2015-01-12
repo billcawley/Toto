@@ -133,7 +133,11 @@ public class JstreeController {
                      } else if (current.child != null) {
                          result.append(current.child.getDefaultDisplayName());
                          if (!parents.equals("true")) {
+                             int count = 0;
                              for (Name child : current.child.getChildren()) {
+                                 if (count++ >100){
+                                     break;
+                                 }
                                  children.add(child);
                              }
                          }else {
@@ -160,7 +164,11 @@ public class JstreeController {
                              if (child.getChildren().size() > 0) {
                                  result.append(",\"children\":true");
                              }
-                             result.append("}");
+                              result.append("}");
+
+                         }
+                         if (children.size() > 100){
+                             result.append(",{\"id\":0,\"text\":\"more....\"}");
 
                          }
                          result.append("]");
