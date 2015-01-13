@@ -42,6 +42,12 @@ public class JstreeController {
     @Autowired
     OnlineService onlineService;
 
+    @Autowired
+    ValueService valueService;
+
+    @Autowired
+    OnlineReportDAO onlineReportDAO;
+
     private static final Logger logger = Logger.getLogger(JstreeController.class);
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
@@ -63,6 +69,7 @@ public class JstreeController {
         String json = request.getParameter("json");
         String parents = request.getParameter("parents");
         String topNode = request.getParameter("topnode");//only for use at root.
+        String itemsChosen = request.getParameter("itemschosen");
         String jsonFunction = "azquojsonfeed";
          try {
             StringBuffer result = new StringBuffer();
@@ -96,6 +103,35 @@ public class JstreeController {
                  nameJsonRequest.id = currentNode.child.getId();//convert from jstree id.
                  result.append(nameService.processJsonRequest(loggedInConnection, nameJsonRequest, loggedInConnection.getLanguages()));
              }else{
+                 if (itemsChosen != null && itemsChosen.length() > 0){
+                     //find the relevant data and show it
+                     String[] jsItems = itemsChosen.split(",");
+                     List<Set<Name>>namesChosen = new ArrayList<Set<Name>>();
+                     for (String jsItem:jsItems){
+                         if (jsItem.length() > 0){
+                             try {
+                                 Name nameChosen = lookup.get(jsItem).child;
+                                 Set<Name> nameChosenSet = new HashSet<Name>();
+                                 nameChosenSet.add(nameChosen);
+                                 namesChosen.add(nameChosenSet);
+                             }catch(Exception e){
+                                 //should never happen.  If it does, ignore!
+                             }
+                         }
+                     }
+                     loggedInConnection.setNamesToSearch(namesChosen);
+                     /*
+                     OnlineReport onlineReport = onlineReportDAO.findById(1);
+                     loggedInConnection.setReportId(1);
+                     String sheet = onlineService.readExcel(loggedInConnection, onlineReport, "inspection","Right-click mouse for provenance");
+                     model.addAttribute("content", sheet);
+                     */
+                     //return goes to a void - needs to refresh the original report....??
+                     return "utf8page";
+
+
+
+                 }
                  LoggedInConnection.JsTreeNode current = new LoggedInConnection.JsTreeNode(null,null);
                  if (jsTreeId==null || jsTreeId.equals("#")){
                      if (topNode != null){
@@ -117,7 +153,7 @@ public class JstreeController {
                      if (current.child != null){
                          rootId = current.child.getId();
                      }
-                     result.append(onlineService.showNameDetails(loggedInConnection, database, rootId,parents));
+                     result.append(onlineService.showNameDetails(loggedInConnection, database, rootId, parents));
                      model.addAttribute("content", result);
                      return "utf8page";
 
@@ -127,11 +163,16 @@ public class JstreeController {
                      result.append("[{\"id\":" + jsTreeId + ",\"state\":{\"opened\":true},\"text\":\"");
                      List<Name> children = new ArrayList<Name>();
                      if (jsTreeId.equals("0")&& current.child == null) {
+                         String searchTerm = loggedInConnection.getAzquoBook().getRangeData("az_inputInspectChoice");
                          result.append("root");
-                         children = nameService.findTopNames(loggedInConnection);
+                         if (searchTerm == null || searchTerm.length()==0){
+                             children = nameService.findTopNames(loggedInConnection);
+                         }else{
+                             children= nameService.findContainingName(loggedInConnection,searchTerm,Name.DEFAULT_DISPLAY_NAME);
+                         }
 
                      } else if (current.child != null) {
-                         result.append(current.child.getDefaultDisplayName());
+                         result.append(current.child.getDefaultDisplayName().replace("\"","\\\""));
                          if (!parents.equals("true")) {
                              int count = 0;
                              for (Name child : current.child.getChildren()) {
@@ -154,21 +195,21 @@ public class JstreeController {
                          int lastId = loggedInConnection.getLastJstreeId();
                          int count = 0;
                          for (Name child : children) {
+                               if (count > 100){
+                                 //result.append(",{\"id\":10000000,\"text\":\"" + (children.size()-100) + " more....\"}");
+                                 break;
+                             }
                              if (count++ > 0) {
                                  result.append(",");
                              }
                              loggedInConnection.setLastJstreeId(++lastId);
                              LoggedInConnection.JsTreeNode newNode = new LoggedInConnection.JsTreeNode(child, current.child);
                              lookup.put(lastId + "", newNode);
-                             result.append("{\"id\":" + lastId + ",\"text\":\"" + child.getDefaultDisplayName() + "\"");
+                             result.append("{\"id\":" + lastId + ",\"text\":\"" + child.getDefaultDisplayName().replace("\"","\\\"") + "\"");
                              if (child.getChildren().size() > 0) {
                                  result.append(",\"children\":true");
                              }
                               result.append("}");
-
-                         }
-                         if (children.size() > 100){
-                             result.append(",{\"id\":0,\"text\":\"more....\"}");
 
                          }
                          result.append("]");
