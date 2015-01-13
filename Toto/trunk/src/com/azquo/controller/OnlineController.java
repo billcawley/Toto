@@ -338,11 +338,11 @@ public class OnlineController {
             if (opcode.equals("savedata")){
                   result = onlineService.saveData(loggedInConnection, jsonFunction);
              }
-            if (opcode.equals("children")){
+            //if (opcode.equals("children")){
 
-                result = nameService.getStructureForNameSearch(loggedInConnection,"", Integer.parseInt(nameId), loggedInConnection.getLanguages());
-                result = jsonFunction + "(" + result + ")";
-            }
+                //result = nameService.getStructureForNameSearch(loggedInConnection,"", Integer.parseInt(nameId), loggedInConnection.getLanguages());
+               // result = jsonFunction + "(" + result + ")";
+           // }
 
 
 
