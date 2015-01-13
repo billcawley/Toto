@@ -424,6 +424,7 @@ public  class AzquoBook {
         if (filterCount == 0)
             filterCount = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
         int maxRows = optionNumber(region, "maxrows");
+        int maxCols = optionNumber(region, "maxcols");
 
         Range rowHeadings = getRange("az_rowheadings" + region);
         if (rowHeadings == null) {
@@ -477,7 +478,7 @@ public  class AzquoBook {
             return headings;
         }
         try {
-            result = valueService.getDataRegion(loggedInConnection, headings, region, filterCount, maxRows);
+            result = valueService.getDataRegion(loggedInConnection, headings, region, filterCount, maxRows, maxCols);
             if (result.startsWith("error:")) return result;
             fillRange(dataRegionPrefix + region, result,loggedInConnection.getLockMap(region));
             result = valueService.getRowHeadings(loggedInConnection, region, headings, filterCount);
@@ -1429,11 +1430,11 @@ public  class AzquoBook {
 
                         if (sortableStart > 0 && content.length() > 0){
                             if (colNo!=sortCol + sortableStart - 1){//sort is currently up
-                                content +="<div class='sortup'><a href='#' onclick='sortCol('" + headingsRegion.trim() + "'," + (colNo-sortableStart + 1) + ");'><img src='/images/sortup.png'></a></div>";
+                                content +="<div class='sortup'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "'," + (colNo-sortableStart + 1) + ");\"><img src='/images/sortup.png'></a></div>";
 
                             }
                             if (colNo != sortableStart - sortCol - 1){
-                                content +="<div class='sortdown'><a href='#' onclick='sortCol('" + headingsRegion.trim() + "'," + (sortableStart - colNo - 1) + ");'><img src='/images/sortdown.png'></a></div>";
+                                content +="<div class='sortdown'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "'," + (sortableStart - colNo - 1) + ");\"><img src='/images/sortdown.png'></a></div>";
                             }
 
                         }
@@ -2266,16 +2267,20 @@ public  class AzquoBook {
 
 
     public String getReportName(){
+        return getRangeData("az_ReportName");
+
+    }
+
+    public String getRangeData(String rangeName){
         for (int i = 0;i < wb.getWorksheets().getNames().getCount();i++){
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
-            if (name.getText().equalsIgnoreCase("az_reportname")){
+            if (name.getText().equalsIgnoreCase(rangeName)){
                 return getRangeValue(name.getText());
             }
         }
         return null;
 
     }
-
 
 
 
