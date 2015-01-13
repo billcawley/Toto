@@ -68,7 +68,7 @@ public final class NameService {
 
         final List<String> nameStrings = new ArrayList<String>();
         //System.out.println("search by names before strip quotes : " + searchByNames);
-        searchByNames = replaceQuotedNamesWithMarkers(searchByNames, nameStrings);
+        searchByNames = stringUtils.replaceQuotedNamesWithMarkers(searchByNames, nameStrings);
         //System.out.println("search by names after strip quotes : " + searchByNames);
         List<String> strings = new ArrayList<String>();
         //System.out.println("search by names before extract strings : " + searchByNames);
@@ -651,30 +651,6 @@ public final class NameService {
     }
 
 */
-    // hmm, looks like a string function but there's checks agains a valid name in there. Come back to that later.
-    // I want to move this or rationalise it or something.
-
-    protected String replaceQuotedNamesWithMarkers(String instructions, List<String> nameStrings) throws Exception {
-        //System.out.println("strip quotes : " + instructions + " attribute names  " + attributeNames);
-        int lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
-        while (lastQuoteEnd >= 0) {
-            int lastQuoteStart = instructions.lastIndexOf(Name.QUOTE, lastQuoteEnd - 1);
-            //find the parents - if they exist
-            String nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd + 1);
-            if (lastQuoteEnd < instructions.length() - 1 && instructions.charAt(lastQuoteEnd + 1) == ',') {
-                Pattern p = Pattern.compile("[;\\+\\*]");
-                Matcher m = p.matcher(instructions.substring(lastQuoteEnd + 1));
-                if (m.find()) {
-                    lastQuoteEnd += m.start();//one too little....
-                    nameToFind = instructions.substring(lastQuoteStart, lastQuoteEnd + 1);//adding one in here to be consistent with line adjustment below
-                }
-            }
-            nameStrings.add(nameToFind);
-                instructions = instructions.substring(0, lastQuoteStart) + NAMEMARKER + (nameStrings.size() - 1) + " " + instructions.substring(lastQuoteEnd + 1);
-                lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
-        }
-        return instructions;
-    }
 
     // to find a set of names, a few bits that were part of the original set of functions
     // edd wondering how to break this up.
@@ -706,10 +682,10 @@ public final class NameService {
         List<String> nameStrings = new ArrayList<String>();
 
         // sorting quotes used to be done inside SYA now it's done outside
-        setFormula = replaceQuotedNamesWithMarkers(setFormula, nameStrings);
+        setFormula = stringUtils.replaceQuotedNamesWithMarkers(setFormula, nameStrings);
         //save away constants as a separate array, replace temporarily with 'xxxxxxx'
         setFormula = stringUtils.extractQuotedTerms(setFormula, formulaStrings);
-        setFormula = shuntingYardAlgorithm(setFormula, nameStrings);
+        setFormula = stringUtils.shuntingYardAlgorithm(setFormula, nameStrings, this);
         Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
         List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection,attributeNames);
@@ -1024,7 +1000,7 @@ public final class NameService {
 
     //  NAMEMARKER is used to remove any contentious characters from expressions (e.g. operators that should not be there)
 
-    private String interpretTerm(final String term, List<String> nameReferences) {
+    protected String interpretTerm(final String term, List<String> nameReferences) {
 
         //System.out.println("interpret term : " + term + " attribute names : " + attributeNames);
 
@@ -1066,97 +1042,6 @@ public final class NameService {
     }*/
 
 
-    // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
-    // it's a list of values and operations
-    // ok, edd here, I don't 100% understand  the exact logic but I do know what it's doing. Maybe some more checking into it later.
-    // I'm beginning to understand. Practically speaking this is where parsing starts.
-
-    protected String shuntingYardAlgorithm(String calc, List<String> nameReferences) throws Exception {
-        // note from Edd, I'm taking the functions to sort out things in name and normal quotes OUT of here, this funciton assumes a string ready to parse
-/*   TODO SORT OUT ACTION ON ERROR
-        Routine to convert a formula (if it exists) to reverse polish.
-
-        Read a token.
-                If the token is a number, then add it to the output queue.
-        If the token is a function token, then push it onto the stack.
-                If the token is a function argument separator (e.g., a comma):
-        Until the token at the top of the stack is a left parenthesis, pop operators off the stack onto the output queue. If no left parentheses are encountered, either the separator was misplaced or parentheses were mismatched.
-        If the token is an operator, o1, then:
-        while there is an operator token, o2, at the top of the stack, and
-        either o1 is left-associative and its precedence is equal to that of o2,
-                or o1 has precedence less than that of o2,
-        pop o2 off the stack, onto the output queue;
-        push o1 onto the stack.
-                If the token is a left parenthesis, then push it onto the stack.
-                If the token is a right parenthesis:
-        Until the token at the top of the stack is a left parenthesis, pop operators off the stack onto the output queue.
-        Pop the left parenthesis from the stack, but not onto the output queue.
-                If the token at the top of the stack is a function token, pop it onto the output queue.
-                If the stack runs out without finding a left parenthesis, then there are mismatched parentheses.
-        When there are no more tokens to read:
-        While there are still operator tokens in the stack:
-        If the operator token on the top of the stack is a parenthesis, then there are mismatched parentheses.
-        Pop the operator onto the output queue.
-                Exit.
-*/
-
-
-
-        Pattern p = Pattern.compile("[\\+\\-/\\*\\(\\)&]"); // only simple maths allowed at present
-        StringBuilder sb = new StringBuilder();
-        String stack = "";
-        Matcher m = p.matcher(calc);
-        String origCalc = calc;
-        int startPos = 0;
-
-
-        while (m.find()) {
-            String opfound = m.group();
-            char thisOp = opfound.charAt(0);
-            int pos = m.start();
-            String namefound = calc.substring(startPos, pos).trim();
-            if (namefound.length() > 0) {
-                String result = interpretTerm(namefound, nameReferences);
-                if (result.startsWith("error:")) {
-                    return result;
-                }
-                sb.append(result);
-            }
-            char lastOffStack = ' ';
-            while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && ")+-*/(".indexOf(thisOp) <= "(+-*/".indexOf(stack.charAt(0)))) {
-
-                if (stack.charAt(0) != '(') {
-                    sb.append(stack.charAt(0)).append(" ");
-                }
-                lastOffStack = stack.charAt(0);
-                stack = stack.substring(1);
-            }
-            if ((thisOp == ')' && lastOffStack != '(') || (thisOp != ')' && lastOffStack == '(')) {
-                return "error: mismatched brackets in " + origCalc;
-            }
-            if (thisOp != ')') {
-                stack = thisOp + stack;
-            }
-            startPos = m.end();
-
-        }
-        // the last term...
-
-        if (calc.substring(startPos).trim().length() > 0) {
-            String result = interpretTerm(calc.substring(startPos).trim(), nameReferences);
-            if (result.startsWith("error:")) {
-                return result;
-            }
-            sb.append(result);
-        }
-
-        //.. and clear the stack
-        while (stack.length() > 0) {
-            sb.append(stack.charAt(0)).append(" ");
-            stack = stack.substring(1);
-        }
-        return sb.toString();
-    }
 
     // pretty much replaced the original set of functions to do basic name manipulation
     // needs a logged in connection forn the structure return

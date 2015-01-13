@@ -368,7 +368,6 @@ public final class ValueService {
         List<Name> calcnames = new ArrayList<Name>();
 
         String calcString = null;
-        List<String> strings = new ArrayList<String>();
         List<Name> formulaNames = new ArrayList<Name>();
         boolean hasCalc = false;
         // add all names to calcnames except the the one with RPCALC
@@ -383,8 +382,8 @@ public final class ValueService {
                     // then get the result of it, this used to be stored in RPCALC
                     // now we sort quotes outside SYA, this should only need name sorting, not string literal (e.g. date > "2012-12-12") fixing
                     List<String> nameStrings = new ArrayList<String>();
-                    calc = nameService.replaceQuotedNamesWithMarkers( calc, nameStrings);
-                    calc = nameService.shuntingYardAlgorithm(calc, nameStrings);
+                    calc = stringUtils.replaceQuotedNamesWithMarkers( calc, nameStrings);
+                    calc = stringUtils.shuntingYardAlgorithm(calc, nameStrings, nameService);
                     //todo : make sure name lookups below use the new style or marker!!
                     if (!calc.startsWith("error")){ // there should be a better way to deal with errors
                         calcString = calc;
