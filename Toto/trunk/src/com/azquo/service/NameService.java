@@ -261,16 +261,13 @@ public final class NameService {
 
         //long marker = System.currentTimeMillis();
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import),and insert a structure into it*/
-        if (name.equalsIgnoreCase("field")){
-            int j=1;
-        }
 
         if (attributeNames == null) {
             attributeNames = new ArrayList<String>();
             attributeNames.add(Name.DEFAULT_DISPLAY_NAME);
         }
 
-        String storeName = name.replace(Name.QUOTE, ' ').trim();
+        String storeName = name.replace(Name.QUOTE, ' ').replace("\"","''").trim();//don't allow ` or " to get into the database
         Name existing;
 
         //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent1", marker - System.currentTimeMillis());
@@ -315,10 +312,7 @@ public final class NameService {
         } else {
                // actually creating a new one
             //System.out.println("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
-            if (storeName.contains("\"")){
-                int j=1;
-            }
-            // todo - we should not be getting the provenance from the conneciton
+              // todo - we should not be getting the provenance from the conneciton
             Provenance provenance = azquoMemoryDBConnection.getProvenance("imported");
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
             if (attributeNames.get(0) != Name.DEFAULT_DISPLAY_NAME) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
@@ -1190,9 +1184,9 @@ public final class NameService {
         String toReturn = "";
 
         // type; elements level 1; from a to b
-        if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)) {
-            return getStructureForNameSearch(azquoMemoryDBConnection, nameJsonRequest.name, -1, attributeNames);//-1 indicates to show the children
-        }
+        //if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)) {
+        //    return getStructureForNameSearch(azquoMemoryDBConnection, nameJsonRequest.name, -1, attributeNames);//-1 indicates to show the children
+        //}
         if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)) {
             try {
                 return getNamesFormattedForOutput(interpretName(azquoMemoryDBConnection, nameJsonRequest.name, attributeNames));
@@ -1352,6 +1346,7 @@ public final class NameService {
 
     // use jackson?
 
+    /*
     public String getStructureForNameSearch(AzquoMemoryDBConnection azquoMemoryDBconnection, String nameSearch, int nameId, List<String> attributeNames) {
 
         boolean withChildren = false;
@@ -1390,21 +1385,19 @@ public final class NameService {
                     }
                 }
             sb.append("]}");
-/*            if (azquoMemoryDBconnection.getAzquoBook()!=null){
-                azquoMemoryDBconnection.getAzquoBook().nameChosenJson = sb.toString();
-            }*/
-            return sb.toString();
+           // if (azquoMemoryDBconnection.getAzquoBook()!=null){
+           //     azquoMemoryDBconnection.getAzquoBook().nameChosenJson = sb.toString();
+             return sb.toString();
         }
     }
+    */
 
     // again should use jackson?
 
-    private String getChildStructureFormattedForOutput(final Name name) {
-        return getChildStructureFormattedForOutput(name, false);
-    }
 
 
-    private String getChildStructureFormattedForOutput(final Name name, boolean showChildren) {
+
+    private String getAttributesFormattedForOutput(final Name name, boolean showChildren) {
         int totalValues = getTotalValues(name);
         //if (totalValues > 0) {
         StringBuilder sb = new StringBuilder();
@@ -1450,19 +1443,6 @@ public final class NameService {
         }
         final Collection<Name> children = name.getChildren();
         sb.append(", \"elements\":\"" + children.size() + "\"");
-        if (showChildren && !children.isEmpty()) {
-            sb.append(", \"children\":[");
-            count = 0;
-            for (Name child : children) {
-                String childData = getChildStructureFormattedForOutput(child);
-                if (childData.length() > 0) {
-                    if (count > 0) sb.append(",");
-                    sb.append(childData);
-                    count++;
-                }
-            }
-            sb.append("]");
-        }
         sb.append("}");
 
 
@@ -1513,7 +1493,7 @@ public final class NameService {
     }
 
     public String jsonNameDetails(Name name) {
-        return getChildStructureFormattedForOutput(name, false);
+        return getAttributesFormattedForOutput(name, false);
     }
 }
 
