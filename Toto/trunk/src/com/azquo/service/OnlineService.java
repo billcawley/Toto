@@ -570,11 +570,11 @@ public final class OnlineService {
                 message="file imported successfully";
             }
         }
-        if (op.equalsIgnoreCase("inspect")){
-           message = nameService.getStructureForNameSearch(loggedInConnection,searchTerm, nameId, loggedInConnection.getLanguages());
-           if (message.startsWith("error:")) return message;
+        //if (op.equalsIgnoreCase("inspect")){
+        //   message = nameService.getStructureForNameSearch(loggedInConnection,searchTerm, nameId, loggedInConnection.getLanguages());
+        //   if (message.startsWith("error:")) return message;
 
-        }
+        //}
 
         return message;
     }
