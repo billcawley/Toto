@@ -72,7 +72,11 @@
 </head>
 <body>
 <div id="wrapper">
-    <div id="container"></div>
+    <form  method="post" id="names" name="names">
+        <input type="hidden" name="itemschosen" value="" id="itemschosen">
+        <div id="container"></div>
+        <div class="choicesubmit"><p><a href="#" onclick="submitChoice()">Submit</a></p></div>
+    </form>
     <div class="namedetails" id="namedetails" style="display:none">
         <div class="closebutton"><a href="#" onclick="hideDetails();"><img src="https://data.azquo.com:8443/images/closebutton.png" alt="close button"/></a></div>
         <div class="namedetailsline">
@@ -193,6 +197,21 @@
             json +="}";
             hideDetails();
             azquojson("Jstree", json);
+
+        }
+        function submitChoice(){
+            var selected  = $('#container').jstree("get_selected");
+            var items = "";
+            for (item in selected){
+                items += selected[item] + ",";
+
+
+            }
+            document.getElementById("itemschosen").value = items;
+            document.getElementById("names").submit();
+
+            window.close();
+
 
         }
 
