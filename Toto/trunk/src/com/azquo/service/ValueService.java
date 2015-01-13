@@ -363,7 +363,7 @@ public final class ValueService {
 
     }
 
-    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name,Integer> totalSetSize) throws Exception{
+    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name,Integer> totalSetSize, List<String> attributeNames) throws Exception{
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
 
@@ -374,13 +374,18 @@ public final class ValueService {
         // add all names to calcnames except the the one with RPCALC
         // and here's a thing : if more than one name has RPcalc then only the first will be used
         // changed from using rpcalc to making it from calculation. Might need to improve the code later.
+        // todo : I think this logic could be cleaned up a little
         for (Name name : names) {
-            if (!hasCalc) {
+            if (!hasCalc) {// then try and find one
 
                 String calc = name.getAttribute(Name.CALCULATION);
                 if (calc != null){
                     // then get the result of it, this used to be stored in RPCALC
-                    calc = nameService.shuntingYardAlgorithm(azquoMemoryDBConnection, calc, strings, null);
+                    // now we sort quotes outside SYA, this should only need name sorting, not string literal (e.g. date > "2012-12-12") fixing
+                    List<String> nameStrings = new ArrayList<String>();
+                    calc = nameService.replaceQuotedNamesWithMarkers( calc, nameStrings);
+                    calc = nameService.shuntingYardAlgorithm(calc, nameStrings);
+                    //todo : make sure name lookups below use the new style or marker!!
                     if (!calc.startsWith("error")){ // there should be a better way to deal with errors
                         calcString = calc;
                         hasCalc = true;
@@ -388,7 +393,7 @@ public final class ValueService {
                 }
                 if (calcString != null) {
                     hasCalc = true;
-                } else {
+                } else { // no valid calc
                     calcnames.add(name);
                 }
             } else {
@@ -429,9 +434,9 @@ public final class ValueService {
                         values[valNo++] = Double.parseDouble(term);
                     } else {
                         // we assume it's a name id starting with NAMEMARKER
-                        int id = Integer.parseInt(term.substring(1));
+                        //int id = Integer.parseInt(term.substring(1));
                         // so get the name and add it to the other names
-                        Name name = nameService.findById(azquoMemoryDBConnection, id);
+                        Name name = nameService.getNameFromListAndMarker(term, formulaNames);
                         Set<Name> seekSet = new HashSet(calcnames);
                         if (name.getPeers().size() == 0 || name.getPeers().size() == calcnames.size()) {
                             seekSet.add(name);
@@ -442,7 +447,7 @@ public final class ValueService {
 
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
-                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound, totalSetSize);
+                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound, totalSetSize, attributeNames);
 
 
                     }
@@ -1278,7 +1283,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                     thisRowValues.add(values);
                     thisRowNames.add(namesForThisCell);
                     // TODO - peer additive check. If using peers and not additive, don't include children
-                    double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values, totalSetSize); // true = pay attention to names additive flag
+                    double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values, totalSetSize, loggedInConnection.getLanguages()); // true = pay attention to names additive flag
                     //if there's only one value, treat it as text (it may be text, or may include £,$,%)
                     if (restrictCount > 0 && (sortCol==0 || sortCol == colNo +1)) {
                         if (sortDown) {
