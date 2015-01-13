@@ -270,9 +270,6 @@
 
         entryX = selectionX;
         entryY = selectionY;
-        if (origval.substring(0,1)=="<"){
-            var j=1;//debugline
-        }
 
         var height = container.offsetHeight - 3;//allow for padding (2) and border (1) this may not work on all occasions
         var width  = container.offsetWidth - 3;
