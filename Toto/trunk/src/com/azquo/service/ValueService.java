@@ -1185,8 +1185,13 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
         return sb;
     }
-
     public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows) throws Exception {
+        return getDataRegion(loggedInConnection, context, region, filterCount, maxRows, 0);
+    }
+
+
+
+        public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows, int maxCols) throws Exception {
 
         if (loggedInConnection.getRowHeadings(region) == null || loggedInConnection.getRowHeadings(region).size() == 0 || loggedInConnection.getColumnHeadings(region) == null || loggedInConnection.getColumnHeadings(region).size() == 0) {
             return "no headings passed";
@@ -1207,18 +1212,25 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 contextNames.add(thisContextNames.get(0));
             }
         }
-        return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows);
+        return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows, maxCols);
     }
 
 
-    public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictCount) throws Exception {
+    public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictCount, int maxCols) throws Exception {
         loggedInConnection.setContext(region, contextNames); // needed for provenance
         long track = System.currentTimeMillis();
         Integer sortCol = loggedInConnection.getSortCol(region);
+        boolean sortDown = true;
         if (sortCol == null){
-            sortCol = -1;
+            sortCol = 0;
+        }else{
+            if (sortCol < 0){
+                sortCol = -sortCol;
+                sortDown = false;
+            }
+
         }
-        if (sortCol >=0 && restrictCount == 0){
+        if (sortCol >0  && restrictCount == 0){
             restrictCount = loggedInConnection.getRowHeadings(region).size();//this is a signal to sort the rows
         }
 
@@ -1268,8 +1280,8 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                     // TODO - peer additive check. If using peers and not additive, don't include children
                     double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values, totalSetSize); // true = pay attention to names additive flag
                     //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                    if (sortCol==-1 || sortCol == colNo) {
-                        if (restrictCount < 0) {
+                    if (restrictCount > 0 && (sortCol==0 || sortCol == colNo +1)) {
+                        if (sortDown) {
                             sortTotal += cellValue;
                         } else {
                             sortTotal -= cellValue;
