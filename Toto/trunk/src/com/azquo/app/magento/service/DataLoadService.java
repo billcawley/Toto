@@ -42,7 +42,7 @@ public final class DataLoadService {
 
 
 
-    public String findLastUpdate(AzquoMemoryDBConnection azquoMemoryDBConnection){
+    public String findLastUpdate(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         String date = "never";
         Name order = nameService.findByName(azquoMemoryDBConnection, "order");
         if (order!=null){
