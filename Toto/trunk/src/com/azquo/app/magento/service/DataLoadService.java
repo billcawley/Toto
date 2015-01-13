@@ -350,12 +350,26 @@ public final class DataLoadService {
                 part5 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 String orderDate = salesRow.get("created_at").substring(0,10);
-                String orderTime = salesRow.get("created_at").substring(11,12);
+                String orderTime = salesRow.get("created_at").substring(11,13);
+                int orderHour = 0;
+                try {
+                    orderHour = Integer.parseInt(orderTime);
+                    if (orderHour < 12){
+                        orderTime = orderHour + " AM";
+                    }else {
+                        if (orderHour == 12) {
+                            orderHour = 24;
+                        }
+                        orderTime = (orderHour - 12) + " PM";
+                    }
+                }catch (Exception e){
+                    //leave orderTime as is
+                }
 
                  part51 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 Name dateName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderDate, allDates, true,languages);
-                Name hourName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Hour " + orderTime,allHours, true, languages);
+                Name hourName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderTime,allHours, true, languages);
                 part52 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 dateName.addChildWillBePersisted(orderName);
