@@ -287,60 +287,40 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     private Set<Name> findAllChildrenCache = null;
     private Set<Name> findAllChildrenPayAttentionToAdditiveCache = null;
 
+
+    private void findAllChildren(Name name, boolean payAttentionToAdditive, final Set<Name>allChildren){
+        if (payAttentionToAdditive && !name.additive) return;
+        for (Name child:name.getChildren()){
+            if (!allChildren.contains(child)){
+                allChildren.add(child);
+                findAllChildren(child,payAttentionToAdditive,allChildren);
+            }
+        }
+
+    }
+
+
     public Collection<Name> findAllChildren(boolean payAttentionToAdditive) {
         if (payAttentionToAdditive) {
             if (findAllChildrenPayAttentionToAdditiveCache != null) {
                 return findAllChildrenPayAttentionToAdditiveCache;
             }
-            Set<Name> findAllChildrenPayAttentionToAdditive = new HashSet<Name>();
-            Collection<Name> foundAtCurrentLevel = getChildren();
-            if (!additive) { // stop it at the first hurdle
-                foundAtCurrentLevel = new HashSet<Name>();
+            Set<Name> allChildrenPayAttentionToAdditive = new HashSet<Name>();
+            findAllChildren(this,payAttentionToAdditive, allChildrenPayAttentionToAdditive);
+            if (!allChildrenPayAttentionToAdditive.isEmpty()){ // only cache if there's something to cache!
+                findAllChildrenPayAttentionToAdditiveCache = allChildrenPayAttentionToAdditive;
             }
-            while (!foundAtCurrentLevel.isEmpty()) {
-                findAllChildrenPayAttentionToAdditive.addAll(foundAtCurrentLevel);
-                final Set<Name> nextLevelSet = new HashSet<Name>();
-                for (Name n : foundAtCurrentLevel) {
-                    if (n.additive) {
-                        nextLevelSet.addAll(n.getChildren());
-                    }
-                }
-                if (nextLevelSet.isEmpty()) { // no more parents to find
-                    break;
-                }
-                foundAtCurrentLevel = nextLevelSet;
-            }
-            // the set will have taken care of duplicates turn it into an array, cache and return
-            // seems to be no typed toArray, do this instead
-            if (!findAllChildrenPayAttentionToAdditive.isEmpty()){ // only cache if there's something to cache!
-                findAllChildrenPayAttentionToAdditiveCache = findAllChildrenPayAttentionToAdditive;
-            }
-            return findAllChildrenPayAttentionToAdditive; // just return the set , don't se the harm
+            return allChildrenPayAttentionToAdditive; // just return the set , don't se the harm
         } else {
             if (findAllChildrenCache != null) {
                 return findAllChildrenCache;
             }
-            Set<Name> findAllChildren = new HashSet<Name>();
-            Collection<Name> foundAtCurrentLevel = getChildren();
-            while (!foundAtCurrentLevel.isEmpty()) {
-                findAllChildren.addAll(foundAtCurrentLevel);
-                Set<Name> nextLevelSet = new HashSet<Name>();
-                for (Name n : foundAtCurrentLevel) {
-                    if (!findAllChildren.contains(n)){
-                        nextLevelSet.addAll(n.getChildren());
-                    }
-                }
-                if (nextLevelSet.isEmpty()) { // no more parents to find
-                    break;
-                }
-                foundAtCurrentLevel = nextLevelSet;
+            Set<Name> allChildren = new HashSet<Name>();
+            findAllChildren(this,payAttentionToAdditive, allChildren);
+            if (!allChildren.isEmpty()){
+                findAllChildrenCache = allChildren;
             }
-            // the set will have taken care of duplicates turn it into an array, cache and return
-            // seems to be no typed toArray, do this instead
-            if (!findAllChildren.isEmpty()){
-                findAllChildrenCache = findAllChildren;
-            }
-            return findAllChildren; // just return the set , don't se the harm
+            return allChildren; // just return the set , don't se the harm
         }
     }
 
@@ -372,16 +352,19 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         }
         */
         // remove all parents on the old one
+
+
         if (this.getChildren()!=null) {
-            for (Name oldChild : this.getChildren()) {
-                //no check for loose names - this routine is only called when making up temporary sets
-                oldChild.removeFromParents(this);
-            }
-            this.children.clear();
+            Set<Name> oldChildren = new HashSet<Name>(this.getChildren());
+            for (Name oldChild : oldChildren) {
+                removeFromChildrenWillBePersisted(oldChild);
+           }
         }
          for (Name child:children){
             addChildWillBePersisted(child);
          }
+        findAllChildrenCache = null;
+        findAllChildrenPayAttentionToAdditiveCache = null;
 
 
 
