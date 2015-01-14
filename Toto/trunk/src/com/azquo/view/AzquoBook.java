@@ -424,6 +424,7 @@ public  class AzquoBook {
         if (filterCount == 0)
             filterCount = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
         int maxRows = optionNumber(region, "maxrows");
+        if (maxRows == 0) loggedInConnection.clearSortCols();//clear it
         int maxCols = optionNumber(region, "maxcols");
 
         Range rowHeadings = getRange("az_rowheadings" + region);
@@ -506,6 +507,7 @@ public  class AzquoBook {
                 }
             }
         }catch (Exception e){
+            e.printStackTrace();
             return e.getMessage();
         }
 
@@ -544,7 +546,7 @@ public  class AzquoBook {
 
     private String hasOption(String region, String optionName) {
         Range optionrange = getRange("az_options" + region);
-        if (optionrange == null)
+        if (optionrange == null || optionrange.getCellOrNull(0,0) == null)
             return null;
         String options = optionrange.getCellOrNull(0, 0).getStringValue();
         int foundPos = options.toLowerCase().indexOf(optionName.toLowerCase());
@@ -571,7 +573,7 @@ public  class AzquoBook {
         int pos = 0;
         while (pos < list.length()){
             char c = list.charAt(pos++);
-            if (c == '\"') {
+            if (c == '\"' || c =='“' || c=='”') {
                 if (inItem) {
                     inItem = false;
                     items.add(item.toString());
@@ -1306,7 +1308,7 @@ public  class AzquoBook {
                 List<com.azquo.memorydb.Name> choiceList = new ArrayList<Name>();
                 String cellChoice = choice.get(choiceRow,0).getStringValue();
                 List<String> constants = new ArrayList<String>();
-                if (cellChoice.startsWith("\"")){
+                if (cellChoice.startsWith("\"") || cellChoice.startsWith("“")){
                     constants = interpretList(cellChoice);
 
 
