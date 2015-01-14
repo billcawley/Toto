@@ -428,10 +428,10 @@ public final class NameService {
                 int nameNumber = Integer.parseInt(nameMarker.substring(1).trim());
                 return nameList.get(nameNumber);
             } catch (Exception e) {
-                throw new Exception(nameMarker + " is not a valid name marker");
+                throw new Exception("error: " + nameMarker + " is not a valid name");
             }
         } else {
-            throw new Exception(nameMarker + " is not a valid name marker");
+            throw new Exception("error: " + nameMarker + " is not a valid name");
         }
 
     }
@@ -702,7 +702,7 @@ public final class NameService {
                 nextTerm = m.start() + pos + 2;
                 //PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
                 //  need to check for this....
-                while (nextTerm < setFormula.length() && (stringUtils.precededBy(setFormula, TO, nextTerm) || stringUtils.precededBy(setFormula, FROM, nextTerm) || stringUtils.precededBy(setFormula, TOTALLEDAS, nextTerm))) {
+                while (nextTerm < setFormula.length() && (stringUtils.precededBy(setFormula, AS, nextTerm) || stringUtils.precededBy(setFormula, TO, nextTerm) || stringUtils.precededBy(setFormula, FROM, nextTerm) || stringUtils.precededBy(setFormula, TOTALLEDAS, nextTerm))) {
                     int startPos = nextTerm + 1;
                     nextTerm = setFormula.length() + 1;
                     m = p.matcher(setFormula.substring(startPos));
