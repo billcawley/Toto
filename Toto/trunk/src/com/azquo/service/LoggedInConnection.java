@@ -224,7 +224,10 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
 
     }
+    public void clearSortCols(){
+        this.sortCol.clear();
 
+    }
 
     public List<Name> getContext(final String region) {
         if (region == null || region.isEmpty()) {
