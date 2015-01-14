@@ -153,6 +153,8 @@ public final class DataLoadService {
         Map<String, Name> azquoCategoriesFound = new HashMap<String, Name>();
         Map<String, Name> azquoProductsFound = new HashMap<String, Name>();
         List<String> languages = new ArrayList<String>();
+        List<String> defaultLanguage = new ArrayList<String>();
+        defaultLanguage.add(Name.DEFAULT_DISPLAY_NAME);
 
         for (Map<String, String> entityTypeRecord : tableMap.get("catalog_category_entity")) {
             //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1`
@@ -368,8 +370,8 @@ public final class DataLoadService {
 
                  part51 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
-                Name dateName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderDate, allDates, true,languages);
-                Name hourName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderTime,allHours, true, languages);
+                Name dateName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderDate, allDates, false,defaultLanguage);
+                Name hourName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderTime,allHours, true, defaultLanguage);
                 part52 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 dateName.addChildWillBePersisted(orderName);
