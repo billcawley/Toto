@@ -27,8 +27,6 @@ import java.util.regex.Pattern;
  */
 public final class NameService {
 
-    // ok attempt to work things out, Edd putting code he is happy with at the top
-
     public StringUtils stringUtils = new StringUtils(); // just make it quickly like this for the mo
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
     private static final Logger logger = Logger.getLogger(NameService.class);
@@ -55,7 +53,7 @@ public final class NameService {
     public static final String EDIT = "edit";
     public static final String NEW = "new";
     public static final String DELETE = "delete";
-    public static final String ASSOCIATED = "associated";
+    //public static final String ASSOCIATED = "associated";
     public static final String WHERE = "where";
 
 
@@ -67,16 +65,10 @@ public final class NameService {
         final List<Set<Name>> toReturn = new ArrayList<Set<Name>>();
 
         final List<String> nameStrings = new ArrayList<String>();
-        //System.out.println("search by names before strip quotes : " + searchByNames);
         searchByNames = stringUtils.replaceQuotedNamesWithMarkers(searchByNames, nameStrings);
-        //System.out.println("search by names after strip quotes : " + searchByNames);
         List<String> strings = new ArrayList<String>();
-        //System.out.println("search by names before extract strings : " + searchByNames);
         searchByNames = stringUtils.extractQuotedTerms(searchByNames, strings);
-        //System.out.println("search by names after extract strings : " + searchByNames);
-
         List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection,attributeNames);
-
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
@@ -512,148 +504,8 @@ public final class NameService {
         return toReturn;
     }
 
-
-    // these should probably live somewhere more global
-    public static final String ERROR = "ERROR";
-    public static final String WARNING = "WARNING";
-
-    /*
-    public Map<String, String> isAValidNameSet(AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final Set<Name> validNameList) throws Exception {
-
-        //long track = System.currentTimeMillis();
-
-        final Map<String, String> toReturn = new HashMap<String, String>();
-
-        String error = "";
-        String warning = "";
-
-        Name peerName = null;
-        final Map<Name, Boolean> peers = new HashMap<Name, Boolean>(); // the names (or their parents) in this list which have peer requirements, should only be one
-        final Set<Name> namesToCheck = new HashSet<Name>();
-
-        for (Name name : names) {
-            if (name != null) {
-                //
-                String calc = name.getAttribute(Name.CALCULATION);
-                List<String> strings = new ArrayList<String>();
-                List<Name> formulaNames = new ArrayList<Name>();
-                if (calc != null){
-                    // then get the result of it, this used to be stored in RPCALC
-                    calc = shuntingYardAlgorithm(azquoMemoryDBConnection, calc, strings, null);
-                    if (calc.startsWith("error")){ // there should be a better way to deal with errors
-                        calc = null;
-                    }
-                }
-
-                // if one term is calculated, the required peers will be the largest of any set of peers in the calculation
-                // if one term has peers, then all should have peers, and all should be a subset of the largest set, but I'm not checking this currently
-                if (calc != null && calc.length() > 0 && peers.isEmpty()) {
-                    while (calc.length() > 0) {
-                        String nextTerm;
-                        if (calc.indexOf(" ") > 0) {
-                            nextTerm = calc.substring(0, calc.indexOf(" ")).trim();
-                        } else {
-                            nextTerm = calc;
-                        }
-                        if (nextTerm.charAt(0) == NAMEMARKER) {
-                            // Edd added a few != null checks here based on IntelliJ, completely necessary??
-                            Name termName = getNameByAttribute(azquoMemoryDBConnection, nextTerm, null);
-                            if (termName == null) {
-                                error += "the formula for " + (peerName != null ? peerName.getDefaultDisplayName() : "null peer name!") + " is not understood";
-                            }
-                            if (termName != null && termName.getPeers().size() > peers.size()) {
-                                peerName = name;
-                                peers.clear();
-                                for (Name peer : name.getPeers().keySet()) {
-                                    peers.put(peer.findATopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
-                                }
-                            }
-                        }
-                        calc = calc.substring(nextTerm.length()).trim();
-                    }
-                    if (!peers.isEmpty()) {
-                        peerName = name;
-                        validNameList.add(name);
-                    } else {
-                        namesToCheck.add(name);
-                    }
-                } else {
-                    if (!name.getPeers().isEmpty()) { // this name is the one that defines what names the data will require
-                        if (peerName == null) {
-                            peerName = name;
-                            for (Name peer : name.getPeers().keySet()) {
-                                peers.put(peer.findATopParent(), name.getPeers().get(peer));//we need to check that the TOP names are compatible for display in ranges
-                            }
-                        } else {
-                            // commented by edd, can't be used
-                            //error += "two names have peers: " + peerName.getDefaultDisplayName() + " and " + name.getDefaultDisplayName();
-                            return toReturn;
-                        }
-                        validNameList.add(name); // the rest will be added below but we need to add this here as the peer defining name is not on the list of peers
-                    } else {
-                        // not adding the name with peers to namesToCheck is more efficient and it stops the name with peers from showing up as being superfluous to the peer list if that makes sense
-                        namesToCheck.add(name);
-                    }
-                }
-            }
-        }
-
-
-        //System.out.println("track 1-1 : " + (System.currentTimeMillis() - track) + "  ---   ");
-        //track = System.currentTimeMillis();
-
-        if (peers.isEmpty()) {
-            error += "  none of the names passed have peers, I don't know what names are required for this value";
-        } else { // one set of peers, ok :)
-            // match peers child names are ok, ignore extra names, warn about this
-            // think that is a bit ofo dirty way of getting the single item in the set . . .just assign it?
-            for (Name requiredPeer : peers.keySet()) {
-                boolean found = false;
-                // do a first direct pass, see old logic below, I think(!) this will work and be faster. Need to think about that equals on name, much cost of tolowercase?
-                if (namesToCheck.remove(requiredPeer)) {// skip to the next one and remove the name from names to check and add it to the validated list to return
-                    validNameList.add(requiredPeer);
-                    found = true;
-                }
-
-                if (!found) { // couldn't find this peer, need to look up through parents of each name for the peer
-                    // again new logic here
-                    for (Name nameToCheck : namesToCheck) {
-                        if (nameToCheck.findAllParents().contains(requiredPeer)) {
-                            namesToCheck.remove(nameToCheck); // skip to the next one and remove the name from names to check and add it to the validated list to return
-                            validNameList.add(nameToCheck);
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!found) {
-                    error += "  I can't find a required peer : " + requiredPeer.getDefaultDisplayName() + " among the names";
-                }
-            }
-
-            if (namesToCheck.size() > 0) { // means they were not used by the required peers, issue a warning
-                for (Name nameToCheck : namesToCheck) {
-                    warning += "  additional name not required by peers " + nameToCheck.getDefaultDisplayName();
-                }
-            }
-        }
-
-        if (error.length() > 0) {
-            toReturn.put(ERROR, error);
-        }
-        if (warning.length() > 0) {
-            toReturn.put(WARNING, error);
-        }
-        //System.out.println("track 1-2 : " + (System.currentTimeMillis() - track) + "  ---   ");
-        //track = System.currentTimeMillis();
-        return toReturn;
-    }
-
-*/
-
     // to find a set of names, a few bits that were part of the original set of functions
-    // edd wondering how to break this up.
+    // add the default display name since no attributes were specified.
     public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
         List<String> langs = new ArrayList<String>();
         langs.add(Name.DEFAULT_DISPLAY_NAME);
@@ -668,14 +520,12 @@ public final class NameService {
         final List<Name> nameList = new ArrayList<Name>();
 
         /*
-        * This routine now amended t        o allow for union (+) and intersection (*) of sets.
+        * This routine now amended to allow for union (+) and intersection (*) of sets.
         *
         * This entails first sorting out the names in quotes (which may contain the reserved characters),
         * starting from the end (there may be "name","parent" in the list)
         *
         * These will be replaced by !<id>   e.g. !1234
-        *
-        *
         * */
         List<List<Name>> nameStack = new ArrayList<List<Name>>();
         List<String> formulaStrings = new ArrayList<String>();

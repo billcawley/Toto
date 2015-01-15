@@ -2,7 +2,10 @@ package com.azquo.service;
 
 import com.azquo.memorydb.Name;
 
+import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -132,10 +135,117 @@ public class StringUtils {
                 }
             }
             nameStrings.add(nameToFind);
-                instructions = instructions.substring(0, lastQuoteStart) + NameService.NAMEMARKER + (nameStrings.size() - 1) + " " + instructions.substring(lastQuoteEnd + 1);
-                lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
+            instructions = instructions.substring(0, lastQuoteStart) + NameService.NAMEMARKER + (nameStrings.size() - 1) + " " + instructions.substring(lastQuoteEnd + 1);
+            lastQuoteEnd = instructions.lastIndexOf(Name.QUOTE);
         }
         return instructions;
+    }
+
+    /* rewriting the parsing, it needs to deal with this sort of thing :
+
+`All months` level 2 from `2014-01-01` to `2015-01-01` as `Period Chosen`
+`High Street`,London,Ontario level 2 from `2014-01-01` to `2015-01-01` as `Period Chosen`
+`2013-12-05`,`All dates` level lowest
+Entities children
+`All Customers` children - `Customer Unknown`
+`All Months` children from `2014-01-01` to `2015-01-01` as `Period Chosen`
+`All products` children sorted * `Kids UK foot size` children level lowest parents
+`Kids UK foot size` children level 1 sorted
+'Boutique Hotels';level lowest WHERE Review date >= "2015-05-05" * order level lowest * All ratings level lowest
+
+nameStrings are strings we assume are references to names
+string literals are things in normal quotes e.g. dates
+Names need to be quoted like Mysql table names with ` if they contain spaces, are keywords etc.
+Also - operators + - / *
+
+I'll add better tracking of where an error is later
+
+     */
+
+    DecimalFormat twoDecimal = new DecimalFormat("##");
+
+    public String parseStatement(String statement, List<String> nameStrings, List<String> stringLiterals) throws Exception {
+        // ok first we'll do the string literals
+        // this matcher deals with escaped quotes
+        // the goal of this little chunk is pretty simple, replace all the "here is a string literal with all sorts of characters*&)*(&" strings with "123"
+        // the number being the place in the original string, as good a way as any to look up in the map.
+        // We do this to enable
+        StringBuilder modifiedStatement = new StringBuilder();
+        Pattern p = Pattern.compile("(\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\")");
+        Matcher matcher = p.matcher(statement);
+        int lastEnd = 0;
+        while(matcher.find()){
+            if (modifiedStatement.length() == 0){
+                modifiedStatement.append(statement.substring(0,matcher.start()));
+            } else {
+                modifiedStatement.append(statement.substring(lastEnd, matcher.start()));
+            }
+            lastEnd = matcher.end();
+            stringLiterals.add(matcher.group());
+            modifiedStatement.append(matcher.start());
+        }
+        if (lastEnd != 0){
+            modifiedStatement.append(statement.substring(lastEnd));
+        }
+        if (modifiedStatement.length() > 0){
+            statement = modifiedStatement.toString();
+        }
+
+        // now sort the name quotes - similar to above but what is replaced is just needed here, the way names can be referenced
+        // with hierarchy and commas makes things more interesting e.g. `High Street`,London,Ontario. In this case we'll have !01,London,Ontario instead
+        modifiedStatement = new StringBuilder();
+        p = Pattern.compile("`.*?`"); // don't need escaping here I don't think. Possible to add though.
+        matcher = p.matcher(statement);
+        lastEnd = 0;
+        List<String> quotedNameCache = new ArrayList<String>();
+        while(matcher.find()){
+            if (modifiedStatement.length() == 0){
+                modifiedStatement.append(statement.substring(0,matcher.start()));
+            } else {
+                modifiedStatement.append(statement.substring(lastEnd, matcher.start()));
+            }
+            lastEnd = matcher.end();
+            quotedNameCache.add(matcher.group());
+            // it should never be more and it breaks our easy fixed length marker thing here
+            if (quotedNameCache.size() > 100){
+                throw new Exception("More than 100 quoted names.");
+            }
+            modifiedStatement.append(NameService.NAMEMARKER + twoDecimal.format(quotedNameCache.size()));
+        }
+        if (lastEnd != 0){
+            modifiedStatement.append(statement.substring(lastEnd));
+        }
+        if (modifiedStatement.length() > 0){
+            statement = modifiedStatement.toString();
+        }
+
+        // ok we've escaped what we need to
+
+        statement = statement.replace(";", " "); // legacy from when this was required
+
+        // now, we want to run validation on what's left really. One problem is that operators might not have spaces
+        // ok this is hacky, I don't really care for the moment
+        statement = statement.replace("*", " * ").replace("  ", " ");
+        statement = statement.replace("+", " * ").replace("  ", " ");
+        statement = statement.replace("-", " * ").replace("  ", " ");
+        statement = statement.replace("/", " * ").replace("  ", " ");
+
+        System.out.println(statement);
+
+
+ /* so now we have things like this, should be ready for a basic test
+        !1 level 2 from !2 to !3 as !4
+!1,London,Ontario level 2 from !2 to !3 as !4
+!1,!2 level lowest
+Entities children
+!1 children * !2
+!1 children from !2 to !3 as !4
+!1 children sorted * !2 children level lowest parents
+!1 children level 1 sorted
+!1 level lowest WHERE !2 >= 54 * order level lowest * !3 level lowest 114 thing thing
+
+        */
+        return statement;
     }
 
     // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*

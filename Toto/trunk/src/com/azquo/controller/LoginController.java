@@ -6,6 +6,7 @@ import com.azquo.jsonrequestentities.LoginJsonRequest;
 import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
 import com.azquo.service.OnlineService;
+import com.azquo.service.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 
 /**
  * Created with IntelliJ IDEA.
@@ -42,6 +45,20 @@ public class LoginController {
     @RequestMapping
     @ResponseBody
     public String handleRequest(HttpServletRequest request)throws Exception{
+
+        // initial parse test
+
+        StringUtils stringUtils = new StringUtils();
+
+        stringUtils.parseStatement("`All months` level 2 from `2014-01-01` to `2015-01-01` as `Period Chosen`", new ArrayList<String>(), new ArrayList<String>());
+        stringUtils.parseStatement("`High Street`,London,Ontario level 2 from `2014-01-01` to `2015-01-01` as `Period Chosen`", new ArrayList<String>(), new ArrayList<String>());
+        stringUtils.parseStatement("`2013-12-05`,`All dates` level lowest", new ArrayList<String>(), new ArrayList<String>());
+        stringUtils.parseStatement("Entities children", new ArrayList<String>(), new ArrayList<String>());
+        stringUtils.parseStatement("`All Customers` children- `Customer Unknown`", new ArrayList<String>(), new ArrayList<String>());
+        stringUtils.parseStatement("`All Months` children from `2014-01-01` to `2015-01-01` as `Period Chosen`", new ArrayList<String>(), new ArrayList<String>());
+        stringUtils.parseStatement("`All products` children sorted * `Kids UK foot size` children level lowest parents", new ArrayList<String>(), new ArrayList<String>());
+        stringUtils.parseStatement("`Kids UK foot size` children level 1 sorted", new ArrayList<String>(), new ArrayList<String>());
+        stringUtils.parseStatement("`Boutique Hotels` level lowest WHERE `Review date` >= \"2015-05-05\"* order level lowest*`All ratings` level lowest \"2015-05-05\" thing thing ", new ArrayList<String>(), new ArrayList<String>());
 
 
         Enumeration<String> parameterNames = request.getParameterNames();
