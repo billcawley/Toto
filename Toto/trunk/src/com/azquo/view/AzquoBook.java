@@ -1314,7 +1314,7 @@ public  class AzquoBook {
 
                 }else {
                     try {
-                        choiceList = nameService.interpretName(loggedInConnection, cellChoice, loggedInConnection.getLanguages());
+                        choiceList = nameService.parseQuery(loggedInConnection, cellChoice, loggedInConnection.getLanguages());
                     } catch (Exception e) {
 
                         //TODO think what to do !
@@ -2196,7 +2196,7 @@ public  class AzquoBook {
         fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
         String result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType, loggedInConnection.getLanguages());
         if (!result.startsWith("error:")){
-            String saveFileName = "/home/azquo/databases/" + loggedInConnection.getCurrentDBName()+"/uploads/" + azquoSheet.getName() + " " +  df.format(new Date()) + ".xlsx";
+            String saveFileName = "/home/cawley/databases/" + loggedInConnection.getCurrentDBName()+"/uploads/" + azquoSheet.getName() + " " +  df.format(new Date()) + ".xlsx";
             File file = new File(saveFileName);
             file.getParentFile().mkdirs();
             wb.save(saveFileName, SaveFormat.XLSX);

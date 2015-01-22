@@ -46,21 +46,6 @@ public class LoginController {
     @ResponseBody
     public String handleRequest(HttpServletRequest request)throws Exception{
 
-        // initial parse test
-
-        StringUtils stringUtils = new StringUtils();
-
-        stringUtils.parseStatement("`All months` level 2 from `2014-01-01` to `2015-01-01` as `Period Chosen`", new ArrayList<String>(), new ArrayList<String>());
-        stringUtils.parseStatement("`High Street`,London,Ontario level 2 from `2014-01-01` to `2015-01-01` as `Period Chosen`", new ArrayList<String>(), new ArrayList<String>());
-        stringUtils.parseStatement("`2013-12-05`,`All dates` level lowest", new ArrayList<String>(), new ArrayList<String>());
-        stringUtils.parseStatement("Entities children", new ArrayList<String>(), new ArrayList<String>());
-        stringUtils.parseStatement("`All Customers` children- `Customer Unknown`", new ArrayList<String>(), new ArrayList<String>());
-        stringUtils.parseStatement("`All Months` children from `2014-01-01` to `2015-01-01` as `Period Chosen`", new ArrayList<String>(), new ArrayList<String>());
-        stringUtils.parseStatement("`All products` children sorted * `Kids UK foot size` children level lowest parents", new ArrayList<String>(), new ArrayList<String>());
-        stringUtils.parseStatement("`Kids UK foot size` children level 1 sorted", new ArrayList<String>(), new ArrayList<String>());
-        stringUtils.parseStatement("`Boutique Hotels` level lowest WHERE `Review date` >= \"2015-05-05\"* order level lowest*`All ratings` level lowest \"2015-05-05\" thing thing ", new ArrayList<String>(), new ArrayList<String>());
-
-
         Enumeration<String> parameterNames = request.getParameterNames();
 
         String userEmail=null;

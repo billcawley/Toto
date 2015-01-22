@@ -1,9 +1,10 @@
 <component name="libraryTable">
-  <library name="net.openhft:koloboke-api-jdk6-7:0.6.5" type="repository">
-    <properties maven-id="net.openhft:koloboke-api-jdk6-7:0.6.5" />
+  <library name="net.openhft:koloboke-impl-jdk6-7:0.6.5" type="repository">
+    <properties maven-id="net.openhft:koloboke-impl-jdk6-7:0.6.5" />
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/lib/koloboke-api-jdk6-7-0.6.5.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/koloboke-impl-jdk6-7-0.6.5.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/jsr305-2.0.3.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/koloboke-api-jdk6-7-0.6.5.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/auto-value-1.0-rc1.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/auto-service-1.0-rc1.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/guava-16.0.jar!/" />

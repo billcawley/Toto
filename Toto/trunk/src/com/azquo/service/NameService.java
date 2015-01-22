@@ -5,7 +5,6 @@ import com.azquo.jsonrequestentities.NameListJson;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 
 import java.io.UnsupportedEncodingException;
@@ -42,10 +41,10 @@ public final class NameService {
     public static final String LOWEST = "lowest";
     public static final String ALL = "all";
     public static final char NAMEMARKER = '!';
+    public static final char ATTRIBUTEMARKER = '|';
     public static final String PEERS = "peers";
     public static final String COUNTBACK = "count back";
     public static final String COMPAREWITH = "compare with";
-    public static final String TOTALLEDAS = "totalled as";
     public static final String AS = "as";
     public static final String STRUCTURE = "structure";
     public static final String NAMELIST = "namelist";
@@ -53,7 +52,6 @@ public final class NameService {
     public static final String EDIT = "edit";
     public static final String NEW = "new";
     public static final String DELETE = "delete";
-    //public static final String ASSOCIATED = "associated";
     public static final String WHERE = "where";
 
 
@@ -63,17 +61,15 @@ public final class NameService {
 
     public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
         final List<Set<Name>> toReturn = new ArrayList<Set<Name>>();
-
-        final List<String> nameStrings = new ArrayList<String>();
-        searchByNames = stringUtils.replaceQuotedNamesWithMarkers(searchByNames, nameStrings);
-        List<String> strings = new ArrayList<String>();
-        searchByNames = stringUtils.extractQuotedTerms(searchByNames, strings);
+        List<String> formulaStrings = new ArrayList<String>();
+        List<String> nameStrings = new ArrayList<String>();
+        List<String> attributeStrings = new ArrayList<String>(); // attribute names is taken. Perhaps need to think about function parameter names
+        searchByNames = stringUtils.parseStatement(searchByNames, nameStrings, formulaStrings, attributeStrings);
         List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection,attributeNames);
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            //System.out.println("new name in decode string : " + nameName);
-            List<Name> nameList = interpretSetTerm( nameName, strings, referencedNames);
+            List<Name> nameList = interpretSetTerm( nameName, formulaStrings, referencedNames, attributeStrings);
             toReturn.add(new HashSet<Name>(nameList));
         }
         return toReturn;
@@ -132,7 +128,6 @@ public final class NameService {
         It can accept multiple layers - ' London, Ontario, Place' would find   Place/Canada/Ontario/London
         It should also recognise ""    "London, North", "Ontario", "Place"     should recognise that the 'North' is part of 'London, North'
 
-        It will also recognise an interim substitution starting '!'
         */
 
         // language effectively being the attribute name
@@ -159,10 +154,6 @@ public final class NameService {
 
         return getNameByAttribute(azquoMemoryDBConnection, remainder, parent, attributeNames);
     }
-
-/*    public List<Name> searchNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String search) {
-        return azquoMemoryDBConnection.getAzquoMemoryDB().searchNames(Name.DEFAULT_DISPLAY_NAME, search);
-    }*/
 
     public void clearChildren(Name name) throws Exception {
         // DON'T DELETE SET WHILE ITERATING, SO MAKE A COPY FIRST
@@ -364,7 +355,7 @@ public final class NameService {
         int level = 1;
         if (levelString != null) {
             if (levelString.equalsIgnoreCase(LOWEST)) {
-                System.out.println("lowest");
+                //System.out.println("lowest");
                 level = LOWEST_LEVEL_INT;
             } else if (levelString.equalsIgnoreCase(ALL)) {
                 level = ALL_LEVEL_INT;
@@ -412,7 +403,7 @@ public final class NameService {
         }
     }
 
-    // when parsing expressions we replace names with markers and jame them on a list. The expression is manipulated before being executed. On execution the referenced names need to be read from a list.
+    // when parsing expressions we replace names with markers and jam them on a list. The expression is manipulated before being executed. On execution the referenced names need to be read from a list.
 
     public Name getNameFromListAndMarker(String nameMarker, List<Name> nameList) throws Exception{
         if (nameMarker.charAt(0) == NAMEMARKER) {
@@ -506,18 +497,25 @@ public final class NameService {
 
     // to find a set of names, a few bits that were part of the original set of functions
     // add the default display name since no attributes were specified.
-    public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
+    public final List<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
         List<String> langs = new ArrayList<String>();
         langs.add(Name.DEFAULT_DISPLAY_NAME);
-        return interpretName(azquoMemoryDBConnection, setFormula, langs);
+        return parseQuery(azquoMemoryDBConnection, setFormula, langs);
     }
 
 
     // todo : rename - this is pretty much the start of expression parsing
 
-    public final List<Name> interpretName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
+    public final List<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
 
-        final List<Name> nameList = new ArrayList<Name>();
+
+/*        // sorting quotes used to be done inside SYA now it's done outside
+        setFormula = stringUtils.replaceQuotedNamesWithMarkers(setFormula, nameStrings);
+        //save away constants as a separate array, replace temporarily with 'xxxxxxx'
+        setFormula = stringUtils.extractQuotedTerms(setFormula, formulaStrings);*/
+
+        // newer code. Need decent errors (Exceptions?)
+
 
         /*
         * This routine now amended to allow for union (+) and intersection (*) of sets.
@@ -527,19 +525,18 @@ public final class NameService {
         *
         * These will be replaced by !<id>   e.g. !1234
         * */
+        final List<Name> toReturn = new ArrayList<Name>();
         List<List<Name>> nameStack = new ArrayList<List<Name>>();
         List<String> formulaStrings = new ArrayList<String>();
         List<String> nameStrings = new ArrayList<String>();
+        List<String> attributeStrings = new ArrayList<String>(); // attribute names is taken. Perhaps need to think about function parameter names
 
-        // sorting quotes used to be done inside SYA now it's done outside
-        setFormula = stringUtils.replaceQuotedNamesWithMarkers(setFormula, nameStrings);
-        //save away constants as a separate array, replace temporarily with 'xxxxxxx'
-        setFormula = stringUtils.extractQuotedTerms(setFormula, formulaStrings);
-        setFormula = stringUtils.shuntingYardAlgorithm(setFormula, nameStrings, this);
+        setFormula = stringUtils.parseStatement(setFormula,nameStrings, formulaStrings, attributeStrings);
+        List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection,attributeNames);
+        setFormula = stringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
-        List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection,attributeNames);
-
+        //System.out.println(setFormula);
         int pos = 0;
         int stackCount = 0;
         //int stringCount = 0;
@@ -552,7 +549,7 @@ public final class NameService {
                 nextTerm = m.start() + pos + 2;
                 //PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
                 //  need to check for this....
-                while (nextTerm < setFormula.length() && (stringUtils.precededBy(setFormula, AS, nextTerm) || stringUtils.precededBy(setFormula, TO, nextTerm) || stringUtils.precededBy(setFormula, FROM, nextTerm) || stringUtils.precededBy(setFormula, TOTALLEDAS, nextTerm))) {
+                while (nextTerm < setFormula.length() && (stringUtils.precededBy(setFormula, AS, nextTerm) || stringUtils.precededBy(setFormula, TO, nextTerm) || stringUtils.precededBy(setFormula, FROM, nextTerm) || stringUtils.precededBy(setFormula, AS, nextTerm))) {
                     int startPos = nextTerm + 1;
                     nextTerm = setFormula.length() + 1;
                     m = p.matcher(setFormula.substring(startPos));
@@ -563,26 +560,11 @@ public final class NameService {
             }
             if (op == NAMEMARKER) {
                 stackCount++;
-                List<Name> nextNames = interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames);
+                List<Name> nextNames = interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeNames);
                 nameStack.add(nextNames);
-            }/* else if (op == '&') { commented by edd 12/01/15. This allowed auto adding to a list e.g. a names north south east west would then get north shop east shop south shop etc. Used by expedia report, am zapping for the moment
-                if (formulaStrings.size() == 0) {
-                    throw new Exception("'&' without a string");
-                }
-                List<Name> nextNames = new ArrayList<Name>();
-                List<Name> baseNames = nameStack.get(stackCount - 1);
-                for (Name name : baseNames) {
-                    String nameToFind = name.getDefaultDisplayName() + formulaStrings.get(formulaStrings.size() - 1);
-                    nextNames.addAll(interpretSetTerm(azquoMemoryDBConnection, nameToFind, formulaStrings, attributeNames));
-                }
-                formulaStrings.remove(formulaStrings.size() - 1);
-                nameStack.remove(stackCount - 1);
-                nameStack.add(nextNames);
-
-            }*/ else if (stackCount-- < 2) {
+            } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + setFormula);
-
-            } else if (op == '*') {
+            } else if (op == '*') { // * meaning intersection here . . .
                 nameStack.get(stackCount - 1).retainAll(nameStack.get(stackCount));
                 nameStack.remove(stackCount);
             } else if (op == '-') {
@@ -599,14 +581,14 @@ public final class NameService {
         if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
             for (Name possible : nameStack.get(0)) {
                 if (isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())) {
-                    nameList.add(possible);
+                    toReturn.add(possible);
                 }
             }
         } else {
-            nameList.addAll(nameStack.get(0));
+            toReturn.addAll(nameStack.get(0));
         }
 
-        return nameList;
+        return toReturn;
     }
 
     public Name inParentSet(Name name, Collection<Name> maybeParents) {
@@ -648,37 +630,17 @@ public final class NameService {
         return confidential == null || !confidential.equalsIgnoreCase("true");
     }
 
-/*    private void getAssociations(AzquoMemoryDBConnection azquoMemoryDBConnection, Collection<Name> names, String associatedString, Set<Name> namesFound, List<String> attributeNames) {
-        /*
-        * this routine finds sets associated with the given name.  e.g. if the name is 'UK' and the associatedString is 'shops' the
-        * routine looks for 'UK shops'.  If it does not find that, it loops through subsets such as 'London shops', 'West End shops', 'Oxford Street shops', r
-        * returning the set of sets.  The required names will be the elements of these sets (e.g. the shops themselves)
-        *
-        *
-        for (Name name : names) {
-            Name associatedName = findByName(azquoMemoryDBConnection, name.getDefaultDisplayName() + " " + associatedString, attributeNames);
-            if (associatedName != null) {
-                namesFound.add(associatedName);
-            } else {
-                getAssociations(azquoMemoryDBConnection, name.getChildren(), associatedString, namesFound, attributeNames);
-            }
-        }
-    }*/
-
-    //
-
-    private void filter(List<Name> names, String condition, List<String> strings) {
+    private void filter(List<Name> names, String condition, List<String> strings, List<String> attributeNames) {
         //NOT HANDLING 'OR' AT PRESENT
         int andPos = condition.toLowerCase().indexOf(" and ");
         if (andPos < 0) {
             andPos = condition.length();
         }
-        int stringCount = 0;
         Set<Name> namesToRemove = new HashSet<Name>();
         int lastPos = 0;
         while (andPos > 0) {
             String clause = condition.substring(0, andPos).trim();
-            Pattern p = Pattern.compile("[<=>]+"); //
+            Pattern p = Pattern.compile("[<=>]+");
             Matcher m = p.matcher(clause);
 
             if (m.find()) {
@@ -686,10 +648,28 @@ public final class NameService {
                 int pos = m.start();
                 String clauseLhs = clause.substring(0, pos).trim();
                 String clauseRhs = clause.substring(m.end()).trim();
+
+                // note, given the new parser these clauses will either be literals or begin .
+                // there may be code improvements that can be made knowing this
+
+                if (clauseLhs.startsWith(".")){
+                    clauseLhs = clauseLhs.substring(1);
+                    if (clauseLhs.charAt(0) == ATTRIBUTEMARKER){// we need to replace it
+                        attributeNames.get(Integer.parseInt(clauseLhs.substring(1, 3)));
+                    }
+                }
+
+                if (clauseRhs.startsWith(".")){
+                    clauseRhs = clauseRhs.substring(1);
+                    if (clauseRhs.charAt(0) == ATTRIBUTEMARKER){// we need to replace it
+                        attributeNames.get(Integer.parseInt(clauseRhs.substring(1, 3)));
+                    }
+                }
+
                 String valRhs = "";
                 boolean fixed = false;
                 if (clauseRhs.charAt(0) == '"') {
-                    valRhs = strings.get(stringCount++);// ignore the value in the clause - it must be a
+                    valRhs = strings.get(Integer.parseInt(clauseRhs.substring(1, 3)));// anything left in quotes is referenced in the strings list
                     fixed = true;
                 }
 
@@ -733,9 +713,7 @@ public final class NameService {
 
     }
 
-    // edd trying to break up
-
-    private List<Name> interpretSetTerm( String setTerm, List<String> strings, List<Name> referencedNames) throws Exception {
+    private List<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
 
         //System.out.println("interpret set term . . ." + setTerm);
         List<Name> namesFound = new ArrayList<Name>();
@@ -749,11 +727,8 @@ public final class NameService {
         String countString = stringUtils.getInstruction(setTerm, COUNT);
         final String countbackString = stringUtils.getInstruction(setTerm, COUNTBACK);
         final String compareWithString = stringUtils.getInstruction(setTerm, COMPAREWITH);
-        String totalledAsString = stringUtils.getInstruction(setTerm, TOTALLEDAS);
-        final String asString = stringUtils.getInstruction(setTerm, AS);//'as' and 'totalled as' are the same - create a new name of the set.
-        if (asString != null){
-            totalledAsString = asString;
-        }
+        String totalledAsString = stringUtils.getInstruction(setTerm, AS);
+        // removed totalled as
 
         //final String associatedString = stringUtils.getInstruction(setTerm, ASSOCIATED);
         final String whereString = stringUtils.getInstruction(setTerm, WHERE);
@@ -761,10 +736,10 @@ public final class NameService {
             childrenString = "true";
         }
         List<Name> names = new ArrayList<Name>();
-
+        // used to be ; at the end of a name
         String nameString = setTerm;
-        if (setTerm.indexOf(';') > 0) {
-            nameString = setTerm.substring(0, setTerm.indexOf(';')).trim();
+        if (setTerm.indexOf(' ') > 0) {
+            nameString = setTerm.substring(0, setTerm.indexOf(' ')).trim();
         }
         final Name name = getNameFromListAndMarker(nameString, referencedNames);
         if (name == null) {
@@ -788,17 +763,6 @@ public final class NameService {
                 names = findChildrenFromToCount(names, fromString, toString, countString, countbackString, compareWithString, referencedNames);
             }
         }
-        /* don't check allowed here - wait until the end of 'interpret term'
-        if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
-            for (Name possible : names) {
-                if (isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())) {
-                    namesFound.add(possible);
-                }
-            }
-        } else {
-            namesFound.addAll(names);
-        }
-        */
         namesFound.addAll(names);
         if (totalledAsString != null) {
             // now will only work on existing names
@@ -807,21 +771,6 @@ public final class NameService {
             namesFound.clear();
             namesFound.add(totalName);
         }
-        // edd getting rid of associations, surely this should be done by set intersection?
-        /*if (associatedString != null) {
-            Set<Name> associatedNames = new HashSet<Name>();
-            //convert the list to a set.....
-            Set<Name> originalNames = new HashSet<Name>();
-            for (Name name2 : namesFound) {
-                originalNames.add(name2);
-            }
-            getAssociations(azquoMemoryDBConnection, originalNames, associatedString, associatedNames, attributeNames);
-            //and convert back to a list
-            namesFound.clear();
-            for (Name name2 : associatedNames) {
-                namesFound.addAll(name2.findAllChildren(false));
-            }
-        }*/
         if (parentsString != null) {
             Set<Name> parents = new HashSet<Name>();
             for (Name child : namesFound) {
@@ -833,7 +782,7 @@ public final class NameService {
 
         }
         if (whereString != null) {
-            filter(namesFound, whereString, strings);
+            filter(namesFound, whereString, strings, attributeStrings);
         }
         if (sorted != null) {
             Collections.sort(namesFound);
@@ -841,60 +790,8 @@ public final class NameService {
         return namesFound;
     }
 
-    // ok it seems the name is passed purely for debugging purposes
-    // called from shuntingyardalgorithm 3 times, think not on operations
-    // it seems the term can be one of two things, a double value or a name.
-    // first tries to parse the double value and then returns it with a space, just confirming what
-    // otherwise it tries to find by name and if it finds it jams in the name ID between NAMEMARKER
-    // but NAMEMARKER is only used here so what's going on there??
-
-    //  NAMEMARKER is used to remove any contentious characters from expressions (e.g. operators that should not be there)
-
-    protected String interpretTerm(final String term, List<String> nameReferences) {
-
-        //System.out.println("interpret term : " + term + " attribute names : " + attributeNames);
-
-        if (term.startsWith("\"") && term.endsWith("\"")) {
-            //strings already saved, so comment out the line below
-            //savedStrings.add(term.substring(1,term.length()-1));
-            return "";
-        }
-        if (term.charAt(0) == NAMEMARKER) return term + " "; // already sorted
-
-        if (NumberUtils.isNumber(term)) {
-            // do we need to parse double here??
-            return Double.parseDouble(term) + " ";
-        }
-        // this routine must interpret set formulae as well as calc formulae, hence the need to look for semicolons
-        int nameEnd = term.indexOf(";");
-        if (nameEnd < 0) {
-            nameEnd = term.length();
-        }
-        nameReferences.add(term.substring(0, nameEnd));
-        return ("" + NAMEMARKER + (nameReferences.size() - 1) + term.substring(nameEnd) + " ");
-
-    }
-
-/*    private String replaceStrings(String calc, List<String> strings) {
-
-        int quotePos = calc.indexOf("\"");
-        int constantNo = 0;
-        while (quotePos >= 0) {
-            int quoteEnd = calc.indexOf("\"", quotePos + 1);
-            if (quoteEnd > 0) {
-                calc = calc.substring(0, quotePos + 1) + strings.get(constantNo++) + calc.substring(quoteEnd);
-                quotePos = calc.indexOf("\"", quoteEnd + 1);
-            } else {
-                quotePos = -1;
-            }
-        }
-        return calc;
-    }*/
-
-
-
     // pretty much replaced the original set of functions to do basic name manipulation
-    // needs a logged in connection forn the structure return
+    // needs a logged in connection for the structure return
 
     public String processJsonRequest(AzquoMemoryDBConnection azquoMemoryDBConnection, NameJsonRequest nameJsonRequest, List<String> attributeNames) throws Exception {
         String toReturn = "";
@@ -905,7 +802,7 @@ public final class NameService {
         }
         if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)) {
             try {
-                return getNamesFormattedForOutput(interpretName(azquoMemoryDBConnection, nameJsonRequest.name, attributeNames));
+                return getNamesFormattedForOutput(parseQuery(azquoMemoryDBConnection, nameJsonRequest.name, attributeNames));
             } catch (Exception e) {
                 return "Error:" + e.getMessage();
             }
@@ -1225,5 +1122,6 @@ public final class NameService {
     public String jsonNameDetails(Name name) {
         return getChildStructureFormattedForOutput(name, false);
     }
+
 }
 

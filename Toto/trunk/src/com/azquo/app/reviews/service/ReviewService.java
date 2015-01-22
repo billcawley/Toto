@@ -361,9 +361,9 @@ public class ReviewService {
         }
         try{
             if (startDate == null){
-                orderItems = nameService.interpretName(azquoMemoryDbConnection, division + ";level lowest * All ratings;level lowest");
+                orderItems = nameService.parseQuery(azquoMemoryDbConnection, division + ";level lowest * `All ratings`;level lowest");
             }else{
-                orderItems = nameService.interpretName(azquoMemoryDbConnection, division + ";level lowest;WHERE Review date >= \"" + startDate + "\" * order;level lowest * All ratings;level lowest");
+                orderItems = nameService.parseQuery(azquoMemoryDbConnection, division + ";level lowest;WHERE .`Review date` >= \"" + startDate + "\" * order;level lowest * `All ratings`;level lowest");
             }
 
         } catch (Exception e){
@@ -760,7 +760,7 @@ public class ReviewService {
                 String choiceset = menuItem.getAttribute("Choice set");
                 if (choiceset != null) {
                     String listToShow = choiceset + ";children * " + business.getDefaultDisplayName() + ";level all";
-                    List<Name> namesFound = nameService.interpretName(masterDBConnection, listToShow);
+                    List<Name> namesFound = nameService.parseQuery(masterDBConnection, listToShow);
                     hd.startElement("","","HEADING",atts);
                     for (Name fieldName : menuItem.getChildren()) {
                         if (fieldName.getAttribute("SummaryScreenItem") != null) {
@@ -859,7 +859,7 @@ public class ReviewService {
                             }
 
                         }else {
-                            List<Name> selectName = nameService.interpretName(masterDBConnection, clause);
+                            List<Name> selectName = nameService.parseQuery(masterDBConnection, clause);
                             if (selectName != null) {
                                 hd.startElement("", "", "SELECT", atts);
                                 for (Name child : selectName) {
@@ -935,7 +935,7 @@ public class ReviewService {
         AzquoMemoryDBConnection masterDBConnection = reviewsConnectionMap.getConnection(UserService.MASTERDBNAME);
         Name menuItem = nameService.findByName(masterDBConnection, itemName);
 
-        List<Name> fieldNames = nameService.interpretName(masterDBConnection, itemName + ";children;from " + fieldNameStr + ";to " + fieldNameStr);
+        List<Name> fieldNames = nameService.parseQuery(masterDBConnection, itemName + ";children;from " + fieldNameStr + ";to " + fieldNameStr);
         Name fieldName = fieldNames.iterator().next();
         Name nameToEdit = nameService.findById(masterDBConnection, nameId);
         String uploadDir = menuItem.getAttribute("uploaddir");

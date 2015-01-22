@@ -380,11 +380,15 @@ public final class ValueService {
                 String calc = name.getAttribute(Name.CALCULATION);
                 if (calc != null){
                     // then get the result of it, this used to be stored in RPCALC
-                    // now we sort quotes outside SYA, this should only need name sorting, not string literal (e.g. date > "2012-12-12") fixing
+                    // it does extra things we won't use but the simple parser before SYA should be fine here
+                    List<String> formulaStrings = new ArrayList<String>();
                     List<String> nameStrings = new ArrayList<String>();
-                    calc = stringUtils.replaceQuotedNamesWithMarkers( calc, nameStrings);
-                    calc = stringUtils.shuntingYardAlgorithm(calc, nameStrings, nameService);
-                    //todo : make sure name lookups below use the new style or marker!!
+                    List<String> attributeStrings = new ArrayList<String>();
+
+                    calc = stringUtils.parseStatement(calc,nameStrings, formulaStrings, attributeStrings);
+                    formulaNames = nameService.getNameListFromStringList(nameStrings, azquoMemoryDBConnection,attributeNames);
+                    calc = stringUtils.shuntingYardAlgorithm(calc);
+                    //todo : make sure name lookups below use the new style of marker
                     if (!calc.startsWith("error")){ // there should be a better way to deal with errors
                         calcString = calc;
                         hasCalc = true;
@@ -436,19 +440,16 @@ public final class ValueService {
                         //int id = Integer.parseInt(term.substring(1));
                         // so get the name and add it to the other names
                         Name name = nameService.getNameFromListAndMarker(term, formulaNames);
-                        Set<Name> seekSet = new HashSet(calcnames);
+                        Set<Name> seekSet = new HashSet<Name>(calcnames);
                         if (name.getPeers().size() == 0 || name.getPeers().size() == calcnames.size()) {
                             seekSet.add(name);
                         } else {
                             seekSet = trimNames(name, seekSet);
                             seekSet.add(name);
                         }
-
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
                         values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound, totalSetSize, attributeNames);
-
-
                     }
                 }
             }
@@ -603,7 +604,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                     }
                     try{
 
-                        List<Name> nameList =  nameService.interpretName(azquoMemoryDBConnection, cellString, attributeNames);
+                        List<Name> nameList =  nameService.parseQuery(azquoMemoryDBConnection, cellString, attributeNames);
                         row.add(nameList);
 
                     } catch (Exception e){
@@ -1207,7 +1208,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         final StringTokenizer st = new StringTokenizer(context, "\n");
         final List<Name> contextNames = new ArrayList<Name>();
         while (st.hasMoreTokens()) {
-            final List<Name> thisContextNames = nameService.interpretName(loggedInConnection,st.nextToken().trim());
+            final List<Name> thisContextNames = nameService.parseQuery(loggedInConnection, st.nextToken().trim());
             if (thisContextNames.size() > 1){
                 return "error: context names must be individual - use 'as' to put sets in context";
             }
