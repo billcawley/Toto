@@ -153,10 +153,10 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 '}';
     }
 
-    // I'm assuming (Ha!) that this collection copying is thread safe enough
+    // OK unmodifiable is not the same as copy, copy too.
 
     public Collection<Value> getValues() {
-        return  Collections.unmodifiableCollection(valuesAsSet != null ? valuesAsSet : values);
+        return  Collections.unmodifiableCollection(new ArrayList<Value>(valuesAsSet != null ? valuesAsSet : values));
     }
 
     // these two are becoming protected so they can be set by Value.
@@ -198,11 +198,11 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
 
     public Collection<Name> getParents() {
-        return  Collections.unmodifiableCollection(parentsAsSet != null ? parentsAsSet : parents);
+        return  Collections.unmodifiableCollection(new ArrayList<Name>(parentsAsSet != null ? parentsAsSet : parents));
     }
 
     public Collection<Name> getPeerParents() {
-        return peerParents != null ? Collections.unmodifiableCollection(peerParents) : new ArrayList<Name>();
+        return peerParents != null ? Collections.unmodifiableCollection(new ArrayList<Name>(peerParents)) : new ArrayList<Name>();
     }
 
     // don't allow external classes to set the parents I mean by function or otherwise, Name can manage this based on set children
@@ -326,7 +326,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
 
     public Collection<Name> getChildren() {
-        return  Collections.unmodifiableCollection(childrenAsSet != null ? childrenAsSet : children);
+        return  Collections.unmodifiableCollection(new ArrayList<Name>(childrenAsSet != null ? childrenAsSet : children));
     }
 
     // as mentioned above, force the set to a linked set, we want it to be ordered, BUT internally it may not stay as a linked set . . .
@@ -468,7 +468,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     public Map<Name, Boolean> getPeers() {
-        return peers != null ? Collections.unmodifiableMap(peers) : new HashMap<Name, Boolean>();
+        return peers != null ? Collections.unmodifiableMap(new HashMap<Name, Boolean>(peers)) : new HashMap<Name, Boolean>();
     }
 
     public Map<String, String> getAttributes() {
@@ -480,7 +480,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             attributesAsMap.put(key, valuesCopy.get(count));
             count++;
         }
-        return Collections.unmodifiableMap(attributesAsMap);
+        return Collections.unmodifiableMap(new HashMap<String, String>(attributesAsMap));
     }
 
     public synchronized void setPeersWillBePersisted(LinkedHashMap<Name, Boolean> peers) throws Exception {
