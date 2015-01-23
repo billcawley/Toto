@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created with IntelliJ IDEA.
@@ -24,8 +25,6 @@ import java.util.*;
  * when the list gets too big.
  *
  * Update on memory : got it to about 850 bytes (magento example DB). Will park for the mo, further change would probably involve changes to attributes.
- *
- * TODO : cleanup and check thread safety and comments, ongoing.
  *
  * attributes case insensitive . . .not entirely happy about this
  *
@@ -51,22 +50,22 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     private Provenance provenance;
     private boolean additive;
     // going to try for attributes as two arraylists as this should save a lot of space vs a linked hash map
+    // unless I synchronize getattributes this is not 100% thread safe as they are updates one at a time. Putting the two in an object would sort this. + 24 bytes for another object reference and header I think
+    // TODO : for thread safety it's probably worth it. A NameAttributes object. Probably immutable.
     private final List<String> attributeKeys;
     private final List<String> attributeValues;
 
 
     // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
-    // these 3 are for quick lookup, must be modified appropriately e.g.add a peer add to that peer's peer parents
+    // these 3 (values, parents, peerparents) are for quick lookup, must be modified appropriately e.g.add a peer add to that peer's peer parents
     // to be clear, these are not used when persisting, they are derived from the name sets in values and the two below
-    // Edd note 11/04/2014 : Sets are expensive in terms of memory, will use lists instead unless they get really big
-    // need the atomic reference for thread safety
-    // Hmm I thought I could get away with values as just a list, it slowed right down, will follow the pattern for children and parents
-    private volatile Set<Value> valuesAsSet;
-    private final List<Value> values;
-    // we want thread safe != null test hence volatile
-    private volatile Set<Name> parentsAsSet;
-    private final ArrayList<Name> parents;
-    private volatile List<Name> peerParents;
+    // Sets are expensive in terms of memory, will use immutable lists instead unless they get really big
+    // I'm not going to make these volatile as the ony time it really matters is on writes which are synchronized and I understand this deals with memory barriers
+    private Set<Value> valuesAsSet;
+    private List<Value> values;
+    private Set<Name> parentsAsSet;
+    private List<Name> parents;
+    private List<Name> peerParents;
 
     /* these two have position which we'll reflect by the place in the list. WHen modifying these sets one has to recreate teh set anyway
     and when doing so changes to the order are taken into account.
@@ -76,13 +75,14 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
      These sets are the ones which define data structure and the ones persisted, parents and peerParents above are derived from these
 
-     I'm not currently using thread safe objects so I need to syncronize modifiers. I also make copies of returned lists.
+    I will use thread safe sets so those modifies don't need to be syncronized but the list changes do
      */
-    // we want thread safe != null test hence volatile
-    private volatile Set<Name> childrenAsSet;
-    private final List<Name> children;
+    // we want thread safe != null test on changes but this should be done by syncronized
+    private Set<Name> childrenAsSet;
+    private List<Name> children;
     // how often is peers used?? - gonna make null by default
     private LinkedHashMap<Name, Boolean> peers;
+
 
     // for the code to make new names
 
@@ -100,14 +100,14 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         jsonCache = jsonFromDB;
         additive = true; // by default
         valuesAsSet = null;
-        values = new ArrayList<Value>(0);
+        values = Collections.unmodifiableList(new ArrayList<Value>(0)); // overhead low and unmodifiable!
         parentsAsSet = null;
-        parents = new ArrayList<Name>(0); // keep overhead low
+        parents = Collections.unmodifiableList(new ArrayList<Name>(0));
         peerParents = null;
         childrenAsSet = null;
-        children = new ArrayList<Name>(0); // keep overhead low
+        children = Collections.unmodifiableList(new ArrayList<Name>(0));
         peers = null; // keep overhead really low! I'm assuming this won't be used often - gets over the problem of linked hash map being expensive
-
+        // ok attributes are different as the lists are not made available externally, they can be modified
         attributeKeys = new ArrayList<String>(1);// a name will have at least one attribute we cna assume
         attributeValues = new ArrayList<String>(1);
 
@@ -126,9 +126,9 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         return provenance;
     }
 
-    public boolean getAdditive() {
+/*    public boolean getAdditive() {
         return additive;
-    }
+    }*/
 
     public synchronized void setAdditiveWillBePersisted(final boolean additive) throws Exception {
         if (this.additive != additive) {
@@ -153,10 +153,10 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 '}';
     }
 
-    // OK unmodifiable is not the same as copy, copy too.
+    // we assume sets are built on concurrent hash map and lists are not modifiable
 
     public Collection<Value> getValues() {
-        return  Collections.unmodifiableCollection(new ArrayList<Value>(valuesAsSet != null ? valuesAsSet : values));
+        return  valuesAsSet != null ? valuesAsSet : values;
     }
 
     // these two are becoming protected so they can be set by Value.
@@ -166,20 +166,22 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     protected void addToValues(final Value value) throws Exception {
         checkDatabaseMatches(value);
-        synchronized (values) { // we can sync on this object whether it's used or not
             if (valuesAsSet != null){
                 valuesAsSet.add(value);
             } else {
+                synchronized (this) { // syncing changes on this is fine, don't want to on values itslef as it's about to be changed
                 if (!values.contains(value)){ // it's this contains expense that means we should stop using arraylists over a certain size
                     // OK, here it may get interesting, what about size???
-                    if (values.size() >= ARRAYLISTTHRESHOLD){ // we need to convert. copy the array to a new hashset then set it
-                        valuesAsSet = new HashSet<Value>(values);
+                    if (values.size() >= ARRAYLISTTHRESHOLD){ // we need to convert. copy the array to a new concurrent hashset then set it
+                        valuesAsSet = Collections.newSetFromMap(new ConcurrentHashMap<Value, Boolean>());// the way to get a thread safe set!
+                        valuesAsSet.addAll(values); // add the existing ones!
                         valuesAsSet.add(value);
-                        // TODO - what about the possibility the get above just misses this set and then gets a clear collection? Maybe don't blank it? By this point the set will be eating way more memory anyway
-                        //parents.clear();
-                        //parents.trimToSize();
-                    } else {
-                        values.add(value);
+                        //values = new ArrayList<Value>(); // to save memory, leaving commented as the saving probably isn't that much and I'm a little worried about concurrency.
+                    } else { // ok we have to switch a new one in
+                        // note : the key here is to have thread safety on these lists, this seems the best way to do it
+                        ArrayList<Value> newValues = new ArrayList<Value>(values);
+                        newValues.add(value);
+                        values = Collections.unmodifiableList(newValues);
                     }
                 }
             }
@@ -187,42 +189,47 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     protected void removeFromValues(final Value value) throws Exception {
-        synchronized (values) { // we can sync on this object whether it's used or not
             if (valuesAsSet != null){
                 valuesAsSet.remove(value);
             } else {
-                values.remove(value);
+                synchronized (this) { // just sync on this object to protect the lists
+                    if (values.contains(value)) {
+                        ArrayList<Value> newValues = new ArrayList<Value>(values);
+                        newValues.remove(value);
+                        values = Collections.unmodifiableList(newValues);
+                    }
+                }
             }
-        }
     }
 
 
     public Collection<Name> getParents() {
-        return  Collections.unmodifiableCollection(new ArrayList<Name>(parentsAsSet != null ? parentsAsSet : parents));
+        return  parentsAsSet != null ? parentsAsSet : parents;
     }
 
-    public Collection<Name> getPeerParents() {
-        return peerParents != null ? Collections.unmodifiableCollection(new ArrayList<Name>(peerParents)) : new ArrayList<Name>();
-    }
+/*    public Collection<Name> getPeerParents() {
+        return peerParents != null ? peerParents : new ArrayList<Name>();
+    }*/
 
     // don't allow external classes to set the parents I mean by function or otherwise, Name can manage this based on set children
     // before could just edit the parents as I pleased now I can'[t need getters and setters based on the map
 
     private void addToParents(final Name name) throws Exception {
-        synchronized (parents) { // we can sync on this object whether it's used or not
             if (parentsAsSet != null){
                 parentsAsSet.add(name);
             } else {
+                synchronized (this) { // we can sync on this object whether it's used or not
                 if (!parents.contains(name)){ // it's this contains expense that means we should stop using arraylists over a certain size
                     // OK, here it may get interesting, what about size???
                     if (parents.size() >= ARRAYLISTTHRESHOLD){ // we need to convert. copy the array to a new hashset then set it
-                        parentsAsSet = new HashSet<Name>(parents);
+                        parentsAsSet = Collections.newSetFromMap(new ConcurrentHashMap<Name, Boolean>());
+                        parentsAsSet.addAll(parents);
                         parentsAsSet.add(name);
-                        // TODO - what about the possibility the get above just misses this set and then gets a clear collection? Maybe don't blank it? By this point the set will be eating way more memory anyway
-                        //parents.clear();
-                        //parents.trimToSize();
+                        // parents  new arraylist?
                     } else {
-                        parents.add(name);
+                        ArrayList<Name> newParents = new ArrayList<Name>(parents);
+                        newParents.add(name);
+                        parents = Collections.unmodifiableList(newParents);
                     }
                 }
             }
@@ -230,11 +237,15 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     private void removeFromParents(final Name name) throws Exception {
-        synchronized (parents) { // we can sync on this object whether it's used or not
-            if (parentsAsSet != null){
-                parentsAsSet.remove(name);
-            } else {
-                parents.remove(name);
+        if (parentsAsSet != null){
+            parentsAsSet.remove(name);
+        } else {
+            synchronized (this) { // just sync on this object to protect the lists
+                if (parents.contains(name)) {
+                    ArrayList<Name> newParents = new ArrayList<Name>(parents);
+                    newParents.remove(name);
+                    parents = Collections.unmodifiableList(newParents);
+                }
             }
         }
     }
@@ -244,6 +255,12 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // todo - check use of this and then whether we use sets internally or not
     // these two functions moved here from the service
 
+    public Collection<Name> findAllParents() {
+        final Set<Name> allParents = new HashSet<Name>();
+        findAllParents(this,allParents);
+        return allParents;
+    }
+
     private void findAllParents(Name name, final Set<Name>allParents){
         for (Name parent:name.getParents()){
             if (!allParents.contains(parent)){
@@ -252,14 +269,6 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             }
         }
 
-    }
-
-
-
-    public Collection<Name> findAllParents() {
-        final Set<Name> allParents = new HashSet<Name>();
-        findAllParents(this,allParents);
-        return allParents;
     }
 
     // we are now allowing a name to be in more than one top parent, hence the name change
@@ -283,7 +292,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     // also we have the option to use additive or not
     // todo - check whether we need a set returned or not . . .
 
-    // switching to lists as better on the memory
+    // leaving as sets for the mo. Arrays would be cheaper on the memory I suppose.
     private Set<Name> findAllChildrenCache = null;
     private Set<Name> findAllChildrenPayAttentionToAdditiveCache = null;
 
@@ -306,7 +315,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 return findAllChildrenPayAttentionToAdditiveCache;
             }
             Set<Name> allChildrenPayAttentionToAdditive = new HashSet<Name>();
-            findAllChildren(this,payAttentionToAdditive, allChildrenPayAttentionToAdditive);
+            findAllChildren(this,true, allChildrenPayAttentionToAdditive);
             if (!allChildrenPayAttentionToAdditive.isEmpty()){ // only cache if there's something to cache!
                 findAllChildrenPayAttentionToAdditiveCache = allChildrenPayAttentionToAdditive;
             }
@@ -316,7 +325,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 return findAllChildrenCache;
             }
             Set<Name> allChildren = new HashSet<Name>();
-            findAllChildren(this,payAttentionToAdditive, allChildren);
+            findAllChildren(this,false, allChildren);
             if (!allChildren.isEmpty()){
                 findAllChildrenCache = allChildren;
             }
@@ -326,60 +335,30 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
 
     public Collection<Name> getChildren() {
-        return  Collections.unmodifiableCollection(new ArrayList<Name>(childrenAsSet != null ? childrenAsSet : children));
+        return  childrenAsSet != null ? childrenAsSet : children;
     }
 
-    // as mentioned above, force the set to a linked set, we want it to be ordered, BUT internally it may not stay as a linked set . . .
-    //should we just use a damn list???
-
+    // might seem inefficient but the adds and removes deal with parents and things. Might reconsider code if used more heavily
+    // each add/remove is safe but for predictability best to synchronize the lot here I think
     public synchronized void setChildrenWillBePersisted(List<Name> children) throws Exception {
-        //removed this check - the only use of this function is in creating temporary names in the same database....
-
-        //checkDatabaseForSet(children);
-        /*
-        We're taking a much more flexible view of sets now, so it is possible for a name to have another name as both child and parent.  Need to check in 'findAllParents
-        // check for circular references
-        for (Name newChild : children) {
-            // now we need to check the top parent is not changing on the child
-            if (newChild.getParents().size() > 0) { // it has parents so we need to check
-                Name newChildFindATopParent = newChild.findATopParent();
-                Collection<Name> getparents = getParents();
-                Name findAtopParent = findATopParent();
-                if (!newChild.findATopParent().equals(this) && getParents().size() > 0 && !newChild.findATopParent().equals(findATopParent())) {
-                    throw new Exception("error cannot assign child as it has a different top parent" + newChild + " has top parent " + newChild.findATopParent() + " " + this + " has or is a different top parent");
-                }
-            }
-        }
-        */
-        // remove all parents on the old one
-
-
-        if (this.getChildren()!=null) {
-            Set<Name> oldChildren = new HashSet<Name>(this.getChildren());
-            for (Name oldChild : oldChildren) {
-                removeFromChildrenWillBePersisted(oldChild);
-           }
-        }
+         for (Name oldChild : this.getChildren()) {
+             removeFromChildrenWillBePersisted(oldChild);
+         }
          for (Name child:children){
             addChildWillBePersisted(child);
          }
-        findAllChildrenCache = null;
-        findAllChildrenPayAttentionToAdditiveCache = null;
-
-
-
-
+         findAllChildrenCache = null;
+         findAllChildrenPayAttentionToAdditiveCache = null;
     }
+
+    // no checks on persistence and parents
 
     private synchronized void setChildrenNoChecks(LinkedHashSet<Name> children){
         if (childrenAsSet != null || children.size() > ARRAYLISTTHRESHOLD){ // then overwrite the map . . I just noticed how this could be dangerous in terms of external references. Make a copy.
-            this.childrenAsSet = new HashSet<Name>(children); // NOTE! now we're not using linked, position and ordering will be ignored for large sets of children!!
+            this.childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<Name, Boolean>()); // NOTE! now we're not using linked, position and ordering will be ignored for large sets of children!!
+            this.childrenAsSet.addAll(children);
         } else {
-            this.children.clear(); // clear the children for this name
-            // could use add all, would this preserve order???
-            for (Name child : children){
-                this.children.add(child);
-            }
+            this.children = Collections.unmodifiableList(new ArrayList<Name>(children));
         }
     }
 
@@ -387,100 +366,90 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         addChildWillBePersisted(child, 0);
     }
 
-    // with position, will just add if none passed
-    // note : this sees position as starting at 1!
-    // todo : is this syncroniseation ok? Maybe on the name object and just for a block?
+    // with position, will just add if none passed note : this sees position as starting at 1!
 
-    public synchronized void addChildWillBePersisted(Name child, int position) throws Exception {
+    public void addChildWillBePersisted(Name child, int position) throws Exception {
         checkDatabaseMatches(child);
         if (child.equals(this) || findAllParents().contains(child)) {
             throw new Exception("error cannot assign child due to circular reference, " + child + " cannot be added to " + this);
         }
-        /* SINGLE CHILDREN MAY NOW HAVE A DIFFERENT TOP PARENT (e.g. ORDER ITEM in PRODUCT)
-        // now we need to check the top parent is not changing ont eh child
-        if (child.getParents().size() > 0) { // it has parents so we need to check
-            if (!child.findATopParent().equals(this) && parents.size() > 0 && !child.findATopParent().equals(findATopParent())) {
-                throw new Exception("error cannot assign child as it has a different top parent" + child + " has top parent " + child.findATopParent() + " " + this + " has or is a different top parent");
-            }
-        }
-        */
-
-        // NOTE!! for the set version we're now just using hassle NOT liked hashset, for large child sets ordering will be ignored!
-
-        // TODO, could it happen that an add or remove misses a switch to the set and actions on the list?? Make sure this cannot happen
-        // well the add is right here and syncronised :) And the remove is syncronized too, this makes it safe?
-        if (childrenAsSet != null){
-            childrenAsSet.add(child); // plain put, will check for duplicates
-        } else {
-            if (!children.contains(child)){
-                // like parents, hope the logic is sound
-                if (children.size() >= ARRAYLISTTHRESHOLD){ // we need to convert. copy the array to a new hashset then set it
-                    childrenAsSet = new HashSet<Name>(children);
-                    childrenAsSet.add(child);
-                    // TODO - what about the possibility the get above just misses this set and then gets a clear collection? Maybe don't blank it? By this point the set will be eating way more memory anyway
-                    //children.clear();
-                    //children.trimToSize();
-                } else {
-                    // then add
-                    // check position first
-                    if (position != 0 && position <= children.size()){
-                        children.add(position - 1, child);
+        // NOTE!! for the set version we're now just using a set backed by a concurrent hash map NOT liked hashset, for large child sets ordering will be ignored!
+        // while childrenasaset is thread safe I think I'm going to need to synchronize the lot to make make state more consistent
+        synchronized (this){
+            if (childrenAsSet != null){
+                childrenAsSet.add(child);
+            } else {
+                if (!children.contains(child)){
+                    // like parents, hope the logic is sound
+                    if (children.size() >= ARRAYLISTTHRESHOLD){ // we need to convert. copy the array to a new hashset then set it
+                        childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<Name, Boolean>());
+                        childrenAsSet.addAll(children);
+                        childrenAsSet.add(child);
+                        // children new arraylist?;
                     } else {
-                        children.add(child);
+                        ArrayList<Name> newChildren = new ArrayList<Name>(children);
+                        if (position != 0 && position <= newChildren.size()){
+                            newChildren.add(position - 1, child);
+                        } else {
+                            newChildren.add(child);
+                        }
+                        children = Collections.unmodifiableList(newChildren);
                     }
                 }
-
-
             }
-        }
-        findAllChildrenCache = null;
-        child.addToParents(this);
-        setNeedsPersisting();
-        //and check that there are not indirect connections which should be deleted (e.g. if London exists in UK and Europe, and we are now
-        //specifying that UK is in Europe, we must remove the direct link from London to Europe
-        for (Name descendant:child.findAllChildren(false)){
-            if (getChildren().contains(descendant)){
-                removeFromChildrenWillBePersisted(descendant);
+            findAllChildrenCache = null;
+            child.addToParents(this);//synchronized internally with this also so will not deadlock
+            setNeedsPersisting();
+            //and check that there are not indirect connections which should be deleted (e.g. if London exists in UK and Europe, and we are now
+            //specifying that UK is in Europe, we must remove the direct link from London to Europe
+            for (Name descendant:child.findAllChildren(false)){
+                if (getChildren().contains(descendant)){
+                    removeFromChildrenWillBePersisted(descendant);
+                }
             }
         }
     }
 
     // removal ok on linked lists
 
-    public synchronized void removeFromChildrenWillBePersisted(Name name) throws Exception {
-        checkDatabaseMatches(name);// even if not needed throw the damn exception!
-        if (getChildren().contains(name)){ // then something to remove
-            name.removeFromParents(this);
-            //don't allow names that have previously had parents to fall out of topparent set
-            if (name.getParents().size() == 0){
-                this.findATopParent().addChildWillBePersisted(name);//revert to top parent (Note that, if 'this' is top parent, then it will be re-instated!
-            }
+    public void removeFromChildrenWillBePersisted(Name name) throws Exception {
+        checkDatabaseMatches(name);// even if not needed throw the exception!
+        // maybe could narrow this a little?
+        synchronized (this){
+            if (getChildren().contains(name)){ // then something to remove
+                name.removeFromParents(this);
+                //don't allow names that have previously had parents to fall out of topparent set
+                if (name.getParents().size() == 0){
+                    this.findATopParent().addChildWillBePersisted(name);//revert to top parent (Note that, if 'this' is top parent, then it will be re-instated!
+                }
 
-            if (childrenAsSet != null){
-                childrenAsSet.remove(name);
-            } else {
-                children.remove(name);
+                if (childrenAsSet != null){
+                    childrenAsSet.remove(name);
+                } else {
+                    ArrayList<Name> newChildren = new ArrayList<Name>(children);
+                    newChildren.remove(name);
+                    children = Collections.unmodifiableList(newChildren);
+                }
+                findAllChildrenCache = null;
+                setNeedsPersisting();
             }
-
-            findAllChildrenCache = null;
-            setNeedsPersisting();
         }
     }
 
     public Map<Name, Boolean> getPeers() {
-        return peers != null ? Collections.unmodifiableMap(new HashMap<Name, Boolean>(peers)) : new HashMap<Name, Boolean>();
+        return peers != null ? peers : new HashMap<Name, Boolean>();
     }
 
     public Map<String, String> getAttributes() {
-        HashMap attributesAsMap = new HashMap();
+        Map<String, String> attributesAsMap = new HashMap<String, String>();
         int count = 0;
-        // if I'm going to for loop I should probably copy
-        ArrayList valuesCopy = new ArrayList(attributeValues);
+        // if I'm going to for loop I should probably copy - in theory the two could go out of sync. Not a pleasing thought . . .
+        List<String> valuesCopy = new ArrayList<String>(attributeValues);
         for (String key : new ArrayList<String>(attributeKeys)){
             attributesAsMap.put(key, valuesCopy.get(count));
             count++;
         }
-        return Collections.unmodifiableMap(new HashMap<String, String>(attributesAsMap));
+        return Collections.unmodifiableMap(attributesAsMap);
     }
 
     public synchronized void setPeersWillBePersisted(LinkedHashMap<Name, Boolean> peers) throws Exception {
@@ -508,7 +477,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         if (this.peers != null){ // added not null chekc as it will be on init
             for (Name existingPeer : this.peers.keySet()) {
                     if (existingPeer.peerParents != null){
-                        synchronized (existingPeer.peerParents) {
+                        synchronized (existingPeer) {
                             existingPeer.peerParents.remove(this);
                         }
                     }
@@ -521,7 +490,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 if (existingPeer.peerParents == null){ // I think this check is all that's required for peerparents to be changed to a list
                     existingPeer.peerParents = new ArrayList<Name>();
                 }
-            synchronized (existingPeer.peerParents) {
+            synchronized (existingPeer) {
                 if (!existingPeer.peerParents.contains(this)){ // I think this check is all that's required for peerparents to be changed to a list
                     existingPeer.peerParents.add(this);
                 }

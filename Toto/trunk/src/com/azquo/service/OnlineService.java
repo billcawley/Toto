@@ -11,11 +11,13 @@ import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -65,10 +67,69 @@ public final class OnlineService {
     @Autowired
     ServletContext servletContext;
 
+    @Autowired
+    private Environment env;
+
+    private final String host;
+    private String homeDir = null;
+
+    // ints not boolean as I want to be able to tell if not set. Thread safety not such a concern, it's reading from a file, can't see how the state would be corrupted
+    private int devMachine = -1;
+    private int asposeLicense = -1;
+
+    public static final String AZQUOHOME = "azquo.home";
+    public static final String ASPOSELICENSE = "aspose.license";
+    public static final String DEVMACHINE = "dev.machine";
+
+
+    public String getHomeDir(){
+        if (homeDir == null){
+            homeDir = env.getProperty(host + "." + AZQUOHOME);
+            if (homeDir == null){
+                homeDir = env.getProperty(AZQUOHOME);
+            }
+        }
+        return homeDir;
+    }
+
+    public boolean useAsposeLicense(){
+        if (asposeLicense == -1){
+            if (env.getProperty(host + "." + ASPOSELICENSE) != null){
+                asposeLicense = (env.getProperty(host + "." + ASPOSELICENSE).equalsIgnoreCase("true") ? 1 : 0);
+            } else {
+                // if null default false
+                asposeLicense = (env.getProperty(ASPOSELICENSE) != null && env.getProperty(ASPOSELICENSE).equalsIgnoreCase("true") ? 1 : 0);
+            }
+        }
+        return asposeLicense == 1;
+    }
+
+    public boolean onADevMachine(){
+        if (devMachine == -1){
+            if (env.getProperty(host + "." + DEVMACHINE) != null){
+                asposeLicense = (env.getProperty(host + "." + DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
+            } else {
+                asposeLicense = (env.getProperty(DEVMACHINE) != null && env.getProperty(DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
+            }
+        }
+        return devMachine == 1;
+    }
+
+
+    public OnlineService(){
+        String thost = "";
+        try{
+            thost = InetAddress.getLocalHost().getHostName();
+        } catch (Exception e){
+            e.printStackTrace(); // may as well in case it goes wrong
+        }
+        System.out.println("host : " + thost);
+        host = thost;
+    }
 
     public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message)throws Exception {
 
-         String path = "/home/azquo/temp/";
+         String path = getHomeDir() + "/temp/";
         if (onlineReport.getId()==1 && !loggedInConnection.getUser().isAdministrator()){
             return showUserMenu(loggedInConnection);
            //onlineReport = onlineReportDAO.findById(-1);//user report list replaces admin sheet
@@ -77,7 +138,7 @@ public final class OnlineService {
         StringBuffer worksheet = new StringBuffer();
         StringBuffer tabs = new StringBuffer();
         StringBuffer head = new StringBuffer();
-        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO);
+        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO, this);
         loggedInConnection.setAzquoBook(azquoBook);
         Map <String,String> velocityContext = new HashMap<String, String>();
         //String output = readFile("onlineReport.html").toString();
@@ -91,12 +152,12 @@ public final class OnlineService {
         }
         try {
             if (onlineReport.getId() < 2){
-                azquoBook.loadBook(onlineReport.getFilename());
+                azquoBook.loadBook(onlineReport.getFilename(), useAsposeLicense());
             }else{
                 int reportDB = onlineReport.getDatabaseId();
                 //note - the database specified in the report may not be the current database (as in applications such as Magento and reviews), but be 'temp'
                 String filepath = ImportService.dbPath + onlineReport.getPathname() +"/onlinereports/" + onlineReport.getFilename();
-                azquoBook.loadBook(filepath);
+                azquoBook.loadBook(filepath, useAsposeLicense());
             }
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
             if (onlineReport.getId()==1 || onlineReport.getId()==-1){//this is the maintenance workbook
@@ -168,7 +229,7 @@ public final class OnlineService {
 
     public String executeSheet(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName) throws Exception{
         String error = "";
-        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO);
+        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO, this);
         loggedInConnection.setAzquoBook(azquoBook);
         return azquoBook.executeSheet(loggedInConnection, onlineReport.getFilename(), spreadsheetName, onlineReport.getId());
     }
@@ -271,7 +332,7 @@ public final class OnlineService {
 
 
     public void saveBookActive(HttpServletResponse response, LoggedInConnection loggedInConnection, String fileName)throws Exception{
-         loggedInConnection.getAzquoBook().saveBookActive(response, fileName);
+         loggedInConnection.getAzquoBook().saveBookActive(response, fileName, env.getProperty("azquo.home") + "/onlinereports/Admin/Azquoblank.xls");
     }
 
 

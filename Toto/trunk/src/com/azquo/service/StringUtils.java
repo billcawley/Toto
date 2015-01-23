@@ -138,7 +138,7 @@ I'll add better tracking of where an error is later
                 throw new Exception("More than 100 quoted names.");
             }
             // I don't even need the number here but I'll leave it here for the moment
-            modifiedStatement.append(NameService.NAMEMARKER + twoDigit.format(quotedNameCache.size()));
+            modifiedStatement.append(NameService.NAMEMARKER).append(twoDigit.format(quotedNameCache.size()));
         }
         if (lastEnd != 0){
             modifiedStatement.append(statement.substring(lastEnd));
@@ -162,7 +162,7 @@ I'll add better tracking of where an error is later
             }
             lastEnd = matcher.end();
             // We do need the literals index here, filter which uses it
-            modifiedStatement.append("\"" + twoDigit.format(stringLiterals.size()) + "\"");
+            modifiedStatement.append("\"").append(twoDigit.format(stringLiterals.size())).append("\"");
             stringLiterals.add(matcher.group().substring(1, matcher.group().length() - 1)); // don't add the quotes. Should we unescape here???
         }
         if (lastEnd != 0){
@@ -220,10 +220,10 @@ I should be ok for stringtokenizer at this point
                 */
                 if (term.startsWith(".")){
                     // I was using name marker, no good as it would be caught by a later conditional parser
-                    modifiedStatement.append(NameService.ATTRIBUTEMARKER + twoDigit.format(attributeStrings.size()));
+                    modifiedStatement.append(NameService.ATTRIBUTEMARKER).append(twoDigit.format(attributeStrings.size()));
                     attributeStrings.add(term.substring(1)); // knock off the .
                 } else {
-                    modifiedStatement.append(NameService.NAMEMARKER + twoDigit.format(nameNames.size()));
+                    modifiedStatement.append(NameService.NAMEMARKER).append(twoDigit.format(nameNames.size()));
                     nameNames.add(term);
                 }
             } else {
@@ -235,43 +235,19 @@ I should be ok for stringtokenizer at this point
     }
 
     public boolean isKeywordOrOperator(String term){
-        if (term.equals("*")
-                || term.equals("/")
-                || term.equals("+")
-                || term.equals("-")
-                || term.equals(">")
-                || term.equals("<")
-                || term.equals(">=")
-                || term.equals("<=")
-                || term.equals("=")
-                ){
-            return true;
-        }
+        return term.equals("*") || term.equals("/") || term.equals("+") || term.equals("-") || term.equals(">")
+                || term.equals("<") || term.equals(">=") || term.equals("<=") || term.equals("=")
+                || term.equalsIgnoreCase(NameService.LEVEL) || term.equalsIgnoreCase(NameService.FROM)
+                || term.equalsIgnoreCase(NameService.TO) || term.equalsIgnoreCase(NameService.COUNT)
+                || term.equalsIgnoreCase(NameService.SORTED) || term.equalsIgnoreCase(NameService.CHILDREN)
+                || term.equalsIgnoreCase(NameService.PARENTS) || term.equalsIgnoreCase(NameService.LOWEST)
+                || term.equalsIgnoreCase(NameService.ALL) || term.equalsIgnoreCase(NameService.PEERS)
+                || term.equalsIgnoreCase(NameService.COUNTBACK) || term.equalsIgnoreCase(NameService.COMPAREWITH)
+                || term.equalsIgnoreCase(NameService.AS) || term.equalsIgnoreCase(NameService.STRUCTURE)
+                || term.equalsIgnoreCase(NameService.NAMELIST) || term.equalsIgnoreCase(NameService.CREATE)
+                || term.equalsIgnoreCase(NameService.EDIT) || term.equalsIgnoreCase(NameService.NEW)
+                || term.equalsIgnoreCase(NameService.DELETE) || term.equalsIgnoreCase(NameService.WHERE);
 
-        if (term.equalsIgnoreCase(NameService.LEVEL)
-                || term.equalsIgnoreCase(NameService.FROM)
-                || term.equalsIgnoreCase(NameService.TO)
-                || term.equalsIgnoreCase(NameService.COUNT)
-                || term.equalsIgnoreCase(NameService.SORTED)
-                || term.equalsIgnoreCase(NameService.CHILDREN)
-                || term.equalsIgnoreCase(NameService.PARENTS)
-                || term.equalsIgnoreCase(NameService.LOWEST)
-                || term.equalsIgnoreCase(NameService.ALL)
-                || term.equalsIgnoreCase(NameService.PEERS)
-                || term.equalsIgnoreCase(NameService.COUNTBACK)
-                || term.equalsIgnoreCase(NameService.COMPAREWITH)
-                || term.equalsIgnoreCase(NameService.AS)
-                || term.equalsIgnoreCase(NameService.STRUCTURE)
-                || term.equalsIgnoreCase(NameService.NAMELIST)
-                || term.equalsIgnoreCase(NameService.CREATE)
-                || term.equalsIgnoreCase(NameService.EDIT)
-                || term.equalsIgnoreCase(NameService.NEW)
-                || term.equalsIgnoreCase(NameService.DELETE)
-                || term.equalsIgnoreCase(NameService.WHERE)
-                ){
-            return true;
-        }
-        return false;
     }
 
 
@@ -317,7 +293,6 @@ I should be ok for stringtokenizer at this point
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
-        String origCalc = calc;
         int startPos = 0;
 
 
@@ -331,7 +306,7 @@ I should be ok for stringtokenizer at this point
                 if (result.startsWith("error:")) {
                     return result;
                 }*/
-                sb.append(namefound + " ");
+                sb.append(namefound).append(" ");
             }
             char lastOffStack = ' ';
             while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && ")+-*/(".indexOf(thisOp) <= "(+-*/".indexOf(stack.charAt(0)))) {
@@ -343,7 +318,7 @@ I should be ok for stringtokenizer at this point
                 stack = stack.substring(1);
             }
             if ((thisOp == ')' && lastOffStack != '(') || (thisOp != ')' && lastOffStack == '(')) {
-                return "error: mismatched brackets in " + origCalc;
+                return "error: mismatched brackets in " + calc;
             }
             if (thisOp != ')') {
                 stack = thisOp + stack;
@@ -358,7 +333,7 @@ I should be ok for stringtokenizer at this point
             if (result.startsWith("error:")) {
                 return result;
             }*/
-            sb.append(calc.substring(startPos) + " ");
+            sb.append(calc.substring(startPos)).append(" ");
         }
 
         //.. and clear the stack

@@ -9,6 +9,7 @@ import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.xml.sax.helpers.AttributesImpl;
@@ -38,7 +39,13 @@ public class ReviewService {
     SimpleDateFormat outputFormat = new SimpleDateFormat("dd/MM/YY");
 
     @Autowired
+    private Environment env;
+
+    @Autowired
     private NameService nameService;
+
+    @Autowired
+    private OnlineService onlineService;
 
     @Autowired
     private AppDBConnectionMap reviewsConnectionMap;
@@ -104,7 +111,7 @@ public class ReviewService {
         if (velocityTemplate == null){
             velocityTemplate = "email.vm";
         } else {
-            velocityTemplate = "/home/azquo/databases/" + azquoMemoryDBConnection.getCurrentDBName() + "/velocitytemplates/" + velocityTemplate;
+            velocityTemplate = onlineService.getHomeDir() + "/databases/" + azquoMemoryDBConnection.getCurrentDBName() + "/velocitytemplates/" + velocityTemplate;
         }
         String error = "";
         Name emailsToBeSent  = nameService.findByName(azquoMemoryDBConnection,EMAILS_TO_BE_SENT);
@@ -956,7 +963,7 @@ public class ReviewService {
                 return;
             }
         }
-        String fullPath = ImportService.dbPath + dbName + "/" + uploadDir + "/" + fName;
+        String fullPath =  onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + "/" + fName;
         InputStream input = new BufferedInputStream((new FileInputStream(fullPath)));
         response.setContentType("application/force-download"); // Set up mime type
         OutputStream out = response.getOutputStream();

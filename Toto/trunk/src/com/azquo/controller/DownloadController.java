@@ -7,6 +7,7 @@ import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
 import com.azquo.service.OnlineService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -53,7 +54,7 @@ public class DownloadController {
             }
         }
         if (image.length() > 0){
-            InputStream input = new BufferedInputStream((new FileInputStream("/home/azquo/temp/" + image)));
+            InputStream input = new BufferedInputStream((new FileInputStream(onlineService.getHomeDir() +  "/temp/" + image)));
             response.setContentType("image/png"); // Set up mime type
             OutputStream out = response.getOutputStream();
             byte[] bucket = new byte[32*1024];

@@ -1,10 +1,8 @@
 package com.azquo.service;
 
 import com.azquo.jsonrequestentities.NameJsonRequest;
-import com.azquo.jsonrequestentities.NameListJson;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 
 import java.io.UnsupportedEncodingException;
@@ -27,7 +25,7 @@ import java.util.regex.Pattern;
 public final class NameService {
 
     public StringUtils stringUtils = new StringUtils(); // just make it quickly like this for the mo
-    private static final ObjectMapper jacksonMapper = new ObjectMapper();
+//    private static final ObjectMapper jacksonMapper = new ObjectMapper();
     private static final Logger logger = Logger.getLogger(NameService.class);
 
 
@@ -43,8 +41,8 @@ public final class NameService {
     public static final char NAMEMARKER = '!';
     public static final char ATTRIBUTEMARKER = '|';
     public static final String PEERS = "peers";
-    public static final String COUNTBACK = "count back";
-    public static final String COMPAREWITH = "compare with";
+    public static final String COUNTBACK = "countback";
+    public static final String COMPAREWITH = "comparewith";
     public static final String AS = "as";
     public static final String STRUCTURE = "structure";
     public static final String NAMELIST = "namelist";
@@ -106,11 +104,9 @@ public final class NameService {
 
     public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent,final List<String> attributeNames) throws Exception {
         if (attributeValue.charAt(0) == NAMEMARKER) {
-            throw new Exception("getNameByAttribute should no longer have name marker passed to it!");
+            throw new Exception("error: getNameByAttribute should no longer have name marker passed to it!");
         }
-
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, attributeValue.replace(Name.QUOTE, ' ').trim(), parent);
-
     }
 
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) throws Exception {
@@ -236,7 +232,9 @@ public final class NameService {
 
     Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<AzquoMemoryDBConnection, Map<String, Long>>();
 
-    private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd){
+    private long addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long marker){
+        long now = System.currentTimeMillis();
+        long toAdd = marker - now;
         long current = 0;
         if (timeTrack.get(azquoMemoryDBConnection) != null) {
             if (timeTrack.get(azquoMemoryDBConnection).get(trackName) != null) {
@@ -246,20 +244,19 @@ public final class NameService {
             timeTrack.put(azquoMemoryDBConnection, new HashMap<String, Long>());
         }
         timeTrack.get(azquoMemoryDBConnection).put(trackName, current + toAdd);
+        return now;
     }
 
     public Map<String, Long> getTimeTrackMapForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection){
         return timeTrack.get(azquoMemoryDBConnection);
     }
 
+    private static final boolean profile = false;
+
     public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name parent, boolean local, List<String> attributeNames) throws Exception {
 
-        //long marker = System.currentTimeMillis();
+        long marker = System.currentTimeMillis();
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import),and insert a structure into it*/
-        if (name.equalsIgnoreCase("field")){
-            int j=1;
-        }
-
         if (attributeNames == null) {
             attributeNames = new ArrayList<String>();
             attributeNames.add(Name.DEFAULT_DISPLAY_NAME);
@@ -268,8 +265,7 @@ public final class NameService {
         String storeName = name.replace(Name.QUOTE, ' ').trim();
         Name existing;
 
-        //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent1", marker - System.currentTimeMillis());
-        //marker = System.currentTimeMillis();
+        if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent1", marker);
         if (parent != null) { // ok try to find it in that parent
             //try for an existing name already with the same parent
             if (local) {// ok looking only below that parent or just in it's whole set or top parent.
@@ -278,8 +274,7 @@ public final class NameService {
                 // Note the new name find A top parent. If names are in more than one top parent criteria to find the name might be a bit random - which top parent do you mean?
                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, parent.findATopParent());
             }
-            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker - System.currentTimeMillis());
-            //marker = System.currentTimeMillis();
+            if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
             // find an existing name with no parents. (note that if there are multiple such names, then the return will be null)
             // if we cant' find the name in parent then it's acceptable to find one with no parents
             if (existing == null) {
@@ -288,12 +283,10 @@ public final class NameService {
                     existing = null;
                 }
             }
-            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent3", marker - System.currentTimeMillis());
-            //marker = System.currentTimeMillis();
+            if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent3", marker);
         } else { // no parent passed go for a vanilla lookup
             existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
-            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent4", marker - System.currentTimeMillis());
-            //marker = System.currentTimeMillis();
+            if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent4", marker);
         }
         if (existing != null) {
             // direct parents may be moved up the hierarchy (e.g. if existing parent is 'Europe' and new parent is 'London', which is in 'Europe' then
@@ -304,24 +297,19 @@ public final class NameService {
                 //only check if the new parent is not already in the parent hierarchy.
                 includeInSet(existing, parent);
             }
-            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent5", marker - System.currentTimeMillis());
-            //marker = System.currentTimeMillis();
+            if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent5", marker);
             return existing;
         } else {
-               // actually creating a new one
             //System.out.println("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
-            if (storeName.contains("\"")){
-                int j=1;
-            }
             // todo - we should not be getting the provenance from the conneciton
             Provenance provenance = azquoMemoryDBConnection.getProvenance("imported");
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
-            if (attributeNames.get(0) != Name.DEFAULT_DISPLAY_NAME) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
+            // was != which would probably have worked but safer with !.equals
+            if (!attributeNames.get(0).equals(Name.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
                 newName.setAttributeWillBePersisted(attributeNames.get(0), storeName);
             }
             newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName); // and set the default regardless
-            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent6", marker - System.currentTimeMillis());
-            //marker = System.currentTimeMillis();
+            if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent6", marker);
             //if the parent already has peers, provisionally set the child peers to be the same.
             if (parent != null) {
                 Map<Name, Boolean> newPeers = parent.getPeers();
@@ -336,8 +324,7 @@ public final class NameService {
                 // and add the new name to the parent of course :)
                 parent.addChildWillBePersisted(newName);
             }
-            //addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent7", marker - System.currentTimeMillis());
-            //marker = System.currentTimeMillis();
+            if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent7", marker);
             return newName;
         }
     }
@@ -637,7 +624,7 @@ public final class NameService {
             andPos = condition.length();
         }
         Set<Name> namesToRemove = new HashSet<Name>();
-        int lastPos = 0;
+        int lastPos;
         while (andPos > 0) {
             String clause = condition.substring(0, andPos).trim();
             Pattern p = Pattern.compile("[<=>]+");
@@ -1010,6 +997,7 @@ public final class NameService {
         return getChildStructureFormattedForOutput(name, false);
     }
 
+    // TODO json??
 
     private String getChildStructureFormattedForOutput(final Name name, boolean showChildren) {
         int totalValues = getTotalValues(name);
@@ -1017,11 +1005,11 @@ public final class NameService {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"name\":");
         sb.append("\"").append(name.getDefaultDisplayName().replace("\"", "''")).append("\"");//trapping quotes in name - should not be there
-        sb.append(", \"id\":\"" + name.getId() + "\"");
+        sb.append(", \"id\":\"").append(name.getId()).append("\"");
 
-        sb.append(", \"dataitems\":\"" + totalValues + "\"");
+        sb.append(", \"dataitems\":\"").append(totalValues).append("\"");
         if (name.getValues().size() > 0) {
-            sb.append(", \"mydataitems\":\"" + name.getValues().size() + "\"");
+            sb.append(", \"mydataitems\":\"").append(name.getValues().size()).append("\"");
         }
         //putputs the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
         int count = 0;
@@ -1039,14 +1027,14 @@ public final class NameService {
                     }
                 }
                 // here and a few lines below is a bit of manual JSON building. Not sure how much this is a good idea or not. Jackson?
-                sb.append("\"peers\":\"" + peerList + "\"");
+                sb.append("\"peers\":\"").append(peerList).append("\"");
                 count++;
 
             }
             for (String attName : name.getAttributes().keySet()) {
                 if (count > 0) sb.append(",");
                 try {
-                    sb.append("\"" + attName + "\":\"" + URLEncoder.encode(name.getAttributes().get(attName).replace("\"", "''"), "UTF-8") + "\"");//replacing quotes again
+                    sb.append("\"").append(attName).append("\":\"").append(URLEncoder.encode(name.getAttributes().get(attName).replace("\"", "''"), "UTF-8")).append("\"");//replacing quotes again
                 } catch (UnsupportedEncodingException e) {
                     // this really should not happen!
                     e.printStackTrace();
@@ -1056,7 +1044,7 @@ public final class NameService {
             sb.append("}");
         }
         final Collection<Name> children = name.getChildren();
-        sb.append(", \"elements\":\"" + children.size() + "\"");
+        sb.append(", \"elements\":\"").append(children.size()).append("\"");
         if (showChildren && !children.isEmpty()) {
             sb.append(", \"children\":[");
             count = 0;
@@ -1073,49 +1061,6 @@ public final class NameService {
         sb.append("}");
 
 
-        return sb.toString();
-    }
-
-
-    private StringBuffer printJsonName(NameListJson nameListJson) {
-        StringBuffer sb = new StringBuffer();
-        sb.append("<li");
-        if (nameListJson.elements > 0) sb.append(" onclick=\"az_clicklist(this)\"");
-        sb.append(">" + nameListJson.name + "\n");
-        sb.append("</li>");
-
-        sb.append("<div class=\"notseen\">" + nameListJson.id + "</div>\n");
-        //ignoring the rest of the info for the moment....
-        /*
-
-        if (nameListJson.elements > 0){
-            sb.append("<ul style=\"display:none\">");
-            for (NameListJson child:nameListJson.children){
-                sb.append(printJsonName(child));
-            }
-            sb.append("</ul>");
-        }
-        */
-        return sb;
-    }
-
-
-    public String convertJsonToHTML(String json) {
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("<ul class=\"namelist\">\n");
-        try {
-            NameListJson nameListJson = jacksonMapper.readValue(json, NameListJson.class);
-            for (NameListJson child : nameListJson.names) {
-                sb.append(printJsonName(child));
-            }
-            sb.append("</ul>\n");
-
-
-        } catch (Exception e) {
-            logger.error("name json parse problem", e);
-            return "error:badly formed json " + e.getMessage();
-        }
         return sb.toString();
     }
 

@@ -3,15 +3,12 @@ package com.azquo.controller;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.adminentities.Permission;
 import com.azquo.adminentities.User;
-import com.azquo.memorydb.Name;
-import com.azquo.service.AdminService;
-import com.azquo.service.ImportService;
-import com.azquo.service.LoggedInConnection;
-import com.azquo.service.LoginService;
+import com.azquo.service.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,6 +28,9 @@ import java.util.List;
 @RequestMapping("/Maintain")
 
 public class AdminController {
+
+    @Autowired
+    private OnlineService onlineService;
 
     private static final Logger logger = Logger.getLogger(AdminController.class);
 
@@ -232,7 +232,7 @@ public class AdminController {
             if (op.equalsIgnoreCase(UPLOADFILE)) {
                 // just a quick way to load for WFC
                //InputStream uploadFile = new FileInputStream("/home/azquo/import/" + fileName);
-               InputStream uploadFile = new FileInputStream("/home/bill/azquo/" + fileName);
+               InputStream uploadFile = new FileInputStream(onlineService.getHomeDir() + "/azquo/" + fileName);
                  return  importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType,"true", true, loggedInConnection.getLanguages());
             }
 

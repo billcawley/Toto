@@ -69,14 +69,14 @@ public final class AzquoMemoryDB {
         // loop over the possible persisted tables making the empty sets, cunning
         if (standardDAO != null) {
             for (StandardDAO.PersistedTable persistedTable : StandardDAO.PersistedTable.values()) {
-                entitiesToPersist.put(persistedTable.name(), new HashSet<AzquoMemoryDBEntity>());
+                entitiesToPersist.put(persistedTable.name(), Collections.newSetFromMap(new HashMap<AzquoMemoryDBEntity, Boolean>()));
             }
         }
         if (appServices != null) {
             for (AppEntityService appEntityService : appServices) {
                 // seems a good a place as any to create the MySQL table if it doesn't exist
                 appEntityService.checkCreateMySQLTable(this);
-                entitiesToPersist.put(appEntityService.getTableName(), new HashSet<AzquoMemoryDBEntity>());
+                entitiesToPersist.put(appEntityService.getTableName(), Collections.newSetFromMap(new HashMap<AzquoMemoryDBEntity, Boolean>()));
             }
         }
         if (standardDAO != null) {
@@ -522,13 +522,11 @@ public final class AzquoMemoryDB {
 
             long totalNameSize = 0;
             Collection<Name> names = nameByIdMap.values();
-            int count = 0;
             DecimalFormat df = new DecimalFormat("###,###,###,###");
             for (Name name : names){
                 //System.out.println("trying for " + name);
                 long nameSize = ObjectSizeCalculator.sizeOfForAzquo(name, null);
                 totalNameSize += nameSize;
-                count++;
                 /*if (count%10000 == 0){
                     System.out.println("Example name size : " + name.getDefaultDisplayName() + ", " + df.format(nameSize));
                     List<StringBuilder> report = new ArrayList<StringBuilder>();
@@ -547,11 +545,9 @@ public final class AzquoMemoryDB {
 
             long totalValuesSize = 0;
             Collection<Value> values = valueByIdMap.values();
-            count = 0;
             for (Value value : values){
                 long valueSize = ObjectSizeCalculator.sizeOfForAzquo(value, null);
                 totalValuesSize += valueSize;
-                count++;
 /*                if (count%10000 == 0){
                     System.out.println("Example value size : " + value + ", " + df.format(valueSize));
                     List<StringBuilder> report = new ArrayList<StringBuilder>();

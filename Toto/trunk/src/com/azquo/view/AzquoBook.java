@@ -21,7 +21,7 @@ import java.util.*;
 
 
 /**
- * Created by bill on 29/04/14.
+ * Created by bill on 29/04/14
  */
 public  class AzquoBook {
 
@@ -31,6 +31,7 @@ public  class AzquoBook {
     private ImportService importService;
     private AdminService adminService;
     private NameService nameService;
+    private OnlineService onlineService;
     private UserChoiceDAO userChoiceDAO;
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
     private SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
@@ -140,13 +141,13 @@ public  class AzquoBook {
         return map;
     }
 
-    public AzquoBook(final ValueService valueService, AdminService adminService, NameService nameService, ImportService importService, UserChoiceDAO userChoiceDAO) throws Exception {
+    public AzquoBook(final ValueService valueService, AdminService adminService, NameService nameService, ImportService importService, UserChoiceDAO userChoiceDAO, OnlineService onlineService) throws Exception {
         this.valueService = valueService;
         this.adminService = adminService;
         this.userChoiceDAO = userChoiceDAO;
         this.nameService = nameService;
         this.importService = importService;
-
+        this.onlineService = onlineService;
     }
 
 
@@ -2082,8 +2083,8 @@ public  class AzquoBook {
 
 
 
-    public void saveBookActive(HttpServletResponse response, String fileName)throws Exception{
-        Workbook wbOut = new Workbook(new FileInputStream(ImportService.homePath + "/onlinereports/Admin/Azquoblank.xls"));
+    public void saveBookActive(HttpServletResponse response, String fileName, String blankPath)throws Exception{
+        Workbook wbOut = new Workbook(new FileInputStream(blankPath));
 
          wbOut.combine(wb);
         if (fileName.endsWith(".xlsx")) fileName = fileName.replace(".xlsx",".xlsm");
@@ -2096,11 +2097,12 @@ public  class AzquoBook {
 
     }
 
-    public void loadBook(String fileName)throws Exception{
-
-        License license = new License();
-        // todo - maybe a switch to only check for the license on the server?
-        license.setLicense("/home/azquo/aspose/Aspose.Cells.lic");
+    public void loadBook(String fileName, boolean useLicense)throws Exception{
+        if (useLicense){
+            // should this be called on every book load or just once somewhere?
+            License license = new License();
+            license.setLicense(onlineService.getHomeDir() + "/aspose/Aspose.Cells.lic");
+        }
         wb  = new Workbook(new FileInputStream(fileName));
 
 
@@ -2196,7 +2198,7 @@ public  class AzquoBook {
         fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
         String result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType, loggedInConnection.getLanguages());
         if (!result.startsWith("error:")){
-            String saveFileName = "/home/cawley/databases/" + loggedInConnection.getCurrentDBName()+"/uploads/" + azquoSheet.getName() + " " +  df.format(new Date()) + ".xlsx";
+            String saveFileName = onlineService.getHomeDir() + "/databases/" + loggedInConnection.getCurrentDBName()+"/uploads/" + azquoSheet.getName() + " " +  df.format(new Date()) + ".xlsx";
             File file = new File(saveFileName);
             file.getParentFile().mkdirs();
             wb.save(saveFileName, SaveFormat.XLSX);

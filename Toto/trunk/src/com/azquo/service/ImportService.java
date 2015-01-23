@@ -49,8 +49,8 @@ public final class ImportService {
     }
 
     //private static final String reportPath = "/home/bill/apache-tomcat-7.0.47/import/";
-    public static final String homePath = "/home/azquo/";
-    public static final String dbPath = "/home/azquo/databases/";
+//    public static final String homePath = "/home/cawley/";
+    public static final String dbPath = "/databases/";
 
     private static final String headingDivider = "|";
     @Autowired
@@ -63,6 +63,8 @@ public final class ImportService {
     private OnlineReportDAO onlineReportDAO;
     @Autowired
     private AdminService adminService;
+    @Autowired
+    private OnlineService onlineService;
     @Autowired
     private UserChoiceDAO userChoiceDAO;
 
@@ -1104,8 +1106,8 @@ private String readBook (final AzquoMemoryDBConnection azquoMemoryDBConnection, 
 
 
         try {
-            AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, this, userChoiceDAO);
-            azquoBook.loadBook(tempName);
+            AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, this, userChoiceDAO, onlineService);
+            azquoBook.loadBook(tempName, onlineService.useAsposeLicense());
             String reportName = azquoBook.getReportName();
             if (reportName!=null){
                 return uploadReport(azquoMemoryDBConnection, azquoBook, fileName, reportName);

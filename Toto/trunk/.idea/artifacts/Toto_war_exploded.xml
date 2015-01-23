@@ -6,7 +6,7 @@
       <element id="directory" name="WEB-INF">
         <element id="directory" name="classes">
           <element id="module-output" name="Toto" />
-          <element id="file-copy" path="$PROJECT_DIR$/classesinclude/log4j.properties" />
+          <element id="file-copy" path="$PROJECT_DIR$/web/WEB-INF/log4j.properties" />
         </element>
         <element id="directory" name="lib">
           <element id="library" level="project" name="apache-avalon:avalon-framework:4.1.5" />
@@ -30,7 +30,7 @@
           <element id="library" level="project" name="velocity-tools:velocity-tools-view:2.0-beta1" />
           <element id="library" level="project" name="org.springframework.security:spring-security-config:3.2.5.RELEASE" />
           <element id="library" level="project" name="org.springframework.security:spring-security-web:3.2.5.RELEASE" />
-          <element id="library" level="project" name="net.openhft:koloboke-api-jdk6-7:0.6.5" />
+          <element id="library" level="project" name="net.openhft:koloboke-impl-jdk6-7:0.6.5" />
         </element>
       </element>
     </root>
