@@ -36,10 +36,12 @@ public final class MemoryDBManager {
     }
 
     public synchronized AzquoMemoryDB getAzquoMemoryDB(Database database) throws Exception {
+        AzquoMemoryDB loaded = null;
         if (database.getName().equals("temp")){
-            return new AzquoMemoryDB(database, null, null);
+            loaded =new AzquoMemoryDB(database, standardDAO, appServices);
+            return loaded;
         }
-        AzquoMemoryDB loaded = memoryDatabaseMap.get(database.getMySQLName());
+        loaded = memoryDatabaseMap.get(database.getMySQLName());
         if (loaded != null){
             return loaded;
         }
@@ -66,7 +68,6 @@ public final class MemoryDBManager {
         memoryDatabaseMap.remove(db.getMySQLName());
 
     }
-
 
     public synchronized void addNewToDBMap(Database database) throws Exception {
         if (memoryDatabaseMap.get(database.getMySQLName()) != null){
