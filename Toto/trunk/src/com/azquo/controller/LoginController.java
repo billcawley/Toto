@@ -84,6 +84,9 @@ public class LoginController {
             }
 
         }
+        if (userEmail!=null && userEmail.equals("convert")){
+            return "done";
+        }
         String callerId = request.getRemoteAddr();
         if (callerId != null && userEmail != null && userEmail.equals("demo@user.com")){
             userEmail += callerId;
@@ -108,7 +111,7 @@ public class LoginController {
 
         }
 
-        if (!online && connectionId != null && connectionId.length() > 0 && loginService.getConnection(connectionId) != null) {
+          if (!online && connectionId != null && connectionId.length() > 0 && loginService.getConnection(connectionId) != null) {
                 return connectionId;
         }
         LoggedInConnection loggedInConnection;
@@ -131,9 +134,14 @@ public class LoginController {
             loggedInConnection = loginService.getConnection(connectionId);
         }
          if (loggedInConnection != null) {
-                result =  loggedInConnection.getConnectionId();
-                if (online){
-                    OnlineReport onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
+             result =  loggedInConnection.getConnectionId();
+             if (spreadsheetName != null && spreadsheetName.equals("createmaster")){
+                 loginService.createAzquoMaster();
+                 return connectionId;
+             }
+
+             if (online){
+                 OnlineReport onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
                       return onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "");
                   }
                 return result;
