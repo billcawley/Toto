@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -71,6 +72,12 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
 
     }
+    public List<OpenDatabase> findForDatabaseId(int databaseId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DATABASEID, databaseId);
+        return findListWithWhereSQLAndParameters("where " + DATABASEID + "` = :" + DATABASEID, namedParams, false);
+    }
+
 
 
 
