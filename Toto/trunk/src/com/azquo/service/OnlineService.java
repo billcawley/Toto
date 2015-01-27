@@ -140,7 +140,7 @@ public final class OnlineService {
         StringBuffer head = new StringBuffer();
         AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO, this);
         loggedInConnection.setAzquoBook(azquoBook);
-        Map <String,String> velocityContext = new HashMap<String, String>();
+        VelocityContext velocityContext = new VelocityContext();
         //String output = readFile("onlineReport.html").toString();
         if (spreadsheetName == null){
             spreadsheetName = "";
@@ -154,7 +154,6 @@ public final class OnlineService {
             if (onlineReport.getId() < 2){
                 azquoBook.loadBook(onlineReport.getFilename(), useAsposeLicense());
             }else{
-                int reportDB = onlineReport.getDatabaseId();
                 //note - the database specified in the report may not be the current database (as in applications such as Magento and reviews), but be 'temp'
                 String filepath = ImportService.dbPath + onlineReport.getPathname() +"/onlinereports/" + onlineReport.getFilename();
                 azquoBook.loadBook(filepath, useAsposeLicense());
@@ -164,7 +163,7 @@ public final class OnlineService {
                 azquoBook.dataRegionPrefix = azquoBook.azInput;
 
             }
-            azquoBook.printTabs(tabs, spreadsheetName);
+            spreadsheetName = azquoBook.printTabs(tabs, spreadsheetName);
 
             String error = azquoBook.convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), spreadsheetName, worksheet);
             if (error.length() > 0){
@@ -180,12 +179,13 @@ public final class OnlineService {
         head.append(azquoBook.printAllStyles());
         head.append(readFile("excelStyle.css"));
         head.append("</style>\n");
-        velocityContext.put("script",readFile("online.js").toString());
-        velocityContext.put("topmenu",createTopMenu(loggedInConnection).toString());
+        //velocityContext.put("script",readFile("online.js").toString());
+        //velocityContext.put("topmenu",createTopMenu(loggedInConnection).toString());
+        azquoBook.fillVelocityOptionInfo(loggedInConnection,velocityContext);
         velocityContext.put("tabs", tabs.toString());
         velocityContext.put("topmessage",message);
-        if (spreadsheetName==null){
-            spreadsheetName = "";
+        if (onlineReport.getId()==1 && spreadsheetName.equalsIgnoreCase("reports")){
+            spreadsheetName ="";
         }
          velocityContext.put("spreadsheetname",spreadsheetName);
         velocityContext.put("topcell", azquoBook.getTopCell()+"");
@@ -196,7 +196,6 @@ public final class OnlineService {
         velocityContext.put("maxcol",azquoBook.getMaxCol()+"");
          velocityContext.put("reportid", onlineReport.getId() + "");
         velocityContext.put("connectionid", loggedInConnection.getConnectionId() +"");
-         velocityContext.put("regions", azquoBook.getRegions(loggedInConnection, azquoBook.dataRegionPrefix).toString());
         if (azquoBook.dataRegionPrefix.equals(AzquoBook.azDataRegion)){
 
              velocityContext.put("menuitems","[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"},{\"position\":3,\"name\":\"Highlight changes\",\"enabled\":true,\"link\":\"showHighlight()\"}]");
@@ -220,9 +219,8 @@ public final class OnlineService {
               ws = ws.replace("$fileselect", "<input type=\"file\" name=\"uploadfile\">");
           }
         velocityContext.put("workbook", ws);
+
         velocityContext.put("charts", azquoBook.drawCharts(loggedInConnection, path).toString());
-
-
         return convertToVelocity(velocityContext,null,null,"onlineReport.vm");
     }
 
@@ -237,23 +235,26 @@ public final class OnlineService {
 
 
 
-
+/*
     private StringBuffer createTopMenu(LoggedInConnection loggedInConnection){
         StringBuffer sb = new StringBuffer();
-        sb.append("<ul class=\"topmenu\">\n");
-        sb.append("<li><a href=\"#\" onclick=\"downloadWorkbook();\">Download</a></li>\n");
+        sb.append("<a class=\"menubutton\" href=\"#\" onclick=\"openTopMenu();\"><img src=\"/images/menu.png\"></a>");
+        sb.append("<div id=\"topmenubox\" class=\"topmenubox\">\n");
+        sb.append("<ul  class=\"topmenu\">\n");
+        sb.append("<li><a href=\"#\" onclick=\"downloadAsXLS();\">Download as XLS</a></li>\n");
         if (loggedInConnection.getAzquoBook().dataRegionPrefix.equals(AzquoBook.azDataRegion)) {
-            sb.append("<li><input type=\"checkbox\" id=\"withMacros\" value=\"\">with macros</li>\n");
-            sb.append("<li><input type=\"checkbox\" id=\"asPDF\" value=\"\">as PDF</li>\n");
+            //sb.append("<li><input type=\"checkbox\" id=\"withMacros\" value=\"\">with macros</li>\n");
+            sb.append("<li><a href=\"#\" onclick=\"downloadAsPDF();\">Download as PDF</a></li>\n");
+            sb.append("<li><a href=\"#\" onclick=\"inspectDatabase();\">Inspect database</a></li>\n");
             //sb.append(menuItem("Draw chart", "drawChart()", " id=\"drawChart\""));
         }
-        sb.append(menuItem("Save data", "saveData()"," id=\"saveData\" style=\"display:none;\""));
-        sb.append("</ul>");
+          sb.append("</ul></div>");
+        sb.append("<a class=\"savedata\" href=\"#\" onclick=\"saveData()\" id=\"saveData\" style=\"display:none;\">Save data</a>");
         return sb;
 
 
     }
-
+*/
     private StringBuffer menuItem(String name, String link, String itemClass){
         return menuItem(name, link, itemClass, "");
 
@@ -301,15 +302,25 @@ public final class OnlineService {
 
       }
     public void setUserChoice(int userId, int reportId, String choiceName, String choiceValue) {
+        if (choiceName.equalsIgnoreCase(AzquoBook.OPTIONPREFIX + "clear overrides")){
+            userChoiceDAO.deleteOverridesForUserAndReportId(userId, reportId);
+            return;
+        }
         UserChoice userChoice = userChoiceDAO.findForUserIdReportIdAndChoice(userId, reportId, choiceName);
-        if (userChoice == null) {
-            userChoice = new UserChoice(0, userId, reportId, choiceName, choiceValue, new Date());
-            userChoiceDAO.store(userChoice);
-        } else {
-            if (!choiceValue.equals(userChoice.getChoiceValue())) {
-                userChoice.setChoiceValue(choiceValue);
-                userChoice.setTime(new Date());
+        if (choiceValue != null && choiceValue.length() > 0) {
+            if (userChoice == null) {
+                userChoice = new UserChoice(0, userId, reportId, choiceName, choiceValue, new Date());
                 userChoiceDAO.store(userChoice);
+            } else {
+                if (!choiceValue.equals(userChoice.getChoiceValue())) {
+                    userChoice.setChoiceValue(choiceValue);
+                    userChoice.setTime(new Date());
+                    userChoiceDAO.store(userChoice);
+                }
+            }
+        }else{
+            if (userChoice!=null){
+                userChoiceDAO.deleteForReportId(userChoice.getId());
             }
         }
     }
@@ -496,31 +507,6 @@ public final class OnlineService {
         return sb;
     }
 
-    private StringBuffer createAdminMenu(){
-        //not currently used - the spreadsheet tabs on the maintenance workbook are used instead
-        StringBuffer sb = new StringBuffer();
-        sb.append("<ul class=\"topmenu\">\n");
-        StringBuffer submenu = new StringBuffer();
-        submenu.append("<ul>");
-        submenu.append(menuItem("New", "manageDatabases('new')", ""));
-        submenu.append(menuItem("Copy", "manageDatabases('copy')",""));
-        submenu.append(menuItem("Merge", "manageDatabases('merge')", ""));
-        submenu.append(menuItem("Restore", "manageDatabases('restore')",""));
-        submenu.append("</ul>\n");
-        sb.append(menuItem("Database", "manageDatabases()","", submenu.toString()));
-
-        sb.append(menuItem("Upload", "upload()",""));
-        sb.append(menuItem("Inspect", "inspect()",""));
-        sb.append(menuItem("Users", "manageUsers()",""));
-        sb.append(menuItem("Permissions", "managePermissions()",""));
-
-        //sb.append(menuItem("Draw chart", "drawChart()",""));
-        //sb.append(menuItem("Save data", "saveData()"," id=\"savedata\" style=\"display:none;\""));
-        sb.append("</ul>");
-        return sb;
-
-
-    }
 
     public String switchDatabase(LoggedInConnection loggedInConnection, String newDBName)throws  Exception{
         Database db = databaseDAO.findForName(loggedInConnection.getBusinessId(), newDBName);
@@ -680,9 +666,11 @@ public final class OnlineService {
 
     public String showUserMenu(LoggedInConnection loggedInConnection){
         List<OnlineReport> onlineReports = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getBusinessId(),loggedInConnection.getUser().getStatus());
-        Map<String,String> context = new HashMap<String, String>();
+        VelocityContext  context = new VelocityContext();
         context.put("welcome","Welcome to Azquo!");
-        context.put("database", loggedInConnection.getAzquoMemoryDB().getDatabase().getName());
+        if (loggedInConnection.getCurrentDatabase() != null){
+            context.put("database", loggedInConnection.getAzquoMemoryDB().getDatabase().getName());
+        }
         Set<Map<String,String>> reports = new HashSet<Map<String, String>>();
         for (OnlineReport onlineReport:onlineReports){
             Map<String,String> vReport = new HashMap<String, String>();
@@ -706,7 +694,7 @@ public final class OnlineService {
             }
             loginService.switchDatabase(loggedInConnection,newDB);
         }
-        Map<String,String> context = new HashMap<String, String>();
+        VelocityContext context = new VelocityContext();
         context.put("connectionid", loggedInConnection.getConnectionId() + "");
         context.put("parents", parents);
         context.put("rootid",nameId + "");
@@ -714,7 +702,7 @@ public final class OnlineService {
     }
 
 
-    private String convertToVelocity(Map<String,String> context, String itemName, Set<Map<String,String>> items, String velocityTemplate){
+    private String convertToVelocity(VelocityContext context, String itemName, Set<Map<String,String>> items, String velocityTemplate){
 
         VelocityEngine ve = new VelocityEngine();
         Properties properties = new Properties();
@@ -741,14 +729,10 @@ public final class OnlineService {
             t = ve.getTemplate(velocityTemplate);
         }
         /*  create a context and add data */
-        VelocityContext vcontext = new VelocityContext();
-        addVelocityElements(vcontext,context);
-        if (items != null){
-            vcontext.put(itemName, items);
-        }
+         context.put(itemName, items);
          /* now render the template into a StringWriter */
         StringWriter writer = new StringWriter();
-        t.merge(vcontext, writer);
+        t.merge(context, writer);
         /* show the World */
         return writer.toString();
 
