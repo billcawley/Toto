@@ -172,7 +172,6 @@ public final class ValueService {
         // changing to sets for speed (hopefully!)
         //int count = 0;
 
-
         assert smallestName != null; // make intellij happy :P
         for (Value value : smallestName.getValues()) {
             boolean theValueIsOk = true;
@@ -797,9 +796,9 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
     }
 
 
-    public List<Integer> sortRows(int restrictCount, Map<Integer, Double> sortTotals) {
+    public List<Integer> sortValues(int restrictCount, Map<Integer, Double> sortTotals) {
 
-        List<Integer> sortedRows = new ArrayList<Integer>();
+        List<Integer> sortedValues = new ArrayList<Integer>();
         if (restrictCount != 0) {
             List list = new LinkedList(sortTotals.entrySet());
 
@@ -813,21 +812,20 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
             for (Iterator it = list.iterator(); it.hasNext(); ) {
                 Map.Entry entry = (Map.Entry) it.next();
-                sortedRows.add((Integer) entry.getKey());
+                sortedValues.add((Integer) entry.getKey());
             }
 
         } else {
             for (int i = 0; i < sortTotals.size(); i++) {
-                sortedRows.add(i);
+                sortedValues.add(i);
             }
         }
-        return sortedRows;
+        return sortedValues;
 
     }
 
-    public String getFullRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        String language = stringUtils.getInstruction(headingsSent, "language");
-        final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
+    public String setupRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
+         final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
         List<String> supplementNames = new ArrayList<String>();
 
         String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent, loggedInConnection.getLanguages());
@@ -836,7 +834,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
        // }
         loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
         loggedInConnection.setRowHeadingSupplements(region, supplementNames);
-        return outputHeadings(loggedInConnection.getRowHeadings(region), language, loggedInConnection.getRowHeadingSupplements(region));
+        return error;
 
 
     }
@@ -862,32 +860,29 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             }
             //note that the sort order has already been set.... there cannot be both a restrict count and a filter count
             return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
-        } else if (loggedInConnection.getRestrictCount(region) != null && loggedInConnection.getRestrictCount(region) != 0) {
-            int restrictCount = loggedInConnection.getRestrictCount(region);
+        } else if (loggedInConnection.getRestrictRowCount(region) != null && loggedInConnection.getRestrictRowCount(region) != 0) {
+            int restrictRowCount = loggedInConnection.getRestrictRowCount(region);
             List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
             List<List<Name>> rowHeadingsWithData = new ArrayList<List<Name>>();
             List<List<Name>> allRowHeadings = loggedInConnection.getRowHeadings(region);
-            if (restrictCount > allRowHeadings.size()) {
-                restrictCount = allRowHeadings.size();
-                loggedInConnection.setRestrictCount(region, restrictCount);
+            if (restrictRowCount > allRowHeadings.size()) {
+                restrictRowCount = allRowHeadings.size();
+                loggedInConnection.setRestrictRowCount(region, restrictRowCount);
             }
-            if (restrictCount > sortedRows.size()) {
-                restrictCount = sortedRows.size();
-                loggedInConnection.setRestrictCount(region, restrictCount);
+            if (restrictRowCount > sortedRows.size()) {
+                restrictRowCount = sortedRows.size();
+                loggedInConnection.setRestrictRowCount(region, restrictRowCount);
             }
 
-            for (int rowInt = 0; rowInt < restrictCount; rowInt++) {
+            for (int rowInt = 0; rowInt < restrictRowCount; rowInt++) {
                 rowHeadingsWithData.add(allRowHeadings.get(sortedRows.get(rowInt)));
             }
             return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
-        } else if (filterCount == -1) {//Online reports with no filtercount or sorting
-            return outputHeadings(loggedInConnection.getRowHeadings(region), language, loggedInConnection.getRowHeadingSupplements(region));
+        } 
+        return outputHeadings(loggedInConnection.getRowHeadings(region), language, loggedInConnection.getRowHeadingSupplements(region));
 
 
-        } else {
-            return getFullRowHeadings(loggedInConnection, region, headingsSent);
-        }
-    }
+      }
 
     /* ok so transposing happens here
     this is because the expand headings function is orientated for for headings and the column heading definitions are unsurprisingly set up for columns
@@ -900,7 +895,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
      */
 
 
-    public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
+    public String setupColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<Name>>> columnHeadingLists = new ArrayList<List<List<Name>>>();
         List<String> supplementNames = new ArrayList<String>();//not used for column headings, but needed for the interpretation routine
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
@@ -911,9 +906,49 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         }
         loggedInConnection.setColumnHeadings(region, (expandHeadings(transpose2DList(columnHeadingLists))));
         String language = stringUtils.getInstruction(headingsSent, "language");
-        return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)), language, null);
+        return "";
     }
 
+
+    public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String language) throws Exception {
+
+
+        if (loggedInConnection.getRestrictColCount(region) != null && loggedInConnection.getRestrictColCount(region) != 0) {
+            int restrictColCount = loggedInConnection.getRestrictColCount(region);
+            List<Integer> sortedCols = loggedInConnection.getColOrder(region);
+            List<List<Name>> ColHeadingsWithData = new ArrayList<List<Name>>();
+            List<List<Name>> allColHeadings = loggedInConnection.getColumnHeadings(region);
+            if (restrictColCount > allColHeadings.size()) {
+                restrictColCount = allColHeadings.size();
+                loggedInConnection.setRestrictColCount(region, restrictColCount);
+            }
+            if (restrictColCount > sortedCols.size()) {
+                restrictColCount = sortedCols.size();
+                loggedInConnection.setRestrictColCount(region, restrictColCount);
+            }
+
+            for (int ColInt = 0; ColInt < restrictColCount; ColInt++) {
+                ColHeadingsWithData.add(allColHeadings.get(sortedCols.get(ColInt)));
+            }
+            return outputHeadings(transpose2DList(ColHeadingsWithData), language, null);
+        }
+
+        return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)), language, null);
+
+    }
+
+    /* ok so transposing happens here
+    this is because the expand headings function is orientated for for headings and the column heading definitions are unsurprisingly set up for columns
+     what is notable here is that the headings are then stored this way in column headings, we need to say "give me the headings for column x"
+
+     NOTE : this means the column heading are not stored according to the orientation used in the above function
+
+      hence, to output them we have to transpose them again!
+
+     */
+
+    
+    
     /*
 
     OK, having generified the function we should only need one function. The list could be anything, names, list of names, hashmaps whatever
@@ -1144,21 +1179,22 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         loggedInConnection.setLockMap(region, sb.toString());
     }
 
-    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, int filterCount, int restrictCount, Map<Integer, Double> sortTotals) {
+    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, int filterCount, int restrictRowCount, int restrictColCount) {
 
         int rowInt = 0;
         int blockRowCount = 0;
         int outputMarker = 0;
         boolean firstRow = true;
-        if (restrictCount == 0) {
-            restrictCount = sortTotals.size();
-        }
-        final StringBuilder sb = new StringBuilder();
         List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
-        if (restrictCount > sortedRows.size()) {
-            restrictCount = sortedRows.size();
+        List<Integer> sortedCols = loggedInConnection.getColOrder(region);
+        final StringBuilder sb = new StringBuilder();
+        if (restrictRowCount==0 || restrictRowCount > sortedRows.size()){
+            restrictRowCount = sortedRows.size();
         }
-        for (int rowNo = 0; rowNo < restrictCount; rowNo++) {
+        if (restrictColCount==0 || restrictColCount > sortedCols.size()){
+            restrictColCount = sortedCols.size();
+        }
+         for (int rowNo = 0; rowNo < restrictRowCount; rowNo++) {
 
             List<String> rowValuesShown = shownValueArray.get(sortedRows.get(rowNo));
             if (blockRowCount == 0) {
@@ -1168,11 +1204,11 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 sb.append("\n");
             }
             boolean newRow = true;
-            for (String colValue : rowValuesShown) {
+            for (int colNo=0;colNo < restrictColCount;colNo++) {
                 if (!newRow) {
                     sb.append("\t");
                 }
-                sb.append(colValue);
+                sb.append(rowValuesShown.get(sortedCols.get(colNo)));
                 newRow = false;
 
             }
@@ -1220,36 +1256,83 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows, maxCols);
     }
 
+    private int findPosition(List<List<Name>> headings, String toFind){
+        boolean desc = false;
+        if (toFind == null || toFind.length()==0){
+            return 0;
+        }
+        if (toFind.endsWith("-desc")){
+            toFind = toFind.replace("-desc","");
+            desc = true;
+        }
+        int count = 1;
+        for (List<Name> heading:headings){
 
-    public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictCount, int maxCols) throws Exception {
+            if (heading.get(heading.size()-1).getDefaultDisplayName().replace(" ","").equals(toFind)){
+                if (desc) return -count;
+                return count;
+            }
+            count++;
+        }
+
+
+        return 0;
+    }
+
+    public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictRowCount, int restrictColCount) throws Exception {
         loggedInConnection.setContext(region, contextNames); // needed for provenance
         long track = System.currentTimeMillis();
-        Integer sortCol = loggedInConnection.getSortCol(region);
-        boolean sortDown = true;
+        Integer sortCol = findPosition(loggedInConnection.getColumnHeadings(region), loggedInConnection.getSortCol(region));
+        Integer sortRow = findPosition(loggedInConnection.getRowHeadings(region),loggedInConnection.getSortRow(region));
+        boolean sortRowsUp = false;
+        boolean sortColsRight = false;
         if (sortCol == null){
             sortCol = 0;
-        }else{
-            if (sortCol < 0){
+        }else {
+            if (sortCol > 0) {
+                sortRowsUp = true;
+            } else {
                 sortCol = -sortCol;
-                sortDown = false;
             }
+        }
+        if (sortRow == null){
+            sortRow = 0;
+        }else{
+            if (sortRow > 0){
+                sortColsRight = true;
+            }else{
+                sortRow = -sortRow;
+            }
+        }
+        if (sortCol >0  && restrictRowCount == 0){
+            restrictRowCount = loggedInConnection.getRowHeadings(region).size();//this is a signal to sort the rows
+        }
+        if (sortRow >0  && restrictColCount == 0){
+            restrictColCount = loggedInConnection.getColumnHeadings(region).size();//this is a signal to sort the cols
+        }
 
-        }
-        if (sortCol >0  && restrictCount == 0){
-            restrictCount = loggedInConnection.getRowHeadings(region).size();//this is a signal to sort the rows
-        }
 
         final List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
         loggedInConnection.setDataValueMap(region, dataValuesMap);
-        final Map<Integer, Double> sortTotals = new HashMap<Integer, Double>();
+        final Map<Integer, Double> sortRowTotals = new HashMap<Integer, Double>();
+        final Map<Integer, Double> sortColumnTotals = new HashMap<Integer, Double>();
         List<List<Set<Name>>> dataNamesMap = new ArrayList<List<Set<Name>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of names for each cell
         List<List<String>> shownValueArray = new ArrayList<List<String>>();
         List<List<Boolean>> lockArray = new ArrayList<List<Boolean>>();
         int rowNo = 0;
         Map<Name,Integer> totalSetSize = new HashMap<Name, Integer>();
+        for (int colNo = 0; colNo < loggedInConnection.getColumnHeadings(region).size();colNo++){
+            sortColumnTotals.put(colNo, 0.00);
+        }
+        int totalRows = loggedInConnection.getRowHeadings(region).size();
+        int totalCols = loggedInConnection.getColumnHeadings(region).size();
+        if (totalRows * totalCols > 500000){
+            throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells 500,000");
+
+        }
         for (List<Name> rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
-            ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(loggedInConnection.getColumnHeadings(region).size());
-            ArrayList<Set<Name>> thisRowNames = new ArrayList<Set<Name>>(loggedInConnection.getColumnHeadings(region).size());
+            ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(totalCols);
+            ArrayList<Set<Name>> thisRowNames = new ArrayList<Set<Name>>(totalCols);
             List<String> shownValues = new ArrayList<String>();
             List<Boolean> lockedCells = new ArrayList<Boolean>();
             dataValuesMap.add(thisRowValues);
@@ -1258,13 +1341,13 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             lockArray.add(lockedCells);
 
 
-            double sortTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total.
+            double sortRowTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total.
             boolean hasValues = false;
             int colNo = 0;
             for (List<Name> columnName : loggedInConnection.getColumnHeadings(region)) {
                 final Set<Name> namesForThisCell = new HashSet<Name>();
                 createCellNameList(namesForThisCell, rowName, columnName, contextNames);
-                // edd putting in peer check stuff here, should I not???
+                 // edd putting in peer check stuff here, should I not???
                 MBoolean locked = new MBoolean(); // we can pass a mutable boolean in and have the function set it
                 // why bother?   Maybe leave it as 'on demand' when a data region doesn't work
                 // Map<String, String> result = nameService.isAValidNameSet(azquoMemoryDBConnection, namesForThisCell, new HashSet<Name>());
@@ -1285,11 +1368,19 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                     // TODO - peer additive check. If using peers and not additive, don't include children
                     double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values, totalSetSize, loggedInConnection.getLanguages()); // true = pay attention to names additive flag
                     //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                    if (restrictCount > 0 && (sortCol==0 || sortCol == colNo +1)) {
-                        if (sortDown) {
-                            sortTotal += cellValue;
+                    if (restrictRowCount > 0 && (sortCol==0 || sortCol == colNo +1)) {
+                        if (sortRowsUp) {
+                            sortRowTotal += cellValue;
                         } else {
-                            sortTotal -= cellValue;
+                            sortRowTotal -= cellValue;
+                        }
+                    }
+                    if (restrictColCount > 0 && (sortRow == 0|| sortRow == rowNo + 1)) {
+                        if (sortColsRight) {
+                            sortColumnTotals.put(colNo, sortColumnTotals.get(colNo) + cellValue);
+                        } else {
+                            sortColumnTotals.put(colNo, sortColumnTotals.get(colNo) - cellValue);
+
                         }
                     }
                     if (values.size() > 0) {
@@ -1302,7 +1393,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                                 //make up a suitable double to get some kind of order! sort on 8 characters
                                 String padded = value.getText() + "        ";
                                 for (int i = 0;i< 8; i++){
-                                    sortTotal = sortTotal * 64 + padded.charAt(i) - 32;
+                                    sortRowTotal = sortRowTotal * 64 + padded.charAt(i) - 32;
                                 }
                             }
                         }
@@ -1317,12 +1408,14 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 }
                 colNo++;
             }
-            sortTotals.put(rowNo++, sortTotal);
+                sortRowTotals.put(rowNo++, sortRowTotal);
 
         }
-        loggedInConnection.setRowOrder(region, sortRows(restrictCount, sortTotals));
-        loggedInConnection.setRestrictCount(region, restrictCount);
-        final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, filterCount, restrictCount, sortTotals);
+        loggedInConnection.setRowOrder(region, sortValues(restrictRowCount, sortRowTotals));
+        loggedInConnection.setColOrder(region, sortValues(restrictColCount, sortColumnTotals));
+        loggedInConnection.setRestrictRowCount(region, restrictRowCount);
+        loggedInConnection.setRestrictColCount(region, restrictColCount);    
+        final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, filterCount, restrictRowCount, restrictColCount);
         formatLockMap(loggedInConnection, region, lockArray);
 
         printSumStats();
@@ -1387,10 +1480,16 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
         final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
         final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
+
         if (rowOrder != null){
+            if (rowInt >= rowOrder.size()) return 10000;
             rowInt = rowOrder.get(rowInt);
         }
-
+        final List<Integer> colOrder = loggedInConnection.getColOrder(region);
+        if (colOrder != null){
+            if (colInt >= colOrder.size()) return 10000;
+            colInt = colOrder.get(colInt);
+        }
         int age = 10000;
         if (dataValueMap == null) return age;
         if (rowInt >= dataValueMap.size()) return age;
@@ -1413,6 +1512,9 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         }
         for (Value value : valuesForCell) {
             if (value.getText().length() > 0) {
+                if (value.getProvenance()==null){
+                    return 0;
+                }
                 Date provdate = value.getProvenance().getTimeStamp();
 
                 final long dateSubtract = today.getTime() - provdate.getTime();
@@ -1431,19 +1533,19 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
     public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt, String jsonFunction) {
         final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
         final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
-
+        final List<Integer> colOrder = loggedInConnection.getColOrder(region);
 
         if (dataValueMap != null) {
             if (dataValueMap.get(rowInt) != null) {
                 final List<List<Value>> rowValues = dataValueMap.get(rowOrder.get(rowInt));
 
-                if (rowValues.get(colInt) != null) {
-                    final List<Value> valuesForCell = rowValues.get(colInt);
+                if (rowValues.get(colOrder.get(colInt)) != null) {
+                    final List<Value> valuesForCell = rowValues.get(colOrder.get(colInt));
                     final Set<Name> originalCellNames = new HashSet<Name>();
                     //Need to find the difference between this value and the visible value.  First find the visible names on the cell
                     originalCellNames.addAll(loggedInConnection.getContext(region));
                     originalCellNames.addAll(loggedInConnection.getRowHeadings(region).get(rowOrder.get(rowInt)));
-                    originalCellNames.addAll(loggedInConnection.getColumnHeadings(region).get(colInt));
+                    originalCellNames.addAll(loggedInConnection.getColumnHeadings(region).get(colOrder.get(colInt)));
                     //Set<Name> specialForProvenance = new HashSet<Name>();
 
 
