@@ -207,18 +207,14 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         return  parentsAsSet != null ? parentsAsSet : parents;
     }
 
-/*    public Collection<Name> getPeerParents() {
-        return peerParents != null ? peerParents : new ArrayList<Name>();
-    }*/
-
     // don't allow external classes to set the parents I mean by function or otherwise, Name can manage this based on set children
-    // before could just edit the parents as I pleased now I can'[t need getters and setters based on the map
+    // before could just edit the parents as I pleased now I can't need getters and setters based on the map
 
     private void addToParents(final Name name) throws Exception {
-            if (parentsAsSet != null){
-                parentsAsSet.add(name);
-            } else {
-                synchronized (this) { // we can sync on this object whether it's used or not
+        if (parentsAsSet != null){
+            parentsAsSet.add(name);
+        } else {
+            synchronized (this) { // we can sync on this object whether it's used or not
                 if (!parents.contains(name)){ // it's this contains expense that means we should stop using arraylists over a certain size
                     // OK, here it may get interesting, what about size???
                     if (parents.size() >= ARRAYLISTTHRESHOLD){ // we need to convert. copy the array to a new hashset then set it
@@ -247,6 +243,24 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                     parents = Collections.unmodifiableList(newParents);
                 }
             }
+        }
+    }
+
+    // ok for thread safety I need a few functions to manage peer parents. Just a plain sync should be fine for the mo
+    // since peerparents is private and only accesed in here synchronized it is safe to change the lists here rather than assign new ones
+
+    private synchronized void addToPeerParents(final Name name) {
+        if (peerParents == null){
+            peerParents = new ArrayList<Name>();
+        }
+        if (!peerParents.contains(name)){
+            peerParents.add(name);
+        }
+    }
+
+    private synchronized void removeFromPeerParents(final Name name) {
+        if (peerParents != null){
+            peerParents.remove(name);
         }
     }
 
@@ -444,6 +458,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         Map<String, String> attributesAsMap = new HashMap<String, String>();
         int count = 0;
         // if I'm going to for loop I should probably copy - in theory the two could go out of sync. Not a pleasing thought . . .
+        // TODO, possibly a wrapper for 2 lists for this? Reference to this object changing could be the way it's (more) atomically updated
         List<String> valuesCopy = new ArrayList<String>(attributeValues);
         for (String key : new ArrayList<String>(attributeKeys)){
             attributesAsMap.put(key, valuesCopy.get(count));
@@ -452,52 +467,46 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         return Collections.unmodifiableMap(attributesAsMap);
     }
 
-    public synchronized void setPeersWillBePersisted(LinkedHashMap<Name, Boolean> peers) throws Exception {
-        //check if identical to existing
-        if (this.peers != null && this.getPeers().size()== peers.size()){ // not null check as it will be on init
-            boolean identical = true;
-            for (Name peer:this.getPeers().keySet()){
-                Boolean newAdditive = peers.get(peer);
-                if (newAdditive == null || newAdditive != this.getPeers().get(peer)){
-                    identical = false;
+    public void setPeersWillBePersisted(LinkedHashMap<Name, Boolean> peers) throws Exception {
+        // synchronize on the blok that affects this object not the whole function or we might have a deadlock (two names setting peers on each other!)
+        synchronized (this){
+            //check if identical to existing
+            if (this.peers != null && this.getPeers().size()== peers.size()){ // not null check as it will be on init
+                boolean identical = true;
+                for (Name peer:this.getPeers().keySet()){
+                    Boolean newAdditive = peers.get(peer);
+                    if (newAdditive == null || newAdditive != this.getPeers().get(peer)){
+                        identical = false;
+                    }
+                }
+                if (identical){
+                    return;
                 }
             }
-            if (identical){
-                return;
+            checkDatabaseForSet(peers.keySet());
+            for (Name peer : peers.keySet()) {
+                if (peer.equals(this)) {
+                    throw new Exception("error name cannot be a peer of itself " + this);
+                }
             }
-        }
-        checkDatabaseForSet(peers.keySet());
-        for (Name peer : peers.keySet()) {
-            if (peer.equals(this)) {
-                throw new Exception("error name cannot be a peer of itself " + this);
-            }
+            setNeedsPersisting();
         }
 
-        // we're ok, now before assigning remove this name form the member of peers look ups map
-        if (this.peers != null){ // added not null chekc as it will be on init
+        // now change the references to peer parents, just used for delete really.
+        if (this.peers != null){ // added not null check as it will be on init
             for (Name existingPeer : this.peers.keySet()) {
-                    if (existingPeer.peerParents != null){
-                        synchronized (existingPeer) {
-                            existingPeer.peerParents.remove(this);
-                        }
-                    }
+                existingPeer.removeFromPeerParents(this);
             }
         }
         System.out.println("setting peers for " + this);
         this.peers = peers;
         // add the adjusted back in back in :)
         for (Name existingPeer : this.peers.keySet()) {
-                if (existingPeer.peerParents == null){ // I think this check is all that's required for peerparents to be changed to a list
-                    existingPeer.peerParents = new ArrayList<Name>();
-                }
-            synchronized (existingPeer) {
-                if (!existingPeer.peerParents.contains(this)){ // I think this check is all that's required for peerparents to be changed to a list
-                    existingPeer.peerParents.add(this);
-                }
-            }
+            existingPeer.addToPeerParents(this);
         }
-        setNeedsPersisting();
     }
+
+    // Not entirely clear on usage here, basic thread safety should be ok I think
 
     public synchronized void setTemporaryAttribute(String attributeName, String attributeValue)throws Exception{
         attributeName = attributeName.toUpperCase();
@@ -515,9 +524,8 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     }
 
-    // zapping set attribute set, only done by he populate from json below I think
-
-    // todo - addname to attribute mapo . . . not efficient???
+    // todo - addname to attribute map . . . not efficient?
+    // I think plain old synchronized here is safe enough if not that fast
 
     public synchronized String setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
         attributeName = attributeName.toUpperCase();
@@ -612,7 +620,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
 
-    // todo : what happens if attributes changed? An exception is not a biggy but what if the lists go out of sync temporarily???
+    // todo : what happens if attributes changed? An exception is not a biggy but what if the lists go out of sync temporarily??? - will be fixed by the wrapper object. WIll cost 24 bytes but probably worth it
 
     public String getAttribute(String attributeName) {
         attributeName = attributeName.toUpperCase();
@@ -635,6 +643,8 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         return false;
     }
 
+/*    ok this function . . . peers needs to be as values chioldren etc, reassigned as a new arraylist in a synchronized block. Deal with the other objects out side of this blobk to avoid deadlocks
+            of course the state of this object and its external ones will not be atomic*/
 
     // removal ok on linked lists
 
@@ -750,30 +760,42 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     // first of its kind. Try to be comprehensive
+    // want to make it synchronized but I'm calling synchronized functions on other objects. Hmmmmmmmm.
 
     public void delete() throws Exception {
-        // remove from values
+        Collection<Value> values;
+        Collection<Name> parents;
+        List<Name> peerParents;
+
+        // ok we want a thread safe snapshot really of things that are synchronized on other objects
+        // peer parents is a bit different in that it can be null and is modified internally so to have a safe iterator I need a copy
+        synchronized (this){
+            values = getValues();
+            parents = getParents();
+            peerParents = this.peerParents == null ? new ArrayList<Name>() : new ArrayList<Name>(this.peerParents);
+            // the basics are done here in the synchronized block
+            getAzquoMemoryDB().removeNameFromDb(this);
+            needsDeleting = true;
+            setNeedsPersisting();
+            // remove children - this is using the same lock so do it in here
+            for (Name child : getChildren()) {
+                removeFromChildrenWillBePersisted(child);
+            }
+        }
+        // then the actions on other objects
+        // remove from values - this will change when value is changed to make more safe
         for (Value v : values) {
             Set<Name> namesForValue = v.getNames();
             namesForValue.remove(this);
             v.setNamesWillBePersisted(namesForValue);
         }
-        // remove children
-        for (Name child : getChildren()) {
-            removeFromChildrenWillBePersisted(child);
-        }
         // remove from parents
-        for (Name parent : getParents()) {
+        for (Name parent : parents) {
             parent.removeFromChildrenWillBePersisted(this);
         }
         // peers - new lookup to use
-        if (peerParents != null){
-            for (Name peerParent : peerParents) {
-                peerParent.removeFromPeersWillBePersisted(this);
-            }
+        for (Name peerParent : peerParents) {
+            peerParent.removeFromPeersWillBePersisted(this);
         }
-        getAzquoMemoryDB().removeNameFromDb(this);
-        needsDeleting = true;
-        setNeedsPersisting();
     }
 }
