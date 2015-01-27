@@ -11,6 +11,8 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.rmi.runtime.Log;
 
+import javax.xml.crypto.Data;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -20,6 +22,10 @@ import java.util.*;
  * Time: 19:31
  * Currently fairly simple login functions
  */
+
+
+
+
 public class LoginService {
 
     private static final Logger logger = Logger.getLogger(LoginService.class);
@@ -44,6 +50,19 @@ public class LoginService {
     private OpenDatabaseDAO openDatabaseDAO;
     @Autowired
     private ValueService valueService;
+
+    @Autowired
+    private AppDBConnectionMap connectionMap;
+    @Autowired
+    private BusinessDAO businessDAO;
+    @Autowired
+    private OnlineReportDAO onlineReportDAO;
+    @Autowired
+    private UserChoiceDAO userChoiceDAO;
+    @Autowired
+    private UploadRecordDAO uploadRecordDAO;
+
+
 
     private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
     private final HashMap<Integer, Integer> openDBCount = new HashMap<Integer, Integer>();
@@ -85,7 +104,10 @@ public class LoginService {
                     logger.info("1 database, use that");
                     database = okDatabases.values().iterator().next();
                     memoryDB = memoryDBManager.getAzquoMemoryDB(database);
-                } else {
+                    if (database.getName().equals("temp")){
+                        memoryDB.zapDatabase();//to be on the safe side and avoid any persistance
+                    }
+                 } else {
                     database = okDatabases.get(databaseName);
                     if (database != null) {
                         memoryDB = memoryDBManager.getAzquoMemoryDB(database);
@@ -99,7 +121,7 @@ public class LoginService {
                 }
                 lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
                 int databaseId = 0;
-                if (memoryDB != null && !memoryDB.getDatabase().getName().equals("temp")){
+                if (memoryDB != null && memoryDB.getDatabase() !=null){
                    databaseId = memoryDB.getDatabase().getId();
                    Integer openCount = openDBCount.get(databaseId);
                    if (openCount != null){
@@ -210,10 +232,12 @@ public class LoginService {
             if ((System.currentTimeMillis() - lic.getLastAccessed().getTime()) > lic.getTimeOut()) {
                 // connection timed out
                 if (lic.getAzquoMemoryDB() != null) {
-                    int databaseId = lic.getAzquoMemoryDB().getDatabase().getId();
-                    String dbName = lic.getAzquoMemoryDB().getDatabase().getName();
+                     int databaseId = 0;
+                    if (lic.getAzquoMemoryDB().getDatabase() !=null) {
+                        databaseId = lic.getAzquoMemoryDB().getDatabase().getId();
+                      }
                     it.remove();
-                    if (!dbName.equals("temp")) {
+                    if (databaseId > 0) {
                         Integer openCount = openDBCount.get(databaseId);
                         if (openCount == 1) {
                             memoryDBManager.removeDatabase(lic.getAzquoMemoryDB().getDatabase());
@@ -304,6 +328,152 @@ public class LoginService {
             return getConnection(standardJsonRequest.connectionId);
         }
         return null;
+    }
+
+    public void createAzquoMaster() throws  Exception{
+
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat tf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+
+        AzquoMemoryDBConnection masterDBConnection = connectionMap.getConnection("Demo_master");//TODO  Convert to Azquo_master
+        Name allBusinesses = nameService.findOrCreateNameInParent(masterDBConnection, "All businesses", null, false);
+        Name allDatabases = nameService.findOrCreateNameInParent(masterDBConnection,"All databases", null,false);
+        Name allUsers = nameService.findOrCreateNameInParent(masterDBConnection,"All users", null,false);
+        Name allStatuses = nameService.findOrCreateNameInParent(masterDBConnection,"All statuses", null, false);
+        Name allPermissions = nameService.findOrCreateNameInParent(masterDBConnection, "All permissions", null, false);
+        Name allReports = nameService.findOrCreateNameInParent(masterDBConnection,"All reports", null, false);
+        Name allUserChoices = nameService.findOrCreateNameInParent(masterDBConnection, "All user choices",null, false);
+        Name allUploads = nameService.findOrCreateNameInParent(masterDBConnection,"All uploads", null, false);
+        Name allLogins = nameService.findOrCreateNameInParent(masterDBConnection,"All logins", null, false);
+        Name allOpenDatabases = nameService.findOrCreateNameInParent(masterDBConnection,"All databases opened", null, false);
+        List<Business> businesses = businessDAO.findAll();
+        for (Business b:businesses) {
+            Name bName = nameService.findOrCreateNameInParent(masterDBConnection, b.getBusinessName(), allBusinesses, false);
+            Business.BusinessDetails bd = b.getBusinessDetails();
+            bName.setAttributeWillBePersisted("address1", bd.address1);
+            bName.setAttributeWillBePersisted("address2", bd.address2);
+            bName.setAttributeWillBePersisted("address3", bd.address3);
+            bName.setAttributeWillBePersisted("address4", bd.address4);
+            bName.setAttributeWillBePersisted("website", bd.website);
+            bName.setAttributeWillBePersisted("postcode", bd.postcode);
+            bName.setAttributeWillBePersisted("telephone", bd.telephone);
+            List<Database> databases = databaseDao.findForBusinessId(b.getId());
+            Map<Integer, Name> dbMap = new HashMap<Integer, Name>();
+            for (Database db : databases) {
+                Name dbName = nameService.findOrCreateNameInParent(masterDBConnection, db.getName(), bName, true);
+                allDatabases.addChildWillBePersisted(dbName);
+                dbName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, db.getMySQLName());
+                dbName.setAttributeWillBePersisted("Start date", df.format(db.getStartDate()));
+                dbName.setAttributeWillBePersisted("End date", df.format(db.getEndDate()));
+                dbMap.put(db.getId(), dbName);
+                List<OpenDatabase> openDatabases = openDatabaseDAO.findForDatabaseId(db.getId());
+                for (OpenDatabase od:openDatabases){
+                    Name odName = nameService.findOrCreateNameInParent(masterDBConnection,db.getName()+":"+tf.format(od.getOpen()),allOpenDatabases, true);
+                    dbName.addChildWillBePersisted(odName);
+                    odName.setAttributeWillBePersisted("close",tf.format(od.getClose()));
+                    odName.setAttributeWillBePersisted("open",tf.format(od.getOpen()));
+
+                }
+
+            }
+            List<User> users = userDao.findForBusinessId(b.getId());
+            Map<Integer,Name> userMap = new HashMap<Integer, Name>();
+            Map<String, Name> statusMap = new HashMap<String, Name>();
+            for (User u : users) {
+                Name uName = nameService.findOrCreateNameInParent(masterDBConnection, u.getEmail(), bName, true);
+                userMap.put(u.getId(), uName);
+                allUsers.addChildWillBePersisted(uName);
+                uName.setAttributeWillBePersisted("name", u.getName());
+                Name sName = nameService.findOrCreateNameInParent(masterDBConnection, u.getStatus(), allStatuses, true);
+                sName.addChildWillBePersisted(uName);
+                uName.setAttributeWillBePersisted("password", u.getPassword());
+                uName.setAttributeWillBePersisted("salt", u.getSalt());
+                uName.setAttributeWillBePersisted("Start date", df.format(u.getStartDate()));
+                uName.setAttributeWillBePersisted("End date", df.format(u.getEndDate()));
+                String userStatus = u.getStatus();
+                if (userStatus != null && userStatus.length() > 0) {
+                    String[] userStatuses = userStatus.split(",");
+                    for (String us : userStatuses) {
+                        String businessUs = b.getBusinessName() + ":" + us;
+                        Name usName = nameService.findOrCreateNameInParent(masterDBConnection, businessUs, bName, true);
+                        allStatuses.addChildWillBePersisted(usName);
+                        usName.addChildWillBePersisted(uName);
+
+                    }
+                }
+                List<Permission> permissions = permissionDao.findForUserId(u.getId());
+
+                for (Permission p : permissions) {
+                    Name pName = nameService.findOrCreateNameInParent(masterDBConnection, dbMap.get(p.getDatabaseId()).getDefaultDisplayName() + ":" + u.getEmail(), allPermissions, true);
+                    uName.addChildWillBePersisted(pName);
+                    if (p.getReadList() != null && p.getReadList().length() > 0) {
+                        pName.setAttributeWillBePersisted("read list", p.getReadList());
+                    }
+                    if (p.getWriteList() != null && p.getWriteList().length() > 0) {
+                        pName.setAttributeWillBePersisted("write list", p.getWriteList());
+                    }
+                    pName.setAttributeWillBePersisted("Start date", df.format(p.getStartDate()));
+                    pName.setAttributeWillBePersisted("End date", df.format(p.getEndDate()));
+
+                }
+                Map<Integer,Name>olrMap = new HashMap<Integer, Name>();
+                List<OnlineReport> onlineReports = onlineReportDAO.findForBusinessId(b.getId());
+                for (OnlineReport olr : onlineReports) {
+                    Name olrParent = bName;
+                    if (olr.getDatabaseId() > 0) {
+                        olrParent = dbMap.get(olrParent);
+
+                    }
+
+                    Name olrName = nameService.findOrCreateNameInParent(masterDBConnection, olr.getReportName(), olrParent, true);
+                    olrMap.put(olr.getId(), olrName);
+                    olrName.setAttributeWillBePersisted("filename", olr.getFilename());
+                    olrName.setAttributeWillBePersisted("explanation", olr.getExplanation());
+                    allReports.addChildWillBePersisted(olrName);
+                    String ustatus = olr.getUserStatus();
+                    if (ustatus != null && ustatus.length() > 0) {
+                        String[] ustatuses = ustatus.split(",");
+                        for (String us : ustatuses) {
+                            String businessUs = b.getBusinessName() + ":" + us;
+                            Name usName = nameService.findOrCreateNameInParent(masterDBConnection, businessUs, bName, true);
+                            allStatuses.addChildWillBePersisted(usName);
+                            usName.addChildWillBePersisted(olrName);
+
+                        }
+                    }
+                    List<UserChoice> userChoices = userChoiceDAO.findForUserIdAndReportId(u.getId(), olr.getId());
+                    for (UserChoice uc:userChoices){
+                         Name ucName = nameService.findOrCreateNameInParent(masterDBConnection, u.getEmail() + ":" + olrName.getDefaultDisplayName(), allUserChoices, true);
+                         uName.addChildWillBePersisted(ucName);
+                         ucName.setAttributeWillBePersisted(uc.getChoiceName(), uc.getChoiceValue());
+                         ucName.setAttributeWillBePersisted("update time", tf.format(uc.getTime()));
+                    }
+                    List<LoginRecord> loginRecords = loginRecordDAO.findForUserId(u.getId());
+                    for (LoginRecord lr:loginRecords){
+                        Name dbName = dbMap.get(lr.getDatabaseId());
+                        if (dbName!=null){
+                            Name lrName = nameService.findOrCreateNameInParent(masterDBConnection,u.getEmail()+":"+tf.format(lr.getTime()),allLogins, true);
+                            dbName.addChildWillBePersisted(lrName);
+                            lrName.setAttributeWillBePersisted("time", tf.format(lr.getTime()));
+                        }
+                    }
+
+                }
+            }
+            List<UploadRecord> uploadRecords = uploadRecordDAO.findForBusinessId(b.getId());
+            for (UploadRecord ur:uploadRecords){
+                Name dbName = dbMap.get(ur.getDatabaseId());
+                Name uName = userMap.get(ur.getUserId());
+                if (dbName != null && uName!=null){
+                    Name urName = nameService.findOrCreateNameInParent(masterDBConnection,uName.getDefaultDisplayName() + ":" + tf.format(ur.getDate()), allUploads,true);
+                    urName.setAttributeWillBePersisted("file name", ur.getFileName());
+                    urName.setAttributeWillBePersisted("time", tf.format(ur.getDate()));
+                }
+            }
+
+         }
+
+
     }
 
 }
