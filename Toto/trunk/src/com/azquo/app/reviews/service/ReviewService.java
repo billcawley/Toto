@@ -368,9 +368,9 @@ public class ReviewService {
         }
         try{
             if (startDate == null){
-                orderItems = nameService.parseQuery(azquoMemoryDbConnection, division + ";level lowest * `All ratings`;level lowest");
+                orderItems = nameService.parseQuery(azquoMemoryDbConnection, "`"+division + "`;level lowest * `All ratings`;level lowest");
             }else{
-                orderItems = nameService.parseQuery(azquoMemoryDbConnection, division + ";level lowest;WHERE .`Review date` >= \"" + startDate + "\" * order;level lowest * `All ratings`;level lowest");
+                orderItems = nameService.parseQuery(azquoMemoryDbConnection, "`"+division + "`;level lowest;WHERE .`Review date` >= \"" + startDate + "\" * order;level lowest * `All ratings`;level lowest");
             }
 
         } catch (Exception e){
