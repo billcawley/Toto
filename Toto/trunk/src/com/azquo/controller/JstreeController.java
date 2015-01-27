@@ -87,6 +87,10 @@ public class JstreeController {
 
              }
              loggedInConnection = loginService.getConnection(connectionId);
+             if ((database==null || database.length() == 0) && loggedInConnection != null && loggedInConnection.getCurrentDatabase()!=null){
+                 database = loggedInConnection.getCurrentDatabase().getName();
+             }
+
              Map<String, LoggedInConnection.JsTreeNode> lookup = loggedInConnection.getJsTreeIds();
              if (json != null && json.length() > 0) {
                  NameJsonRequest nameJsonRequest;
@@ -134,7 +138,7 @@ public class JstreeController {
                  }
                  LoggedInConnection.JsTreeNode current = new LoggedInConnection.JsTreeNode(null,null);
                  if (jsTreeId==null || jsTreeId.equals("#")){
-                     if (topNode != null){
+                     if (topNode != null && !topNode.equals("0")){
                          current.child = nameService.findById(loggedInConnection,Integer.parseInt(topNode));
                      }
                      jsTreeId = "0";
