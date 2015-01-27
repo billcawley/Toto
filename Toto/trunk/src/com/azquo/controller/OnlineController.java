@@ -7,6 +7,7 @@ import com.azquo.adminentities.OnlineReport;
 import com.azquo.memorydb.Name;
 import com.azquo.service.*;
 //import com.azquo.util.Chart;
+import com.azquo.view.AzquoBook;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
@@ -239,6 +240,9 @@ public class OnlineController {
                 workbookName = "unknown";
             }
             if (connectionId == null) {
+                if (user==null){
+                    return "utf8Page";
+                }
                 if (user.equals("demo@user.com")){
                     user += request.getRemoteAddr();
                 }
@@ -264,13 +268,15 @@ public class OnlineController {
                         loginService.switchDatabase(loggedInConnection, db);
                         onlineReport.setPathname(loggedInConnection.getCurrentDBName());
                     } else {
-                        db=loggedInConnection.getCurrentDatabase();
-                          onlineReport.setPathname(adminService.getBusinessPrefix(loggedInConnection));
+                        db = loggedInConnection.getCurrentDatabase();
+                        onlineReport.setPathname(adminService.getBusinessPrefix(loggedInConnection));
 
                     }
-                    onlineReport.setDatabase(db.getName());
-                    database = onlineReport.getDatabase();
-                  }
+                    if (db != null){
+                        onlineReport.setDatabase(db.getName());
+                        database = onlineReport.getDatabase();
+                    }
+                }
             }
             if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.hasAzquoMemoryDB()){
                 loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(),"");
@@ -302,8 +308,21 @@ public class OnlineController {
 
              */
             //String sortRegion = "";
-            if ((opcode.equals("sortcol") || opcode.equals("highlight") || opcode.equals("selectchosen")) && choiceName != null){
-                onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
+            if ((opcode.equals("setchosen")) && choiceName != null){
+                if (choiceName.startsWith("region options:")){
+                    String region = choiceName.substring(15);
+                    System.out.println("saving choices: " + choiceName + " " + choiceValue);
+                    if (choiceValue.equals("clear")){
+                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "clear overrides", "");
+                    }else {
+                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxrows" + region, request.getParameter("maxrows" + region));
+                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxcols" + region, request.getParameter("maxcols" + region));
+                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "hiderows" + region, request.getParameter("hiderows" + region));
+                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "sortable" + region, request.getParameter("sortable" + region));
+                    }
+                }else{
+                    onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
+                }
 
                 opcode="loadsheet";
             }
