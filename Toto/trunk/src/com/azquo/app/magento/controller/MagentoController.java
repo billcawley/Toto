@@ -112,8 +112,6 @@ public class MagentoController {
          if (loggedInConnection == null) {
              //for testing only
              if (db == null) db = "temp";
-             if (logon==null || logon.equals("guest")) logon="tempuser";
-             if (password==null || password.equals("guest")) password = "password";
              loggedInConnection = loginService.login(db,logon,password,0,"",false);//will automatically switch the database to 'temp' if that's the only one
              if (loggedInConnection==null){
                  return "error: user " + logon + " with this password does not exist";
@@ -128,7 +126,9 @@ public class MagentoController {
              return dataLoadService.findLastUpdate(loggedInConnection);
          }
          if (op.equals("updatedb")) {
-             System.out.println("RUnning a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
+             if (  loggedInConnection.getCurrentDatabase()!=null){
+                 System.out.println("RUnning a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
+             }
             dataLoadService.loadData(loggedInConnection, data.getInputStream());
              return loggedInConnection.getConnectionId() + "";
             //return onlineService.readExcel(loggedInConnection, onlineReport, null, "");
