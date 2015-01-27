@@ -2,12 +2,14 @@ package com.azquo.admindao;
 
 
 import com.azquo.adminentities.UserChoice;
+import com.azquo.view.AzquoBook;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -80,10 +82,28 @@ public final class UserChoiceDAO extends  StandardDAO<UserChoice> {
         return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " and `" + CHOICENAME + "` = :" + CHOICENAME, namedParams);
     }
 
+    public List<UserChoice> findForUserIdAndReportId(final int userId, final int reportId) {
+        //only used by the convert to Azquo_master;
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(USERID, userId);
+        namedParams.addValue(REPORTID, reportId);
+        return findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + REPORTID + "` = :" + REPORTID, namedParams, false);
+     }
+
     public void deleteForReportId(final int reportId){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
          namedParams.addValue(REPORTID, reportId);
          jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + REPORTID + " = :" + REPORTID, namedParams);
+
+
+    }
+
+
+    public void deleteOverridesForUserAndReportId(final int userId, final int reportId){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(REPORTID, reportId);
+        namedParams.addValue(USERID, userId);
+        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + REPORTID + " = :" + REPORTID + " AND " + USERID + " = :" + USERID + " AND " + CHOICENAME + " LIKE '" + AzquoBook.OPTIONPREFIX + "%'", namedParams);
 
 
     }
