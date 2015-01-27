@@ -29,21 +29,17 @@ a, img {
      list-style-type:none;
      margin:0;
      padding:0;
-    position:absolute;
-    left:240px;
-    top:0px;
     font-family:Arial;
+    font-size:12px;
 
  }
 
 .topmenu li {
-    float:left;
     position:relative;
-    padding-right:100;
     display:block;
     padding:10px;
     color:#444444;
-    text-align:center;
+
 
 }
 
@@ -324,49 +320,103 @@ li{
 }
 
 
+.excelDefaults .sortright{
+    position:absolute;
+    bottom:2px;
+    right:2px;
+    z-index:3;
+}
+
+.excelDefaults .sortleft{
+    position:absolute;
+    bottom:2px;
+    right:10px;
+    z-index:3;
+}
+
+
+
+.dataregionmenu {
+    display: none;
+    position: absolute;
+    font-size: 12px;
+    height:400px;
+    width:280px;
+}
+
+
+
+.dataregionmenu ul{
+    position:absolute;
+    line-height:5px;
+    z-index:11;
+    border:1px solid #cccccc;
+    padding:10px;
+    background-color:white;
+    width:250px;
+}
+
+.dataregionmenu a{
+    text-decoration:none;
+    font-weight: bold;
+    color:#444444;
+
+
+}
+
+
 .excelDefaults .highlight{
     color:#ff0000;
 
 }
 
-.popupmenu{
+.menubutton{
+    position:absolute;
+    right:0;
+    top:0;
+    height:20px;
+    width:30px;
+    overflow:hidden;
+    border:1px solid #888888;
+    background-color: #cccccc;
+    text-align:center;
+}
+
+.topmenubox{
+    position:absolute;
+    right:0;
+    top:20px;
+    border:1px solid silver;
+    width:250px;
     display:none;
-    width: 140px;
-    height: 200px;
-    position: absolute;
-    z-index: 11;
-    padding:20px 10px 10px 10px;
-    background-color: #eeeeee;
-    border: 1px solid #444444;
-}
-
-.popupmenu .enabled{
-    text-align:center;
+    z-index:3;
+    background-color: white;
+    height:400px
 
 }
 
-.popupmenu .enabled a{
-    color:#444444;
-    height:20px;
-    font-size:14px;
+
+.savedata{
+    position:absolute;
+    left:300px;
+    top:20px;
+    display:none;
+    font-family:Arial;
+    font-size:24px;
     text-decoration:none;
+    color:#444444;
+
 }
 
-.popupmenu .disabled{
-    color:grey;
-    height:20px;
-    font-size:14px;
+.sheetoptions{
+    height:200px;
+}
+
+.optionval{
+    width:30px;
     text-align:center;
 }
 
-.popupmenu .divider{
-    border: 1px solid #dddddd;
-    height: 0px;
-    width: 100px;
-    margin: 10px;
-    left: 15px;
-    position: relative;
-}
 
 .highlightoptions {
     display:none;
