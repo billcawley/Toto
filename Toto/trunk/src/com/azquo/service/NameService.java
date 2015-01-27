@@ -78,7 +78,7 @@ public final class NameService {
         for (String nameString : nameStrings){
             Name toAdd = findByName(azquoMemoryDBConnection, nameString, attributeNames);
             if (toAdd == null){
-                throw new Exception("cannot resolve reference to a name " + nameString);
+                throw new Exception("error: cannot resolve reference to a name " + nameString);
             }
             referencedNames.add(toAdd);
         }
