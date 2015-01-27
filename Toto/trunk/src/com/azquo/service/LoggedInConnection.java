@@ -50,8 +50,11 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private final Map<String, List<List<Name>>> columnHeadings;
     private final Map<String, List<String>> rowHeadingSupplements;//this will allow product classes to be included in the returned row headings, not used to define data.
     private final Map<String, List<Integer>> rowOrder;//for when top or bottom values need to be returned.
-    private final Map<String, Integer> restrictCount; //as above
-    private final Map<String, Integer> sortCol; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
+    private final Map<String, List<Integer>> colOrder; //as above
+    private final Map<String, Integer> restrictRowCount; //as above
+    private final Map<String, Integer> restrictColCount;
+    private final Map<String, String> sortCol; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
+    private final Map<String, String> sortRow; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
     private final Map<String, List<Name>> contexts;
     private final Map<String, String> lockMaps;
     private final Map<String, String> sentDataMaps;
@@ -77,8 +80,11 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         columnHeadings = new HashMap<String, List<List<Name>>>();
         rowHeadingSupplements = new HashMap<String, List<String>>();
         rowOrder = new HashMap<String, List<Integer>>();
-        restrictCount = new HashMap<String, Integer>();
-        sortCol = new HashMap<String, Integer>();
+        colOrder = new HashMap<String, List<Integer>>();
+        restrictRowCount = new HashMap<String, Integer>();
+        restrictColCount = new HashMap<String, Integer>();
+        sortCol = new HashMap<String, String>();
+        sortRow = new HashMap<String, String>();
         contexts = new HashMap<String, List<Name>>();
         lockMaps = new HashMap<String, String>();
         sentDataMaps = new HashMap<String, String>();
@@ -191,24 +197,63 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
       }
 
-    public Integer getRestrictCount(final String region) {
+    public List<Integer> getColOrder(final String region) {
         if (region == null || region.isEmpty()) {
-            return restrictCount.get(defaultRegion);
+            return colOrder.get(defaultRegion);
         } else {
-            return restrictCount.get(region);
+            return colOrder.get(region);
         }
     }
 
-    public void setRestrictCount(final String region, final int restrictCount){
+    public void setColOrder(final String region, final List<Integer> colOrder){
         if (region == null || region.isEmpty()) {
-            this.restrictCount.put(defaultRegion, restrictCount);
+            this.colOrder.put(defaultRegion, colOrder);
         } else {
-            this.restrictCount.put(region, restrictCount);
+            this.colOrder.put(region, colOrder);
         }
 
     }
 
-    public Integer getSortCol(final String region) {
+
+    public Integer getRestrictRowCount(final String region) {
+        if (region == null || region.isEmpty()) {
+            return restrictRowCount.get(defaultRegion);
+        } else {
+            return restrictRowCount.get(region);
+        }
+    }
+
+
+    public void setRestrictRowCount(final String region, final int restrictRowCount){
+        if (region == null || region.isEmpty()) {
+            this.restrictRowCount.put(defaultRegion, restrictRowCount);
+        } else {
+            this.restrictRowCount.put(region, restrictRowCount);
+        }
+
+    }
+
+
+
+    public Integer getRestrictColCount(final String region) {
+        if (region == null || region.isEmpty()) {
+            return restrictColCount.get(defaultRegion);
+        } else {
+            return restrictColCount.get(region);
+        }
+    }
+
+    public void setRestrictColCount(final String region, final int restrictColCount){
+        if (region == null || region.isEmpty()) {
+            this.restrictColCount.put(defaultRegion, restrictColCount);
+        } else {
+            this.restrictColCount.put(region, restrictColCount);
+        }
+
+    }
+
+
+    public String getSortCol(final String region) {
         if (region == null || region.isEmpty()) {
             return sortCol.get(defaultRegion);
         } else {
@@ -216,7 +261,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
-    public void setSortCol(final String region, final int sortCol){
+    public void setSortCol(final String region, final String sortCol){
         if (region == null || region.isEmpty()) {
             this.sortCol.put(defaultRegion, sortCol);
         } else {
@@ -228,6 +273,28 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         this.sortCol.clear();
 
     }
+
+    public String getSortRow(final String region) {
+        if (region == null || region.isEmpty()) {
+            return sortRow.get(defaultRegion);
+        } else {
+            return sortRow.get(region);
+        }
+    }
+
+    public void setSortRow(final String region, final String sortRow){
+        if (region == null || region.isEmpty()) {
+            this.sortRow.put(defaultRegion, sortRow);
+        } else {
+            this.sortRow.put(region, sortRow);
+        }
+
+    }
+    public void clearSortRows(){
+        this.sortRow.clear();
+
+    }
+
 
     public List<Name> getContext(final String region) {
         if (region == null || region.isEmpty()) {
