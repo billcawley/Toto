@@ -54,7 +54,10 @@ public class AzquoMemoryDBConnection {
     }
 
     public com.azquo.adminentities.Database getCurrentDatabase() {
-        return azquoMemoryDB.getDatabase();
+        if (azquoMemoryDB!=null){
+            return azquoMemoryDB.getDatabase();
+        }
+        return null;
     }
     public int getMaxIdOnCurrentDB() {
         return azquoMemoryDB.getCurrentMaximumId();
