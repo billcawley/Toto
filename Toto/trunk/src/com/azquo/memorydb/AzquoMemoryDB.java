@@ -41,7 +41,7 @@ public final class AzquoMemoryDB {
     private boolean needsLoading;
 
     // reference to the mysql db
-    private final Database database;
+    private  Database database;//removed 'final' to allow temporary database to be loaded
 
     // object ids. We handle this here, it's not done by MySQL
     private int maxIdAtLoad;
@@ -93,6 +93,10 @@ public final class AzquoMemoryDB {
 
     public Database getDatabase() {
         return database;
+    }
+
+    public void zapDatabase(){
+        database = null;
     }
 
     public boolean getNeedsLoading() {
