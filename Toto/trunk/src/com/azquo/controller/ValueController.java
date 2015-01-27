@@ -195,7 +195,7 @@ public class ValueController {
               }
 
             if (columnheadings != null && columnheadings.length() > 0) {
-                result =  valueService.getColumnHeadings(loggedInConnection, region, columnheadings);
+                result =  valueService.setupColumnHeadings(loggedInConnection, region, columnheadings);
                 logger.info("time for column headings in region " + region + " is " + (System.currentTimeMillis() - startTime));
             }
             if (context != null) {
