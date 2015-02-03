@@ -104,9 +104,13 @@ public class JstreeController {
                     return "error:invalid connection id or login credentials";
                 }
                 LoggedInConnection.JsTreeNode currentNode = lookup.get(nameJsonRequest.id+ "");
-                 nameJsonRequest.id = currentNode.child.getId();//convert from jstree id.
-                 result.append(nameService.processJsonRequest(loggedInConnection, nameJsonRequest, loggedInConnection.getLanguages()));
-             }else{
+                 LoggedInConnection.NameOrValue lineChosen = currentNode.child;
+                 if (lineChosen.name != null){
+                     nameJsonRequest.id = lineChosen.name.getId();//convert from jstree id.
+                     result.append(nameService.processJsonRequest(loggedInConnection, nameJsonRequest, loggedInConnection.getLanguages()));
+
+                 }
+              }else{
                  if (itemsChosen != null && itemsChosen.length() > 0){
                      //find the relevant data and show it
                      String[] jsItems = itemsChosen.split(",");
@@ -114,10 +118,13 @@ public class JstreeController {
                      for (String jsItem:jsItems){
                          if (jsItem.length() > 0){
                              try {
-                                 Name nameChosen = lookup.get(jsItem).child;
-                                 Set<Name> nameChosenSet = new HashSet<Name>();
-                                 nameChosenSet.add(nameChosen);
-                                 namesChosen.add(nameChosenSet);
+                                 LoggedInConnection.NameOrValue lineChosen = lookup.get(jsItem).child;
+                                 Name nameChosen = lineChosen.name;
+                                 if (nameChosen != null) {
+                                     Set<Name> nameChosenSet = new HashSet<Name>();
+                                     nameChosenSet.add(nameChosen);
+                                     namesChosen.add(nameChosenSet);
+                                 }
                              }catch(Exception e){
                                  //should never happen.  If it does, ignore!
                              }
@@ -137,9 +144,11 @@ public class JstreeController {
 
                  }
                  LoggedInConnection.JsTreeNode current = new LoggedInConnection.JsTreeNode(null,null);
+                 current.child=new LoggedInConnection.NameOrValue();
+                 current.child.values = null;
                  if (jsTreeId==null || jsTreeId.equals("#")){
                      if (topNode != null && !topNode.equals("0")){
-                         current.child = nameService.findById(loggedInConnection,Integer.parseInt(topNode));
+                         current.child.name = nameService.findById(loggedInConnection,Integer.parseInt(topNode));
                      }
                      jsTreeId = "0";
                  } else{
@@ -154,8 +163,8 @@ public class JstreeController {
                  if (op.equals("new")){
                      if (parents==null) parents = "false";
                      int rootId = 0;
-                     if (current.child != null){
-                         rootId = current.child.getId();
+                     if (current.child.name != null){
+                         rootId = current.child.name.getId();
                      }
                      result.append(onlineService.showNameDetails(loggedInConnection, database, rootId, parents));
                      model.addAttribute("content", result);
@@ -163,81 +172,30 @@ public class JstreeController {
 
                  }
                  if (op.equals("children")) {
+
+
                      jsonFunction = null;
-                     result.append("[{\"id\":" + jsTreeId + ",\"state\":{\"opened\":true},\"text\":\"");
-                     List<Name> children = new ArrayList<Name>();
-                     if (jsTreeId.equals("0")&& current.child == null) {
-                         String searchTerm = loggedInConnection.getAzquoBook().getRangeData("az_inputInspectChoice");
-                         result.append("root");
-                         if (searchTerm == null || searchTerm.length()==0){
-                             children = nameService.findTopNames(loggedInConnection);
-                         }else{
-                             children= nameService.findContainingName(loggedInConnection,searchTerm,Name.DEFAULT_DISPLAY_NAME);
-                         }
 
-                     } else if (current.child != null) {
-                         result.append(current.child.getDefaultDisplayName().replace("\"","\\\""));
-                         if (!parents.equals("true")) {
-                             int count = 0;
-                             for (Name child : current.child.getChildren()) {
-                                 if (count++ >100){
-                                     break;
-                                 }
-                                 children.add(child);
-                             }
-                         }else {
-                             for (Name nameParent : current.child.getParents()) {
-                                 children.add(nameParent);
-                             }
-                         }
-
-                     }
-
-                     result.append("\"");
-                     if (children.size() > 0) {
-                         result.append(",\"children\":[");
-                         int lastId = loggedInConnection.getLastJstreeId();
-                         int count = 0;
-                         for (Name child : children) {
-                               if (count > 100){
-                                 //result.append(",{\"id\":10000000,\"text\":\"" + (children.size()-100) + " more....\"}");
-                                 break;
-                             }
-                             if (count++ > 0) {
-                                 result.append(",");
-                             }
-                             loggedInConnection.setLastJstreeId(++lastId);
-                             LoggedInConnection.JsTreeNode newNode = new LoggedInConnection.JsTreeNode(child, current.child);
-                             lookup.put(lastId + "", newNode);
-                             result.append("{\"id\":" + lastId + ",\"text\":\"" + child.getDefaultDisplayName().replace("\"","\\\"") + "\"");
-                             if (child.getChildren().size() > 0) {
-                                 result.append(",\"children\":true");
-                             }
-                              result.append("}");
-
-                         }
-                         result.append("]");
-                     }
-                     result.append("}]");
+                     result.append(nameService.getJsonChildren(loggedInConnection, jsTreeId, current.child.name, parents, lookup));
 
                  }
-                 if (current.child != null){
+                 if (current.child.name != null){
                      if (op.equals("move_node")){
-                        lookup.get(parent).child.addChildWillBePersisted(current.child);
+                        lookup.get(parent).child.name.addChildWillBePersisted(current.child.name);
                         result.append("true");
                     }
                     if (op.equals("create_node")) {
-                        Name newName = nameService.findOrCreateNameInParent(loggedInConnection, "newnewnew", current.child, true);
+                        Name newName = nameService.findOrCreateNameInParent(loggedInConnection, "newnewnew", current.child.name, true);
                         newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, "New node");
                         result.append("true");
                     }
 
                     if (op.equals("rename_node")) {
-                        current.child.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, position);
+                        current.child.name.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, position);
                         result.append("true");
                     }
                     if (op.equals("details")) {
-                        result.append("true,\"namedetails\":" + nameService.jsonNameDetails(current.child));
+                        result.append("true,\"namedetails\":" + nameService.jsonNameDetails(current.child.name));
                         //result = jsonFunction + "({\"namedetails\":" + result + "})";
 
                     }
@@ -252,7 +210,7 @@ public class JstreeController {
                 model.addAttribute("content", result);
             }
             response.setHeader("Access-Control-Allow-Origin","*");
-            response.setHeader("Content-type","application/json");
+            response.setHeader("Content-type", "application/json");
 
 
         } catch (Exception e) {
