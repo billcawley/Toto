@@ -1106,6 +1106,49 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         return sb.toString();
     }
 
+    public String getJsonDataforOneName(LoggedInConnection loggedInConnection, final Name name, Map<String, LoggedInConnection.JsTreeNode>lookup) throws Exception {
+        final StringBuilder sb = new StringBuilder();
+        Set<Name> names = new HashSet<Name>();
+        names.add(name);
+        List<Set<Name>> searchNames = new ArrayList<Set<Name>>();
+        searchNames.add(names);
+        Map<Set<Name>, Set<Value>> showValues = getSearchValues(searchNames);
+        if (showValues==null){
+            return "";
+        }
+        sb.append(", \"children\":[");
+        int lastId = loggedInConnection.getLastJstreeId();
+        int count = 0;
+        for (Set<Name> valNames : showValues.keySet()) {
+            Set<Value> values = showValues.get(valNames);
+            if (count++ > 0) {
+                sb.append(",");
+            }
+
+            loggedInConnection.setLastJstreeId(++lastId);
+            LoggedInConnection.NameOrValue nameOrValue = new LoggedInConnection.NameOrValue();
+            nameOrValue.values = values;
+            nameOrValue.name = null;
+            LoggedInConnection.JsTreeNode newNode = new LoggedInConnection.JsTreeNode(nameOrValue, name);
+            lookup.put(lastId + "", newNode);
+            if (count > 100) {
+                sb.append("{\"id\":" + lastId + ",\"text\":\"" + (showValues.size()-100) + " more....\"}");
+                break;
+            }
+            sb.append("{\"id\":" + lastId + ",\"text\":\"" + addValues(values) + " ");
+            for (Name valName:valNames){
+                if (valName.getId()!= name.getId()){
+                    sb.append(valName.getDefaultDisplayName().replace("\"", "\\\"") + " ");
+                }
+            }
+            sb.append("\"");
+            sb.append("}");
+
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
     private boolean isInPeers(Name name, Map<Name, Boolean> peers) {
         for (Name peer : peers.keySet()) {
             if (peer == name) return true;
