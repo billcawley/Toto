@@ -3,7 +3,6 @@ package com.azquo.memorydb;
 import com.azquo.memorydbdao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,12 +23,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * the goal is to bring it to sub 500 bytes. THis means in some cases variables being null until used and using arraylists instead of sets switching for performance
  * when the list gets too big.
  *
- * Update on memory : got it to about 850 bytes (magento example DB). Will park for the mo, further change would probably involve changes to attributes.
+ * Update on memory : got it to about 850 bytes (magento example DB). Will park for the mo, further change would probably involve changes to attributes,
+ * I mean the name attributes not being held here for example
  *
  * attributes case insensitive . . .not entirely happy about this
  *
+ * was comparable but this resulted in a code warning I've moved the comparator to NameService
  */
-public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> {
+public final class Name extends AzquoMemoryDBEntity {
 
     public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
     public static final String CALCULATION = "CALCULATION";
@@ -49,11 +50,26 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     private Provenance provenance;
     private boolean additive;
-    // going to try for attributes as two arraylists as this should save a lot of space vs a linked hash map
-    // unless I synchronize getattributes this is not 100% thread safe as they are updates one at a time. Putting the two in an object would sort this. + 24 bytes for another object reference and header I think
-    // TODO : for thread safety it's probably worth it. A NameAttributes object. Probably immutable.
-    private final List<String> attributeKeys;
-    private final List<String> attributeValues;
+
+    /* going to try for attributes as two arraylists as this should save a lot of space vs a linked hash map
+    that is to say one makes a new one of these when updating attributes and then switch it in. Hence atomic (but not necessarily visible!) switch of two arraylists
+    if an object reference is out of date it will at least be two consistent arrays
+
+    I have not problem with out of date versions of nameAttributes as the JVM makes things visible to other threads as long as object contents remain consistent.
+
+    According to what I've read I believe this object to be thread safe / Immutable.
+
+    */
+    private final class NameAttributes{
+        public final List<String> attributeKeys;
+        public final List<String> attributeValues;
+        private NameAttributes(List<String> attributeKeys, List<String> attributeValues) {
+            this.attributeKeys = Collections.unmodifiableList(new ArrayList<String>(attributeKeys)); // copy and unmodifiable
+            this.attributeValues = Collections.unmodifiableList(new ArrayList<String>(attributeValues));
+        }
+    }
+
+    private NameAttributes nameAttributes;
 
 
     // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
@@ -75,13 +91,13 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
      These sets are the ones which define data structure and the ones persisted, parents and peerParents above are derived from these
 
-    I will use thread safe sets so those modifies don't need to be syncronized but the list changes do
+    I will use thread safe sets so those modifies don't need to be synchronized but the list changes do
      */
-    // we want thread safe != null test on changes but this should be done by syncronized
+    // we want thread safe != null test on changes but this should be done by synchronized
     private Set<Name> childrenAsSet;
     private List<Name> children;
     // how often is peers used?? - gonna make null by default
-    private LinkedHashMap<Name, Boolean> peers;
+    private Map<Name, Boolean> peers;
 
 
     // for the code to make new names
@@ -93,7 +109,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
     // protected, should only be called by azquo memory db
-    // maps are not set here as we need to wait then load from the json cache
+    // Lists/Sets are not set here as we need to wait then load from the json cache
 
     protected Name(final AzquoMemoryDB azquoMemoryDB, int id, String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id);
@@ -108,8 +124,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         children = Collections.unmodifiableList(new ArrayList<Name>(0));
         peers = null; // keep overhead really low! I'm assuming this won't be used often - gets over the problem of linked hash map being expensive
         // ok attributes are different as the lists are not made available externally, they can be modified
-        attributeKeys = new ArrayList<String>(1);// a name will have at least one attribute we cna assume
-        attributeValues = new ArrayList<String>(1);
+        nameAttributes = new NameAttributes(new ArrayList<String>(0), new ArrayList<String>(0)); // attributes will nearly always be written over, this is just a placeholder
 
         getAzquoMemoryDB().addNameToDb(this);
     }
@@ -148,8 +163,8 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     public String toString() {
         return "Name{" +
                 "id='" + getId() + '\'' +
-                "attributes='" + attributeKeys + '\'' +
-                "attribute values='" + attributeValues + '\'' +
+                "attributes='" + nameAttributes.attributeKeys + '\'' +
+                "attribute values='" + nameAttributes.attributeValues + '\'' +
                 '}';
     }
 
@@ -304,7 +319,6 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     // same logic as find all parents but returns a set, should be correct
     // also we have the option to use additive or not
-    // todo - check whether we need a set returned or not . . .
 
     // leaving as sets for the mo. Arrays would be cheaper on the memory I suppose.
     private Set<Name> findAllChildrenCache = null;
@@ -457,18 +471,18 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     public Map<String, String> getAttributes() {
         Map<String, String> attributesAsMap = new HashMap<String, String>();
         int count = 0;
-        // if I'm going to for loop I should probably copy - in theory the two could go out of sync. Not a pleasing thought . . .
-        // TODO, possibly a wrapper for 2 lists for this? Reference to this object changing could be the way it's (more) atomically updated
-        List<String> valuesCopy = new ArrayList<String>(attributeValues);
-        for (String key : new ArrayList<String>(attributeKeys)){
-            attributesAsMap.put(key, valuesCopy.get(count));
+        NameAttributes nameAttributes = this.nameAttributes;// grab a reference in case it changes
+        for (String key : nameAttributes.attributeKeys){
+            attributesAsMap.put(key, nameAttributes.attributeValues.get(count));
             count++;
         }
         return Collections.unmodifiableMap(attributesAsMap);
     }
 
     public void setPeersWillBePersisted(LinkedHashMap<Name, Boolean> peers) throws Exception {
-        // synchronize on the blok that affects this object not the whole function or we might have a deadlock (two names setting peers on each other!)
+        // synchronize on the block that affects this object not the whole function or we might have a deadlock (two names setting peers on each other!)
+        // I get the existing outside so I can reassign peers in the synchronized block then do other object stuff outside
+        Map<Name,Boolean> oldPeers = this.peers;
         synchronized (this){
             //check if identical to existing
             if (this.peers != null && this.getPeers().size()== peers.size()){ // not null check as it will be on init
@@ -490,17 +504,16 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 }
             }
             setNeedsPersisting();
+            this.peers = peers;
         }
 
         // now change the references to peer parents, just used for delete really.
-        if (this.peers != null){ // added not null check as it will be on init
-            for (Name existingPeer : this.peers.keySet()) {
+        if (oldPeers != null){ // added not null check as it will be on init
+            for (Name existingPeer : oldPeers.keySet()) {
                 existingPeer.removeFromPeerParents(this);
             }
         }
-        System.out.println("setting peers for " + this);
-        this.peers = peers;
-        // add the adjusted back in back in :)
+        // add the adjusted back in back in to the peer parents of the peers
         for (Name existingPeer : this.peers.keySet()) {
             existingPeer.addToPeerParents(this);
         }
@@ -510,6 +523,10 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     public synchronized void setTemporaryAttribute(String attributeName, String attributeValue)throws Exception{
         attributeName = attributeName.toUpperCase();
+        // ok, I am assuming nameAttribute will ONLY be assigned in code synchronized on this object
+        // that is to say I'm assuming the reference won't change over the next two lines
+        List<String> attributeKeys = new ArrayList<String>(nameAttributes.attributeKeys);
+        List<String> attributeValues = new ArrayList<String>(nameAttributes.attributeValues);
         int index = attributeKeys.indexOf(attributeName);
         if (index != -1){
             attributeValues.remove(index);
@@ -518,6 +535,9 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             attributeKeys.add(attributeName);
             attributeValues.add(attributeValue);
         }
+        // yes I know this is a few array copies in a row (this constructor copies), trying to make things as safe as possible
+        // if there's a big overhead will have to revisit I suppose
+        nameAttributes = new NameAttributes(attributeKeys, attributeValues);
 
 //        attributes.put(attributeName, attributeValue);
         getAzquoMemoryDB().addNameToAttributeNameMap(this); // will overwrite but that's fine
@@ -531,8 +551,10 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         attributeName = attributeName.toUpperCase();
         // important, manage persistence, allowed name rules, db look ups
         // only care about ones in this set
-
         // code adapted from map based code to lists, may need rewriting
+        // again assume nameAttributes reference only set in code synchronized on this block
+        List<String> attributeKeys = new ArrayList<String>(nameAttributes.attributeKeys);
+        List<String> attributeValues = new ArrayList<String>(nameAttributes.attributeValues);
 
         int index = attributeKeys.indexOf(attributeName);
         String existing = null;
@@ -554,15 +576,6 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         if (existing!= null && existing.equals(attributeValue)){
             return "";
         }
-        /* THERE SHOULD NOT BE A NEED TO CHECK AMONG SIBLINGS,  NOT SURE WHY THIS CHECK IS THERE - MAYBE CHECKING DEFAULT DISPLAY NAME FOR DUPLICATES
-        for (Name parent : parents) {
-            for (Name fellowChild : parent.getChildren()) {
-                if (fellowChild.getId() != getId() && fellowChild.getAttribute(attributeName) != null && fellowChild.getAttribute(attributeName).equalsIgnoreCase(attributeValue)) {
-                     return "error: value : " + attributeValue + " already exists among siblings of " + getAttribute(DEFAULT_DISPLAY_NAME);
-                }
-            }
-        }
-        */
         if (existing != null){
             // just update the values
             attributeValues.remove(index);
@@ -573,7 +586,7 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
             attributeKeys.add(attributeName);
             attributeValues.add(attributeValue);
         }
-//        attributes.put(attributeName, attributeValue);
+        nameAttributes = new NameAttributes(attributeKeys, attributeValues);
         // now deal with the DB maps!
         // ok here I did say addNameToAttributeNameMap but that is inefficient, it uses every attribute, we've only changed one
         getAzquoMemoryDB().setAttributeForNameInAttributeNameMap(attributeName, attributeValue, this);
@@ -583,18 +596,21 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
 
     public synchronized void removeAttributeWillBePersisted(String attributeName) throws Exception {
         attributeName = attributeName.toUpperCase();
-        int index = attributeKeys.indexOf(attributeName);
+        int index = nameAttributes.attributeKeys.indexOf(attributeName);
         if (index != -1) {
+            List<String> attributeKeys = new ArrayList<String>(nameAttributes.attributeKeys);
+            List<String> attributeValues = new ArrayList<String>(nameAttributes.attributeValues);
             getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, attributeValues.get(index), this);
             attributeKeys.remove(index);
             attributeValues.remove(index);
+            nameAttributes = new NameAttributes(attributeKeys, attributeValues);
         }
         setNeedsPersisting();
     }
 
     // convenience
     public synchronized void clearAttributes() throws Exception {
-        for (String attribute : new ArrayList<String>(attributeKeys)) { // need to wrap the keyset in an arraylist as removeAttributeWillBePersisted will modify the keyset
+        for (String attribute : nameAttributes.attributeKeys) { // nameAttributes will be reassigned by the function but that should be ok, hang onto the key set as it was at the beginning
             removeAttributeWillBePersisted(attribute);
         }
     }
@@ -620,14 +636,12 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
     }
 
 
-    // todo : what happens if attributes changed? An exception is not a biggy but what if the lists go out of sync temporarily??? - will be fixed by the wrapper object. WIll cost 24 bytes but probably worth it
-
     public String getAttribute(String attributeName) {
         attributeName = attributeName.toUpperCase();
         String attribute = null;
-        int index = attributeKeys.indexOf(attributeName);
+        int index = nameAttributes.attributeKeys.indexOf(attributeName);
         if (index != -1){
-            attribute = attributeValues.get(index);
+            attribute = nameAttributes.attributeValues.get(index);
         }
         if (attribute != null) return attribute;
         //look up the chain for any parent with the attribute
@@ -643,30 +657,26 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
         return false;
     }
 
-/*    ok this function . . . peers needs to be as values chioldren etc, reassigned as a new arraylist in a synchronized block. Deal with the other objects out side of this blobk to avoid deadlocks
-            of course the state of this object and its external ones will not be atomic*/
+/*  peers needs to be as values children etc, reassigned as a new LinkedHashMap in a synchronized block. Deal with the other objects out side of this block to avoid deadlocks
+            of course the state of this object and its external ones will not be atomic
+            To clarify - since peers is returned I either need to copy on set or get. I choose on set and make it unmodifiable
+            */
 
-    // removal ok on linked lists
 
-    public synchronized void removeFromPeersWillBePersisted(Name name) throws Exception {
-        if (peers != null){
-            checkDatabaseMatches(name);// even if not needed throw the damn exception!
-            peers.remove(name);
-            if (name.peerParents != null){
-                synchronized (name.peerParents){
-                    name.peerParents.remove(this);
-                }
+    public void removeFromPeersWillBePersisted(Name name) throws Exception {
+        synchronized (this){
+            if (peers != null){
+                checkDatabaseMatches(name);// even if not needed throw the damn exception!
+                LinkedHashMap<Name, Boolean> newPeers = new LinkedHashMap<Name, Boolean>(peers);
+                newPeers.remove(name);
+                peers = Collections.unmodifiableMap(newPeers);
+                setNeedsPersisting();
             }
-            setNeedsPersisting();
         }
+        name.removeFromPeerParents(this);
     }
 
-    // assign a comparator if wanted for a specific language!
 
-    @Override
-    public int compareTo(Name n) {
-        return getDefaultDisplayName().toUpperCase().compareTo(n.getDefaultDisplayName().toUpperCase()); // think that will give us a case insensitive sort!
-    }
 
     // for Jackson mapping, trying to attach to actual fields would be dangerous in terms of allowing unsafe access
     // think important to use a linked hash map to preserve order.
@@ -727,10 +737,13 @@ public final class Name extends AzquoMemoryDBEntity implements Comparable<Name> 
                 this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
                 this.additive = transport.additive;
                 //this.attributes = transport.attributes;
+                List<String> attributeKeys = new ArrayList<String>();
+                List<String> attributeValues = new ArrayList<String>();
                 for (String key : transport.attributes.keySet()){
                     attributeKeys.add(key.toUpperCase());
                     attributeValues.add(transport.attributes.get(key));
                 }
+                nameAttributes = new NameAttributes(attributeKeys, attributeValues);
                 LinkedHashMap<Integer, Boolean> peerIds = transport.peerIds;
                 if (!peerIds.isEmpty()){
                     peers = new LinkedHashMap<Name, Boolean>();

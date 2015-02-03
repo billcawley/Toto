@@ -52,6 +52,13 @@ public final class NameService {
     public static final String DELETE = "delete";
     public static final String WHERE = "where";
 
+    private Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = new Comparator<Name>() {
+        @Override
+        public int compare(Name n1, Name n2) {
+            return n1.getDefaultDisplayName().toUpperCase().compareTo(n2.getDefaultDisplayName().toUpperCase()); // think that will give us a case insensitive sort!
+        }
+    };
+
 
     // get names from a comma separated list
     // edd: this is fine in principle, I'm concerned by the interpreter
@@ -92,7 +99,7 @@ public final class NameService {
 
     public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, String attribute) {
         ArrayList<Name> namesList = new ArrayList<Name>(azquoMemoryDBConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name));
-        Collections.sort(namesList);
+        Collections.sort(namesList, defaultLanguageCaseInsensitiveNameComparator);
         return namesList;
     }
 
@@ -300,7 +307,7 @@ public final class NameService {
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent5", marker);
             return existing;
         } else {
-            //System.out.println("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
+            logger.debug("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
             // todo - we should not be getting the provenance from the conneciton
             Provenance provenance = azquoMemoryDBConnection.getProvenance("imported");
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
@@ -342,7 +349,6 @@ public final class NameService {
         int level = 1;
         if (levelString != null) {
             if (levelString.equalsIgnoreCase(LOWEST)) {
-                //System.out.println("lowest");
                 level = LOWEST_LEVEL_INT;
             } else if (levelString.equalsIgnoreCase(ALL)) {
                 level = ALL_LEVEL_INT;
@@ -523,7 +529,7 @@ public final class NameService {
         setFormula = stringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
-        //System.out.println(setFormula);
+        logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
         int stackCount = 0;
         //int stringCount = 0;
@@ -742,7 +748,7 @@ public final class NameService {
             if (countString == null) countString = "";
             // SECOND  Sort if necessary
             if (sorted != null) {
-                Collections.sort(names);
+                Collections.sort(names, defaultLanguageCaseInsensitiveNameComparator);
             }
 
             //THIRD  trim that down to the subset defined by from, to, count
@@ -772,7 +778,7 @@ public final class NameService {
             filter(namesFound, whereString, strings, attributeStrings);
         }
         if (sorted != null) {
-            Collections.sort(namesFound);
+            Collections.sort(namesFound, defaultLanguageCaseInsensitiveNameComparator);
         }
         return namesFound;
     }
@@ -969,7 +975,7 @@ public final class NameService {
                 }
                 if (names.size() == 0) {
                     names = findTopNames(azquoMemoryDBconnection);
-                    Collections.sort(names);
+                    Collections.sort(names, defaultLanguageCaseInsensitiveNameComparator);
                 }
             }
             StringBuilder sb = new StringBuilder();

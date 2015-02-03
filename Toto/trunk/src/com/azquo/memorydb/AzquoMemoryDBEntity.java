@@ -1,6 +1,5 @@
 package com.azquo.memorydb;
 
-import com.azquo.memorydbdao.StandardDAO;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
