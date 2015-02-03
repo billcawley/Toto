@@ -1,6 +1,5 @@
 package com.azquo.app.magento.service;
 
-import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.memorydb.Name;
 import com.azquo.service.AzquoMemoryDBConnection;
 import com.azquo.service.NameService;
@@ -9,10 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.SynchronousQueue;
 
 /**
  * Created by cawley on 07/08/14.
@@ -24,7 +21,6 @@ public final class DataLoadService {
     Runtime runtime = Runtime.getRuntime();
     int mb = 1024*1024;
 
-
     private final String latestupdate = "Latest update";
 
     @Autowired
@@ -33,14 +29,10 @@ public final class DataLoadService {
     @Autowired
     private ValueService valueService;
 
-
-
 /*    final Map<Integer, Name> products = new HashMap<Integer, Name>();
     final Map<Integer, Name> categories = new HashMap<Integer, Name>();
     //final Map<Integer, MagentoOrderLineItem> orderLineItems = new HashMap<Integer, MagentoOrderLineItem>();
     final Map<String, String> optionValueLookup = new HashMap<String, String>();*/
-
-
 
     public String findLastUpdate(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         String date = "never";
@@ -52,11 +44,6 @@ public final class DataLoadService {
             }
         }
         return date;
-    }
-
-
-    public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, String data) throws Exception {
-        loadData(azquoMemoryDBConnection, data != null ? new BufferedReader(new InputStreamReader(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)))) : null);
     }
 
     public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, InputStream data) throws Exception {
@@ -86,7 +73,6 @@ public final class DataLoadService {
                 if (currentColumnNames == null) {
                     currentColumnNames = line.split("\t", -1);
                 } else {
-                    int index = 0;
                     String[] lineValues = line.split("\t", -1);
                     Map<String, String> dataRowMap = new HashMap<String, String>();
                     for (int i = 0; i < lineValues.length;i++) {
@@ -121,7 +107,6 @@ public final class DataLoadService {
         String customerEntityId = null;
         String firstNameId = null;
         String lastNameId = null;
-        Map<String, String> categoryEntityTypeRecord = null;
         for (Map<String, String> entityTypeRecord : tableMap.get("eav_entity_type")) {
             if (entityTypeRecord.get("entity_type_code")!=null) {
                 if (entityTypeRecord.get("entity_type_code").equals("catalog_category")) {
@@ -177,7 +162,8 @@ public final class DataLoadService {
             //only picking the name from all the category attributes
 
             if (attributeRow.get("attribute_id").equals(categoryNameId)) {
-                Name magentoName = nameService.findByName(azquoMemoryDBConnection, attributeRow.get("entity_id"));
+                // can return the name
+                nameService.findByName(azquoMemoryDBConnection, attributeRow.get("entity_id"));
                 azquoCategoriesFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attributeRow.get("value"));
             }
         }
@@ -269,7 +255,7 @@ public final class DataLoadService {
         double price = 0.0;
         double qty = 0.0;
         String configLine = null;
-        String productId = null;
+//        String productId = null;
         Name entities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Entities",null,false);
         Name priceName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Price",entities, false);
            Name qtyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Quantity",entities, false);
@@ -310,7 +296,7 @@ public final class DataLoadService {
             if (configLine == null) {
                 price = 0.0;
                 qty = 0.0;
-                productId = salesRow.get("product_id");
+//                productId = salesRow.get("product_id");
                 try {
                     price = Double.parseDouble(salesRow.get("base_row_invoiced"));
                     double qtyOrdered = Double.parseDouble(salesRow.get("qty_ordered"));
@@ -323,7 +309,7 @@ public final class DataLoadService {
                     configLine = salesRow.get("item_id");
                 }
             } else {
-                productId = salesRow.get("product_id");
+//                productId = salesRow.get("product_id");
                 if (!configLine.equals(salesRow.get("parent_item_id"))) {
                     System.out.println("problem in importing sales items - config item " + configLine + " does not have a simple item associated");
                     qty = 0;
@@ -360,7 +346,7 @@ public final class DataLoadService {
                 thisCycleMarker = System.currentTimeMillis();
                 String orderDate = salesRow.get("created_at").substring(0,10);
                 String orderTime = salesRow.get("created_at").substring(11,13);
-                int orderHour = 0;
+                int orderHour;
                 try {
                     orderHour = Integer.parseInt(orderTime);
                     if (orderHour < 12){
@@ -403,7 +389,7 @@ public final class DataLoadService {
                 thisCycleMarker = System.currentTimeMillis();
                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, qty + "", namesForValue);
                 part8 += (thisCycleMarker - System.currentTimeMillis());
-                thisCycleMarker = System.currentTimeMillis();
+                //thisCycleMarker = System.currentTimeMillis();
 
 
             }
@@ -508,7 +494,7 @@ public final class DataLoadService {
                     customer.setAttributeWillBePersisted(attFound, valFound);
                     String firstName = customer.getAttribute("First name");
                     String lastName = customer.getAttribute("Last name");
-                    String customerName = "";
+                    String customerName;
                     if (firstName != null){
                         if (lastName!=null){
                             customerName = firstName + " " + lastName;

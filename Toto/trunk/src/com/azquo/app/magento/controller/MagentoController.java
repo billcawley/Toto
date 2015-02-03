@@ -61,8 +61,10 @@ public class MagentoController {
     public String handleRequest(HttpServletRequest request) throws Exception {
         LoggedInConnection loggedInConnection = null;
         try {
+            // this Apache API seems a simple way to get this info. I think the built in Java one was being a pain.
             DiskFileItemFactory factory = new DiskFileItemFactory();
 
+            // this means temp files should not be deleted, useful for debugging
             factory.setFileCleaningTracker(null);
 
 // Configure a repository (to ensure a secure temp location is used)
