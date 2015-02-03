@@ -3,7 +3,7 @@
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-
+    <link rel="stylesheet" href="/css/themes/proton/style.min.css" />
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jstree/3.0.4/themes/default/style.min.css" />
     <script src="//cdnjs.cloudflare.com/ajax/libs/jstree/3.0.4/jstree.min.js"></script>
     <style>
@@ -114,7 +114,12 @@
                         azquojson("Jstree","op=" + operation + "&id=" + node.id + "&position=" + position + "&parent=" + parent.id);
                         //carry on, but let the json feed flag the errors
                         return true; // allow everything else
+                    },
+                    "themes": {
+                        "name": "proton",
+                        "responsive": true
                     }
+
 
                 },
                 "plugins" : ["dnd","contextmenu"],
@@ -184,22 +189,7 @@
         });
 
 
-        function submitNameDetails(){
-            var json = "\"operation\":\"edit\",\"id\":" + nameChosenNo + ",\"attributes\":{\"DEFAULT_DISPLAY_NAME\":\"" + document.getElementById("DEFAULT_DISPLAY_NAME").value + "\"";
-            for (var i= 0; i<20;i++){//max number of attributes = 20 - arbitrary
-                var attname = document.getElementById("attname" + i);
-                if (attname != null) {
-                    if (attname.value > ""){
-                        json += ",\"" + attname.value + "\":\"" + document.getElementById("attvalue" + i).value + "\"";
-                    }
-                }
-            }
-            json +="}";
-            hideDetails();
-            azquojson("Jstree", json);
-
-        }
-        function submitChoice(){
+       function submitChoice(){
             var selected  = $('#container').jstree("get_selected");
             var items = "";
             for (item in selected){
@@ -260,7 +250,7 @@
                 var attname = document.getElementById("attname" + i);
                 if (attname != null) {
                     if (attname.value > ""){
-                        json += ",\"" + attname.value + "\":\"" + document.getElementById("attvalue" + i).value + "\"";
+                        json += ",\"" + attname.value + "\":\"" + encodeURIComponent(document.getElementById("attvalue" + i).value) + "\"";
                     }
                 }
             }
