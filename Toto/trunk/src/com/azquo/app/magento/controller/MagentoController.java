@@ -63,12 +63,12 @@ public class MagentoController {
           DiskFileItemFactory factory = new DiskFileItemFactory();
 
          factory.setFileCleaningTracker(null);
-         System.out.println(" repository : " + factory.getRepository().getPath());
 
 // Configure a repository (to ensure a secure temp location is used)
         ServletContext servletContext = request.getServletContext();
         File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
         factory.setRepository(repository);
+         System.out.println(" repository : " + factory.getRepository().getPath());
         FileItem item = null;
         FileItem data = null;
 // Create a new file upload handler
