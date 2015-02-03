@@ -46,9 +46,14 @@ public class MerchantAdminController {
             return "utf8page";
 
         }
-        List<String> values = new ArrayList<String>();
+        Map<Integer, String> values = new HashMap<Integer, String>();
         String op = request.getParameter("op");
-        String itemName = request.getParameter("itemname").replace("_"," ");
+        String itemName = request.getParameter("itemname");
+        if (itemName==null){
+            itemName = "";
+
+        }
+        itemName = itemName.replace("_"," ");
         String type = request.getParameter("itemtype");
         String nameId = request.getParameter("nameid");
         Map<String,String> fieldnames = new HashMap<String, String>();
@@ -57,12 +62,11 @@ public class MerchantAdminController {
         Map<String,String> fieldvalues = new HashMap<String, String>();
         String velocityTemplate = request.getParameter("velocitytemplate");
         String submit = request.getParameter("submit");
-         // scan through for parameters rating1 rating2 comment1 comment2 etc. One could scan with a for loop but this seems as good a way as any.
-        int i=1;
-        String fieldVal = request.getParameter("field" + i++);
-        while (fieldVal != null){
-            values.add(fieldVal);
-            fieldVal = request.getParameter("field" + i++);
+        for (int i=1;i < 200;i++){//assuming that there will never be more than 200 fields!
+            String fieldVal = request.getParameter("field" + i);
+            if (fieldVal != null) {
+                values.put(i,fieldVal);
+            }
         }
 
 
