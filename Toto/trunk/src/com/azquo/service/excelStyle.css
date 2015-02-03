@@ -342,19 +342,13 @@ li{
     font-size: 12px;
     height:400px;
     width:280px;
-}
-
-
-
-.dataregionmenu ul{
-    position:absolute;
-    line-height:5px;
-    z-index:11;
-    border:1px solid #cccccc;
-    padding:10px;
     background-color:white;
-    width:250px;
+    z-index:11;
+    border:1px solid silver;
 }
+
+
+
 
 .dataregionmenu a{
     text-decoration:none;
@@ -409,7 +403,7 @@ li{
 }
 
 .sheetoptions{
-    height:200px;
+    height:150px;
 }
 
 .optionval{
@@ -439,3 +433,38 @@ li{
     color:#444444;
   }
 
+.regionspec{
+    width:250px;
+    height:300px;
+    position:absolute;
+    top:0;
+    left:0;
+    text-align:left;
+    padding:10px
+
+}
+
+.regionspec  table{
+
+    width: 260px;
+    table-layout: fixed;
+    word-wrap: break-word;
+    line-height:15px;
+}
+
+.spectitle {
+    font-weight:bold;
+    color:#444444;
+    text-align:left;
+}
+
+.specdata{
+    width:260px;
+
+}
+
+.specdata td{
+    border:1px solid silver;
+    margin:0;
+    padding:0;
+}
