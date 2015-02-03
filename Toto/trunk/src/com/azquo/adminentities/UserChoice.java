@@ -46,13 +46,21 @@ public class UserChoice extends StandardEntity {
         return choiceName;
     }
 
-    public String getChoiceValue() {return choiceValue; }
+    public String getChoiceValue() {
+        return choiceValue;
+    }
 
-    public void setChoiceValue(String choiceValue) { this.choiceValue = choiceValue; }
+    public void setChoiceValue(String choiceValue) {
+        this.choiceValue = choiceValue;
+    }
 
-    public Date getTime() {return time; }
+    public Date getTime() {
+        return time;
+    }
 
-    public void setTime(Date time){ this.time = time; }
+    public void setTime(Date time) {
+        this.time = time;
+    }
 }
 
 

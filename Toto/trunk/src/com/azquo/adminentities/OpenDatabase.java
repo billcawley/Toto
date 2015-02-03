@@ -30,7 +30,6 @@ public final class OpenDatabase extends StandardEntity {
                 '}';
     }
 
-
     public int getDatabaseId() {
         return databaseId;
     }
@@ -39,7 +38,7 @@ public final class OpenDatabase extends StandardEntity {
         return open;
     }
 
-    public Date getClose(){
+    public Date getClose() {
         return close;
     }
 }

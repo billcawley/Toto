@@ -39,7 +39,6 @@ public final class LoginRecordDAO extends StandardDAO<LoginRecord> {
     }
 
     public static final class LoginRecordRowMapper implements RowMapper<LoginRecord> {
-
         @Override
         public LoginRecord mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
@@ -71,5 +70,4 @@ public final class LoginRecordDAO extends StandardDAO<LoginRecord> {
         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
 
     }
-
 }

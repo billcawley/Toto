@@ -620,6 +620,7 @@ public final class Name extends AzquoMemoryDBEntity {
     public String getAttribute(String attributeName) {
         attributeName = attributeName.toUpperCase();
         String attribute = null;
+        NameAttributes nameAttributes = this.nameAttributes;// grab a reference in case it changes
         int index = nameAttributes.attributeKeys.indexOf(attributeName);
         if (index != -1) {
             attribute = nameAttributes.attributeValues.get(index);

@@ -14,9 +14,7 @@ import java.util.Map;
  * Created by bill on 15/04/14.
  *
  */
-public class OnlineReportDAO extends StandardDAO<OnlineReport>{
-
-
+public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     // the default table name for this data.
     @Override
     public String getTableName() {
@@ -59,7 +57,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
                         , rs.getString(REPORTNAME)
                         , rs.getString(USERSTATUS)
                         , rs.getString(FILENAME)
-                        ,""
+                        , ""
                         , rs.getString(EXPLANATION));
             } catch (Exception e) {
                 e.printStackTrace();
@@ -73,14 +71,12 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
         return new OnlineReportRowMapper();
     }
 
-
     public OnlineReport findForDatabaseIdAndName(final int databaseId, String reportName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
-        namedParams.addValue(REPORTNAME,reportName);
+        namedParams.addValue(REPORTNAME, reportName);
         return findOneWithWhereSQLAndParameters(" WHERE `" + DATABASEID + "` = :" + DATABASEID + " and `" + REPORTNAME + "` = :" + REPORTNAME, namedParams);
     }
-
 
     public List<OnlineReport> findForBusinessIdAndUserStatus(final int businessId, String userStatus) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -101,30 +97,24 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport>{
         return findListWithWhereSQLAndParameters("WHERE " + DATABASEID + " = :" + DATABASEID, namedParams, false);
     }
 
-    public void removeForDatabaseId(int databaseId){
+    public void removeForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
-
     }
 
-    public final void update(int id, Map<String, Object> parameters){
+    public final void update(int id, Map<String, Object> parameters) {
         String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        for (String columnName:parameters.keySet()){
+        for (String columnName : parameters.keySet()) {
             updateSql += "`" + columnName + "` = :" + columnName + ", ";
             namedParams.addValue(columnName, parameters.get(columnName));
-         }
+        }
         updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
         updateSql += " where " + ID + " = :" + ID;
         namedParams.addValue(ID, id);
         jdbcTemplate.update(updateSql, namedParams);
-
     }
-
-
-
-
 }
 
 

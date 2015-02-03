@@ -50,7 +50,6 @@ public final class DatabaseDAO extends StandardDAO<Database> {
 
         @Override
         public Database mapRow(final ResultSet rs, final int row) throws SQLException {
-            // not pretty, just make it work for the moment
             try {
                 return new Database(rs.getInt(ID)
                         , rs.getDate(STARTDATE)

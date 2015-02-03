@@ -19,7 +19,6 @@ import java.util.Map;
  */
 public class UserDAO extends StandardDAO<User> {
 
-
     @Autowired
     AdminService adminService;
 
@@ -56,7 +55,6 @@ public class UserDAO extends StandardDAO<User> {
     }
 
     public static final class UserRowMapper implements RowMapper<User> {
-
         @Override
         public User mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
@@ -93,22 +91,18 @@ public class UserDAO extends StandardDAO<User> {
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
 
-
     public final void update(int id, int businessId, Map<String, Object> parameters) {
         String email = (String) parameters.get("email");
-        if (id==0 && email.length() > 0) {
+        if (id == 0 && email.length() > 0) {
              User u = findByEmail(email);
             if (u != null) {
                 id = u.getId();
             } else {
-                u = new User(0, new Date(), new Date(), businessId, "","","","","");
+                u = new User(0, new Date(), new Date(), businessId, "", "", "", "", "");
                 store(u);
                 id = u.getId();
-
-
             }
         }
-
         String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
         MapSqlParameterSource namedParams = new MapSqlParameterSource();
         for (String columnName:parameters.keySet()){
@@ -121,7 +115,7 @@ public class UserDAO extends StandardDAO<User> {
                      namedParams.addValue(SALT, salt);
                      updateSql += PASSWORD + "= :" + PASSWORD + ", " + SALT + " = :" + SALT + ", ";
                  }
-            }else{
+            } else {
                   namedParams.addValue(columnName, parameters.get(columnName));
                   updateSql +=  columnName + "= :" + columnName + ", ";
 
@@ -131,9 +125,5 @@ public class UserDAO extends StandardDAO<User> {
         updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
         updateSql += " where " + ID + " = :" + ID;
         jdbcTemplate.update(updateSql, namedParams);
-
     }
-
-
-
 }

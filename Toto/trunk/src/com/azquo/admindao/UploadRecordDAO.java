@@ -47,7 +47,6 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
     }
 
     public static final class UploadRecordRowMapper implements RowMapper<UploadRecord> {
-
         @Override
         public UploadRecord mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
@@ -78,13 +77,10 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
 
-
     public void removeForDatabaseId(int databaseId){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
 
     }
-
-
 }

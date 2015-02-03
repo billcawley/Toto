@@ -24,7 +24,6 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
     protected NamedParameterJdbcTemplate jdbcTemplate;
 
     private static final int SELECTLIMIT = 10000;
-
     protected static final String ID = "id";
     protected static final String MASTER_DB = "master_db";
 
@@ -98,7 +97,6 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         namedParams.addValue(ID, id);
         final String FIND_BY_ID = "Select * from `" + MASTER_DB + "`.`" + getTableName() + "` where " + ID + " = :" + ID;
         final List<EntityType> results = jdbcTemplate.query(FIND_BY_ID, namedParams, getRowMapper());
-
         if (results.size() == 0) {
             //logger.warning("No customer found for id " + id + " in table " + table);
             return null;
@@ -137,10 +135,9 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         return results.get(0);
     }
 
-    public final void update(final String setclause, final MapSqlParameterSource namedParams) throws DataAccessException{
+    public final void update(final String setclause, final MapSqlParameterSource namedParams) throws DataAccessException {
         final String SQL_UPDATE = "update `" + MASTER_DB + "`.`" + getTableName() + "` " + setclause;
         jdbcTemplate.update(SQL_UPDATE, namedParams);
 
     }
-
 }

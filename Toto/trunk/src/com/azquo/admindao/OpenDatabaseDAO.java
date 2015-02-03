@@ -48,7 +48,7 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
                         , rs.getInt(DATABASEID)
                         , rs.getDate(OPEN)
                         , rs.getDate(CLOSE));
-               } catch (Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 return null;
             }
@@ -67,19 +67,15 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
         update(" SET `" + CLOSE + "`=:" + CLOSE + " WHERE `" + CLOSE + "` = '0000-00-00' and `" + DATABASEID + "` = :" + DATABASEID, namedParams);
     }
 
-    public void removeForDatabaseId(int databaseId){
+    public void removeForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
-
     }
+
     public List<OpenDatabase> findForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
         return findListWithWhereSQLAndParameters("where " + DATABASEID + "` = :" + DATABASEID, namedParams, false);
     }
-
-
-
-
 }

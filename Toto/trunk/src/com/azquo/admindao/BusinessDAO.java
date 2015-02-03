@@ -18,7 +18,6 @@ public final class BusinessDAO extends StandardDAO<Business> {
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
-    // the default table name for this data.
     @Override
     public String getTableName() {
         return "business";
@@ -76,5 +75,4 @@ public final class BusinessDAO extends StandardDAO<Business> {
         namedParams.addValue(BUSINESSNAME, businessName);
         return findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSNAME + "` = :" + BUSINESSNAME, namedParams);
     }
-
 }

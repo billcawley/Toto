@@ -94,19 +94,12 @@ public final class UserChoiceDAO extends  StandardDAO<UserChoice> {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
          namedParams.addValue(REPORTID, reportId);
          jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + REPORTID + " = :" + REPORTID, namedParams);
-
-
     }
-
 
     public void deleteOverridesForUserAndReportId(final int userId, final int reportId){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(REPORTID, reportId);
         namedParams.addValue(USERID, userId);
         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + REPORTID + " = :" + REPORTID + " AND " + USERID + " = :" + USERID + " AND " + CHOICENAME + " LIKE '" + AzquoBook.OPTIONPREFIX + "%'", namedParams);
-
-
     }
-
-
 }

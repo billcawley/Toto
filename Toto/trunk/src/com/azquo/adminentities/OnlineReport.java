@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Created by bill on 15/04/14.
- *
  */
 public class OnlineReport extends StandardEntity {
 
@@ -20,11 +19,11 @@ public class OnlineReport extends StandardEntity {
     private String pathName; //internal use
     private String explanation;
 
-     @JsonCreator
+    @JsonCreator
     public OnlineReport(@JsonProperty("id") int id
             , @JsonProperty("businessId") int businessId
             , @JsonProperty("databaseId") int databaseId
-             , @JsonProperty("database") String database
+            , @JsonProperty("database") String database
             , @JsonProperty("reportName") String reportName
             , @JsonProperty("userStatus") String userStatus
             , @JsonProperty("filename") String filename
@@ -53,7 +52,9 @@ public class OnlineReport extends StandardEntity {
         return databaseId;
     }
 
-    public void setDatabaseId(int databaseId) { this.databaseId = databaseId; }
+    public void setDatabaseId(int databaseId) {
+        this.databaseId = databaseId;
+    }
 
     public String getDatabase() {
         return database;
@@ -71,7 +72,9 @@ public class OnlineReport extends StandardEntity {
         this.reportName = reportName;
     }
 
-    public String getUserStatus() {return userStatus;  }
+    public String getUserStatus() {
+        return userStatus;
+    }
 
     public void setUserStatus(String userStatus) {
         this.userStatus = userStatus;
@@ -108,7 +111,7 @@ public class OnlineReport extends StandardEntity {
                 "id=" + id +
                 ", businessId=" + businessId +
                 ", databaseId=" + databaseId +
-                ", reportName='" + reportName +'\'' +
+                ", reportName='" + reportName + '\'' +
                 ", userStatus='" + userStatus + '\'' +
                 ", filename='" + filename + '\'' +
                 ", explanation='" + explanation + '\'' +

@@ -14,19 +14,14 @@ import java.util.Map;
 
 /**
  * Created by cawley on 07/01/14.
- * User permission datails
+ * User permission details
  */
 public final class PermissionDAO extends StandardDAO<Permission> {
-
-
-
     // the default table name for this data.
     @Override
     public String getTableName() {
         return "permission";
     }
-
-
 
     // column names except ID which is in the superclass
 
@@ -59,14 +54,12 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         return findListWithWhereSQLAndParameters(", `master_db`.`database`  WHERE `master_db`.`database`.id = `master_db`.`permission`.`database_id` and  `master_db`.`database`.`" + DatabaseDAO.BUSINESSID + "` = :" + DatabaseDAO.BUSINESSID, namedParams, false);
     }
 
-
     public Permission findByBusinessUserAndDatabase(User user, Database database) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, user.getId());
         namedParams.addValue(DATABASEID, database.getId());
         return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " and " + DATABASEID + " =:" + DATABASEID, namedParams);
     }
-
 
     public void deleteForBusinessId(int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -115,43 +108,34 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         return findOneWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID + " and " + DATABASEID + "= :" + DATABASEID, namedParams);
     }
 
-
     public void removeForDatabaseId(int databaseId){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
-
     }
 
     public final void update(int id, Map<String, Object> parameters) {
-        if (id==0) {
+        if (id == 0) {
             int dbId = (Integer)parameters.get("database_id");
             int userId = (Integer)parameters.get("user_id");
             Permission p = findForUserIdAndDatabaseId(userId, dbId);
             if (p != null) {
                 id = p.getId();
             } else {
-                p = new Permission(0,null,null,0,0,"","");
+                p = new Permission(0, null, null, 0, 0, "", "");
                 store(p);
                 id = p.getId();
-
-
             }
         }
-
         String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
         MapSqlParameterSource namedParams = new MapSqlParameterSource();
         for (String columnName:parameters.keySet()){
             namedParams.addValue(columnName, parameters.get(columnName));
             updateSql +=  columnName + "= :" + columnName + ", ";
-
         }
         namedParams.addValue(ID, id);
         updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
         updateSql += " where " + ID + " = :" + ID;
         jdbcTemplate.update(updateSql, namedParams);
-
     }
-
-
 }
