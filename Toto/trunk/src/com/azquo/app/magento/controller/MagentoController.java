@@ -7,6 +7,7 @@ import com.azquo.app.magento.service.DataLoadService;
 import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
 import com.azquo.service.OnlineService;
+import com.azquo.util.AzquoMailer;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
@@ -51,6 +52,9 @@ public class MagentoController {
 
     @Autowired
     DatabaseDAO databaseDAO;
+
+    @Autowired
+    AzquoMailer azquoMailer;
 
     private static final Logger logger = Logger.getLogger(MagentoController.class);
 
@@ -100,9 +104,6 @@ public class MagentoController {
              data = item;
          }
 
-
-
-
 // Parse the request
 
 
@@ -132,6 +133,10 @@ public class MagentoController {
              if (  loggedInConnection.getCurrentDatabase()!=null){
                  System.out.println("RUnning a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
              }
+             azquoMailer.sendEMail("edd@azquo.com","Edd", "Magento file upload " + db, "Magento file upload " + db);
+             azquoMailer.sendEMail("bill@azquo.com","Bill", "Magento file upload " + db, "Magento file upload " + db);
+             azquoMailer.sendEMail("nic@azquo.com","Nic", "Magento file upload " + db, "Magento file upload " + db);
+
             dataLoadService.loadData(loggedInConnection, data.getInputStream());
              return loggedInConnection.getConnectionId() + "";
             //return onlineService.readExcel(loggedInConnection, onlineReport, null, "");
