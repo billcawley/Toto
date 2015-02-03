@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class OnlineReport extends StandardEntity {
 
-    public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
+//    public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
 
     private int businessId;
     private int databaseId;
