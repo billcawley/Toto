@@ -62,6 +62,8 @@ public class MagentoController {
      try {
           DiskFileItemFactory factory = new DiskFileItemFactory();
 
+         factory.setFileCleaningTracker(null);
+
 // Configure a repository (to ensure a secure temp location is used)
         ServletContext servletContext = request.getServletContext();
         File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
