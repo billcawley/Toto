@@ -1011,14 +1011,39 @@ public  class AzquoBook {
         String maxcols;
         String hiderows;
         String sortable;
+        String rowdata;
+        String coldata;
+        String contextdata;
         public String getname(){return name;}
         public String getmaxrows(){return maxrows;}
         public String getmaxcols(){return maxcols;}
         public String gethiderows(){return hiderows;}
         public String getsortable(){return sortable;}
+        public String getrowdata(){return rowdata;}
+        public String getcoldata(){return coldata;}
+        public String getcontextdata(){return contextdata;}
 
 
 }
+
+    private String getHTMLTableData(String rangeName){
+        Range range = getRange(rangeName);
+        if (range==null) return "";
+        StringBuffer sb = new StringBuffer();
+        sb.append("<table>\n");
+        for (int row=0; row < range.getRowCount(); row++){
+            sb.append("<tr>\n");
+            for (int col=0; col < range.getColumnCount(); col++){
+                sb.append("<td>");
+                String val = range.get(row, col).getStringValue().replace(";", " ");//this 'replace' should be removed in due course
+                if (val==null) val="";
+                sb.append(val + "</td>");
+            }
+            sb.append("</tr>\n");
+        }
+        sb.append("</table>\n");
+        return sb.toString();
+    }
 
     public void fillVelocityOptionInfo(LoggedInConnection loggedInConnection, VelocityContext velocityContext){
         Set<String>regions = new HashSet<String>();
@@ -1035,10 +1060,14 @@ public  class AzquoBook {
                 String sortable = "";
                 if (hasOption(region, "sortable") != null) sortable = "checked";
                 vRegion.sortable =  sortable;
+                 vRegion.rowdata = getHTMLTableData("az_RowHeadings" + region);
+                vRegion.coldata  = getHTMLTableData("az_ColumnHeadings" + region);
+                vRegion.contextdata = getHTMLTableData("az_Context" + region);
                 vRegions.add(vRegion);
              }
 
         }
+        velocityContext.put("hdays", highlightDays  + "");
         velocityContext.put("menuregions", vRegions);
         velocityContext.put("regions", getRegions(loggedInConnection, dataRegionPrefix).toString());//this is for javascript routines
 
@@ -2102,14 +2131,10 @@ public  class AzquoBook {
     }
 
 
-    public String executeSheet(LoggedInConnection loggedInConnection, String fileName, String spreadsheetName, int reportId) throws Exception{
+        public String executeSheet(LoggedInConnection loggedInConnection, String spreadsheetName, int reportId) throws Exception{
         String error = "";
         try {
-            fileName = ImportService.dbPath  + loggedInConnection.getCurrentDBName() + "/onlinereports/" + fileName;
-            wb = new Workbook(new FileInputStream(fileName));
-
-            dataRegionPrefix = AzquoBook.azDataRegion;
-            setSheet(0);
+              setSheet(0);
             if (spreadsheetName != null) {
                 for (int i = 0; i < wb.getWorksheets().getCount(); i++){
                     Worksheet sheet = wb.getWorksheets().get(i);
@@ -2201,6 +2226,7 @@ public  class AzquoBook {
         }
         System.out.println("loaded Aspose licence");
         wb  = new Workbook(new FileInputStream(fileName));
+        System.out.println("file name = " + fileName);
 
 
     }
