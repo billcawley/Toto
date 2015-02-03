@@ -162,6 +162,8 @@
             popup.style.left = left + "px";
             popup.style.top = top + "px";
             popup.style.display="block";
+            document.getElementById("regionspec" + dataRegion).style.display="none";
+            document.getElementById("regionlist" + dataRegion).style.display="block";
             dataRegionMenu = "menu" + dataRegion;
             return false; //disables the default context menu
         }
@@ -522,6 +524,10 @@
             document.azquoform.submit();
         }
 
+        function showRegionSpec(region){
+            document.getElementById("regionlist" + region).style.display="none";
+            document.getElementById("regionspec" + region).style.display="block";
+        }
 
         document.onkeydown =function (e) {
 
@@ -870,6 +876,11 @@
                 <li><a href="#" onclick="downloadAsXLS()">Download as XLSX</a></li>
                 <li><a href="#" onclick="downloadAsPDF();">Download as PDF</a></li>
                 <li><a href="#" onclick="inspectDatabase();">Inspect database</a>
+                <li>
+                    <a href="" #" onclick="showHighlight();">Highlight changed data
+                         (currently $hdays days)
+                  </a>
+                </li>
             </ul>
         </div>
         <a class="savedata" href="#" onclick="saveData()" id="saveData" style="display:none;">Save data</a>
@@ -897,47 +908,51 @@
             <div id="provenance" class="provenance"><div class="closebutton"><a href="#" onclick="document.getElementById('provenance').style.display = 'none';"><img src="https://data.azquo.com:8443/images/closebutton.png" alt="close button"/></a></div><div id="provenancecontent" class="content"></div></div>
             #foreach($mregion in $menuregions)
                 <div id="menu${mregion.name}" class="dataregionmenu">
-
-                    <ul>
-                        <li>
+                    <div id="regionlist$mregion.name" class="regionspec">
+                        <div class="spectitle">
                             <a href="" #" onclick="showProvenance();">Show provenance</a>
-                        </li>
-                        <li>
-                            <a href="" #" onclick="showHighlight();">Highlight changed data</a>
-                        </li>
-                        <li>
-                            <div class="sheetoptions" onclick="return false;">
-                                <table>
-                                    <tr>
-                                        <td>sorted row count (0 disabled)</td>
-                                        <td><input type="text" value="${mregion.maxrows}" class="optionval"
-                                                   name="maxrows${mregion.name}"></td>
-                                    </tr>
-                                    <tr>
-                                        <td>sorted column limit (0 disabled)</td>
-                                        <td><input type="text" value="${mregion.maxcols}" class="optionval"
-                                                   name="maxcols${mregion.name}"></td>
-                                    </tr>
-                                    <tr>
-                                        <td>hide blank rows batch size (0 disabled)</td>
-                                        <td><input type="text" value="${mregion.hiderows}" class="optionval"
-                                                   name="hiderows${mregion.name}"></td>
-                                    </tr>
-                                    <tr>
-                                        <td>allow row and column sorts</td>
-                                        <td><input type="checkbox" ${mregion.sortable} class="optionval"
-                                                   name="sortable${mregion.name}"></td>
-                                    </tr>
-                                     <tr>
-                                        <td><a href="#" onclick="clearOverrideOptions('$mregion.name');">Clear options</a></td>
-                                        <td><a href="#" onclick="submitOptions('$mregion.name');">Submit</a></td>
-                                    </tr>
-                                </table>
-                            </div>
+                        </div>
+                        <div class="sheetoptions" onclick="return false;">
+                            <table>
+                                <tr>
+                                    <td>sorted row count (0 disabled)</td>
+                                    <td><input type="text" value="${mregion.maxrows}" class="optionval"
+                                               name="maxrows${mregion.name}"></td>
+                                </tr>
+                                <tr>
+                                    <td>sorted column limit (0 disabled)</td>
+                                    <td><input type="text" value="${mregion.maxcols}" class="optionval"
+                                               name="maxcols${mregion.name}"></td>
+                                </tr>
+                                <tr>
+                                    <td>hide blank rows batch size (0 disabled)</td>
+                                    <td><input type="text" value="${mregion.hiderows}" class="optionval"
+                                               name="hiderows${mregion.name}"></td>
+                                </tr>
+                                <tr>
+                                    <td>allow row and column sorts</td>
+                                    <td><input type="checkbox" ${mregion.sortable} class="optionval"
+                                               name="sortable${mregion.name}"></td>
+                                </tr>
+                                <tr>
+                                    <td><a href="#" onclick="clearOverrideOptions('$mregion.name');">Clear options</a></td>
+                                    <td><a href="#" onclick="submitOptions('$mregion.name');">Submit</a></td>
+                                </tr>
+                            </table>
+                        </div>
 
+                        <div class="spectitle"><a href="" #" onclick="showRegionSpec('$mregion.name');">Show region spec</a></div>
+                    </div>
+                    <div id="regionspec$mregion.name" class="regionspec">
+                        <div class="spectitle">SPECIFICATION FOR DATA REGION $mregion.name</div>
+                        <div class="spectitle">Column headings</div>
+                        <div class="specdata">$mregion.coldata</div>
+                        <div class="spectitle">Row headings</div>
+                        <div class="specdata">$mregion.rowdata</div>
+                        <div class="spectitle">Context</div>
+                        <div class="specdata">$mregion.contextdata</div>
 
-                        </li>
-                    </ul>
+                    </div>
                 </div>
             #end
 
