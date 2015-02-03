@@ -86,6 +86,11 @@ public class OnlineService {
     public static final String AZQUOHOME = "azquo.home";
     public static final String ASPOSELICENSE = "aspose.license";
     public static final String DEVMACHINE = "dev.machine";
+    class SetnameChosen {
+        String setname;
+        List<Name> choiceList;
+        Name chosen;
+    }
 
 
     public String getHomeDir(){
@@ -141,10 +146,10 @@ public class OnlineService {
            //onlineReport = onlineReportDAO.findById(-1);//user report list replaces admin sheet
         }
 
+          AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO, this);
         StringBuffer worksheet = new StringBuffer();
         StringBuffer tabs = new StringBuffer();
         StringBuffer head = new StringBuffer();
-        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO, this);
         loggedInConnection.setAzquoBook(azquoBook);
         VelocityContext velocityContext = new VelocityContext();
         //String output = readFile("onlineReport.html").toString();
@@ -162,7 +167,37 @@ public class OnlineService {
             }else{
                 //note - the database specified in the report may not be the current database (as in applications such as Magento and reviews), but be 'temp'
                 String filepath = ImportService.dbPath + onlineReport.getPathname() +"/onlinereports/" + onlineReport.getFilename();
-                azquoBook.loadBook(filepath, useAsposeLicense());
+
+                azquoBook.loadBook(getHomeDir()+ filepath, useAsposeLicense());
+                String executeSetName = azquoBook.getRangeValue("az_ExecuteSet");
+
+                List<SetnameChosen> nameLoop = new ArrayList<SetnameChosen>();
+
+                String executeSet = null;
+                if (executeSetName!=null  && executeSetName.length() > 0){
+                    executeSet = azquoBook.getRangeValue(executeSetName);
+                }
+                if (executeSet != null){
+                    String[] executeItems = executeSet.split(",");
+                    for (String executeItem:executeItems){
+
+                        if (executeItem.length() > 0   && executeItem.toLowerCase().endsWith("choice")){
+                            List<Name> nameList = nameService.parseQuery(loggedInConnection, executeItem);
+                            if (nameList!=null){
+                                SetnameChosen nextSetnameChosen = new SetnameChosen();
+                                nextSetnameChosen.setname = executeItem.toLowerCase().replace("choice","chosen");
+                                nextSetnameChosen.choiceList = nameList;
+                                nextSetnameChosen.chosen = null;
+                                nameLoop.add(nextSetnameChosen);
+                            }
+                        }
+                    }
+                    if (nameLoop!=null){
+                        executeLoop(loggedInConnection, spreadsheetName, onlineReport.getId(), nameLoop,0);
+                    }
+                    return "";
+
+                }
             }
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
             if (onlineReport.getId()==1 || onlineReport.getId()==-1){//this is the maintenance workbook
@@ -231,13 +266,6 @@ public class OnlineService {
     }
 
 
-    public String executeSheet(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName) throws Exception{
-        String error = "";
-        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO, this);
-        loggedInConnection.setAzquoBook(azquoBook);
-        return azquoBook.executeSheet(loggedInConnection, onlineReport.getFilename(), spreadsheetName, onlineReport.getId());
-    }
-
 
 
 
@@ -277,10 +305,23 @@ public class OnlineService {
 
 
 
+    public void executeLoop(LoggedInConnection loggedInConnection, String spreadsheetName, int reportId, List<SetnameChosen> nameLoop,int level) throws  Exception{
+        AzquoBook azquoBook = loggedInConnection.getAzquoBook();
+        for (Name chosen : nameLoop.get(level).choiceList) {
+            setUserChoice(loggedInConnection.getUser().getId(), reportId, nameLoop.get(level).setname, chosen.getDefaultDisplayName());
+            level++;
+            if (level == nameLoop.size()) {
+                azquoBook.executeSheet(loggedInConnection, spreadsheetName, reportId);
+            } else {
+                executeLoop(loggedInConnection, spreadsheetName, reportId, nameLoop, level + 1);
+            }
+        }
+    }
 
 
 
-    StringBuffer readFile(String filename){
+
+        StringBuffer readFile(String filename){
 
          // First, copy the base css
         StringBuffer sb = new StringBuffer();
