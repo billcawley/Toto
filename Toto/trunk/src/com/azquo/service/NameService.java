@@ -4,6 +4,7 @@ import com.azquo.jsonrequestentities.NameJsonRequest;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -23,6 +24,9 @@ import java.util.regex.Pattern;
  *
  */
 public final class NameService {
+
+    @Autowired
+    ValueService valueService;//used only in formating children for output
 
     public StringUtils stringUtils = new StringUtils(); // just make it quickly like this for the mo
 //    private static final ObjectMapper jacksonMapper = new ObjectMapper();
@@ -999,13 +1003,9 @@ public final class NameService {
 
     // again should use jackson?
 
-    private String getChildStructureFormattedForOutput(final Name name) {
-        return getChildStructureFormattedForOutput(name, false);
-    }
-
     // TODO json??
 
-    private String getChildStructureFormattedForOutput(final Name name, boolean showChildren) {
+    private String getChildStructureFormattedForOutput(final Name name, boolean showChildren){
         int totalValues = getTotalValues(name);
         //if (totalValues > 0) {
         StringBuilder sb = new StringBuilder();
@@ -1051,18 +1051,20 @@ public final class NameService {
         }
         final Collection<Name> children = name.getChildren();
         sb.append(", \"elements\":\"").append(children.size()).append("\"");
-        if (showChildren && !children.isEmpty()) {
-            sb.append(", \"children\":[");
-            count = 0;
-            for (Name child : children) {
-                String childData = getChildStructureFormattedForOutput(child);
-                if (childData.length() > 0) {
-                    if (count > 0) sb.append(",");
-                    sb.append(childData);
-                    count++;
+        if (showChildren){
+            if (!children.isEmpty()) {
+                sb.append(", \"children\":[");
+                count = 0;
+                for (Name child : children) {
+                    String childData = getChildStructureFormattedForOutput(child, false);
+                    if (childData.length() > 0) {
+                        if (count > 0) sb.append(",");
+                        sb.append(childData);
+                        count++;
+                    }
                 }
+                sb.append("]");
             }
-            sb.append("]");
         }
         sb.append("}");
 
@@ -1070,9 +1072,96 @@ public final class NameService {
         return sb.toString();
     }
 
-    public String jsonNameDetails(Name name) {
+    public String jsonNameDetails(Name name){
         return getChildStructureFormattedForOutput(name, false);
+
+    }
+
+
+    public String getJsonChildren(LoggedInConnection loggedInConnection, String jsTreeId, Name name, String parents,  Map<String, LoggedInConnection.JsTreeNode> lookup)throws Exception{
+        StringBuilder result = new StringBuilder();
+        result.append("[{\"id\":" + jsTreeId + ",\"state\":{\"opened\":true},\"text\":\"");
+        List<Name> children = new ArrayList<Name>();
+        if (jsTreeId.equals("0") && name == null) {
+            String searchTerm = loggedInConnection.getAzquoBook().getRangeData("az_inputInspectChoice");
+            result.append("root");
+            if (searchTerm == null || searchTerm.length() == 0) {
+                children = findTopNames(loggedInConnection);
+            } else {
+                children = findContainingName(loggedInConnection, searchTerm, Name.DEFAULT_DISPLAY_NAME);
+            }
+
+        } else if (name != null) {
+            result.append(name.getDefaultDisplayName().replace("\"", "\\\""));
+            if (!parents.equals("true")) {
+                int count = 0;
+                for (Name child : name.getChildren()) {
+                    if (count++ > 100) {
+                        break;
+                    }
+                    children.add(child);
+                }
+            } else {
+                for (Name nameParent : name.getParents()) {
+                    children.add(nameParent);
+                }
+            }
+
+        }
+
+        result.append("\"");
+        int maxdebug=500;
+        if (children.size() > 0) {
+            result.append(",\"children\":[");
+            int lastId = loggedInConnection.getLastJstreeId();
+            int count = 0;
+            for (Name child : children) {
+                if (maxdebug--==0) break;
+                  if (count++ > 0) {
+                    result.append(",");
+                }
+                loggedInConnection.setLastJstreeId(++lastId);
+                LoggedInConnection.NameOrValue nameOrValue = new LoggedInConnection.NameOrValue();
+                nameOrValue.values = null;
+                nameOrValue.name = child;
+                LoggedInConnection.JsTreeNode newNode = new LoggedInConnection.JsTreeNode(nameOrValue, name);
+                lookup.put(lastId + "", newNode);
+                if (count > 100) {
+                    result.append("{\"id\":" + lastId + ",\"text\":\"" + (children.size()-100) + " more....\"}");
+                    break;
+                }
+                result.append("{\"id\":" + lastId + ",\"text\":\"" + child.getDefaultDisplayName().replace("\"", "\\\"") + "\"");
+                if (child.getChildren().size() > 0 || child.getValues().size() > 0) {
+                    result.append(",\"children\":true");
+                }
+                result.append("}");
+
+            }
+            result.append("]");
+        }else{
+            result.append(valueService.getJsonDataforOneName(loggedInConnection, name, lookup));
+         }
+        result.append(",\"type\":\"");
+        if (children.size() > 0){
+            result.append("parent");
+
+        }else if (name.getValues().size() > 0){
+            if (name.getValues().size() > 1) {
+                result.append("values");
+            }else{
+                result.append("value");
+            }
+        }else{
+            result.append("child");
+        }
+        result.append("\"}]");
+        return result.toString();
     }
 
 }
+
+
+
+
+
 
