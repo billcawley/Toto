@@ -759,16 +759,22 @@ public class ReviewService {
         setToXML(hd, atts, menu, "MENU");
          //then find the requirements for the page
         Name menuItem = nameService.findByName(masterDBConnection,itemName);
-        Name editset = nameService.findByName(masterDBConnection, menuItem.getAttribute("Choice set"));
+        String choiceSet = menuItem.getAttribute("Choice set");
+        boolean structured = false;
+        if (choiceSet.indexOf("structured") > 0 && choiceSet.indexOf(",")>0){
+            structured = true;
+            choiceSet = choiceSet.substring(0, choiceSet.indexOf(","));//assumes that the comma is before 'structured'!
+        }
+        Name editset = nameService.findByName(masterDBConnection, choiceSet);
         if (menuItem!=null){
              addElement(hd, atts, "TYPE", type);
 
             if (type.equals("list")){
-                String choiceset = menuItem.getAttribute("Choice set");
-                if (choiceset != null) {
-                    String listToShow = choiceset + ";children * " + business.getDefaultDisplayName() + ";level all";
+                 if (choiceSet != null) {
+                    String listToShow = "`" + choiceSet + "`;children * `" + business.getDefaultDisplayName() + "`;level all";
                     List<Name> namesFound = nameService.parseQuery(masterDBConnection, listToShow);
                     hd.startElement("","","HEADING",atts);
+                    int fieldNo = 0;
                     for (Name fieldName : menuItem.getChildren()) {
                         if (fieldName.getAttribute("SummaryScreenItem") != null) {
                             hd.startElement("", "", "LINEITEM", atts);
@@ -776,6 +782,7 @@ public class ReviewService {
                             addElement(hd, atts, "NAME", attribute);
                             hd.endElement("", "", "LINEITEM");
                         }
+
                     }
                     hd.endElement("","","HEADING");
                     hd.startElement("", "", "LIST", atts);
@@ -785,8 +792,9 @@ public class ReviewService {
                         addElement(hd, atts, "NAME", lineName.getDefaultDisplayName());
                         addElement(hd, atts, "LINK", "itemname=" + menuItem.getDefaultDisplayName().replace(" ","_") + "&nameid=" + lineName.getId());
                                 hd.endElement("", "", "LINEITEM");
+                        fieldNo = 0;
                         for (Name fieldName : menuItem.getChildren()) {
-                            if (fieldName.getAttribute("SummaryScreenItem") != null) {
+                               if (fieldNo++ > 0 && fieldName.getAttribute("SummaryScreenItem") != null) {
                                 hd.startElement("", "", "LINEITEM", atts);
                                 String attribute = lineName.getAttribute(fieldName.getDefaultDisplayName());
                                 if (attribute == null) attribute = "";
@@ -820,11 +828,26 @@ public class ReviewService {
                 }else{
                     Provenance provenance = masterDBConnection.getProvenance("in app");
                     nameToEdit = nameService.findOrCreateNameInParent(masterDBConnection,"new "+ itemName, editset,true);
+                    if (structured){
+                        Name topName = null;
+                        for (Name name: editset.getChildren()){
+                            if (topName==null) topName = name;
+                            if (name.findAllParents().contains(topName)){
+                                topName = name;
+                            }
+                        }
+                        topName.addChildWillBePersisted(nameToEdit);
+
+
+                    }
                 }
                 int tabno = 0;
                 int fieldNo = 0;
                 String tabname = "";
+                int debugmax = 500;//only here for debugging if XML causes problems
+
                 for (Name fieldName:menuItem.getChildren()){
+                    if (debugmax-- == 0) break;
                     if (!fieldName.getAttribute("tab").equals(tabname)) {
                         if (tabname.length() > 0) {
                             hd.endElement("", "", "TAB");
@@ -848,7 +871,7 @@ public class ReviewService {
 
                     }
                     if (clause.contains("[business]")){
-                        clause = clause.replace("[business]", business.getDefaultDisplayName());
+                        clause = clause.replace("[business]", "`" + business.getDefaultDisplayName() + "`");
                     }
                     if (fieldType.equals("boolean")|| fieldType.equals("select") || fieldType.equals("file")){
                         addElement(hd,atts,"ITEMTYPE", fieldType);
@@ -868,10 +891,11 @@ public class ReviewService {
                         }else {
                             List<Name> selectName = nameService.parseQuery(masterDBConnection, clause);
                             if (selectName != null) {
-                                hd.startElement("", "", "SELECT", atts);
+                                //hd.startElement("", "", "SELECT", atts);
                                 for (Name child : selectName) {
                                     addElement(hd, atts, "OPTION", child.getDefaultDisplayName());
                                 }
+                                //hd.endElement("","","SELECT");
                              }
                         }
                         hd.endElement("", "", "OPTIONS");
@@ -903,6 +927,7 @@ public class ReviewService {
                             thisTest = fieldValidation;
                             fieldValidation = "";
                         }
+                        if (thisTest.equals("req") && nameToEdit.getAttribute(field)!=null & nameToEdit.getAttribute(field)!= null)
                         if (thisTest.indexOf(",") < 0){
                             thisTest = thisTest + ",Please enter " + field;
                         }
@@ -942,17 +967,21 @@ public class ReviewService {
         AzquoMemoryDBConnection masterDBConnection = reviewsConnectionMap.getConnection(UserService.MASTERDBNAME);
         Name menuItem = nameService.findByName(masterDBConnection, itemName);
 
-        List<Name> fieldNames = nameService.parseQuery(masterDBConnection, itemName + ";children;from " + fieldNameStr + ";to " + fieldNameStr);
+        List<Name> fieldNames = nameService.parseQuery(masterDBConnection, "`" + itemName + "`;children;from " + fieldNameStr + ";to " + fieldNameStr);
         Name fieldName = fieldNames.iterator().next();
         Name nameToEdit = nameService.findById(masterDBConnection, nameId);
         String uploadDir = menuItem.getAttribute("uploaddir");
         if (uploadDir == null){
             uploadDir = menuItem.getDefaultDisplayName().replace(" ","");
         }
+        Name azquoCustomers = nameService.findByName(masterDBConnection,ReviewsCustomerService.REVIEWS_CUSTOMER);
+        Collection<Name> topMerchants = nameToEdit.findAllParents();
+        topMerchants.retainAll(azquoCustomers.getChildren());
+        Name topMerchant = topMerchants.iterator().next();//should be only one!
 
-        String dbName = nameToEdit.getAttribute("dbname");
+        String dbName = topMerchant.getAttribute("dbname");
         if (dbName==null){
-            dbName = "revie_" + nameToEdit.getDefaultDisplayName().replace(" ","");
+            dbName = "revie_" + topMerchant.getDefaultDisplayName().replace(" ","");
         }
 
         String fName = nameToEdit.getAttribute(fieldName.getDefaultDisplayName());
@@ -999,7 +1028,7 @@ public class ReviewService {
 
     }
 
-    public void saveData(HttpServletResponse response, String itemName, List<String>  values, int itemToEdit)throws  Exception{
+    public void saveData(HttpServletResponse response, String itemName, Map<Integer, String>  values, int itemToEdit)throws  Exception{
         AzquoMemoryDBConnection masterDBConnection = reviewsConnectionMap.getConnection(UserService.MASTERDBNAME);
         Name nameToEdit = nameService.findById(masterDBConnection,itemToEdit);
 
@@ -1013,31 +1042,41 @@ public class ReviewService {
 
             //the array of values starts at 0 (though fields on screen start at 1)
             if (fieldNo == 0){
-                nameToEdit.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, values.get(fieldNo));
+                 nameToEdit.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, values.get(fieldNo));
 
             }else{
-                String oldVal = nameToEdit.getAttribute(fieldName.getDefaultDisplayName());
-                if (oldVal == null || !oldVal.equals(values.get(fieldNo))) {
-                    if (fieldName.getAttribute("type").equals("file")) {
-                        String fileName = values.get(fieldNo);
-                        String dbName = nameToEdit.getAttribute("dbname");
-                        if (dbName == null) {
-                            dbName = "revie_" + nameToEdit.getDefaultDisplayName().replace(" ", "");
+                String field = fieldName.getDefaultDisplayName();
+                String oldVal = nameToEdit.getAttribute(field);
+                if (oldVal==null) oldVal = "";
+                String newVal = values.get(fieldNo);
+                if (newVal==null){
+                    newVal = "";
+                }
+                if (!oldVal.equals(newVal)) {
+                    nameToEdit.setAttributeWillBePersisted(field,"");//zap first, to discover if new value is identical to parent value;
+                    oldVal = nameToEdit.getAttribute(field);
+                    if (oldVal==null || !oldVal.equals(newVal)) {
+                        if (fieldName.getAttribute("type").equals("file")) {
+                            String fileName = values.get(fieldNo);
+                            String dbName = nameToEdit.getAttribute("dbname");
+                            if (dbName == null) {
+                                dbName = "revie_" + nameToEdit.getDefaultDisplayName().replace(" ", "");
+                            }
+                            String fName = fileName.substring(fileName.lastIndexOf("_") + 1);
+                            if (fileName != null) {
+                                URL input = new URL(fileName);
+                                String fullPath = onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + "/" + fName;
+
+                                File output = new File(fullPath);
+                                FileUtils.copyURLToFile(input, output, 5000, 5000);
+                                nameToEdit.setAttributeWillBePersisted(field, fName);
+
+
+                            }
+
+                        } else {
+                            nameToEdit.setAttributeWillBePersisted(fieldName.getDefaultDisplayName(), values.get(fieldNo));
                         }
-                        String fName = fileName.substring(fileName.lastIndexOf("_") + 1);
-                        if (fileName != null) {
-                            URL input = new URL(fileName);
-                            String fullPath = ImportService.dbPath + dbName + "/" + uploadDir + "/" + fName;
-
-                            File output = new File(fullPath);
-                            FileUtils.copyURLToFile(input, output, 5000, 5000);
-                            nameToEdit.setAttributeWillBePersisted(fieldName.getDefaultDisplayName(), fName);
-
-
-                        }
-
-                    } else {
-                        nameToEdit.setAttributeWillBePersisted(fieldName.getDefaultDisplayName(), values.get(fieldNo));
                     }
                 }
             }
