@@ -26,11 +26,16 @@ import java.util.*;
  */
 public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
+    public static final class NameOrValue{
+        public Name name;
+        public Set<Value> values;
+    }
+
     public static final class JsTreeNode{
-        public Name child;
+        public NameOrValue child;
         public Name parent;
 
-        public JsTreeNode(Name child, Name parent){
+        public JsTreeNode(NameOrValue child, Name parent){
             this.child = child;
             this.parent = parent;
 
