@@ -596,27 +596,37 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
-    private String findParentAttributes(Name child, String attributeName) {
+    private String findParentAttributes(Name child, String attributeName, Set<Name> checked) {
         attributeName = attributeName.toUpperCase();
         for (Name parent : child.getParents()) {
-            if (parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
-                return child.getDefaultDisplayName();
-            }
-            String attribute = parent.getAttribute(attributeName);
-            if (attribute != null) {
-                return attribute;
+            if (!checked.contains(parent)){
+                checked.add(parent);
+                if (parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
+                    return child.getDefaultDisplayName();
+                }
+                String attribute = parent.getAttribute(attributeName);
+                if (attribute != null) {
+                    return attribute;
 
-            }
-            attribute = findParentAttributes(parent, attributeName);
-            if (attribute != null) {
-                return attribute;
+                }
+                attribute = findParentAttributes(parent, attributeName, checked);
+                if (attribute != null) {
+                    return attribute;
+                }
             }
         }
         return null;
 
     }
 
+    // default to parent check
+
     public String getAttribute(String attributeName) {
+        return getAttribute(attributeName, true);
+    }
+
+
+    public String getAttribute(String attributeName, boolean parentCheck) {
         attributeName = attributeName.toUpperCase();
         String attribute = null;
         NameAttributes nameAttributes = this.nameAttributes;// grab a reference in case it changes
@@ -626,7 +636,10 @@ public final class Name extends AzquoMemoryDBEntity {
         }
         if (attribute != null) return attribute;
         //look up the chain for any parent with the attribute
-        return findParentAttributes(this, attributeName);
+        if (parentCheck){
+            return findParentAttributes(this, attributeName, new HashSet<Name>());
+        }
+        return null;
     }
 
     public boolean hasInParentTree(final Name testParent) {

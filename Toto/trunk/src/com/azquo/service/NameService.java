@@ -601,6 +601,7 @@ public final class NameService {
         return null;
     }
 
+    // todo, address concerns about
 
     public boolean isAllowed(Name name, List<Set<Name>> names) {
 

@@ -362,10 +362,9 @@ public final class ValueService {
 
     }
 
-    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name,Integer> totalSetSize, List<String> attributeNames) throws Exception{
+    public double  findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name,Integer> totalSetSize, List<String> attributeNames) throws Exception{
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
-
         String calcString = null;
         List<Name> formulaNames = new ArrayList<Name>();
         boolean hasCalc = false;
@@ -376,7 +375,7 @@ public final class ValueService {
         for (Name name : names) {
             if (!hasCalc) {// then try and find one
 
-                String calc = name.getAttribute(Name.CALCULATION);
+                String calc = name.getAttribute(Name.CALCULATION, false);
                 if (calc != null){
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
@@ -395,19 +394,30 @@ public final class ValueService {
                 }
                 if (calcString != null) {
                     hasCalc = true;
-                } else { // no valid calc
+                } else { // no valgetattributeid calc
                     calcnames.add(name);
                 }
             } else {
                 calcnames.add(name);
             }
         }
+
         // no reverse polish converted formula, just sum
         if (!hasCalc) {
             locked.isTrue = false;
-            for (Name oneName : names) {
-                if ((oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) || !nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions()))
+            for (Name oneName : names) { // inexpensive check first
+                if (oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0){
                     locked.isTrue = true;
+                    break;
+                }
+            }
+            if (!locked.isTrue){ // now the more expensive isallowed check
+                for (Name oneName : names) {
+                    if (!nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions())){
+                        locked.isTrue = true;
+                        break;
+                    }
+                }
             }
             return findSumForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, totalSetSize);
         } else {
@@ -1396,6 +1406,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                     thisRowNames.add(namesForThisCell);
                     // TODO - peer additive check. If using peers and not additive, don't include children
                     double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values, totalSetSize, loggedInConnection.getLanguages()); // true = pay attention to names additive flag
+
                     //if there's only one value, treat it as text (it may be text, or may include £,$,%)
                     if (restrictRowCount > 0 && (sortCol==0 || sortCol == colNo +1)) {
                         if (sortRowsUp) {
