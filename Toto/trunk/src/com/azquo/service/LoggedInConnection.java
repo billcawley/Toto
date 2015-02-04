@@ -23,6 +23,11 @@ import java.util.*;
  * A little more complex ins things like row headings. Used to just be a list but now it's maps (due to multiple regions on the excel sheet)
  * of lists of lists of names. Lists of lists due to mult level headings, e.g. London by container as two column headings above each other (the next one being london not by container)
  * Lockmaps and sent data maps are maps of the actual data sent to excel, this generally is read back by the csv reader
+ *
+ * Since Excel is no longer the priority this class might be a bit different if rewritten
+ *
+ * Not thread safe really although it should be one per session. As in multiple tabs or fast refreshes could cause problems.
+ *
  */
 public final class LoggedInConnection extends AzquoMemoryDBConnection {
 

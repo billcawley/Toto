@@ -118,9 +118,9 @@ public class OnlineService {
     public boolean onADevMachine(){
         if (devMachine == -1){
             if (env.getProperty(host + "." + DEVMACHINE) != null){
-                asposeLicense = (env.getProperty(host + "." + DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
+                devMachine = (env.getProperty(host + "." + DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
             } else {
-                asposeLicense = (env.getProperty(DEVMACHINE) != null && env.getProperty(DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
+                devMachine = (env.getProperty(DEVMACHINE) != null && env.getProperty(DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
             }
         }
         return devMachine == 1;

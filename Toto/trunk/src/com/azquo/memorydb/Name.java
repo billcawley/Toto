@@ -616,7 +616,6 @@ public final class Name extends AzquoMemoryDBEntity {
 
     }
 
-
     public String getAttribute(String attributeName) {
         attributeName = attributeName.toUpperCase();
         String attribute = null;

@@ -495,16 +495,6 @@ public final class ValueService {
     public List<Value> findValuesForNameIncludeAllChildren(final Name name, boolean payAttentionToAdditive) {
         List<Value> toReturn = new ArrayList<Value>();
         toReturn.addAll(name.getValues());
-        // TODO : concurrent errror here !!!
-        /*
-
-        java.util.ConcurrentModificationException
-        at java.util.HashMap$HashIterator.nextEntry(HashMap.java:926)
-        at java.util.HashMap$KeyIterator.next(HashMap.java:960)
-        at com.azquo.service.ValueService.findValuesForNameIncludeAllChildren(ValueService.java:460)
-        at com.azquo.service.ValueService.findForNamesIncludeChildren(ValueService.java:228)
-
-         */
         for (Name child : name.findAllChildren(payAttentionToAdditive)) {
             toReturn.addAll(child.getValues());
         }
@@ -795,6 +785,8 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         return true;
     }
 
+    // todo : I think this next function could be improved
+
 
     public List<Integer> sortValues(int restrictCount, Map<Integer, Double> sortTotals) {
 
@@ -944,12 +936,6 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
      NOTE : this means the column heading are not stored according to the orientation used in the above function
 
       hence, to output them we have to transpose them again!
-
-     */
-
-    
-    
-    /*
 
     OK, having generified the function we should only need one function. The list could be anything, names, list of names, hashmaps whatever
     generics ensure that the return type will match the sent type

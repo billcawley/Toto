@@ -127,9 +127,11 @@ public class MagentoController {
                     System.out.println("RUnning a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
                 }
                 if (data != null){
-                    azquoMailer.sendEMail("edd@azquo.com", "Edd", "Magento file upload " + db, "Magento file upload " + db);
-                    azquoMailer.sendEMail("bill@azquo.com", "Bill", "Magento file upload " + db, "Magento file upload " + db);
-                    azquoMailer.sendEMail("nic@azquo.com", "Nic", "Magento file upload " + db, "Magento file upload " + db);
+                    if (!onlineService.onADevMachine()){
+                        azquoMailer.sendEMail("edd@azquo.com", "Edd", "Magento file upload " + db, "Magento file upload " + db);
+                        azquoMailer.sendEMail("bill@azquo.com", "Bill", "Magento file upload " + db, "Magento file upload " + db);
+                        azquoMailer.sendEMail("nic@azquo.com", "Nic", "Magento file upload " + db, "Magento file upload " + db);
+                    }
                     dataLoadService.loadData(loggedInConnection, data.getInputStream());
                     return loggedInConnection.getConnectionId() + "";
                 } else {

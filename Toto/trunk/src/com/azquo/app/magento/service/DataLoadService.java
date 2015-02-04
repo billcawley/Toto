@@ -164,7 +164,11 @@ public final class DataLoadService {
             if (attributeRow.get("attribute_id").equals(categoryNameId)) {
                 // can return the name
                 nameService.findByName(azquoMemoryDBConnection, attributeRow.get("entity_id"));
-                azquoCategoriesFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attributeRow.get("value"));
+                if (azquoCategoriesFound.get(attributeRow.get("entity_id")) == null){
+                    System.out.println("Entity id linked in catalog_category_entity_varchar that doesn't exist in catalog_category_entity : " + attributeRow.get("entity_id"));
+                } else {
+                    azquoCategoriesFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attributeRow.get("value"));
+                }
             }
         }
         languages.clear();
@@ -185,24 +189,44 @@ public final class DataLoadService {
             //only picking the name from all the category attributes, and only choosing store 0 - other stores assumed to be different languages
             if (attributeRow.get("attribute_id").equals(productNameId) && attributeRow.get("store_id").equals("0")) {
                 //Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + attributeRow.get("entity_id"), topProduct, true,languages);
-                azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attributeRow.get("value"));
+                if (azquoProductsFound.get(attributeRow.get("entity_id")) == null){
+                    System.out.println("Entity id linked in catalog_product_entity_varchar that doesn't exist in catalog_product_entity : " + attributeRow.get("entity_id"));
+                } else {
+                    azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attributeRow.get("value"));
+                }
             }
         }
         //create a product structure
         for (Map<String, String> relationRow : tableMap.get("catalog_product_super_link")) {
             Name child = azquoProductsFound.get(relationRow.get("product_id"));
-            azquoProductsFound.get(relationRow.get("parent_id")).addChildWillBePersisted(child);
-            allProducts.removeFromChildrenWillBePersisted(child);
+            if (child == null){
+                System.out.println("product id linked in catalog_product_super_link that doesn't exist in catalog_product_entity : " + relationRow.get("product_id"));
+            } else {
+                if (azquoProductsFound.get(relationRow.get("parent_id")) == null){
+                    System.out.println("parent_id linked in catalog_product_super_link that doesn't exist in catalog_product_entity : " + relationRow.get("parent_id"));
+                } else {
+                    azquoProductsFound.get(relationRow.get("parent_id")).addChildWillBePersisted(child);
+                    allProducts.removeFromChildrenWillBePersisted(child);
+                }
+            }
         }
         // and put products into categories
 
         for (Map<String, String> relationRow : tableMap.get("catalog_category_product")) {
             Name child = azquoProductsFound.get(relationRow.get("product_id"));
-            Name category = azquoCategoriesFound.get(relationRow.get("category_id"));
-            if (!child.findAllParents().contains(category)){
-                category.addChildWillBePersisted(child);
+            if (child == null){
+                System.out.println("product id linked in catalog_category_product that doesn't exist in catalog_product_entity : " + relationRow.get("product_id"));
+            } else {
+                Name category = azquoCategoriesFound.get(relationRow.get("category_id"));
+                if (category == null){
+                    System.out.println("category_id linked in catalog_category_product that doesn't exist in catalog_category_entity : " + relationRow.get("category_id"));
+                } else {
+                    if (!child.findAllParents().contains(category)){
+                        category.addChildWillBePersisted(child);
+                    }
+                    uncategorisedProducts.removeFromChildrenWillBePersisted(child);
+                }
             }
-            uncategorisedProducts.removeFromChildrenWillBePersisted(child);
         }
         //now find the attributes that matter
         Set<String> attributes = new HashSet<String>();
@@ -234,17 +258,21 @@ public final class DataLoadService {
             String attVal = attVals.get("attribute_id");
             if (attributes.contains(attVal)) {
                 Name magentoName = azquoProductsFound.get(attVals.get("entity_id"));
-                Name magentoProductCategory = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeNames.get(attVal), productAttributesName, true,languages);
-                String val = attVals.get("value");
-                if (optionValues.get(val) != null) {
-                    //note - this is NOT a product id, so don't use the product id to find it!
-                    Name magentoOptionName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, optionValues.get(val), magentoProductCategory, true,null);
-                    if (!magentoName.findAllParents().contains(magentoOptionName)) {
-                        magentoOptionName.addChildWillBePersisted(magentoName);
-                        //allProducts.removeFromChildrenWillBePersisted(magentoName);
-                    }
+                if (magentoName == null){
+                    System.out.println("entity_id linked in catalog_product_entity_int that doesn't exist in catalog_product_entity : " + attVals.get("entity_id"));
                 } else {
-                    System.out.println("found an option value " + val + " for " + magentoProductCategory.getDefaultDisplayName());
+                    Name magentoProductCategory = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeNames.get(attVal), productAttributesName, true,languages);
+                    String val = attVals.get("value");
+                    if (optionValues.get(val) != null) {
+                        //note - this is NOT a product id, so don't use the product id to find it!
+                        Name magentoOptionName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, optionValues.get(val), magentoProductCategory, true,null);
+                        if (!magentoName.findAllParents().contains(magentoOptionName)) {
+                            magentoOptionName.addChildWillBePersisted(magentoName);
+                            //allProducts.removeFromChildrenWillBePersisted(magentoName);
+                        }
+                    } else {
+                        System.out.println("found an option value " + val + " for " + magentoProductCategory.getDefaultDisplayName());
+                    }
                 }
             }
         }
