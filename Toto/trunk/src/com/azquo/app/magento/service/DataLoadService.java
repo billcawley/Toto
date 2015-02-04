@@ -61,11 +61,14 @@ public final class DataLoadService {
         String line;
         List<Map<String, String>> currentTableDataMap = null;
         String[] currentColumnNames = null;
+        int count = 0;
         while ((line = br.readLine()) != null) {
             if (line.startsWith("||||TABLE:")) {
+                count = 0;
                 currentColumnNames = null;
                 String tableName = line.substring(10);
-                System.out.println("Initial load of : " + tableName);
+                System.out.println();
+                System.out.print("Initial load of : " + tableName);
                 // I'm not going to support tables being loaded in two chunks I see no point. THis would overwrite data if a table were referenced twice
                 currentTableDataMap = new ArrayList<Map<String, String>>(); // and I know this repeats keys for each row, the goal here is ease of use for importing, not efficiency
                 tableMap.put(tableName, currentTableDataMap);
@@ -73,6 +76,7 @@ public final class DataLoadService {
                 if (currentColumnNames == null) {
                     currentColumnNames = line.split("\t", -1);
                 } else {
+                    count++;
                     String[] lineValues = line.split("\t", -1);
                     Map<String, String> dataRowMap = new HashMap<String, String>();
                     for (int i = 0; i < lineValues.length;i++) {
@@ -86,9 +90,13 @@ public final class DataLoadService {
                         dataRowMap.put(currentColumnNames[i].intern(),val);
                     }
                     currentTableDataMap.add(dataRowMap);
+                    if (count%10000 == 0){
+                        System.out.print(".");
+                    }
                 }
             }
         }
+        System.out.println();
         System.out.println("initial load of magento data done");
         System.out.println("Trying to make some product objects");
 
