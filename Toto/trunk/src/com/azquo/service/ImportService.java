@@ -1083,7 +1083,7 @@ public final class ImportService {
             reportId = or.getId();
         }
 
-        String fullPath = dbPath + pathName + "/onlinereports/" + fileName;
+        String fullPath = onlineService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
 
