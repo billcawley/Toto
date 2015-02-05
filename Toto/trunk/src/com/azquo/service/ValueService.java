@@ -239,6 +239,9 @@ public final class ValueService {
 
             if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
                 smallestNameSetSize = setSizeIncludingChildren;
+                if (smallestNameSetSize==0){//no values
+                    return values;
+                }
                 smallestName = name;
             }
         }
@@ -1274,7 +1277,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows, int maxCols) throws Exception {
 
         if (loggedInConnection.getRowHeadings(region) == null || loggedInConnection.getRowHeadings(region).size() == 0 || loggedInConnection.getColumnHeadings(region) == null || loggedInConnection.getColumnHeadings(region).size() == 0) {
-            return "no headings passed";
+            return "error: no headings passed";
         }
 
 
@@ -1365,11 +1368,13 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         }
         int totalRows = loggedInConnection.getRowHeadings(region).size();
         int totalCols = loggedInConnection.getColumnHeadings(region).size();
+        System.out.println("data region size = " + totalRows + " * " + totalCols);
         if (totalRows * totalCols > 500000){
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells 500,000");
 
         }
         for (List<Name> rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
+            if (rowNo % 1000 == 0) System.out.print(".");
             ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(totalCols);
             ArrayList<Set<Name>> thisRowNames = new ArrayList<Set<Name>>(totalCols);
             List<String> shownValues = new ArrayList<String>();
