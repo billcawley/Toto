@@ -741,11 +741,7 @@ public class ReviewService {
 
         AzquoMemoryDBConnection masterDBConnection = reviewsConnectionMap.getConnection(UserService.MASTERDBNAME);
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String result = "";
-        Name user = userService.getUserByEmail(auth.getName());
-        user = userService.getUserByEmail("testuser5");
-        Name business = reviewsCustomerService.getReviewsCustomerForUser(user);
+        Name business = getUserBusiness();
 
 
 
@@ -862,7 +858,7 @@ public class ReviewService {
                     addElement(hd,atts,"ITEMNO",++fieldNo + "");
                     addElement(hd, atts, "ITEMID", "item" + fieldNo);
                     addElement(hd,atts,"ITEMNAME",field);
-                    String fieldType = fieldName.getAttribute("type");
+                    String fieldType = fieldName.getAttribute("type").toLowerCase();
                     String clause = "";
                     int nameEnd = fieldType.indexOf(" ");
                     if (nameEnd > 0){
@@ -889,15 +885,19 @@ public class ReviewService {
                             }
 
                         }else {
-                            List<Name> selectName = nameService.parseQuery(masterDBConnection, clause);
-                            if (selectName != null) {
-                                //hd.startElement("", "", "SELECT", atts);
-                                for (Name child : selectName) {
-                                    addElement(hd, atts, "OPTION", child.getDefaultDisplayName());
+                            try {
+                                List<Name> selectName = nameService.parseQuery(masterDBConnection, clause);
+                                if (selectName != null) {
+                                    //hd.startElement("", "", "SELECT", atts);
+                                    for (Name child : selectName) {
+                                        addElement(hd, atts, "OPTION", child.getDefaultDisplayName());
+                                    }
+                                    //hd.endElement("","","SELECT");
                                 }
-                                //hd.endElement("","","SELECT");
-                             }
-                        }
+                            }catch(Exception e){
+                                return e.getMessage();
+                            }
+                          }
                         hd.endElement("", "", "OPTIONS");
                     }
                     String fieldVal = null;
@@ -927,8 +927,7 @@ public class ReviewService {
                             thisTest = fieldValidation;
                             fieldValidation = "";
                         }
-                        if (thisTest.equals("req") && nameToEdit.getAttribute(field)!=null & nameToEdit.getAttribute(field)!= null)
-                        if (thisTest.indexOf(",") < 0){
+                        if (thisTest.equals("req") && thisTest.indexOf(",") < 0){
                             thisTest = thisTest + ",Please enter " + field;
                         }
 
@@ -1032,16 +1031,21 @@ public class ReviewService {
         AzquoMemoryDBConnection masterDBConnection = reviewsConnectionMap.getConnection(UserService.MASTERDBNAME);
         Name nameToEdit = nameService.findById(masterDBConnection,itemToEdit);
 
-        int fieldNo = 0;
+        int fieldNo = 1;
         Name menuItem = nameService.findByName(masterDBConnection,itemName);
+        if (itemToEdit == 0){
+            Name choiceSet = nameService.findByName(masterDBConnection, menuItem.getAttribute("choice set"));
+            nameToEdit = nameService.findOrCreateNameInParent(masterDBConnection, values.get(1), choiceSet, true);
+             Name business = getUserBusiness();
+            business.addChildWillBePersisted(nameToEdit);
+        }
         for (Name fieldName:menuItem.getChildren()){
             String uploadDir = menuItem.getAttribute("uploaddir");
             if (uploadDir == null){
                 uploadDir = menuItem.getDefaultDisplayName().replace(" ","");
             }
 
-            //the array of values starts at 0 (though fields on screen start at 1)
-            if (fieldNo == 0){
+            if (fieldNo == 1){
                  nameToEdit.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, values.get(fieldNo));
 
             }else{
@@ -1056,7 +1060,15 @@ public class ReviewService {
                     nameToEdit.setAttributeWillBePersisted(field,"");//zap first, to discover if new value is identical to parent value;
                     oldVal = nameToEdit.getAttribute(field);
                     if (oldVal==null || !oldVal.equals(newVal)) {
-                        if (fieldName.getAttribute("type").equals("file")) {
+                        String fieldType = fieldName.getAttribute("type");
+                        if (fieldType.startsWith("file")) {
+                            String subDir = "";
+                            if (fieldType.length() > 5){
+                                subDir = fieldType.substring(5);
+                                if (!subDir.endsWith("/")){
+                                    subDir += "/";
+                                }
+                            }
                             String fileName = values.get(fieldNo);
                             String dbName = nameToEdit.getAttribute("dbname");
                             if (dbName == null) {
@@ -1065,7 +1077,7 @@ public class ReviewService {
                             String fName = fileName.substring(fileName.lastIndexOf("_") + 1);
                             if (fileName != null) {
                                 URL input = new URL(fileName);
-                                String fullPath = onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + "/" + fName;
+                                String fullPath = onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + subDir + "/" + fName;
 
                                 File output = new File(fullPath);
                                 FileUtils.copyURLToFile(input, output, 5000, 5000);
@@ -1085,6 +1097,14 @@ public class ReviewService {
         }
         masterDBConnection.persist();
 
+
+    }
+
+    private Name getUserBusiness()throws Exception{
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Name user = userService.getUserByEmail(auth.getName());
+        //user = userService.getUserByEmail("testuser5");
+        return reviewsCustomerService.getReviewsCustomerForUser(user);
 
     }
 
