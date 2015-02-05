@@ -78,7 +78,7 @@
         <div class="choicesubmit"><p><a href="#" onclick="submitChoice()">Submit</a></p></div>
     </form>
     <div class="namedetails" id="namedetails" style="display:none">
-        <div class="closebutton"><a href="#" onclick="hideDetails();"><img src="https://data.azquo.com:8443/images/closebutton.png" alt="close button"/></a></div>
+        <div class="closebutton"><a href="#" onclick="hideDetails();"><img src="https://data.azquo.com/images/closebutton.png" alt="close button"/></a></div>
         <div class="namedetailsline">
             Name
             <div class="value">

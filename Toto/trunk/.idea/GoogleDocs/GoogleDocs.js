@@ -697,7 +697,7 @@ function FillTheRange(textsent, rangename){
 
     function AzquoPost1(functionName, params){
 
-        var url = "https://data.azquo.com:8443/api/" + functionName;
+        var url = "https://data.azquo.com/api/" + functionName;
         var payload = {
             json: "{" + params + ",\"connectionid\":\"" + azConnectionId +"\",\"user\":\"demo@user.com\",\"password\":\"password\",\"database\":\"export\"}",
         };

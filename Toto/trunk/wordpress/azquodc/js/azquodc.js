@@ -15,7 +15,7 @@ function azquojson(functionName, params){
     }else{
         params +="&user=" + az_logon + "&password=" +  az_password + "&database=" + az_database;
     }
-    var htmlText = "https://data.azquo.com:8443/api/" + functionName + "?" + params;
+    var htmlText = "https://data.azquo.com/api/" + functionName + "?" + params;
     var script = document.createElement('script'),
     head = document.getElementsByTagName('head')[0] || document.documentElement;
     script.src = htmlText;

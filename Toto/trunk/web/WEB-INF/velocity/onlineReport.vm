@@ -905,7 +905,7 @@
 
 
             <div id="selector" class="selector"></div>
-            <div id="provenance" class="provenance"><div class="closebutton"><a href="#" onclick="document.getElementById('provenance').style.display = 'none';"><img src="https://data.azquo.com:8443/images/closebutton.png" alt="close button"/></a></div><div id="provenancecontent" class="content"></div></div>
+            <div id="provenance" class="provenance"><div class="closebutton"><a href="#" onclick="document.getElementById('provenance').style.display = 'none';"><img src="https://data.azquo.com/images/closebutton.png" alt="close button"/></a></div><div id="provenancecontent" class="content"></div></div>
             #foreach($mregion in $menuregions)
                 <div id="menu${mregion.name}" class="dataregionmenu">
                     <div id="regionlist$mregion.name" class="regionspec">
