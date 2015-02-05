@@ -550,6 +550,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 attributeValues.remove(index);
                 //attributes.remove(attributeName);
                 getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
+                nameAttributes = new NameAttributes(attributeKeys, attributeValues);
                 setNeedsPersisting();
             }
             return "";
