@@ -1,6 +1,5 @@
 package com.azquo.memorydb;
 
-import com.azquo.admindao.DatabaseDAO;
 import com.azquo.admindao.OpenDatabaseDAO;
 import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OpenDatabase;
@@ -9,6 +8,7 @@ import com.azquo.service.AppEntityService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 
@@ -20,23 +20,22 @@ public final class MemoryDBManager {
 
     @Autowired
     OpenDatabaseDAO openDatabaseDAO;
-    //@Autowired
+
     List<AppEntityService> appServices = null;
 
     private final HashMap<String, AzquoMemoryDB> memoryDatabaseMap;
-//    private DatabaseDAO databaseDAO;
+
     private StandardDAO standardDAO;
 
 
-    public MemoryDBManager(DatabaseDAO databaseDAO, StandardDAO standardDAO) throws Exception {
-        //this.databaseDAO = databaseDAO;
+    public MemoryDBManager(StandardDAO standardDAO) throws Exception {
         this.standardDAO = standardDAO;
         memoryDatabaseMap = new HashMap<String, AzquoMemoryDB>(); // by mysql name. Will be unique.
         loadMemoryDBMap();
     }
 
     public synchronized AzquoMemoryDB getAzquoMemoryDB(Database database) throws Exception {
-        AzquoMemoryDB loaded = null;
+        AzquoMemoryDB loaded;
         if (database.getName().equals("temp")){
             loaded =new AzquoMemoryDB(database, standardDAO, appServices);
             return loaded;
@@ -47,7 +46,7 @@ public final class MemoryDBManager {
         }
         loaded = new AzquoMemoryDB(database, standardDAO, appServices);
         memoryDatabaseMap.put(database.getMySQLName(), loaded);
-        final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new Date(0,0,0));
+        final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new GregorianCalendar(1900,0,0).getTime());// should start to get away from date
         openDatabaseDAO.store(openDatabase);
         return loaded;
     }

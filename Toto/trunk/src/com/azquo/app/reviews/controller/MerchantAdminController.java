@@ -2,6 +2,7 @@ package com.azquo.app.reviews.controller;
 
 /**
  * Created by edd on 09/10/14.
+ *
  */
 import com.azquo.app.reviews.service.ReviewService;
 import com.azquo.app.reviews.service.ReviewsCustomerService;
@@ -13,14 +14,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-/**
- *
- */
 
 @Controller
 @RequestMapping("/MerchantAdmin")
@@ -84,7 +80,7 @@ public class MerchantAdminController {
             if (submit == null){
                 result = reviewService.createPageSpec(itemName,type, nameId);
             }else{
-                reviewService.saveData(response, itemName,values, Integer.parseInt(nameId));
+                reviewService.saveData(itemName,values, Integer.parseInt(nameId));
             }
 
         }

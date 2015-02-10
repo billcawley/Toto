@@ -134,17 +134,20 @@ public class ValueController {
                logger.error("name json parse problem", e);
                return "error:badly formed json " + e.getMessage();
            }
+
+            // decoding to UTF 8 hope that's correct
+
             if (valueJsonRequest.rowheadings != null){
-                rowheadings = URLDecoder.decode(valueJsonRequest.rowheadings);
+                rowheadings = URLDecoder.decode(valueJsonRequest.rowheadings, "UTF-8");
             }
             if (valueJsonRequest.columnheadings != null){
-                columnheadings = URLDecoder.decode(valueJsonRequest.columnheadings);
+                columnheadings = URLDecoder.decode(valueJsonRequest.columnheadings, "UTF-8");
             }
-            if (valueJsonRequest.context != null) context = URLDecoder.decode(valueJsonRequest.context);
+            if (valueJsonRequest.context != null) context = URLDecoder.decode(valueJsonRequest.context, "UTF-8");
             if (valueJsonRequest.connectionid != null) connectionId = valueJsonRequest.connectionid;
             if (valueJsonRequest.region != null) region = valueJsonRequest.region;
             if (valueJsonRequest.lockmap != null) lockMap = valueJsonRequest.lockmap;
-            if (valueJsonRequest.editeddata != null) editedData = URLDecoder.decode(valueJsonRequest.editeddata);
+            if (valueJsonRequest.editeddata != null) editedData = URLDecoder.decode(valueJsonRequest.editeddata, "UTF-8");
             if (valueJsonRequest.searchbynames != null) searchByNames = valueJsonRequest.searchbynames;
             if (valueJsonRequest.jsonfunction != null) jsonfunction = valueJsonRequest.jsonfunction;
             if (valueJsonRequest.user != null) user = valueJsonRequest.user;

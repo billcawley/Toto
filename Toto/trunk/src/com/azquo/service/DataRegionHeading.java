@@ -12,17 +12,17 @@ import com.azquo.memorydb.Name;
  *
  * See no reason not to make this simple and immutable. Bottom line is that this can be either an attribute or a name
  */
-public class DataRegionHeader {
+public class DataRegionHeading {
 
     private final Name name;
     private final String attribute;
 
-    public DataRegionHeader(Name name) {
+    public DataRegionHeading(Name name) {
         this.name = name;
         this.attribute = null;
     }
 
-    public DataRegionHeader(String attribute) {
+    public DataRegionHeading(String attribute) {
         this.name = null;
         this.attribute = attribute;
     }

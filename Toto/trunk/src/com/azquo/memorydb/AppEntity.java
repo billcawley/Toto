@@ -18,13 +18,11 @@ public abstract class AppEntity<ServiceType extends AppEntityService> extends Az
         return service.getTableName();
     }
 
-    protected AppEntity(AzquoMemoryDB azquoMemoryDB, int id, ServiceType service) throws Exception {
+    protected <T extends AppEntity> AppEntity(AzquoMemoryDB azquoMemoryDB, int id, ServiceType service) throws Exception {
         super(azquoMemoryDB, id, true);
         this.service = service;
         // this should be done in the super constructor but it will null pointer without the service being set . . .
         this.setNeedsPersisting();
-        service.addToIdMap(this);// Intellij gives this a yellow. It should not, the class is abstract, this could only be called by something of entity type which extends this class
+        service.addToIdMap(this); // I'm letting this annoy me far too much :)
     }
-
-
 }

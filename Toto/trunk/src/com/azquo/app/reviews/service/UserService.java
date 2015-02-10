@@ -11,6 +11,7 @@ import java.util.List;
 
 /**
  * Created by cawley on 23/10/14.
+ *
  */
 public class UserService {
 
@@ -21,7 +22,6 @@ public class UserService {
 
     private AdminService adminService;
 
-    private AppDBConnectionMap reviewsConnectionMap;
 
     AzquoMemoryDBConnection masterDBConnection;
 
@@ -30,7 +30,6 @@ public class UserService {
     public UserService(NameService nameService, AdminService adminService, AppDBConnectionMap reviewsConnectionMap) throws Exception{
         this.nameService = nameService;
         this.adminService = adminService;
-        this.reviewsConnectionMap = reviewsConnectionMap;
         if (reviewsConnectionMap.getConnection(MASTERDBNAME) == null){ // should only happen once!
             reviewsConnectionMap.newDatabase("master"); // note, I assume the main reviews business is called reviews!
         }

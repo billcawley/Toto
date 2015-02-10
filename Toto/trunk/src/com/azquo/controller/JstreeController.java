@@ -1,27 +1,18 @@
 package com.azquo.controller;
 
-import com.azquo.admindao.DatabaseDAO;
 import com.azquo.admindao.OnlineReportDAO;
-import com.azquo.adminentities.Database;
-import com.azquo.adminentities.OnlineReport;
 import com.azquo.jsonrequestentities.NameJsonRequest;
 import com.azquo.memorydb.Name;
 import com.azquo.service.*;
-//import com.azquo.util.Chart;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
 import java.util.*;
 
 
@@ -65,7 +56,7 @@ public class JstreeController {
         String database = request.getParameter("database");
         String position = request.getParameter("position");
         String parent = request.getParameter("parent");
-        LoggedInConnection loggedInConnection = null;
+        LoggedInConnection loggedInConnection;
         String json = request.getParameter("json");
         String parents = request.getParameter("parents");
         String topNode = request.getParameter("topnode");//only for use at root.
@@ -92,6 +83,8 @@ public class JstreeController {
              }
 
              Map<String, LoggedInConnection.JsTreeNode> lookup = loggedInConnection.getJsTreeIds();
+
+             // todo : these error messages won't work!
              if (json != null && json.length() > 0) {
                  NameJsonRequest nameJsonRequest;
                 try {
@@ -157,9 +150,9 @@ public class JstreeController {
                  if (jsTreeId.equals("true")){
                      current = lookup.get(parent);
                  }
-                 if (current==null&& op.equals("rename_node")){
+                 //if (current==null&& op.equals("rename_node")){
                      //a new node has just been created
-                }
+                //}
                  if (op.equals("new")){
                      if (parents==null) parents = "false";
                      int rootId = 0;

@@ -6,7 +6,6 @@ import com.azquo.jsonrequestentities.LoginJsonRequest;
 import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
 import com.azquo.service.OnlineService;
-import com.azquo.service.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,9 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
 
 /**
  * Created with IntelliJ IDEA.

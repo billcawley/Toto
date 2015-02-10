@@ -1,13 +1,11 @@
 package com.azquo.app.reviews.misc;
 
-import com.azquo.app.reviews.service.ReviewService;
 import com.azquo.app.reviews.service.UserService;
 import com.azquo.memorydb.Name;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
@@ -16,7 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by cawley on 23/10/14.
+ * Created by cawley on 23/10/14
+ *
+ * Implements a spring interface so we can defer to that
  */
 
 @Component

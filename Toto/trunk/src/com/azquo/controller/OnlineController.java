@@ -68,15 +68,12 @@ public class OnlineController {
         String choiceName = null;
         String choiceValue = null;
         String reportId = null;
-        //String chartParams = null;
         String chart = null;
         String jsonFunction = "azquojsonfeed";
-        //String region = null;
         String rowStr = "";
         String colStr = "";
         String changedValue = null;
         String opcode = "";
-        String nameId = null;
         String spreadsheetName = "";
         String database = "";
         String reportToLoad = "";
@@ -114,9 +111,7 @@ public class OnlineController {
                 changedValue = paramValue;
             }else if (paramName.equals("spreadsheetname")){
                 spreadsheetName = paramValue;
-            }else if (paramName.equals("nameid")){
-                nameId = paramValue;
-            }else if (paramName.equals("database")){
+            }else  if (paramName.equals("database")){
                 database = paramValue;
             }
 
@@ -226,7 +221,7 @@ public class OnlineController {
 
         //long startTime = System.currentTimeMillis();
         String workbookName = null;
-        Database db = null;
+        Database db;
         try {
             OnlineReport onlineReport = null;
             if (reportId != null && reportId.length() > 0){

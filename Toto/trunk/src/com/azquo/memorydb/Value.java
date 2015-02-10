@@ -35,7 +35,7 @@ public final class Value extends AzquoMemoryDBEntity {
         this.provenance = provenance;
         this.text = text;
         this.deletedInfo = deletedInfo;
-        names = new HashSet<Name>();
+        names = Collections.unmodifiableSet(new HashSet<Name>());
         // added 10/12/2014, wasn't there before, why??? I suppose it just worked. Inconsistent though!
         getAzquoMemoryDB().addValueToDb(this);
     }
@@ -102,12 +102,12 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     public Set<Name> getNames() {
-        return Collections.unmodifiableSet(names);
+        return names;
     }
 
     public void setNames(final Set<Name> names){
         //this function is used only for temporary 'values' while creating provenance information on sets of values.
-        this.names = names;
+        this.names = Collections.unmodifiableSet(names);
     }
 
     // make sure to adjust the values lists on the name objects :)
@@ -119,7 +119,7 @@ public final class Value extends AzquoMemoryDBEntity {
         for (Name oldName : this.names) {
             oldName.removeFromValues(this);
         }
-        this.names = names;
+        this.names = Collections.unmodifiableSet(names);
         // set this against names on the new list
         for (Name newName : this.names) {
             newName.addToValues(this);

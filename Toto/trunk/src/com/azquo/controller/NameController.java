@@ -12,7 +12,6 @@ package com.azquo.controller;
  */
 
 import com.azquo.jsonrequestentities.NameJsonRequest;
-import com.azquo.memorydb.Name;
 import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
 import com.azquo.service.NameService;
