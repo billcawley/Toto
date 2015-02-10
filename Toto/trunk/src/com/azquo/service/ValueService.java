@@ -1310,7 +1310,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         int count = 1;
         for (List<Name> heading:headings){
 
-            if (heading.get(heading.size()-1).getDefaultDisplayName().replace(" ","").equals(toFind)){
+            if (heading.get(heading.size()-1)!=null && heading.get(heading.size()-1).getDefaultDisplayName().replace(" ","").equals(toFind)){
                 if (desc) return -count;
                 return count;
             }
