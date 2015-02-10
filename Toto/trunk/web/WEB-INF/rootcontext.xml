@@ -63,7 +63,6 @@
         </util:list> -->
     <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
     <bean name="memoryDBManager" class="com.azquo.memorydb.MemoryDBManager">
-        <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
         <constructor-arg type="com.azquo.memorydbdao.StandardDAO" ref="standardDao"/>
     </bean>
     <!-- and now app conneciton maps, firs one will be for  -->
