@@ -1033,11 +1033,11 @@ public class ReviewService {
 
         int fieldNo = 1;
         Name menuItem = nameService.findByName(masterDBConnection,itemName);
+        Name business = getUserBusiness();
         if (itemToEdit == 0){
             Name choiceSet = nameService.findByName(masterDBConnection, menuItem.getAttribute("choice set"));
             nameToEdit = nameService.findOrCreateNameInParent(masterDBConnection, values.get(1), choiceSet, true);
-             Name business = getUserBusiness();
-            business.addChildWillBePersisted(nameToEdit);
+            business.addChildWillBePersisted(nameToEdit);//everything connected with the business is stored under it
         }
         for (Name fieldName:menuItem.getChildren()){
             String uploadDir = menuItem.getAttribute("uploaddir");
@@ -1061,7 +1061,7 @@ public class ReviewService {
                     oldVal = nameToEdit.getAttribute(field);
                     if (oldVal==null || !oldVal.equals(newVal)) {
                         String fieldType = fieldName.getAttribute("type");
-                        if (fieldType.startsWith("file")) {
+                        if (fieldType.toLowerCase().startsWith("file")) {
                             String subDir = "";
                             if (fieldType.length() > 5){
                                 subDir = fieldType.substring(5);
@@ -1070,9 +1070,9 @@ public class ReviewService {
                                 }
                             }
                             String fileName = values.get(fieldNo);
-                            String dbName = nameToEdit.getAttribute("dbname");
+                            String dbName = business.getAttribute("dbname");
                             if (dbName == null) {
-                                dbName = "revie_" + nameToEdit.getDefaultDisplayName().replace(" ", "");
+                                dbName = "revie_" + business.getDefaultDisplayName().replace(" ", "");
                             }
                             String fName = fileName.substring(fileName.lastIndexOf("_") + 1);
                             if (fileName != null) {
