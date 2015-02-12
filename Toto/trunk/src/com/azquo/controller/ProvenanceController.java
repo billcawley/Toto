@@ -91,7 +91,7 @@ public class ProvenanceController {
                         return valueService.formatProvenanceForOutput(names.iterator().next().getProvenance(), jsonFunction);
                     } else {
                         final List<Value> values = valueService.findForNamesIncludeChildren(names, false, null);
-                        return valueService.formatCellProvenanceForOutput(loggedInConnection, names, values, jsonFunction);
+                        return valueService.formatCellProvenanceForOutput(loggedInConnection, values, jsonFunction);
                     }
                 }
                 // should maybe be an error here?

@@ -1159,10 +1159,39 @@ public final class NameService {
         return result.toString();
     }
 
+    // return the intersection of the sets
+
+    public Set<Name> setIntersection(Set<Name> sets, boolean payAttentionToAdditive){
+        // ok going to make this very simple for the moment
+        // find the smallest of the sets
+        int smallestNameSetSize = -1;
+        Name smallestSet = null;
+        for (Name set : sets) {
+            int setSize = set.findAllChildren(payAttentionToAdditive).size();
+            if (smallestNameSetSize == -1 || setSize < smallestNameSetSize) {
+                smallestNameSetSize = setSize;
+                smallestSet = set;
+            }
+        }
+        if (smallestSet == null){
+            return new HashSet<Name>();
+        }
+        // we want the smallest set as a retainall against it should be faster then a big set. I think.
+        Set<Name> toReturn = new HashSet<Name>(smallestSet.findAllChildren(payAttentionToAdditive));
+        toReturn.add(smallestSet);
+
+        for (Name set : sets) {
+            if (set != smallestSet){ // then check the intersection (no point checking on the smallest set!)
+                boolean retainSetItself = false;
+                if (toReturn.contains(set)){ //then add it abck in after the retain all just featuring the children. I don't want to have to copy the find all chidren results
+                    retainSetItself = true;
+                }
+                toReturn.retainAll(set.findAllChildren(payAttentionToAdditive)); // basic intersection
+                if (retainSetItself){
+                    toReturn.add(set);
+                }
+            }
+       }
+       return toReturn;
+    }
 }
-
-
-
-
-
-

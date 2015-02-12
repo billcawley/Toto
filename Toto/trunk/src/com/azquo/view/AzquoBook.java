@@ -15,7 +15,6 @@ import org.apache.velocity.VelocityContext;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -1930,7 +1929,7 @@ public  class AzquoBook {
                         for (com.azquo.memorydb.Value value : loggedInConnection.getValuesFound().get(names)) {
                             tempList.add(value);
                         }
-                        return valueService.formatCellProvenanceForOutput(loggedInConnection, names, tempList, jsonFunction);
+                        return valueService.formatCellProvenanceForOutput(loggedInConnection, tempList, jsonFunction);
 
                     } else {
                         for (com.azquo.memorydb.Name tempname : names) {
@@ -1946,23 +1945,23 @@ public  class AzquoBook {
 
             if (regionInfo.region.startsWith("az_displayrowheadings")){
                 String region = regionInfo.region.substring(21);
-                com.azquo.memorydb.Name name = loggedInConnection.getRowHeadings(region).get(regionInfo.row).get(regionInfo.col);
-                if (name!=null){
-                    return valueService.formatProvenanceForOutput(name.getProvenance(),jsonFunction);
+
+                DataRegionHeading dataRegionHeading = loggedInConnection.getRowHeadings(region).get(regionInfo.row).get(regionInfo.col);
+                if (dataRegionHeading != null && dataRegionHeading.getName() != null){
+                    return valueService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(),jsonFunction);
 
                 }else{
                     return "";
                 }
-            }else if (regionInfo.region.startsWith("az_displaycolumnheadings")){
+            } else if (regionInfo.region.startsWith("az_displaycolumnheadings")){
                 String region = regionInfo.region.substring(24);
-                com.azquo.memorydb.Name  name = loggedInConnection.getColumnHeadings(region).get(regionInfo.col).get(regionInfo.row);//note that the array is transposed
-                if (name!=null){
-                    return valueService.formatProvenanceForOutput(name.getProvenance(),jsonFunction);
-
-                }else{
+                DataRegionHeading dataRegionHeading = loggedInConnection.getColumnHeadings(region).get(regionInfo.col).get(regionInfo.row);//note that the array is transposed
+                if (dataRegionHeading != null && dataRegionHeading.getName() != null){
+                    return valueService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(),jsonFunction);
+                } else {
                     return "";
                 }
-            }else if (regionInfo.region.startsWith(dataRegionPrefix)){
+            } else if (regionInfo.region.startsWith(dataRegionPrefix)){
                 String region = regionInfo.region.substring(dataRegionPrefix.length());
                 return valueService.formatDataRegionProvenanceForOutput(loggedInConnection, region, regionInfo.row, regionInfo.col, jsonFunction);
 

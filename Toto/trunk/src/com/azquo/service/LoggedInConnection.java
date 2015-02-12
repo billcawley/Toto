@@ -56,9 +56,8 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private String spreadsheetName;
     private int reportId;
 
-    private final Map<String, List<List<Name>>> rowHeadings;
-    private final Map<String, List<List<Name>>> columnHeadings;
-    private final Map<String, List<String>> rowHeadingSupplements;//this will allow product classes to be included in the returned row headings, not used to define data.
+    private final Map<String, List<List<DataRegionHeading>>> rowHeadings;
+    private final Map<String, List<List<DataRegionHeading>>> columnHeadings;
     private final Map<String, List<Integer>> rowOrder;//for when top or bottom values need to be returned.
     private final Map<String, List<Integer>> colOrder; //as above
     private final Map<String, Integer> restrictRowCount; //as above
@@ -69,7 +68,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private final Map<String, String> lockMaps;
     private final Map<String, String> sentDataMaps;
     private final Map<String, List<List<List<Value>>>> sentDataValuesMaps; // As in a 2 d array (lists of lists) of lists of valuer Useful for when data is saved
-    private final Map<String, List<List<Set<Name>>>> sentDataNamesMaps; // As in a 2 d array (lists of lists) of sets of names, identifying each cell. Necessary if saving new data in that cell. SHould the values map use sets also???
+    private final Map<String, List<List<Set<DataRegionHeading>>>> sentDataHeadingsMaps; // As in a 2 d array (lists of lists) of sets of names, identifying each cell. Necessary if saving new data in that cell. SHould the values map use sets also???
     private List<Set<Name>> namesToSearch;
     private Map<Set<Name>, Set<Value>> valuesFound;
     private AzquoBook azquoBook;
@@ -86,9 +85,8 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         loginTime = new Date();
         lastAccessed = new Date();
         reportId = 0;
-        rowHeadings = new HashMap<String, List<List<Name>>>();
-        columnHeadings = new HashMap<String, List<List<Name>>>();
-        rowHeadingSupplements = new HashMap<String, List<String>>();
+        rowHeadings = new HashMap<String, List<List<DataRegionHeading>>>();
+        columnHeadings = new HashMap<String, List<List<DataRegionHeading>>>();
         rowOrder = new HashMap<String, List<Integer>>();
         colOrder = new HashMap<String, List<Integer>>();
         restrictRowCount = new HashMap<String, Integer>();
@@ -99,7 +97,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         lockMaps = new HashMap<String, String>();
         sentDataMaps = new HashMap<String, String>();
         sentDataValuesMaps = new HashMap<String, List<List<List<Value>>>>();
-        sentDataNamesMaps = new HashMap<String, List<List<Set<Name>>>>();
+        sentDataHeadingsMaps = new HashMap<String, List<List<Set<DataRegionHeading>>>>();
         namesToSearch = null;
         valuesFound = null;
         azquoBook = null;
@@ -141,7 +139,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         this.lastAccessed = lastAccessed;
     }
 
-    public List<List<Name>> getRowHeadings(final String region) {
+    public List<List<DataRegionHeading>> getRowHeadings(final String region) {
         if (region == null || region.isEmpty()) {
             return rowHeadings.get(defaultRegion);
         } else {
@@ -149,7 +147,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
-    public void setRowHeadings(final String region, final List<List<Name>> rowHeadings) {
+    public void setRowHeadings(final String region, final List<List<DataRegionHeading>> rowHeadings) {
         if (region == null || region.isEmpty()) {
             this.rowHeadings.put(defaultRegion, rowHeadings);
         } else {
@@ -157,7 +155,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
-    public List<List<Name>> getColumnHeadings(final String region) {
+    public List<List<DataRegionHeading>> getColumnHeadings(final String region) {
         if (region == null || region.isEmpty()) {
             return columnHeadings.get(defaultRegion);
         } else {
@@ -165,29 +163,12 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
-    public void setColumnHeadings(final String region, final List<List<Name>> columnHeadings) {
+    public void setColumnHeadings(final String region, final List<List<DataRegionHeading>> columnHeadings) {
         if (region == null || region.isEmpty()) {
             this.columnHeadings.put(defaultRegion, columnHeadings);
         } else {
             this.columnHeadings.put(region, columnHeadings);
         }
-    }
-
-    public List<String> getRowHeadingSupplements(final String region) {
-        if (region == null || region.isEmpty()) {
-            return rowHeadingSupplements.get(defaultRegion);
-        } else {
-            return rowHeadingSupplements.get(region);
-        }
-    }
-
-    public void setRowHeadingSupplements(final String region, final List<String> rowHeadingSupplements) {
-        if (region == null || region.isEmpty()) {
-            this.rowHeadingSupplements.put(defaultRegion, rowHeadingSupplements);
-        } else {
-            this.rowHeadingSupplements.put(region, rowHeadingSupplements);
-        }
-
     }
 
     public List<Integer> getRowOrder(final String region) {
@@ -370,19 +351,19 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
-    public List<List<Set<Name>>> getDataNamesMap(final String region) {
+    public List<List<Set<DataRegionHeading>>> getDataHeadingsMap(final String region) {
         if (region == null || region.isEmpty()) {
-            return sentDataNamesMaps.get(defaultRegion);
+            return sentDataHeadingsMaps.get(defaultRegion);
         } else {
-            return sentDataNamesMaps.get(region);
+            return sentDataHeadingsMaps.get(region);
         }
     }
 
-    public void setDataNamesMap(final String region, final List<List<Set<Name>>> sentDataNamesMap) {
+    public void setDataHeadingsMap(final String region, final List<List<Set<DataRegionHeading>>> sentDataHeadingsMap) {
         if (region == null || region.isEmpty()) {
-            this.sentDataNamesMaps.put(defaultRegion, sentDataNamesMap);
+            this.sentDataHeadingsMaps.put(defaultRegion, sentDataHeadingsMap);
         } else {
-            this.sentDataNamesMaps.put(region, sentDataNamesMap);
+            this.sentDataHeadingsMaps.put(region, sentDataHeadingsMap);
         }
     }
 

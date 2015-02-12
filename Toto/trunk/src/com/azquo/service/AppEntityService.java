@@ -2,14 +2,12 @@ package com.azquo.service;
 
 import com.azquo.memorydb.AppEntity;
 import com.azquo.memorydb.AzquoMemoryDB;
-import com.azquo.memorydb.AzquoMemoryDBEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**

@@ -91,10 +91,12 @@ public class JstreeController {
                     nameJsonRequest = jacksonMapper.readValue(json, NameJsonRequest.class);
                 } catch (Exception e) {
                     logger.error("name json parse problem", e);
-                    return "error:badly formed json " + e.getMessage();
+                    model.addAttribute("content", "error:badly formed json " + e.getMessage());
+                    return "utf8page";
                 }
                 if (loggedInConnection == null) {
-                    return "error:invalid connection id or login credentials";
+                    model.addAttribute("content", "error:invalid connection id or login credentials");
+                    return "utf8page";
                 }
                 LoggedInConnection.JsTreeNode currentNode = lookup.get(nameJsonRequest.id+ "");
                  LoggedInConnection.NameOrValue lineChosen = currentNode.child;

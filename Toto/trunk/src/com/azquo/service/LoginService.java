@@ -9,9 +9,6 @@ import com.azquo.memorydb.Name;
 import com.azquo.util.AzquoMailer;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import sun.rmi.runtime.Log;
-
-import javax.xml.crypto.Data;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -76,7 +73,7 @@ public class LoginService {
             spreadsheetName = "unknown";
         }
 
-        User user=null;
+        User user = null;
 
         //for demo users, a new User id is made for each user.
         if (userEmail.startsWith("demo@user.com")){

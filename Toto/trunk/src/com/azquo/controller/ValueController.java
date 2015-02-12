@@ -34,8 +34,6 @@ public class ValueController {
     @Autowired
     private ValueService valueService;
 
-    // TODO : break up into separate functions
-
     private static final Logger logger = Logger.getLogger(ValueController.class);
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 

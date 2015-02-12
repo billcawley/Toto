@@ -80,7 +80,7 @@ public class MerchantAdminController {
             if (submit == null){
                 result = reviewService.createPageSpec(itemName,type, nameId);
             }else{
-                reviewService.saveData(itemName,values, Integer.parseInt(nameId));
+                reviewService.saveData(response,itemName,values, Integer.parseInt(nameId));
             }
 
         }

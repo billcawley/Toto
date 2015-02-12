@@ -45,10 +45,10 @@ public final class ValueService {
 
     // one line function, much point??
 
-    private class MBoolean{
+    private class MBoolean {
         boolean isTrue;
 
-        MBoolean(){
+        MBoolean() {
             isTrue = false;
         }
     }
@@ -59,7 +59,7 @@ public final class ValueService {
 
     Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<AzquoMemoryDBConnection, Map<String, Long>>();
 
-    private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd){
+    private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd) {
         long current = 0;
         if (timeTrack.get(azquoMemoryDBConnection) != null) {
             if (timeTrack.get(azquoMemoryDBConnection).get(trackName) != null) {
@@ -71,7 +71,7 @@ public final class ValueService {
         timeTrack.get(azquoMemoryDBConnection).put(trackName, current + toAdd);
     }
 
-    public Map<String, Long> getTimeTrackMapForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection){
+    public Map<String, Long> getTimeTrackMapForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection) {
         return timeTrack.get(azquoMemoryDBConnection);
     }
 
@@ -90,13 +90,13 @@ public final class ValueService {
         //final Map<String, String> nameCheckResult = nameService.isAValidNameSet(azquoMemoryDBConnection, names, validNames);
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames1", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
-       // final String error = nameCheckResult.get(NameService.ERROR);
+        // final String error = nameCheckResult.get(NameService.ERROR);
         //final String warning = nameCheckResult.get(NameService.WARNING);
         //if (error != null) {
-       //     return error;
-       // } else if (warning != null) {
-       //     toReturn += warning;
-       // }
+        //     return error;
+        // } else if (warning != null) {
+        //     toReturn += warning;
+        // }
 
         final List<Value> existingValues = findForNames(names);
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
@@ -117,7 +117,7 @@ public final class ValueService {
             //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
             //marker = System.currentTimeMillis();
 
-            if (compareStringValues(existingValue.getText(),valueString)) {
+            if (compareStringValues(existingValue.getText(), valueString)) {
                 toReturn += "  that value already exists, skipping";
                 alreadyInDatabase = true;
             } else {
@@ -144,7 +144,6 @@ public final class ValueService {
 
 
     public boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, final String newValueString) throws Exception {
-
         Value newValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), newValueString, null);
         newValue.setNamesWillBePersisted(existingValue.getNames());
         deleteValue(existingValue);
@@ -224,7 +223,7 @@ public final class ValueService {
         Name smallestName = null;
         for (Name name : names) {
             Integer setSizeIncludingChildren = null;
-            if (setSizeCache != null){
+            if (setSizeCache != null) {
                 setSizeIncludingChildren = setSizeCache.get(name);
             }
             if (setSizeIncludingChildren == null) {
@@ -232,14 +231,14 @@ public final class ValueService {
                 for (Name child : name.findAllChildren(payAttentionToAdditive)) {
                     setSizeIncludingChildren += child.getValues().size();
                 }
-                if (setSizeCache != null){
-                    setSizeCache.put(name,setSizeIncludingChildren);
+                if (setSizeCache != null) {
+                    setSizeCache.put(name, setSizeIncludingChildren);
                 }
             }
 
             if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
                 smallestNameSetSize = setSizeIncludingChildren;
-                if (smallestNameSetSize==0){//no values
+                if (smallestNameSetSize == 0) {//no values
                     return values;
                 }
                 smallestName = name;
@@ -257,10 +256,10 @@ public final class ValueService {
             for (Name name : names) {
                 if (!name.equals(smallestName)) { // ignore the one we started with
                     if (!value.getNames().contains(name)) { // top name not in there check children also
-                        Set <Name> copy = new HashSet<Name>(value.getNames());
-                         copy.retainAll(name.findAllChildren(payAttentionToAdditive));
-                         if (copy.size()==0){
-      //                        count++;
+                        Set<Name> copy = new HashSet<Name>(value.getNames());
+                        copy.retainAll(name.findAllChildren(payAttentionToAdditive));
+                        if (copy.size() == 0) {
+                            //                        count++;
                             theValueIsOk = false;
                             break;
                         }
@@ -365,7 +364,7 @@ public final class ValueService {
 
     }
 
-    public double  findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name,Integer> totalSetSize, List<String> attributeNames) throws Exception{
+    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, List<String> attributeNames) throws Exception {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
         String calcString = null;
@@ -379,18 +378,18 @@ public final class ValueService {
             if (!hasCalc) {// then try and find one
 
                 String calc = name.getAttribute(Name.CALCULATION, false);
-                if (calc != null){
+                if (calc != null) {
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
                     List<String> formulaStrings = new ArrayList<String>();
                     List<String> nameStrings = new ArrayList<String>();
                     List<String> attributeStrings = new ArrayList<String>();
 
-                    calc = stringUtils.parseStatement(calc,nameStrings, formulaStrings, attributeStrings);
-                    formulaNames = nameService.getNameListFromStringList(nameStrings, azquoMemoryDBConnection,attributeNames);
+                    calc = stringUtils.parseStatement(calc, nameStrings, formulaStrings, attributeStrings);
+                    formulaNames = nameService.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
                     calc = stringUtils.shuntingYardAlgorithm(calc);
                     //todo : make sure name lookups below use the new style of marker
-                    if (!calc.startsWith("error")){ // there should be a better way to deal with errors
+                    if (!calc.startsWith("error")) { // there should be a better way to deal with errors
                         calcString = calc;
                         hasCalc = true;
                     }
@@ -409,14 +408,14 @@ public final class ValueService {
         if (!hasCalc) {
             locked.isTrue = false;
             for (Name oneName : names) { // inexpensive check first
-                if (oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0){
+                if (oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) {
                     locked.isTrue = true;
                     break;
                 }
             }
-            if (!locked.isTrue){ // now the more expensive isallowed check
+            if (!locked.isTrue) { // now the more expensive isallowed check
                 for (Name oneName : names) {
-                    if (!nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions())){
+                    if (!nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions())) {
                         locked.isTrue = true;
                         break;
                     }
@@ -470,6 +469,58 @@ public final class ValueService {
         }
     }
 
+    public String findValueForHeadings(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<DataRegionHeading> headings, final MBoolean locked, final boolean payAttentionToAdditive) throws Exception {
+        // like above but uses an attribute (attributes?) and doens't care about calc for the moment, hence should be much more simple
+        // can return a string of course
+        // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function
+
+        Set<Name> names = namesFromDataRegionHeadings(headings);
+
+        // same locking check as with values, factor off?
+        locked.isTrue = false;
+        for (Name oneName : names) { // inexpensive check first
+            if (oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) {
+                locked.isTrue = true;
+                break;
+            }
+        }
+        if (!locked.isTrue) { // now the more expensive isallowed check
+            for (Name oneName : names) {
+                if (!nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions())) {
+                    locked.isTrue = true;
+                    break;
+                }
+            }
+        }
+
+        //Set<Name> setIntersection = nameService.setIntersection(names, payAttentionToAdditive);
+        Set<String> attributes = attributesFromDataRegionHeadings(headings);
+        // ok so run through the names, I guess tally a number if I can?
+
+        String stringResult = null;
+        double numericResult = 0;
+
+        // was on set intersection . . .
+        for (Name n : names) {
+            for (String attribute : attributes){
+                String attValue = n.getAttribute(attribute);
+                if (attValue != null){
+                    if (NumberUtils.isNumber(attValue)){
+                        numericResult += Double.parseDouble(attValue);
+                    } else {
+                        if (stringResult == null){
+                            stringResult = attValue;
+                        } else {
+                            stringResult += (", " + attValue);
+                        }
+                    }
+                }
+            }
+        }
+        return stringResult != null ? stringResult : numericResult + "";
+
+    }
+
     public double findSumForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize) {
         //System.out.println("findSumForNamesIncludeChildren");
         long start = System.nanoTime();
@@ -514,40 +565,29 @@ public final class ValueService {
         return toReturn;
     }
 
-    public String outputHeadings(final List<List<Name>> headings, String language, List<String> rowHeadingSupplements) {
+    public String outputHeadings(final List<List<DataRegionHeading>> headings, String language) {
 
         final StringBuilder sb = new StringBuilder();
 
         if (language == null || language.length() == 0) language = Name.DEFAULT_DISPLAY_NAME;
         for (int x = 0; x < headings.size(); x++) {
-            List<Name> xNames = headings.get(x);
+            List<DataRegionHeading> dataRegionHeadings = headings.get(x);
             if (x > 0) sb.append("\n");
-            Name lastName = null;
-            for (int y = 0; y < xNames.size(); y++) {
+            for (int y = 0; y < dataRegionHeadings.size(); y++) {
                 if (y > 0) sb.append("\t");
                 //NOW - LEAVE THE PRUNING OF NAMES TO EXCEL - MAYBE THE LIST WILL BE SORTED.
-                //don't show repeating names in the headings - leave blank.
-                //if ((x == 0 || !lastxNames.get(y).equals(xNames.get(y))) && (y == 0 || !xNames.get(y - 1).equals(xNames.get(y)))) {
-                lastName = xNames.get(y);
-                if (lastName != null) {
-                    String nameInLanguage = lastName.getAttribute(language);
+                Name name = dataRegionHeadings.get(y).getName();
+                if (name != null) {
+                    String nameInLanguage = name.getAttribute(language);
                     if (nameInLanguage == null) {
-                        nameInLanguage = lastName.getDefaultDisplayName();
+                        nameInLanguage = name.getDefaultDisplayName();
                     }
                     sb.append(nameInLanguage);
+                } else {
+                    // yes this will null pointer without an attribute or name I think that's correct for the moment
+                    sb.append(dataRegionHeadings.get(y).getAttribute());
                 }
             }
-            if (rowHeadingSupplements != null) {
-                for (String supplement : rowHeadingSupplements) {
-                    String attribute = lastName.getAttribute(supplement);
-                    if (attribute != null) {
-                        sb.append("\t" + attribute);
-                    } else {
-                        sb.append("\t");
-                    }
-                }
-            }
-            // lastxNames = xNames;
         }
         return sb.toString();
     }
@@ -576,8 +616,7 @@ seaports;children   container;children
      */
 
 
-
-public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<List<Name>>> nameLists, List<String> supplementNames, final String excelRegionPasted, List<String> attributeNames) throws Exception {
+    public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<List<DataRegionHeading>>> nameLists, final String excelRegionPasted, List<String> attributeNames) throws Exception {
         //logger.info("excel region pasted : " + excelRegionPasted);
         int maxColCount = 1;
         CsvReader pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t');
@@ -588,29 +627,25 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         }
         pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t'); // reset the CSV reader
         pastedDataReader.setUseTextQualifier(false);
-        while (pastedDataReader.readRecord()) {
-            List<List<Name>> row = new ArrayList<List<Name>>();
+        while (pastedDataReader.readRecord()) { // we're stepping through the cells that describe headings
+
+            // ok here's the thing, before it was just names here, now it could be other things, attribute names formulae etc.
+            List<List<DataRegionHeading>> row = new ArrayList<List<DataRegionHeading>>();
             for (int column = 0; column < pastedDataReader.getColumnCount(); column++) {
                 String cellString = pastedDataReader.get(column);
                 if (cellString.length() == 0) {
                     row.add(null);
                 } else {
-                    if (cellString.toLowerCase().contains(";with ")) {
-                        int withPos = cellString.toLowerCase().indexOf(";with ");
-                        String withList = cellString.substring(withPos + 6);
-                        cellString = cellString.substring(0, withPos);
-                        String[] sNames = withList.split(",");
-                        for (String sName:sNames){
-                            supplementNames.add(sName.trim());
+                    // was just a name expression, now we allow an attribute also. May be more in future.
+                    if (cellString.startsWith(".")) {
+                        // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
+                        row.add(Arrays.asList(new DataRegionHeading(cellString)));
+                    } else {
+                        try {
+                            row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, cellString, attributeNames)));
+                        } catch (Exception e) {
+                            return "error:" + e.getMessage();
                         }
-                    }
-                    try{
-
-                        List<Name> nameList =  nameService.parseQuery(azquoMemoryDBConnection, cellString, attributeNames);
-                        row.add(nameList);
-
-                    } catch (Exception e){
-                        return "error:" + e.getMessage();
                     }
                 }
             }
@@ -730,18 +765,18 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
      */
 
 
-    public List<List<Name>> expandHeadings(final List<List<List<Name>>> headingLists) {
+    public List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists) {
 
-        List<List<Name>> output = new ArrayList<List<Name>>();
+        List<List<DataRegionHeading>> output = new ArrayList<List<DataRegionHeading>>();
         final int noOfHeadingDefinitionRows = headingLists.size();
-        if (noOfHeadingDefinitionRows == 0){
+        if (noOfHeadingDefinitionRows == 0) {
             return output;
         }
         final int lastHeadingDefinitionCellIndex = headingLists.get(0).size() - 1; // the headingLists will be square, that is to say all row lists the same length as prepared by createNameListsFromExcelRegion
 
 
         for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) {
-            List<List<Name>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
+            List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
             // ok we have one of the heading definition rows
             while (headingDefinitionRowIndex < noOfHeadingDefinitionRows - 1 // we're not on the last row
                     && headingLists.get(headingDefinitionRowIndex + 1).size() > 1 // the next row is not a single cell (will all rows be the same length?)
@@ -749,7 +784,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
                 headingDefinitionRowIndex++;
             }
-            List<List<Name>> permuted = get2DPermutationOfLists(headingDefinitionRow);
+            List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
             output.addAll(permuted);
         }
         return output;
@@ -758,7 +793,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
     // what we're saying is it's only got one cell in the heading definition filled and it's the last one.
 
-    private boolean headingDefinitionRowHasOnlyTheRightCellPopulated(List<List<Name>> headingLists) {
+    private boolean headingDefinitionRowHasOnlyTheRightCellPopulated(List<List<DataRegionHeading>> headingLists) {
         int numberOfCellsInThisHeadingDefinition = headingLists.size();
         for (int cellIndex = 0; cellIndex < numberOfCellsInThisHeadingDefinition; cellIndex++) {
             if (headingLists.get(cellIndex) != null) {
@@ -830,15 +865,13 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
     }
 
     public String setupRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-         final List<List<List<Name>>> rowHeadingLists = new ArrayList<List<List<Name>>>();
-        List<String> supplementNames = new ArrayList<String>();
+        final List<List<List<DataRegionHeading>>> rowHeadingLists = new ArrayList<List<List<DataRegionHeading>>>();
 
-        String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, supplementNames, headingsSent, loggedInConnection.getLanguages());
+        String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, headingsSent, loggedInConnection.getLanguages());
         //if (error.length() > 0) {
-       //     return error;
-       // }
+        //     return error;
+        // }
         loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
-        loggedInConnection.setRowHeadingSupplements(region, supplementNames);
         return error;
 
 
@@ -852,8 +885,8 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
         if (filterCount > 0) {
             //send back only those headings that have data - considered in batches of length filtercount.
-            List<List<Name>> rowHeadingsWithData = new ArrayList<List<Name>>();
-            List<List<Name>> allRowHeadings = loggedInConnection.getRowHeadings(region);
+            List<List<DataRegionHeading>> rowHeadingsWithData = new ArrayList<List<DataRegionHeading>>();
+            List<List<DataRegionHeading>> allRowHeadings = loggedInConnection.getRowHeadings(region);
             int rowInt = 0;
             while (rowInt < allRowHeadings.size()) {
                 if (!blankRows(loggedInConnection, region, rowInt, filterCount)) {
@@ -864,12 +897,12 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 rowInt += filterCount;
             }
             //note that the sort order has already been set.... there cannot be both a restrict count and a filter count
-            return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
+            return outputHeadings(rowHeadingsWithData, language);
         } else if (loggedInConnection.getRestrictRowCount(region) != null && loggedInConnection.getRestrictRowCount(region) != 0) {
             int restrictRowCount = loggedInConnection.getRestrictRowCount(region);
             List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
-            List<List<Name>> rowHeadingsWithData = new ArrayList<List<Name>>();
-            List<List<Name>> allRowHeadings = loggedInConnection.getRowHeadings(region);
+            List<List<DataRegionHeading>> rowHeadingsWithData = new ArrayList<List<DataRegionHeading>>();
+            List<List<DataRegionHeading>> allRowHeadings = loggedInConnection.getRowHeadings(region);
             if (restrictRowCount > allRowHeadings.size()) {
                 restrictRowCount = allRowHeadings.size();
                 loggedInConnection.setRestrictRowCount(region, restrictRowCount);
@@ -882,12 +915,12 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             for (int rowInt = 0; rowInt < restrictRowCount; rowInt++) {
                 rowHeadingsWithData.add(allRowHeadings.get(sortedRows.get(rowInt)));
             }
-            return outputHeadings(rowHeadingsWithData, language, loggedInConnection.getRowHeadingSupplements(region));
-        } 
-        return outputHeadings(loggedInConnection.getRowHeadings(region), language, loggedInConnection.getRowHeadingSupplements(region));
+            return outputHeadings(rowHeadingsWithData, language);
+        }
+        return outputHeadings(loggedInConnection.getRowHeadings(region), language);
 
 
-      }
+    }
 
     /* ok so transposing happens here
     this is because the expand headings function is orientated for for headings and the column heading definitions are unsurprisingly set up for columns
@@ -901,11 +934,10 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
 
     public String setupColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        List<List<List<Name>>> columnHeadingLists = new ArrayList<List<List<Name>>>();
-        List<String> supplementNames = new ArrayList<String>();//not used for column headings, but needed for the interpretation routine
+        List<List<List<DataRegionHeading>>> columnHeadingLists = new ArrayList<List<List<DataRegionHeading>>>();
         // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
         // "here is what that 2d heading definition excel region looks like in names"
-        String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, supplementNames, headingsSent, loggedInConnection.getLanguages());
+        String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, headingsSent, loggedInConnection.getLanguages());
         if (error.length() > 0) {
             return error;
         }
@@ -921,8 +953,8 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         if (loggedInConnection.getRestrictColCount(region) != null && loggedInConnection.getRestrictColCount(region) != 0) {
             int restrictColCount = loggedInConnection.getRestrictColCount(region);
             List<Integer> sortedCols = loggedInConnection.getColOrder(region);
-            List<List<Name>> ColHeadingsWithData = new ArrayList<List<Name>>();
-            List<List<Name>> allColHeadings = loggedInConnection.getColumnHeadings(region);
+            List<List<DataRegionHeading>> ColHeadingsWithData = new ArrayList<List<DataRegionHeading>>();
+            List<List<DataRegionHeading>> allColHeadings = loggedInConnection.getColumnHeadings(region);
             if (restrictColCount > allColHeadings.size()) {
                 restrictColCount = allColHeadings.size();
                 loggedInConnection.setRestrictColCount(region, restrictColCount);
@@ -935,10 +967,10 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             for (int ColInt = 0; ColInt < restrictColCount; ColInt++) {
                 ColHeadingsWithData.add(allColHeadings.get(sortedCols.get(ColInt)));
             }
-            return outputHeadings(transpose2DList(ColHeadingsWithData), language, null);
+            return outputHeadings(transpose2DList(ColHeadingsWithData), language);
         }
 
-        return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)), language, null);
+        return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)), language);
 
     }
 
@@ -993,7 +1025,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
 
     public Map<Set<Name>, Set<Value>> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
-        if (searchNames==null) return null;
+        if (searchNames == null) return null;
         Set<Value> values = findForSearchNamesIncludeChildren(searchNames, false);
         //The names on the values have been moved 'up' the tree to the name that was searched
         // e.g. if the search was 'England' and the name was 'London' then 'London' has been replaced with 'England'
@@ -1005,23 +1037,23 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 sumNames.add(sumName(name, searchNames));
             }
             Set<Value> alreadyThere = showValues.get(sumNames);
-            if (alreadyThere != null){
+            if (alreadyThere != null) {
                 alreadyThere.add(value);
-            }else{
+            } else {
                 Set<Value> newValues = new HashSet<Value>();
                 newValues.add(value);
                 showValues.put(sumNames, newValues);
             }
-          }
+        }
         return showValues;
     }
 
-    public String addValues(Set<Value>values){
+    public String addValues(Set<Value> values) {
 
         String stringVal = null;
         Double doubleVal = 0.0;
         boolean percentage = false;
-        for (Value value:values) {
+        for (Value value : values) {
             String thisVal = value.getText();
             Double thisNum = 0.0;
             if (NumberUtils.isNumber(thisVal)) {
@@ -1049,7 +1081,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
     }
 
-    public LinkedHashSet<Name> getHeadings(Map <Set<Name>, Set<Value>> showValues){
+    public LinkedHashSet<Name> getHeadings(Map<Set<Name>, Set<Value>> showValues) {
         LinkedHashSet<Name> headings = new LinkedHashSet<Name>();
         // this may not be optimal, can sort later . . .
         int count = 0;
@@ -1087,7 +1119,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             int i = 0;
             for (Name heading : headings) {
                 for (Name name : valNames) {
-                    if (name.findATopParent() ==heading) {
+                    if (name.findATopParent() == heading) {
                         names[i] = name.getDefaultDisplayName();
                     }
                 }
@@ -1105,14 +1137,14 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         return sb.toString();
     }
 
-    public String getJsonDataforOneName(LoggedInConnection loggedInConnection, final Name name, Map<String, LoggedInConnection.JsTreeNode>lookup) throws Exception {
+    public String getJsonDataforOneName(LoggedInConnection loggedInConnection, final Name name, Map<String, LoggedInConnection.JsTreeNode> lookup) throws Exception {
         final StringBuilder sb = new StringBuilder();
         Set<Name> names = new HashSet<Name>();
         names.add(name);
         List<Set<Name>> searchNames = new ArrayList<Set<Name>>();
         searchNames.add(names);
         Map<Set<Name>, Set<Value>> showValues = getSearchValues(searchNames);
-        if (showValues==null){
+        if (showValues == null) {
             return "";
         }
         sb.append(", \"children\":[");
@@ -1131,12 +1163,12 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             LoggedInConnection.JsTreeNode newNode = new LoggedInConnection.JsTreeNode(nameOrValue, name);
             lookup.put(lastId + "", newNode);
             if (count > 100) {
-                sb.append("{\"id\":" + lastId + ",\"text\":\"" + (showValues.size()-100) + " more....\"}");
+                sb.append("{\"id\":" + lastId + ",\"text\":\"" + (showValues.size() - 100) + " more....\"}");
                 break;
             }
             sb.append("{\"id\":" + lastId + ",\"text\":\"" + addValues(values) + " ");
-            for (Name valName:valNames){
-                if (valName.getId()!= name.getId()){
+            for (Name valName : valNames) {
+                if (valName.getId() != name.getId()) {
                     sb.append(valName.getDefaultDisplayName().replace("\"", "\\\"") + " ");
                 }
             }
@@ -1160,42 +1192,6 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         }
         return false;
     }
-
-    // todo edd understand
-
-    private void createCellNameList(final Set<Name> namesForThisCell, final List<Name> rowName, final List<Name> columnName, final List<Name> contextNames) {
-        namesForThisCell.addAll(contextNames);
-        namesForThisCell.addAll(columnName);
-        namesForThisCell.addAll(rowName);
-        //now check that all names are needed
-        /*  THERE MAY BE INTERSECTIONS OF SETS IN CONTEXT WITH OTHER SETS,
-
-        Map<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>();
-        for (Name peerCell : columnName) {
-            if (peerCell != null && peerCell.getPeers().size() > 0) {
-                peers = peerCell.getPeers();
-            }
-        }
-        if (peers.size() == 0) {
-            for (Name peerCell : rowName) {
-                if (peerCell != null && peerCell.getPeers().size() > 0) {
-                    peers = peerCell.getPeers();
-                }
-            }
-        }
-        if (peers.size() > 0 && peers.size() + 1 != namesForThisCell.size()) {
-            // we may discard some names
-            List<Name> surplusNames = new ArrayList<Name>();
-            for (Name name : namesForThisCell) {
-                if (name.getPeers().size() == 0 && !isInPeers(name, peers)) {
-                    surplusNames.add(name);
-                }
-            }
-            namesForThisCell.removeAll(surplusNames);
-        }
-        */
-    }
-
 
     private void formatLockMap(LoggedInConnection loggedInConnection, String region, List<List<Boolean>> lockMap) {
         StringBuffer sb = new StringBuffer();
@@ -1230,13 +1226,13 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
         List<Integer> sortedCols = loggedInConnection.getColOrder(region);
         final StringBuilder sb = new StringBuilder();
-        if (restrictRowCount==0 || restrictRowCount > sortedRows.size()){
+        if (restrictRowCount == 0 || restrictRowCount > sortedRows.size()) {
             restrictRowCount = sortedRows.size();
         }
-        if (restrictColCount==0 || restrictColCount > sortedCols.size()){
+        if (restrictColCount == 0 || restrictColCount > sortedCols.size()) {
             restrictColCount = sortedCols.size();
         }
-         for (int rowNo = 0; rowNo < restrictRowCount; rowNo++) {
+        for (int rowNo = 0; rowNo < restrictRowCount; rowNo++) {
 
             List<String> rowValuesShown = shownValueArray.get(sortedRows.get(rowNo));
             if (blockRowCount == 0) {
@@ -1246,7 +1242,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 sb.append("\n");
             }
             boolean newRow = true;
-            for (int colNo=0;colNo < restrictColCount;colNo++) {
+            for (int colNo = 0; colNo < restrictColCount; colNo++) {
                 if (!newRow) {
                     sb.append("\t");
                 }
@@ -1268,13 +1264,13 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
         return sb;
     }
+
     public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows) throws Exception {
         return getDataRegion(loggedInConnection, context, region, filterCount, maxRows, 0);
     }
 
 
-
-        public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows, int maxCols) throws Exception {
+    public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows, int maxCols) throws Exception {
 
         if (loggedInConnection.getRowHeadings(region) == null || loggedInConnection.getRowHeadings(region).size() == 0 || loggedInConnection.getColumnHeadings(region) == null || loggedInConnection.getColumnHeadings(region).size() == 0) {
             return "error: no headings passed";
@@ -1287,33 +1283,44 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         final List<Name> contextNames = new ArrayList<Name>();
         while (st.hasMoreTokens()) {
             final List<Name> thisContextNames = nameService.parseQuery(loggedInConnection, st.nextToken().trim());
-            if (thisContextNames.size() > 1){
+            if (thisContextNames.size() > 1) {
                 return "error: context names must be individual - use 'as' to put sets in context";
             }
             if (thisContextNames.size() > 0) {
-                 //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
+                //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
                 contextNames.add(thisContextNames.get(0));
             }
         }
         return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows, maxCols);
     }
 
-    private int findPosition(List<List<Name>> headings, String toFind){
+    private int findPosition(List<List<DataRegionHeading>> headings, String toFind) {
         boolean desc = false;
-        if (toFind == null || toFind.length()==0){
+        if (toFind == null || toFind.length() == 0) {
             return 0;
         }
-        if (toFind.endsWith("-desc")){
-            toFind = toFind.replace("-desc","");
+        if (toFind.endsWith("-desc")) {
+            toFind = toFind.replace("-desc", "");
             desc = true;
         }
         int count = 1;
-        for (List<Name> heading:headings){
-
-            if (heading.get(heading.size()-1)!=null && heading.get(heading.size()-1).getDefaultDisplayName().replace(" ","").equals(toFind)){
-                if (desc) return -count;
-                return count;
+        for (List<DataRegionHeading> heading : headings) {
+            DataRegionHeading dataRegionHeading = heading.get(heading.size() - 1);
+            if (dataRegionHeading != null) {
+                String toCompare;
+                if (dataRegionHeading.getName() != null) {
+                    toCompare = dataRegionHeading.getName().getDefaultDisplayName().replace(" ", "");
+                } else {
+                    toCompare = dataRegionHeading.getAttribute();
+                }
+                if (toCompare.equals(toFind)) {
+                    if (desc) {
+                        return -count;
+                    }
+                    return count;
+                }
             }
+
             count++;
         }
 
@@ -1325,31 +1332,31 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         loggedInConnection.setContext(region, contextNames); // needed for provenance
         long track = System.currentTimeMillis();
         Integer sortCol = findPosition(loggedInConnection.getColumnHeadings(region), loggedInConnection.getSortCol(region));
-        Integer sortRow = findPosition(loggedInConnection.getRowHeadings(region),loggedInConnection.getSortRow(region));
+        Integer sortRow = findPosition(loggedInConnection.getRowHeadings(region), loggedInConnection.getSortRow(region));
         boolean sortRowsUp = false;
         boolean sortColsRight = false;
-        if (sortCol == null){
+        if (sortCol == null) {
             sortCol = 0;
-        }else {
+        } else {
             if (sortCol > 0) {
                 sortRowsUp = true;
             } else {
                 sortCol = -sortCol;
             }
         }
-        if (sortRow == null){
+        if (sortRow == null) {
             sortRow = 0;
-        }else{
-            if (sortRow > 0){
+        } else {
+            if (sortRow > 0) {
                 sortColsRight = true;
-            }else{
+            } else {
                 sortRow = -sortRow;
             }
         }
-        if (sortCol >0  && restrictRowCount == 0){
+        if (sortCol > 0 && restrictRowCount == 0) {
             restrictRowCount = loggedInConnection.getRowHeadings(region).size();//this is a signal to sort the rows
         }
-        if (sortRow >0  && restrictColCount == 0){
+        if (sortRow > 0 && restrictColCount == 0) {
             restrictColCount = loggedInConnection.getColumnHeadings(region).size();//this is a signal to sort the cols
         }
 
@@ -1358,46 +1365,47 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         loggedInConnection.setDataValueMap(region, dataValuesMap);
         final Map<Integer, Double> sortRowTotals = new HashMap<Integer, Double>();
         final Map<Integer, Double> sortColumnTotals = new HashMap<Integer, Double>();
-        List<List<Set<Name>>> dataNamesMap = new ArrayList<List<Set<Name>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of names for each cell
+        List<List<Set<DataRegionHeading>>> dataHeadingsMap = new ArrayList<List<Set<DataRegionHeading>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of names for each cell
         List<List<String>> shownValueArray = new ArrayList<List<String>>();
         List<List<Boolean>> lockArray = new ArrayList<List<Boolean>>();
         int rowNo = 0;
-        Map<Name,Integer> totalSetSize = new HashMap<Name, Integer>();
-        for (int colNo = 0; colNo < loggedInConnection.getColumnHeadings(region).size();colNo++){
+        Map<Name, Integer> totalSetSize = new HashMap<Name, Integer>();
+        for (int colNo = 0; colNo < loggedInConnection.getColumnHeadings(region).size(); colNo++) {
             sortColumnTotals.put(colNo, 0.00);
         }
         int totalRows = loggedInConnection.getRowHeadings(region).size();
         int totalCols = loggedInConnection.getColumnHeadings(region).size();
         System.out.println("data region size = " + totalRows + " * " + totalCols);
-        if (totalRows * totalCols > 500000){
+        if (totalRows * totalCols > 500000) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells 500,000");
 
         }
-        for (List<Name> rowName : loggedInConnection.getRowHeadings(region)) { // make it like a document
+        for (List<DataRegionHeading> rowHeadings : loggedInConnection.getRowHeadings(region)) { // make it like a document
             if (rowNo % 1000 == 0) System.out.print(".");
             ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(totalCols);
-            ArrayList<Set<Name>> thisRowNames = new ArrayList<Set<Name>>(totalCols);
+            ArrayList<Set<DataRegionHeading>> thisRowHeadings = new ArrayList<Set<DataRegionHeading>>(totalCols);
             List<String> shownValues = new ArrayList<String>();
             List<Boolean> lockedCells = new ArrayList<Boolean>();
             dataValuesMap.add(thisRowValues);
-            dataNamesMap.add(thisRowNames);
+            dataHeadingsMap.add(thisRowHeadings);
             shownValueArray.add(shownValues);
             lockArray.add(lockedCells);
 
 
             double sortRowTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total.
-            boolean hasValues = false;
             int colNo = 0;
-            for (List<Name> columnName : loggedInConnection.getColumnHeadings(region)) {
-                final Set<Name> namesForThisCell = new HashSet<Name>();
-                createCellNameList(namesForThisCell, rowName, columnName, contextNames);
-                 // edd putting in peer check stuff here, should I not???
+            for (List<DataRegionHeading> columnHeadings : loggedInConnection.getColumnHeadings(region)) {
+                final Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
+                headingsForThisCell.addAll(rowHeadings);
+                headingsForThisCell.addAll(columnHeadings);
+                headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames));
+                // edd putting in peer check stuff here, should I not???
                 MBoolean locked = new MBoolean(); // we can pass a mutable boolean in and have the function set it
                 // why bother?   Maybe leave it as 'on demand' when a data region doesn't work
                 // Map<String, String> result = nameService.isAValidNameSet(azquoMemoryDBConnection, namesForThisCell, new HashSet<Name>());
                 // much simpler check - simply that the list is complete.
                 boolean checked = true;
-                for (Name name : namesForThisCell) {
+                for (DataRegionHeading name : headingsForThisCell) {
                     if (name == null) checked = false;
                 }
                 if (!checked) { // not a valid peer set? Show a blank locked cell
@@ -1406,45 +1414,58 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                     thisRowValues.add(null);
                 } else {
 
+                    // ok new logic here, we need to know if we're going to use attributes or values
+                    boolean headingsHaveAttributes = headingsHaveAttributes(headingsForThisCell);
+                    thisRowHeadings.add(headingsForThisCell);
+
+                    double cellValue = 0;
                     List<Value> values = new ArrayList<Value>();
                     thisRowValues.add(values);
-                    thisRowNames.add(namesForThisCell);
-                    // TODO - peer additive check. If using peers and not additive, don't include children
-                    double cellValue = findValueForNames(loggedInConnection, namesForThisCell, locked, true, values, totalSetSize, loggedInConnection.getLanguages()); // true = pay attention to names additive flag
+                    if (!headingsHaveAttributes) { // we go the value route (the standard/old one), need the headings as names,
+                        // TODO - peer additive check. If using peers and not additive, don't include children
+                        cellValue = findValueForNames(loggedInConnection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, loggedInConnection.getLanguages()); // true = pay attention to names additive flag
+                        //if there's only one value, treat it as text (it may be text, or may include £,$,%)
+                        if (values.size() == 1 && !locked.isTrue) {
+                            Value value = values.get(0);
+                            shownValues.add(value.getText());
+                            if (sortCol == colNo && !NumberUtils.isNumber(value.getText())) {
+                                //make up a suitable double to get some kind of order! sort on 8 characters
+                                String padded = value.getText() + "        ";
+                                for (int i = 0; i < 8; i++) {
+                                    sortRowTotal = sortRowTotal * 64 + padded.charAt(i) - 32;
+                                }
+                            }
+                        } else {
+                            shownValues.add(cellValue + "");
+                        }
+                    } else {  // now, new logic for attributes
+                        String attributeResult = findValueForHeadings(loggedInConnection, headingsForThisCell,locked, true);// pay attention ot additive??
+                        if (NumberUtils.isNumber(attributeResult)){ // there should be a more efficient way I feel given that the result is typed internally
+                            cellValue = Double.parseDouble(attributeResult);
+                        }
+                        shownValues.add(attributeResult);
+                    }
 
-                    //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                    if (restrictRowCount > 0 && (sortCol==0 || sortCol == colNo +1)) {
+
+
+
+                    // ok these bits are for sorting. Could put a check on whether a number was actually the result but not so bothered
+                    // code was a bit higher, have moved it below the chunk that detects if we're using values or not, see no harm in this.
+                    if (restrictRowCount > 0 && (sortCol == 0 || sortCol == colNo + 1)) {
                         if (sortRowsUp) {
                             sortRowTotal += cellValue;
                         } else {
                             sortRowTotal -= cellValue;
                         }
                     }
-                    if (restrictColCount > 0 && (sortRow == 0|| sortRow == rowNo + 1)) {
+                    if (restrictColCount > 0 && (sortRow == 0 || sortRow == rowNo + 1)) {
                         if (sortColsRight) {
                             sortColumnTotals.put(colNo, sortColumnTotals.get(colNo) + cellValue);
                         } else {
                             sortColumnTotals.put(colNo, sortColumnTotals.get(colNo) - cellValue);
+                        }
+                    }
 
-                        }
-                    }
-                    if (values.size() > 0) {
-                        hasValues = true;
-                    }
-                    if (values.size() == 1 && !locked.isTrue) {
-                        for (Value value : values) {
-                            shownValues.add(value.getText());
-                            if (sortCol == colNo && !NumberUtils.isNumber(value.getText())){
-                                //make up a suitable double to get some kind of order! sort on 8 characters
-                                String padded = value.getText() + "        ";
-                                for (int i = 0;i< 8; i++){
-                                    sortRowTotal = sortRowTotal * 64 + padded.charAt(i) - 32;
-                                }
-                            }
-                        }
-                    } else {
-                        shownValues.add(cellValue + "");
-                    }
                     if (locked.isTrue) {
                         lockedCells.add(true);
                     } else {
@@ -1453,19 +1474,19 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 }
                 colNo++;
             }
-                sortRowTotals.put(rowNo++, sortRowTotal);
+            sortRowTotals.put(rowNo++, sortRowTotal);
 
         }
         loggedInConnection.setRowOrder(region, sortValues(restrictRowCount, sortRowTotals));
         loggedInConnection.setColOrder(region, sortValues(restrictColCount, sortColumnTotals));
         loggedInConnection.setRestrictRowCount(region, restrictRowCount);
-        loggedInConnection.setRestrictColCount(region, restrictColCount);    
+        loggedInConnection.setRestrictColCount(region, restrictColCount);
         final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, filterCount, restrictRowCount, restrictColCount);
         formatLockMap(loggedInConnection, region, lockArray);
 
         printSumStats();
         printFindForNamesIncludeChildrenStats();
-        loggedInConnection.setDataNamesMap(region, dataNamesMap);
+        loggedInConnection.setDataHeadingsMap(region, dataHeadingsMap);
         logger.info("time to execute : " + (System.currentTimeMillis() - track));
         return sb.toString();
     }
@@ -1489,28 +1510,28 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
     }
 
-    private String stripCurrency(String val){
+    private String stripCurrency(String val) {
         //TODO we need to be able to detect other currencies
 
-        if (val.length() > 1 && "$£".contains(val.substring(0,1))){
+        if (val.length() > 1 && "$£".contains(val.substring(0, 1))) {
             return val.substring(1);
 
         }
         return val;
     }
 
-    private boolean compareStringValues(final String val1, final String val2){
+    private boolean compareStringValues(final String val1, final String val2) {
         //tries to work out if numbers expressed with different numbers of decimal places, maybe including percentage signs and currency symbols are the same.
         if (val1.equals(val2)) return true;
         String val3 = val1;
         String val4 = val2;
-        if (val1.endsWith("%") && val2.endsWith("%")){
+        if (val1.endsWith("%") && val2.endsWith("%")) {
             val3 = val1.substring(0, val1.length() - 1);
             val4 = val2.substring(0, val2.length() - 1);
-         }
+        }
         val3 = stripCurrency(val3);
         val4 = stripCurrency(val4);
-        if (NumberUtils.isNumber(val3) && NumberUtils.isNumber(val4)){
+        if (NumberUtils.isNumber(val3) && NumberUtils.isNumber(val4)) {
             Double n1 = Double.parseDouble(val3);
             Double n2 = Double.parseDouble(val4);
             if (n1 - n2 == 0) return true;
@@ -1519,19 +1540,19 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
     }
 
 
-    public int getAge(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt){
+    public int getAge(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt) {
         Calendar cal = Calendar.getInstance();
         Date today = cal.getTime();
 
         final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
         final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
 
-        if (rowOrder != null){
+        if (rowOrder != null) {
             if (rowInt >= rowOrder.size()) return 10000;
             rowInt = rowOrder.get(rowInt);
         }
         final List<Integer> colOrder = loggedInConnection.getColOrder(region);
-        if (colOrder != null){
+        if (colOrder != null) {
             if (colInt >= colOrder.size()) return 10000;
             colInt = colOrder.get(colInt);
         }
@@ -1541,23 +1562,23 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         if (dataValueMap.get(rowInt) == null) return age;
 
         final List<List<Value>> rowValues = dataValueMap.get(rowInt);
-        if (colInt >=rowValues.size()){// a blank column
+        if (colInt >= rowValues.size()) {// a blank column
             return age;
         }
         final List<Value> valuesForCell = rowValues.get(colInt);
-        if (valuesForCell==null || valuesForCell.size() == 0){
-             return 0;
+        if (valuesForCell == null || valuesForCell.size() == 0) {
+            return 0;
         }
-        if (valuesForCell.size()==1){
-            for (Value value:valuesForCell){
-                if (value == null){//cell has been changed
+        if (valuesForCell.size() == 1) {
+            for (Value value : valuesForCell) {
+                if (value == null) {//cell has been changed
                     return 0;
                 }
             }
         }
         for (Value value : valuesForCell) {
             if (value.getText().length() > 0) {
-                if (value.getProvenance()==null){
+                if (value.getProvenance() == null) {
                     return 0;
                 }
                 Date provdate = value.getProvenance().getTimeStamp();
@@ -1586,15 +1607,10 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
                 if (rowValues.get(colOrder.get(colInt)) != null) {
                     final List<Value> valuesForCell = rowValues.get(colOrder.get(colInt));
-                    final Set<Name> originalCellNames = new HashSet<Name>();
-                    //Need to find the difference between this value and the visible value.  First find the visible names on the cell
-                    originalCellNames.addAll(loggedInConnection.getContext(region));
-                    originalCellNames.addAll(loggedInConnection.getRowHeadings(region).get(rowOrder.get(rowInt)));
-                    originalCellNames.addAll(loggedInConnection.getColumnHeadings(region).get(colOrder.get(colInt)));
                     //Set<Name> specialForProvenance = new HashSet<Name>();
 
 
-                    return formatCellProvenanceForOutput(loggedInConnection, originalCellNames, valuesForCell, jsonFunction);
+                    return formatCellProvenanceForOutput(loggedInConnection, valuesForCell, jsonFunction);
                 } else {
                     return ""; //return "error: col out of range : " + colInt;
                 }
@@ -1610,7 +1626,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         Map<Name, Integer> nameCount = new HashMap<Name, Integer>();
         for (Value value : values) {
             for (Name name : value.getNames()) {
-                if (topParent == null || name.findATopParent()==topParent) {
+                if (topParent == null || name.findATopParent() == topParent) {
                     Integer origCount = nameCount.get(name);
                     if (origCount == null) {
                         nameCount.put(name, 1);
@@ -1620,7 +1636,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 }
             }
         }
-        if (nameCount.size() == 0){
+        if (nameCount.size() == 0) {
             return getMostUsedName(values, null);
         }
         int maxCount = 0;
@@ -1638,10 +1654,10 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
 
     public void sortValues(List<Value> values) {
 
-        Collections.sort(values, new Comparator() {
-            public int compare(Object o1, Object o2) {
-                return ((Comparable) ((Value) (o1)).getProvenance().getTimeStamp())
-                        .compareTo(((Value) (o2)).getProvenance().getTimeStamp());
+        Collections.sort(values, new Comparator<Value>() {
+            public int compare(Value o1, Value o2) {
+                return (o1.getProvenance().getTimeStamp())
+                        .compareTo(o2.getProvenance().getTimeStamp());
             }
         });
 
@@ -1743,7 +1759,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
     private StringBuffer printExtract(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values, Provenance p) {
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
         StringBuffer sb = new StringBuffer();
-        sb.append(jsonValue("heading", "<b>" +  df.format(p.getTimeStamp()) + "</b> by <b>" + p.getUser() + "</b><br/>Method:" + p.getMethod() + " " + p.getName(), false));
+        sb.append(jsonValue("heading", "<b>" + df.format(p.getTimeStamp()) + "</b> by <b>" + p.getUser() + "</b><br/>Method:" + p.getMethod() + " " + p.getName(), false));
         sb.append(",\"items\":[");
         sb.append(printBatch(azquoMemoryDBConnection, values));
         sb.append("]");
@@ -1755,7 +1771,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
     // not exactly sure why
     // this might make it a bit more difficult to jackson but we should aim to do it really
 
-    public String formatCellProvenanceForOutput(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Name> origNames, List<Value> values, String jsonFunction) {
+    public String formatCellProvenanceForOutput(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, String jsonFunction) {
 
         StringBuffer output = new StringBuffer();
         output.append(jsonFunction + "({\"provenance\":[{");
@@ -1773,9 +1789,9 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                     oneUpdate.add(value);
                     p = value.getProvenance();
                 } else {
-                    if (firstHeading){
-                        firstHeading= false;
-                    }else{
+                    if (firstHeading) {
+                        firstHeading = false;
+                    } else {
                         output.append("},{");
                     }
                     output.append(printExtract(azquoMemoryDBConnection, oneUpdate, p));
@@ -1783,8 +1799,8 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                     provdate = value.getProvenance().getTimeStamp();
                 }
             }
-            if (!firstHeading){
-                 output.append(",");
+            if (!firstHeading) {
+                output.append(",");
             }
             output.append(printExtract(azquoMemoryDBConnection, oneUpdate, p));
         }
@@ -1829,12 +1845,12 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
             // going to parse the data here for the moment as parsing is controller stuff
             // I need to track column and Row
             int rowCounter = 0;
-            final String[] originalReader = loggedInConnection.getSentDataMap(region).split("\n",-1);
-            final String[] editedReader = editedData.split("\n",-1);
-            final String[] lockLines = loggedInConnection.getLockMap(region).split("\n",-1);
-              // rows, columns, value lists
+            final String[] originalReader = loggedInConnection.getSentDataMap(region).split("\n", -1);
+            final String[] editedReader = editedData.split("\n", -1);
+            final String[] lockLines = loggedInConnection.getLockMap(region).split("\n", -1);
+            // rows, columns, value lists
             final List<List<List<Value>>> dataValuesMap = loggedInConnection.getDataValueMap(region);
-            final List<List<Set<Name>>> dataNamesMap = loggedInConnection.getDataNamesMap(region);
+            final List<List<Set<DataRegionHeading>>> dataHeadingsMap = loggedInConnection.getDataHeadingsMap(region);
             // TODO : deal with mismatched column and row counts
             int numberOfValuesModified = 0;
             List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
@@ -1843,9 +1859,9 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 String lockLine = lockLines[rowNo];
                 int columnCounter = 0;
                 final List<List<Value>> rowValues = dataValuesMap.get(sortedRows.get(rowCounter));
-                final List<Set<Name>> rowNames = dataNamesMap.get(rowCounter);
-                final String[] originalValues = originalReader[rowNo].split("\t",-1);//NB Include trailing empty strings.
-                final String[] editedValues = editedReader[rowNo].split("\t",-1);
+                final List<Set<DataRegionHeading>> rowHeadings = dataHeadingsMap.get(rowCounter);
+                final String[] originalValues = originalReader[rowNo].split("\t", -1);//NB Include trailing empty strings.
+                final String[] editedValues = editedReader[rowNo].split("\t", -1);
                 String[] locks = lockLine.split("\t", -1);
                 for (int colNo = 0; colNo < locks.length; colNo++) {
                     String locked = locks[colNo];
@@ -1860,13 +1876,13 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                     if (edited.endsWith(".0")) {
                         edited = edited.substring(0, edited.length() - 2);
                     }
-                    if (!compareStringValues(orig,edited)) {
+                    if (!compareStringValues(orig, edited)) {
                         if (!locked.equalsIgnoreCase("locked")) { // it wasn't locked, good to go, check inside the different values bit to error if the excel tries something it should not
                             logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                             logger.info(orig + "|" + edited + "|");
 
                             final List<Value> valuesForCell = rowValues.get(columnCounter);
-                            final Set<Name> namesForCell = rowNames.get(columnCounter);
+                            final Set<DataRegionHeading> headingsForCell = rowHeadings.get(columnCounter);
                             // one thing about these store functions to the value service, they expect the provenance on the logged in connection to be appropriate
                             if (valuesForCell.size() == 1) {
                                 final Value theValue = valuesForCell.get(0);
@@ -1875,11 +1891,12 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                                     //sometimes non-existant original values are stored as '0'
                                     overWriteExistingValue(loggedInConnection, theValue, edited);
                                     numberOfValuesModified++;
-                                }else
+                                } else
                                     deleteValue(theValue);
-                            } else if (valuesForCell.isEmpty() && edited.length()> 0) {
+                            } else if (valuesForCell.isEmpty() && edited.length() > 0) {
                                 logger.info("storing new value here . . .");
-                                storeValueWithProvenanceAndNames(loggedInConnection, edited, namesForCell);
+                                // this call to make the hash set seems rather unefficient
+                                storeValueWithProvenanceAndNames(loggedInConnection, edited, namesFromDataRegionHeadings(headingsForCell));
                                 numberOfValuesModified++;
                             }
                         } else {
@@ -1905,8 +1922,7 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
     }
 
 
-
-    public static Date interpretDate(String dateString){
+    public static Date interpretDate(String dateString) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
         SimpleDateFormat dateFormat2 = new SimpleDateFormat("dd/MM/yy");
         SimpleDateFormat dateFormat3 = new SimpleDateFormat("dd/MM/yyyy");
@@ -1928,11 +1944,11 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
                 }
             } else {
                 if (dateString.substring(2, 3).equals("-")) {
-                    try{
+                    try {
                         dateFound = dateFormat4.parse(dateString);
-                    }catch (Exception ignored){
+                    } catch (Exception ignored) {
                     }
-                }else{
+                } else {
                     try {
                         dateFound = simpleDateFormat.parse(dateString);
                     } catch (Exception ignored) {
@@ -1942,6 +1958,43 @@ public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquo
         }
         return dateFound;
 
+    }
+
+    public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names) {
+        List<DataRegionHeading> dataRegionHeadings = new ArrayList<DataRegionHeading>();
+        for (Name name : names) {
+            dataRegionHeadings.add(new DataRegionHeading(name));
+        }
+        return dataRegionHeadings;
+    }
+
+    public Set<Name> namesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
+        Set<Name> names = new HashSet<Name>();
+        for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
+            if (dataRegionHeading.getName() != null) {
+                names.add(dataRegionHeading.getName());
+            }
+        }
+        return names;
+    }
+
+    public Set<String> attributesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
+        Set<String> names = new HashSet<String>();
+        for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
+            if (dataRegionHeading.getAttribute() != null) {
+                names.add(dataRegionHeading.getAttribute().substring(1)); // at the mo I assume attributes begin with .
+            }
+        }
+        return names;
+    }
+
+    public boolean headingsHaveAttributes(Collection<DataRegionHeading> dataRegionHeadings) {
+        for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
+            if (dataRegionHeading.getAttribute() != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }
