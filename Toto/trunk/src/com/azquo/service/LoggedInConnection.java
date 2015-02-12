@@ -47,6 +47,41 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
+    // for the map of values for a region. USed to be just a list of values for each cell but now given attributes it could be a lit of names and and attributes - typically will be just one attribute and name
+    // a little similar to name or value I suppose though this needs attributes specified
+
+    public class ListOfValuesOrNamesAndAttributeName{
+        private final List<Value> values;
+        private final List<Name> names;
+        private final List<String> attributeNames;
+
+        public ListOfValuesOrNamesAndAttributeName(List<Name> names, List<String> attributeNames) {
+            this.names = names;
+            this.attributeNames = attributeNames;
+            this.values = null;
+        }
+
+        public ListOfValuesOrNamesAndAttributeName(List<Value> values) {
+            this.values = values;
+            this.names = null;
+            this.attributeNames = null;
+        }
+
+        public List<Value> getValues() {
+            return values;
+        }
+
+        public List<Name> getNames() {
+            return names;
+        }
+
+        public List<String> getAttributeNames() {
+            return attributeNames;
+        }
+    }
+
+
+
     private static final Logger logger = Logger.getLogger(LoggedInConnection.class);
 
     private final String connectionId;
@@ -67,7 +102,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private final Map<String, List<Name>> contexts;
     private final Map<String, String> lockMaps;
     private final Map<String, String> sentDataMaps;
-    private final Map<String, List<List<List<Value>>>> sentDataValuesMaps; // As in a 2 d array (lists of lists) of lists of valuer Useful for when data is saved
+    private final Map<String, List<List<ListOfValuesOrNamesAndAttributeName>>> sentDataValuesMaps; // As in a 2 d array (lists of lists) of lists of valuer Useful for when data is saved - now has to support the name attribute combo
     private final Map<String, List<List<Set<DataRegionHeading>>>> sentDataHeadingsMaps; // As in a 2 d array (lists of lists) of sets of names, identifying each cell. Necessary if saving new data in that cell. SHould the values map use sets also???
     private List<Set<Name>> namesToSearch;
     private Map<Set<Name>, Set<Value>> valuesFound;
@@ -96,7 +131,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         contexts = new HashMap<String, List<Name>>();
         lockMaps = new HashMap<String, String>();
         sentDataMaps = new HashMap<String, String>();
-        sentDataValuesMaps = new HashMap<String, List<List<List<Value>>>>();
+        sentDataValuesMaps = new HashMap<String, List<List<ListOfValuesOrNamesAndAttributeName>>>();
         sentDataHeadingsMaps = new HashMap<String, List<List<Set<DataRegionHeading>>>>();
         namesToSearch = null;
         valuesFound = null;
@@ -335,7 +370,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
-    public List<List<List<Value>>> getDataValueMap(final String region) {
+    public List<List<ListOfValuesOrNamesAndAttributeName>> getDataValueMap(final String region) {
         if (region == null || region.isEmpty()) {
             return sentDataValuesMaps.get(defaultRegion);
         } else {
@@ -343,7 +378,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
-    public void setDataValueMap(final String region, final List<List<List<Value>>> sentDataValuesMap) {
+    public void setDataValueMap(final String region, final List<List<ListOfValuesOrNamesAndAttributeName>> sentDataValuesMap) {
         if (region == null || region.isEmpty()) {
             this.sentDataValuesMaps.put(defaultRegion, sentDataValuesMap);
         } else {

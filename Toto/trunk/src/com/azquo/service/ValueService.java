@@ -469,7 +469,7 @@ public final class ValueService {
         }
     }
 
-    public String findValueForHeadings(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<DataRegionHeading> headings, final MBoolean locked, final boolean payAttentionToAdditive) throws Exception {
+    public String findValueForHeadings(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<DataRegionHeading> headings, final MBoolean locked, List<Name> namesForMap, List<String> attributesForMap) throws Exception {
         // like above but uses an attribute (attributes?) and doens't care about calc for the moment, hence should be much more simple
         // can return a string of course
         // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function
@@ -478,18 +478,26 @@ public final class ValueService {
 
         // same locking check as with values, factor off?
         locked.isTrue = false;
-        for (Name oneName : names) { // inexpensive check first
-            if (oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) {
-                locked.isTrue = true;
-                break;
-            }
-        }
-        if (!locked.isTrue) { // now the more expensive isallowed check
-            for (Name oneName : names) {
-                if (!nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions())) {
+
+        if (names.size() != 1){
+            locked.isTrue = true;
+        } else {
+/*            for (Name oneName : names) { // inexpensive check first
+                if (oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) {
                     locked.isTrue = true;
                     break;
                 }
+            }
+            if (!locked.isTrue) { // now the more expensive isallowed check
+                for (Name oneName : names) {
+                    if (!nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions())) {
+                        locked.isTrue = true;
+                        break;
+                    }
+                }
+            }*/
+            if (!nameService.isAllowed(names.iterator().next(), azquoMemoryDBConnection.getWritePermissions())) {
+                locked.isTrue = true;
             }
         }
 
@@ -505,6 +513,17 @@ public final class ValueService {
             for (String attribute : attributes){
                 String attValue = n.getAttribute(attribute);
                 if (attValue != null){
+                    if (!locked.isTrue && n.getAttribute(attribute, false) == null){ // tha attribute is not against the name itself (it's form the parent or structure)
+                        locked.isTrue = true;
+                    } else {
+                        // this feels a little hacky but I need to record this for saving purposes later
+                        if (!namesForMap.contains(n)){
+                            namesForMap.add(n);
+                        }
+                        if (!attributesForMap.contains(attribute)){
+                            attributesForMap.add(attribute);
+                        }
+                    }
                     if (NumberUtils.isNumber(attValue)){
                         numericResult += Double.parseDouble(attValue);
                     } else {
@@ -816,14 +835,15 @@ seaports;children   container;children
 
     private boolean blankRows(LoggedInConnection loggedInConnection, String region, int rowInt, int count) {
 
-        final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
+        final List<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>> dataValueMap = loggedInConnection.getDataValueMap(region);
 
         if (dataValueMap != null) {
             for (int rowCount = 0; rowCount < count; rowCount++) {
                 if (dataValueMap.get(rowInt + rowCount) != null) {
-                    final List<List<Value>> rowValues = dataValueMap.get(rowInt + rowCount);
-                    for (List<Value> oneCell : rowValues) {
-                        if (oneCell.size() > 0) {
+                    final List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName> rowContents = dataValueMap.get(rowInt + rowCount);
+                    for (LoggedInConnection.ListOfValuesOrNamesAndAttributeName oneCell : rowContents) {
+                        // names should only be set if there is a value
+                        if ((oneCell.getValues() != null && oneCell.getValues().size() > 0) || (oneCell.getNames() != null && oneCell.getNames().size() > 0)) {
                             return false;
                         }
                     }
@@ -1361,7 +1381,8 @@ seaports;children   container;children
         }
 
 
-        final List<List<List<Value>>> dataValuesMap = new ArrayList<List<List<Value>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
+        final List<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>> dataValuesMap
+                = new ArrayList<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
         loggedInConnection.setDataValueMap(region, dataValuesMap);
         final Map<Integer, Double> sortRowTotals = new HashMap<Integer, Double>();
         final Map<Integer, Double> sortColumnTotals = new HashMap<Integer, Double>();
@@ -1382,7 +1403,8 @@ seaports;children   container;children
         }
         for (List<DataRegionHeading> rowHeadings : loggedInConnection.getRowHeadings(region)) { // make it like a document
             if (rowNo % 1000 == 0) System.out.print(".");
-            ArrayList<List<Value>> thisRowValues = new ArrayList<List<Value>>(totalCols);
+            ArrayList<LoggedInConnection.ListOfValuesOrNamesAndAttributeName> thisRowValues
+                    = new ArrayList<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>(totalCols);
             ArrayList<Set<DataRegionHeading>> thisRowHeadings = new ArrayList<Set<DataRegionHeading>>(totalCols);
             List<String> shownValues = new ArrayList<String>();
             List<Boolean> lockedCells = new ArrayList<Boolean>();
@@ -1419,10 +1441,10 @@ seaports;children   container;children
                     thisRowHeadings.add(headingsForThisCell);
 
                     double cellValue = 0;
-                    List<Value> values = new ArrayList<Value>();
-                    thisRowValues.add(values);
+                    LoggedInConnection.ListOfValuesOrNamesAndAttributeName valuesOrNamesAndAttributeName;
                     if (!headingsHaveAttributes) { // we go the value route (the standard/old one), need the headings as names,
                         // TODO - peer additive check. If using peers and not additive, don't include children
+                        List<Value> values = new ArrayList<Value>();
                         cellValue = findValueForNames(loggedInConnection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, loggedInConnection.getLanguages()); // true = pay attention to names additive flag
                         //if there's only one value, treat it as text (it may be text, or may include £,$,%)
                         if (values.size() == 1 && !locked.isTrue) {
@@ -1438,8 +1460,12 @@ seaports;children   container;children
                         } else {
                             shownValues.add(cellValue + "");
                         }
+                        valuesOrNamesAndAttributeName = loggedInConnection.new ListOfValuesOrNamesAndAttributeName(values);
                     } else {  // now, new logic for attributes
-                        String attributeResult = findValueForHeadings(loggedInConnection, headingsForThisCell,locked, true);// pay attention ot additive??
+                        List<Name> names = new ArrayList<Name>();
+                        List<String> attributes = new ArrayList<String>();
+                        valuesOrNamesAndAttributeName = loggedInConnection.new ListOfValuesOrNamesAndAttributeName(names, attributes);
+                        String attributeResult = findValueForHeadings(loggedInConnection, headingsForThisCell,locked, names, attributes);
                         if (NumberUtils.isNumber(attributeResult)){ // there should be a more efficient way I feel given that the result is typed internally
                             cellValue = Double.parseDouble(attributeResult);
                         }
@@ -1448,6 +1474,7 @@ seaports;children   container;children
 
 
 
+                    thisRowValues.add(valuesOrNamesAndAttributeName);
 
                     // ok these bits are for sorting. Could put a check on whether a number was actually the result but not so bothered
                     // code was a bit higher, have moved it below the chunk that detects if we're using values or not, see no harm in this.
@@ -1539,12 +1566,14 @@ seaports;children   container;children
         return false;
     }
 
+    // todo : does this need to deal with name/attribute combos?
+
 
     public int getAge(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt) {
         Calendar cal = Calendar.getInstance();
         Date today = cal.getTime();
 
-        final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
+        final List<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>> dataValueMap = loggedInConnection.getDataValueMap(region);
         final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
 
         if (rowOrder != null) {
@@ -1561,22 +1590,22 @@ seaports;children   container;children
         if (rowInt >= dataValueMap.size()) return age;
         if (dataValueMap.get(rowInt) == null) return age;
 
-        final List<List<Value>> rowValues = dataValueMap.get(rowInt);
+        final List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName> rowValues = dataValueMap.get(rowInt);
         if (colInt >= rowValues.size()) {// a blank column
             return age;
         }
-        final List<Value> valuesForCell = rowValues.get(colInt);
-        if (valuesForCell == null || valuesForCell.size() == 0) {
+        final LoggedInConnection.ListOfValuesOrNamesAndAttributeName valuesForCell = rowValues.get(colInt);
+        if (valuesForCell.getValues() == null || valuesForCell.getValues().size() == 0) {
             return 0;
         }
-        if (valuesForCell.size() == 1) {
-            for (Value value : valuesForCell) {
+        if (valuesForCell.getValues().size() == 1) {
+            for (Value value : valuesForCell.getValues()) {
                 if (value == null) {//cell has been changed
                     return 0;
                 }
             }
         }
-        for (Value value : valuesForCell) {
+        for (Value value : valuesForCell.getValues()) {
             if (value.getText().length() > 0) {
                 if (value.getProvenance() == null) {
                     return 0;
@@ -1595,22 +1624,24 @@ seaports;children   container;children
         return age;
     }
 
-
+// todo, when cell contents are from attributes??
     public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt, String jsonFunction) {
-        final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
+        final List<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>> dataValueMap = loggedInConnection.getDataValueMap(region);
         final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
         final List<Integer> colOrder = loggedInConnection.getColOrder(region);
 
         if (dataValueMap != null) {
             if (dataValueMap.get(rowInt) != null) {
-                final List<List<Value>> rowValues = dataValueMap.get(rowOrder.get(rowInt));
+                final List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName> rowValues = dataValueMap.get(rowOrder.get(rowInt));
 
                 if (rowValues.get(colOrder.get(colInt)) != null) {
-                    final List<Value> valuesForCell = rowValues.get(colOrder.get(colInt));
+                    final LoggedInConnection.ListOfValuesOrNamesAndAttributeName valuesForCell = rowValues.get(colOrder.get(colInt));
                     //Set<Name> specialForProvenance = new HashSet<Name>();
 
-
-                    return formatCellProvenanceForOutput(loggedInConnection, valuesForCell, jsonFunction);
+                    if (valuesForCell.getValues() != null){
+                        return formatCellProvenanceForOutput(loggedInConnection, valuesForCell.getValues(), jsonFunction);
+                    }
+                    return "";
                 } else {
                     return ""; //return "error: col out of range : " + colInt;
                 }
@@ -1827,7 +1858,6 @@ seaports;children   container;children
         }
     }
 
-
     public String saveData(LoggedInConnection loggedInConnection, String region, String editedData) throws Exception {
         String result = "";
         logger.info("------------------");
@@ -1849,7 +1879,7 @@ seaports;children   container;children
             final String[] editedReader = editedData.split("\n", -1);
             final String[] lockLines = loggedInConnection.getLockMap(region).split("\n", -1);
             // rows, columns, value lists
-            final List<List<List<Value>>> dataValuesMap = loggedInConnection.getDataValueMap(region);
+            final List<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>> dataValuesMap = loggedInConnection.getDataValueMap(region);
             final List<List<Set<DataRegionHeading>>> dataHeadingsMap = loggedInConnection.getDataHeadingsMap(region);
             // TODO : deal with mismatched column and row counts
             int numberOfValuesModified = 0;
@@ -1858,7 +1888,7 @@ seaports;children   container;children
             for (int rowNo = 0; rowNo < lockLines.length; rowNo++) {
                 String lockLine = lockLines[rowNo];
                 int columnCounter = 0;
-                final List<List<Value>> rowValues = dataValuesMap.get(sortedRows.get(rowCounter));
+                final List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName> rowValues = dataValuesMap.get(sortedRows.get(rowCounter));
                 final List<Set<DataRegionHeading>> rowHeadings = dataHeadingsMap.get(rowCounter);
                 final String[] originalValues = originalReader[rowNo].split("\t", -1);//NB Include trailing empty strings.
                 final String[] editedValues = editedReader[rowNo].split("\t", -1);
@@ -1881,23 +1911,35 @@ seaports;children   container;children
                             logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                             logger.info(orig + "|" + edited + "|");
 
-                            final List<Value> valuesForCell = rowValues.get(columnCounter);
+                            final LoggedInConnection.ListOfValuesOrNamesAndAttributeName valuesForCell = rowValues.get(columnCounter);
                             final Set<DataRegionHeading> headingsForCell = rowHeadings.get(columnCounter);
                             // one thing about these store functions to the value service, they expect the provenance on the logged in connection to be appropriate
-                            if (valuesForCell.size() == 1) {
-                                final Value theValue = valuesForCell.get(0);
-                                logger.info("trying to overwrite");
-                                if (edited.length() > 0) {
-                                    //sometimes non-existant original values are stored as '0'
-                                    overWriteExistingValue(loggedInConnection, theValue, edited);
+                            // right, switch here to deal with attribute based cell values
+
+                            if (valuesForCell.getValues() != null){
+                                if (valuesForCell.getValues().size() == 1) {
+                                    final Value theValue = valuesForCell.getValues().get(0);
+                                    logger.info("trying to overwrite");
+                                    if (edited.length() > 0) {
+                                        //sometimes non-existant original values are stored as '0'
+                                        overWriteExistingValue(loggedInConnection, theValue, edited);
+                                        numberOfValuesModified++;
+                                    } else {
+                                        deleteValue(theValue);
+                                    }
+                                } else if (valuesForCell.getValues().isEmpty() && edited.length() > 0) {
+                                    logger.info("storing new value here . . .");
+                                    // this call to make the hash set seems rather unefficient
+                                    storeValueWithProvenanceAndNames(loggedInConnection, edited, namesFromDataRegionHeadings(headingsForCell));
                                     numberOfValuesModified++;
-                                } else
-                                    deleteValue(theValue);
-                            } else if (valuesForCell.isEmpty() && edited.length() > 0) {
-                                logger.info("storing new value here . . .");
-                                // this call to make the hash set seems rather unefficient
-                                storeValueWithProvenanceAndNames(loggedInConnection, edited, namesFromDataRegionHeadings(headingsForCell));
-                                numberOfValuesModified++;
+                                }
+                            } else {
+                                if (valuesForCell.getNames().size() == 1 && valuesForCell.getAttributeNames().size() == 1){ // allows a simple store
+                                    Name toChange = valuesForCell.getNames().get(0);
+                                    String attribute = valuesForCell.getAttributeNames().get(0);
+                                    logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
+                                    toChange.setAttributeWillBePersisted(attribute, edited);
+                                }
                             }
                         } else {
                             // TODO  WORK OUT WHAT TO BE DONE ON ERROR - what about calculated cells??

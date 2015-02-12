@@ -1900,15 +1900,15 @@ public  class AzquoBook {
 
             if (regionInfo.region.startsWith(dataRegionPrefix)){
                 String region = regionInfo.region.substring(dataRegionPrefix.length());
-                final List<List<List<Value>>> dataValueMap = loggedInConnection.getDataValueMap(region);
+                final List<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>> dataValueMap = loggedInConnection.getDataValueMap(region);
                 final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
 
 
                 if (dataValueMap != null && dataValueMap.get(regionInfo.row) != null) {
-                    final List<List<Value>> rowValues = dataValueMap.get(rowOrder.get(regionInfo.row));
+                    final List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName> rowValues = dataValueMap.get(rowOrder.get(regionInfo.row));
                     List<Value> newValues = new ArrayList<Value>();
                     newValues.add(newValue);
-                    rowValues.set(regionInfo.col, newValues);
+                    rowValues.set(regionInfo.col, loggedInConnection.new ListOfValuesOrNamesAndAttributeName(newValues));
                 }
             }
         }
