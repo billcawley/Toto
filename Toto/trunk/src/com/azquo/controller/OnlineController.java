@@ -350,7 +350,8 @@ public class OnlineController {
                 result = onlineService.getProvenance(loggedInConnection, row, Integer.parseInt(colStr), jsonFunction);
             }
             if (opcode.equals("savedata")){
-                  result = onlineService.saveData(loggedInConnection, jsonFunction);
+                  onlineService.saveData(loggedInConnection, jsonFunction);
+                 result = "data saved successfully";
              }
             //if (opcode.equals("children")){
 
@@ -379,12 +380,12 @@ public class OnlineController {
                 result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName,"Right-click mouse for provenance");
             }
             if (opcode.equals("buttonpressed") && row > 0){//button pressed - follow instructions and reload admin sheet
-                String message = onlineService.followInstructionsAt(loggedInConnection, jsonFunction, row, Integer.parseInt(colStr), database, item);
+                onlineService.followInstructionsAt(loggedInConnection, jsonFunction, row, Integer.parseInt(colStr), database, item);
 
                 if (onlineReport == null){
                     onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
                 }
-                result =  onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, message);
+                result =  onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, result);
             }
 
             /*
