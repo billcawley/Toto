@@ -222,7 +222,7 @@ public final class AzquoMemoryDB {
     // TODO - collection this up later? What hsould be returned?
 
     private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
-        Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toLowerCase().trim());
+        Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
         if (map != null) { // that attribute is there
             List<Name> names = map.get(attributeValue.toLowerCase().trim());
             if (names != null) { // were there any entries for that value?
@@ -307,24 +307,24 @@ public final class AzquoMemoryDB {
     // get names containing an attribute using wildcards, start end both
 
     private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
-        final String lctAttributeName = attributeName.toLowerCase().trim();
+        final String uctAttributeName = attributeName.toUpperCase().trim();
         final String lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
         final Set<Name> names = new HashSet<Name>();
-        if (nameByAttributeMap.get(lctAttributeName) == null) {
+        if (nameByAttributeMap.get(uctAttributeName) == null) {
             return names;
         }
-        for (String attributeValue : nameByAttributeMap.get(lctAttributeName).keySet()) {
+        for (String attributeValue : nameByAttributeMap.get(uctAttributeName).keySet()) {
             if (startsWith && endsWith) {
-                if (attributeValue.toLowerCase().contains(lctAttributeValueSearch.toLowerCase())) {
-                    names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
+                if (attributeValue.contains(lctAttributeValueSearch)) {
+                    names.addAll(nameByAttributeMap.get(uctAttributeName).get(attributeValue));
                 }
             } else if (startsWith) {
-                if (attributeValue.toLowerCase().startsWith(lctAttributeValueSearch.toLowerCase())) {
-                    names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
+                if (attributeValue.startsWith(lctAttributeValueSearch)) {
+                    names.addAll(nameByAttributeMap.get(uctAttributeName).get(attributeValue));
                 }
             } else if (endsWith) {
-                if (attributeValue.toLowerCase().endsWith(lctAttributeValueSearch.toLowerCase())) {
-                    names.addAll(nameByAttributeMap.get(lctAttributeName).get(attributeValue));
+                if (attributeValue.endsWith(lctAttributeValueSearch)) {
+                    names.addAll(nameByAttributeMap.get(uctAttributeName).get(attributeValue));
                 }
             }
 
@@ -401,14 +401,16 @@ public final class AzquoMemoryDB {
     // like above but for one attribute
 
     public void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
-        if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) == null) { // make a new map for the attributes
-            nameByAttributeMap.put(attributeName.toLowerCase().trim().intern(), new ConcurrentHashMap<String, List<Name>>());
+        String lcAttributeValue = attributeValue.toLowerCase().trim();
+        String ucAttributeName = attributeName.toUpperCase().trim();
+        if (nameByAttributeMap.get(ucAttributeName) == null) { // make a new map for the attributes
+            nameByAttributeMap.put(ucAttributeName.intern(), new ConcurrentHashMap<String, List<Name>>());
         }
-        final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
-        if (attributeValue.indexOf(Name.QUOTE) >= 0 && !attributeName.equals(Name.CALCULATION)) {
-            attributeValue = attributeValue.replace(Name.QUOTE, '\'');
+        final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
+        if (lcAttributeValue.indexOf(Name.QUOTE) >= 0 && !ucAttributeName.equals(Name.CALCULATION)) {
+            lcAttributeValue = lcAttributeValue.replace(Name.QUOTE, '\'');
         }
-        List<Name> names = namesForThisAttribute.get(attributeValue);
+        List<Name> names = namesForThisAttribute.get(lcAttributeValue);
         if (names != null) {
             if (!names.contains(name)){
                 names.add(name);
@@ -416,16 +418,18 @@ public final class AzquoMemoryDB {
         } else {
             final List<Name> possibles = new ArrayList<Name>();
             possibles.add(name);
-            namesForThisAttribute.put(attributeValue.toLowerCase().intern(), possibles);
+            namesForThisAttribute.put(lcAttributeValue.intern(), possibles);
         }
     }
 
 
     protected void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
+        String ucAttributeName = attributeName.toUpperCase().trim();
+        String lcAttributeValue = attributeValue.toLowerCase().trim();
         name.checkDatabaseMatches(this);
-        if (nameByAttributeMap.get(attributeName.toLowerCase().trim()) != null) {// the map we care about
-            final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(attributeName.toLowerCase().trim());
-            final List<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(attributeValue.toLowerCase().trim());
+        if (nameByAttributeMap.get(ucAttributeName) != null) {// the map we care about
+            final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
+            final List<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(lcAttributeValue);
             if (namesForThatAttributeAndAttributeValue != null) {
                 namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the set . . .
             }
