@@ -7,6 +7,7 @@ package com.azquo.app.reviews.controller;
 import com.azquo.app.reviews.service.ReviewService;
 import com.azquo.app.reviews.service.ReviewsCustomerService;
 import com.azquo.app.reviews.service.UserService;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -30,6 +31,11 @@ public class MerchantAdminController {
     private UserService userService;
     @Autowired
     ReviewService reviewService;
+
+
+    private static final Logger logger = Logger.getLogger(MerchantAdminController.class);
+
+
 
     @RequestMapping
     public String handleRequest(ModelMap model,HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -64,24 +70,29 @@ public class MerchantAdminController {
                 values.put(i,fieldVal);
             }
         }
-
+        String result = "";
+        try {
 
         if (op==null){
             op="displaypage";
             if (itemName==null)  itemName="";
             if (type==null) type = "";
         }
-        String result = "";
         if (download!=null && download.length() > 0){
             op = "";
             reviewService.download(response, itemName, Integer.parseInt(nameId), field);
         }
         if(op.equals("displaypage")){
             if (submit == null){
-                result = reviewService.createPageSpec(itemName,type, nameId);
+                    result = reviewService.createPageSpec(itemName, type, nameId);
             }else{
                 reviewService.saveData(response,itemName,values, Integer.parseInt(nameId));
             }
+
+            }
+        }catch(Exception e){
+            result = e.getMessage();
+            logger.error(result, e);
 
         }
 
