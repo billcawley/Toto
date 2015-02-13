@@ -267,6 +267,9 @@ public final class NameService {
     public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name parent, boolean local, List<String> attributeNames) throws Exception {
 
         long marker = System.currentTimeMillis();
+        if (name.length()==0){
+            return null;
+        }
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import),and insert a structure into it*/
         if (attributeNames == null) {
             attributeNames = new ArrayList<String>();
@@ -282,8 +285,7 @@ public final class NameService {
             if (local) {// ok looking only below that parent or just in it's whole set or top parent.
                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, parent);
             } else {
-                // Note the new name find A top parent. If names are in more than one top parent criteria to find the name might be a bit random - which top parent do you mean?
-                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, parent.findATopParent());
+                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
             }
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
             // find an existing name with no parents. (note that if there are multiple such names, then the return will be null)
@@ -605,24 +607,21 @@ public final class NameService {
 
     public boolean isAllowed(Name name, List<Set<Name>> names) {
 
-        if (name == null) {
+        if (name==null || names == null) {
             return true;
         }
-        /*
-         * check if name is in one relevant set from names.  If so then OK  (e.g. if name is a date, then only check dates in 'names')
+         /*
+         * check if name is in one relevant set from names.  If so then OK
          * If not, then depends if the name is confidential.
           *
           * */
-        Name topParent = name.findATopParent();
         for (Set<Name> listNames : names) {
             if (!listNames.isEmpty()) {
                 Name listName = listNames.iterator().next();//all names in each list have the same topparent, so don't try further (just get the first)
-                if (topParent == listName.findATopParent()) {
-                    if (inParentSet(name, listNames) != null) {
-                        return true;
-                    }
+                if (inParentSet(name, listNames) != null) {
+                    return true;
                 }
-            }
+             }
         }
         String confidential = name.getAttribute("CONFIDENTIAL");
         return confidential == null || !confidential.equalsIgnoreCase("true");
