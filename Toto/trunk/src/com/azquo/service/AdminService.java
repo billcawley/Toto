@@ -134,11 +134,11 @@ public class AdminService {
         return "";
     }
 
-    public String createDatabase(final String databaseName, final LoggedInConnection loggedInConnection) throws Exception {
+    public void createDatabase(final String databaseName, final LoggedInConnection loggedInConnection) throws Exception {
         if (loggedInConnection.getUser().isAdministrator()) {
              Database existing = databaseDao.findForName(loggedInConnection.getBusinessId(),databaseName);
             if (existing != null){
-                return "error: That database already exists";
+                throw new Exception("error: That database already exists");
             }
             final String mysqlName = getSQLDatabaseName(loggedInConnection, databaseName);
             final Business b = businessDao.findById(loggedInConnection.getBusinessId());
@@ -153,32 +153,35 @@ public class AdminService {
             if (loggedInConnection.getAzquoMemoryDB() == null) { // creating their first db I guess?
                 loggedInConnection.setAzquoMemoryDB(memoryDBManager.getAzquoMemoryDB(database));
             }
-            return "Database created successfully";
+
+        }else{
+            throw new Exception("error: Only administrators can create databases");
         }
-        return "error: Only administrators can create databases";
     }
 
-    public boolean createUser(final String email
+    public void createUser(final String email
             , final String userName
             , final String status
             , final String password
-            , final LoggedInConnection loggedInConnection) throws IOException {
+            , final LoggedInConnection loggedInConnection) throws Exception {
         if (loggedInConnection.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
             final User user = new User(0, new Date(), new Date(130, 1, 1), loggedInConnection.getBusinessId(), email, userName, status, encrypt(password, salt), salt);
             userDao.store(user);
-            return true;
+            return;
+        }else{
+            throw new Exception("error: you do not have permission to create a user");
         }
-        return false;
-    }
+     }
 
-    public boolean createUserPermission(final String email, final String readList, final String writeList, final LoggedInConnection loggedInConnection) throws IOException {
+    public void createUserPermission(final String email, final String readList, final String writeList, final LoggedInConnection loggedInConnection) throws Exception {
         if (loggedInConnection.getUser().isAdministrator() && loggedInConnection.getAzquoMemoryDB() != null) { // actually have a DB selected
             final Permission permission = new Permission(0, new Date(), new Date(130, 1, 1), userDao.findByEmail(email).getId(), loggedInConnection.getAzquoMemoryDB().getDatabase().getId(), readList, writeList);
             permissionDao.store(permission);
-            return true;
+            return;
+        }else{
+            throw new Exception("error: you do not have permission to perform this action");
         }
-        return false;
     }
 
     //variation on a function I've used before
@@ -452,24 +455,39 @@ public class AdminService {
         return "";
     }
 
-    private Name findToName(final LoggedInConnection lic2, final Name name, Name topParent, boolean local) throws Exception{
 
+    public Name copyName(AzquoMemoryDBConnection toDB, Name name, Name parent, List<String> languages, Collection<Name> allowed, Map<Name,Name> dictionary) throws Exception{
+        Name name2 =dictionary.get(name);
+        if (name2!=null ) return name2;
 
-        //this routine transfers the name and all the parent paths to that name.  It then copies the name attributes  and peers (but not the attributes of the parents)
-        Name name2 = null;
-        if (name.getParents().size() == 0){
-            name2 = nameService.findOrCreateNameInParent(lic2, name.getDefaultDisplayName(), null, local, lic2.getLanguages());
-            return name2;
+        //consider ALL names as local.  Global names will be found from dictionary
+        name2 = nameService.findOrCreateNameInParent(toDB, name.getDefaultDisplayName(), parent, true, languages);
+        for (String attName : name.getAttributes().keySet()) {
+            name2.setAttributeWillBePersisted(attName, name.getAttribute(attName));
         }
-        for (Name parent:name.getParents()){
-            //will the the same name2 on each iteration, but the
-            Name parent2 = findToName(lic2, parent, topParent, local);
-            name2 = nameService.findOrCreateNameInParent(lic2, name.getDefaultDisplayName(),parent2, local, lic2.getLanguages());
+        LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
+        for (Name peer:name.getPeers().keySet()){
+            Name peer2 = copyName(toDB,peer, null, languages, null, dictionary);//assume that peers can be found globally
+            peers2.put(peer2, name.getPeers().get(peer));
 
         }
-        //never uses the return here...
+        if (peers2.size() > 0){
+            name2.setPeersWillBePersisted(peers2);
+        }
+        for (Name child:name.getChildren()){
+            if (allowed==null || allowed.contains(child)){
+                copyName(toDB,child, name2, languages, allowed, dictionary);
+            }
+        }
         return name2;
+
+
+
     }
+
+
+
+
 
     public String copyDatabase(LoggedInConnection loggedInConnection, String database, String nameList) throws Exception{
 
@@ -490,23 +508,19 @@ public class AdminService {
                 namesFound.add(name);
             }
         }
+        List<String> languages = new ArrayList<String>();
+        languages.add(Name.DEFAULT_DISPLAY_NAME);
         //transfer each name and its parents.
         Map<Name, Name> dictionary = new HashMap<Name, Name>();
         for (Name name:namesFound){
-            Name name2 = findToName(lic2, name, null, false);//currently assuming no local name!!!!
-            for (String attName : name.getAttributes().keySet()) {
-                name2.setAttributeWillBePersisted(attName, name.getAttribute(attName));
-            }
-            LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
-            for (Name peer:name.getPeers().keySet()){
-                Name peer2 = nameService.findOrCreateNameInParent(lic2,peer.getDefaultDisplayName(),null, false, lic2.getLanguages());
-                peers2.put(peer2, name.getPeers().get(peer));
-
-            }
-            if (peers2.size() > 0){
-                name2.setPeersWillBePersisted(peers2);
-            }
-            dictionary.put(name, name2);
+            Collection<Name> allowed = name.findAllParents();
+            allowed.add(name);
+            for (Name parent:name.findAllParents()){
+                if (parent.getParents()==null){//we need to start from the top
+                    //copyname copies all allowed children, and avoids endless loops.
+                    copyName(lic2,parent,null, languages, allowed, dictionary);
+                 }
+             }
 
         }
         for (Set<Name> nameValues:showValues.keySet()){

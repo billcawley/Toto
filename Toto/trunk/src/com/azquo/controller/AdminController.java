@@ -87,156 +87,167 @@ public class AdminController {
             , @RequestParam(value = "connectionid", required = false) String connectionId) throws Exception {
 
         logger.info("request to admin controller : " + op);
+        try {
 
-        if (op.equalsIgnoreCase(SIGNON)) {
-            String result;
-            if (key != null && key.length() > 0 && businessName != null && businessName.length() > 0) {
-                return adminService.confirmKey(businessName
-                        , email
-                        , password
-                        , key
-                        , spreadsheetName);
-            } else if (email != null && email.length() > 0
-                    && user != null && user.length() > 0
-                    && businessName != null && businessName.length() > 0
-                    && password != null && password.length() > 0) {
-                     result =  adminService.registerBusiness(email
-                        , user
-                        , password
-                        , businessName
-                        , address1 != null ? address1 : ""
-                        , address2 != null ? address2 : ""
-                        , address3 != null ? address3 : ""
-                        , address4 != null ? address4 : ""
-                        , postcode != null ? postcode : ""
-                        , telephone != null ? telephone : "");
-            }else{
-                String missing = "";
-
-                if (email == null){
-                    missing += "email address, ";
-                }
-                if (user == null){
-                    missing += "user name, ";
-                }
-                if (businessName == null || businessName.length()==0){
-                    missing += "business name, ";
-                }
-                if (password == null || password.length() == 0){
-                    missing += "password, ";
-                }
-                result = "error: Please send: " + missing;
-            }
-            if (online != null && online.toLowerCase().equals("true")){
-                return "azquojson({\"registrationreply\":\"" + result + "\"})";
-            }else{
-                return result;
-            }
-        } else {
-            logger.info("connection id : " + connectionId);
-            if (connectionId == null) {
-                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, spreadsheetName, false);
-                if (loggedInConnection == null) {
-                    return "error:no connection id";
-                }
-                connectionId = loggedInConnection.getConnectionId();
-             }
-
-            final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
-            if (loggedInConnection == null) {
-                return "error:invalid or expired connection id";
-            }
-
-            if (op.equalsIgnoreCase(NEWDATABASE)) {
-                if (database != null && database.length() > 0) {
-                    return adminService.createDatabase(database, loggedInConnection) + "";
-                }
-            }
-
-            if (op.equalsIgnoreCase(NEWUSER)) {
-                if (email != null && email.length() > 0
+            if (op.equalsIgnoreCase(SIGNON)) {
+                String result;
+                if (key != null && key.length() > 0 && businessName != null && businessName.length() > 0) {
+                    return adminService.confirmKey(businessName
+                            , email
+                            , password
+                            , key
+                            , spreadsheetName);
+                } else if (email != null && email.length() > 0
                         && user != null && user.length() > 0
-                        && status != null && status.length() > 0
+                        && businessName != null && businessName.length() > 0
                         && password != null && password.length() > 0) {
-                    return adminService.createUser(email, user, status, password, loggedInConnection) + "";
+                    result = adminService.registerBusiness(email
+                            , user
+                            , password
+                            , businessName
+                            , address1 != null ? address1 : ""
+                            , address2 != null ? address2 : ""
+                            , address3 != null ? address3 : ""
+                            , address4 != null ? address4 : ""
+                            , postcode != null ? postcode : ""
+                            , telephone != null ? telephone : "");
+                } else {
+                    String missing = "";
+
+                    if (email == null) {
+                        missing += "email address, ";
+                    }
+                    if (user == null) {
+                        missing += "user name, ";
+                    }
+                    if (businessName == null || businessName.length() == 0) {
+                        missing += "business name, ";
+                    }
+                    if (password == null || password.length() == 0) {
+                        missing += "password, ";
+                    }
+                    result = "error: Please send: " + missing;
                 }
-            }
-
-            if (op.equalsIgnoreCase(USERPERMISSION)) {
-                if (email != null && email.length() > 0
-                        && readList != null && readList.length() > 0
-                        && writeList != null && writeList.length() > 0) {
-                    return adminService.createUserPermission(email, readList, writeList, loggedInConnection) + "";
+                if (online != null && online.toLowerCase().equals("true")) {
+                    return "azquojson({\"registrationreply\":\"" + result + "\"})";
+                } else {
+                    return result;
                 }
-            }
-
-            if (op.equalsIgnoreCase(DATABASELIST)) {
-                return jacksonMapper.writeValueAsString(adminService.getDatabaseListForBusiness(loggedInConnection));
-            }
-
-            if (op.equalsIgnoreCase(USERLIST)) {
-                return jacksonMapper.writeValueAsString(adminService.getUserListForBusiness(loggedInConnection));
-            }
-
-            if (op.equalsIgnoreCase(COPYDATABASE)) {
-                return adminService.copyDatabase(loggedInConnection, database, nameList);
-            }
-            if (op.equalsIgnoreCase(SAVEUSERS)) {
-                if (json != null && json.length() > 0) {
-                    List<User> usersFromJson = jacksonMapper.readValue(json, new TypeReference<List<User>>() {});
-                    adminService.setUserListForBusiness(loggedInConnection, usersFromJson);
+            } else {
+                logger.info("connection id : " + connectionId);
+                if (connectionId == null) {
+                    LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, spreadsheetName, false);
+                    if (loggedInConnection == null) {
+                        return "error:no connection id";
+                    }
+                    connectionId = loggedInConnection.getConnectionId();
                 }
-            }
 
-            if (op.equalsIgnoreCase(PERMISSIONLIST)) {
-                // ok needs to work without email . .
-                String toReturn = jacksonMapper.writeValueAsString(adminService.getPermissionList(loggedInConnection));
-                logger.info("returned permission list : " + toReturn);
-                return toReturn;
-            }
+                final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
+                if (loggedInConnection == null) {
+                    return "error:invalid or expired connection id";
+                }
 
-            if (op.equalsIgnoreCase(SAVEPERMISSIONS)) {
-                logger.info("save permissions json " + json);
-                if (json != null && json.length() > 0) {
-                    try {
-                        List<Permission> permissionFromJson = jacksonMapper.readValue(json, new TypeReference<List<Permission>>() {});
-                        return adminService.setPermissionListForBusiness(loggedInConnection, permissionFromJson);
-                    } catch (Exception e) {
-                        logger.error("problem saving permissions", e);
+                if (op.equalsIgnoreCase(NEWDATABASE)) {
+                    if (database != null && database.length() > 0) {
+                        adminService.createDatabase(database, loggedInConnection);
                     }
                 }
-            }
 
-            if (op.equalsIgnoreCase(UPLOADSLIST)) {
-                return jacksonMapper.writeValueAsString(adminService.getUploadRecordsForDisplayForBusiness(loggedInConnection));
-            }
-            if (op.equalsIgnoreCase(SAVEONLINEREPORTS)) {
-                logger.info("save online report json " + json);
-                if (json != null && json.length() > 0) {
-                    try {
-                        List<OnlineReport> onlineReportsFromJson = jacksonMapper.readValue(json, new TypeReference<List<OnlineReport>>() {});
-                        return adminService.saveOnlineReportList(loggedInConnection, onlineReportsFromJson);
-                    } catch (Exception e) {
-                        logger.error("problem saving online reports", e);
+                if (op.equalsIgnoreCase(NEWUSER)) {
+                    if (email != null && email.length() > 0
+                            && user != null && user.length() > 0
+                            && status != null && status.length() > 0
+                            && password != null && password.length() > 0) {
+                        adminService.createUser(email, user, status, password, loggedInConnection);
                     }
                 }
+
+                if (op.equalsIgnoreCase(USERPERMISSION)) {
+                    if (email != null && email.length() > 0
+                            && readList != null && readList.length() > 0
+                            && writeList != null && writeList.length() > 0) {
+                        adminService.createUserPermission(email, readList, writeList, loggedInConnection);
+                    }
+                }
+
+                if (op.equalsIgnoreCase(DATABASELIST)) {
+                    return jacksonMapper.writeValueAsString(adminService.getDatabaseListForBusiness(loggedInConnection));
+                }
+
+                if (op.equalsIgnoreCase(USERLIST)) {
+                    return jacksonMapper.writeValueAsString(adminService.getUserListForBusiness(loggedInConnection));
+                }
+
+                if (op.equalsIgnoreCase(COPYDATABASE)) {
+                     adminService.copyDatabase(loggedInConnection, database, nameList);
+                    return "database copied successvully";
+                }
+                if (op.equalsIgnoreCase(SAVEUSERS)) {
+                    if (json != null && json.length() > 0) {
+                        List<User> usersFromJson = jacksonMapper.readValue(json, new TypeReference<List<User>>() {
+                        });
+                        adminService.setUserListForBusiness(loggedInConnection, usersFromJson);
+                        return "users saved successfully";
+                    }
+                }
+
+                if (op.equalsIgnoreCase(PERMISSIONLIST)) {
+                    // ok needs to work without email . .
+                    String toReturn = jacksonMapper.writeValueAsString(adminService.getPermissionList(loggedInConnection));
+                    logger.info("returned permission list : " + toReturn);
+                    return toReturn;
+                }
+
+                if (op.equalsIgnoreCase(SAVEPERMISSIONS)) {
+                    logger.info("save permissions json " + json);
+                    if (json != null && json.length() > 0) {
+                        try {
+                            List<Permission> permissionFromJson = jacksonMapper.readValue(json, new TypeReference<List<Permission>>() {
+                            });
+                            adminService.setPermissionListForBusiness(loggedInConnection, permissionFromJson);
+                            return "permissions saved successfully";
+                        } catch (Exception e) {
+                            logger.error("problem saving permissions", e);
+                        }
+                    }
+                }
+
+                if (op.equalsIgnoreCase(UPLOADSLIST)) {
+                    return jacksonMapper.writeValueAsString(adminService.getUploadRecordsForDisplayForBusiness(loggedInConnection));
+                }
+                if (op.equalsIgnoreCase(SAVEONLINEREPORTS)) {
+                    logger.info("save online report json " + json);
+                    if (json != null && json.length() > 0) {
+                        try {
+                            List<OnlineReport> onlineReportsFromJson = jacksonMapper.readValue(json, new TypeReference<List<OnlineReport>>() {
+                            });
+                            return adminService.saveOnlineReportList(loggedInConnection, onlineReportsFromJson);
+                        } catch (Exception e) {
+                            logger.error("problem saving online reports", e);
+                        }
+                    }
+                }
+                if (op.equalsIgnoreCase(REPORTLIST)) {
+                    // ok needs to work without email . .
+                    String result = jacksonMapper.writeValueAsString(adminService.getReportList(loggedInConnection));
+                    logger.info("returned report list : " + result);
+                    return jsonFunction + "({\"username\":\"" + loggedInConnection.getUser().getName() + "\",\"reportlist\":" + result + "})";
+                }
+
+                if (op.equalsIgnoreCase(UPLOADFILE)) {
+                    // just a quick way to load for WFC
+                    //InputStream uploadFile = new FileInputStream("/home/azquo/import/" + fileName);
+                    InputStream uploadFile = new FileInputStream(onlineService.getHomeDir() + "/azquo/" + fileName);
+                    importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, true, loggedInConnection.getLanguages());
+                    return "file uploaded successfully";
+                }
+
+
             }
-            if (op.equalsIgnoreCase(REPORTLIST)) {
-                // ok needs to work without email . .
-                String result = jacksonMapper.writeValueAsString(adminService.getReportList(loggedInConnection));
-                logger.info("returned report list : " + result);
-                return jsonFunction + "({\"username\":\"" + loggedInConnection.getUser().getName() + "\",\"reportlist\":" + result + "})";
-             }
-
-            if (op.equalsIgnoreCase(UPLOADFILE)) {
-                // just a quick way to load for WFC
-               //InputStream uploadFile = new FileInputStream("/home/azquo/import/" + fileName);
-               InputStream uploadFile = new FileInputStream(onlineService.getHomeDir() + "/azquo/" + fileName);
-                 return  importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType,"true", true, loggedInConnection.getLanguages());
-            }
-
-
-
+        }catch(Exception e){
+            e.printStackTrace();
+            return e.getMessage();
         }
         return "";
     }
