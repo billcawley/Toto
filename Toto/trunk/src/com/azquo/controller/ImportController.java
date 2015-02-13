@@ -68,7 +68,6 @@ public class ImportController {
         String fileName = "";
         String fileType = "";
         String language = "";
-        String create = "";
         LoggedInConnection loggedInConnection = null;
         try {
             DiskFileItemFactory factory = new DiskFileItemFactory();
@@ -97,8 +96,6 @@ public class ImportController {
                         fileType = item.getString();
                     } else if (item.getFieldName().equals("language")) {
                         language = item.getString();
-                    } else if (item.getFieldName().equals("create")) {
-                        create = item.getString();
                     }
                     // ok this is a bit hacky but we assume the last item is the file and let the code below deal with it
                     item = (FileItem) it.next();
@@ -126,9 +123,6 @@ public class ImportController {
                         }
                         if (parameterName.equals("language")) {
                             language = st2.nextToken();
-                        }
-                        if (parameterName.equals("create")) {
-                            create = st2.nextToken();
                         }
                     }
                 }
@@ -158,13 +152,13 @@ public class ImportController {
                 langs = loggedInConnection.getLanguages();
             }
             loggedInConnection.setLanguages(langs);
-            result = importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, create, macMode, langs);
+             importService.importTheFile(loggedInConnection, fileName, uploadFile, fileType, macMode, langs);
             loggedInConnection.setLanguages(origLanguages);
-            return result;
         } catch (Exception e) {
             e.printStackTrace();
             return "error:" + e.getMessage();
         }
+        return "";
     }
 
 
