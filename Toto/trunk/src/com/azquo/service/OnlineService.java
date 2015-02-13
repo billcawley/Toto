@@ -509,20 +509,16 @@ public class OnlineService {
         return result;
     }
 
-    public String saveData(LoggedInConnection loggedInConnection, String jsonFunction)throws Exception{
+    public void saveData(LoggedInConnection loggedInConnection, String jsonFunction)throws Exception{
 
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
         String result = "";
         if (azquoBook.dataRegionPrefix.equals(AzquoBook.azInput)){
             result = saveAdminData(loggedInConnection, jsonFunction);
         }else {
-            result = azquoBook.saveData(loggedInConnection);
+            azquoBook.saveData(loggedInConnection);
         }
-        if (result.length()==0){
-            result = "data saved successfully";
-        }
-        return jsonFunction + "({\"message\":\"" + result + "\"})";
-    }
+     }
 
     private StringBuffer createDatabaseSelect(LoggedInConnection loggedInConnection){
         StringBuffer sb = new StringBuffer();
@@ -566,7 +562,7 @@ public class OnlineService {
     }
 
 
-    public String followInstructionsAt(LoggedInConnection loggedInConnection, String jsonFunction, int rowNo, int colNo, String database, FileItem item)throws Exception{
+    public void followInstructionsAt(LoggedInConnection loggedInConnection, String jsonFunction, int rowNo, int colNo, String database, FileItem item)throws Exception{
         //this routine is called when a button on the maintenance spreadsheet is pressed
 
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
@@ -622,12 +618,12 @@ public class OnlineService {
         }
         if (op.equalsIgnoreCase("newdatabase")){
             if (newdatabase.length() > 0) {
-                message =  adminService.createDatabase(newdatabase, loggedInConnection) + "";
+                adminService.createDatabase(newdatabase, loggedInConnection);
             }
 
         }
         if (op.equalsIgnoreCase("copydatabase")){
-            message =  adminService.copyDatabase(loggedInConnection, database, nameList);
+            adminService.copyDatabase(loggedInConnection, database, nameList);
         }
         if (op.equals("delete")){
             loginService.switchDatabase(loggedInConnection, null);
@@ -659,18 +655,14 @@ public class OnlineService {
         if (op.equalsIgnoreCase("upload")){
             InputStream uploadFile = item.getInputStream();
             String fileName = item.getName();
-              message = importService.importTheFile(loggedInConnection, fileName, uploadFile, "", "", true, loggedInConnection.getLanguages());
-            if (message.length()==0){
-                message="file imported successfully";
-            }
-        }
+            importService.importTheFile(loggedInConnection, fileName, uploadFile, "", true, loggedInConnection.getLanguages());
+         }
         //if (op.equalsIgnoreCase("inspect")){
         //   message = nameService.getStructureForNameSearch(loggedInConnection,searchTerm, nameId, loggedInConnection.getLanguages());
         //   if (message.startsWith("error:")) return message;
 
         //}
 
-        return message;
     }
 
     public static Date interpretDate(String dateString){
