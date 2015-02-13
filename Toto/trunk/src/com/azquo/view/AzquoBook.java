@@ -930,7 +930,7 @@ public  class AzquoBook {
                 colNo++;
                 for (com.azquo.memorydb.Name name : nameHeadings) {
                     for (com.azquo.memorydb.Name valueName : names) {
-                        if (valueName.findATopParent() == name) {
+                        if (valueName.findAllParents().contains(name)) {
                             azquoCells.get(headingsRow + rowNo, headingsCol + colNo).setValue(valueName.getDefaultDisplayName());
                         }
                     }
@@ -2093,7 +2093,7 @@ public  class AzquoBook {
     }
 
 
-    public String saveData(LoggedInConnection loggedInConnection)throws Exception{
+    public void saveData(LoggedInConnection loggedInConnection)throws Exception{
         Map<String, String> newNames = new HashMap<String, String>();// if there are ranges starting 'az_next' then substitute these names for the latest number
         for (int i = 0;i < wb.getWorksheets().getNames().getCount();i++){
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
@@ -2116,21 +2116,17 @@ public  class AzquoBook {
                 String region = name.getText().substring(dataRegionPrefix.length());
                  String result = "";
                 if ( getRange("az_rowheadings" + region) == null){
-                    result = importRangeFromScreen(loggedInConnection, region, newNames);
+                    importRangeFromScreen(loggedInConnection, region, newNames);
                 }else{
                     StringBuffer sb = rangeToText(name.getRange(), false);
                     result = valueService.saveData(loggedInConnection,region.toLowerCase(), sb.toString());
                 }
-                if (result.startsWith("error:")){
-                    return result;
-                }
-            }
+             }
         }
-        return "";
     }
 
 
-        public String executeSheet(LoggedInConnection loggedInConnection, String spreadsheetName, int reportId) throws Exception{
+        public void executeSheet(LoggedInConnection loggedInConnection, String spreadsheetName, int reportId) throws Exception{
         String error = "";
         try {
               setSheet(0);
@@ -2143,17 +2139,14 @@ public  class AzquoBook {
                 }
             }
             Map<Cell,Boolean> highlighted = new HashMap<Cell, Boolean>();
-            error = prepareSheet(loggedInConnection, reportId, highlighted);
-            if (error.length() == 0) {
-                error = saveData(loggedInConnection);
-            }
+            prepareSheet(loggedInConnection, reportId, highlighted);
+            saveData(loggedInConnection);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
 
 
-        return error;
 
     }
 
@@ -2309,7 +2302,7 @@ public  class AzquoBook {
 
     }
 
-    private String importRangeFromScreen(LoggedInConnection loggedInConnection, String region, Map<String, String>newNames)throws Exception{
+    private void importRangeFromScreen(LoggedInConnection loggedInConnection, String region, Map<String, String>newNames)throws Exception{
         String fileType = azquoSheet.getName();
 
         File temp = File.createTempFile("fromscreen","." + fileType);
@@ -2322,14 +2315,11 @@ public  class AzquoBook {
         csvW.close();
         InputStream uploadFile = new FileInputStream(tempName);
         fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
-        String result =  importService.readPreparedFile(loggedInConnection, uploadFile, fileType, loggedInConnection.getLanguages());
-        if (!result.startsWith("error:")){
-            String saveFileName = onlineService.getHomeDir() + "/databases/" + loggedInConnection.getCurrentDBName()+"/uploads/" + azquoSheet.getName() + " " +  df.format(new Date()) + ".xlsx";
-            File file = new File(saveFileName);
-            file.getParentFile().mkdirs();
-            wb.save(saveFileName, SaveFormat.XLSX);
-        }
-        return result;
+        importService.readPreparedFile(loggedInConnection, uploadFile, fileType, loggedInConnection.getLanguages());
+        String saveFileName = onlineService.getHomeDir() + "/databases/" + loggedInConnection.getCurrentDBName()+"/uploads/" + azquoSheet.getName() + " " +  df.format(new Date()) + ".xlsx";
+        File file = new File(saveFileName);
+        file.getParentFile().mkdirs();
+        wb.save(saveFileName, SaveFormat.XLSX);
 
 
     }
