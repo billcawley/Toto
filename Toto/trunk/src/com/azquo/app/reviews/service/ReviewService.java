@@ -1,5 +1,6 @@
 package com.azquo.app.reviews.service;
 
+import com.azquo.adminentities.User;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import com.azquo.service.*;
@@ -61,6 +62,15 @@ public class ReviewService {
 
     @Autowired
     UserService userService;
+
+    @Autowired
+    ImportService importService;
+
+    @Autowired
+    AdminService adminService;
+
+    @Autowired
+    LoginService loginService;
 
     public static final String SUPPLIER = "SUPPLIER";
     public static final String ALL_RATINGS = "ALL RATINGS";
@@ -824,6 +834,7 @@ public class ReviewService {
                 }else{
                     Provenance provenance = masterDBConnection.getProvenance("in app");
                     nameToEdit = nameService.findOrCreateNameInParent(masterDBConnection,"new "+ itemName, editset,true);
+                    nameToEdit.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME,"New name " + nameToEdit.getId());
                     if (structured){
                         Name topName = null;
                         for (Name name: editset.getChildren()){
@@ -975,6 +986,7 @@ public class ReviewService {
         }
         Name azquoCustomers = nameService.findByName(masterDBConnection,ReviewsCustomerService.REVIEWS_CUSTOMER);
         Collection<Name> topMerchants = nameToEdit.findAllParents();
+        topMerchants.add(nameToEdit);
         topMerchants.retainAll(azquoCustomers.getChildren());
         Name topMerchant = topMerchants.iterator().next();//should be only one!
 
@@ -991,7 +1003,12 @@ public class ReviewService {
                 return;
             }
         }
-        String fullPath =  onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + "/" + fName;
+        String fullPath = "";
+        if (fName.contains("/")){
+            fullPath = onlineService.getHomeDir() + ImportService.dbPath + fName;
+        }else {
+            fullPath = onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + "/" + fName;
+        }
         InputStream input = new BufferedInputStream((new FileInputStream(fullPath)));
         response.setContentType("application/force-download"); // Set up mime type
         OutputStream out = response.getOutputStream();
@@ -1029,12 +1046,14 @@ public class ReviewService {
 
     public void saveData(HttpServletResponse response, String itemName, Map<Integer, String>  values, int itemToEdit)throws  Exception{
         AzquoMemoryDBConnection masterDBConnection = reviewsConnectionMap.getConnection(UserService.MASTERDBNAME);
+
+
         Name nameToEdit = nameService.findById(masterDBConnection,itemToEdit);
 
         int fieldNo = 1;
         Name menuItem = nameService.findByName(masterDBConnection,itemName);
         Name business = getUserBusiness();
-        if (itemToEdit == 0){
+          if (itemToEdit == 0){
             Name choiceSet = nameService.findByName(masterDBConnection, menuItem.getAttribute("choice set"));
             nameToEdit = nameService.findOrCreateNameInParent(masterDBConnection, values.get(1), choiceSet, true);
             business.addChildWillBePersisted(nameToEdit);//everything connected with the business is stored under it
@@ -1056,12 +1075,16 @@ public class ReviewService {
                 if (newVal==null){
                     newVal = "";
                 }
+                String fieldType = fieldName.getAttribute("type");
+                if (fieldType.toLowerCase().startsWith("file")&& (values.get(fieldNo)==null || values.get(fieldNo).length()==0)){//no new file has been uploaded
+                        newVal = oldVal;
+                }
+
                 if (!oldVal.equals(newVal)) {
                     nameToEdit.setAttributeWillBePersisted(field,"");//zap first, to discover if new value is identical to parent value;
                     oldVal = nameToEdit.getAttribute(field);
                     if (oldVal==null || !oldVal.equals(newVal)) {
-                        String fieldType = fieldName.getAttribute("type");
-                        if (fieldType.toLowerCase().startsWith("file")) {
+                        if (fieldType.toLowerCase().startsWith("file") && values.get(fieldNo).length() > 0) {
                             String subDir = "";
                             if (fieldType.length() > 5){
                                 subDir = fieldType.substring(5);
@@ -1070,18 +1093,21 @@ public class ReviewService {
                                 }
                             }
                             String fileName = values.get(fieldNo);
-                            String dbName = business.getAttribute("dbname");
-                            if (dbName == null) {
-                                dbName = "revie_" + business.getDefaultDisplayName().replace(" ", "");
-                            }
+                            String dbName = getBusinessDB(business);
                             String fName = fileName.substring(fileName.lastIndexOf("_") + 1);
                             if (fileName != null) {
                                 URL input = new URL(fileName);
-                                String fullPath = onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + subDir + "/" + fName;
-
-                                File output = new File(fullPath);
-                                FileUtils.copyURLToFile(input, output, 5000, 5000);
-                                nameToEdit.setAttributeWillBePersisted(field, fName);
+                                if (fName.toLowerCase().contains(".xls") || fName.toLowerCase().contains(".csv")){//uploading review data
+                                    String supplierDb = getBusinessDB(business);
+                                    AzquoMemoryDBConnection azquoMemoryDBConnection = reviewsConnectionMap.getConnection(supplierDb);
+                                    InputStream loadFile = input.openStream();
+                                    importService.importTheFile(azquoMemoryDBConnection,fName, loadFile);
+                                }else{
+                                       String fullPath = onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + subDir + "/" + fName;
+                                       File output = new File(fullPath);
+                                       FileUtils.copyURLToFile(input, output, 5000, 5000);
+                                       nameToEdit.setAttributeWillBePersisted(field, fName);
+                                }
 
 
                             }
@@ -1096,6 +1122,22 @@ public class ReviewService {
 
         }
         masterDBConnection.persist();
+        String supplierDb = getBusinessDB(business);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = reviewsConnectionMap.getConnection(supplierDb);
+        List<String> languages = new ArrayList<String>();
+        languages.add(Name.DEFAULT_DISPLAY_NAME);
+        Map<Name, Name> dictionary = new HashMap<Name,Name>();
+        adminService.copyName(azquoMemoryDBConnection,business,null,languages, null, dictionary);
+
+
+    }
+
+    private String getBusinessDB(Name business) throws Exception{
+        String dbName = business.getAttribute("dbname");
+        if (dbName == null) {
+            dbName = "revie_" + business.getDefaultDisplayName().toLowerCase().replace(" ", "");
+        }
+        return dbName;
 
 
     }
