@@ -413,6 +413,10 @@ public final class DataLoadService {
                 namesForValue.add(priceName);
                 part6 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
+                //NEW STORAGE METHOD  - PRICE + QUANTITY ATTRIBUTES OF THE ORDER ITEM
+                //orderItemName.setAttributeWillBePersisted("price", price+"");
+                //orderItemName.setAttributeWillBePersisted("quantity",qty + "");
+                //....................END OF NEW STORAGE METHOD - LINE BELOW TO BE DELETED
                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, price + "", namesForValue);
                 part7 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
