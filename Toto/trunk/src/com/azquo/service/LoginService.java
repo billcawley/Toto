@@ -206,7 +206,6 @@ public class LoginService {
 
                 }
                 valueService.randomAdjust(set, low, high);
-
             }else {
                 int count = 1;
                 for (Name name : set.getChildren()) {

@@ -18,10 +18,9 @@ import java.util.regex.Pattern;
  * User: cawley
  * Date: 17/10/13
  * Time: 14:18
- *
+ * <p/>
  * Ok, outside of the memorydb package this may be the the most fundamental class.
  * Edd trying to understand it properly and trying to get string parsing out of it but not sure how easy that will be
- *
  */
 public final class NameService {
 
@@ -29,9 +28,8 @@ public final class NameService {
     ValueService valueService;//used only in formating children for output
 
     public StringUtils stringUtils = new StringUtils(); // just make it quickly like this for the mo
-//    private static final ObjectMapper jacksonMapper = new ObjectMapper();
+    //    private static final ObjectMapper jacksonMapper = new ObjectMapper();
     private static final Logger logger = Logger.getLogger(NameService.class);
-
 
     public static final String LEVEL = "level";
     public static final String FROM = "from";
@@ -63,10 +61,7 @@ public final class NameService {
         }
     };
 
-
-    // get names from a comma separated list
-    // edd: this is fine in principle, I'm concerned by the interpreter
-    // interpret name list?
+    // get names from a comma separated list. Well expressions describing names.
 
     public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
         final List<Set<Name>> toReturn = new ArrayList<Set<Name>>();
@@ -74,21 +69,24 @@ public final class NameService {
         List<String> nameStrings = new ArrayList<String>();
         List<String> attributeStrings = new ArrayList<String>(); // attribute names is taken. Perhaps need to think about function parameter names
         searchByNames = stringUtils.parseStatement(searchByNames, nameStrings, formulaStrings, attributeStrings);
-        List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection,attributeNames);
+        List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
+        // given that parse statement treats "," as an operator this should be ok.
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            List<Name> nameList = interpretSetTerm( nameName, formulaStrings, referencedNames, attributeStrings);
+            List<Name> nameList = interpretSetTerm(nameName, formulaStrings, referencedNames, attributeStrings);
             toReturn.add(new HashSet<Name>(nameList));
         }
         return toReturn;
     }
 
+    // we replace the names with markers for parsing. Then we need to resolve them later, here is where the exception will be thrown. Should be NameNotFoundException?
+
     public List<Name> getNameListFromStringList(List<String> nameStrings, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames) throws Exception {
         List<Name> referencedNames = new ArrayList<Name>();
-        for (String nameString : nameStrings){
+        for (String nameString : nameStrings) {
             Name toAdd = findByName(azquoMemoryDBConnection, nameString, attributeNames);
-            if (toAdd == null){
+            if (toAdd == null) {
                 throw new Exception("error: cannot resolve reference to a name " + nameString);
             }
             referencedNames.add(toAdd);
@@ -101,19 +99,19 @@ public final class NameService {
         return findContainingName(azquoMemoryDBConnection, name, Name.DEFAULT_DISPLAY_NAME);
     }
 
+    // the parameter is called name as the get attribute function will look up and derive attributes it can't find from parent/combinations
+
     public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, String attribute) {
         ArrayList<Name> namesList = new ArrayList<Name>(azquoMemoryDBConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name));
         Collections.sort(namesList, defaultLanguageCaseInsensitiveNameComparator);
         return namesList;
     }
 
-
     public Name findById(final AzquoMemoryDBConnection azquoMemoryDBConnection, int id) {
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(id);
     }
 
-
-    public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent,final List<String> attributeNames) throws Exception {
+    public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent, final List<String> attributeNames) throws Exception {
         if (attributeValue.charAt(0) == NAMEMARKER) {
             throw new Exception("error: getNameByAttribute should no longer have name marker passed to it!");
         }
@@ -124,7 +122,7 @@ public final class NameService {
         // aha, not null passed here now, jam in a default display name I think
         List<String> attNames = new ArrayList<String>();
         attNames.add(Name.DEFAULT_DISPLAY_NAME);
-         return findByName(azquoMemoryDBConnection, name, attNames);
+        return findByName(azquoMemoryDBConnection, name, attNames);
     }
 
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final List<String> attributeNames) throws Exception {
@@ -163,12 +161,12 @@ public final class NameService {
     }
 
     public void clearChildren(Name name) throws Exception {
-        // DON'T DELETE SET WHILE ITERATING, SO MAKE A COPY FIRST
         if (name.getParents().size() == 0) {
             //can't clear from topparent
             return;
         }
-        for (Name child : new ArrayList<Name>(name.getChildren())) { // loop over a copy
+        // after changes to name it's safe to iterate over name.getChildren
+        for (Name child : name.getChildren()) {
             name.removeFromChildrenWillBePersisted(child);
         }
 
@@ -243,7 +241,7 @@ public final class NameService {
 
     Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<AzquoMemoryDBConnection, Map<String, Long>>();
 
-    private long addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long marker){
+    private long addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long marker) {
         long now = System.currentTimeMillis();
         long toAdd = marker - now;
         long current = 0;
@@ -258,7 +256,7 @@ public final class NameService {
         return now;
     }
 
-    public Map<String, Long> getTimeTrackMapForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection){
+    public Map<String, Long> getTimeTrackMapForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection) {
         return timeTrack.get(azquoMemoryDBConnection);
     }
 
@@ -267,7 +265,7 @@ public final class NameService {
     public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name parent, boolean local, List<String> attributeNames) throws Exception {
 
         long marker = System.currentTimeMillis();
-        if (name.length()==0){
+        if (name.length() == 0) {
             return null;
         }
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import),and insert a structure into it*/
@@ -285,7 +283,7 @@ public final class NameService {
             if (local) {// ok looking only below that parent or just in it's whole set or top parent.
                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, parent);
             } else {
-                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
             }
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
             // find an existing name with no parents. (note that if there are multiple such names, then the return will be null)
@@ -314,7 +312,7 @@ public final class NameService {
             return existing;
         } else {
             logger.debug("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
-            // todo - we should not be getting the provenance from the conneciton
+            // todo - we should not be getting the provenance from the connection
             Provenance provenance = azquoMemoryDBConnection.getProvenance("imported");
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
             // was != which would probably have worked but safer with !.equals
@@ -351,7 +349,6 @@ public final class NameService {
         // level -1 means get me the lowest
         // level -2 means 'ALL' (including the top level
         // notable that with current logic asking for a level with no data returns no data not the nearest it can get. Would be simple to change this
-
         int level = 1;
         if (levelString != null) {
             if (levelString.equalsIgnoreCase(LOWEST)) {
@@ -366,8 +363,6 @@ public final class NameService {
                 }
             }
         }
-
-
         List<Name> namesFound = new ArrayList<Name>();
         addNames(name, namesFound, 0, level);
         return namesFound;
@@ -404,7 +399,7 @@ public final class NameService {
 
     // when parsing expressions we replace names with markers and jam them on a list. The expression is manipulated before being executed. On execution the referenced names need to be read from a list.
 
-    public Name getNameFromListAndMarker(String nameMarker, List<Name> nameList) throws Exception{
+    public Name getNameFromListAndMarker(String nameMarker, List<Name> nameList) throws Exception {
         if (nameMarker.charAt(0) == NAMEMARKER) {
             try {
                 int nameNumber = Integer.parseInt(nameMarker.substring(1).trim());
@@ -502,20 +497,9 @@ public final class NameService {
         return parseQuery(azquoMemoryDBConnection, setFormula, langs);
     }
 
-
-    // todo : rename - this is pretty much the start of expression parsing
+    // todo : sort exceptions?
 
     public final List<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
-
-
-/*        // sorting quotes used to be done inside SYA now it's done outside
-        setFormula = stringUtils.replaceQuotedNamesWithMarkers(setFormula, nameStrings);
-        //save away constants as a separate array, replace temporarily with 'xxxxxxx'
-        setFormula = stringUtils.extractQuotedTerms(setFormula, formulaStrings);*/
-
-        // newer code. Need decent errors (Exceptions?)
-
-
         /*
         * This routine now amended to allow for union (+) and intersection (*) of sets.
         *
@@ -530,8 +514,8 @@ public final class NameService {
         List<String> nameStrings = new ArrayList<String>();
         List<String> attributeStrings = new ArrayList<String>(); // attribute names is taken. Perhaps need to think about function parameter names
 
-        setFormula = stringUtils.parseStatement(setFormula,nameStrings, formulaStrings, attributeStrings);
-        List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection,attributeNames);
+        setFormula = stringUtils.parseStatement(setFormula, nameStrings, formulaStrings, attributeStrings);
+        List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
         setFormula = stringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
@@ -573,7 +557,6 @@ public final class NameService {
                 nameStack.get(stackCount - 1).addAll(nameStack.get(stackCount));
                 nameStack.remove(stackCount);
             }
-
             pos = nextTerm;
         }
 
@@ -586,7 +569,6 @@ public final class NameService {
         } else {
             toReturn.addAll(nameStack.get(0));
         }
-
         return toReturn;
     }
 
@@ -603,11 +585,9 @@ public final class NameService {
         return null;
     }
 
-    // todo, address concerns about
-
     public boolean isAllowed(Name name, List<Set<Name>> names) {
 
-        if (name==null || names == null) {
+        if (name == null || names == null) {
             return true;
         }
          /*
@@ -617,11 +597,11 @@ public final class NameService {
           * */
         for (Set<Name> listNames : names) {
             if (!listNames.isEmpty()) {
-                Name listName = listNames.iterator().next();//all names in each list have the same topparent, so don't try further (just get the first)
+                //Name listName = listNames.iterator().next();//all names in each list have the same topparent, so don't try further (just get the first)
                 if (inParentSet(name, listNames) != null) {
                     return true;
                 }
-             }
+            }
         }
         String confidential = name.getAttribute("CONFIDENTIAL");
         return confidential == null || !confidential.equalsIgnoreCase("true");
@@ -649,16 +629,16 @@ public final class NameService {
                 // note, given the new parser these clauses will either be literals or begin .
                 // there may be code improvements that can be made knowing this
 
-                if (clauseLhs.startsWith(".")){
+                if (clauseLhs.startsWith(".")) {
                     clauseLhs = clauseLhs.substring(1);
-                    if (clauseLhs.charAt(0) == ATTRIBUTEMARKER){// we need to replace it
+                    if (clauseLhs.charAt(0) == ATTRIBUTEMARKER) {// we need to replace it
                         attributeNames.get(Integer.parseInt(clauseLhs.substring(1, 3)));
                     }
                 }
 
-                if (clauseRhs.startsWith(".")){
+                if (clauseRhs.startsWith(".")) {
                     clauseRhs = clauseRhs.substring(1);
-                    if (clauseRhs.charAt(0) == ATTRIBUTEMARKER){// we need to replace it
+                    if (clauseRhs.charAt(0) == ATTRIBUTEMARKER) {// we need to replace it
                         attributeNames.get(Integer.parseInt(clauseRhs.substring(1, 3)));
                     }
                 }
@@ -711,7 +691,6 @@ public final class NameService {
     }
 
     private List<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
-
         //System.out.println("interpret set term . . ." + setTerm);
         List<Name> namesFound = new ArrayList<Name>();
 
@@ -776,7 +755,6 @@ public final class NameService {
             }
             namesFound.clear();
             namesFound.addAll(parents);
-
         }
         if (whereString != null) {
             filter(namesFound, whereString, strings, attributeStrings);
@@ -792,7 +770,6 @@ public final class NameService {
 
     public String processJsonRequest(AzquoMemoryDBConnection azquoMemoryDBConnection, NameJsonRequest nameJsonRequest, List<String> attributeNames) throws Exception {
         String toReturn = "";
-
         // type; elements level 1; from a to b
         if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)) {
             return getStructureForNameSearch(azquoMemoryDBConnection, nameJsonRequest.name, -1, attributeNames);//-1 indicates to show the children
@@ -824,7 +801,6 @@ public final class NameService {
                 }
             }
         }
-
 
         if (nameJsonRequest.operation.equalsIgnoreCase(EDIT) || nameJsonRequest.operation.equalsIgnoreCase(NEW)) {
             if (nameJsonRequest.id == 0 && nameJsonRequest.operation.equalsIgnoreCase(EDIT)) {
@@ -915,7 +891,6 @@ public final class NameService {
                         }
                     }
                 }
-                // re set attributes, use single functions so checks happen
             }
         }
         azquoMemoryDBConnection.persist();
@@ -924,7 +899,6 @@ public final class NameService {
 
 
     // right now ONLY called for the column heading in uploads, set peers on existing names
-
 
     // should use jackson??
 
@@ -984,15 +958,15 @@ public final class NameService {
             }
             StringBuilder sb = new StringBuilder();
             sb.append("{\"names\":[");
-                int count = 0;
-                for (Name outputName : names) {
-                    String nameJson = getChildStructureFormattedForOutput(outputName, withChildren);
-                    if (nameJson.length() > 0) {
-                        if (count > 0) sb.append(",");
-                        sb.append(nameJson);
-                        count++;
-                    }
+            int count = 0;
+            for (Name outputName : names) {
+                String nameJson = getChildStructureFormattedForOutput(outputName, withChildren);
+                if (nameJson.length() > 0) {
+                    if (count > 0) sb.append(",");
+                    sb.append(nameJson);
+                    count++;
                 }
+            }
             sb.append("]}");
 /*            if (azquoMemoryDBconnection.getAzquoBook()!=null){
                 azquoMemoryDBconnection.getAzquoBook().nameChosenJson = sb.toString();
@@ -1003,9 +977,7 @@ public final class NameService {
 
     // again should use jackson?
 
-    // TODO json??
-
-    private String getChildStructureFormattedForOutput(final Name name, boolean showChildren){
+    private String getChildStructureFormattedForOutput(final Name name, boolean showChildren) {
         int totalValues = getTotalValues(name);
         //if (totalValues > 0) {
         StringBuilder sb = new StringBuilder();
@@ -1051,7 +1023,7 @@ public final class NameService {
         }
         final Collection<Name> children = name.getChildren();
         sb.append(", \"elements\":\"").append(children.size()).append("\"");
-        if (showChildren){
+        if (showChildren) {
             if (!children.isEmpty()) {
                 sb.append(", \"children\":[");
                 count = 0;
@@ -1067,18 +1039,15 @@ public final class NameService {
             }
         }
         sb.append("}");
-
-
         return sb.toString();
     }
 
-    public String jsonNameDetails(Name name){
+    public String jsonNameDetails(Name name) {
         return getChildStructureFormattedForOutput(name, false);
 
     }
 
-
-    public String getJsonChildren(LoggedInConnection loggedInConnection, String jsTreeId, Name name, String parents,  Map<String, LoggedInConnection.JsTreeNode> lookup)throws Exception{
+    public String getJsonChildren(LoggedInConnection loggedInConnection, String jsTreeId, Name name, String parents, Map<String, LoggedInConnection.JsTreeNode> lookup) throws Exception {
         StringBuilder result = new StringBuilder();
         result.append("[{\"id\":" + jsTreeId + ",\"state\":{\"opened\":true},\"text\":\"");
         List<Name> children = new ArrayList<Name>();
@@ -1110,14 +1079,14 @@ public final class NameService {
         }
 
         result.append("\"");
-        int maxdebug=500;
+        int maxdebug = 500;
         if (children.size() > 0) {
             result.append(",\"children\":[");
             int lastId = loggedInConnection.getLastJstreeId();
             int count = 0;
             for (Name child : children) {
-                if (maxdebug--==0) break;
-                  if (count++ > 0) {
+                if (maxdebug-- == 0) break;
+                if (count++ > 0) {
                     result.append(",");
                 }
                 loggedInConnection.setLastJstreeId(++lastId);
@@ -1127,7 +1096,7 @@ public final class NameService {
                 LoggedInConnection.JsTreeNode newNode = new LoggedInConnection.JsTreeNode(nameOrValue, name);
                 lookup.put(lastId + "", newNode);
                 if (count > 100) {
-                    result.append("{\"id\":" + lastId + ",\"text\":\"" + (children.size()-100) + " more....\"}");
+                    result.append("{\"id\":" + lastId + ",\"text\":\"" + (children.size() - 100) + " more....\"}");
                     break;
                 }
                 result.append("{\"id\":" + lastId + ",\"text\":\"" + child.getDefaultDisplayName().replace("\"", "\\\"") + "\"");
@@ -1138,20 +1107,20 @@ public final class NameService {
 
             }
             result.append("]");
-        }else{
+        } else {
             result.append(valueService.getJsonDataforOneName(loggedInConnection, name, lookup));
-         }
+        }
         result.append(",\"type\":\"");
-        if (children.size() > 0){
+        if (children.size() > 0) {
             result.append("parent");
 
-        }else if (name.getValues().size() > 0){
+        } else if (name != null && name.getValues().size() > 0) {
             if (name.getValues().size() > 1) {
                 result.append("values");
-            }else{
+            } else {
                 result.append("value");
             }
-        }else{
+        } else {
             result.append("child");
         }
         result.append("\"}]");
@@ -1160,7 +1129,7 @@ public final class NameService {
 
     // return the intersection of the sets
 
-    public Set<Name> setIntersection(Set<Name> sets, boolean payAttentionToAdditive){
+    public Set<Name> setIntersection(Set<Name> sets, boolean payAttentionToAdditive) {
         // ok going to make this very simple for the moment
         // find the smallest of the sets
         int smallestNameSetSize = -1;
@@ -1172,7 +1141,7 @@ public final class NameService {
                 smallestSet = set;
             }
         }
-        if (smallestSet == null){
+        if (smallestSet == null) {
             return new HashSet<Name>();
         }
         // we want the smallest set as a retainall against it should be faster then a big set. I think.
@@ -1180,17 +1149,17 @@ public final class NameService {
         toReturn.add(smallestSet);
 
         for (Name set : sets) {
-            if (set != smallestSet){ // then check the intersection (no point checking on the smallest set!)
+            if (set != smallestSet) { // then check the intersection (no point checking on the smallest set!)
                 boolean retainSetItself = false;
-                if (toReturn.contains(set)){ //then add it abck in after the retain all just featuring the children. I don't want to have to copy the find all chidren results
+                if (toReturn.contains(set)) { //then add it abck in after the retain all just featuring the children. I don't want to have to copy the find all chidren results
                     retainSetItself = true;
                 }
                 toReturn.retainAll(set.findAllChildren(payAttentionToAdditive)); // basic intersection
-                if (retainSetItself){
+                if (retainSetItself) {
                     toReturn.add(set);
                 }
             }
-       }
-       return toReturn;
+        }
+        return toReturn;
     }
 }

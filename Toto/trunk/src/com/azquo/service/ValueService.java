@@ -31,6 +31,7 @@ public final class ValueService {
 
     // set the names in delete info and unlink - best I can come up with at the moment
     // unlike Name I don't think we're actually going to delete it - though whether the current name behavior is correct is another thing
+    // todo : make delete mean delete, rollback without names rollback is pointless
     public void deleteValue(final Value value) throws Exception {
         String names = "";
         for (Name n : value.getNames()) {
@@ -45,10 +46,10 @@ public final class ValueService {
 
     // one line function, much point??
 
-    private class MBoolean {
+    private class MutableBoolean {
         boolean isTrue;
 
-        MBoolean() {
+        MutableBoolean() {
             isTrue = false;
         }
     }
@@ -84,19 +85,8 @@ public final class ValueService {
 
         final Set<Name> validNames = new HashSet<Name>();
 
-        //removed check - caveat saver! WFC.
+        //removed valid name set check - caveat saver! WFC.
         validNames.addAll(names);
-
-        //final Map<String, String> nameCheckResult = nameService.isAValidNameSet(azquoMemoryDBConnection, names, validNames);
-        //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames1", marker - System.currentTimeMillis());
-        //marker = System.currentTimeMillis();
-        // final String error = nameCheckResult.get(NameService.ERROR);
-        //final String warning = nameCheckResult.get(NameService.WARNING);
-        //if (error != null) {
-        //     return error;
-        // } else if (warning != null) {
-        //     toReturn += warning;
-        // }
 
         final List<Value> existingValues = findForNames(names);
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
@@ -206,10 +196,6 @@ public final class ValueService {
     long part3NanoCallTime1 = 0;
     int numberOfTimesCalled1 = 0;
 
-    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
-        return findForNamesIncludeChildren(names, payAttentionToAdditive, null);
-    }
-
     // setsize cache is a temporary cache of set sizes. Passed through as typically it would only be used for the scope of an operation
     // it is requires as we enumerate though the set a lot. A question : should a set record something like "numvaluesincludingchildren"
     // a possible TODO
@@ -292,6 +278,7 @@ public final class ValueService {
         for (Name name : smallestNames) {
             valueSet.addAll(findValuesForNameIncludeAllChildren(name, payAttentionToAdditive));
         }
+        // this seems a fairly crude implementation, list all values for the name sets then check that that values list is in all the name sets
         part2NanoCallTime1 += (System.nanoTime() - point);
         point = System.nanoTime();
         for (Value value : valueSet) {
@@ -339,11 +326,11 @@ public final class ValueService {
     long part2NanoCallTime = 0;
     int numberOfTimesCalled = 0;
 
-    /* RPCALC will have been set by the shunting yard algorithm earlier
-    names referenced as id to stop operators in names
-    RPcalc will be a list of values and operations e.g. 5*(2+3) converted to 5.0 2.1 + 3.0 * !76 +
-    There may be name references in there, by !nameid
+    /* only relevant where there are peers, not completely sure of it
+    It wants to make sure all names are in the same top set as peers
+    but only up to the number of peers? Well leave for the mo.
     */
+
 
     private Set<Name> trimNames(Name name, Set<Name> nameSet) {
         //this is for weeding out peers when an element of the calc has less peers
@@ -356,27 +343,25 @@ public final class ValueService {
                     if (--required == 0) {
                         return applicableNames;
                     }
-
                 }
             }
         }
         return applicableNames;
-
     }
 
-    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, List<String> attributeNames) throws Exception {
+    // the function that populates each cell.
+
+    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, List<String> attributeNames) throws Exception {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
         String calcString = null;
         List<Name> formulaNames = new ArrayList<Name>();
         boolean hasCalc = false;
-        // add all names to calcnames except the the one with RPCALC
-        // and here's a thing : if more than one name has RPcalc then only the first will be used
-        // changed from using rpcalc to making it from calculation. Might need to improve the code later.
-        // todo : I think this logic could be cleaned up a little
+        // add all names to calcnames except the the one with CALCULATION
+        // and here's a thing : if more than one name has CALCULATION then only the first will be used
+        // todo : I think this logic could be cleaned up a little - the way hascalc is set seems wrong but initial attempts to simplify were also wrong
         for (Name name : names) {
             if (!hasCalc) {// then try and find one
-
                 String calc = name.getAttribute(Name.CALCULATION, false);
                 if (calc != null) {
                     // then get the result of it, this used to be stored in RPCALC
@@ -396,7 +381,7 @@ public final class ValueService {
                 }
                 if (calcString != null) {
                     hasCalc = true;
-                } else { // no valgetattributeid calc
+                } else {
                     calcnames.add(name);
                 }
             } else {
@@ -413,7 +398,7 @@ public final class ValueService {
                     break;
                 }
             }
-            if (!locked.isTrue) { // now the more expensive isallowed check
+            if (!locked.isTrue) { // now the more expensive isallowed check - this caused a slowdown on some tests
                 for (Name oneName : names) {
                     if (!nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions())) {
                         locked.isTrue = true;
@@ -423,6 +408,7 @@ public final class ValueService {
             }
             return findSumForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, totalSetSize);
         } else {
+            // this is where the work done by the shunting yard algorithm is used
             // ok I think I know why an array was used, to easily reference the entry before
             double[] values = new double[20];//should be enough!!
             int valNo = 0;
@@ -469,41 +455,24 @@ public final class ValueService {
         }
     }
 
-    public String findValueForHeadings(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<DataRegionHeading> headings, final MBoolean locked, List<Name> namesForMap, List<String> attributesForMap) throws Exception {
-        // like above but uses an attribute (attributes?) and doens't care about calc for the moment, hence should be much more simple
-        // can return a string of course
-        // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function
+    // Added by Edd, like above but uses an attribute (attributes?) and doens't care about calc for the moment, hence should be much more simple
+    // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function
 
+    public String findValueForHeadings(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<DataRegionHeading> headings, final MutableBoolean locked, List<Name> namesForMap, List<String> attributesForMap) throws Exception {
         Set<Name> names = namesFromDataRegionHeadings(headings);
 
-        // same locking check as with values, factor off?
         locked.isTrue = false;
 
         if (names.size() != 1){
             locked.isTrue = true;
         } else {
-/*            for (Name oneName : names) { // inexpensive check first
-                if (oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) {
-                    locked.isTrue = true;
-                    break;
-                }
-            }
-            if (!locked.isTrue) { // now the more expensive isallowed check
-                for (Name oneName : names) {
-                    if (!nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions())) {
-                        locked.isTrue = true;
-                        break;
-                    }
-                }
-            }*/
+            // perhaps should have a bit more checking e.g. against isallowed, like above
             if (!nameService.isAllowed(names.iterator().next(), azquoMemoryDBConnection.getWritePermissions())) {
                 locked.isTrue = true;
             }
         }
 
-        //Set<Name> setIntersection = nameService.setIntersection(names, payAttentionToAdditive);
         Set<String> attributes = attributesFromDataRegionHeadings(headings);
-        // ok so run through the names, I guess tally a number if I can?
 
         String stringResult = null;
         double numericResult = 0;
@@ -517,6 +486,7 @@ public final class ValueService {
                         locked.isTrue = true;
                     } else {
                         // this feels a little hacky but I need to record this for saving purposes later
+                        // that is to say this is note required directly for the return value here
                         if (!namesForMap.contains(n)){
                             namesForMap.add(n);
                         }
@@ -524,6 +494,8 @@ public final class ValueService {
                             attributesForMap.add(attribute);
                         }
                     }
+                    // basic sum across the names/attributes (not going into children)
+                    // comma separated for non numeric. If mixed it will default to the string
                     if (NumberUtils.isNumber(attValue)){
                         numericResult += Double.parseDouble(attValue);
                     } else {
@@ -537,8 +509,9 @@ public final class ValueService {
             }
         }
         return stringResult != null ? stringResult : numericResult + "";
-
     }
+
+    // on a standard non-calc cell this will give the result
 
     public double findSumForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize) {
         //System.out.println("findSumForNamesIncludeChildren");
@@ -611,18 +584,12 @@ public final class ValueService {
         return sb.toString();
     }
 
-/*    public List<Name> interpretItem(String item) {
-        //todo  - item should be a string, but potentially include ;children; level x; from a; to b; from n; to n;
-        return null;
-    }*/
-
-
     /*
 
-    Ok, select a region of names in excel and paste and this function will build a multidimentional array of name objects from that paste
+    Ok, select a region of names in excel and paste and this function will build a multidimentional array of heading objects from that paste
 
-    more specifically : the outermost list is of rows, the second list is each cell in that row and the final list is a list not a name
-    because there could be multiple names in a cell if the cell has something like container;children. Interpretnames is what does this
+    more specifically : the outermost list is of rows, the second list is each cell in that row and the final list is a list not a heading
+    because there could be multiple names/attributes in a cell if the cell has something like container;children. Interpretnames is what does this
 
 hence
 
@@ -767,7 +734,7 @@ seaports;children   container;children
 
     The dynamic namecalls e.g. Seaports; children; have their lists populated but they have not been expanded out into the 2d set itself
 
-    So in the case of row headings for the export example it's passed a list or 1 (the outermost list of row headings derined)
+    So in the case of row headings for the export example it's passed a list or 1 (the outermost list of row headings defined)
 
     and this 1 has a list of 2, the two cells defined in row headings as seaports; children     container;children
 
@@ -793,7 +760,9 @@ seaports;children   container;children
         }
         final int lastHeadingDefinitionCellIndex = headingLists.get(0).size() - 1; // the headingLists will be square, that is to say all row lists the same length as prepared by createNameListsFromExcelRegion
 
-
+        // ok here's the logic, what's passed is a 2d array of lists, as created from createNameListsFromExcelRegion
+        // we would just run through the rows running a 2d permutation on each row BUT there's a rule that if there's
+        // a row below blank except the right most one then add that right most one to the one above
         for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) {
             List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
             // ok we have one of the heading definition rows
@@ -823,17 +792,7 @@ seaports;children   container;children
         return false; // it was ALL null, error time?
     }
 
-
-    /*
-    createNameListsFromExcelRegion is fairly simple, given seaports;children    container;children returns a list of names of seaports and a list of container criteria held in a list
-     which is in turn held in a larger list as seaports;children    container;children is one row which expands out to many, there could be further rows underneath (I mean rows in excel to define headings)
-     notable that this means that headings for rows or columns are sent in the same format, a region from excel
-
-     Rowheadingslists outside is actual rows, one in is columns,final one is for the cell
-                  */
-
-
-    private boolean blankRows(LoggedInConnection loggedInConnection, String region, int rowInt, int count) {
+    private boolean theseRowsInThisRegionAreBlank(LoggedInConnection loggedInConnection, String region, int rowInt, int count) {
 
         final List<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>> dataValueMap = loggedInConnection.getDataValueMap(region);
 
@@ -853,26 +812,21 @@ seaports;children   container;children
         return true;
     }
 
-    // todo : I think this next function could be improved
-
-
     public List<Integer> sortValues(int restrictCount, Map<Integer, Double> sortTotals) {
 
         List<Integer> sortedValues = new ArrayList<Integer>();
         if (restrictCount != 0) {
-            List list = new LinkedList(sortTotals.entrySet());
+            List<Map.Entry<Integer, Double>> list = new ArrayList<Map.Entry<Integer, Double>>(sortTotals.entrySet());
 
             // sort list based on comparator
-            Collections.sort(list, new Comparator() {
-                public int compare(Object o1, Object o2) {
-                    return ((Comparable) ((Map.Entry) (o1)).getValue())
-                            .compareTo(((Map.Entry) (o2)).getValue());
+            Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {
+                public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
+                    return o1.getValue().compareTo(o2.getValue());
                 }
             });
 
-            for (Iterator it = list.iterator(); it.hasNext(); ) {
-                Map.Entry entry = (Map.Entry) it.next();
-                sortedValues.add((Integer) entry.getKey());
+            for (Map.Entry<Integer, Double> aList : list) {
+                sortedValues.add(aList.getKey());
             }
 
         } else {
@@ -881,35 +835,28 @@ seaports;children   container;children
             }
         }
         return sortedValues;
-
     }
 
     public String setupRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         final List<List<List<DataRegionHeading>>> rowHeadingLists = new ArrayList<List<List<DataRegionHeading>>>();
-
         String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, headingsSent, loggedInConnection.getLanguages());
-        //if (error.length() > 0) {
-        //     return error;
-        // }
         loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
         return error;
-
-
     }
 
+    // THis returns the headings as they're meant to be seen in Excel I think
+    // not this is called AFTER the data has been populated, hence how it can determine if rows are blank or not
+
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent, final int filterCount) throws Exception {
-        // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
-        // "here is what that 2d heading definition excel region looks like in names"
         String language = stringUtils.getInstruction(headingsSent, "language");
-
-
+        // do we want to try removing blank rows?
         if (filterCount > 0) {
             //send back only those headings that have data - considered in batches of length filtercount.
             List<List<DataRegionHeading>> rowHeadingsWithData = new ArrayList<List<DataRegionHeading>>();
             List<List<DataRegionHeading>> allRowHeadings = loggedInConnection.getRowHeadings(region);
             int rowInt = 0;
             while (rowInt < allRowHeadings.size()) {
-                if (!blankRows(loggedInConnection, region, rowInt, filterCount)) {
+                if (!theseRowsInThisRegionAreBlank(loggedInConnection, region, rowInt, filterCount)) {
                     for (int rowCount = 0; rowCount < filterCount; rowCount++) {
                         rowHeadingsWithData.add(allRowHeadings.get(rowInt + rowCount));
                     }
@@ -918,7 +865,7 @@ seaports;children   container;children
             }
             //note that the sort order has already been set.... there cannot be both a restrict count and a filter count
             return outputHeadings(rowHeadingsWithData, language);
-        } else if (loggedInConnection.getRestrictRowCount(region) != null && loggedInConnection.getRestrictRowCount(region) != 0) {
+        } else if (loggedInConnection.getRestrictRowCount(region) != null && loggedInConnection.getRestrictRowCount(region) != 0) {//if not blanking then restrict by other criteria
             int restrictRowCount = loggedInConnection.getRestrictRowCount(region);
             List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
             List<List<DataRegionHeading>> rowHeadingsWithData = new ArrayList<List<DataRegionHeading>>();
@@ -943,33 +890,29 @@ seaports;children   container;children
     }
 
     /* ok so transposing happens here
-    this is because the expand headings function is orientated for for headings and the column heading definitions are unsurprisingly set up for columns
+    this is because the expand headings function is orientated for row headings and the column heading definitions are unsurprisingly set up for columns
      what is notable here is that the headings are then stored this way in column headings, we need to say "give me the headings for column x"
 
      NOTE : this means the column heading are not stored according to the orientation used in the above function
 
       hence, to output them we have to transpose them again!
 
+      should they be being transposed back again here after expanding? Or make expanding deal with this? Something to investigate
+
      */
 
 
     public String setupColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
         List<List<List<DataRegionHeading>>> columnHeadingLists = new ArrayList<List<List<DataRegionHeading>>>();
-        // rows, columns, cells (which can have many names (e.g. xxx;elements), I mean rows and columns and cells of a region saying what the headings should be, not the headings themselves!
-        // "here is what that 2d heading definition excel region looks like in names"
         String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, headingsSent, loggedInConnection.getLanguages());
-        if (error.length() > 0) {
-            return error;
-        }
         loggedInConnection.setColumnHeadings(region, (expandHeadings(transpose2DList(columnHeadingLists))));
-        String language = stringUtils.getInstruction(headingsSent, "language");
-        return "";
+        return error;
     }
 
+    // ok this seems rather similar ot the get RowHeadingsLogic - probabtl some factoring and perhaps better dealing with
+    // transpose2DList. Todo!
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String language) throws Exception {
-
-
         if (loggedInConnection.getRestrictColCount(region) != null && loggedInConnection.getRestrictColCount(region) != 0) {
             int restrictColCount = loggedInConnection.getRestrictColCount(region);
             List<Integer> sortedCols = loggedInConnection.getColOrder(region);
@@ -989,9 +932,7 @@ seaports;children   container;children
             }
             return outputHeadings(transpose2DList(ColHeadingsWithData), language);
         }
-
         return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)), language);
-
     }
 
     /* ok so transposing happens here
@@ -1031,6 +972,8 @@ seaports;children   container;children
         return flipped;
     }
 
+    // edd not completely clear about these three functions, todo
+
     private Name sumName(Name name, List<Set<Name>> searchNames) {
         for (Set<Name> searchName : searchNames) {
             Name maybeParent = nameService.inParentSet(name, searchName);
@@ -1039,10 +982,7 @@ seaports;children   container;children
             }
         }
         return name;
-
-
     }
-
 
     public Map<Set<Name>, Set<Value>> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
         if (searchNames == null) return null;
@@ -1101,6 +1041,8 @@ seaports;children   container;children
 
     }
 
+    // I guess headings when showing a jumble of values?
+
     public LinkedHashSet<Name> getHeadings(Map<Set<Name>, Set<Value>> showValues) {
         LinkedHashSet<Name> headings = new LinkedHashSet<Name>();
         // this may not be optimal, can sort later . . .
@@ -1119,6 +1061,8 @@ seaports;children   container;children
 
     }
 
+    // Uses above, I think get values based on name search then format for excel
+    // are these functions really still necessary?
 
     public String getExcelDataForNamesSearch(final List<Set<Name>> searchNames) throws Exception {
         final StringBuilder sb = new StringBuilder();
@@ -1156,6 +1100,8 @@ seaports;children   container;children
         }
         return sb.toString();
     }
+
+    // vanilla jackson might not be good enough but this is too much manual json writing I think
 
     public String getJsonDataforOneName(LoggedInConnection loggedInConnection, final Name name, Map<String, LoggedInConnection.JsTreeNode> lookup) throws Exception {
         final StringBuilder sb = new StringBuilder();
@@ -1200,19 +1146,6 @@ seaports;children   container;children
         return sb.toString();
     }
 
-    private boolean isInPeers(Name name, Map<Name, Boolean> peers) {
-        for (Name peer : peers.keySet()) {
-            if (peer == name) return true;
-
-        }
-        for (Name parent : name.getParents()) {
-            if (isInPeers(parent, peers)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private void formatLockMap(LoggedInConnection loggedInConnection, String region, List<List<Boolean>> lockMap) {
         StringBuffer sb = new StringBuffer();
         boolean firstRow = true;
@@ -1236,6 +1169,8 @@ seaports;children   container;children
         }
         loggedInConnection.setLockMap(region, sb.toString());
     }
+
+    // having built shownValueArray in getExcelDataForColumnsRowsAndContext need to format it. Whether such a function should go back in there is a question
 
     public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, int filterCount, int restrictRowCount, int restrictColCount) {
 
@@ -1274,7 +1209,7 @@ seaports;children   container;children
             rowInt++;
             firstRow = false;
             if (++blockRowCount == filterCount) {
-                if (blankRows(loggedInConnection, region, rowInt - filterCount, filterCount)) {
+                if (theseRowsInThisRegionAreBlank(loggedInConnection, region, rowInt - filterCount, filterCount)) {
                     sb.delete(outputMarker, sb.length());
                 }
                 blockRowCount = 0;
@@ -1314,6 +1249,8 @@ seaports;children   container;children
         return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows, maxCols);
     }
 
+    // for looking up a heading given a string. Seems used for looking up teh right col or row to sort on
+
     private int findPosition(List<List<DataRegionHeading>> headings, String toFind) {
         boolean desc = false;
         if (toFind == null || toFind.length() == 0) {
@@ -1340,13 +1277,12 @@ seaports;children   container;children
                     return count;
                 }
             }
-
             count++;
         }
-
-
         return 0;
     }
+
+    // the guts of actually delivering the data for a region
 
     public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictRowCount, int restrictColCount) throws Exception {
         loggedInConnection.setContext(region, contextNames); // needed for provenance
@@ -1379,8 +1315,6 @@ seaports;children   container;children
         if (sortRow > 0 && restrictColCount == 0) {
             restrictColCount = loggedInConnection.getColumnHeadings(region).size();//this is a signal to sort the cols
         }
-
-
         final List<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>> dataValuesMap
                 = new ArrayList<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
         loggedInConnection.setDataValueMap(region, dataValuesMap);
@@ -1399,7 +1333,6 @@ seaports;children   container;children
         System.out.println("data region size = " + totalRows + " * " + totalCols);
         if (totalRows * totalCols > 500000) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells 500,000");
-
         }
         for (List<DataRegionHeading> rowHeadings : loggedInConnection.getRowHeadings(region)) { // make it like a document
             if (rowNo % 1000 == 0) System.out.print(".");
@@ -1422,7 +1355,7 @@ seaports;children   container;children
                 headingsForThisCell.addAll(columnHeadings);
                 headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames));
                 // edd putting in peer check stuff here, should I not???
-                MBoolean locked = new MBoolean(); // we can pass a mutable boolean in and have the function set it
+                MutableBoolean locked = new MutableBoolean(); // we can pass a mutable boolean in and have the function set it
                 // why bother?   Maybe leave it as 'on demand' when a data region doesn't work
                 // Map<String, String> result = nameService.isAValidNameSet(azquoMemoryDBConnection, namesForThisCell, new HashSet<Name>());
                 // much simpler check - simply that the list is complete.
@@ -1435,11 +1368,9 @@ seaports;children   container;children
                     lockedCells.add(true);
                     thisRowValues.add(null);
                 } else {
-
                     // ok new logic here, we need to know if we're going to use attributes or values
                     boolean headingsHaveAttributes = headingsHaveAttributes(headingsForThisCell);
                     thisRowHeadings.add(headingsForThisCell);
-
                     double cellValue = 0;
                     LoggedInConnection.ListOfValuesOrNamesAndAttributeName valuesOrNamesAndAttributeName;
                     if (!headingsHaveAttributes) { // we go the value route (the standard/old one), need the headings as names,
@@ -1471,11 +1402,7 @@ seaports;children   container;children
                         }
                         shownValues.add(attributeResult);
                     }
-
-
-
                     thisRowValues.add(valuesOrNamesAndAttributeName);
-
                     // ok these bits are for sorting. Could put a check on whether a number was actually the result but not so bothered
                     // code was a bit higher, have moved it below the chunk that detects if we're using values or not, see no harm in this.
                     if (restrictRowCount > 0 && (sortCol == 0 || sortCol == colNo + 1)) {
@@ -1510,7 +1437,6 @@ seaports;children   container;children
         loggedInConnection.setRestrictColCount(region, restrictColCount);
         final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, filterCount, restrictRowCount, restrictColCount);
         formatLockMap(loggedInConnection, region, lockArray);
-
         printSumStats();
         printFindForNamesIncludeChildrenStats();
         loggedInConnection.setDataHeadingsMap(region, dataHeadingsMap);
@@ -1518,10 +1444,7 @@ seaports;children   container;children
         return sb.toString();
     }
 
-
-    private String jsonElement(String elementName, String elementValue) {
-        return "\"" + elementName + "\":\"" + elementValue.replace("\"", "\\") + "\"";
-    }
+    // for anonymiseing data
 
     public void randomAdjust(Name name, double low, double high) {
         for (Value value : name.getValues()) {
@@ -1536,6 +1459,8 @@ seaports;children   container;children
         }
 
     }
+
+    // used when comparing values. So ignore the currency symbol if the numbers are the same
 
     private String stripCurrency(String val) {
         //TODO we need to be able to detect other currencies
@@ -1567,7 +1492,7 @@ seaports;children   container;children
     }
 
     // todo : does this need to deal with name/attribute combos?
-
+    // for highlighting cells based on provenance time, seems quite the effort
 
     public int getAge(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt) {
         Calendar cal = Calendar.getInstance();
@@ -1653,6 +1578,8 @@ seaports;children   container;children
         }
     }
 
+    // find the most used name by a set of values, used by printBatch to derive headings
+
     private Name getMostUsedName(Set<Value> values, Name topParent) {
         Map<Name, Integer> nameCount = new HashMap<Name, Integer>();
         for (Value value : values) {
@@ -1694,14 +1621,8 @@ seaports;children   container;children
 
     }
 
-
-    private Set<Name> listDiff(Set<Name> list1, Set<Name> list2) {
-        Set<Name> diff = new HashSet<Name>();
-        diff.addAll(list1);
-        diff.removeAll(list2);
-        return diff;
-    }
-
+    // pring a bunch of values in json. It seems to find the mane which represents the most values and displays
+    // them under them then the name that best represents the rest etc etc until all values have been displayed
 
     private StringBuffer printBatch(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values) {
         StringBuffer sb = new StringBuffer();
@@ -1776,6 +1697,7 @@ seaports;children   container;children
 
     }
 
+    // again, should we be using jackson??
 
     private String jsonValue(String val1, String val2, boolean comma) {
         String result = "\"" + val1 + "\":\"" + val2 + "\"";
@@ -1786,7 +1708,6 @@ seaports;children   container;children
         return "," + result;
     }
 
-
     private StringBuffer printExtract(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values, Provenance p) {
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
         StringBuffer sb = new StringBuffer();
@@ -1796,7 +1717,6 @@ seaports;children   container;children
         sb.append("]");
         return sb;
     }
-
 
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
     // not exactly sure why
@@ -1809,7 +1729,6 @@ seaports;children   container;children
         int count = 0;
         if (values.size() > 1 || (values.size() > 0 && values.get(0) != null)) {
             sortValues(values);
-
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
             Date provdate = values.get(0).getProvenance().getTimeStamp();
             Set<Value> oneUpdate = new HashSet<Value>();
@@ -1837,13 +1756,9 @@ seaports;children   container;children
         }
         output.append("}]})");
         return output.toString();
-
-
     }
 
-
     public String formatProvenanceForOutput(Provenance provenance, String jsonFunction) {
-
         String output;
         if (provenance == null) {
             output = "{provenance:[{\"who\":\"no provenance\"}]}";
@@ -1960,47 +1875,9 @@ seaports;children   container;children
             result = " no sent data/rows/columns/context";
         }
         return result;
-
     }
 
-
-    public static Date interpretDate(String dateString) {
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        SimpleDateFormat dateFormat2 = new SimpleDateFormat("dd/MM/yy");
-        SimpleDateFormat dateFormat3 = new SimpleDateFormat("dd/MM/yyyy");
-        SimpleDateFormat dateFormat4 = new SimpleDateFormat("dd-MM-yyyy");
-        Date dateFound = null;
-        if (dateString.length() > 5) {
-            if (dateString.substring(2, 3).equals("/")) {
-                if (dateString.length() > 8) {
-                    try {
-                        dateFound = dateFormat3.parse(dateString);
-                    } catch (Exception ignored) {
-                    }
-
-                } else {
-                    try {
-                        dateFound = dateFormat2.parse(dateString);
-                    } catch (Exception ignored) {
-                    }
-                }
-            } else {
-                if (dateString.substring(2, 3).equals("-")) {
-                    try {
-                        dateFound = dateFormat4.parse(dateString);
-                    } catch (Exception ignored) {
-                    }
-                } else {
-                    try {
-                        dateFound = simpleDateFormat.parse(dateString);
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-        }
-        return dateFound;
-
-    }
+    // Four little utility functions added by Edd, required now headings are not names
 
     public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<DataRegionHeading>();
@@ -2038,5 +1915,4 @@ seaports;children   container;children
         }
         return false;
     }
-
 }

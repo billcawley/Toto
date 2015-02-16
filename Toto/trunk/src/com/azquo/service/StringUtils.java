@@ -66,20 +66,9 @@ public class StringUtils {
                     commandEnd = instructions.length();
                 }
                 toReturn = instructions.substring(commandStart, commandEnd).trim();
-               /*
-                  Pattern p = Pattern.compile("[^a-z A-Z\\-0-9!]");
-                 Matcher m = p.matcher(instructions.substring(commandStart));
-                commandEnd = instructions.length();
-                if (m.find()) {
-                    commandEnd = commandStart + m.start();
-                }
-                */
             } else {
                 toReturn = "";
             }
-            //  if (toReturn.startsWith(Name.QUOTE)) {
-            //      toReturn = toReturn.substring(1, toReturn.length() - 1); // trim quotes
-            // }
             if (toReturn.length() > 0 && toReturn.charAt(0) == '=') {
                 toReturn = toReturn.substring(1).trim();
             }
@@ -107,7 +96,7 @@ Entities children
 nameStrings are strings we assume are references to names
 string literals are things in normal quotes e.g. dates
 Names need to be quoted like Mysql table names with ` if they contain spaces, are keywords etc.
-Also - operators + - / *
+Also - operators + - / * and , added also to facilitate a list of statements (decode string)
 
 I'll add better tracking of where an error is later
 
@@ -188,7 +177,9 @@ I'll add better tracking of where an error is later
         statement = statement.replace("<=", " <= ").replace("  ", " ");
         statement = statement.replace(">=", " >= ").replace("  ", " ");
         statement = statement.replace("=", " = ").replace("  ", " ");
-
+        // added, as an operator, should make it more robust when used with decode string
+        // this assumes that the , will be taken care of after the parsing
+        statement = statement.replace(",", " , ").replace("  ", " ");
 
  /* so now we have things like this, should be ready for a basic test
         !1 level 2 from !2 to !3 as !4
@@ -236,7 +227,7 @@ I should be ok for stringtokenizer at this point
 
     public boolean isKeywordOrOperator(String term){
         return term.equals("*") || term.equals("/") || term.equals("+") || term.equals("-") || term.equals(">")
-                || term.equals("<") || term.equals(">=") || term.equals("<=") || term.equals("=")
+                || term.equals("<") || term.equals(">=") || term.equals("<=") || term.equals("=") || term.equals(",")
                 || term.equalsIgnoreCase(NameService.LEVEL) || term.equalsIgnoreCase(NameService.FROM)
                 || term.equalsIgnoreCase(NameService.TO) || term.equalsIgnoreCase(NameService.COUNT)
                 || term.equalsIgnoreCase(NameService.SORTED) || term.equalsIgnoreCase(NameService.CHILDREN)
@@ -252,14 +243,10 @@ I should be ok for stringtokenizer at this point
 
 
     // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
-    // it's a list of values and operations
-    // ok, edd here, I don't 100% understand  the exact logic but I do know what it's doing. Maybe some more checking into it later.
-    // I'm beginning to understand. Practically speaking this is where parsing starts.
 
-
-    protected String shuntingYardAlgorithm(String calc) throws Exception {
-        // note from Edd, I'm taking the functions to sort out things in name and normal quotes OUT of here, this funciton assumes a string ready to parse
-/*   TODO SORT OUT ACTION ON ERROR
+    protected String shuntingYardAlgorithm(String calc) {
+        // note from Edd, this function assumes a string ready to parse, quoted areas dealt with
+/*
         Routine to convert a formula (if it exists) to reverse polish.
 
         Read a token.
@@ -287,25 +274,17 @@ I should be ok for stringtokenizer at this point
                 Exit.
 */
 
-        // todo - edd commented some bits of code , interpret term, check how the logic may have changed. Also try to understand what the function is doing, could perhaps be integrated
-
         Pattern p = Pattern.compile("[\\+\\-/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
         int startPos = 0;
-
-
         while (m.find()) {
             String opfound = m.group();
             char thisOp = opfound.charAt(0);
             int pos = m.start();
             String namefound = calc.substring(startPos, pos).trim();
             if (namefound.length() > 0) {
-/*                String result = nameService.interpretTerm(namefound, nameReferences);
-                if (result.startsWith("error:")) {
-                    return result;
-                }*/
                 sb.append(namefound).append(" ");
             }
             char lastOffStack = ' ';
@@ -329,10 +308,6 @@ I should be ok for stringtokenizer at this point
         // the last term...
 
         if (calc.substring(startPos).trim().length() > 0) {
-/*            String result = nameService.interpretTerm(calc.substring(startPos).trim(), nameReferences);
-            if (result.startsWith("error:")) {
-                return result;
-            }*/
             sb.append(calc.substring(startPos)).append(" ");
         }
 
