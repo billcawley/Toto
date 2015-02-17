@@ -2,21 +2,6 @@ package com.azquo.app.reviews.controller;
 
 /**
  * Created by edd on 09/10/14.
- */
-import com.azquo.admindao.DatabaseDAO;
-import com.azquo.app.reviews.service.ReviewService;
-import com.azquo.service.LoggedInConnection;
-import com.azquo.service.LoginService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.ModelMap;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-
-import javax.servlet.http.HttpServletRequest;
-import java.util.*;
-
-/**
  *
  The supplier rep will need to be logged in
 
@@ -35,8 +20,21 @@ import java.util.*;
 
 
  lots of pasted code from review controller initially
-
+ *
  */
+import com.azquo.admindao.DatabaseDAO;
+import com.azquo.app.reviews.service.ReviewService;
+import com.azquo.service.LoggedInConnection;
+import com.azquo.service.LoginService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.*;
+
 
 @Controller
 @RequestMapping("/SupplierResponse")
@@ -96,16 +94,11 @@ public class SupplierResponseController {
         if (supplierDB != null) {
             loginService.switchDatabase(loggedInConnection, databaseDAO.findForName(loggedInConnection.getBusinessId(), supplierDB));
         }
-        String result = "";
-
             if (submit!=null){
                 reviewService.processSupplierResponseForm(loggedInConnection, orderRef, comments);
             }
-                result = reviewService.createSupplierResponseForm(loggedInConnection, orderRef, velocityTemplate);
+                String result = reviewService.createSupplierResponseForm(loggedInConnection, orderRef, velocityTemplate);
         model.addAttribute("content", result);
         return "utf8page";
     }
-
-
 }
-

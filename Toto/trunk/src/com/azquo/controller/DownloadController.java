@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.util.Enumeration;
-
 
 @Controller
 @RequestMapping("/Download")
@@ -32,27 +30,13 @@ public class DownloadController {
     @RequestMapping
     public void handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-        Enumeration<String> parameterNames = request.getParameterNames();
-
-        String connectionId = null;
-        boolean withMacros =false;
-        boolean pdf = false;
-        String image = "";
-
-        while (parameterNames.hasMoreElements()) {
-            String paramName = parameterNames.nextElement();
-            String paramValue = request.getParameterValues(paramName)[0];
-            if (paramName.equals("connectionid")) {
-                connectionId = paramValue;
-            }else if (paramName.equals("macros")){
-                withMacros = true;
-            }else if (paramName.equals("pdf")){
-                pdf = true;
-            }else if (paramName.equals("image")){
-                image = paramValue;
-            }
-        }
-        if (image.length() > 0){
+        // this was enumerating through parameter names. Since we're not looking for binary data being submitted I see no reason why.
+        String connectionId = request.getParameter("connectionid");
+        boolean withMacros = request.getParameter("macros") != null;
+        boolean pdf = request.getParameter("pdf") != null;
+        String image = request.getParameter("connectionid");
+        // deliver a preprepared image. Are these names unique? Could images move between spreadsheets unintentionally?
+        if (image != null && image.length() > 0){
             InputStream input = new BufferedInputStream((new FileInputStream(onlineService.getHomeDir() +  "/temp/" + image)));
             response.setContentType("image/png"); // Set up mime type
             OutputStream out = response.getOutputStream();
@@ -92,7 +76,6 @@ public class DownloadController {
         }
         LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
         if (loggedInConnection == null) {
-
             return;
         }
         OnlineReport onlineReport = null;
@@ -104,8 +87,7 @@ public class DownloadController {
 
             }
         }
-
-
+        // response passed into the functions to be dealt with there. Should mimetypes be dealt with out here?
         String fileName = "/azquobook.xls";
         if (onlineReport != null) {
             fileName = onlineReport.getFilename();

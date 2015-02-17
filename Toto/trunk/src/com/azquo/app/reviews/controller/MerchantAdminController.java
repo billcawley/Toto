@@ -5,8 +5,6 @@ package com.azquo.app.reviews.controller;
  *
  */
 import com.azquo.app.reviews.service.ReviewService;
-import com.azquo.app.reviews.service.ReviewsCustomerService;
-import com.azquo.app.reviews.service.UserService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -26,10 +24,6 @@ import java.util.Map;
 public class MerchantAdminController {
 
     @Autowired
-    private ReviewsCustomerService reviewsCustomerService;
-    @Autowired
-    private UserService userService;
-    @Autowired
     ReviewService reviewService;
 
 
@@ -39,7 +33,7 @@ public class MerchantAdminController {
 
     @RequestMapping
     public String handleRequest(ModelMap model,HttpServletRequest request, HttpServletResponse response) throws Exception {
-        Map<String, String[]> parameterMap = request.getParameterMap();
+//        Map<String, String[]> parameterMap = request.getParameterMap();
 
         System.out.println("Merchant admin accessed");
         String testitem = request.getParameter("testitem");
@@ -58,11 +52,11 @@ public class MerchantAdminController {
         itemName = itemName.replace("_"," ");
         String type = request.getParameter("itemtype");
         String nameId = request.getParameter("nameid");
-        Map<String,String> fieldnames = new HashMap<String, String>();
+//        Map<String,String> fieldnames = new HashMap<String, String>();
         String download = request.getParameter("download");
         String field = request.getParameter("field");
-        Map<String,String> fieldvalues = new HashMap<String, String>();
-        String velocityTemplate = request.getParameter("velocitytemplate");
+//        Map<String,String> fieldvalues = new HashMap<String, String>();
+//        String velocityTemplate = request.getParameter("velocitytemplate");
         String submit = request.getParameter("submit");
         for (int i=1;i < 200;i++){//assuming that there will never be more than 200 fields!
             String fieldVal = request.getParameter("field" + i);
