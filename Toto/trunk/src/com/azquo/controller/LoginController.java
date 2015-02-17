@@ -11,6 +11,7 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
@@ -40,17 +41,19 @@ public class LoginController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(HttpServletRequest request) throws Exception {
-        String userEmail = request.getParameter("useremail");
-        String password = request.getParameter("password");
-        String spreadsheetName = request.getParameter("spreadsheetname");
-        String timeout = request.getParameter("timeout");
-        String connectionId = request.getParameter("connectionid");
-        String json = request.getParameter("json");
-        String database = request.getParameter("database");
-        String checkConnectionId = request.getParameter("checkconnectionid");
+    public String handleRequest(HttpServletRequest request
+            , @RequestParam(value = "user", required = false)  String userEmail
+            , @RequestParam(value = "password", required = false)  String password
+            , @RequestParam(value = "spreadsheetname", required = false)  String spreadsheetName
+            , @RequestParam(value = "timeout", required = false)  String timeout
+            , @RequestParam(value = "connectionid", required = false)  String connectionId
+            , @RequestParam(value = "json", required = false)  String json
+            , @RequestParam(value = "database", required = false)  String database
+            , @RequestParam(value = "checkconnectionid", required = false)  String checkConnectionId
+            , @RequestParam(value = "online", required = false)  boolean online
+
+                                ) throws Exception {
         String result;
-        boolean online = request.getParameter("online") != null;
         if (userEmail != null && userEmail.equals("convert")) {
             return "done";
         }

@@ -15,11 +15,14 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -58,48 +61,17 @@ public class MagentoController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(HttpServletRequest request) throws Exception {
+    public String handleRequest(HttpServletRequest request
+            , @RequestParam(value = "db", required = false, defaultValue = "") String db
+            , @RequestParam(value = "op", required = false, defaultValue = "") String op
+            , @RequestParam(value = "logon", required = false, defaultValue = "") String logon
+            , @RequestParam(value = "password", required = false, defaultValue = "") String password
+            , @RequestParam(value = "connectionid", required = false, defaultValue = "") String connectionId
+            , @RequestParam(value = "data", required = false) MultipartFile data
+
+    ) throws Exception {
         LoggedInConnection loggedInConnection = null;
         try {
-            // this Apache API seems a simple way to get this info. I think the built in Java one was being a pain.
-            DiskFileItemFactory factory = new DiskFileItemFactory();
-
-            // this means temp files should not be deleted, useful for debugging
-            factory.setFileCleaningTracker(null);
-
-// Configure a repository (to ensure a secure temp location is used)
-            ServletContext servletContext = request.getServletContext();
-            File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
-            factory.setRepository(repository);
-            FileItem data = null;
-// Create a new file upload handler
-            ServletFileUpload upload = new ServletFileUpload(factory);
-
-            List<FileItem> items = upload.parseRequest(request);
-            Iterator it = items.iterator();
-            String op = null;
-            String db = null;
-            String logon = null;
-            String password = null;
-            String connectionId = null;
-
-            while (it.hasNext()) {
-                FileItem item = (FileItem) it.next();
-
-                if (item.getFieldName().equals("db")) {
-                    db = item.getString();
-                } else if (item.getFieldName().equals("op")) {
-                    op = item.getString();
-                } else if (item.getFieldName().equals("logon")) {
-                    logon = item.getString();
-                } else if (item.getFieldName().equals("password")) {
-                    password = item.getString();
-                } else if (item.getFieldName().equals("connectionid")) {
-                    connectionId = item.getString();
-                }
-                // ok this is a bit hacky but we assume the last item is the file and let the code below deal with it
-                data = item;
-            }
 
             if (op == null) op = "";
             if (connectionId != null) {
@@ -124,14 +96,16 @@ public class MagentoController {
             }
             if (op.equals("updatedb")) {
                 if (loggedInConnection.getCurrentDatabase() != null) {
-                    System.out.println("RUnning a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
+                    System.out.println("Running a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
                 }
                 if (data != null){
-                    if (!onlineService.onADevMachine()){
+                    if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")){ // if it's from us don't email us :)
                         azquoMailer.sendEMail("edd@azquo.com", "Edd", "Magento file upload " + db, "Magento file upload " + db);
                         azquoMailer.sendEMail("bill@azquo.com", "Bill", "Magento file upload " + db, "Magento file upload " + db);
                         azquoMailer.sendEMail("nic@azquo.com", "Nic", "Magento file upload " + db, "Magento file upload " + db);
+                        data.transferTo(new File(onlineService.getHomeDir() + "/temp/" + db + new Date()));
                     }
+                    data.transferTo(new File(onlineService.getHomeDir() + "/temp/" + db + new Date()));
                     dataLoadService.loadData(loggedInConnection, data.getInputStream());
                     return loggedInConnection.getConnectionId() + "";
                 } else {

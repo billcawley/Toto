@@ -3,10 +3,7 @@ package com.azquo.service;
 import com.azquo.admindao.*;
 import com.azquo.adminentities.*;
 import com.azquo.memorydb.Name;
-import com.azquo.memorydbdao.*;
 import com.azquo.view.AzquoBook;
-import org.apache.commons.fileupload.FileItem;
-//import org.apache.poi.ss.usermodel.*;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -14,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
@@ -22,8 +19,6 @@ import java.io.*;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Configuration
 @PropertySource({ "classpath:azquo.properties" })
@@ -164,7 +159,7 @@ public class OnlineService {
         try {
             if (onlineReport.getId() < 2){
                 azquoBook.loadBook(onlineReport.getFilename(), useAsposeLicense());
-            }else{
+            } else {
                 //note - the database specified in the report may not be the current database (as in applications such as Magento and reviews), but be 'temp'
                 String filepath = ImportService.dbPath + onlineReport.getPathname() +"/onlinereports/" + onlineReport.getFilename();
 
@@ -562,7 +557,7 @@ public class OnlineService {
     }
 
 
-    public void followInstructionsAt(LoggedInConnection loggedInConnection, String jsonFunction, int rowNo, int colNo, String database, FileItem item)throws Exception{
+    public void followInstructionsAt(LoggedInConnection loggedInConnection,  int rowNo, int colNo, String database, MultipartFile file)throws Exception{
         //this routine is called when a button on the maintenance spreadsheet is pressed
 
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
@@ -653,8 +648,8 @@ public class OnlineService {
             }
         }
         if (op.equalsIgnoreCase("upload")){
-            InputStream uploadFile = item.getInputStream();
-            String fileName = item.getName();
+            InputStream uploadFile = file.getInputStream();
+            String fileName = file.getName();
             importService.importTheFile(loggedInConnection, fileName, uploadFile, "", true, loggedInConnection.getLanguages());
          }
         //if (op.equalsIgnoreCase("inspect")){

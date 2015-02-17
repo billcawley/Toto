@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -45,23 +46,26 @@ public class JstreeController {
 
 
     @RequestMapping
-    public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
+            , @RequestParam(value = "op", required = false)  String op
+            , @RequestParam(value = "id", required = false)  String jsTreeId
+            , @RequestParam(value = "connectionid", required = false)  String connectionId
+            , @RequestParam(value = "user", required = false)  String user
+            , @RequestParam(value = "password", required = false)  String password
+            , @RequestParam(value = "database", required = false)  String database
+            , @RequestParam(value = "position", required = false)  String position
+            , @RequestParam(value = "parent", required = false)  String parent
+            , @RequestParam(value = "json", required = false)  String json
+            , @RequestParam(value = "parents", required = false)  String parents
+            , @RequestParam(value = "topnode", required = false)  String topNode //only for use at root.
+            , @RequestParam(value = "itemschosen", required = false)  String itemsChosen
+                                ) throws Exception {
 
 
-        String op = request.getParameter("op");
-        String jsTreeId = request.getParameter("id");
-        String connectionId = request.getParameter("connectionid");
-        String user = request.getParameter("user");
-        String password = request.getParameter("password");
-        String database = request.getParameter("database");
-        String position = request.getParameter("position");
-        String parent = request.getParameter("parent");
-        LoggedInConnection loggedInConnection;
-        String json = request.getParameter("json");
-        String parents = request.getParameter("parents");
-        String topNode = request.getParameter("topnode");//only for use at root.
-        String itemsChosen = request.getParameter("itemschosen");
         String jsonFunction = "azquojsonfeed";
+
+
+        LoggedInConnection loggedInConnection;
         try {
             StringBuffer result = new StringBuffer();
             if (connectionId == null) {
