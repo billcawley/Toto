@@ -45,7 +45,7 @@ public class OnlineController {
 
     private static final Logger logger = Logger.getLogger(OnlineController.class);
 
-    @RequestMapping
+    @RequestMapping(headers = "content-type=multipart/*")
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "user", required = false) String user
             , @RequestParam(value = "password", required = false) String password
@@ -256,6 +256,27 @@ public class OnlineController {
         }
         return "utf8page";
 
+    }
+    // when not multipart
+    @RequestMapping
+    public String handleRequest(ModelMap model, HttpServletRequest request
+            , @RequestParam(value = "user", required = false) String user
+            , @RequestParam(value = "password", required = false) String password
+            , @RequestParam(value = "connectionid", required = false) String connectionId
+            , @RequestParam(value = "editedname", required = false) String choiceName
+            , @RequestParam(value = "editedvalue", required = false) String choiceValue
+            , @RequestParam(value = "reportid", required = false) String reportId
+            , @RequestParam(value = "chart", required = false) String chart
+            , @RequestParam(value = "jsonfunction", required = false, defaultValue = "azquojsonfeed") String jsonFunction
+            , @RequestParam(value = "row", required = false, defaultValue = "") String rowStr
+            , @RequestParam(value = "col", required = false, defaultValue = "") String colStr
+            , @RequestParam(value = "value", required = false) String changedValue
+            , @RequestParam(value = "opcode", required = false, defaultValue = "") String opcode
+            , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
+            , @RequestParam(value = "database", required = false, defaultValue = "") String database
+            , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
+            ) throws Exception{
+        return handleRequest(model,request,user,password,connectionId,choiceName,choiceValue,reportId,chart,jsonFunction,rowStr,colStr, changedValue, opcode, spreadsheetName, database, reportToLoad, null);
     }
 
 

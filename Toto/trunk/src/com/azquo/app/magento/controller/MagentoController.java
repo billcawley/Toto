@@ -59,7 +59,7 @@ public class MagentoController {
     // we should start using the logger really
     //private static final Logger logger = Logger.getLogger(MagentoController.class);
 
-    @RequestMapping
+    @RequestMapping(headers = "content-type=multipart/*")
     @ResponseBody
     public String handleRequest(HttpServletRequest request
             , @RequestParam(value = "db", required = false, defaultValue = "") String db
@@ -124,4 +124,20 @@ public class MagentoController {
             return "error:" + e.getMessage();
         }
     }
+
+    // when not multipart
+
+    @RequestMapping
+    @ResponseBody
+    public String handleRequest(HttpServletRequest request
+            , @RequestParam(value = "db", required = false, defaultValue = "") String db
+            , @RequestParam(value = "op", required = false, defaultValue = "") String op
+            , @RequestParam(value = "logon", required = false, defaultValue = "") String logon
+            , @RequestParam(value = "password", required = false, defaultValue = "") String password
+            , @RequestParam(value = "connectionid", required = false, defaultValue = "") String connectionId
+
+    ) throws Exception {
+        return handleRequest(request, db, op, logon, password, connectionId, null);
+    }
+
 }
