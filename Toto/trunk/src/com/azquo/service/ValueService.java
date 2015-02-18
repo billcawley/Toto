@@ -391,19 +391,10 @@ public final class ValueService {
 
         // no reverse polish converted formula, just sum
         if (!hasCalc) {
-            locked.isTrue = false;
-            for (Name oneName : names) { // inexpensive check first
+            for (Name oneName : names) { // inexpensive check based on peers which we don't use that much now
                 if (oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) {
                     locked.isTrue = true;
                     break;
-                }
-            }
-            if (!locked.isTrue) { // now the more expensive isallowed check - this caused a slowdown on some tests
-                for (Name oneName : names) {
-                    if (!nameService.isAllowed(oneName, azquoMemoryDBConnection.getWritePermissions())) {
-                        locked.isTrue = true;
-                        break;
-                    }
                 }
             }
             return findSumForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, totalSetSize);
@@ -458,18 +449,10 @@ public final class ValueService {
     // Added by Edd, like above but uses an attribute (attributes?) and doens't care about calc for the moment, hence should be much more simple
     // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function
 
-    public String findValueForHeadings(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<DataRegionHeading> headings, final MutableBoolean locked, List<Name> namesForMap, List<String> attributesForMap) throws Exception {
+    public String findValueForHeadings(final Set<DataRegionHeading> headings, final MutableBoolean locked, List<Name> namesForMap, List<String> attributesForMap) throws Exception {
         Set<Name> names = namesFromDataRegionHeadings(headings);
-
-        locked.isTrue = false;
-
         if (names.size() != 1){
             locked.isTrue = true;
-        } else {
-            // perhaps should have a bit more checking e.g. against isallowed, like above
-            if (!nameService.isAllowed(names.iterator().next(), azquoMemoryDBConnection.getWritePermissions())) {
-                locked.isTrue = true;
-            }
         }
 
         Set<String> attributes = attributesFromDataRegionHeadings(headings);
@@ -625,10 +608,10 @@ seaports;children   container;children
                     // was just a name expression, now we allow an attribute also. May be more in future.
                     if (cellString.startsWith(".")) {
                         // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
-                        row.add(Arrays.asList(new DataRegionHeading(cellString)));
+                        row.add(Arrays.asList(new DataRegionHeading(cellString, true))); // we say that an attribuite heading defaults to writeable, it will defer to the name
                     } else {
                         try {
-                            row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, cellString, attributeNames)));
+                            row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, cellString, attributeNames), azquoMemoryDBConnection));
                         } catch (Exception e) {
                             return "error:" + e.getMessage();
                         }
@@ -1061,46 +1044,6 @@ seaports;children   container;children
 
     }
 
-    // Uses above, I think get values based on name search then format for excel
-    // are these functions really still necessary?
-
-    public String getExcelDataForNamesSearch(final List<Set<Name>> searchNames) throws Exception {
-        final StringBuilder sb = new StringBuilder();
-        Map<Set<Name>, Set<Value>> showValues = getSearchValues(searchNames);
-        sb.append(" ");
-        LinkedHashSet<Name> headings = getHeadings(showValues);
-        for (Name heading : headings) {
-            sb.append("\t").append(heading.getDefaultDisplayName());
-        }
-        sb.append("\n");
-        int count = 0;
-        for (Set<Name> valNames : showValues.keySet()) {
-            if (count++ == 2000) {
-                break;
-            }
-            sb.append(addValues(showValues.get(valNames)));
-            String[] names = new String[headings.size()];
-            int i = 0;
-            for (Name heading : headings) {
-                for (Name name : valNames) {
-                    if (name.findATopParent() == heading) {
-                        names[i] = name.getDefaultDisplayName();
-                    }
-                }
-                i++;
-            }
-            for (String name : names) {
-                if (name != null) {
-                    sb.append("\t").append(name);
-                } else {
-                    sb.append("\t");
-                }
-            }
-            sb.append("\n");
-        }
-        return sb.toString();
-    }
-
     // vanilla jackson might not be good enough but this is too much manual json writing I think
 
     public String getJsonDataforOneName(LoggedInConnection loggedInConnection, final Name name, Map<String, LoggedInConnection.JsTreeNode> lookup) throws Exception {
@@ -1219,11 +1162,6 @@ seaports;children   container;children
 
         return sb;
     }
-
-    public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows) throws Exception {
-        return getDataRegion(loggedInConnection, context, region, filterCount, maxRows, 0);
-    }
-
 
     public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows, int maxCols) throws Exception {
 
@@ -1353,15 +1291,18 @@ seaports;children   container;children
                 final Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
                 headingsForThisCell.addAll(rowHeadings);
                 headingsForThisCell.addAll(columnHeadings);
-                headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames));
+                headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, loggedInConnection));
                 // edd putting in peer check stuff here, should I not???
-                MutableBoolean locked = new MutableBoolean(); // we can pass a mutable boolean in and have the function set it
+                MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
                 // why bother?   Maybe leave it as 'on demand' when a data region doesn't work
                 // Map<String, String> result = nameService.isAValidNameSet(azquoMemoryDBConnection, namesForThisCell, new HashSet<Name>());
                 // much simpler check - simply that the list is complete.
                 boolean checked = true;
-                for (DataRegionHeading name : headingsForThisCell) {
-                    if (name == null) checked = false;
+                for (DataRegionHeading heading : headingsForThisCell) {
+                    if (heading == null) checked = false;
+                    if (!heading.isWriteAllowed()){ // this replaces the isallowed check that was in the functions that resolved the cell values
+                        locked.isTrue = true;
+                    }
                 }
                 if (!checked) { // not a valid peer set? Show a blank locked cell
                     shownValues.add("");
@@ -1396,7 +1337,7 @@ seaports;children   container;children
                         List<Name> names = new ArrayList<Name>();
                         List<String> attributes = new ArrayList<String>();
                         valuesOrNamesAndAttributeName = loggedInConnection.new ListOfValuesOrNamesAndAttributeName(names, attributes);
-                        String attributeResult = findValueForHeadings(loggedInConnection, headingsForThisCell,locked, names, attributes);
+                        String attributeResult = findValueForHeadings(headingsForThisCell,locked, names, attributes);
                         if (NumberUtils.isNumber(attributeResult)){ // there should be a more efficient way I feel given that the result is typed internally
                             cellValue = Double.parseDouble(attributeResult);
                         }
@@ -1879,10 +1820,11 @@ seaports;children   container;children
 
     // Four little utility functions added by Edd, required now headings are not names
 
-    public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names) {
+    public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<DataRegionHeading>();
         for (Name name : names) {
-            dataRegionHeadings.add(new DataRegionHeading(name));
+            // will the new write permissions cause an overhead?
+            dataRegionHeadings.add(new DataRegionHeading(name,nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions())));
         }
         return dataRegionHeadings;
     }

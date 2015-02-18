@@ -16,15 +16,18 @@ public class DataRegionHeading {
 
     private final Name name;
     private final String attribute;
+    private boolean writeAllowed;
 
-    public DataRegionHeading(Name name) {
+    public DataRegionHeading(Name name, boolean writeAllowed) {
         this.name = name;
         this.attribute = null;
+        this.writeAllowed = writeAllowed;
     }
 
-    public DataRegionHeading(String attribute) {
+    public DataRegionHeading(String attribute, boolean writeAllowed) {
         this.name = null;
         this.attribute = attribute;
+        this.writeAllowed = writeAllowed;
     }
 
     public Name getName() {
@@ -33,5 +36,9 @@ public class DataRegionHeading {
 
     public String getAttribute() {
         return attribute;
+    }
+
+    public boolean isWriteAllowed() {
+        return writeAllowed;
     }
 }

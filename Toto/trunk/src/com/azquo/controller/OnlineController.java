@@ -141,12 +141,10 @@ public class OnlineController {
                 }
             }
             */
-
             String result = "error: no action taken";
             int row = 0;
             try {
                 row = Integer.parseInt(rowStr);
-
             } catch (Exception e) {
                 //rowStr can be blank or '0'
             }
@@ -172,7 +170,6 @@ public class OnlineController {
                 } else {
                     onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
                 }
-
                 opcode = "loadsheet";
             }
             if (opcode.equals("valuesent")) {
@@ -193,11 +190,8 @@ public class OnlineController {
                         //ignore - this is an internal parameter
                     }
                     opcode = "loadsheet";
-
-
                 } catch (Exception ignored) {
                 }
-
             }
 
             if (opcode.equals("provenance")) {
@@ -212,8 +206,6 @@ public class OnlineController {
             //result = nameService.getStructureForNameSearch(loggedInConnection,"", Integer.parseInt(nameId), loggedInConnection.getLanguages());
             // result = jsonFunction + "(" + result + ")";
             // }
-
-
             if (opcode.equals("chart")) {
                 /*if (chartParams.length() > 6){ //params start with 'chart '
                     chartParams = chartParams.substring(6);
@@ -222,7 +214,6 @@ public class OnlineController {
                 }*/
                 //chart =  onlineService.getChart(loggedInConnection, chartParams);
                 result = jsonFunction + "({\"chart\":\"" + chart + "\"})";
-
             }
 
             if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
@@ -241,7 +232,6 @@ public class OnlineController {
                 }
                 result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, result);
             }
-
             /*
             BufferedReader br = new BufferedReader(new StringReader(result));
            / String line;
@@ -255,9 +245,9 @@ public class OnlineController {
             model.addAttribute("content", "error:" + e.getMessage());
         }
         return "utf8page";
-
     }
-    // when not multipart
+
+    // when not multipart - this is a bit annoying, hopefully can find a way around it later
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "user", required = false) String user
@@ -278,6 +268,4 @@ public class OnlineController {
             ) throws Exception{
         return handleRequest(model,request,user,password,connectionId,choiceName,choiceValue,reportId,chart,jsonFunction,rowStr,colStr, changedValue, opcode, spreadsheetName, database, reportToLoad, null);
     }
-
-
 }
