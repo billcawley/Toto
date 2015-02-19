@@ -16,7 +16,7 @@ public class DataRegionHeading {
 
     private final Name name;
     private final String attribute;
-    private boolean writeAllowed;
+    private final boolean writeAllowed;
 
     public DataRegionHeading(Name name, boolean writeAllowed) {
         this.name = name;

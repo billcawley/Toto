@@ -2155,7 +2155,7 @@ public  class AzquoBook {
         return "<img alt='' src = '/images/tab" + left + right + ".png'/>";
     }
 
-    public String printTabs(StringBuffer tabs, String spreadsheetName){
+    public String printTabs(StringBuilder tabs, String spreadsheetName){
          final int tabShift = 50;
         int left = 0;
         int right = 0;
@@ -2224,7 +2224,7 @@ public  class AzquoBook {
     }
 
 
-    public String convertSpreadsheetToHTML(LoggedInConnection loggedInConnection, int reportId, String spreadsheetName,StringBuffer output) throws Exception {
+    public String convertSpreadsheetToHTML(LoggedInConnection loggedInConnection, int reportId, String spreadsheetName,StringBuilder output) throws Exception {
 
 
         setSheet(0);

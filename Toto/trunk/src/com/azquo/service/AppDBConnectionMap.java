@@ -43,7 +43,7 @@ public class AppDBConnectionMap {
             }
         }
     }
-    // was a simple get but we#re going to lazy load
+    // was a simple get but we're going to lazy load
     public AzquoMemoryDBConnection getConnection(String mysqlName){
         AzquoMemoryDBConnection azquoMemoryDBConnection = connectionMap.get(mysqlName);
         if (azquoMemoryDBConnection != null){
@@ -86,16 +86,12 @@ public class AppDBConnectionMap {
         final String mysqlName = (business.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "") + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();;
         final Database database = new Database(0, new Date(), new Date(130, 1, 1), business.getId(), databaseName, mysqlName, 0, 0);
         // todo here and elsewhere, stop mysql dbs overwriting each other
-        try{
             mySQLDatabaseManager.createNewDatabase(mysqlName);
             databaseDAO.store(database);
             memoryDBManager.addNewToDBMap(database);
             dbByNameMap.put(database.getMySQLName(), database);
             connectionMap.put(database.getMySQLName(),
-                    new AzquoMemoryDBConnection(memoryDBManager.getAzquoMemoryDB(database), new User(0, null, null, business.getId(), "", "connection pool", "", "", "" )));
-        }catch (Exception e){
-            throw e;
-        }
+            new AzquoMemoryDBConnection(memoryDBManager.getAzquoMemoryDB(database), new User(0, null, null, business.getId(), "", "connection pool", "", "", "" )));
     }
 
 }
