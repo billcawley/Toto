@@ -395,7 +395,7 @@ public class OnlineService {
         String result = "";
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
         String tableName = azquoBook.getAdminTableName();
-        StringBuffer data = azquoBook.getAdminData();
+        StringBuilder data = azquoBook.getAdminData();
         if (data == null) {
             result = "error: no data to save";
         } else {
@@ -648,6 +648,7 @@ public class OnlineService {
 
     // do we need to be creating a new velocity engine every time? Not sure if necessary.
     // The amount of string pushing around here bugs me slightly, azquo book probably makes a big old chunk of HTML
+    // todo, maybe use velocity in the spring way? http://wiki.apache.org/velocity/VelocityAndSpringStepByStep
 
     private String convertToVelocity(VelocityContext context, String itemName, Set<Map<String, String>> items, String velocityTemplate) {
         VelocityEngine ve = new VelocityEngine();

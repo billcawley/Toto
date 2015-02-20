@@ -198,7 +198,7 @@ public class OnlineController {
                 result = onlineService.getProvenance(loggedInConnection, row, Integer.parseInt(colStr), jsonFunction);
             }
             if (opcode.equals("savedata")) {
-                onlineService.saveData(loggedInConnection, jsonFunction);
+                onlineService.saveData(loggedInConnection);
                 result = "data saved successfully";
             }
             //if (opcode.equals("children")){
