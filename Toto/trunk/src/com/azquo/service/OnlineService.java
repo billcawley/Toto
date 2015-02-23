@@ -569,7 +569,7 @@ public class OnlineService {
         }
         if (op.equalsIgnoreCase("upload")) {
             InputStream uploadFile = file.getInputStream();
-            String fileName = file.getName();
+            String fileName = file.getOriginalFilename();
             importService.importTheFile(loggedInConnection, fileName, uploadFile, "", true, loggedInConnection.getLanguages());
         }
     }
