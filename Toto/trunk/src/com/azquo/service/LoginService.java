@@ -69,6 +69,10 @@ public class LoginService {
 
         public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn) throws  Exception{
 
+/*            System.out.println("database name " + databaseName);
+            System.out.println("usermeail " + userEmail);
+            System.out.println("password " + password);*/
+
         if (spreadsheetName == null) {
             spreadsheetName = "unknown";
         }
@@ -315,7 +319,6 @@ public class LoginService {
         String user = standardJsonRequest.user;
         if (user != null && user.equals("demo@user.com")){
             user = user + callerIP;
-
         }
         if (standardJsonRequest.user != null && standardJsonRequest.user.length() > 0 &&
                 standardJsonRequest.password != null && standardJsonRequest.password.length() > 0) {

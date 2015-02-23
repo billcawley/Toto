@@ -1,6 +1,8 @@
 package com.azquo.view;
 
 import com.aspose.cells.*;
+import com.aspose.cells.Color;
+import com.aspose.cells.Font;
 import com.azquo.admindao.UserChoiceDAO;
 import com.azquo.adminentities.UserChoice;
 import com.azquo.memorydb.*;
@@ -13,9 +15,11 @@ import org.apache.log4j.Logger;
 import org.apache.velocity.VelocityContext;
 
 import javax.servlet.http.HttpServletResponse;
+import java.awt.*;
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.List;
 
 /**
  * Created by bill on 29/04/14
@@ -2074,6 +2078,24 @@ public class AzquoBook {
         OutputStream out = response.getOutputStream();
         wb.save(out, SaveFormat.XLSX);
         out.flush();
+
+        // edd testing!
+/*
+        //Create an instance of HtmlSaveOptions
+HtmlSaveOptions saveOptions = new HtmlSaveOptions(SaveFormat.HTML);
+
+//Set the ImageFormat to PNG
+saveOptions.getImageOptions().setImageFormat(ImageFormat.getPng());
+
+//Set the background of image as transparent
+saveOptions.getImageOptions().setTransparent(true);
+
+//Set rendering hints for the images
+saveOptions.getImageOptions().setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+saveOptions.getImageOptions().setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+//Save spreadsheet to HTML while passing object of HtmlSaveOptions
+wb.save(onlineService.getHomeDir() + "/temp/asposeoutputtest.html", saveOptions);*/
     }
 
 

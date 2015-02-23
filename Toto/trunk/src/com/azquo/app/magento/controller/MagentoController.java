@@ -22,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -99,13 +100,21 @@ public class MagentoController {
                     System.out.println("Running a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
                 }
                 if (data != null){
+                    File moved = null;
                     if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")){ // if it's from us don't email us :)
                         azquoMailer.sendEMail("edd@azquo.com", "Edd", "Magento file upload " + db, "Magento file upload " + db);
                         azquoMailer.sendEMail("bill@azquo.com", "Bill", "Magento file upload " + db, "Magento file upload " + db);
                         azquoMailer.sendEMail("nic@azquo.com", "Nic", "Magento file upload " + db, "Magento file upload " + db);
-                        data.transferTo(new File(onlineService.getHomeDir() + "/temp/" + db + new Date()));
+                        moved = new File(onlineService.getHomeDir() + "/temp/" + db + new Date());
+                        data.transferTo(moved);
                     }
-                    dataLoadService.loadData(loggedInConnection, data.getInputStream());
+                    if (moved != null){
+                        FileInputStream fis = new FileInputStream(moved);
+                        dataLoadService.loadData(loggedInConnection, fis);
+                        fis.close();
+                    } else {
+                        dataLoadService.loadData(loggedInConnection, data.getInputStream());
+                    }
                     return loggedInConnection.getConnectionId() + "";
                 } else {
                     return "error: no data posted";

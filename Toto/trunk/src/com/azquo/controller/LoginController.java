@@ -50,7 +50,7 @@ public class LoginController {
             , @RequestParam(value = "json", required = false)  String json
             , @RequestParam(value = "database", required = false)  String database
             , @RequestParam(value = "checkconnectionid", required = false)  String checkConnectionId
-            , @RequestParam(value = "online", required = false)  boolean online
+            , @RequestParam(value = "online", required = false, defaultValue = "false")  boolean online
 
                                 ) throws Exception {
         String result;
