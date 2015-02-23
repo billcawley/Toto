@@ -105,7 +105,6 @@ public class MagentoController {
                         azquoMailer.sendEMail("nic@azquo.com", "Nic", "Magento file upload " + db, "Magento file upload " + db);
                         data.transferTo(new File(onlineService.getHomeDir() + "/temp/" + db + new Date()));
                     }
-                    data.transferTo(new File(onlineService.getHomeDir() + "/temp/" + db + new Date()));
                     dataLoadService.loadData(loggedInConnection, data.getInputStream());
                     return loggedInConnection.getConnectionId() + "";
                 } else {
