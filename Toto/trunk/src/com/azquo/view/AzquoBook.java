@@ -1464,7 +1464,12 @@ public class AzquoBook {
             //File tempchart = File.createTempFile(loggedInConnection.getConnectionId() + name ,".jpg");
             String tempname = (loggedInConnection.getUser().getId() + "." + loggedInConnection.getReportId() + "." + name + ".png").replace(" ", "");
             try {
-                chart.toImage(basePath + tempname);
+
+                ImageOrPrintOptions imageOrPrintOptions = new ImageOrPrintOptions();
+                imageOrPrintOptions.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                imageOrPrintOptions.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                chart.toImage(basePath + tempname, imageOrPrintOptions);
                 int topOffset = 0; //not sure why we should need this!
                 sb.append("<div id='chart").append(name).append("' style='position:absolute;top:")
                         .append(chart.getChartObject().getY() + topOffset).append("px;left:").append(chart.getChartObject().getX()).append("px;'><img src='/api/Download?image=")
@@ -2078,24 +2083,6 @@ public class AzquoBook {
         OutputStream out = response.getOutputStream();
         wb.save(out, SaveFormat.XLSX);
         out.flush();
-
-        // edd testing!
-/*
-        //Create an instance of HtmlSaveOptions
-HtmlSaveOptions saveOptions = new HtmlSaveOptions(SaveFormat.HTML);
-
-//Set the ImageFormat to PNG
-saveOptions.getImageOptions().setImageFormat(ImageFormat.getPng());
-
-//Set the background of image as transparent
-saveOptions.getImageOptions().setTransparent(true);
-
-//Set rendering hints for the images
-saveOptions.getImageOptions().setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-saveOptions.getImageOptions().setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-//Save spreadsheet to HTML while passing object of HtmlSaveOptions
-wb.save(onlineService.getHomeDir() + "/temp/asposeoutputtest.html", saveOptions);*/
     }
 
 
