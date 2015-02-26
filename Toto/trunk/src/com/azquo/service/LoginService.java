@@ -67,36 +67,42 @@ public class LoginService {
 
 
 
-        public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn) throws  Exception{
+        public LoggedInConnection login(final String databaseName, final String userEmail, final String password, final int timeOutInMinutes, String spreadsheetName, boolean loggedIn) throws  Exception {
 
 /*            System.out.println("database name " + databaseName);
             System.out.println("usermeail " + userEmail);
             System.out.println("password " + password);*/
 
-        if (spreadsheetName == null) {
-            spreadsheetName = "unknown";
-        }
-
-        User user = null;
-
-        //for demo users, a new User id is made for each user.
-        if (userEmail.startsWith("demo@user.com")){
-            user = userDao.findByEmail(userEmail);
-            if (user== null) {
-                user = userDao.findByEmail("demo@user.com");
-                if (user != null) {
-                    user.setEmail(userEmail);
-                    user.setId(0);
-                    userDao.store(user);
-                }
+            if (spreadsheetName == null) {
+                spreadsheetName = "unknown";
             }
-        }else{
-            user = userDao.findByEmail(userEmail);
+
+            User user = null;
+
+            //for demo users, a new User id is made for each user.
+            if (userEmail.startsWith("demo@user.com")) {
+                user = userDao.findByEmail(userEmail);
+                if (user == null) {
+                    user = userDao.findByEmail("demo@user.com");
+                    if (user != null) {
+                        user.setEmail(userEmail);
+                        user.setId(0);
+                        userDao.store(user);
+                    }
+                }
+            } else {
+                user = userDao.findByEmail(userEmail);
+            }
+            //boolean temporary = false;
+            if (user != null && (loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword()))) {
+                    return login(databaseName, user, timeOutInMinutes, spreadsheetName);
+
+            }
+            return null;
         }
-        //boolean temporary = false;
-        if (user != null) {
-            if (loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword())) {
-                // ok user should be ok :)
+
+    public LoggedInConnection login(final String databaseName, final User user, final int timeOutInMinutes, String spreadsheetName) throws  Exception{
+                 // ok user should be ok :)
                 final Map<String, Database> okDatabases = foundDatabases(user);
                 logger.info("ok databases size " + okDatabases.size());
                 AzquoMemoryDB memoryDB = null;
@@ -162,10 +168,7 @@ public class LoginService {
 
 
                 return lic;
-            } // else would be wrong password
-        } // else would be email not found
-        return null;
-    }
+         }
 
 
 
