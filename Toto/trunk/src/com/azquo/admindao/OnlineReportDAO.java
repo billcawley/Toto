@@ -91,6 +91,14 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
 
+
+    public OnlineReport findForBusinessIdandName(final int businessId, final String name) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(REPORTNAME, name);
+        return findOneWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + REPORTNAME + " like :" + REPORTNAME, namedParams);
+    }
+
     public List<OnlineReport> findForDatabaseId(final int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
