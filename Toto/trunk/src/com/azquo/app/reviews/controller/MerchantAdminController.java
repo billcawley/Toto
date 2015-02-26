@@ -67,30 +67,33 @@ public class MerchantAdminController {
         String result = "";
         try {
 
-        if (op==null){
-            op="displaypage";
-            if (itemName==null)  itemName="";
-            if (type==null) type = "";
-        }
-        if (download!=null && download.length() > 0){
-            op = "";
-            reviewService.download(response, itemName, Integer.parseInt(nameId), field);
-        }
-        if(op.equals("displaypage")){
-            if (submit == null){
+            if (op==null){
+                op="displaypage";
+                if (itemName==null)  itemName="";
+                if (type==null) type = "";
+            }
+            if (download!=null && download.length() > 0){
+                op = "";
+                reviewService.download(response, itemName, Integer.parseInt(nameId), field);
+            }
+            if(op.equals("displaypage")) {
+                int id = -1;
+
+                if (nameId != null) id = Integer.parseInt(nameId);
+                if (submit == null) {
                     result = reviewService.createPageSpec(itemName, type, nameId);
-            }else{
-                reviewService.saveData(response,itemName,values, Integer.parseInt(nameId));
+                } else {
+                    reviewService.saveData(response, itemName, values, id);
+                }
             }
 
-            }
         }catch(Exception e){
             result = e.getMessage();
             logger.error(result, e);
 
         }
 
-         model.addAttribute("content", result);
+        model.addAttribute("content", result);
         return "utf8page";
     }
 
