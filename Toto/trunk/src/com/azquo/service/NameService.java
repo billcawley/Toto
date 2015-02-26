@@ -548,7 +548,12 @@ public final class NameService {
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + setFormula);
             } else if (op == '*') { // * meaning intersection here . . .
-                nameStack.get(stackCount - 1).retainAll(nameStack.get(stackCount));
+                //assume that the second term implies 'level all'
+                List<Name> allNames = new ArrayList<Name>();
+                for (Name name:nameStack.get(stackCount)){
+                    addNames(name, allNames,0,ALL_LEVEL_INT);
+                }
+                nameStack.get(stackCount - 1).retainAll(allNames);
                 nameStack.remove(stackCount);
             } else if (op == '-') {
                 nameStack.get(stackCount - 1).removeAll(nameStack.get(stackCount));
