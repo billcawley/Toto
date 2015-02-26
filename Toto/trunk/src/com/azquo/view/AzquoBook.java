@@ -194,8 +194,8 @@ public class AzquoBook {
             mergedCells.put(azquoCells.get(r.StartRow, r.StartColumn), r);
         }
     }
-
-    private Range getRange(String rangeName) {
+    
+     private Range getRange(String rangeName) {
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().equalsIgnoreCase(rangeName)) {
@@ -208,7 +208,7 @@ public class AzquoBook {
 
 
     public String getRangeValue(String rangeName) {
-        Range range = wb.getWorksheets().getRangeByName(rangeName);
+        Range range = getRange(rangeName);
         if (range != null) {
             return range.getCellOrNull(0, 0).getStringValue();
         }
@@ -216,7 +216,7 @@ public class AzquoBook {
     }
 
 /*    private Range interpretRangeName(String cellString) {
-        return wb.getWorksheets().getRangeByName(cellString);
+        return getRangeTest(cellString);
     }*/
 
     private void createChosenMap() {
@@ -352,10 +352,10 @@ public class AzquoBook {
     }
 
 
-    private void fillRange(String regionName, String fillText, String lockMap) {
+    private void fillRange(String regionName, String fillText, String lockMap, boolean overwrite) {
         // for the headings, the lockmap is "locked" rather than the full array.
         boolean shapeAdjusted = false;
-        Range range = wb.getWorksheets().getRangeByName(regionName);
+        Range range = getRange(regionName);
         if (range == null) return;
         String[] rows = fillText.split("\n", -1);
         String[] rowLocks = lockMap.split("\n", -1);
@@ -372,7 +372,7 @@ public class AzquoBook {
                 int rowCount = rows.length;
                 insertRows(range, rowCount);
                 insertCols(range, colCount);
-                range = wb.getWorksheets().getRangeByName(regionName);
+                range = getRange(regionName);
                 createMergeMap();
                 shapeAdjusted = true;
             }
@@ -387,7 +387,10 @@ public class AzquoBook {
                 if (locked.equals("LOCKED")) {
                     currentCell.getStyle().setLocked(true);
                 }
-                setCellValue(currentCell, val);
+                String existingCellVal = currentCell.getStringValue();
+                if (overwrite || existingCellVal==null || existingCellVal.length()==0){
+                    setCellValue(currentCell, val);
+                }
             }
         }
     }
@@ -456,9 +459,9 @@ public class AzquoBook {
             result = valueService.getDataRegion(loggedInConnection, headings, region, filterCount, maxRows, maxCols);
             if (result.startsWith("error:")) return result;
             String language = Name.DEFAULT_DISPLAY_NAME;//TODO  Find the language!
-            fillRange(dataRegionPrefix + region, result, loggedInConnection.getLockMap(region));
+            fillRange(dataRegionPrefix + region, result, loggedInConnection.getLockMap(region), true);
             result = valueService.getColumnHeadings(loggedInConnection, region, language);
-            fillRange("az_displaycolumnheadings" + region, result, "LOCKED");
+            fillRange("az_displaycolumnheadings" + region, result, "LOCKED", false);
             if (hasOption(region, "sortable") != null) {
                 Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
                 if (displayColumnHeadings != null) {
@@ -468,7 +471,7 @@ public class AzquoBook {
             }
 
             result = valueService.getRowHeadings(loggedInConnection, region, language, filterCount);
-            fillRange("az_displayrowheadings" + region, result, "LOCKED");
+            fillRange("az_displayrowheadings" + region, result, "LOCKED", false);
             if (hasOption(region, "sortable") != null) {
                 Range displayRowHeadings = getRange("az_displayrowheadings" + region);
                 if (displayRowHeadings != null) {
