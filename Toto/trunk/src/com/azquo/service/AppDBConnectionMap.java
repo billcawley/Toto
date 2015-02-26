@@ -45,6 +45,7 @@ public class AppDBConnectionMap {
     }
     // was a simple get but we're going to lazy load
     public AzquoMemoryDBConnection getConnection(String mysqlName){
+        mysqlName = mysqlName.toLowerCase();
         AzquoMemoryDBConnection azquoMemoryDBConnection = connectionMap.get(mysqlName);
         if (azquoMemoryDBConnection != null){
             return azquoMemoryDBConnection;
