@@ -177,6 +177,8 @@ I'll add better tracking of where an error is later
         statement = statement.replace("<=", " <= ").replace("  ", " ");
         statement = statement.replace(">=", " >= ").replace("  ", " ");
         statement = statement.replace("=", " = ").replace("  ", " ");
+        statement = statement.replace("(", " ( ").replace("  ", " ");
+        statement = statement.replace(")", " ) ").replace("  ", " ");
         // added, as an operator, should make it more robust when used with decode string
         // this assumes that the , will be taken care of after the parsing
         statement = statement.replace(",", " , ").replace("  ", " ");
@@ -228,6 +230,7 @@ I should be ok for stringtokenizer at this point
     public boolean isKeywordOrOperator(String term){
         return term.equals("*") || term.equals("/") || term.equals("+") || term.equals("-") || term.equals(">")
                 || term.equals("<") || term.equals(">=") || term.equals("<=") || term.equals("=") || term.equals(",")
+                || term.equals("(") || term.equals(")")
                 || term.equalsIgnoreCase(NameService.LEVEL) || term.equalsIgnoreCase(NameService.FROM)
                 || term.equalsIgnoreCase(NameService.TO) || term.equalsIgnoreCase(NameService.COUNT)
                 || term.equalsIgnoreCase(NameService.SORTED) || term.equalsIgnoreCase(NameService.CHILDREN)
