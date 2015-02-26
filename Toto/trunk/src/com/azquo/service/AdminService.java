@@ -404,8 +404,11 @@ public class AdminService {
                 if (uploadRecord.getDatabaseId()> 0){
                     dbName = databaseDao.findById(uploadRecord.getDatabaseId()).getName();
                 }
-
-                uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, businessDao.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userDao.findById(uploadRecord.getUserId()).getName()));
+                String userName = "";
+                if (uploadRecord.getUserId() > 0) {
+                    userName = userDao.findById(uploadRecord.getUserId()).getName();
+                }
+                uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, businessDao.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName));
             }
             return uploadRecordsForDisplay;
         }
