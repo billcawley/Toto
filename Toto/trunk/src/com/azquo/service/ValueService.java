@@ -463,7 +463,7 @@ public final class ValueService {
         // was on set intersection . . .
         for (Name n : names) {
             for (String attribute : attributes){
-                String attValue = n.getAttribute(attribute);
+                String attValue = n.getAttribute(attribute.replace("`",""));
                 if (attValue != null){
                     if (!locked.isTrue && n.getAttribute(attribute, false) == null){ // tha attribute is not against the name itself (it's form the parent or structure)
                         locked.isTrue = true;
