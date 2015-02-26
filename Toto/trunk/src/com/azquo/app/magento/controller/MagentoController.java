@@ -101,7 +101,7 @@ public class MagentoController {
                 }
                 if (data != null){
                     File moved = null;
-                    if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")){ // if it's from us don't email us :)
+                    if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't email us :)
                         azquoMailer.sendEMail("edd@azquo.com", "Edd", "Magento file upload " + db, "Magento file upload " + db);
                         azquoMailer.sendEMail("bill@azquo.com", "Bill", "Magento file upload " + db, "Magento file upload " + db);
                         azquoMailer.sendEMail("nic@azquo.com", "Nic", "Magento file upload " + db, "Magento file upload " + db);
@@ -116,7 +116,7 @@ public class MagentoController {
                         dataLoadService.loadData(loggedInConnection, data.getInputStream());
                     }
                     return loggedInConnection.getConnectionId() + "";
-                } else {
+                } else{
                     return "error: no data posted";
                 }
                 //return onlineService.readExcel(loggedInConnection, onlineReport, null, "");
