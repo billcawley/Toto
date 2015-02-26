@@ -1,6 +1,12 @@
 package com.azquo.app.reviews.service;
 
+import com.azquo.admindao.BusinessDAO;
+import com.azquo.admindao.OnlineReportDAO;
+import com.azquo.adminentities.Database;
+import com.azquo.adminentities.OnlineReport;
 import com.azquo.adminentities.User;
+import com.azquo.memorydb.AzquoMemoryDB;
+import com.azquo.memorydb.MemoryDBManager;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import com.azquo.service.*;
@@ -26,6 +32,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import java.io.*;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -38,6 +45,9 @@ public class ReviewService {
     SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd  hh:mm:ss");
     SimpleDateFormat df2 = new SimpleDateFormat("yyyy-MM-dd");
     SimpleDateFormat outputFormat = new SimpleDateFormat("dd/MM/YY");
+    private static final String REVIEWS = "reviews";
+    private static final String RESPONSESHEET = "Supplier responses";
+
 
     @Autowired
     private Environment env;
@@ -71,6 +81,15 @@ public class ReviewService {
 
     @Autowired
     LoginService loginService;
+
+    @Autowired
+    OnlineReportDAO onlineReportDAO;
+
+    @Autowired
+    BusinessDAO businessDAO;
+
+    @Autowired
+    MemoryDBManager memoryDBManager;
 
     public static final String SUPPLIER = "SUPPLIER";
     public static final String ALL_RATINGS = "ALL RATINGS";
@@ -766,6 +785,11 @@ public class ReviewService {
          //then find the requirements for the page
         Name menuItem = nameService.findByName(masterDBConnection,itemName);
         String choiceSet = menuItem.getAttribute("Choice set");
+        boolean thisIsASetItem = true;
+       if (choiceSet==null){
+           thisIsASetItem = false;
+           choiceSet = itemName;
+       }
         boolean structured = false;
         if (choiceSet.indexOf("structured") > 0 && choiceSet.indexOf(",")>0){
             structured = true;
@@ -832,20 +856,22 @@ public class ReviewService {
                 if (itemToEdit> 0){
                     nameToEdit = nameService.findById(masterDBConnection,itemToEdit);
                 }else{
-                    Provenance provenance = masterDBConnection.getProvenance("in app");
-                    nameToEdit = nameService.findOrCreateNameInParent(masterDBConnection,"new "+ itemName, editset,true);
-                    nameToEdit.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME,"New name " + nameToEdit.getId());
-                    if (structured){
-                        Name topName = null;
-                        for (Name name: editset.getChildren()){
-                            if (topName==null) topName = name;
-                            if (name.findAllParents().contains(topName)){
-                                topName = name;
+                    if (thisIsASetItem) {
+                        Provenance provenance = masterDBConnection.getProvenance("in app");
+                        nameToEdit = nameService.findOrCreateNameInParent(masterDBConnection, "new " + itemName, editset, true);
+                        nameToEdit.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, "New name " + nameToEdit.getId());
+                        if (structured) {
+                            Name topName = null;
+                            for (Name name : editset.getChildren()) {
+                                if (topName == null) topName = name;
+                                if (name.findAllParents().contains(topName)) {
+                                    topName = name;
+                                }
                             }
+                            topName.addChildWillBePersisted(nameToEdit);
+
+
                         }
-                        topName.addChildWillBePersisted(nameToEdit);
-
-
                     }
                 }
                 int tabno = 0;
@@ -912,16 +938,18 @@ public class ReviewService {
                         hd.endElement("", "", "OPTIONS");
                     }
                     String fieldVal = null;
-                    if (fieldNo == 1){
-                        addElement(hd,atts,"VALUE",nameToEdit.getDefaultDisplayName());
+                    if (thisIsASetItem) {
+                        if (fieldNo == 1) {
+                            addElement(hd, atts, "VALUE", nameToEdit.getDefaultDisplayName());
 
-                    }else{
-                         fieldVal = nameToEdit.getAttribute(field);
-                        if (fieldVal==null){
-                            fieldVal = fieldName.getAttribute("default");
-                        }
-                        if (fieldVal!=null){
-                            addElement(hd, atts,"VALUE", fieldVal);
+                        } else {
+                            fieldVal = nameToEdit.getAttribute(field);
+                            if (fieldVal == null) {
+                                fieldVal = fieldName.getAttribute("default");
+                            }
+                            if (fieldVal != null) {
+                                addElement(hd, atts, "VALUE", fieldVal);
+                            }
                         }
                     }
 
@@ -1047,13 +1075,19 @@ public class ReviewService {
     public void saveData(HttpServletResponse response, String itemName, Map<Integer, String>  values, int itemToEdit)throws  Exception{
         AzquoMemoryDBConnection masterDBConnection = reviewsConnectionMap.getConnection(UserService.MASTERDBNAME);
 
-
-        Name nameToEdit = nameService.findById(masterDBConnection,itemToEdit);
+        Name nameToEdit = null;
+        boolean thisIsASetItem = true;
+        if (itemToEdit >= 0){
+            nameToEdit = nameService.findById(masterDBConnection,itemToEdit);
+        }else{
+            nameToEdit = nameService.findByName(masterDBConnection,itemName);
+            thisIsASetItem = false;
+        }
 
         int fieldNo = 1;
         Name menuItem = nameService.findByName(masterDBConnection,itemName);
         Name business = getUserBusiness();
-          if (itemToEdit == 0){
+        if (thisIsASetItem && itemToEdit == 0){
             Name choiceSet = nameService.findByName(masterDBConnection, menuItem.getAttribute("choice set"));
             nameToEdit = nameService.findOrCreateNameInParent(masterDBConnection, values.get(1), choiceSet, true);
             business.addChildWillBePersisted(nameToEdit);//everything connected with the business is stored under it
@@ -1064,7 +1098,7 @@ public class ReviewService {
                 uploadDir = menuItem.getDefaultDisplayName().replace(" ","");
             }
 
-            if (fieldNo == 1){
+            if (thisIsASetItem && fieldNo == 1){
                  nameToEdit.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, values.get(fieldNo));
 
             }else{
@@ -1093,17 +1127,17 @@ public class ReviewService {
                                 }
                             }
                             String fileName = values.get(fieldNo);
-                            String dbName = getBusinessDB(business);
+                            String dbName = getBusinessDBPath(business);
                             String fName = fileName.substring(fileName.lastIndexOf("_") + 1);
                             if (fileName != null) {
                                 URL input = new URL(fileName);
-                                if (fName.toLowerCase().contains(".xls") || fName.toLowerCase().contains(".csv")){//uploading review data
-                                    String supplierDb = getBusinessDB(business);
+                                if (itemName.equals("upload")){//uploading review data NOTE THAT THIS IS SPECIFIC
+                                    String supplierDb = getBusinessDBPath(business);
                                     AzquoMemoryDBConnection azquoMemoryDBConnection = reviewsConnectionMap.getConnection(supplierDb);
                                     InputStream loadFile = input.openStream();
                                     importService.importTheFile(azquoMemoryDBConnection,fName, loadFile);
                                 }else{
-                                       String fullPath = onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + subDir + "/" + fName;
+                                       String fullPath = onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + subDir + "/" + URLEncoder.encode(fName);
                                        File output = new File(fullPath);
                                        FileUtils.copyURLToFile(input, output, 5000, 5000);
                                        nameToEdit.setAttributeWillBePersisted(field, fName);
@@ -1122,7 +1156,7 @@ public class ReviewService {
 
         }
         masterDBConnection.persist();
-        String supplierDb = getBusinessDB(business);
+        String supplierDb = getBusinessDBPath(business);
         AzquoMemoryDBConnection azquoMemoryDBConnection = reviewsConnectionMap.getConnection(supplierDb);
         List<String> languages = new ArrayList<String>();
         languages.add(Name.DEFAULT_DISPLAY_NAME);
@@ -1132,10 +1166,10 @@ public class ReviewService {
 
     }
 
-    private String getBusinessDB(Name business) throws Exception{
+    private String getBusinessDBPath(Name business) throws Exception{
         String dbName = business.getAttribute("dbname");
         if (dbName == null) {
-            dbName = "revie_" + business.getDefaultDisplayName().toLowerCase().replace(" ", "");
+            dbName = "revie_" + business.getDefaultDisplayName().replace(" ", "");
         }
         return dbName;
 
@@ -1147,6 +1181,30 @@ public class ReviewService {
         Name user = userService.getUserByEmail(auth.getName());
         //user = userService.getUserByEmail("testuser5");
         return reviewsCustomerService.getReviewsCustomerForUser(user);
+
+    }
+
+    public int reviewsId(){
+        return businessDAO.findByName(REVIEWS).getId();
+    }
+
+
+
+    public void respond() throws Exception{
+
+        int reviewsId = reviewsId();
+        Name userBusiness = getUserBusiness();
+        String supplierDb = getBusinessDBPath(userBusiness);
+       // User reviewsApp =
+
+       //LoggedInConnection loggedInConnection = login(getBusinessDBPath(userBusiness), final User user, final int timeOutInMinutes, String spreadsheetName) throws  Exception{
+
+
+
+        //OnlineReport responseSheet = onlineReportDAO.findForBusinessIdandName(reviewsId,RESPONSESHEET);
+        //LoggedInConnection loggedInConnection =   new LoggedInConnection(System.nanoTime() + "", azquoMemoryDBConnection.getAzquoMemoryDB(), user, timeOutInMinutes * 60 * 1000, spreadsheetName);
+
+
 
     }
 
