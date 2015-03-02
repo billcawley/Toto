@@ -53,6 +53,7 @@
     <orderEntry type="library" name="org.springframework.security:spring-security-config:3.2.5.RELEASE" level="project" />
     <orderEntry type="library" name="org.springframework.security:spring-security-web:3.2.5.RELEASE" level="project" />
     <orderEntry type="library" name="net.openhft:koloboke-impl-jdk6-7:0.6.5" level="project" />
+    <orderEntry type="library" name="zsjsp" level="project" />
   </component>
 </module>
 

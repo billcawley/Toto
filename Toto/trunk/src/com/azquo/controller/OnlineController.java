@@ -7,6 +7,7 @@ import com.azquo.adminentities.OnlineReport;
 import com.azquo.memorydb.Name;
 import com.azquo.service.*;
 import com.azquo.view.AzquoBook;
+import com.azquo.view.ZKAzquoBookProvider;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -30,6 +31,8 @@ public class OnlineController {
 
     @Autowired
     private NameService nameService;
+    @Autowired
+    private ValueService valueService;
     @Autowired
     private LoginService loginService;
     @Autowired
@@ -65,6 +68,13 @@ public class OnlineController {
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
 
     ) throws Exception {
+        // test code, the useful objects will have been set up below
+        if (request.getParameter("trynewsheet") != null && request.getParameter("trynewsheet").length() > 0) {
+            request.setAttribute(ZKAzquoBookProvider.VALUE_SERVICE, valueService);
+            request.setAttribute(ZKAzquoBookProvider.NAME_SERVICE, nameService);
+            return "zstest";
+        }
+
         String callerId = request.getRemoteAddr();
         if (callerId != null && user != null && user.equals("demo@user.com")) {
             user += callerId;
@@ -221,6 +231,9 @@ public class OnlineController {
                     loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName, "");
                 }
                 loggedInConnection.setReportId(onlineReport.getId());
+                // jam 'em in the session for the moment, makes testing easier. As in see a report then try with &trynewsheet=true after
+                request.getSession().setAttribute(ZKAzquoBookProvider.LOGGED_IN_CONNECTION, loggedInConnection);
+                request.getSession().setAttribute(ZKAzquoBookProvider.BOOK_PATH, onlineService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
                 result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "Right-click mouse for provenance");
             }
             if (opcode.equals("buttonpressed") && row > 0) {//button pressed - follow instructions and reload admin sheet

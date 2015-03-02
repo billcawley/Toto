@@ -30,6 +30,7 @@
           <element id="library" level="project" name="org.springframework.security:spring-security-config:3.2.5.RELEASE" />
           <element id="library" level="project" name="org.springframework.security:spring-security-web:3.2.5.RELEASE" />
           <element id="library" level="project" name="net.openhft:koloboke-impl-jdk6-7:0.6.5" />
+          <element id="library" level="project" name="zsjsp" />
         </element>
       </element>
     </root>

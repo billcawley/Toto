@@ -829,9 +829,14 @@ seaports;children   container;children
 
     // THis returns the headings as they're meant to be seen in Excel I think
     // not this is called AFTER the data has been populated, hence how it can determine if rows are blank or not
+    // broken into 2 functions to help use the new sheet display
 
     public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent, final int filterCount) throws Exception {
         String language = stringUtils.getInstruction(headingsSent, "language");
+        return outputHeadings(getRowHeadingsAsArray(loggedInConnection,region,filterCount), language);
+    }
+
+    public List<List<DataRegionHeading>> getRowHeadingsAsArray(final LoggedInConnection loggedInConnection, final String region, final int filterCount) throws Exception {
         // do we want to try removing blank rows?
         if (filterCount > 0) {
             //send back only those headings that have data - considered in batches of length filtercount.
@@ -847,7 +852,7 @@ seaports;children   container;children
                 rowInt += filterCount;
             }
             //note that the sort order has already been set.... there cannot be both a restrict count and a filter count
-            return outputHeadings(rowHeadingsWithData, language);
+            return rowHeadingsWithData;
         } else if (loggedInConnection.getRestrictRowCount(region) != null && loggedInConnection.getRestrictRowCount(region) != 0) {//if not blanking then restrict by other criteria
             int restrictRowCount = loggedInConnection.getRestrictRowCount(region);
             List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
@@ -865,11 +870,9 @@ seaports;children   container;children
             for (int rowInt = 0; rowInt < restrictRowCount; rowInt++) {
                 rowHeadingsWithData.add(allRowHeadings.get(sortedRows.get(rowInt)));
             }
-            return outputHeadings(rowHeadingsWithData, language);
+            return rowHeadingsWithData;
         }
-        return outputHeadings(loggedInConnection.getRowHeadings(region), language);
-
-
+        return loggedInConnection.getRowHeadings(region);
     }
 
     /* ok so transposing happens here
@@ -896,6 +899,10 @@ seaports;children   container;children
     // transpose2DList. Todo!
 
     public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String language) throws Exception {
+        return outputHeadings(getColumnHeadingsAsArray(loggedInConnection, region), language);
+    }
+
+    public List<List<DataRegionHeading>> getColumnHeadingsAsArray(final LoggedInConnection loggedInConnection, final String region) throws Exception {
         if (loggedInConnection.getRestrictColCount(region) != null && loggedInConnection.getRestrictColCount(region) != 0) {
             int restrictColCount = loggedInConnection.getRestrictColCount(region);
             List<Integer> sortedCols = loggedInConnection.getColOrder(region);
@@ -913,9 +920,9 @@ seaports;children   container;children
             for (int ColInt = 0; ColInt < restrictColCount; ColInt++) {
                 ColHeadingsWithData.add(allColHeadings.get(sortedCols.get(ColInt)));
             }
-            return outputHeadings(transpose2DList(ColHeadingsWithData), language);
+            return transpose2DList(ColHeadingsWithData);
         }
-        return outputHeadings(transpose2DList(loggedInConnection.getColumnHeadings(region)), language);
+        return transpose2DList(loggedInConnection.getColumnHeadings(region));
     }
 
     /* ok so transposing happens here
@@ -1115,8 +1122,9 @@ seaports;children   container;children
 
     // having built shownValueArray in getExcelDataForColumnsRowsAndContext need to format it. Whether such a function should go back in there is a question
 
-    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, int filterCount, int restrictRowCount, int restrictColCount) {
+    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, List<List<Object>> displayObjectsForNewSheet, int filterCount, int restrictRowCount, int restrictColCount) {
 
+        List<List<Object>> sortedDisplayObjectsForNewSheet = new ArrayList<List<Object>>();
         int rowInt = 0;
         int blockRowCount = 0;
         int outputMarker = 0;
@@ -1133,6 +1141,12 @@ seaports;children   container;children
         for (int rowNo = 0; rowNo < restrictRowCount; rowNo++) {
 
             List<String> rowValuesShown = shownValueArray.get(sortedRows.get(rowNo));
+            List<Object> rowForNewSheet = null;
+            List<Object> sortedRowForNewSheet = null;
+            if (displayObjectsForNewSheet != null){
+                rowForNewSheet = displayObjectsForNewSheet.get(sortedRows.get(rowNo));
+                sortedRowForNewSheet = new ArrayList<Object>();
+            }
             if (blockRowCount == 0) {
                 outputMarker = sb.length();// in case we need to truncate it.
             }
@@ -1145,19 +1159,31 @@ seaports;children   container;children
                     sb.append("\t");
                 }
                 sb.append(rowValuesShown.get(sortedCols.get(colNo)));
+                if (rowForNewSheet != null){
+                    sortedRowForNewSheet.add(rowForNewSheet.get(sortedCols.get(colNo)));
+                }
                 newRow = false;
-
             }
-
+            sortedDisplayObjectsForNewSheet.add(sortedRowForNewSheet);
             rowInt++;
             firstRow = false;
             if (++blockRowCount == filterCount) {
                 if (theseRowsInThisRegionAreBlank(loggedInConnection, region, rowInt - filterCount, filterCount)) {
                     sb.delete(outputMarker, sb.length());
+                    // this should be the equivalent of the above delete
+                    for (int i = 0; i < blockRowCount; i++){
+                        sortedDisplayObjectsForNewSheet.remove(sortedDisplayObjectsForNewSheet.size() - 1);
+                    }
                 }
                 blockRowCount = 0;
             }
         }
+        // now adjust the displayobjects for new sheet
+        if (displayObjectsForNewSheet != null){// doing this way as I need to affect the passed collection
+            displayObjectsForNewSheet.clear();
+            displayObjectsForNewSheet.addAll(sortedDisplayObjectsForNewSheet);
+        }
+
         loggedInConnection.setSentDataMap(region, sb.toString());
 
         return sb;
@@ -1220,9 +1246,14 @@ seaports;children   container;children
         return 0;
     }
 
-    // the guts of actually delivering the data for a region
-
     public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictRowCount, int restrictColCount) throws Exception {
+        return  getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, restrictRowCount, restrictColCount, null);
+    }
+
+    // the guts of actually delivering the data for a region
+    // displayObjectsForNewSheet is similar to shown valuer array but the latter is made of strings, I need more synamic objects
+
+    public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictRowCount, int restrictColCount, List<List<Object>> displayObjectsForNewSheet) throws Exception {
         loggedInConnection.setContext(region, contextNames); // needed for provenance
         long track = System.currentTimeMillis();
         Integer sortCol = findPosition(loggedInConnection.getColumnHeadings(region), loggedInConnection.getSortCol(region));
@@ -1277,6 +1308,11 @@ seaports;children   container;children
             ArrayList<LoggedInConnection.ListOfValuesOrNamesAndAttributeName> thisRowValues
                     = new ArrayList<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>(totalCols);
             ArrayList<Set<DataRegionHeading>> thisRowHeadings = new ArrayList<Set<DataRegionHeading>>(totalCols);
+            List<Object> rowForNewSheet = null;
+            if (displayObjectsForNewSheet != null){
+                rowForNewSheet = new ArrayList<Object>();
+                displayObjectsForNewSheet.add(rowForNewSheet);
+            }
             List<String> shownValues = new ArrayList<String>();
             List<Boolean> lockedCells = new ArrayList<Boolean>();
             dataValuesMap.add(thisRowValues);
@@ -1306,6 +1342,9 @@ seaports;children   container;children
                 }
                 if (!checked) { // not a valid peer set? Show a blank locked cell
                     shownValues.add("");
+                    if (rowForNewSheet != null){
+                        rowForNewSheet.add("");
+                    }
                     lockedCells.add(true);
                     thisRowValues.add(null);
                 } else {
@@ -1322,6 +1361,9 @@ seaports;children   container;children
                         if (values.size() == 1 && !locked.isTrue) {
                             Value value = values.get(0);
                             shownValues.add(value.getText());
+                            if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
+                                rowForNewSheet.add(NumberUtils.isNumber(value.getText()) ? new Double(cellValue) : value.getText());
+                            }
                             if (sortCol == colNo && !NumberUtils.isNumber(value.getText())) {
                                 //make up a suitable double to get some kind of order! sort on 8 characters
                                 String padded = value.getText() + "        ";
@@ -1331,6 +1373,9 @@ seaports;children   container;children
                             }
                         } else {
                             shownValues.add(cellValue + "");
+                            if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
+                                rowForNewSheet.add(new Double(cellValue));
+                            }
                         }
                         valuesOrNamesAndAttributeName = loggedInConnection.new ListOfValuesOrNamesAndAttributeName(values);
                     } else {  // now, new logic for attributes
@@ -1340,8 +1385,14 @@ seaports;children   container;children
                         String attributeResult = findValueForHeadings(headingsForThisCell,locked, names, attributes);
                         if (NumberUtils.isNumber(attributeResult)){ // there should be a more efficient way I feel given that the result is typed internally
                             cellValue = Double.parseDouble(attributeResult);
+                            if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
+                                rowForNewSheet.add(new Double(cellValue));
+                            }
                         }
                         shownValues.add(attributeResult);
+                        if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
+                            rowForNewSheet.add(attributeResult);
+                        }
                     }
                     thisRowValues.add(valuesOrNamesAndAttributeName);
                     // ok these bits are for sorting. Could put a check on whether a number was actually the result but not so bothered
@@ -1376,7 +1427,7 @@ seaports;children   container;children
         loggedInConnection.setColOrder(region, sortValues(restrictColCount, sortColumnTotals));
         loggedInConnection.setRestrictRowCount(region, restrictRowCount);
         loggedInConnection.setRestrictColCount(region, restrictColCount);
-        final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, filterCount, restrictRowCount, restrictColCount);
+        final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, displayObjectsForNewSheet, filterCount, restrictRowCount, restrictColCount);
         formatLockMap(loggedInConnection, region, lockArray);
         printSumStats();
         printFindForNamesIncludeChildrenStats();

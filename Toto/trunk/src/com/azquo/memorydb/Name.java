@@ -119,11 +119,21 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // for convenience but be careful where it is used . . .
-
     public String getDefaultDisplayName() {
         return getAttribute(DEFAULT_DISPLAY_NAME);
     }
 
+    // for convenience but be careful where it is used . . .
+    public String getDisplayNameForLanguages(List<String> languages)
+    {
+        for (String language : languages){
+            String toReturn = getAttribute(language);
+            if (toReturn != null){
+                return toReturn;
+            }
+        }
+        return getDefaultDisplayName();
+    }
     // provenance immutable. If it were not then would need to clone
 
     public Provenance getProvenance() {
