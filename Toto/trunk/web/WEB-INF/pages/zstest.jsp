@@ -16,9 +16,16 @@
 <div>
     <zssjsp:spreadsheet id="myzss"
                         bookProvider="com.azquo.view.ZKAzquoBookProvider"
+                        apply="com.azquo.view.ZKComposer"
+                        width="100%" height="900px"
+                        maxrows="200" maxcolumns="80"
+                        showToolbar="true" showFormulabar="true" showContextMenu="true" showSheetbar="true"/>
+<!--    zssjsp:spreadsheet id="myzss"
+                        bookProvider="com.azquo.view.ZKAzquoBookProvider"
+                        apply="com.azquo.view.ZKComposer"
                         width="1850px" height="900px"
                         maxrows="1000" maxcolumns="80"
-                        showToolbar="true" showFormulabar="true" showContextMenu="true"/>
+                        showToolbar="true" showFormulabar="true" showContextMenu="true"/>-->
 </div>
 </body>
 </html>

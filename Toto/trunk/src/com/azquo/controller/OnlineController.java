@@ -2,12 +2,13 @@ package com.azquo.controller;
 
 import com.azquo.admindao.DatabaseDAO;
 import com.azquo.admindao.OnlineReportDAO;
+import com.azquo.admindao.UserChoiceDAO;
 import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.memorydb.Name;
 import com.azquo.service.*;
 import com.azquo.view.AzquoBook;
-import com.azquo.view.ZKAzquoBookProvider;
+import com.azquo.view.ZKAzquoBookUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -15,8 +16,11 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.zkoss.zss.api.Importers;
+import org.zkoss.zss.api.model.Book;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
 import java.util.*;
 
 
@@ -40,6 +44,8 @@ public class OnlineController {
     @Autowired
     private DatabaseDAO databaseDAO;
     @Autowired
+    private UserChoiceDAO userChoiceDAO;
+    @Autowired
     private OnlineService onlineService;
     @Autowired
     private AdminService adminService;
@@ -47,6 +53,16 @@ public class OnlineController {
     // TODO : break up into separate functions
 
     private static final Logger logger = Logger.getLogger(OnlineController.class);
+
+    public static final String BOOK = "BOOK";
+    public static final String BOOK_PATH = "BOOK_PATH";
+    public static final String LOGGED_IN_CONNECTION = "LOGGED_IN_CONNECTION";
+    public static final String VALUE_SERVICE = "VALUE_SERVICE";
+    public static final String NAME_SERVICE = "NAME_SERVICE";
+    public static final String USER_CHOICE_DAO = "USER_CHOICE_DAO";
+    public static final String ONLINE_SERVICE = "ONLINE_SERVICE";
+    public static final String REPORT_ID = "REPORT_ID";
+
 
     @RequestMapping(headers = "content-type=multipart/*")
     public String handleRequest(ModelMap model, HttpServletRequest request
@@ -70,8 +86,22 @@ public class OnlineController {
     ) throws Exception {
         // test code, the useful objects will have been set up below
         if (request.getParameter("trynewsheet") != null && request.getParameter("trynewsheet").length() > 0) {
-            request.setAttribute(ZKAzquoBookProvider.VALUE_SERVICE, valueService);
-            request.setAttribute(ZKAzquoBookProvider.NAME_SERVICE, nameService);
+            // ok new plan, make the book with all it needs here and set against the request for the provider to return
+            String bookPath = (String)request.getSession().getAttribute(BOOK_PATH);
+            final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+            final LoggedInConnection loggedInConnection = (LoggedInConnection)request.getSession().getAttribute(LOGGED_IN_CONNECTION);
+            // the first two make sense. Little funny about teh second two but we need a reference to these
+            book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
+            book.getInternalBook().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
+            book.getInternalBook().setAttribute(VALUE_SERVICE, valueService);
+            book.getInternalBook().setAttribute(NAME_SERVICE, nameService);
+            book.getInternalBook().setAttribute(ONLINE_SERVICE, onlineService);
+            book.getInternalBook().setAttribute(USER_CHOICE_DAO, userChoiceDAO);
+            // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
+            book.getInternalBook().setAttribute(REPORT_ID, loggedInConnection.getReportId());
+            ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils();
+            bookUtils.populateBook(book);
+            request.setAttribute(BOOK, book);
             return "zstest";
         }
 
@@ -232,8 +262,8 @@ public class OnlineController {
                 }
                 loggedInConnection.setReportId(onlineReport.getId());
                 // jam 'em in the session for the moment, makes testing easier. As in see a report then try with &trynewsheet=true after
-                request.getSession().setAttribute(ZKAzquoBookProvider.LOGGED_IN_CONNECTION, loggedInConnection);
-                request.getSession().setAttribute(ZKAzquoBookProvider.BOOK_PATH, onlineService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
+                request.getSession().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
+                request.getSession().setAttribute(BOOK_PATH, onlineService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
                 result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "Right-click mouse for provenance");
             }
             if (opcode.equals("buttonpressed") && row > 0) {//button pressed - follow instructions and reload admin sheet

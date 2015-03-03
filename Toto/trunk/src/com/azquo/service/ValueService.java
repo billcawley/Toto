@@ -1251,7 +1251,7 @@ seaports;children   container;children
     }
 
     // the guts of actually delivering the data for a region
-    // displayObjectsForNewSheet is similar to shown valuer array but the latter is made of strings, I need more synamic objects
+    // displayObjectsForNewSheet is similar to shown valuer array but the latter is made of strings, I need more dynamic objects
 
     public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictRowCount, int restrictColCount, List<List<Object>> displayObjectsForNewSheet) throws Exception {
         loggedInConnection.setContext(region, contextNames); // needed for provenance
