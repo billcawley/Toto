@@ -22,7 +22,8 @@ public final class DataLoadService {
     Runtime runtime = Runtime.getRuntime();
     int mb = 1024*1024;
 
-    private final String latestupdate = "Latest update";
+    private final String LATEST_UPDATE = "Latest update";
+    private final String REQUIRED_TABLES = "required tables";
 
     @Autowired
     private NameService nameService;
@@ -55,14 +56,21 @@ public final class DataLoadService {
 
     public String findLastUpdate(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         String date = "never";
+        String requiredTables = defaultData().replace("$starttime","");
         Name order = nameService.findByName(azquoMemoryDBConnection, "order");
         if (order!=null){
-            String lastUpdate = order.getAttribute(latestupdate);
+            String lastUpdate = order.getAttribute(LATEST_UPDATE);
             if (lastUpdate!=null){
                 date = lastUpdate;
             }
+            requiredTables = order.getAttribute(REQUIRED_TABLES);
+            if (requiredTables == null){
+                requiredTables = defaultData();
+            }
+            requiredTables.replace("$starttime", date);
         }
-        return date;
+
+        return requiredTables;
     }
 
     public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, InputStream data) throws Exception {
@@ -662,12 +670,14 @@ public final class DataLoadService {
 
         }
         Map<String, Name> customerGroups = new HashMap<String, Name>();
-        for (Map<String,String> group:tableMap.get("customer_group")){
-            String groupId = group.get("customer_group_id");
-            String groupString = group.get("customer_group_code");
-            Name groupName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,groupString,allGroupsName,true, languages);
-            customerGroups.put(groupId, groupName);
+        if (tableMap.get("customer_group") != null) {
+             for (Map<String, String> group : tableMap.get("customer_group")) {
+                String groupId = group.get("customer_group_id");
+                String groupString = group.get("customer_group_code");
+                Name groupName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, groupString, allGroupsName, true, languages);
+                customerGroups.put(groupId, groupName);
 
+            }
         }
 
 
@@ -744,32 +754,33 @@ public final class DataLoadService {
             }
         }
 
-        Map<String,Name>addressMap = new HashMap<String, Name>();
-        for (Map<String, String> addressRec : tableMap.get("customer_address_entity")) {
-            Name customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Customer " + addressRec.get("parent_id"), allCustomersName, true, languages);
+        if (tableMap.get("customer_address_entity") !=null) {
+            Map<String, Name> addressMap = new HashMap<String, Name>();
+            for (Map<String, String> addressRec : tableMap.get("customer_address_entity")) {
+                Name customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Customer " + addressRec.get("parent_id"), allCustomersName, true, languages);
 
-            addressMap.put(addressRec.get("entity_id"), customer);
-
-        }
-        tableMap.remove("customer_address_entity");
-
-        for (Map<String, String> attributeRow : tableMap.get("customer_address_entity_varchar")) {
-            String attId = attributeRow.get("attribute_id");
-            if (attId.equals(countryNameId) || attId.equals(postcodeNameId)){
-                String value = attributeRow.get("value");
-                String addressId = attributeRow.get("entity_id");
-                Name customer = addressMap.get(addressId);
-                if (attId.equals(countryNameId)){
-                    Name country = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,value, allCountriesName, true, languages);
-                    country.addChildWillBePersisted(customer);
-                }else{
-                    customer.setAttributeWillBePersisted("postcode", value);
-                }
+                addressMap.put(addressRec.get("entity_id"), customer);
 
             }
-        }
-        tableMap.remove("customer_address_entity_varchar");
+            tableMap.remove("customer_address_entity");
 
+            for (Map<String, String> attributeRow : tableMap.get("customer_address_entity_varchar")) {
+                String attId = attributeRow.get("attribute_id");
+                if (attId.equals(countryNameId) || attId.equals(postcodeNameId)) {
+                    String value = attributeRow.get("value");
+                    String addressId = attributeRow.get("entity_id");
+                    Name customer = addressMap.get(addressId);
+                    if (attId.equals(countryNameId)) {
+                        Name country = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, value, allCountriesName, true, languages);
+                        country.addChildWillBePersisted(customer);
+                    } else {
+                        customer.setAttributeWillBePersisted("postcode", value);
+                    }
+
+                }
+            }
+            tableMap.remove("customer_address_entity_varchar");
+        }
 
 
 
@@ -780,7 +791,7 @@ public final class DataLoadService {
 
         Name order = nameService.findByName(azquoMemoryDBConnection,"order", languages);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        order.setAttributeWillBePersisted(latestupdate, sdf.format(new Date()));
+        order.setAttributeWillBePersisted(LATEST_UPDATE, sdf.format(new Date()));
         if (azquoMemoryDBConnection.getCurrentDatabase()!=null){
             azquoMemoryDBConnection.persist();
         }
@@ -880,6 +891,25 @@ public final class DataLoadService {
     }
 
 
+    private String defaultData(){
+        //version number followed by required data.  $starttime to be replaced by latest update
+        return  "1.0\n" +
+                "'*','catalog_category_entity','','entity_id'\n" +
+                "'*','catalog_category_product','', 'product_id'\n" +
+                "'*','catalog_product_entity','','entity_id'\n" +
+                "'*','catalog_product_bundle_selection','','selection_id'\n" +
+                "'*','catalog_product_super_link','','product_id'\n" +
+                "'*','catalog_product_super_attribute','','product_super_attribute_id'\n" +
+                "'*','eav_attribute','', 'attribute_id'\n" +
+                "'*','eav_attribute_label','','attribute_label_id'\n" +
+                "'*','eav_attribute_option_value','','value_id'\n" +
+                "'*','eav_entity_type','','entity_type_id'\n" +
+                "'item_id,order_id,parent_item_id,created_at,product_id,weight,product_type,qty_ordered,qty_canceled,base_discount_invoiced, base_tax_amount, base_row_invoiced, base_row_total','sales_flat_order_item', '$starttime','item_id'\n" +
+                "'entity_id, customer_id, base_currency_code, increment_id, shipping_amount','sales_flat_order',  '$starttime', 'entity_id'\n" +
+                "'entity_id, email, group_id','customer_entity',  '$starttime', 'entity_id'\n" +
+                "'*','customer_group','', 'customer_group_id'\n" +
+                "'entity_id, parent_id','customer_address_entity', '$starttime', 'entity_id'\n";
+    }
 
 
 
