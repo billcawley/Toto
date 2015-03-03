@@ -368,7 +368,7 @@ public final class NameService {
         return namesFound;
     }
 
-    public void addNames(final Name name, List<Name> namesFound, final int currentLevel, final int level) throws Exception {
+    public void addNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
         if (currentLevel == level || level == ALL_LEVEL_INT) {
             namesFound.add(name);
         }
@@ -549,7 +549,7 @@ public final class NameService {
                 throw new Exception("not understood:  " + setFormula);
             } else if (op == '*') { // * meaning intersection here . . .
                 //assume that the second term implies 'level all'
-                List<Name> allNames = new ArrayList<Name>();
+                Set<Name> allNames = new HashSet<Name>();
                 for (Name name:nameStack.get(stackCount)){
                     addNames(name, allNames,0,ALL_LEVEL_INT);
                 }
@@ -1052,7 +1052,7 @@ public final class NameService {
 
     }
 
-    public String getJsonChildren(LoggedInConnection loggedInConnection, String jsTreeId, Name name, String parents, Map<String, LoggedInConnection.JsTreeNode> lookup) throws Exception {
+    public String getJsonChildren(LoggedInConnection loggedInConnection, String jsTreeId, Name name, String parents, Map<String, LoggedInConnection.JsTreeNode> lookup, boolean details) throws Exception {
         StringBuilder result = new StringBuilder();
         result.append("[{\"id\":" + jsTreeId + ",\"state\":{\"opened\":true},\"text\":\"");
         List<Name> children = new ArrayList<Name>();
@@ -1068,11 +1068,7 @@ public final class NameService {
         } else if (name != null) {
             result.append(name.getDefaultDisplayName().replace("\"", "\\\""));
             if (!parents.equals("true")) {
-                int count = 0;
                 for (Name child : name.getChildren()) {
-                    if (count++ > 100) {
-                        break;
-                    }
                     children.add(child);
                 }
             } else {
@@ -1085,7 +1081,7 @@ public final class NameService {
 
         result.append("\"");
         int maxdebug = 500;
-        if (children.size() > 0) {
+        if (children.size() > 0 || (details && name.getAttributes().size() > 1)) {
             result.append(",\"children\":[");
             int lastId = loggedInConnection.getLastJstreeId();
             int count = 0;
@@ -1105,12 +1101,25 @@ public final class NameService {
                     break;
                 }
                 result.append("{\"id\":" + lastId + ",\"text\":\"" + child.getDefaultDisplayName().replace("\"", "\\\"") + "\"");
-                if (child.getChildren().size() > 0 || child.getValues().size() > 0) {
+                if (child.getChildren().size() > 0 || child.getValues().size() > 0 || (details && child.getAttributes().size()>1)) {
                     result.append(",\"children\":true");
                 }
                 result.append("}");
 
             }
+            if (details&&name!=null) {
+                for (String attName:name.getAttributes().keySet()){
+                    if (!attName.equals(Name.DEFAULT_DISPLAY_NAME)){
+                        if (count++ > 0) {
+                            result.append(",");
+                        }
+                        loggedInConnection.setLastJstreeId(++lastId);
+                        result.append("{\"id\":" + lastId + ",\"text\":\"" + attName + ":" + name.getAttributes().get(attName).replace("\"", "\\\"") + "\"}");
+                    }
+                }
+
+            }
+
             result.append("]");
         } else {
             result.append(valueService.getJsonDataforOneName(loggedInConnection, name, lookup));
