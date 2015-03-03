@@ -589,7 +589,13 @@ public class AzquoBook {
     }
 
     private String addOption(String item, String selected) {
-        String content = "<option value = '" + item + "'";
+        String content = null;
+        if (item.contains("'")){
+            content = "<option value = \"" + item + "\"";
+
+        }else{
+            content = "<option value = '" + item + "'";
+        }
         if (item.toLowerCase().equals(selected.toLowerCase())) {
             content += " selected";
 
@@ -984,13 +990,13 @@ public class AzquoBook {
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
                 String regionName = name.getText().substring(dataRegionPrefix.length()).toLowerCase();
                 String error = fillRegion(loggedInConnection, regionName);
+                calculateAll();
                 if (error.startsWith("error:")) {
                     return error;
                 }
             }
         }
-        calculateAll();
-        return "";
+         return "";
     }
 
 
