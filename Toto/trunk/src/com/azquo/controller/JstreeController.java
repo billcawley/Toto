@@ -171,8 +171,9 @@ public class JstreeController {
 
 
                     jsonFunction = null;
+                    boolean details = true;
 
-                    result.append(nameService.getJsonChildren(loggedInConnection, jsTreeId, current.child.name, parents, lookup));
+                    result.append(nameService.getJsonChildren(loggedInConnection, jsTreeId, current.child.name, parents, lookup, details));
 
                 }
                 if (current.child.name != null) {
