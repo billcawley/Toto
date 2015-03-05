@@ -217,32 +217,42 @@ public class ZKAzquoBookUtils {
                 }
                 if ((displayRowHeadings.getRowCount() < expandedRowHeadings.size()) && displayRowHeadings.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
                     rowsToAdd = expandedRowHeadings.size() - (displayRowHeadings.getRowCount());
-                    for (int i = 0; i < rowsToAdd; i++) {
+                    int insertRow = displayRowHeadings.getRow() + 2; // I think this is correct, middle row of 3?
+                    Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
+                    Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1 , maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+                    CellOperationUtil.insertRow(insertRange);
+                    // will this paste the lot?
+                    CellOperationUtil.paste(copySource, insertRange);
+                    int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
+                    if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
+                        insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
+                    }
+/*                    for (int i = 0; i < rowsToAdd; i++) {
                         int rowToCopy = displayRowHeadings.getRow() + 1; // I think this is correct, middle row of 3?
                         Range copySource = Ranges.range(sheet, rowToCopy, 0, rowToCopy, maxCol);
-                        Range insertRange = Ranges.range(sheet, rowToCopy + 1, 0, rowToCopy + 1, maxCol); // insert at the 3rd row
+                        Range insertRange = Ranges.range(sheet, rowToCopy + 1, 0, rowToCopy + 5, maxCol); // insert at the 3rd row
                         CellOperationUtil.insertRow(insertRange); // get formatting from above
                         if (sheet.getInternalSheet().getRow(rowToCopy).getHeight() != sheet.getInternalSheet().getRow(rowToCopy + 1).getHeight()) { // height may not match on insert/paste, if not set it
                             sheet.getInternalSheet().getRow(rowToCopy + 1).setHeight(sheet.getInternalSheet().getRow(rowToCopy).getHeight());
                         }
                         // ok now copy contents, this should (ha!) copy the row that was just shifted down to the one just created
                         CellOperationUtil.paste(copySource, insertRange);
-                    }
+                    }*/
                 }
                 // add columns
                 int maxRow = sheet.getLastRow();
                 if (displayColumnHeadings.getColumnCount() < expandedColumnHeadings.get(0).size() && displayColumnHeadings.getColumnCount() > 2) { // then we need to expand
+
                     colsToAdd = expandedColumnHeadings.get(0).size() - (displayColumnHeadings.getColumnCount());
-                    for (int i = 0; i < colsToAdd; i++) {
-                        int colToCopy = displayColumnHeadings.getColumn() + 1; // I think this is correct, middle row of 3?
-                        Range copySource = Ranges.range(sheet, 0, colToCopy, maxRow, colToCopy);
-                        Range insertRange = Ranges.range(sheet, 0, colToCopy + 1, maxRow, colToCopy + 1); // insert at the 3rd col
-                        CellOperationUtil.insertColumn(insertRange); // get formatting from above
-                        // ok now copy contents, this should (ha!) copy the row that was just shifted down to the one just created
-                        CellOperationUtil.paste(copySource, insertRange);
-                        if (sheet.getInternalSheet().getColumn(colToCopy).getWidth() != sheet.getInternalSheet().getColumn(colToCopy + 1).getWidth()) { // width may not match on insert/paste, if not set it
-                            sheet.getInternalSheet().getColumn(colToCopy + 1).setWidth(sheet.getInternalSheet().getColumn(colToCopy).getWidth());
-                        }
+                    int insertCol = displayColumnHeadings.getColumn() + 2; // I think this is correct, just after the second column?
+                    Range copySource = Ranges.range(sheet, 0, insertCol - 1, maxRow, insertCol - 1);
+                    Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the 3rd col
+                    CellOperationUtil.insertColumn(insertRange);
+                    // will this paste the lot?
+                    CellOperationUtil.paste(copySource, insertRange);
+                    int originalWidth = sheet.getInternalSheet().getColumn(insertCol).getWidth();
+                    if (originalWidth != sheet.getInternalSheet().getColumn(insertCol).getWidth()) { // height may not match on insert
+                        insertRange.setColumnWidth(originalWidth); // hopefully set the lot in one go??
                     }
                 }
                 // ok there should be the right space for the headings
