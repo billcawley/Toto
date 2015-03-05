@@ -652,10 +652,12 @@ public class AzquoBook {
             addStyle("font-style", "italic");
         }
         int fontheight = font.getSize();
-        if (fontheight == 9) {
-            //fix for stupid ol Windows
-            fontheight = 10;
-        }
+        fontheight = fontheight * 4 / 3;
+
+       // if (fontheight == 9) {
+       //     //fix for stupid ol Windows
+        //    fontheight = 10;
+       // }
         addStyle("font-size", fontheight + "px");
         // Font color is handled with the other colors
     }
