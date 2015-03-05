@@ -31,15 +31,22 @@ public class ZKAzquoBookUtils {
     public static final String azNext = "az_Next";
     public static final String OPTIONPREFIX = "!";
 
+    final ValueService valueService;
+    final NameService nameService;
+    final UserChoiceDAO userChoiceDAO;
+
+    public ZKAzquoBookUtils(ValueService valueService, NameService nameService, UserChoiceDAO userChoiceDAO) {
+        this.valueService = valueService;
+        this.nameService = nameService;
+        this.userChoiceDAO = userChoiceDAO;
+    }
+
 
     // kind of like azquo book prepare sheet, load data bits, will aim to replicate the basics from there
 
     public void populateBook(Book book) throws Exception {
         //book.getInternalBook().getAttribute(ZKAzquoBookProvider.BOOK_PATH);
         LoggedInConnection loggedInConnection = (LoggedInConnection) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_CONNECTION);
-        ValueService valueService = (ValueService) book.getInternalBook().getAttribute(OnlineController.VALUE_SERVICE);
-        NameService nameService = (NameService) book.getInternalBook().getAttribute(OnlineController.NAME_SERVICE);
-        UserChoiceDAO userChoiceDAO = (UserChoiceDAO) book.getInternalBook().getAttribute(OnlineController.USER_CHOICE_DAO);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
 
         Map<String, String> userChoices = new HashMap<String, String>();
@@ -85,7 +92,7 @@ public class ZKAzquoBookUtils {
                                 optionsForRegion = null;
                             }
                         }
-                    fillRegion(sheet, region, userChoices, optionsForRegion, valueService, nameService, loggedInConnection);
+                    fillRegion(sheet, region, userChoices, optionsForRegion, loggedInConnection);
                 }
             }
 
@@ -110,59 +117,15 @@ public class ZKAzquoBookUtils {
                 if (userChoice != null) {
                     range.setValue(userChoice.getChoiceValue());
                 }*/
-            // could add this excel validation above of course
-            for (SName name : namesForSheet) {
-                if (name.getRefersToSheetName().equals(sheet.getSheetName())) {
-                    if (name.getName().endsWith("Choice")) {
-                        CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
-                        CellRegion chosen = getCellRegionForSheetAndName(sheet, name.getName().substring(0, name.getName().length() - "Choice".length()) + "Chosen");
-                        if (choice != null && chosen != null) {
-                            // ok I assume choice is a single cell
-                            try{
-                                List<Name> choiceNames = nameService.parseQuery(loggedInConnection, sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).getStringValue());// I think this will do it??
-                                // TODO : investigate whether the choices should be dumped in an excel range and then use that - for now build the selector string
 
-                                StringBuilder selectorString = new StringBuilder();
-                                selectorString.append("{");
-                                for (Name name1 : choiceNames) {
-                                    if (selectorString.length() > 1) {
-                                        selectorString.append(",");
-                                    }
-                                    selectorString.append("\"").append(name1.getDisplayNameForLanguages(loggedInConnection.getLanguages())).append("\"");
-                                }
-                                selectorString.append("}");
-                                Range chosenRange = Ranges.range(sheet, chosen.getRow(), chosen.getColumn(), chosen.getLastRow(), chosen.getLastColumn());
-                                chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, selectorString.toString(), null,
-                                        true, "title", "msg",
-                                        true, Validation.AlertStyle.WARNING, "alert title", "alert msg");
-/*                                    book.getInternalBook().addEventListener(
-                                            new ModelEventListener() {
-                                                @Override
-                                                public void onEvent(ModelEvent modelEvent) {
-                                                    System.out.println(modelEvent);
-                                                    if (modelEvent.getName().equals("onDataValidationContentChange")){
-                                                        modelEvent.getObjectId();
-                                                    }
-                                                }
-                                            });*/
-                            } catch (Exception e){
-                                Range chosenRange = Ranges.range(sheet, chosen.getRow(), chosen.getColumn(), chosen.getLastRow(), chosen.getLastColumn());
-                                chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "{\"" + e.getMessage() + "\"}", null,
-                                        true, "title", "msg",
-                                        true, Validation.AlertStyle.WARNING, "alert title", "alert msg");
-
-                            }
-                        }
-                    }
-                }
-            }
+            addValidation(namesForSheet,sheet,loggedInConnection);
 
         }
     }
 
     // taking the function from old AzquoBook and rewriting
 
-    private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, String optionsForRegion, ValueService valueService, NameService nameService, LoggedInConnection loggedInConnection) throws Exception {
+    private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, String optionsForRegion, LoggedInConnection loggedInConnection) throws Exception {
         int filterCount = asNumber(getOption(region, "hiderows", userChoices, optionsForRegion));
         if (filterCount == 0)
             filterCount = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
@@ -182,8 +145,8 @@ public class ZKAzquoBookUtils {
             // instead of valueService.setupRowHeadings, used not for straight display but for the excel data bit, it will constain them and after we output.
             // while running in parallel with the old code it might work without this as the headings would have been set up in a previous call to the logged in connection
 
-            List<List<List<DataRegionHeading>>> columnHeadings = getHeadingsLists(columnHeadingsDescription, sheet, valueService, nameService, loggedInConnection);
-            List<List<List<DataRegionHeading>>> rowHeadings = getHeadingsLists(rowHeadingsDescription, sheet, valueService, nameService, loggedInConnection);
+            List<List<List<DataRegionHeading>>> columnHeadings = getHeadingsLists(columnHeadingsDescription, sheet, loggedInConnection);
+            List<List<List<DataRegionHeading>>> rowHeadings = getHeadingsLists(rowHeadingsDescription, sheet, loggedInConnection);
             // transpose, expand, transpose again
             List<List<Object>> displayObjectsForNewSheet = new ArrayList<List<Object>>();
 
@@ -366,7 +329,7 @@ public class ZKAzquoBookUtils {
         return null;
     }
 
-    public List<List<List<DataRegionHeading>>> getHeadingsLists(CellRegion headings, Sheet sheet, ValueService valueService, NameService nameService, LoggedInConnection loggedInConnection) {
+    public List<List<List<DataRegionHeading>>> getHeadingsLists(CellRegion headings, Sheet sheet, LoggedInConnection loggedInConnection) {
         List<List<List<DataRegionHeading>>> headingsLists = new ArrayList<List<List<DataRegionHeading>>>();
         for (int rowIndex = headings.getRow(); rowIndex <= headings.getLastRow(); rowIndex++) {
             List<List<DataRegionHeading>> row = new ArrayList<List<DataRegionHeading>>();
@@ -382,6 +345,7 @@ public class ZKAzquoBookUtils {
                         row.add(Arrays.asList(new DataRegionHeading(cellString, true))); // we say that an attribuite heading defaults to writeable, it will defer to the name
                     } else {
                         try {
+
                             row.add(valueService.dataRegionHeadingsFromNames(nameService.parseQuery(loggedInConnection, cellString, loggedInConnection.getLanguages()), loggedInConnection));
                         } catch (Exception e) {
                             // todo, error handling??
@@ -394,6 +358,61 @@ public class ZKAzquoBookUtils {
             headingsLists.add(row);
         }
         return headingsLists;
+    }
+
+    public static final String VALIDATION_SHEET = "VALIDATION_SHEET";
+
+    public void addValidation(List<SName> namesForSheet, Sheet sheet, LoggedInConnection loggedInConnection){
+        Sheet validationSheet = null;
+        if (sheet.getBook().getSheet(VALIDATION_SHEET) == null){
+            sheet.getBook().getInternalBook().createSheet(VALIDATION_SHEET);
+        }
+        validationSheet = sheet.getBook().getSheet(VALIDATION_SHEET);
+        int numberOfValidationsAdded = 0;
+        for (SName name : namesForSheet) {
+            if (name.getRefersToSheetName().equals(sheet.getSheetName())) {
+                if (name.getName().endsWith("Choice")) {
+                    CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
+                    CellRegion chosen = getCellRegionForSheetAndName(sheet, name.getName().substring(0, name.getName().length() - "Choice".length()) + "Chosen");
+                    if (choice != null && chosen != null) {
+                        // ok I assume choice is a single cell
+                        try{
+                            List<Name> choiceNames = nameService.parseQuery(loggedInConnection, sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).getStringValue());// I think this will do it??
+                            int row = 0;
+                            for (Name name1 : choiceNames) {
+                                validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded).setStringValue(name1.getDisplayNameForLanguages(loggedInConnection.getLanguages()));
+                                row++;
+                            }
+                            Range validationValues = Ranges.range(validationSheet, 0, numberOfValidationsAdded, row, numberOfValidationsAdded);
+                            validationValues.createName("az_Validation" + numberOfValidationsAdded);
+                            Range chosenRange = Ranges.range(sheet, chosen.getRow(), chosen.getColumn(), chosen.getLastRow(), chosen.getLastColumn());
+
+                            //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
+                            chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
+                                    true, "title", "msg",
+                                    true, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+/*                                    book.getInternalBook().addEventListener(
+                                            new ModelEventListener() {
+                                                @Override
+                                                public void onEvent(ModelEvent modelEvent) {
+                                                    System.out.println(modelEvent);
+                                                    if (modelEvent.getName().equals("onDataValidationContentChange")){
+                                                        modelEvent.getObjectId();
+                                                    }
+                                                }
+                                            });*/
+                        } catch (Exception e){
+                            Range chosenRange = Ranges.range(sheet, chosen.getRow(), chosen.getColumn(), chosen.getLastRow(), chosen.getLastColumn());
+                            chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "{\"" + e.getMessage() + "\"}", null,
+                                    true, "title", "msg",
+                                    true, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+
+                        }
+                        numberOfValidationsAdded++;
+                    }
+                }
+            }
+        }
     }
 
 }

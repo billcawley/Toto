@@ -57,10 +57,6 @@ public class OnlineController {
     public static final String BOOK = "BOOK";
     public static final String BOOK_PATH = "BOOK_PATH";
     public static final String LOGGED_IN_CONNECTION = "LOGGED_IN_CONNECTION";
-    public static final String VALUE_SERVICE = "VALUE_SERVICE";
-    public static final String NAME_SERVICE = "NAME_SERVICE";
-    public static final String USER_CHOICE_DAO = "USER_CHOICE_DAO";
-    public static final String ONLINE_SERVICE = "ONLINE_SERVICE";
     public static final String REPORT_ID = "REPORT_ID";
 
 
@@ -93,15 +89,13 @@ public class OnlineController {
             // the first two make sense. Little funny about teh second two but we need a reference to these
             book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
             book.getInternalBook().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
-            book.getInternalBook().setAttribute(VALUE_SERVICE, valueService);
-            book.getInternalBook().setAttribute(NAME_SERVICE, nameService);
-            book.getInternalBook().setAttribute(ONLINE_SERVICE, onlineService);
-            book.getInternalBook().setAttribute(USER_CHOICE_DAO, userChoiceDAO);
             // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
             book.getInternalBook().setAttribute(REPORT_ID, loggedInConnection.getReportId());
-            ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils();
+            ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, nameService, userChoiceDAO);
             bookUtils.populateBook(book);
             request.setAttribute(BOOK, book);
+            model.addAttribute("databaseChosen", loggedInConnection.getCurrentDBName());
+            model.addAttribute("connectionId", loggedInConnection.getConnectionId());
             return "zstest";
         }
 
