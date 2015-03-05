@@ -4,10 +4,9 @@ import com.azquo.admindao.UserChoiceDAO;
 import com.azquo.adminentities.UserChoice;
 import com.azquo.controller.OnlineController;
 import com.azquo.memorydb.Name;
-import com.azquo.service.DataRegionHeading;
-import com.azquo.service.LoggedInConnection;
-import com.azquo.service.NameService;
-import com.azquo.service.ValueService;
+import com.azquo.memorydb.Value;
+import com.azquo.service.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
@@ -16,7 +15,9 @@ import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.api.model.Validation;
 import org.zkoss.zss.jsp.BookProvider;
 import org.zkoss.zss.model.*;
+import org.zkoss.zss.model.impl.HyperlinkImpl;
 
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -27,18 +28,25 @@ public class ZKAzquoBookUtils {
 
     public static final String azDataRegion = "az_DataRegion";
     public static final String azOptions = "az_Options";
+    public static final String azHeadings = "az_headings";
     public static final String azInput = "az_Input";
     public static final String azNext = "az_Next";
     public static final String OPTIONPREFIX = "!";
 
+
+    private static final ObjectMapper jacksonMapper = new ObjectMapper();
+
+
     final ValueService valueService;
     final NameService nameService;
     final UserChoiceDAO userChoiceDAO;
+    final AdminService adminService;
 
-    public ZKAzquoBookUtils(ValueService valueService, NameService nameService, UserChoiceDAO userChoiceDAO) {
+    public ZKAzquoBookUtils(ValueService valueService, NameService nameService, UserChoiceDAO userChoiceDAO, AdminService adminService) {
         this.valueService = valueService;
         this.nameService = nameService;
         this.userChoiceDAO = userChoiceDAO;
+        this.adminService = adminService;
     }
 
 
@@ -58,68 +66,78 @@ public class ZKAzquoBookUtils {
         }
         // I guess run through all sheets?
 
-        for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+        if (loggedInConnection.getReportId()==1){
+            for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+                Sheet sheet = book.getSheetAt(sheetNumber);
+                loadAdminData(loggedInConnection, book, sheet);
+            }
+            //fill admin date
+        }else {
 
 
-            Sheet sheet = book.getSheetAt(sheetNumber);
-            // see if we can impose the user choices on the sheet
-            for (String choiceName : userChoices.keySet()){
-                CellRegion choice = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
-                if (choice != null){
-                    sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoices.get(choiceName));
+            for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+
+
+                Sheet sheet = book.getSheetAt(sheetNumber);
+                // see if we can impose the user choices on the sheet
+                for (String choiceName : userChoices.keySet()) {
+                    CellRegion choice = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
+                    if (choice != null) {
+                        sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoices.get(choiceName));
+                    }
                 }
-            }
 
-            // ok the plan here is remove all the merges then put them back in after the regions are expanded.
-            List<CellRegion> merges = new ArrayList<CellRegion>(sheet.getInternalSheet().getMergedRegions());
+                // ok the plan here is remove all the merges then put them back in after the regions are expanded.
+                List<CellRegion> merges = new ArrayList<CellRegion>(sheet.getInternalSheet().getMergedRegions());
 
-            for (CellRegion merge : merges) {
-                CellOperationUtil.unmerge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()));
-            }
+                for (CellRegion merge : merges) {
+                    CellOperationUtil.unmerge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()));
+                }
 
-            // and now we want to run through all regions for this sheet, will look at the old code for this, I think it's fill region that we take cues from
-            // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
-            List<SName> namesForSheet = getNamesForSheet(sheet);
-            for (SName name : namesForSheet) {
-                // Old one was case insensitive - not so happy about this. Will allow it on the prefix
-                if (name.getName().startsWith(azDataRegion)) { // then we have a data region to deal with here
-                    String region = name.getName().substring(azDataRegion.length()); // might well be an empty string
-                    String optionsForRegion = null;
-                        CellRegion optionsRegion =  getCellRegionForSheetAndName(sheet, azOptions + region);
-                        if (optionsRegion != null){
+                // and now we want to run through all regions for this sheet, will look at the old code for this, I think it's fill region that we take cues from
+                // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
+                List<SName> namesForSheet = getNamesForSheet(sheet);
+                for (SName name : namesForSheet) {
+                    // Old one was case insensitive - not so happy about this. Will allow it on the prefix
+                    if (name.getName().startsWith(azDataRegion)) { // then we have a data region to deal with here
+                        String region = name.getName().substring(azDataRegion.length()); // might well be an empty string
+                        String optionsForRegion = null;
+                        CellRegion optionsRegion = getCellRegionForSheetAndName(sheet, azOptions + region);
+                        if (optionsRegion != null) {
                             optionsForRegion = sheet.getInternalSheet().getCell(optionsRegion.getRow(), optionsRegion.getColumn()).getStringValue();
                             if (optionsForRegion.isEmpty()) {
                                 optionsForRegion = null;
                             }
                         }
-                    fillRegion(sheet, region, userChoices, optionsForRegion, loggedInConnection);
+                        fillRegion(sheet, region, userChoices, optionsForRegion, loggedInConnection);
+                    }
                 }
-            }
 
-            // all data for that sheet should be populated
-            // snap the charts - currently just top left, do bottom right also?
-            for (SChart chart : sheet.getInternalSheet().getCharts()) {
-                ViewAnchor oldAnchor = chart.getAnchor();
-                int row = oldAnchor.getRowIndex();
-                int col = oldAnchor.getColumnIndex();
-                int width = oldAnchor.getWidth();
-                int height = oldAnchor.getHeight();
-                chart.setAnchor(new ViewAnchor(row, col, 0, 0, width, height));
-            }
-            // now remerge? Should work
-            for (CellRegion merge : merges) {
-                // I think we do want to merge horizontally (the boolean flag)
-                CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), true);
-            }
-            // now sort out dropdowns
-            // todo, sort out saved choiced on the dropdowns
+                // all data for that sheet should be populated
+                // snap the charts - currently just top left, do bottom right also?
+                for (SChart chart : sheet.getInternalSheet().getCharts()) {
+                    ViewAnchor oldAnchor = chart.getAnchor();
+                    int row = oldAnchor.getRowIndex();
+                    int col = oldAnchor.getColumnIndex();
+                    int width = oldAnchor.getWidth();
+                    int height = oldAnchor.getHeight();
+                    chart.setAnchor(new ViewAnchor(row, col, 0, 0, width, height));
+                }
+                // now remerge? Should work
+                for (CellRegion merge : merges) {
+                    // I think we do want to merge horizontally (the boolean flag)
+                    CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), true);
+                }
+                // now sort out dropdowns
+                // todo, sort out saved choiced on the dropdowns
                 /*                     UserChoice userChoice = userChoiceDAO.findForUserIdReportIdAndChoice(loggedInConnection.getUser().getId(), reportId, choiceName);
                 if (userChoice != null) {
                     range.setValue(userChoice.getChoiceValue());
                 }*/
 
-            addValidation(namesForSheet,sheet,loggedInConnection);
+                addValidation(namesForSheet, sheet, loggedInConnection);
 
+            }
         }
     }
 
@@ -414,6 +432,188 @@ public class ZKAzquoBookUtils {
             }
         }
     }
+
+
+    private void loadAdminData(LoggedInConnection loggedInConnection, Book book, Sheet sheet) throws Exception {
+        List<SName> namesForSheet = getNamesForSheet(sheet);
+        for (SName name : namesForSheet) {
+            // Old one was case insensitive - not so happy about this. Will allow it on the prefix
+            if (name.getName().toLowerCase().startsWith(azHeadings)) { // then we have a data region to deal with here
+                String region = name.getName().substring(azHeadings.length()).toLowerCase(); // might well be an empty string
+                fillAdminData(loggedInConnection, sheet, region, valueService, adminService);
+            }
+        }
+    }
+
+    public String fillAdminData(LoggedInConnection loggedInConnection, Sheet sheet, String region, ValueService valueService, AdminService adminService) throws Exception {
+        String data = null;
+        CellRegion headingsRange = getCellRegionForSheetAndName(sheet, "az_Headings" + region);
+        int headingsRow = headingsRange.getRow();
+        int headingsCol = headingsRange.getColumn();
+        int firstHeading = headingsRange.getColumn();
+        if (region.equals("data") && loggedInConnection.getNamesToSearch() != null) {
+            Map<Set<com.azquo.memorydb.Name>, Set<Value>> shownValues = valueService.getSearchValues(loggedInConnection.getNamesToSearch());
+            loggedInConnection.setValuesFound(shownValues);
+            LinkedHashSet<com.azquo.memorydb.Name> nameHeadings = valueService.getHeadings(shownValues);
+            int colNo = firstHeading + 1;
+            int rowNo = 0;
+            for (com.azquo.memorydb.Name name : nameHeadings) {
+                sheet.getInternalSheet().getCell(headingsRow, headingsCol + colNo).setValue(name.getDefaultDisplayName());
+                colNo++;
+            }
+            for (Set<com.azquo.memorydb.Name> names : shownValues.keySet()) {
+                rowNo++;
+                colNo = firstHeading;
+                sheet.getInternalSheet().getCell(headingsRow + rowNo, headingsCol + colNo).setValue(valueService.addValues(shownValues.get(names)));
+                colNo++;
+                for (com.azquo.memorydb.Name name : nameHeadings) {
+                    for (com.azquo.memorydb.Name valueName : names) {
+                        if (valueName.findAllParents().contains(name)) {
+                            sheet.getInternalSheet().getCell(headingsRow + rowNo, headingsCol + colNo).setValue(valueName.getDefaultDisplayName());
+                        }
+                    }
+                    colNo++;
+                }
+            }
+        } else {
+            if (region.equals("databases")) {
+                data = jacksonMapper.writeValueAsString(adminService.getDatabaseListForBusiness(loggedInConnection));
+            } else if (region.equals("uploads")) {
+                data = jacksonMapper.writeValueAsString(adminService.getUploadRecordsForDisplayForBusiness(loggedInConnection));
+            } else if (region.equals("users")) {
+                data = jacksonMapper.writeValueAsString(adminService.getUserListForBusiness(loggedInConnection));
+            } else if (region.equals("permissions")) {
+                data = jacksonMapper.writeValueAsString(adminService.getPermissionList(loggedInConnection));
+            } else if (region.equals("reports")) {
+                data = jacksonMapper.writeValueAsString(adminService.getReportList(loggedInConnection));
+            }
+            if (data == null) return "";
+            int lastHeading = headingsRange.getColumnCount();
+            int rowNo = 0;
+            //strip the square brackets
+            while (data.length() > 2) {
+                Map<String, String> pairs = new HashMap<String, String>();
+                data = readJsonData(data, pairs);
+                if (data.startsWith("error:")) return data;
+                rowNo++;
+                for (int colNo = firstHeading; colNo < lastHeading; colNo++) {
+                    String heading = sheet.getInternalSheet().getCell(headingsRow, headingsCol + colNo).getStringValue();
+                    SCell cell = sheet.getInternalSheet().getCell(headingsRow + rowNo, headingsCol  + colNo);
+                    String link = null;
+                    String linkStart = null;
+                    int nameEnd = heading.indexOf(";");
+                    if (nameEnd > 0) {
+                        link = heading.substring(nameEnd + 1);
+                        heading = heading.substring(0, nameEnd);
+
+                        if (link.startsWith("href=")) {
+                            link = link.substring(5);
+                        linkStart = "<a href=";
+                    } else if (link.startsWith("onclick=")) {
+                        link = link.substring(8);
+                        linkStart = "<a href='#' onclick=";
+                    } else {
+                        link = null;
+                    }
+                }
+                String valFound = pairs.get(heading);
+                if (link != null) {
+                    String linkAddr = evaluateExpression(link.replace("“", "\"").replace("”", "\""), pairs);//excel uses fancy quotes
+                        cell.setHyperlink(new HyperlinkImpl(SHyperlink.HyperlinkType.URL,linkAddr,"link"));
+                }
+                if (valFound != null) {
+                    try {
+                        //if it can be parsed as a date, it is a date!
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+                        Date date = df.parse(valFound);
+                        cell.setDateValue(date);
+                    } catch (Exception e) {
+                        cell.setValue(valFound);
+                    }
+                }
+            }
+        }
+    }
+    return "";
+}
+
+    public String readJsonData(String data, Map<String, String> pairs) throws Exception{
+        //should use Jackson for this,....
+        /*
+        final String json = "{}";
+       final ObjectMapper mapper = new ObjectMapper();
+       final MapType type = mapper.getTypeFactory().constructMapType(
+       Map.class, String.class, Object.class);
+       final Map<String, Object> data = mapper.readValue(json, type);
+
+
+        */
+        int pos = 1;
+        if (data.charAt(pos++) != '{') return jsonError(data, pos);
+        while (data.charAt(pos++) == '"') {
+            int endName = data.indexOf("\"", pos);
+            if (endName < 0) return jsonError(data, pos);
+            String jsonName = data.substring(pos, endName);
+            pos = endName + 1;
+            if (data.charAt(pos++) != ':') return jsonError(data, pos);
+            String jsonValue;
+            if (data.charAt(pos) != '"') {
+                int endLine = data.indexOf("}", pos);
+                endName = data.indexOf(",", pos);
+                if (endName < 0 || (endName > 0 && endLine < endName)) endName = endLine;
+                if (endName < 0) return jsonError(data, pos);
+                jsonValue = data.substring(pos, endName);
+                pos = endName;
+            } else {
+                pos++;
+                endName = data.indexOf("\"", pos);
+                if (endName < 0) return jsonError(data, pos);
+                jsonValue = data.substring(pos, endName);
+                pos = endName + 1;
+            }
+            pairs.put(jsonName, jsonValue);
+            if (data.charAt(pos) == '}') {
+                break;
+            }
+            if (data.charAt(pos++) != ',') return jsonError(data, pos);
+        }
+        return data.substring(pos + 1);
+
+
+    }
+
+    public String jsonError(String data, int pos) throws Exception{
+        int end = data.length();
+        if (pos < end - 30) {
+            end = pos + 30;
+        }
+        throw new Exception("error: json parsing problem at " + data.substring(pos, end));
+    }
+
+    private String evaluateExpression(String expression, Map<String, String> pairs) throws Exception {
+        //evaluates simple text expressions
+        StringBuilder sb = new StringBuilder();
+        int pos = 0;
+        while (pos < expression.length()) {
+            if (expression.charAt(pos) == '"') {
+                int endQuote = expression.indexOf("\"", ++pos);
+                if (endQuote < 0) throw new Exception("error: expression not understood " + expression);
+                sb.append(expression.substring(pos, endQuote));
+                pos = endQuote + 1;
+            } else if (expression.charAt(pos) == '&' || expression.charAt(pos) == ' ') {
+                pos++;
+            } else {
+                int endTerm = (expression + "&").indexOf("&", pos);
+                String val = pairs.get(expression.substring(pos, endTerm).trim());
+                if (val == null) throw new Exception("error: expression not understood " + expression);
+                sb.append(val);
+                pos = endTerm;
+            }
+        }
+        return sb.toString();
+    }
+
+
 
 }
 
