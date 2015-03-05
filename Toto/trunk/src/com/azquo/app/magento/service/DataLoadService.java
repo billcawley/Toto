@@ -135,6 +135,7 @@ public final class DataLoadService {
         Name productCategories = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product categories", topProduct, false);
         Name allSKUs = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All SKUs", topProduct, false);
         Name allProducts = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All Products", topProduct, false);
+        Name orphans = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"SKU Orphans", topProduct, false);
         Name allCategories = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All Categories", topProduct, false);
 
         Name uncategorisedProducts = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Uncategorised Products", topProduct, false);
@@ -340,7 +341,9 @@ public final class DataLoadService {
                         Name magentoOptionName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, optionValues.get(val), magentoProductCategory, true,null);
                         if (!magentoName.findAllParents().contains(magentoOptionName)) {
                             magentoOptionName.addChildWillBePersisted(magentoName);
-                            //allProducts.removeFromChildrenWillBePersisted(magentoName);
+                            if (allProducts.getChildren().contains(magentoName)){
+                                orphans.addChildWillBePersisted(magentoName);
+                            }
                         }
                     } else {
                         System.out.println("found an option value " + val + " for " + magentoProductCategory.getDefaultDisplayName());
