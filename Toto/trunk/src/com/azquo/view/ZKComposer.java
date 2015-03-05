@@ -2,10 +2,7 @@ package com.azquo.view;
 
 import com.azquo.admindao.UserChoiceDAO;
 import com.azquo.controller.OnlineController;
-import com.azquo.service.LoggedInConnection;
-import com.azquo.service.NameService;
-import com.azquo.service.OnlineService;
-import com.azquo.service.ValueService;
+import com.azquo.service.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.zk.ui.Component;
@@ -44,6 +41,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     NameService nameService;
     ValueService valueService;
     UserChoiceDAO userChoiceDAO;
+    AdminService adminService;
 
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
@@ -54,6 +52,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         nameService = (NameService)applicationContext.getBean("nameService");
         valueService = (ValueService)applicationContext.getBean("valueService");
         userChoiceDAO = (UserChoiceDAO)applicationContext.getBean("userChoiceDao");
+        adminService = (AdminService) applicationContext.getBean("adminService");
         editPopup.setId("editPopup");
         Menuitem item1 = new Menuitem("Provenance");
         item1.setId("viewInfo1");
@@ -113,7 +112,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
-                ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, nameService, userChoiceDAO);
+                ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, nameService, userChoiceDAO, adminService);
                 zkAzquoBookUtils.populateBook(newBook); // reload the data
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
             } catch (Exception e) {
@@ -125,7 +124,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onSheetSelect = #myzss")
     public void onSheetSelect(SheetSelectEvent sheetSelectEvent) {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
-        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, nameService, userChoiceDAO);
+        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, nameService, userChoiceDAO, adminService);
         Book book = sheetSelectEvent.getSheet().getBook();
         zkAzquoBookUtils.addValidation(zkAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()),sheetSelectEvent.getSheet(),
                 (LoggedInConnection)book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_CONNECTION));
