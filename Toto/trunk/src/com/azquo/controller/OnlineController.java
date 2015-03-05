@@ -94,7 +94,9 @@ public class OnlineController {
             ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, nameService, userChoiceDAO, adminService);
             bookUtils.populateBook(book);
             request.setAttribute(BOOK, book);
-            model.addAttribute("databaseChosen", loggedInConnection.getCurrentDBName());
+            if (loggedInConnection.getCurrentDBName() != null){
+                model.addAttribute("databaseChosen", loggedInConnection.getCurrentDBName());
+            }
             model.addAttribute("connectionId", loggedInConnection.getConnectionId());
             return "zstest";
         }
@@ -253,11 +255,15 @@ public class OnlineController {
             if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
                 if (onlineReport.getId() != 1 && spreadsheetName.length() > 0) {
                     loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName, "");
+                    request.getSession().setAttribute(BOOK_PATH, onlineService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
+
+                }else{
+                    request.getSession().setAttribute(BOOK_PATH, onlineReport.getFilename());
+
                 }
                 loggedInConnection.setReportId(onlineReport.getId());
                 // jam 'em in the session for the moment, makes testing easier. As in see a report then try with &trynewsheet=true after
                 request.getSession().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
-                request.getSession().setAttribute(BOOK_PATH, onlineService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
                 result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "Right-click mouse for provenance");
             }
             if (opcode.equals("buttonpressed") && row > 0) {//button pressed - follow instructions and reload admin sheet
