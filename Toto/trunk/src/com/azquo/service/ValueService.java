@@ -1423,10 +1423,27 @@ seaports;children   container;children
             sortRowTotals.put(rowNo++, sortRowTotal);
 
         }
-        loggedInConnection.setRowOrder(region, sortValues(restrictRowCount, sortRowTotals));
-        loggedInConnection.setColOrder(region, sortValues(restrictColCount, sortColumnTotals));
+        //sort and trim rows and cols
+        List<Integer>sortedRows = sortValues(restrictRowCount, sortRowTotals);
+        restrictRowCount--;
+        if (sortedRows.size() > restrictColCount){
+            while (restrictRowCount > 2 && sortRowTotals.get(sortedRows.get(restrictRowCount)) == 0) {
+                sortedRows.remove(restrictRowCount--);
+            }
+        }
+        restrictRowCount++;
         loggedInConnection.setRestrictRowCount(region, restrictRowCount);
-        loggedInConnection.setRestrictColCount(region, restrictColCount);
+        loggedInConnection.setRowOrder(region,sortedRows);
+        List<Integer>sortedCols = sortValues(restrictColCount, sortColumnTotals);
+        restrictColCount--;
+        if (sortedCols.size() > restrictColCount){
+            while (restrictColCount > 2 && sortColumnTotals.get(sortedCols.get(restrictColCount))==0) {
+                sortedCols.remove(restrictColCount--);
+            }
+        }
+        restrictColCount++;
+        loggedInConnection.setColOrder(region, sortedCols);
+         loggedInConnection.setRestrictColCount(region, restrictColCount);
         final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, displayObjectsForNewSheet, filterCount, restrictRowCount, restrictColCount);
         formatLockMap(loggedInConnection, region, lockArray);
         printSumStats();
