@@ -50,7 +50,7 @@ public class AzquoMemoryDBConnection {
     }
 
     public String getCurrentDBName() {
-        if (azquoMemoryDB.getDatabase()!=null){
+        if (azquoMemoryDB!= null && azquoMemoryDB.getDatabase()!=null){
             return azquoMemoryDB.getDatabase().getMySQLName();
         }
         return null;
