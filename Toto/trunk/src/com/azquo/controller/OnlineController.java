@@ -253,9 +253,11 @@ public class OnlineController {
             }
 
             if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
-                if (onlineReport.getId() != 1 && spreadsheetName.length() > 0) {
-                    loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName, "");
+                if (onlineReport.getId() != 1) {
                     request.getSession().setAttribute(BOOK_PATH, onlineService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
+                    if (spreadsheetName.length() > 0){
+                        loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName, "");
+                    }
 
                 }else{
                     request.getSession().setAttribute(BOOK_PATH, onlineReport.getFilename());
