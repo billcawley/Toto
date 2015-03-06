@@ -67,7 +67,9 @@ public class ZKComposer extends SelectorComposer<Component> {
         editPopup.appendChild(item1);
         // by trial and error this gave us an element we could show. Not sure baout best practice etc. here
         // can't seem to find the context menu to edit. No matter, have one or the other.
-        myzss.getFirstChild().appendChild(editPopup);
+        if (myzss.getFirstChild() != null){
+            myzss.getFirstChild().appendChild(editPopup);
+        }
 
 /*        final Button button = new Button("XLS");
         button.addEventListener("onClick",
