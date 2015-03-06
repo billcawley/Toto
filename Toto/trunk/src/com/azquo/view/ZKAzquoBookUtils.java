@@ -310,7 +310,7 @@ public class ZKAzquoBookUtils {
     public List<SName> getNamesForSheet(Sheet sheet) {
         List<SName> names = new ArrayList<SName>();
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
-            if (name.getRefersToSheetName().equals(sheet.getSheetName())) {
+            if (name.getRefersToSheetName()!= null && name.getRefersToSheetName().equals(sheet.getSheetName())) {
                 names.add(name);
             }
         }
