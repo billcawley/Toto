@@ -1426,7 +1426,7 @@ seaports;children   container;children
         //sort and trim rows and cols
         List<Integer>sortedRows = sortValues(restrictRowCount, sortRowTotals);
         restrictRowCount--;
-        if (sortedRows.size() > restrictColCount){
+        if (sortedRows.size() > restrictRowCount){
             while (restrictRowCount > 2 && sortRowTotals.get(sortedRows.get(restrictRowCount)) == 0) {
                 sortedRows.remove(restrictRowCount--);
             }
