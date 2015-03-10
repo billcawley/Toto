@@ -36,7 +36,7 @@ public class ImageController {
         if (image != null) {
             if (image.length() > 0 && image.indexOf(".") > 0) {
                 //may need some security check...
-                String path = onlineService + "/databases/" + db + "/images/" + image;
+                String path = onlineService.getHomeDir() + "/databases/" + db + "/" +  image;
                 File file = new File(path);
                 String ext = image.substring(image.indexOf(".") + 1).toLowerCase();
                 if (ext.equals("jpg")) {
