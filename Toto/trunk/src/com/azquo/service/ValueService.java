@@ -1358,12 +1358,20 @@ seaports;children   container;children
                         List<Value> values = new ArrayList<Value>();
                         cellValue = findValueForNames(loggedInConnection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, loggedInConnection.getLanguages()); // true = pay attention to names additive flag
                         //if there's only one value, treat it as text (it may be text, or may include £,$,%)
+
+
                         if (values.size() == 1 && !locked.isTrue) {
+
                             Value value = values.get(0);
-                            shownValues.add(value.getText());
+                            String text = value.getText();
+
                             if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
                                 rowForNewSheet.add(NumberUtils.isNumber(value.getText()) ? new Double(cellValue) : value.getText());
                             }
+                            if (text.contains("\n")){
+                                text = text.replaceAll("\n","<br/>");//this is unsatisfactory, but a quick fix.
+                            }
+                            shownValues.add(text);
                             if (sortCol == colNo && !NumberUtils.isNumber(value.getText())) {
                                 //make up a suitable double to get some kind of order! sort on 8 characters
                                 String padded = value.getText() + "        ";
@@ -1383,16 +1391,18 @@ seaports;children   container;children
                         List<String> attributes = new ArrayList<String>();
                         valuesOrNamesAndAttributeName = loggedInConnection.new ListOfValuesOrNamesAndAttributeName(names, attributes);
                         String attributeResult = findValueForHeadings(headingsForThisCell,locked, names, attributes);
-                        if (NumberUtils.isNumber(attributeResult)){ // there should be a more efficient way I feel given that the result is typed internally
+                             if (NumberUtils.isNumber(attributeResult)){ // there should be a more efficient way I feel given that the result is typed internally
                             cellValue = Double.parseDouble(attributeResult);
                             if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
                                 rowForNewSheet.add(new Double(cellValue));
                             }
+                        }else{
+                            if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
+                                rowForNewSheet.add(attributeResult);
+                            }
                         }
+                        attributeResult = attributeResult.replace("\n","<br/>");//unsatisfactory....
                         shownValues.add(attributeResult);
-                        if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
-                            rowForNewSheet.add(attributeResult);
-                        }
                     }
                     thisRowValues.add(valuesOrNamesAndAttributeName);
                     // ok these bits are for sorting. Could put a check on whether a number was actually the result but not so bothered
