@@ -514,7 +514,7 @@ public final class NameService {
         List<String> nameStrings = new ArrayList<String>();
         List<String> attributeStrings = new ArrayList<String>(); // attribute names is taken. Perhaps need to think about function parameter names
 
-        setFormula = stringUtils.parseStatement(setFormula, nameStrings, formulaStrings, attributeStrings);
+        setFormula = stringUtils.parseStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
         setFormula = stringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
@@ -543,7 +543,7 @@ public final class NameService {
             }
             if (op == NAMEMARKER) {
                 stackCount++;
-                List<Name> nextNames = interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeNames);
+                List<Name> nextNames = interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings);
                 nameStack.add(nextNames);
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + setFormula);
@@ -615,13 +615,13 @@ public final class NameService {
     private void filter(List<Name> names, String condition, List<String> strings, List<String> attributeNames) {
         //NOT HANDLING 'OR' AT PRESENT
         int andPos = condition.toLowerCase().indexOf(" and ");
-        if (andPos < 0) {
-            andPos = condition.length();
-        }
-        Set<Name> namesToRemove = new HashSet<Name>();
-        int lastPos;
-        while (andPos > 0) {
-            String clause = condition.substring(0, andPos).trim();
+         Set<Name> namesToRemove = new HashSet<Name>();
+        int lastPos = 0;
+        while (lastPos < condition.length()) {
+            if (andPos < 0) {
+                andPos = condition.length();
+            }
+            String clause = condition.substring(lastPos, andPos).trim();
             Pattern p = Pattern.compile("[<=>]+");
             Matcher m = p.matcher(clause);
 
@@ -634,20 +634,12 @@ public final class NameService {
                 // note, given the new parser these clauses will either be literals or begin .
                 // there may be code improvements that can be made knowing this
 
-                if (clauseLhs.startsWith(".")) {
-                    clauseLhs = clauseLhs.substring(1);
                     if (clauseLhs.charAt(0) == ATTRIBUTEMARKER) {// we need to replace it
-                        attributeNames.get(Integer.parseInt(clauseLhs.substring(1, 3)));
+                        clauseLhs = attributeNames.get(Integer.parseInt(clauseLhs.substring(1, 3)));
                     }
-                }
-
-                if (clauseRhs.startsWith(".")) {
-                    clauseRhs = clauseRhs.substring(1);
                     if (clauseRhs.charAt(0) == ATTRIBUTEMARKER) {// we need to replace it
-                        attributeNames.get(Integer.parseInt(clauseRhs.substring(1, 3)));
+                        clauseRhs = attributeNames.get(Integer.parseInt(clauseRhs.substring(1, 3)));
                     }
-                }
-
                 String valRhs = "";
                 boolean fixed = false;
                 if (clauseRhs.charAt(0) == '"') {
@@ -689,7 +681,7 @@ public final class NameService {
                 names.removeAll(namesToRemove);
             }
             lastPos = andPos + 5;
-            andPos = condition.toLowerCase().indexOf(" and ", lastPos);
+             andPos = condition.toLowerCase().indexOf(" and ", lastPos);
 
         }
 
@@ -712,7 +704,11 @@ public final class NameService {
         // removed totalled as
 
         //final String associatedString = stringUtils.getInstruction(setTerm, ASSOCIATED);
-        final String whereString = stringUtils.getInstruction(setTerm, WHERE);
+        int wherePos = setTerm.toLowerCase().indexOf(WHERE.toLowerCase());
+        String whereString = null;
+        if (wherePos >= 0) {
+            whereString = setTerm.substring(wherePos + 6);//the rest of the string???   maybe need 'group by' in future
+        }
         if (levelString != null) {
             childrenString = "true";
         }
