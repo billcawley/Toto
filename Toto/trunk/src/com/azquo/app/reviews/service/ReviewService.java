@@ -5,10 +5,7 @@ import com.azquo.admindao.OnlineReportDAO;
 import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.adminentities.User;
-import com.azquo.memorydb.AzquoMemoryDB;
-import com.azquo.memorydb.MemoryDBManager;
-import com.azquo.memorydb.Name;
-import com.azquo.memorydb.Provenance;
+import com.azquo.memorydb.*;
 import com.azquo.service.*;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.io.FileUtils;
@@ -90,6 +87,9 @@ public class ReviewService {
 
     @Autowired
     MemoryDBManager memoryDBManager;
+
+    @Autowired
+    ValueService valueService;
 
     public static final String SUPPLIER = "SUPPLIER";
     public static final String ALL_RATINGS = "ALL RATINGS";
@@ -216,7 +216,7 @@ public class ReviewService {
             productCount++;
         }
         String orderSaleDate = getValueFromParent(order,saleDate);
-         context.put("supplierlogo",thisSite + "/Image/?supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&image=" + supplier.getAttribute(SUPPLIER_ATTRIBUTE.LOGO));
+         context.put("supplierlogo",thisSite + "/Image/?supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&image=MerchantDetails/" + supplier.getAttribute(SUPPLIER_ATTRIBUTE.LOGO));
         context.put("saledate", showDate(orderSaleDate));
         context.put("customername", order.getAttribute(ORDER_ATTRIBUTE.CUSTOMER_NAME));
         context.put("saledescription", saledesc.toString());
@@ -262,6 +262,13 @@ public class ReviewService {
         Name name = getParent(child,parent);
         if (name == null) return "";
         return name.getDefaultDisplayName();
+    }
+
+    private Name todayName(AzquoMemoryDBConnection azquoMemoryDBConnection)throws Exception{
+        String todayString = df2.format(new Date());
+        return nameService.findOrCreateNameInParent(azquoMemoryDBConnection,todayString,null,false);//dates should not be local!
+
+
     }
 
     public String showDate(String fileDate){
@@ -510,7 +517,7 @@ public class ReviewService {
         validationScript.append(" var frmvalidator  = new Validator(\"review\");\n");
         String thisURL = request.getRequestURL().toString();
         String thisSite = thisURL.substring(0,thisURL.lastIndexOf("/",thisURL.length() -2));
-        context.put("supplierlogo",thisSite + "/Image/?supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&image=" + supplier.getAttribute("logo"));
+        context.put("supplierlogo",thisSite + "/Image/?supplierdb=" + azquoMemoryDBConnection.getCurrentDBName() + "&image=MerchantDetails/" + supplier.getAttribute("logo"));
         context.put("suppliername", supplier.getDefaultDisplayName());
         context.put("intro", intro);
         context.put("thisurl",thisURL);
@@ -567,8 +574,9 @@ public class ReviewService {
             String productCode = orderItemName.substring(orderItemName.lastIndexOf(" ") + 1);
             String feedbackDate = df.format(new Date());
             String rating = ratings.get(productCode);
+            Name ratingSet = null;
             if (rating != null){
-                Name ratingSet = nameService.findByName(azquoMemoryDBConnection,rating + ", Rating");
+                ratingSet = nameService.findByName(azquoMemoryDBConnection,rating + ", Rating");
                 if (ratingSet != null) {
                     ratingSet.addChildWillBePersisted(orderItem);
                     orderItem.setAttributeWillBePersisted("Review date", feedbackDate);
@@ -578,6 +586,29 @@ public class ReviewService {
             if (comment != null){
                 orderItem.setAttributeWillBePersisted("comment", comment);
                 orderItem.setAttributeWillBePersisted("Review date", feedbackDate);
+            }
+            if (ratingSet != null) {
+                //store rating with date, product, rating value
+                azquoMemoryDBConnection.setNewProvenance("feedback form","reviews system","");
+                Provenance provenance = azquoMemoryDBConnection.getProvenance();
+                Set<Name> valueNames = new HashSet<Name>();
+                Name product = nameService.findByName(azquoMemoryDBConnection, "All products");
+                Collection<Name> itemParents = orderItem.findAllParents();
+                itemParents.retainAll(product.getChildren());
+                Name countName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"count",null,false);
+                valueNames.add(countName);
+                valueNames.addAll(itemParents);//should be only one!
+                valueNames.add(ratingSet);
+                valueNames.add(todayName(azquoMemoryDBConnection));
+                List<Value> vlist = valueService.findForNames(valueNames);
+                Value v = null;
+                if (vlist == null){
+                    v = vlist.get(0);
+                    valueService.overWriteExistingValue(azquoMemoryDBConnection,v,Integer.parseInt(v.getText() + 1) +"");//increase value by 1
+                }else{
+                    valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection,"1",valueNames);
+                }
+
             }
         }
 
