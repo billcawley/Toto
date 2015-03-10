@@ -96,6 +96,7 @@ public class ReviewController {
                 result = "logged in user : " + user.getDefaultDisplayName() + " in " + (merchant != null ? merchant.getDefaultDisplayName() : "???") + result;
             }
         }*/
+        response.addHeader("Access-Control-Allow-Origin", "*");
 
         model.addAttribute("content", result);
         return "utf8page";
