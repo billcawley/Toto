@@ -214,7 +214,7 @@ I should be ok for stringtokenizer at this point
                 if (term.startsWith(".")){
                     // I was using name marker, no good as it would be caught by a later conditional parser
                     modifiedStatement.append(NameService.ATTRIBUTEMARKER).append(twoDigit.format(attributeStrings.size()));
-                    attributeStrings.add(term.substring(1)); // knock off the .
+                    attributeStrings.add(term.substring(1).replace("`","")); // knock off the . and remove ``
                 } else {
                     modifiedStatement.append(NameService.NAMEMARKER).append(twoDigit.format(nameNames.size()));
                     nameNames.add(term);
@@ -231,6 +231,7 @@ I should be ok for stringtokenizer at this point
         return term.equals("*") || term.equals("/") || term.equals("+") || term.equals("-") || term.equals(">")
                 || term.equals("<") || term.equals(">=") || term.equals("<=") || term.equals("=") || term.equals(",")
                 || term.equals("(") || term.equals(")")
+                || term.equalsIgnoreCase("and")
                 || term.equalsIgnoreCase(NameService.LEVEL) || term.equalsIgnoreCase(NameService.FROM)
                 || term.equalsIgnoreCase(NameService.TO) || term.equalsIgnoreCase(NameService.COUNT)
                 || term.equalsIgnoreCase(NameService.SORTED) || term.equalsIgnoreCase(NameService.CHILDREN)
