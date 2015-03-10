@@ -504,6 +504,12 @@
             document.getElementById(dataRegionMenu).style.display = "none";
         }
 
+        function tryNewSheet(){
+            document.getElementById("newversion").value = "true";
+            document.azquoform.submit();
+        }
+
+
         function highlight(days){
             document.getElementById("editedName").value = "highlight";
             document.getElementById("editedValue").value = days + "";
@@ -877,10 +883,11 @@
                 <li><a href="#" onclick="downloadAsPDF();">Download as PDF</a></li>
                 <li><a href="#" onclick="inspectDatabase();">Inspect database</a>
                 <li>
-                    <a href="" #" onclick="showHighlight();">Highlight changed data
+                    <a href="#"  onclick="showHighlight();">Highlight changed data
                          (currently $hdays days)
                   </a>
                 </li>
+                <li><a href="#" onclick="tryNewSheet()">Show new version</a></li>
             </ul>
         </div>
         <a class="savedata" href="#" onclick="saveData()" id="saveData" style="display:none;">Save data</a>
@@ -902,6 +909,7 @@
             <input type="hidden" name="opcode" id="opcode" value=""/>
             <input type="hidden" name="row" id="row" value=""/>
             <input type="hidden" name="col" id="col" value=""/>
+            <input type="hidden" name="trynewsheet" id="newversion" value="">
 
 
             <div id="selector" class="selector"></div>
