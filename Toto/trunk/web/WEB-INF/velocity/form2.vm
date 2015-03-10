@@ -33,7 +33,7 @@
     <script type='text/javascript' src='https://www.azquoreviews.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=1.2.1'></script>
     <script type='text/javascript' src='https://www.azquoreviews.com/wp-content/plugins/bootstrap-shortcodes/js/bootstrap.js?ver=4.0'></script>
     <script type='text/javascript' src='https://www.azquoreviews.com/wp-content/plugins/bootstrap-shortcodes/js/init.js?ver=4.0'></script>
-    <script type='text/ja></script>
+    <script type='text/javascript' src='https://www.azquoreviews.com/wp-content/themes/azquo/js/gen_validatorv4.js?ver=4.0'></script>
     <link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://www.azquoreviews.com/xmlrpc.php?rsd" />
     <link rel="wlwmanifest" type="application/wlwmanifest+xml" href="https://www.azquoreviews.com/wp-includes/wlwmanifest.xml" />
     <meta name="generator" content="WordPress 4.0" />
@@ -103,7 +103,7 @@
 <div class="singlewrap">
 
 
-<form id="review" name="review" class="review" method="post" action="$thisURL/api/Reviews/?supplierdb=yousay1&businessid=SUTTON&orderref=296698408082014&op=reviewform">
+<form id="review" name="review" class="review" method="post">
 <div class="reviews">
     <fieldset>
         #foreach($review in $reviews)
