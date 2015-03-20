@@ -611,7 +611,23 @@ public class OnlineService {
         return dateFound;
     }
 
-    // I think on logging into Magento reports for example
+
+
+    public String showUploadFile(LoggedInConnection loggedInConnection){
+
+        VelocityContext context = new VelocityContext();
+        context.put("azquodatabaselist", createDatabaseSelect(loggedInConnection));
+
+
+        return convertToVelocity(context, "upload", null, "upload.vm");
+
+
+    }
+
+
+    // on logging into Magento reports for example
+
+
 
     public String showUserMenu(LoggedInConnection loggedInConnection) {
         List<OnlineReport> onlineReports = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getBusinessId(), loggedInConnection.getUser().getStatus());
