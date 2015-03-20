@@ -27,6 +27,9 @@ import java.util.List;
 
 public class AzquoBook {
 
+    public static final String cr = "";//removing unnecessary carriage returns
+
+
     private static final Logger logger = Logger.getLogger(AzquoBook.class);
     private ValueService valueService;
     private ImportService importService;
@@ -116,6 +119,7 @@ public class AzquoBook {
 
     private Formatter sOut;
     Map<Range, String> sortableHeadings = new HashMap<Range, String>();
+    Map<String, String[]> givenHeadings = new HashMap<String, String[]>();
 
 //    private static final int ROWSCALE = 16;
 //    private static final int COLUMNSCALE = 40;
@@ -194,7 +198,7 @@ public class AzquoBook {
             mergedCells.put(azquoCells.get(r.StartRow, r.StartColumn), r);
         }
     }
-    
+
      private Range getRange(String rangeName) {
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
@@ -352,6 +356,13 @@ public class AzquoBook {
     }
 
 
+    private String[] splitRange(String fillText) {
+        String[] rows = fillText.split("\n", -1);
+        String row = rows[rows.length - 1];
+        return  row.split("\t", -1);
+     }
+
+
     private void fillRange(String regionName, String fillText, String lockMap, boolean overwrite) {
         // for the headings, the lockmap is "locked" rather than the full array.
         boolean shapeAdjusted = false;
@@ -462,20 +473,24 @@ public class AzquoBook {
             fillRange(dataRegionPrefix + region, result, loggedInConnection.getLockMap(region), true);
             result = valueService.getColumnHeadings(loggedInConnection, region, language);
             fillRange("az_displaycolumnheadings" + region, result, "LOCKED", false);
-            if (hasOption(region, "sortable") != null) {
+            String sortable = hasOption(region, "sortable");
+            if (sortable != null) {
                 Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
                 if (displayColumnHeadings != null) {
                     sortableHeadings.put(displayColumnHeadings, "columns:" + region);
+                    givenHeadings.put("columns:" + region,splitRange(result));
 
                 }
             }
 
             result = valueService.getRowHeadings(loggedInConnection, region, language, filterCount);
             fillRange("az_displayrowheadings" + region, result, "LOCKED", false);
-            if (hasOption(region, "sortable") != null) {
+            if (sortable!=null && sortable.equalsIgnoreCase("all")) {
                 Range displayRowHeadings = getRange("az_displayrowheadings" + region);
                 if (displayRowHeadings != null) {
                     sortableHeadings.put(displayRowHeadings, "rows:" + region);
+
+                    givenHeadings.put("rows:" + region,splitRange(result));
 
                 }
             }
@@ -600,7 +615,7 @@ public class AzquoBook {
             content += " selected";
 
         }
-        content += ">" + item + "</option>\n";
+        content += ">" + item + "</option>" + cr;
         return content;
     }
 
@@ -942,18 +957,18 @@ public class AzquoBook {
         Range range = getRange(rangeName);
         if (range == null) return "";
         StringBuilder sb = new StringBuilder();
-        sb.append("<table>\n");
+        sb.append("<table>" + cr);
         for (int row = 0; row < range.getRowCount(); row++) {
-            sb.append("<tr>\n");
+            sb.append("<tr>" + cr);
             for (int col = 0; col < range.getColumnCount(); col++) {
                 sb.append("<td>");
                 String val = range.get(row, col).getStringValue().replace(";", " ");//this 'replace' should be removed in due course
                 if (val == null) val = "";
                 sb.append(val).append("</td>");
             }
-            sb.append("</tr>\n");
+            sb.append("</tr>" + cr);
         }
-        sb.append("</table>\n");
+        sb.append("</table>" + cr);
         return sb.toString();
     }
 
@@ -1286,9 +1301,13 @@ public class AzquoBook {
         return cellWidth;
     }
 
-    private String createCellContentHTML(LoggedInConnection loggedInConnection, Cell cell, String cellClass) {
+    private String createCellContentHTML(LoggedInConnection loggedInConnection, Cell cell, String cellClass, String overrideValue) {
         String content = getCellContentAsString(cell);
         // changed to rotation angle from rotation as depreciated, I assume the same value
+        if (overrideValue != null){
+            content = overrideValue;
+        }
+
         if (cell.getStyle().getRotationAngle() == 90) {
             content = "<div class='r90'>" + content + "</div>";
         }
@@ -1329,8 +1348,8 @@ public class AzquoBook {
                         choiceName += choiceOffset;
                         onChange = "onchange='selectChosen(\"" + choiceName + "\", false)' id='" + choiceName + "'";
                     }
-                    content = "<select class = '" + selectClass + "'" + onChange + " class='" + cellClass + "' >\n";
-                    //content = "<select class = \"" + selectClass + "\" onchange=\"selectChosen('" + choiceName + "')\" id=\"" + ChosenMap.get(cell) + "\" class=\"" + cellClass + "\" >\n";
+                    content = "<select class = '" + selectClass + "'" + onChange + " class='" + cellClass + "' >" + cr;
+                    //content = "<select class = \"" + selectClass + "\" onchange=\"selectChosen('" + choiceName + "')\" id=\"" + ChosenMap.get(cell) + "\" class=\"" + cellClass + "\" >" + cr;
                     content += "<option value = ''></option>";
                     for (String constant : constants) {
                         content += addOption(constant, origContent);
@@ -1391,7 +1410,12 @@ public class AzquoBook {
                         if (cellHighlighted == null) cellHighlighted = false;
 
                         StringBuilder cellClass = createCellClass(rowNo, colNo, cell, cellHighlighted);
-                        content = createCellContentHTML(loggedInConnection, cell, cellClass.toString());
+                        String overrideValue = null;
+                        if (rowNo > 500){
+                            overrideValue = "<br/><b>Spreadsheet truncated.  To see full report, download as XLSX</b>";
+                        }
+
+                        content = createCellContentHTML(loggedInConnection, cell, cellClass.toString(), overrideValue);
                         String sizeInfo = "";
                         if (mergedCells.get(cell) != null) {
                             addStyle("z-index", "1");
@@ -1404,8 +1428,11 @@ public class AzquoBook {
                         Range headingsRange = cellInMap(cell, sortableHeadings);
                         if (headingsRange != null && content.length() > 0) {
                             String headingsRegion = sortableHeadings.get(headingsRange);
+                            String[]givenStrings = givenHeadings.get(headingsRegion);
                             if (headingsRegion.startsWith("columns:")) {
+                                origContent = givenStrings[colNo - headingsRange.getFirstColumn()];
                                 String sortChoice = sortChoices.get(headingsRegion);
+
 
                                 headingsRegion = headingsRegion.substring(8);
                                 if (!origContent.equals(sortChoice)) {//sort is currently up
@@ -1422,6 +1449,7 @@ public class AzquoBook {
 
                                 }
                             } else {
+                                origContent = givenStrings[colNo - headingsRange.getFirstColumn()];
                                 String sortChoice = sortChoices.get(headingsRegion);
                                 headingsRegion = headingsRegion.substring(5);
                                 if (!origContent.equals(sortChoice)) {//sort is currently left
@@ -1452,15 +1480,18 @@ public class AzquoBook {
                             }
                         }
                         output.append("   <div class='").append(cellClass).append("' ").append(sizeInfo).append(" id='cell")
-                                .append(rowNo).append("-").append(colNo).append("'>").append(content.trim()).append("</div>\n");
+                                .append(rowNo).append("-").append(colNo).append("'>").append(content.trim()).append("</div>" + cr);
                         //out.format("    <td class=%s %s>%s</td>%n", styleName(style),
                         //        attrs, content);
+                        if (rowNo > 500){
+                            return output;
+                        }
                     } else {
                         rowValues.add(getCellContentAsString(cell));
                     }
-                }
+                 }
                 cellTop += rowHeight + 1;
-            }
+              }
             rowNo++;
             lastRow = row;
         }
@@ -1484,7 +1515,7 @@ public class AzquoBook {
                 int topOffset = 0; //not sure why we should need this!
                 sb.append("<div id='chart").append(name).append("' style='position:absolute;top:")
                         .append(chart.getChartObject().getY() + topOffset).append("px;left:").append(chart.getChartObject().getX()).append("px;'><img src='/api/Download?image=")
-                        .append(tempname).append("'/></div>\n");
+                        .append(tempname).append("'/></div>" + cr);
             } catch (Exception e) {
                 sb.append("chart ").append(tempname).append(" not found");
             }
@@ -1660,7 +1691,7 @@ public class AzquoBook {
     private StringBuffer cellInfo(LoggedInConnection loggedInConnection, Cell cell, boolean highlighted) {
         StringBuffer sb = new StringBuffer();
         String cellClass = createCellClass(cell.getRow(), cell.getColumn(), cell, highlighted).toString();
-        String content = createCellContentHTML(loggedInConnection, cell, cellClass);
+        String content = createCellContentHTML(loggedInConnection, cell, cellClass, null);
         if (content.startsWith("$button;name=")) {//don't show button info
             return sb;
         }
@@ -2030,7 +2061,7 @@ public class AzquoBook {
                 }
                 tabclass = "tabbackground";
             }
-            //tabs.append("<div class=\"tab\" style=\"left:" + left + "px\"><a href=\"#\" onclick=\"loadsheet('" + sheet.getSheetName() + "')\">" + sheet.getSheetName() + "</a></div>\n");
+            //tabs.append("<div class=\"tab\" style=\"left:" + left + "px\"><a href=\"#\" onclick=\"loadsheet('" + sheet.getSheetName() + "')\">" + sheet.getSheetName() + "</a></div>" + cr);
             tabs.append(tabImage(left, right)).append("<span  class=\"").append(tabclass).append("\"><a href=\"#\" onclick=\"loadsheet('")
                     .append(sheet.getName()).append("')\">").append(sheet.getName()).append("</a></span>");
         }
