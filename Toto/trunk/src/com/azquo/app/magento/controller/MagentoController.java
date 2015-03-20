@@ -2,11 +2,10 @@ package com.azquo.app.magento.controller;
 
 import com.azquo.admindao.DatabaseDAO;
 import com.azquo.admindao.OnlineReportDAO;
+import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.app.magento.service.DataLoadService;
-import com.azquo.service.LoggedInConnection;
-import com.azquo.service.LoginService;
-import com.azquo.service.OnlineService;
+import com.azquo.service.*;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -23,6 +22,8 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
+import java.net.URLEncoder;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -57,6 +58,12 @@ public class MagentoController {
     @Autowired
     AzquoMailer azquoMailer;
 
+    @Autowired
+    AdminService adminService;
+
+    @Autowired
+    ImportService importService;
+
     // we should start using the logger really
     //private static final Logger logger = Logger.getLogger(MagentoController.class);
 
@@ -75,10 +82,10 @@ public class MagentoController {
         try {
 
             if (op == null) op = "";
-            if (connectionId != null) {
+            if (connectionId != null && connectionId.length() > 0) {
                 loggedInConnection = loginService.getConnection(connectionId);
             }
-            System.out.println("==================== db sent  : " + db);
+            System.out.println("==================== db sent  : " + db + " op= " + op);
             if (loggedInConnection == null) {
                 //for testing only
                 if (db == null) db = "temp";
@@ -92,6 +99,24 @@ public class MagentoController {
                 }
                 //loggedInConnection = loginService.login("test","magentobill","password",0,"",false);
             }
+            if (op.equals("connect")) {
+                return loggedInConnection.getConnectionId();
+            }
+            if (op.equals("restart")){;
+                Database existingDb = loggedInConnection.getCurrentDatabase();
+
+                adminService.emptyDatabase(loggedInConnection.getCurrentDBName());
+                loginService.switchDatabase(loggedInConnection,null);
+                loginService.switchDatabase(loggedInConnection,existingDb);
+                String magentoSetupFile = onlineService.getHomeDir() + "/databases/Magen/setup/magentosetup.xlsx";
+                InputStream uploadFile = new FileInputStream(magentoSetupFile);
+                String fileName = "magentosetup.xlsx";
+                importService.importTheFile(loggedInConnection, fileName, uploadFile, "", true, loggedInConnection.getLanguages());
+
+
+                return dataLoadService.findLastUpdate(loggedInConnection);
+            }
+
             if (op.equals("lastupdate")) {
                 return dataLoadService.findLastUpdate(loggedInConnection);
             }
@@ -102,9 +127,10 @@ public class MagentoController {
                 if (data != null){
                     File moved = null;
                     if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't email us :)
-                        azquoMailer.sendEMail("edd@azquo.com", "Edd", "Magento file upload " + db, "Magento file upload " + db);
-                        azquoMailer.sendEMail("bill@azquo.com", "Bill", "Magento file upload " + db, "Magento file upload " + db);
-                        azquoMailer.sendEMail("nic@azquo.com", "Nic", "Magento file upload " + db, "Magento file upload " + db);
+                        String title = "Magento file upload " + logon + " from " + request.getRemoteAddr();
+                        azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
+                        azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
+                        azquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                         moved = new File(onlineService.getHomeDir() + "/temp/" + db + new Date());
                         data.transferTo(moved);
                     }
