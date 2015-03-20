@@ -565,14 +565,14 @@ public final class NameService {
             pos = nextTerm;
         }
 
+        boolean hasPermissions = false;
         if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
-            for (Name possible : nameStack.get(0)) {
-                if (isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())) {
-                    toReturn.add(possible);
-                }
-            }
-        } else {
-            toReturn.addAll(nameStack.get(0));
+            hasPermissions = true;
+        }
+        for (Name possible : nameStack.get(0)) {
+            if (possible.getAttribute("CONFIDENTIAL")== null && (!hasPermissions || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions()))) {
+                        toReturn.add(possible);
+             }
         }
         return toReturn;
     }
@@ -672,7 +672,7 @@ public final class NameService {
                                 break;
                             case '>':
                                 if (comp > 0) OK = true;
-                        }
+                          }
                     }
                     if (!OK) {
                         namesToRemove.add(name);
