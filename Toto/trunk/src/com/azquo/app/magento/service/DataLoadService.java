@@ -643,8 +643,18 @@ public final class DataLoadService {
             Name orderName = azquoOrdersFound.get("Order " + orderRow.get("entity_id"));
             if (orderName != null){
                 String customer = orderRow.get("customer_id");
-                if (customer == null || customer.length()== 0) customer="Unknown";
-                Name customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Customer " + customer, allCustomersName, true,languages);
+                String magentoCustomer = null;
+                Name customerName = null;
+                if (customer == null || customer.length()== 0){
+                    magentoCustomer="NOT LOGGED IN";
+                    customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allGroupsName, true, languages);
+                    allCountriesName.addChildWillBePersisted(customerName);
+
+                }
+                else {
+                    magentoCustomer = " Customer " + customer;
+                    customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allCustomersName, true, languages);
+                }
                 customerName.addChildWillBePersisted(orderName);
                 String currency = orderRow.get("base_currency_code");
                 Name currencyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,currency, allCurrenciesName, true, languages);
@@ -672,6 +682,25 @@ public final class DataLoadService {
 
 
         }
+
+        if (tableMap.get("sales_flat_shipment") != null) {
+            for (Map<String, String> orderRow : tableMap.get("sales_flat_shipment")) {
+                //only importing the IDs at present
+                Name orderName = azquoOrdersFound.get("Order " + orderRow.get("order_id"));
+                String shippingDate = orderRow.get("created_at");
+                String packages = orderRow.get("total_qty");
+                if (orderName != null && shippingDate != null && packages != null) {
+                    shippingDate = shippingDate.substring(0, 10);
+                    orderName.setAttributeWillBePersisted("Shipping date", shippingDate);
+
+
+                }
+            }
+        }
+
+
+
+
         Map<String, Name> customerGroups = new HashMap<String, Name>();
         if (tableMap.get("customer_group") != null) {
              for (Map<String, String> group : tableMap.get("customer_group")) {
@@ -819,13 +848,16 @@ public final class DataLoadService {
         List<String> productLanguage = new ArrayList<String>();
         productLanguage.add("MagentoProductId");
         String bundlePrices = bundleTotal.itemName.getAttribute("bundleprices");
+        if (bundlePrices==null){
+            bundlePrices = "";
+        }
         String[]skuPrices = bundlePrices.split(",");
 
         for (SaleItem saleItem:bundleItems) {
              if (saleItem.price == 0) {
                  for (String skuPrice:skuPrices){
                      String sKU = saleItem.itemName.getAttribute("SKU");
-                     if (skuPrice.startsWith(sKU)){
+                     if (sKU!=null && skuPrice.startsWith(sKU)){
                          String price = skuPrice.substring(sKU.length()+ 1);
                          try {
                             saleItem.price = Double.parseDouble(price) * saleItem.qty * taxAdjustment;
@@ -869,7 +901,7 @@ public final class DataLoadService {
                     saleItem.tax = taxRemaining;
 
                 }else{
-                    saleItem.price = saleItem.origPrice * unallocatedPriceRemaining /totalOrigPrice;
+                    saleItem.price = saleItem.origPrice * unallocatedPriceRemaining /totalOrigPrice * saleItem.qty;
                     saleItem.tax = saleItem.price * bundleTotal.tax /bundleTotal.price;
 
                 }
@@ -911,7 +943,8 @@ public final class DataLoadService {
                 "'entity_id, customer_id, base_currency_code, increment_id, shipping_amount','sales_flat_order',  '$starttime', 'entity_id'\n" +
                 "'entity_id, email, group_id','customer_entity',  '$starttime', 'entity_id'\n" +
                 "'*','customer_group','', 'customer_group_id'\n" +
-                "'entity_id, parent_id','customer_address_entity', '$starttime', 'entity_id'\n";
+                "'entity_id, parent_id','customer_address_entity', '$starttime', 'entity_id'\n" +
+                "'entity_id, order_id, created_at,total_qty','sales_flat_shipment','$starttime','entity_id'\n";
     }
 
 
