@@ -789,10 +789,10 @@ public final class ImportService {
                         //looking up in the correct language
                         if (peerHeading.attribute != null) {
                             peerLanguages.add(peerHeading.attribute);
-                            if (attributeNames.size() > 1) {
+                        }else{
                                 peerLanguages.addAll(attributeNames);
-                            }
                         }
+
                         peerHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, peerHeading.lineValue, headings.get(peerHeadingNo).name, false, peerLanguages);
                     }                }
                     // add to the set of names we're going to store against this value
@@ -1041,7 +1041,7 @@ public final class ImportService {
     }
 
 
-    private String uploadReport(AzquoMemoryDBConnection azquoMemoryDBConnection,AzquoBook azquoBook, String fileName, String reportName) throws Exception{
+    private void uploadReport(AzquoMemoryDBConnection azquoMemoryDBConnection,AzquoBook azquoBook, String fileName, String reportName) throws Exception{
         int businessId = azquoMemoryDBConnection.getBusinessId();
         int databaseId = 0;
         String pathName = adminService.getBusinessPrefix(azquoMemoryDBConnection);
@@ -1064,7 +1064,6 @@ public final class ImportService {
          out.close();
          or = new OnlineReport(reportId, businessId,databaseId ,"", reportName, "", fileName,"","");
          onlineReportDAO.store(or);
-        return "";
 
 
     }
@@ -1074,18 +1073,17 @@ public final class ImportService {
 
 
 
-private String readBook (final AzquoMemoryDBConnection azquoMemoryDBConnection, final String fileName, final String tempName, List<String> attributeNames) {
+private void readBook (final AzquoMemoryDBConnection azquoMemoryDBConnection, final String fileName, final String tempName, List<String> attributeNames) throws Exception{
 
 
-        try {
             AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, this, userChoiceDAO, onlineService);
             azquoBook.loadBook(tempName, onlineService.useAsposeLicense());
             String reportName = azquoBook.getReportName();
             if (reportName!=null){
-                return uploadReport(azquoMemoryDBConnection, azquoBook, fileName, reportName);
+                uploadReport(azquoMemoryDBConnection, azquoBook, fileName, reportName);
             }
             if (azquoMemoryDBConnection.getAzquoMemoryDB() == null){
-                throw new Exception("error: no database set");
+                throw new Exception("no database set");
             }
             int sheetNo = 0;
 
@@ -1094,11 +1092,7 @@ private String readBook (final AzquoMemoryDBConnection azquoMemoryDBConnection, 
                 sheetNo++;
             }
 
-        } catch (Exception ioe) {
-            ioe.printStackTrace();
-        }
-        return "";
-    }
+   }
 
 
 
