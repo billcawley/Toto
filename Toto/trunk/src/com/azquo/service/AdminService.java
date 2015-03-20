@@ -129,6 +129,13 @@ public class AdminService {
 
     }
 
+    public void emptyDatabase(String mysqlName) throws Exception{
+        mySQLDatabaseManager.emptyDatabase(mysqlName);
+
+     }
+
+
+
     public String dropDatabase(String mysqlName) throws Exception{
         mySQLDatabaseManager.dropDatabase(mysqlName);
         return "";
