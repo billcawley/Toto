@@ -456,7 +456,16 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     public Map<Name, Boolean> getPeers() {
-        return peers != null ? Collections.unmodifiableMap(peers) : new HashMap<Name, Boolean>();
+        if (peers!=null){
+            return Collections.unmodifiableMap(peers);
+        }
+        Collection<Name> parents = findAllParents();
+        for (Name parent:parents){
+            if (parent.peers !=null){
+                return Collections.unmodifiableMap(parent.peers);
+            }
+        }
+        return new HashMap<Name, Boolean>();
     }
 
     public Map<String, String> getAttributes() {
