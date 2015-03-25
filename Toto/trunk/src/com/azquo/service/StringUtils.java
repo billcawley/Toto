@@ -224,12 +224,13 @@ I should be ok for stringtokenizer at this point
             }
         }
         statement = modifiedStatement.toString().trim();
+        statement = statement.replace("> =",">=").replace("< =","<=");//remove unnecessary blanks
         return statement;
     }
 
     public boolean isKeywordOrOperator(String term){
         return term.equals("*") || term.equals("/") || term.equals("+") || term.equals("-") || term.equals(">")
-                || term.equals("<") || term.equals(">=") || term.equals("<=") || term.equals("=") || term.equals(",")
+                || term.equals("<")  || term.equals("=") || term.equals(",")
                 || term.equals("(") || term.equals(")")
                 || term.equalsIgnoreCase("and")
                 || term.equalsIgnoreCase(NameService.LEVEL) || term.equalsIgnoreCase(NameService.FROM)
