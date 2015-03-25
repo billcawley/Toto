@@ -362,7 +362,7 @@ public final class ValueService {
         // todo : I think this logic could be cleaned up a little - the way hascalc is set seems wrong but initial attempts to simplify were also wrong
         for (Name name : names) {
             if (!hasCalc) {// then try and find one
-                String calc = name.getAttribute(Name.CALCULATION, false);
+                String calc = name.getAttribute(Name.CALCULATION, false, new HashSet<Name>());
                 if (calc != null) {
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
@@ -461,11 +461,14 @@ public final class ValueService {
         double numericResult = 0;
 
         // was on set intersection . . .
+        int count = 0;
+        String attValue = null;
         for (Name n : names) {
             for (String attribute : attributes){
-                String attValue = n.getAttribute(attribute.replace("`",""));
+                attValue = n.getAttribute(attribute.replace("`",""));
                 if (attValue != null){
-                    if (!locked.isTrue && n.getAttribute(attribute, false) == null){ // tha attribute is not against the name itself (it's form the parent or structure)
+                    count++;
+                    if (!locked.isTrue && n.getAttribute(attribute, false, new HashSet<Name>()) == null){ // tha attribute is not against the name itself (it's form the parent or structure)
                         locked.isTrue = true;
                     } else {
                         // this feels a little hacky but I need to record this for saving purposes later
@@ -491,7 +494,8 @@ public final class ValueService {
                 }
             }
         }
-        return stringResult != null ? stringResult : numericResult + "";
+        if (count==1) return attValue;//don't allow long numbers to be converted to standard form.
+        return (stringResult != null) ? stringResult : numericResult + "";
     }
 
     // on a standard non-calc cell this will give the result
@@ -795,22 +799,56 @@ seaports;children   container;children
         return true;
     }
 
-    public List<Integer> sortValues(int restrictCount, Map<Integer, Double> sortTotals) {
+    public List<Integer> sortValues(int restrictCount, Map<Integer, Object> sortTotals, boolean isNumber, boolean sortRowsUp) {
 
         List<Integer> sortedValues = new ArrayList<Integer>();
         if (restrictCount != 0) {
-            List<Map.Entry<Integer, Double>> list = new ArrayList<Map.Entry<Integer, Double>>(sortTotals.entrySet());
+            List<Map.Entry<Integer, Object>> list = new ArrayList<Map.Entry<Integer, Object>>(sortTotals.entrySet());
+            if (isNumber) {
 
-            // sort list based on comparator
-            Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {
-                public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
-                    return o1.getValue().compareTo(o2.getValue());
+                // sort list based on
+                if (sortRowsUp) {
+                    Collections.sort(list, new Comparator<Map.Entry<Integer, Object>>() {
+                        public int compare(Map.Entry<Integer, Object> o1, Map.Entry<Integer, Object> o2) {
+                            Double d1 = (Double) o1.getValue();
+                            Double d2 = (Double) o2.getValue();
+                            return d1.compareTo(d2);
+                        }
+                    });
+                }else{
+                    Collections.sort(list, new Comparator<Map.Entry<Integer, Object>>() {
+                        public int compare(Map.Entry<Integer, Object> o1, Map.Entry<Integer, Object> o2) {
+                            Double d1 = (Double) o1.getValue();
+                            Double d2 = (Double) o2.getValue();
+                            return d2.compareTo(d1);
+                        }
+                    });
+
                 }
-            });
+            }else {
+                if (sortRowsUp) {
+                    Collections.sort(list, new Comparator<Map.Entry<Integer, Object>>() {
+                        public int compare(Map.Entry<Integer, Object> o1, Map.Entry<Integer, Object> o2) {
+                            String s1 = (String) o1.getValue();
+                            String s2 = (String) o2.getValue();
+                            return s1.compareTo(s2);
+                        }
+                    });
+                } else {
+                    Collections.sort(list, new Comparator<Map.Entry<Integer, Object>>() {
+                        public int compare(Map.Entry<Integer, Object> o1, Map.Entry<Integer, Object> o2) {
+                            String s1 = (String) o1.getValue();
+                            String s2 = (String) o2.getValue();
+                            return s2.compareTo(s1);
+                        }
+                    });
 
-            for (Map.Entry<Integer, Double> aList : list) {
+                }
+            }
+            for (Map.Entry<Integer, Object> aList : list) {
                 sortedValues.add(aList.getKey());
             }
+
 
         } else {
             for (int i = 0; i < sortTotals.size(); i++) {
@@ -821,10 +859,12 @@ seaports;children   container;children
     }
 
     public String setupRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
+        long start = System.currentTimeMillis();
         final List<List<List<DataRegionHeading>>> rowHeadingLists = new ArrayList<List<List<DataRegionHeading>>>();
         String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, headingsSent, loggedInConnection.getLanguages());
+        System.out.println("row heading setup took " + (System.currentTimeMillis() - start) + " millisecs");
         loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
-        return error;
+         return error;
     }
 
     // THis returns the headings as they're meant to be seen in Excel I think
@@ -1256,8 +1296,29 @@ seaports;children   container;children
     public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictRowCount, int restrictColCount, List<List<Object>> displayObjectsForNewSheet) throws Exception {
         loggedInConnection.setContext(region, contextNames); // needed for provenance
         long track = System.currentTimeMillis();
+        int totalRows = loggedInConnection.getRowHeadings(region).size();
+        int totalCols = loggedInConnection.getColumnHeadings(region).size();
+        if (restrictRowCount < 0){
+            //decide whether to sort the rows
+            if (totalRows + restrictRowCount < 0){
+                restrictRowCount = 0;
+            }else{
+                restrictRowCount = -restrictRowCount;
+            }
+        }
+        if (restrictColCount < 0){
+            //decide whether to sort the Cols
+            if (totalCols + restrictColCount < 0){
+                restrictColCount = 0;
+            }else{
+                restrictColCount = -restrictColCount;
+            }
+        }
+        if (restrictRowCount > totalRows) restrictRowCount = totalRows;
+        if (restrictColCount > totalCols) restrictColCount = totalCols;
         Integer sortCol = findPosition(loggedInConnection.getColumnHeadings(region), loggedInConnection.getSortCol(region));
         Integer sortRow = findPosition(loggedInConnection.getRowHeadings(region), loggedInConnection.getSortRow(region));
+        
         boolean sortRowsUp = false;
         boolean sortColsRight = false;
         if (sortCol == null) {
@@ -1279,30 +1340,33 @@ seaports;children   container;children
             }
         }
         if (sortCol > 0 && restrictRowCount == 0) {
-            restrictRowCount = loggedInConnection.getRowHeadings(region).size();//this is a signal to sort the rows
+            restrictRowCount = totalRows;//this is a signal to sort the rows
         }
         if (sortRow > 0 && restrictColCount == 0) {
-            restrictColCount = loggedInConnection.getColumnHeadings(region).size();//this is a signal to sort the cols
+            restrictColCount = totalCols;//this is a signal to sort the cols
         }
         final List<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>> dataValuesMap
-                = new ArrayList<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of values
+                = new ArrayList<List<LoggedInConnection.ListOfValuesOrNamesAndAttributeName>>(totalRows); // rows, columns, lists of values
         loggedInConnection.setDataValueMap(region, dataValuesMap);
-        final Map<Integer, Double> sortRowTotals = new HashMap<Integer, Double>();
-        final Map<Integer, Double> sortColumnTotals = new HashMap<Integer, Double>();
-        List<List<Set<DataRegionHeading>>> dataHeadingsMap = new ArrayList<List<Set<DataRegionHeading>>>(loggedInConnection.getRowHeadings(region).size()); // rows, columns, lists of names for each cell
+        final Map<Integer, Object> sortRowTotals = new HashMap<Integer, Object>();
+        final Map<Integer, Object> sortRowStrings = new HashMap<Integer, Object>();
+        final Map<Integer, Object> sortColumnTotals = new HashMap<Integer, Object>();
+        final Map<Integer, Object> sortColumnStrings = new HashMap<Integer, Object>();
+        List<List<Set<DataRegionHeading>>> dataHeadingsMap = new ArrayList<List<Set<DataRegionHeading>>>(totalRows); // rows, columns, lists of names for each cell
         List<List<String>> shownValueArray = new ArrayList<List<String>>();
         List<List<Boolean>> lockArray = new ArrayList<List<Boolean>>();
         int rowNo = 0;
         Map<Name, Integer> totalSetSize = new HashMap<Name, Integer>();
-        for (int colNo = 0; colNo < loggedInConnection.getColumnHeadings(region).size(); colNo++) {
+        for (int colNo = 0; colNo < totalCols; colNo++) {
             sortColumnTotals.put(colNo, 0.00);
+            sortColumnStrings.put(colNo,"");
         }
-        int totalRows = loggedInConnection.getRowHeadings(region).size();
-        int totalCols = loggedInConnection.getColumnHeadings(region).size();
         System.out.println("data region size = " + totalRows + " * " + totalCols);
         if (totalRows * totalCols > 500000) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells 500,000");
         }
+        boolean rowNumbers = true;
+        boolean colNumbers = true;
         for (List<DataRegionHeading> rowHeadings : loggedInConnection.getRowHeadings(region)) { // make it like a document
             if (rowNo % 1000 == 0) System.out.print(".");
             ArrayList<LoggedInConnection.ListOfValuesOrNamesAndAttributeName> thisRowValues
@@ -1323,12 +1387,13 @@ seaports;children   container;children
 
             double sortRowTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total.
             int colNo = 0;
+            sortRowStrings.put(rowNo,"");
             for (List<DataRegionHeading> columnHeadings : loggedInConnection.getColumnHeadings(region)) {
                 final Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
                 headingsForThisCell.addAll(rowHeadings);
                 headingsForThisCell.addAll(columnHeadings);
                 headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, loggedInConnection));
-                // edd putting in peer check stuff here, should I not???
+                 // edd putting in peer check stuff here, should I not???
                 MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
                 // why bother?   Maybe leave it as 'on demand' when a data region doesn't work
                 // Map<String, String> result = nameService.isAValidNameSet(azquoMemoryDBConnection, namesForThisCell, new HashSet<Name>());
@@ -1353,6 +1418,7 @@ seaports;children   container;children
                     thisRowHeadings.add(headingsForThisCell);
                     double cellValue = 0;
                     LoggedInConnection.ListOfValuesOrNamesAndAttributeName valuesOrNamesAndAttributeName;
+                    String text = "";
                     if (!headingsHaveAttributes) { // we go the value route (the standard/old one), need the headings as names,
                         // TODO - peer additive check. If using peers and not additive, don't include children
                         List<Value> values = new ArrayList<Value>();
@@ -1363,7 +1429,7 @@ seaports;children   container;children
                         if (values.size() == 1 && !locked.isTrue) {
 
                             Value value = values.get(0);
-                            String text = value.getText();
+                            text = value.getText();
 
                             if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
                                 rowForNewSheet.add(NumberUtils.isNumber(value.getText()) ? new Double(cellValue) : value.getText());
@@ -1372,13 +1438,6 @@ seaports;children   container;children
                                 text = text.replaceAll("\n","<br/>");//this is unsatisfactory, but a quick fix.
                             }
                             shownValues.add(text);
-                            if (sortCol == colNo && !NumberUtils.isNumber(value.getText())) {
-                                //make up a suitable double to get some kind of order! sort on 8 characters
-                                String padded = value.getText() + "        ";
-                                for (int i = 0; i < 8; i++) {
-                                    sortRowTotal = sortRowTotal * 64 + padded.charAt(i) - 32;
-                                }
-                            }
                         } else {
                             shownValues.add(cellValue + "");
                             if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
@@ -1391,7 +1450,7 @@ seaports;children   container;children
                         List<String> attributes = new ArrayList<String>();
                         valuesOrNamesAndAttributeName = loggedInConnection.new ListOfValuesOrNamesAndAttributeName(names, attributes);
                         String attributeResult = findValueForHeadings(headingsForThisCell,locked, names, attributes);
-                             if (NumberUtils.isNumber(attributeResult)){ // there should be a more efficient way I feel given that the result is typed internally
+                        if (NumberUtils.isNumber(attributeResult)){ // there should be a more efficient way I feel given that the result is typed internally
                             cellValue = Double.parseDouble(attributeResult);
                             if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
                                 rowForNewSheet.add(new Double(cellValue));
@@ -1403,23 +1462,23 @@ seaports;children   container;children
                         }
                         attributeResult = attributeResult.replace("\n","<br/>");//unsatisfactory....
                         shownValues.add(attributeResult);
+                        text = attributeResult;
                     }
                     thisRowValues.add(valuesOrNamesAndAttributeName);
                     // ok these bits are for sorting. Could put a check on whether a number was actually the result but not so bothered
                     // code was a bit higher, have moved it below the chunk that detects if we're using values or not, see no harm in this.
-                    if (restrictRowCount > 0 && (sortCol == 0 || sortCol == colNo + 1)) {
-                        if (sortRowsUp) {
-                            sortRowTotal += cellValue;
-                        } else {
-                            sortRowTotal -= cellValue;
+
+                    if (sortCol == colNo +1){
+                        sortRowStrings.put(rowNo,text);
+                        if (text.length() > 0 && !NumberUtils.isNumber(text)){
+                            rowNumbers = false;
                         }
                     }
+                    if (restrictRowCount > 0 && (sortCol == 0 || sortCol == colNo + 1)) {
+                        sortRowTotal += cellValue;
+                    }
                     if (restrictColCount > 0 && (sortRow == 0 || sortRow == rowNo + 1)) {
-                        if (sortColsRight) {
-                            sortColumnTotals.put(colNo, sortColumnTotals.get(colNo) + cellValue);
-                        } else {
-                            sortColumnTotals.put(colNo, sortColumnTotals.get(colNo) - cellValue);
-                        }
+                        sortColumnTotals.put(colNo, (Double)sortColumnTotals.get(colNo) + cellValue);
                     }
 
                     if (locked.isTrue) {
@@ -1433,25 +1492,17 @@ seaports;children   container;children
             sortRowTotals.put(rowNo++, sortRowTotal);
 
         }
+
         //sort and trim rows and cols
-        List<Integer>sortedRows = sortValues(restrictRowCount, sortRowTotals);
-        restrictRowCount--;
-        if (sortedRows.size() > restrictRowCount){
-            while (restrictRowCount > 2 && sortRowTotals.get(sortedRows.get(restrictRowCount)) == 0) {
-                sortedRows.remove(restrictRowCount--);
-            }
+        List<Integer> sortedRows = null;
+        if (rowNumbers){
+            sortedRows = sortValues(restrictRowCount, sortRowTotals, rowNumbers, sortRowsUp);
+        }else{
+            sortedRows = sortValues(restrictRowCount, sortRowStrings, rowNumbers, sortRowsUp);
         }
-        restrictRowCount++;
         loggedInConnection.setRestrictRowCount(region, restrictRowCount);
         loggedInConnection.setRowOrder(region,sortedRows);
-        List<Integer>sortedCols = sortValues(restrictColCount, sortColumnTotals);
-        restrictColCount--;
-        if (sortedCols.size() > restrictColCount){
-            while (restrictColCount > 2 && sortColumnTotals.get(sortedCols.get(restrictColCount))==0) {
-                sortedCols.remove(restrictColCount--);
-            }
-        }
-        restrictColCount++;
+        List<Integer>sortedCols = sortValues(restrictColCount, sortColumnTotals, rowNumbers, sortColsRight);
         loggedInConnection.setColOrder(region, sortedCols);
          loggedInConnection.setRestrictColCount(region, restrictColCount);
         final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, displayObjectsForNewSheet, filterCount, restrictRowCount, restrictColCount);
