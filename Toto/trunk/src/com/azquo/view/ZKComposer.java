@@ -14,6 +14,7 @@ import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
+import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.model.SCell;
@@ -87,6 +88,8 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
+        Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
+        //Clients.evalJavaScript("alert('hello');");
         boolean reload = false;
         String chosen = (String) event.getEditingValue();
         int row = event.getRow();
