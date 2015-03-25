@@ -346,12 +346,19 @@ public class ZKAzquoBookUtils {
         if (optionsForRegion != null) {
             int foundPos = optionsForRegion.toLowerCase().indexOf(optionName.toLowerCase());
             if (foundPos != -1 && optionsForRegion.length() > foundPos + optionName.length()) {
-                optionsForRegion = optionsForRegion.substring(foundPos + optionName.length() + 1).trim();//allow for a space or '=' at the end of the option name
+                optionsForRegion = optionsForRegion.substring(foundPos + optionName.length());//allow for a space or '=' at the end of the option name
+                char operator = optionsForRegion.charAt(0);
+                if (operator=='>' ) {//interpret the '>' symbol as '-' to create an integer
+                    optionsForRegion = "-" + optionsForRegion.substring(1);
+                }else{
+                    //ignore '=' or a space
+                    optionsForRegion = optionsForRegion.substring(1);
+                }
                 foundPos = optionsForRegion.indexOf(",");
                 if (foundPos > 0) {
                     optionsForRegion = optionsForRegion.substring(0, foundPos);
                 }
-                return optionsForRegion;
+                return optionsForRegion.trim();
             }
         }
         return null;
@@ -455,6 +462,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
+
     public String fillAdminData(LoggedInConnection loggedInConnection, Sheet sheet, String region, ValueService valueService, AdminService adminService) throws Exception {
         String data = null;
         CellRegion headingsRange = getCellRegionForSheetAndName(sheet, "az_Headings" + region);
@@ -513,6 +521,7 @@ public class ZKAzquoBookUtils {
                     String linkStart = null;
                     int nameEnd = heading.indexOf(";");
                     if (nameEnd > 0) {
+                        //this is all left over from older versions of the spreadsheet.....
                         link = heading.substring(nameEnd + 1);
                         heading = heading.substring(0, nameEnd);
 
@@ -528,7 +537,9 @@ public class ZKAzquoBookUtils {
                 }
                 String valFound = pairs.get(heading);
                 if (link != null) {
-                    String linkAddr = evaluateExpression(link.replace("“", "\"").replace("”", "\""), pairs);//excel uses fancy quotes
+                    //new universal link...  REPORTS ONLY!
+                    String linkAddr = "/api/Online/?opcode=loadsheet&connectionid=" + loggedInConnection.getConnectionId() + "&reportid=" + pairs.get("id");
+                    //String linkAddr = evaluateExpression(link.replace("“", "\"").replace("”", "\""), pairs);//excel uses fancy quotes
                         cell.setHyperlink(new HyperlinkImpl(SHyperlink.HyperlinkType.URL,linkAddr,"link"));
                 }
                 if (valFound != null) {
@@ -538,6 +549,8 @@ public class ZKAzquoBookUtils {
                         Date date = df.parse(valFound);
                         cell.setDateValue(date);
                     } catch (Exception e) {
+
+
                         cell.setValue(valFound);
                     }
                 }
