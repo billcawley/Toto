@@ -21,6 +21,7 @@ import org.zkoss.zss.api.model.Book;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
+import java.io.InputStream;
 import java.util.*;
 
 
@@ -49,6 +50,9 @@ public class OnlineController {
     private OnlineService onlineService;
     @Autowired
     private AdminService adminService;
+    @Autowired
+    private ImportService importService;
+
 
     // TODO : break up into separate functions
 
@@ -68,7 +72,7 @@ public class OnlineController {
             , @RequestParam(value = "editedname", required = false) String choiceName
             , @RequestParam(value = "editedvalue", required = false) String choiceValue
             , @RequestParam(value = "reportid", required = false) String reportId
-            , @RequestParam(value = "chart", required = false) String chart
+             , @RequestParam(value = "chart", required = false) String chart
             , @RequestParam(value = "jsonfunction", required = false, defaultValue = "azquojsonfeed") String jsonFunction
             , @RequestParam(value = "row", required = false, defaultValue = "") String rowStr
             , @RequestParam(value = "col", required = false, defaultValue = "") String colStr
@@ -77,96 +81,99 @@ public class OnlineController {
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
+            , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
 
-    ) throws Exception {
-        // test code, the useful objects will have been set up below
-        if (request.getParameter("trynewsheet") != null && request.getParameter("trynewsheet").length() > 0) {
-            // ok new plan, make the book with all it needs here and set against the request for the provider to return
-            String bookPath = (String)request.getSession().getAttribute(BOOK_PATH);
-            final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-            final LoggedInConnection loggedInConnection = (LoggedInConnection)request.getSession().getAttribute(LOGGED_IN_CONNECTION);
-            // the first two make sense. Little funny about teh second two but we need a reference to these
-            book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
-            book.getInternalBook().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
-            // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
-            book.getInternalBook().setAttribute(REPORT_ID, loggedInConnection.getReportId());
-            ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, nameService, userChoiceDAO, adminService);
-            bookUtils.populateBook(book);
-            request.setAttribute(BOOK, book);
-            if (loggedInConnection.getCurrentDBName() != null){
-                model.addAttribute("databaseChosen", loggedInConnection.getCurrentDBName());
-            }
-            model.addAttribute("connectionId", loggedInConnection.getConnectionId());
-            return "zstest";
-        }
-
-        String callerId = request.getRemoteAddr();
-        if (callerId != null && user != null && user.equals("demo@user.com")) {
-            user += callerId;
-        }
-
-        if (reportToLoad != null && reportToLoad.length() > 0) {
-            reportId = reportToLoad;
-        }
-
-        //long startTime = System.currentTimeMillis();
-        String workbookName = null;
-        Database db;
+    ) {
         try {
-            OnlineReport onlineReport = null;
-            if (reportId != null && reportId.length() > 0) {
-                //report id is assumed to be integer - sent from the website
-                onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
-                if (onlineReport != null) {
-                    workbookName = onlineReport.getReportName();
+            // test code, the useful objects will have been set up below
+            if (request.getParameter("trynewsheet") != null && request.getParameter("trynewsheet").length() > 0) {
+                // ok new plan, make the book with all it needs here and set against the request for the provider to return
+                String bookPath = (String) request.getSession().getAttribute(BOOK_PATH);
+                final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                final LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LOGGED_IN_CONNECTION);
+                // the first two make sense. Little funny about teh second two but we need a reference to these
+                book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
+                book.getInternalBook().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
+                // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
+                book.getInternalBook().setAttribute(REPORT_ID, loggedInConnection.getReportId());
+                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, nameService, userChoiceDAO, adminService);
+                bookUtils.populateBook(book);
+                request.setAttribute(BOOK, book);
+                if (loggedInConnection.getCurrentDBName() != null) {
+                    model.addAttribute("databaseChosen", loggedInConnection.getCurrentDBName());
                 }
+                model.addAttribute("connectionId", loggedInConnection.getConnectionId());
+                //return "zstest";
+                return "zstest";
             }
-            if (workbookName == null) {
-                workbookName = "unknown";
+
+            String callerId = request.getRemoteAddr();
+            if (callerId != null && user != null && user.equals("demo@user.com")) {
+                user += callerId;
             }
-            if (connectionId == null) {
-                if (user == null) {
-                    return "utf8page";
+
+            if (reportToLoad != null && reportToLoad.length() > 0) {
+                reportId = reportToLoad;
+            }
+
+            //long startTime = System.currentTimeMillis();
+            String workbookName = null;
+            Database db;
+            try {
+                OnlineReport onlineReport = null;
+                if (reportId != null && reportId.length() > 0) {
+                    //report id is assumed to be integer - sent from the website
+                    onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
+                    if (onlineReport != null) {
+                        workbookName = onlineReport.getReportName();
+                    }
                 }
-                if (user.equals("demo@user.com")) {
-                    user += request.getRemoteAddr();
+                if (workbookName == null) {
+                    workbookName = "unknown";
                 }
-                LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, workbookName, false);
+                if (connectionId == null) {
+                    if (user == null) {
+                        return "utf8page";
+                    }
+                    if (user.equals("demo@user.com")) {
+                        user += request.getRemoteAddr();
+                    }
+                    LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, workbookName, false);
+                    if (loggedInConnection == null) {
+                        model.addAttribute("content", "error:no connection id");
+                        return "utf8page";
+                    }
+                    connectionId = loggedInConnection.getConnectionId();
+
+                }
+                final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
+
                 if (loggedInConnection == null) {
-                    model.addAttribute("content", "error:no connection id");
+                    model.addAttribute("content", "error:invalid or expired connection id");
                     return "utf8page";
                 }
-                connectionId = loggedInConnection.getConnectionId();
+                if (onlineReport != null) {
+                    if (onlineReport.getId() != 1) {
+                        if (onlineReport.getDatabaseId() > 0) {
+                            db = databaseDAO.findById(onlineReport.getDatabaseId());
+                            loginService.switchDatabase(loggedInConnection, db);
+                            onlineReport.setPathname(loggedInConnection.getCurrentDBName());
+                        } else {
+                            db = loggedInConnection.getCurrentDatabase();
+                            onlineReport.setPathname(adminService.getBusinessPrefix(loggedInConnection));
 
-            }
-            final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
-
-            if (loggedInConnection == null) {
-                model.addAttribute("content", "error:invalid or expired connection id");
-                return "utf8page";
-            }
-            if (onlineReport != null) {
-                if (onlineReport.getId() != 1) {
-                    if (onlineReport.getDatabaseId() > 0) {
-                        db = databaseDAO.findById(onlineReport.getDatabaseId());
-                        loginService.switchDatabase(loggedInConnection, db);
-                        onlineReport.setPathname(loggedInConnection.getCurrentDBName());
-                    } else {
-                        db = loggedInConnection.getCurrentDatabase();
-                        onlineReport.setPathname(adminService.getBusinessPrefix(loggedInConnection));
-
-                    }
-                    if (db != null) {
-                        onlineReport.setDatabase(db.getName());
-                        database = onlineReport.getDatabase();
+                        }
+                        if (db != null) {
+                            onlineReport.setDatabase(db.getName());
+                            database = onlineReport.getDatabase();
+                        }
                     }
                 }
-            }
-            if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.hasAzquoMemoryDB()) {
-                loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(), "");
+                if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.hasAzquoMemoryDB()) {
+                    loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(), "");
 
-            }
+                }
              /*
             THIS GIVES A NULL POINTER EXCEPTION - NOT SURE WHY I PUT IT IN!
             if (loggedInConnection.getProvenance()==null){
@@ -177,106 +184,121 @@ public class OnlineController {
                 }
             }
             */
-            String result = "error: no action taken";
-            int row = 0;
-            try {
-                row = Integer.parseInt(rowStr);
-            } catch (Exception e) {
-                //rowStr can be blank or '0'
-            }
+                String result = "error: no action taken";
+                int row = 0;
+                try {
+                    row = Integer.parseInt(rowStr);
+                } catch (Exception e) {
+                    //rowStr can be blank or '0'
+                }
             /* expand the row and column headings.
             the result is jammed into result but may not be needed - getrowheadings is still important as it sets up the bits in the logged in connection
 
             ok, one could send the row and column headings at the same time as the data but looking at the export demo it's asking for rows headings then column headings then the context
 
              */
-            //String sortRegion = "";
-            if ((opcode.equals("setchosen")) && choiceName != null) {
-                if (choiceName.startsWith("region options:")) {
-                    String region = choiceName.substring(15);
-                    System.out.println("saving choices: " + choiceName + " " + choiceValue);
-                    if (choiceValue.equals("clear")) {
-                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "clear overrides", "");
+                //String sortRegion = "";
+                if ((opcode.equals("setchosen")) && choiceName != null) {
+                    if (choiceName.startsWith("region options:")) {
+                        String region = choiceName.substring(15);
+                        System.out.println("saving choices: " + choiceName + " " + choiceValue);
+                        if (choiceValue.equals("clear")) {
+                            onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "clear overrides", "");
+                        } else {
+                            onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxrows" + region, request.getParameter("maxrows" + region));
+                            onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxcols" + region, request.getParameter("maxcols" + region));
+                            onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "hiderows" + region, request.getParameter("hiderows" + region));
+                            onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "sortable" + region, request.getParameter("sortable" + region));
+                        }
                     } else {
-                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxrows" + region, request.getParameter("maxrows" + region));
-                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxcols" + region, request.getParameter("maxcols" + region));
-                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "hiderows" + region, request.getParameter("hiderows" + region));
-                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "sortable" + region, request.getParameter("sortable" + region));
-                    }
-                } else {
-                    onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
-                }
-                opcode = "loadsheet";
-            }
-            if (opcode.equals("valuesent")) {
-                result = onlineService.changeValue(loggedInConnection, row, Integer.parseInt(colStr), changedValue);
-                result = jsonFunction + "({\"changedvalues\":" + result + "})";
-            }
-            if (opcode.equals("nameidchosen")) {
-                try {
-                    List<Set<Name>> names = new ArrayList<Set<Name>>();
-                    //this routine should accept much more than a single name....
-                    try {
-                        Name name = nameService.findById(loggedInConnection, Integer.parseInt(choiceName));
-                        Set<Name> names1 = new HashSet<Name>();
-                        names1.add(name);
-                        names.add(0, names1);
-                        loggedInConnection.setNamesToSearch(names);
-                    } catch (Exception e) {
-                        //ignore - this is an internal parameter
+                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
                     }
                     opcode = "loadsheet";
-                } catch (Exception ignored) {
                 }
-            }
+                if (opcode.equals("upload")) {
+                    if (submit.length() > 0) {
+                        if (database.length() > 0){
+                            onlineService.switchDatabase(loggedInConnection, database);
+                        }
+                        InputStream uploadFile = uploadfile.getInputStream();
+                        String fileName = uploadfile.getOriginalFilename();
+                        importService.importTheFile(loggedInConnection, fileName, uploadFile, "", true, loggedInConnection.getLanguages());
+                        result = "File imported successfully";
 
-            if (opcode.equals("provenance")) {
-                result = onlineService.getProvenance(loggedInConnection, row, Integer.parseInt(colStr), jsonFunction);
-            }
-            if (opcode.equals("savedata")) {
-                onlineService.saveData(loggedInConnection);
-                result = "data saved successfully";
-            }
-            //if (opcode.equals("children")){
+                    } else {
+                        result = onlineService.showUploadFile(loggedInConnection);
+                    }
 
-            //result = nameService.getStructureForNameSearch(loggedInConnection,"", Integer.parseInt(nameId), loggedInConnection.getLanguages());
-            // result = jsonFunction + "(" + result + ")";
-            // }
-            if (opcode.equals("chart")) {
+                }
+                if (opcode.equals("valuesent")) {
+                    result = onlineService.changeValue(loggedInConnection, row, Integer.parseInt(colStr), changedValue);
+                    result = jsonFunction + "({\"changedvalues\":" + result + "})";
+                }
+                if (opcode.equals("nameidchosen")) {
+                    try {
+                        List<Set<Name>> names = new ArrayList<Set<Name>>();
+                        //this routine should accept much more than a single name....
+                        try {
+                            Name name = nameService.findById(loggedInConnection, Integer.parseInt(choiceName));
+                            Set<Name> names1 = new HashSet<Name>();
+                            names1.add(name);
+                            names.add(0, names1);
+                            loggedInConnection.setNamesToSearch(names);
+                        } catch (Exception e) {
+                            //ignore - this is an internal parameter
+                        }
+                        opcode = "loadsheet";
+                    } catch (Exception ignored) {
+                    }
+                }
+
+                if (opcode.equals("provenance")) {
+                    result = onlineService.getProvenance(loggedInConnection, row, Integer.parseInt(colStr), jsonFunction);
+                }
+                if (opcode.equals("savedata")) {
+                    onlineService.saveData(loggedInConnection);
+                    result = "data saved successfully";
+                }
+                //if (opcode.equals("children")){
+
+                //result = nameService.getStructureForNameSearch(loggedInConnection,"", Integer.parseInt(nameId), loggedInConnection.getLanguages());
+                // result = jsonFunction + "(" + result + ")";
+                // }
+                if (opcode.equals("chart")) {
                 /*if (chartParams.length() > 6){ //params start with 'chart '
                     chartParams = chartParams.substring(6);
                 }else{
                     chartParams="";
                 }*/
-                //chart =  onlineService.getChart(loggedInConnection, chartParams);
-                result = jsonFunction + "({\"chart\":\"" + chart + "\"})";
-            }
+                    //chart =  onlineService.getChart(loggedInConnection, chartParams);
+                    result = jsonFunction + "({\"chart\":\"" + chart + "\"})";
+                }
 
-            if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
-                if (onlineReport.getId() != 1) {
-                    request.getSession().setAttribute(BOOK_PATH, onlineService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
-                    if (spreadsheetName.length() > 0){
-                        loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName, "");
+                if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
+                    if (onlineReport.getId() != 1) {
+                        request.getSession().setAttribute(BOOK_PATH, onlineService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
+                        if (spreadsheetName.length() > 0) {
+                            loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName, "");
+                        }
+
+                    } else {
+                        request.getSession().setAttribute(BOOK_PATH, onlineReport.getFilename());
+
                     }
+                    loggedInConnection.setReportId(onlineReport.getId());
+                    // jam 'em in the session for the moment, makes testing easier. As in see a report then try with &trynewsheet=true after
+                    request.getSession().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
+                    result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "Right-click mouse for provenance");
+                 }
+                if (opcode.equals("buttonpressed") && row > 0) {//button pressed - follow instructions and reload admin sheet
+                    // json function was being passed but ignored!
+                    onlineService.followInstructionsAt(loggedInConnection, row, Integer.parseInt(colStr), database, uploadfile);
 
-                }else{
-                    request.getSession().setAttribute(BOOK_PATH, onlineReport.getFilename());
-
+                    if (onlineReport == null) {
+                        onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
+                    }
+                    result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, result);
                 }
-                loggedInConnection.setReportId(onlineReport.getId());
-                // jam 'em in the session for the moment, makes testing easier. As in see a report then try with &trynewsheet=true after
-                request.getSession().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
-                result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "Right-click mouse for provenance");
-            }
-            if (opcode.equals("buttonpressed") && row > 0) {//button pressed - follow instructions and reload admin sheet
-                // json function was being passed but ignored!
-                onlineService.followInstructionsAt(loggedInConnection, row, Integer.parseInt(colStr), database, uploadfile);
-
-                if (onlineReport == null) {
-                    onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
-                }
-                result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, result);
-            }
             /*
             BufferedReader br = new BufferedReader(new StringReader(result));
            / String line;
@@ -284,12 +306,16 @@ public class OnlineController {
             while ((line = br.readLine()) != null) {
                 logger.info(line);
             }*/
-            model.addAttribute("content", result);
-        } catch (Exception e) {
-            logger.error("online controller error", e);
-            model.addAttribute("content", "error:" + e.getMessage());
+                model.addAttribute("content", result);
+            } catch (Exception e) {
+                logger.error("online controller error", e);
+                model.addAttribute("content", "error:" + e.getMessage());
+            }
+            return "utf8page";
+        }catch(Exception e){
+            System.out.println(e.getStackTrace());
+            return e.getMessage();
         }
-        return "utf8page";
     }
 
     // when not multipart - this is a bit annoying, hopefully can find a way around it later
@@ -310,7 +336,8 @@ public class OnlineController {
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
-            ) throws Exception{
-        return handleRequest(model,request,user,password,connectionId,choiceName,choiceValue,reportId,chart,jsonFunction,rowStr,colStr, changedValue, opcode, spreadsheetName, database, reportToLoad, null);
+            , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
+    ) {
+        return handleRequest(model,request,user,password,connectionId,choiceName,choiceValue,reportId,chart,jsonFunction,rowStr,colStr, changedValue, opcode, spreadsheetName, database, reportToLoad, submit, null);
     }
 }
