@@ -120,14 +120,19 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // for convenience but be careful where it is used . . .
     public String getDefaultDisplayName() {
-        return getAttribute(DEFAULT_DISPLAY_NAME);
+        int index = nameAttributes.attributeKeys.indexOf(DEFAULT_DISPLAY_NAME);
+        if (index != -1) {
+            return nameAttributes.attributeValues.get(index);
+        }
+
+        return null;
     }
 
     // for convenience but be careful where it is used . . .
     public String getDisplayNameForLanguages(List<String> languages)
     {
         for (String language : languages){
-            String toReturn = getAttribute(language);
+            String toReturn = getAttribute(language, false, new HashSet<Name>());
             if (toReturn != null){
                 return toReturn;
             }
@@ -624,16 +629,12 @@ public final class Name extends AzquoMemoryDBEntity {
                 if (parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
                     return child.getDefaultDisplayName();
                 }
-                String attribute = parent.getAttribute(attributeName);
+                String attribute = parent.getAttribute(attributeName, true, checked);
                 if (attribute != null) {
                     return attribute;
 
                 }
-                attribute = findParentAttributes(parent, attributeName, checked);
-                if (attribute != null) {
-                    return attribute;
-                }
-            }
+           }
         }
         return null;
 
@@ -642,11 +643,11 @@ public final class Name extends AzquoMemoryDBEntity {
     // default to parent check
 
     public String getAttribute(String attributeName) {
-        return getAttribute(attributeName, true);
+        return getAttribute(attributeName, true, new HashSet<Name>());
     }
 
 
-    public String getAttribute(String attributeName, boolean parentCheck) {
+    public String getAttribute(String attributeName, boolean parentCheck, Set<Name> checked) {
         attributeName = attributeName.toUpperCase();
         String attribute = null;
         NameAttributes nameAttributes = this.nameAttributes;// grab a reference in case it changes
@@ -657,7 +658,7 @@ public final class Name extends AzquoMemoryDBEntity {
         if (attribute != null) return attribute;
         //look up the chain for any parent with the attribute
         if (parentCheck){
-            return findParentAttributes(this, attributeName, new HashSet<Name>());
+            return findParentAttributes(this, attributeName, checked);
         }
         return null;
     }
