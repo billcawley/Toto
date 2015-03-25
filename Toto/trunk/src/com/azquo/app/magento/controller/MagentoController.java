@@ -61,8 +61,6 @@ public class MagentoController {
     @Autowired
     AdminService adminService;
 
-    @Autowired
-    ImportService importService;
 
     // we should start using the logger really
     //private static final Logger logger = Logger.getLogger(MagentoController.class);
@@ -100,7 +98,12 @@ public class MagentoController {
                 //loggedInConnection = loginService.login("test","magentobill","password",0,"",false);
             }
             if (op.equals("connect")) {
-                return loggedInConnection.getConnectionId();
+                if (dataLoadService.findLastUpdate(loggedInConnection)!=null) {
+                    return loggedInConnection.getConnectionId();
+                }else{
+                    return dataLoadService.findRequiredTables(loggedInConnection);
+
+                }
             }
             if (op.equals("restart")){;
                 Database existingDb = loggedInConnection.getCurrentDatabase();
@@ -108,17 +111,14 @@ public class MagentoController {
                 adminService.emptyDatabase(loggedInConnection.getCurrentDBName());
                 loginService.switchDatabase(loggedInConnection,null);
                 loginService.switchDatabase(loggedInConnection,existingDb);
-                String magentoSetupFile = onlineService.getHomeDir() + "/databases/Magen/setup/magentosetup.xlsx";
-                InputStream uploadFile = new FileInputStream(magentoSetupFile);
-                String fileName = "magentosetup.xlsx";
-                importService.importTheFile(loggedInConnection, fileName, uploadFile, "", true, loggedInConnection.getLanguages());
 
 
-                return dataLoadService.findLastUpdate(loggedInConnection);
+                return dataLoadService.findRequiredTables(loggedInConnection);
             }
 
-            if (op.equals("lastupdate")) {
-                return dataLoadService.findLastUpdate(loggedInConnection);
+            if (op.equals("lastupdate") || op.equals("requiredtables")) { // 'lastupdate' applies only to versions 1.1.0 and 1.1.1  (LazySusan and Lyco)
+
+                return dataLoadService.findRequiredTables(loggedInConnection);
             }
             if (op.equals("updatedb")) {
                 if (loggedInConnection.getCurrentDatabase() != null) {
@@ -126,11 +126,8 @@ public class MagentoController {
                 }
                 if (data != null){
                     File moved = null;
+                    long start = System.currentTimeMillis();
                     if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't email us :)
-                        String title = "Magento file upload " + logon + " from " + request.getRemoteAddr();
-                        azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
-                        azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
-                        azquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                         moved = new File(onlineService.getHomeDir() + "/temp/" + db + new Date());
                         data.transferTo(moved);
                     }
@@ -141,6 +138,13 @@ public class MagentoController {
                     } else {
                         dataLoadService.loadData(loggedInConnection, data.getInputStream());
                     }
+                        if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't email us :)
+                            long elapsed = System.currentTimeMillis() - start;
+                            String title = "Magento file upload " + logon + " from " + request.getRemoteAddr() + " elapsed time " + elapsed +  " millisec";
+                            azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
+                            azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
+                            azquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
+                      }
                     return loggedInConnection.getConnectionId() + "";
                 } else{
                     return "error: no data posted";
