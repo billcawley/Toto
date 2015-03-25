@@ -124,6 +124,7 @@ public class ReviewService {
 
     public String sendEmails(String thisURL,String supplierDb, int maxCount, String velocityTemplate)throws Exception{
 
+        System.out.println("sending a batch of emails for " + supplierDb + " using " + velocityTemplate);
         AzquoMemoryDBConnection azquoMemoryDBConnection = reviewsConnectionMap.getConnection(supplierDb);
         if (azquoMemoryDBConnection==null){
             return "error: cannot find " + supplierDb;
@@ -145,15 +146,33 @@ public class ReviewService {
         String error = "";
         Name emailsToBeSent  = nameService.findByName(azquoMemoryDBConnection,EMAILS_TO_BE_SENT);
         Name ordersWithEmailSent = nameService.findByName(azquoMemoryDBConnection, ORDERS_WITH_EMAIL_SENT);
-        Set<Name> emailsSentThisTime = new HashSet<Name>();
+        //temporary housekeeping - remove
+        Set<Name> movedOrders = new HashSet<Name>();
+        for (Name name:ordersWithEmailSent.getChildren()){
+            String emailSentDate = name.getAttribute("EMAIL DATE");
+            if (emailSentDate!=null){
+                    movedOrders.add(name);
+                    nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Emails sent on " + emailSentDate,ordersWithEmailSent, false).addChildWillBePersisted(name);
+
+
+             }
+        }
+        for (Name name:movedOrders){
+            ordersWithEmailSent.removeFromChildrenWillBePersisted(name);
+        }
+        //end of temporary housekeeping
+         Set<Name> emailsSentThisTime = new HashSet<Name>();
         String now = todayString();
         int count = 0;
         String todaysEmailsSent = "Emails sent on " + df2.format(new Date());
         Name todaysEmails = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,todaysEmailsSent,ordersWithEmailSent, false);
         for (Name order : emailsToBeSent.getChildren()) {
             String feedbackDate = order.getAttribute(ORDER_ATTRIBUTE.FEEDBACK_DATE);
-            if (feedbackDate == null){
-                error = "no feedback date for order " + order.getDefaultDisplayName();
+            if (feedbackDate == null) {
+                feedbackDate = order.getAttribute("EMAIL DATE");
+            }
+                if (feedbackDate == null){
+                    error = "no feedback date for order " + order.getDefaultDisplayName();
             }else{
                 if (feedbackDate.compareTo(now) < 0) {
                     //todo  consider what happens if the server crashes
@@ -171,8 +190,9 @@ public class ReviewService {
             }
 
         }
-        for (Name order:emailsSentThisTime){
+         for (Name order:emailsSentThisTime){
             emailsToBeSent.removeFromChildrenWillBePersisted(order);
+             todaysEmails.addChildWillBePersisted(order);
         }
 
         azquoMemoryDBConnection.persist();
