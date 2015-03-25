@@ -632,6 +632,12 @@
             window.open("/api/Jstree?op=new&database=" + db + "&connectionid=" + document.getElementById("connectionId").value, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=400, height=400")
         }
 
+        function uploadFile(){
+            window.open("/api/Online?opcode=upload&connectionid="+ document.getElementById("connectionId").value, "_blank", "toolbar=no, status=no, scrollbars=no, resizable=no, top=150, left=200, width=510, height=200")
+        }
+
+
+
         function loadsheet(sheetname){
             document.getElementById("spreadsheetname").value = sheetname;
             document.getElementById("opcode").value="loadsheet";
@@ -881,7 +887,8 @@
             <ul  class="topmenu">
                 <li><a href="#" onclick="downloadAsXLS()">Download as XLSX</a></li>
                 <li><a href="#" onclick="downloadAsPDF();">Download as PDF</a></li>
-                <li><a href="#" onclick="inspectDatabase();">Inspect database</a>
+                <li><a href="#" onclick="inspectDatabase();">Inspect database</a></li>
+                <li><a href="#" onclick="uploadFile();">Upload file</a></li>
                 <li>
                     <a href="#"  onclick="showHighlight();">Highlight changed data
                          (currently $hdays days)
