@@ -79,10 +79,22 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     }
 
     public List<OnlineReport> findForBusinessIdAndUserStatus(final int businessId, String userStatus) {
+        String[] statuses = userStatus.split(",");
+        String statusSelect = "(";
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(BUSINESSID, businessId);
+        for (int count=0; count < statuses.length;count++){
+            if (count > 0) {
+                statusSelect += " or ";
+            }
+            namedParams.addValue(USERSTATUS + count, "%" + statuses[count].trim() + "%" );
+            statusSelect += USERSTATUS + " like :" + USERSTATUS + count;
+
+        }
+        statusSelect += ")";
+
+         namedParams.addValue(BUSINESSID, businessId);
         namedParams.addValue(USERSTATUS, "%" + userStatus + "%");
-        return findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " and " + USERSTATUS + " like :" + USERSTATUS, namedParams, false);
+        return findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " and " + statusSelect, namedParams, false);
     }
 
     public List<OnlineReport> findForBusinessId(final int businessId) {
