@@ -108,36 +108,37 @@ public class JstreeController {
 
                 }
             } else {
-                if (itemsChosen != null && itemsChosen.length() > 0) {
-                    //find the relevant data and show it
-                    String[] jsItems = itemsChosen.split(",");
-                    List<Set<Name>> namesChosen = new ArrayList<Set<Name>>();
-                    for (String jsItem : jsItems) {
-                        if (jsItem.length() > 0) {
-                            try {
-                                LoggedInConnection.NameOrValue lineChosen = lookup.get(jsItem).child;
-                                Name nameChosen = lineChosen.name;
-                                if (nameChosen != null) {
-                                    Set<Name> nameChosenSet = new HashSet<Name>();
-                                    nameChosenSet.add(nameChosen);
-                                    namesChosen.add(nameChosenSet);
+                if (!op.equals("new") && !op.equals("children")){
+                    if (itemsChosen != null && itemsChosen.length() > 0) {
+                        //find the relevant data and show it
+                        String[] jsItems = itemsChosen.split(",");
+                        List<Set<Name>> namesChosen = new ArrayList<Set<Name>>();
+                        for (String jsItem : jsItems) {
+                            if (jsItem.length() > 0) {
+                                try {
+                                    LoggedInConnection.NameOrValue lineChosen = lookup.get(jsItem).child;
+                                    Name nameChosen = lineChosen.name;
+                                    if (nameChosen != null) {
+                                        Set<Name> nameChosenSet = new HashSet<Name>();
+                                        nameChosenSet.add(nameChosen);
+                                        namesChosen.add(nameChosenSet);
+                                    }
+                                } catch (Exception e) {
+                                    //should never happen.  If it does, ignore!
                                 }
-                            } catch (Exception e) {
-                                //should never happen.  If it does, ignore!
                             }
                         }
-                    }
-                    loggedInConnection.setNamesToSearch(namesChosen);
+                        loggedInConnection.setNamesToSearch(namesChosen);
                      /*
                      OnlineReport onlineReport = onlineReportDAO.findById(1);
                      loggedInConnection.setReportId(1);
                      String sheet = onlineService.readExcel(loggedInConnection, onlineReport, "inspection","Right-click mouse for provenance");
                      model.addAttribute("content", sheet);
                      */
-                    //return goes to a void - needs to refresh the original report....??
-                    return "utf8page";
+                        //return goes to a void - needs to refresh the original report....??
+                        return "utf8page";
 
-
+                    }
                 }
                 LoggedInConnection.JsTreeNode current = new LoggedInConnection.JsTreeNode(null, null);
                 current.child = new LoggedInConnection.NameOrValue();
@@ -162,7 +163,7 @@ public class JstreeController {
                     if (current.child.name != null) {
                         rootId = current.child.name.getId();
                     }
-                    result.append(onlineService.showNameDetails(loggedInConnection, database, rootId, parents));
+                    result.append(onlineService.showNameDetails(loggedInConnection, database, rootId, parents, itemsChosen));
                     model.addAttribute("content", result);
                     return "utf8page";
 
@@ -173,7 +174,7 @@ public class JstreeController {
                     jsonFunction = null;
                     boolean details = true;
 
-                    result.append(nameService.getJsonChildren(loggedInConnection, jsTreeId, current.child.name, parents, lookup, details));
+                    result.append(nameService.getJsonChildren(loggedInConnection, jsTreeId, current.child.name, parents, lookup, details, itemsChosen));
 
                 }
                 if (current.child.name != null) {
