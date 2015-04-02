@@ -647,7 +647,7 @@ public class OnlineService {
         return convertToVelocity(context, "reports", reports, "azquoReports.vm");
     }
 
-    public String showNameDetails(LoggedInConnection loggedInConnection, String database, int nameId, String parents) throws Exception {
+    public String showNameDetails(LoggedInConnection loggedInConnection, String database, int nameId, String parents, String searchNames) throws Exception {
         if (database != null && database.length() > 0) {
             Database newDB = databaseDAO.findForName(loggedInConnection.getBusinessId(), database);
             if (newDB == null) {
@@ -655,10 +655,12 @@ public class OnlineService {
             }
             loginService.switchDatabase(loggedInConnection, newDB);
         }
+        if (searchNames==null)searchNames = "";
         VelocityContext context = new VelocityContext();
         context.put("connectionid", loggedInConnection.getConnectionId() + "");
         context.put("parents", parents);
         context.put("rootid", nameId + "");
+        context.put("searchnames", searchNames);
         return convertToVelocity(context, null, null, "jstree.vm");
     }
 
