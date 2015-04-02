@@ -625,11 +625,15 @@
 
         function inspectDatabase(){
             var databasechosen = document.getElementById("databasechosen");
+            var searchItems = "";
+            if (document.getElementById("entered") != null){
+                searchItems = document.getElementById("entered").value;
+            }
             var db = "";
             if (databasechosen!=null){
                 db = databasechosen.value;
             }
-            window.open("/api/Jstree?op=new&database=" + db + "&connectionid=" + document.getElementById("connectionId").value, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=400, height=400")
+            window.open("/api/Jstree?op=new&database=" + db + "&itemschosen=" + searchItems + "&connectionid=" + document.getElementById("connectionId").value, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=400, height=400")
         }
 
         function uploadFile(){
