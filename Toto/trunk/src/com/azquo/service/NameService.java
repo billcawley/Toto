@@ -32,14 +32,14 @@ public final class NameService {
     private static final Logger logger = Logger.getLogger(NameService.class);
 
     public static final String LEVEL = "level";
+    public static final String PARENTS = "parents";
     public static final String FROM = "from";
     public static final String TO = "to";
     public static final String COUNT = "count";
     public static final String SORTED = "sorted";
     public static final String CHILDREN = "children";
-    public static final String PARENTS = "parents";
-    public static final String LOWEST = "lowest";
-    public static final String ALL = "all";
+    //public static final String LOWEST = "lowest";
+    //public static final String ALL = "all";
     public static final char NAMEMARKER = '!';
     public static final char ATTRIBUTEMARKER = '|';
     public static final String PEERS = "peers";
@@ -340,27 +340,21 @@ public final class NameService {
         }
     }
 
-    public static final int LOWEST_LEVEL_INT = -1;
-    public static final int ALL_LEVEL_INT = -2;
+    public static final int LOWEST_LEVEL_INT = 100;
+    public static final int ALL_LEVEL_INT = 101;
 
     // needs to be a list to preserve order when adding. Or could use a linked set, don't see much advantage
 
     public List<Name> findChildrenAtLevel(final Name name, final String levelString) throws Exception {
-        // level -1 means get me the lowest
-        // level -2 means 'ALL' (including the top level
+        // level 100 means get me the lowest
+        // level 101 means 'ALL' (including the top level
         // notable that with current logic asking for a level with no data returns no data not the nearest it can get. Would be simple to change this
         int level = 1;
         if (levelString != null) {
-            if (levelString.equalsIgnoreCase(LOWEST)) {
-                level = LOWEST_LEVEL_INT;
-            } else if (levelString.equalsIgnoreCase(ALL)) {
-                level = ALL_LEVEL_INT;
-            } else {
-                try {
-                    level = Integer.parseInt(levelString);
-                } catch (NumberFormatException nfe) {
-                    //carry on regardless!
-                }
+            try {
+                level = Integer.parseInt(levelString);
+            } catch (NumberFormatException nfe) {
+                //carry on regardless!
             }
         }
         List<Name> namesFound = new ArrayList<Name>();
@@ -517,7 +511,7 @@ public final class NameService {
         setFormula = stringUtils.parseStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
         setFormula = stringUtils.shuntingYardAlgorithm(setFormula);
-        Pattern p = Pattern.compile("[\\+\\-\\*" + NAMEMARKER + "&]");//recognises + - * NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
+        Pattern p = Pattern.compile("[\\+\\-\\*/" + NAMEMARKER + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
         logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
@@ -550,10 +544,18 @@ public final class NameService {
             } else if (op == '*') { // * meaning intersection here . . .
                 //assume that the second term implies 'level all'
                 Set<Name> allNames = new HashSet<Name>();
-                for (Name name:nameStack.get(stackCount)){
-                    addNames(name, allNames,0,ALL_LEVEL_INT);
+                for (Name name : nameStack.get(stackCount)) {
+                    addNames(name, allNames, 0, ALL_LEVEL_INT);
                 }
                 nameStack.get(stackCount - 1).retainAll(allNames);
+                nameStack.remove(stackCount);
+            }else if (op == '/') {
+                    Set<Name> parents = new HashSet<Name>();
+                    for (Name child : nameStack.get(stackCount)) {
+                        parents.addAll(child.findAllParents());
+
+                    }
+                nameStack.get(stackCount - 1).retainAll(parents);
                 nameStack.remove(stackCount);
             } else if (op == '-') {
                 nameStack.get(stackCount - 1).removeAll(nameStack.get(stackCount));
@@ -570,7 +572,7 @@ public final class NameService {
             hasPermissions = true;
         }
         for (Name possible : nameStack.get(0)) {
-            if (possible.getAttribute("CONFIDENTIAL")== null && (!hasPermissions || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions()))) {
+            if (possible==null  || (possible.getAttribute("CONFIDENTIAL")== null && (!hasPermissions || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())))) {
                         toReturn.add(possible);
              }
         }
@@ -693,8 +695,8 @@ public final class NameService {
 
         final String levelString = stringUtils.getInstruction(setTerm, LEVEL);
         String fromString = stringUtils.getInstruction(setTerm, FROM);
+        String parentsString = stringUtils.getInstruction(setTerm,PARENTS);
         String childrenString = stringUtils.getInstruction(setTerm, CHILDREN);
-        final String parentsString = stringUtils.getInstruction(setTerm, PARENTS);
         final String sorted = stringUtils.getInstruction(setTerm, SORTED);
         String toString = stringUtils.getInstruction(setTerm, TO);
         String countString = stringUtils.getInstruction(setTerm, COUNT);
@@ -748,17 +750,19 @@ public final class NameService {
             namesFound.clear();
             namesFound.add(totalName);
         }
-        if (parentsString != null) {
-            Set<Name> parents = new HashSet<Name>();
-            for (Name child : namesFound) {
-                parents.addAll(child.findAllParents());
-
-            }
-            namesFound.clear();
-            namesFound.addAll(parents);
-        }
         if (whereString != null) {
             filter(namesFound, whereString, strings, attributeStrings);
+        }
+        if (parentsString!=null){
+            //remove the childless names
+            List<Name> filteredList = new ArrayList<Name>();
+            for (Name possibleName:namesFound){
+                if (possibleName.getChildren().size()>0){
+                    filteredList.add(possibleName);
+                }
+
+            }
+            namesFound = filteredList;
         }
         if (sorted != null) {
             Collections.sort(namesFound, defaultLanguageCaseInsensitiveNameComparator);
@@ -1048,12 +1052,14 @@ public final class NameService {
 
     }
 
-    public String getJsonChildren(LoggedInConnection loggedInConnection, String jsTreeId, Name name, String parents, Map<String, LoggedInConnection.JsTreeNode> lookup, boolean details) throws Exception {
+    public String getJsonChildren(LoggedInConnection loggedInConnection, String jsTreeId, Name name, String parents, Map<String, LoggedInConnection.JsTreeNode> lookup, boolean details, String searchTerm) throws Exception {
         StringBuilder result = new StringBuilder();
         result.append("[{\"id\":" + jsTreeId + ",\"state\":{\"opened\":true},\"text\":\"");
         List<Name> children = new ArrayList<Name>();
         if (jsTreeId.equals("0") && name == null) {
-            String searchTerm = loggedInConnection.getAzquoBook().getRangeData("az_inputInspectChoice");
+            if (searchTerm == null){
+                searchTerm = loggedInConnection.getAzquoBook().getRangeData("az_inputInspectChoice");
+            }
             result.append("root");
             if (searchTerm == null || searchTerm.length() == 0) {
                 children = findTopNames(loggedInConnection);
@@ -1110,6 +1116,13 @@ public final class NameService {
                             result.append(",");
                         }
                         loggedInConnection.setLastJstreeId(++lastId);
+                        LoggedInConnection.NameOrValue nameOrValue = new LoggedInConnection.NameOrValue();
+                        nameOrValue.values = null;
+                        nameOrValue.name = name;
+                        LoggedInConnection.JsTreeNode newNode = new LoggedInConnection.JsTreeNode(nameOrValue, name);
+
+                        lookup.put(lastId + "", newNode);
+
                         result.append("{\"id\":" + lastId + ",\"text\":\"" + attName + ":" + name.getAttributes().get(attName).replace("\"", "\\\"") + "\"}");
                     }
                 }
