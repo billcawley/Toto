@@ -190,7 +190,9 @@ function jsonElement(elementName, elementValue){
 function az_inputChanged(){
     document.getElementById("az_Data").style.display = "none";
     var newname = document.getElementById("az_InputName").value
-    azquojson("Name",jsonElement("operation","structure") + "," + jsonElement("name","`" + escape(newname) + "`"));
+    window.open("https://data.azquo.com/api/Jstree?op=new&database=export&user=demo@user.com&password=password&itemschosen=" + escape(newname), "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
+
+
 }
 
 function az_sendlogon(){
