@@ -182,6 +182,8 @@ I'll add better tracking of where an error is later
         // added, as an operator, should make it more robust when used with decode string
         // this assumes that the , will be taken care of after the parsing
         statement = statement.replace(",", " , ").replace("  ", " ");
+        statement = statement.replace("level lowest","level 100");
+        statement = statement.replace("level all","level 101");
 
  /* so now we have things like this, should be ready for a basic test
         !1 level 2 from !2 to !3 as !4
@@ -236,8 +238,7 @@ I should be ok for stringtokenizer at this point
                 || term.equalsIgnoreCase(NameService.LEVEL) || term.equalsIgnoreCase(NameService.FROM)
                 || term.equalsIgnoreCase(NameService.TO) || term.equalsIgnoreCase(NameService.COUNT)
                 || term.equalsIgnoreCase(NameService.SORTED) || term.equalsIgnoreCase(NameService.CHILDREN)
-                || term.equalsIgnoreCase(NameService.PARENTS) || term.equalsIgnoreCase(NameService.LOWEST)
-                || term.equalsIgnoreCase(NameService.ALL) || term.equalsIgnoreCase(NameService.PEERS)
+                || term.equalsIgnoreCase(NameService.PEERS)  || term.equalsIgnoreCase(NameService.PARENTS)
                 || term.equalsIgnoreCase(NameService.COUNTBACK) || term.equalsIgnoreCase(NameService.COMPAREWITH)
                 || term.equalsIgnoreCase(NameService.AS) || term.equalsIgnoreCase(NameService.STRUCTURE)
                 || term.equalsIgnoreCase(NameService.NAMELIST) || term.equalsIgnoreCase(NameService.CREATE)
@@ -293,7 +294,7 @@ I should be ok for stringtokenizer at this point
                 sb.append(namefound).append(" ");
             }
             char lastOffStack = ' ';
-            while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && ")+-*/(".indexOf(thisOp) <= "(+-*/".indexOf(stack.charAt(0)))) {
+            while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && ")+-/*(".indexOf(thisOp) <= "(+-/*".indexOf(stack.charAt(0)))) {
 
                 if (stack.charAt(0) != '(') {
                     sb.append(stack.charAt(0)).append(" ");
