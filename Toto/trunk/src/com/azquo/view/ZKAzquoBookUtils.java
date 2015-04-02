@@ -260,7 +260,9 @@ public class ZKAzquoBookUtils {
                 for (List<DataRegionHeading> rowHeading : expandedRowHeadings) {
                     int col = displayRowHeadings.getColumn();
                     for (DataRegionHeading heading : rowHeading) {
-                        sheet.getInternalSheet().getCell(row, col).setValue(heading.getAttribute() != null ? heading.getAttribute() : heading.getName().getDisplayNameForLanguages(loggedInConnection.getLanguages()));
+                        if (heading!=null){
+                            sheet.getInternalSheet().getCell(row, col).setValue(heading.getAttribute() != null ? heading.getAttribute() : heading.getName().getDisplayNameForLanguages(loggedInConnection.getLanguages()));
+                        }
                         col++;
                     }
                     row++;
@@ -269,7 +271,9 @@ public class ZKAzquoBookUtils {
                 for (List<DataRegionHeading> colHeading : expandedColumnHeadings) {
                     int col = displayColumnHeadings.getColumn();
                     for (DataRegionHeading heading : colHeading) {
-                        sheet.getInternalSheet().getCell(row, col).setValue(heading.getAttribute() != null ? heading.getAttribute() : heading.getName().getDisplayNameForLanguages(loggedInConnection.getLanguages()));
+                        if (heading!=null){
+                            sheet.getInternalSheet().getCell(row, col).setValue(heading.getAttribute() != null ? heading.getAttribute() : heading.getName().getDisplayNameForLanguages(loggedInConnection.getLanguages()));
+                        }
                         col++;
                     }
                     row++;
