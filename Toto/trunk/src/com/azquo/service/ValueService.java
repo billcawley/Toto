@@ -555,16 +555,19 @@ public final class ValueService {
             for (int y = 0; y < dataRegionHeadings.size(); y++) {
                 if (y > 0) sb.append("\t");
                 //NOW - LEAVE THE PRUNING OF NAMES TO EXCEL - MAYBE THE LIST WILL BE SORTED.
-                Name name = dataRegionHeadings.get(y).getName();
-                if (name != null) {
-                    String nameInLanguage = name.getAttribute(language);
-                    if (nameInLanguage == null) {
-                        nameInLanguage = name.getDefaultDisplayName();
+                DataRegionHeading rowName = dataRegionHeadings.get(y);
+                if (rowName != null) {
+                    Name name = rowName.getName();
+                    if (name != null) {
+                        String nameInLanguage = name.getAttribute(language);
+                        if (nameInLanguage == null) {
+                            nameInLanguage = name.getDefaultDisplayName();
+                        }
+                        sb.append(nameInLanguage);
+                    } else {
+                        String attribute = dataRegionHeadings.get(y).getAttribute();
+                        if (attribute != null) sb.append(attribute);
                     }
-                    sb.append(nameInLanguage);
-                } else {
-                    // yes this will null pointer without an attribute or name I think that's correct for the moment
-                    sb.append(dataRegionHeadings.get(y).getAttribute());
                 }
             }
         }
@@ -666,7 +669,13 @@ seaports;children   container;children
     public <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
 
         List<List<T>> toReturn = null;
+
         for (List<T> permutationDimension : listsToPermute) {
+            if (permutationDimension == null){
+                permutationDimension = new ArrayList<T>();
+                permutationDimension.add(null);
+
+            }
             if (toReturn == null) { // first one, just assign the single column
                 toReturn = new ArrayList<List<T>>();
                 for (T item : permutationDimension) {
@@ -1390,17 +1399,35 @@ seaports;children   container;children
             sortRowStrings.put(rowNo,"");
             for (List<DataRegionHeading> columnHeadings : loggedInConnection.getColumnHeadings(region)) {
                 final Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
-                headingsForThisCell.addAll(rowHeadings);
-                headingsForThisCell.addAll(columnHeadings);
-                headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, loggedInConnection));
-                 // edd putting in peer check stuff here, should I not???
+                //check that we do have both row and column headings.....
+                for (DataRegionHeading heading:rowHeadings){
+                    if (heading!=null){
+                        headingsForThisCell.add(heading);
+                    }
+                }
+                int hCount= headingsForThisCell.size();
+                if (hCount > 0) {
+                    for (DataRegionHeading heading : columnHeadings) {
+                        if (heading != null) {
+                            headingsForThisCell.add(heading);
+                        }
+                    }
+                    if (headingsForThisCell.size() > hCount) {
+                        headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, loggedInConnection));
+                    } else {
+                        headingsForThisCell.clear();
+                    }
+                }
+                    // edd putting in peer check stuff here, should I not???
                 MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
                 // why bother?   Maybe leave it as 'on demand' when a data region doesn't work
                 // Map<String, String> result = nameService.isAValidNameSet(azquoMemoryDBConnection, namesForThisCell, new HashSet<Name>());
                 // much simpler check - simply that the list is complete.
                 boolean checked = true;
                 for (DataRegionHeading heading : headingsForThisCell) {
-                    if (heading == null) checked = false;
+                    if (heading.getName() == null && heading.getAttribute()==null){
+                        checked = false;
+                    }
                     if (!heading.isWriteAllowed()){ // this replaces the isallowed check that was in the functions that resolved the cell values
                         locked.isTrue = true;
                     }
