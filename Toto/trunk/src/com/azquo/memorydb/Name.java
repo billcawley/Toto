@@ -61,7 +61,7 @@ public final class Name extends AzquoMemoryDBEntity {
     According to what I've read I believe this object (NameAttributes) to be thread safe / Immutable.
 
     */
-    private final class NameAttributes {
+    private static final class NameAttributes {
         public final List<String> attributeKeys;
         public final List<String> attributeValues;
 

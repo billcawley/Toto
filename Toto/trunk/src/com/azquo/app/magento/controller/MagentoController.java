@@ -7,9 +7,6 @@ import com.azquo.adminentities.OnlineReport;
 import com.azquo.app.magento.service.DataLoadService;
 import com.azquo.service.*;
 import com.azquo.util.AzquoMailer;
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
 //import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -18,15 +15,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.InputStream;
-import java.net.URLEncoder;
 import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * Created by bill on 28/10/14
@@ -105,7 +97,7 @@ public class MagentoController {
 
                 }
             }
-            if (op.equals("restart")){;
+            if (op.equals("restart")){
                 Database existingDb = loggedInConnection.getCurrentDatabase();
 
                 adminService.emptyDatabase(loggedInConnection.getCurrentDBName());

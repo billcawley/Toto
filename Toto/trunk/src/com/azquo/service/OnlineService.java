@@ -84,7 +84,7 @@ public class OnlineService {
     public static final String ASPOSELICENSE = "aspose.license";
     public static final String DEVMACHINE = "dev.machine";
 
-    class SetNameChosen {
+    static class SetNameChosen {
         String setName;
         List<Name> choiceList;
         Name chosen;
@@ -297,7 +297,7 @@ public class OnlineService {
             setUserChoice(loggedInConnection.getUser().getId(), reportId, nameLoop.get(level).setName, chosen.getDefaultDisplayName());
             level++;
             if (level == nameLoop.size()) {
-                azquoBook.executeSheet(loggedInConnection, spreadsheetName, reportId);
+                azquoBook.executeSheet(loggedInConnection);
             } else {
                 executeLoop(loggedInConnection, spreadsheetName, reportId, nameLoop, level + 1);
             }

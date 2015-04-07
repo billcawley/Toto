@@ -2,9 +2,6 @@ package com.azquo.app.reviews.service;
 
 import com.azquo.admindao.BusinessDAO;
 import com.azquo.admindao.OnlineReportDAO;
-import com.azquo.adminentities.Database;
-import com.azquo.adminentities.OnlineReport;
-import com.azquo.adminentities.User;
 import com.azquo.memorydb.*;
 import com.azquo.service.*;
 import com.azquo.util.AzquoMailer;
@@ -35,6 +32,7 @@ import java.util.*;
 
 /**
  * Created by bill on 12/09/14.
+ *
  */
 
 public class ReviewService {
@@ -301,7 +299,7 @@ public class ReviewService {
         }
     }
 
-    public class VelocityReview {
+    public static class VelocityReview {
         public String rating;
         public String ratingName;
         public String product;

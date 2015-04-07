@@ -44,7 +44,7 @@ public class StandardDAO {
 
     public enum PersistedTable {provenance, name, value}
 
-    private final class JsonRecordTransportRowMapper implements RowMapper<JsonRecordTransport> {
+    private static final class JsonRecordTransportRowMapper implements RowMapper<JsonRecordTransport> {
         @Override
         public JsonRecordTransport mapRow(final ResultSet rs, final int row) throws SQLException {
             return new JsonRecordTransport(rs.getInt(ID), rs.getString(JSON), JsonRecordTransport.State.LOADED);

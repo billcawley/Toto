@@ -26,8 +26,8 @@ public final class DataLoadService {
     Runtime runtime = Runtime.getRuntime();
     int mb = 1024*1024;
 
-    private final String LATEST_UPDATE = "Latest update";
-    private final String REQUIRED_TABLES = "required tables";
+    private final static String LATEST_UPDATE = "Latest update";
+    private final static String REQUIRED_TABLES = "required tables";
 
     @Autowired
     private NameService nameService;
@@ -35,7 +35,7 @@ public final class DataLoadService {
     @Autowired
     private ValueService valueService;
 
-    private class SaleItem{
+    private static class SaleItem{
         public Name itemName;
         public double price;
         public double tax;
@@ -89,7 +89,7 @@ public final class DataLoadService {
             if (requiredTables == null){
                 requiredTables = defaultData();
             }
-            requiredTables.replace("$starttime", date);
+            requiredTables = requiredTables.replace("$starttime", date);
         }
 
         return requiredTables;
@@ -702,8 +702,8 @@ public final class DataLoadService {
             Name orderName = azquoOrdersFound.get("Order " + orderRow.get("entity_id"));
             if (orderName != null){
                 String customer = orderRow.get("customer_id");
-                String magentoCustomer = null;
-                Name customerName = null;
+                String magentoCustomer;
+                Name customerName;
                 if (customer == null || customer.length()== 0){
                     magentoCustomer="NOT LOGGED IN";
                     customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allGroupsName, true, languages);
@@ -725,8 +725,7 @@ public final class DataLoadService {
                     double dShipping = 0.0;
                     try{
                         dShipping = Double.parseDouble(shipping);
-                    }catch(Exception e){
-
+                    } catch (Exception ignored){
                     }
                     if (dShipping > 0) {
                         Set<Name> namesForValue = new HashSet<Name>();
@@ -904,8 +903,8 @@ public final class DataLoadService {
 
         Double taxAdjustment = priceRemaining/(priceRemaining + taxRemaining);
 
-        List<String> productLanguage = new ArrayList<String>();
-        productLanguage.add("MagentoProductId");
+/*        List<String> productLanguage = new ArrayList<String>();
+        productLanguage.add("MagentoProductId");*/
         String bundlePrices = bundleTotal.itemName.getAttribute("bundleprices");
         if (bundlePrices==null){
             bundlePrices = "";
@@ -920,9 +919,7 @@ public final class DataLoadService {
                          String price = skuPrice.substring(sKU.length()+ 1);
                          try {
                             saleItem.price = Double.parseDouble(price) * saleItem.qty * taxAdjustment;
-
-                        } catch (Exception e) {
-
+                        } catch (Exception ignored) {
                         }
                          break;
                     }
@@ -942,7 +939,7 @@ public final class DataLoadService {
                 if (itemPrice != null) {
                     try {
                         saleItem.origPrice = Double.parseDouble(itemPrice);
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
                     }
                 }
                 totalOrigPrice += saleItem.origPrice * saleItem.qty;

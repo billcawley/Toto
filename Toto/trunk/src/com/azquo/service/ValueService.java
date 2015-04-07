@@ -46,7 +46,7 @@ public final class ValueService {
 
     // one line function, much point??
 
-    private class MutableBoolean {
+    private static class MutableBoolean {
         boolean isTrue;
 
         MutableBoolean() {
@@ -1146,7 +1146,7 @@ seaports;children   container;children
     }
 
     private void formatLockMap(LoggedInConnection loggedInConnection, String region, List<List<Boolean>> lockMap) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         boolean firstRow = true;
         for (List<Boolean> row : lockMap) {
             if (firstRow) {
@@ -1360,7 +1360,7 @@ seaports;children   container;children
         final Map<Integer, Object> sortRowTotals = new HashMap<Integer, Object>();
         final Map<Integer, Object> sortRowStrings = new HashMap<Integer, Object>();
         final Map<Integer, Object> sortColumnTotals = new HashMap<Integer, Object>();
-        final Map<Integer, Object> sortColumnStrings = new HashMap<Integer, Object>();
+//        final Map<Integer, Object> sortColumnStrings = new HashMap<Integer, Object>();
         List<List<Set<DataRegionHeading>>> dataHeadingsMap = new ArrayList<List<Set<DataRegionHeading>>>(totalRows); // rows, columns, lists of names for each cell
         List<List<String>> shownValueArray = new ArrayList<List<String>>();
         List<List<Boolean>> lockArray = new ArrayList<List<Boolean>>();
@@ -1368,14 +1368,14 @@ seaports;children   container;children
         Map<Name, Integer> totalSetSize = new HashMap<Name, Integer>();
         for (int colNo = 0; colNo < totalCols; colNo++) {
             sortColumnTotals.put(colNo, 0.00);
-            sortColumnStrings.put(colNo,"");
+//            sortColumnStrings.put(colNo,"");
         }
         System.out.println("data region size = " + totalRows + " * " + totalCols);
         if (totalRows * totalCols > 500000) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells 500,000");
         }
         boolean rowNumbers = true;
-        boolean colNumbers = true;
+//        boolean colNumbers = true;
         for (List<DataRegionHeading> rowHeadings : loggedInConnection.getRowHeadings(region)) { // make it like a document
             if (rowNo % 1000 == 0) System.out.print(".");
             ArrayList<LoggedInConnection.ListOfValuesOrNamesAndAttributeName> thisRowValues
@@ -1471,16 +1471,16 @@ seaports;children   container;children
                                 rowForNewSheet.add(new Double(cellValue));
                             }
                         }
-                        valuesOrNamesAndAttributeName = loggedInConnection.new ListOfValuesOrNamesAndAttributeName(values);
+                        valuesOrNamesAndAttributeName = new LoggedInConnection.ListOfValuesOrNamesAndAttributeName(values);
                     } else {  // now, new logic for attributes
                         List<Name> names = new ArrayList<Name>();
                         List<String> attributes = new ArrayList<String>();
-                        valuesOrNamesAndAttributeName = loggedInConnection.new ListOfValuesOrNamesAndAttributeName(names, attributes);
+                        valuesOrNamesAndAttributeName = new LoggedInConnection.ListOfValuesOrNamesAndAttributeName(names, attributes);
                         String attributeResult = findValueForHeadings(headingsForThisCell,locked, names, attributes);
                         if (NumberUtils.isNumber(attributeResult)){ // there should be a more efficient way I feel given that the result is typed internally
                             cellValue = Double.parseDouble(attributeResult);
                             if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
-                                rowForNewSheet.add(new Double(cellValue));
+                                rowForNewSheet.add(cellValue);
                             }
                         }else{
                             if (rowForNewSheet != null){// I'm asuming the new spreadsheet display pays attention to the object type
@@ -1521,7 +1521,7 @@ seaports;children   container;children
         }
 
         //sort and trim rows and cols
-        List<Integer> sortedRows = null;
+        List<Integer> sortedRows;
         if (rowNumbers){
             sortedRows = sortValues(restrictRowCount, sortRowTotals, rowNumbers, sortRowsUp);
         }else{
@@ -1723,7 +1723,7 @@ seaports;children   container;children
 
     private StringBuffer printBatch(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values) {
         StringBuffer sb = new StringBuffer();
-        int debugCount = 0;
+        //int debugCount = 0;
         boolean headingNeeded = false;
         boolean firstName = true;
         for (Value value : values) {
@@ -1741,7 +1741,7 @@ seaports;children   container;children
                 sb.append(",");
             }
             sb.append("{");
-            debugCount = value.getNames().size();
+            //debugCount = value.getNames().size();
             sb.append(jsonValue("value", value.getText(), false));
             sb.append(jsonValue("name", nameFound, true));
             sb.append("}");
@@ -1773,7 +1773,7 @@ seaports;children   container;children
                         slimNames.remove(heading);
                         slimValue.setNames(slimNames);
                         slimExtract.add(slimValue);
-                        debugCount = slimValue.getNames().size();
+                        //debugCount = slimValue.getNames().size();
                     }
 
 
@@ -1821,7 +1821,7 @@ seaports;children   container;children
 
     public String formatCellProvenanceForOutput(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, String jsonFunction) {
 
-        StringBuffer output = new StringBuffer();
+        StringBuilder output = new StringBuilder();
         output.append(jsonFunction + "({\"provenance\":[{");
         int count = 0;
         if (values.size() > 1 || (values.size() > 0 && values.get(0) != null)) {

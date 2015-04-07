@@ -21,7 +21,8 @@ public final class Value extends AzquoMemoryDBEntity {
 
     private static final Logger logger = Logger.getLogger(Value.class);
 
-    private final Provenance provenance;
+    // issue of final here and bits of the init being in a try block. Need to have a little think about that
+    private Provenance provenance;
     private String text;//no longer final.   May be adjusted during imports (if duplicate lines are found will sum...)
     private String deletedInfo;
 
@@ -44,28 +45,26 @@ public final class Value extends AzquoMemoryDBEntity {
 
     protected Value(final AzquoMemoryDB azquoMemoryDB, final int id, final String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id);
-        JsonTransport transport= null;
         try{
-            transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
-        }catch(Exception e){
-            int j = 1;//something very wrong if the JSON doesn't work
-
-        }
-        this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
-        this.text = transport.text;
-        this.deletedInfo = transport.deletedInfo;
-        names = new HashSet<Name>();
-        //System.out.println("name ids" + transport.nameIds);
-        for (Integer nameId : transport.nameIds) {
-            Name name = getAzquoMemoryDB().getNameById(nameId);
-            if (name != null) {
-                names.add(name);
-            } else {
-                logger.info("Value referenced a name id that did not exist : " + nameId + " skipping");
+            JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
+            this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
+            this.text = transport.text;
+            this.deletedInfo = transport.deletedInfo;
+            names = new HashSet<Name>();
+            //System.out.println("name ids" + transport.nameIds);
+            for (Integer nameId : transport.nameIds) {
+                Name name = getAzquoMemoryDB().getNameById(nameId);
+                if (name != null) {
+                    names.add(name);
+                } else {
+                    logger.info("Value referenced a name id that did not exist : " + nameId + " skipping");
+                }
             }
+            setNamesWillBePersisted(names);
+            getAzquoMemoryDB().addValueToDb(this);
+        } catch(Exception e) {
+            e.printStackTrace();
         }
-        setNamesWillBePersisted(names);
-        getAzquoMemoryDB().addValueToDb(this);
     }
 
     public Provenance getProvenance() {

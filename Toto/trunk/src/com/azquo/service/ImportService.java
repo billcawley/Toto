@@ -3,7 +3,6 @@ package com.azquo.service;
 import com.azquo.admindao.OnlineReportDAO;
 import com.azquo.admindao.UploadRecordDAO;
 import com.azquo.admindao.UserChoiceDAO;
-import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.adminentities.UploadRecord;
 import com.azquo.memorydb.Name;
@@ -28,7 +27,7 @@ import java.util.zip.ZipInputStream;
 
 public final class ImportService {
 
-    private class NameParent{
+    private static class NameParent{
         String name;
         Name parent;
         
@@ -59,19 +58,19 @@ public final class ImportService {
     @Autowired
     private UserChoiceDAO userChoiceDAO;
 
-    public final String IDENTIFIER = "key";
-    public final String CHILDOF = "child of ";
-    public final String PARENTOF = "parent of ";
-    public final String ATTRIBUTE = "attribute ";
-    public final String LANGUAGE = "language ";
-    public final String PLURAL = "plural ";
-    public final String PEERS = "peers";
-    public final String LOCAL = "local";
-    public final String EQUALS = "equals";
-    public final String COMPOSITION = "composition";
+    public static final String IDENTIFIER = "key";
+    public static final String CHILDOF = "child of ";
+    public static final String PARENTOF = "parent of ";
+    public static final String ATTRIBUTE = "attribute ";
+    public static final String LANGUAGE = "language ";
+    public static final String PLURAL = "plural ";
+    public static final String PEERS = "peers";
+    public static final String LOCAL = "local";
+    public static final String EQUALS = "equals";
+    public static final String COMPOSITION = "composition";
 
 
-    class ImportHeading{
+    static class ImportHeading{
         int column;
         String heading;
         Name name;
@@ -282,7 +281,7 @@ public final class ImportService {
                 if (peersString.contains("}")) {
                     peersString = peersString.substring(1, peersString.indexOf("}"));
                     final StringTokenizer st = new StringTokenizer(peersString, ",");
-                    final List<String> peersToAdd = new ArrayList<String>();
+                    //final List<String> peersToAdd = new ArrayList<String>();
                     String notFoundError = "";
                     final LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>(st.countTokens());
                     while (st.hasMoreTokens()) {
@@ -445,12 +444,12 @@ public final class ImportService {
         // what we're doing here is going through the headers, First thing to do is to set up the peers if defined for a header
         // then we find or create each header as a name in the database. If the name has peers it's added to the nameimportheading map, a way to find the header for that name with peers
         // namesWithPeersHeaderMap is a map of the names which have peers, colums headed by such names will have the value in them, hence why we need to hold the header so we cna get the value
-        final HashMap<Name, String> namesWithPeersHeaderMap = new HashMap<Name, String>();
+        //final HashMap<Name, String> namesWithPeersHeaderMap = new HashMap<Name, String>();
         final List<ImportHeading> headings = new ArrayList<ImportHeading>();
 
         readHeaders(azquoMemoryDBConnection, headers, headings, fileType, attributeNames);
 
-        fillInHeaderInformation(azquoMemoryDBConnection, headings, attributeNames);
+        fillInHeaderInformation(azquoMemoryDBConnection, headings);
 
         int valuecount = 0; // purely for logging
         int lastReported = 0;
@@ -458,7 +457,7 @@ public final class ImportService {
           int lineNo = 0;
         while (csvReader.readRecord()) {
             lineNo++;
-            ImportHeading contextPeersItem = null;
+            //ImportHeading contextPeersItem = null;
             if (csvReader.get(0).length()==0)break;//break if the first line element is blank
             for (ImportHeading heading:headings){
                 heading.lineValue = csvReader.get(heading.column);
@@ -527,7 +526,7 @@ public final class ImportService {
 
     private int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings, HashMap<NameParent, Name> namesFound, List<String> attributeNames)throws Exception{
         List<Name> contextNames = new ArrayList<Name>();
-        String value = null;
+        String value;
         int valueCount = 0;
         ImportHeading contextPeersItem = null;
         /*
@@ -605,13 +604,13 @@ public final class ImportService {
                     }
                 }
                 if (heading.peerHeadings.size() > 0 ) {
-                    ImportHeading headingWithPeers = heading;
+                    //ImportHeading headingWithPeers = heading;
                     if (heading.contextItem) {
                         contextPeersItem = heading;
                     }
-                    if (contextPeersItem != null) {
+                    /*if (contextPeersItem != null) {
                         headingWithPeers = contextPeersItem;
-                    }
+                    }*/
                     final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
 
                     boolean hasRequiredPeers = findPeers(azquoMemoryDBConnection,namesFound, heading, headings, namesForValue, attributeNames);
@@ -650,7 +649,7 @@ public final class ImportService {
     }
 
 
-    private void fillInHeaderInformation(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings, List<String> attributeNames)throws Exception{
+    private void fillInHeaderInformation(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings)throws Exception{
 
         for (ImportHeading importHeading:headings) {
             if (importHeading.heading != null) {
@@ -773,10 +772,10 @@ public final class ImportService {
 
     private boolean findPeers(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, Set<Name> namesForValue, List<String> attributeNames)throws  Exception{
 
-        ImportHeading headingWithPeers = heading;
+        //ImportHeading headingWithPeers = heading;
         boolean hasRequiredPeers = true;
         namesForValue.add(heading.name); // the one at the top of this headingNo, the name with peers.
-        for (int peerHeadingNo : headingWithPeers.peerHeadings) { // go looking for the peers
+        for (int peerHeadingNo : heading.peerHeadings) { // go looking for the peers
             ImportHeading peerHeading = headings.get(peerHeadingNo);
             if (peerHeading.contextItem) {
                 namesForValue.add(peerHeading.name);

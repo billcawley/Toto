@@ -18,7 +18,7 @@ public class ReviewsCustomerService {
 
     private NameService nameService;
 
-    private AppDBConnectionMap reviewsConnectionMap;
+    //private AppDBConnectionMap reviewsConnectionMap;
 
     AzquoMemoryDBConnection masterDBConnection;
 
@@ -26,7 +26,7 @@ public class ReviewsCustomerService {
 
     public ReviewsCustomerService(NameService nameService, AppDBConnectionMap reviewsConnectionMap) throws Exception{
         this.nameService = nameService;
-        this.reviewsConnectionMap = reviewsConnectionMap;
+        //this.reviewsConnectionMap = reviewsConnectionMap;
         if (reviewsConnectionMap.getConnection(MASTERDBNAME) == null){ // should only happen once!
             reviewsConnectionMap.newDatabase("master"); // note, I assume the main reviews business is called reviews!
         }
@@ -38,7 +38,7 @@ public class ReviewsCustomerService {
         String ADDRESS = "ADDRESS";
         String EMAIL = "EMAIL";
         String TELEPHONENO = "TELEPHONENO";
-        String SUPPLIERMYSQLDB = "SUPPLIERMYSQLDB";
+        //String SUPPLIERMYSQLDB = "SUPPLIERMYSQLDB";
     }
 
     public String createReviewsCustomer(String name, String address, String email, String telephoneno) throws Exception{

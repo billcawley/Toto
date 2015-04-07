@@ -47,7 +47,7 @@ public class AzquoBook {
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
-    class RegionInfo {
+    static class RegionInfo {
         String region;
         int row;
         int col;
@@ -610,16 +610,14 @@ public class AzquoBook {
     }
 
     private String addOption(String item, String selected) {
-        String content = null;
+        String content;
         if (item.contains("'")){
             content = "<option value = \"" + item + "\"";
-
         }else{
             content = "<option value = '" + item + "'";
         }
         if (item.toLowerCase().equals(selected.toLowerCase())) {
             content += " selected";
-
         }
         content += ">" + item + "</option>" + cr;
         return content;
@@ -1423,7 +1421,8 @@ public class AzquoBook {
                             leftCell = colNo;
                         }
                         String content = getCellContentAsString(cell);
-                        String origContent = content.replace(" ", "");
+//                        String origContent = content.replace(" ", "");
+                        String origContent;
                         rowValues.add(content);//saved for when cells are changed
 /*                        if (cell.getStyle().getRotationAngle() == 90) {
                             content = "<div class='r90'>" + content + "</div>";
@@ -2028,7 +2027,7 @@ public class AzquoBook {
         }
     }
 
-    public void executeSheet(LoggedInConnection loggedInConnection, String spreadsheetName, int reportId) throws Exception {
+    public void executeSheet(LoggedInConnection loggedInConnection) throws Exception {
             loadData(loggedInConnection);
             saveData(loggedInConnection);
      }

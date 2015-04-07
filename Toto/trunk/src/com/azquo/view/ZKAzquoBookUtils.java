@@ -69,7 +69,7 @@ public class ZKAzquoBookUtils {
         if (loggedInConnection.getReportId()==1){
             for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
                 Sheet sheet = book.getSheetAt(sheetNumber);
-                loadAdminData(loggedInConnection, book, sheet);
+                loadAdminData(loggedInConnection, sheet);
             }
             //fill admin date
         }else {
@@ -402,11 +402,10 @@ public class ZKAzquoBookUtils {
     public static final String VALIDATION_SHEET = "VALIDATION_SHEET";
 
     public void addValidation(List<SName> namesForSheet, Sheet sheet, LoggedInConnection loggedInConnection){
-        Sheet validationSheet = null;
         if (sheet.getBook().getSheet(VALIDATION_SHEET) == null){
             sheet.getBook().getInternalBook().createSheet(VALIDATION_SHEET);
         }
-        validationSheet = sheet.getBook().getSheet(VALIDATION_SHEET);
+        Sheet validationSheet = sheet.getBook().getSheet(VALIDATION_SHEET);
         int numberOfValidationsAdded = 0;
         for (SName name : namesForSheet) {
             if (name.getRefersToSheetName().equals(sheet.getSheetName())) {
@@ -455,7 +454,7 @@ public class ZKAzquoBookUtils {
     }
 
 
-    private void loadAdminData(LoggedInConnection loggedInConnection, Book book, Sheet sheet) throws Exception {
+    private void loadAdminData(LoggedInConnection loggedInConnection, Sheet sheet) throws Exception {
         List<SName> namesForSheet = getNamesForSheet(sheet);
         for (SName name : namesForSheet) {
             // Old one was case insensitive - not so happy about this. Will allow it on the prefix
@@ -522,7 +521,6 @@ public class ZKAzquoBookUtils {
                     String heading = sheet.getInternalSheet().getCell(headingsRow, headingsCol + colNo).getStringValue();
                     SCell cell = sheet.getInternalSheet().getCell(headingsRow + rowNo, headingsCol  + colNo);
                     String link = null;
-                    String linkStart = null;
                     int nameEnd = heading.indexOf(";");
                     if (nameEnd > 0) {
                         //this is all left over from older versions of the spreadsheet.....
@@ -531,10 +529,10 @@ public class ZKAzquoBookUtils {
 
                         if (link.startsWith("href=")) {
                             link = link.substring(5);
-                        linkStart = "<a href=";
+//                        linkStart = "<a href=";
                     } else if (link.startsWith("onclick=")) {
                         link = link.substring(8);
-                        linkStart = "<a href='#' onclick=";
+                        //linkStart = "<a href='#' onclick=";
                     } else {
                         link = null;
                     }

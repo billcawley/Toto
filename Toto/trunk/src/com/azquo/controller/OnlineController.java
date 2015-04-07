@@ -313,7 +313,7 @@ public class OnlineController {
             }
             return "utf8page";
         }catch(Exception e){
-            System.out.println(e.getStackTrace());
+            e.printStackTrace();
             return e.getMessage();
         }
     }

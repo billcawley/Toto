@@ -22,7 +22,6 @@ package com.azquo.app.reviews.controller;
  lots of pasted code from review controller initially
  *
  */
-import com.azquo.admindao.DatabaseDAO;
 import com.azquo.app.reviews.service.ReviewService;
 import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
@@ -43,8 +42,6 @@ import java.util.*;
 public class SupplierResponseController {
 
     @Autowired
-    private DatabaseDAO databaseDAO;
-    @Autowired
     private LoginService loginService;
     @Autowired
     private ReviewService reviewService;
@@ -54,10 +51,10 @@ public class SupplierResponseController {
 
         Enumeration<String> parameterNames = request.getParameterNames();
 
-        String supplierDB = null;
-        String connectionId = null;
+//        String supplierDB = null;
+//        String connectionId = null;
         String orderRef = null;
-        int businessId = 0;
+//        int businessId = 0;
         String submit = null;
         Map<String,String> comments = new HashMap<String, String>();
         String velocityTemplate = null;
@@ -78,22 +75,22 @@ public class SupplierResponseController {
         }
         LoggedInConnection loggedInConnection;
 
-        if (connectionId == null) {
+/*        if (connectionId == null) {
             if (businessId > 0){//someone filling in a review
                 loggedInConnection = loginService.login(supplierDB,"","",0,"",false);
-            }else{
+            }else{*/
                 //temporary connection .. need to think about this
-                loggedInConnection = loginService.login(supplierDB,"","",0,"",false);
+                loggedInConnection = loginService.login(null,"","",0,"",false);
                 // edd just wants it to work for the mo!
                 //loggedInConnection = loginService.login("yousay1", "edd@azquo.com", "eddtest", 0, "", false);
-            }
+            /*}
 
         } else {
             loggedInConnection = loginService.getConnection(connectionId);
-        }
-        if (supplierDB != null) {
+        }*/
+        /*if (supplierDB != null) {
             loginService.switchDatabase(loggedInConnection, databaseDAO.findForName(loggedInConnection.getBusinessId(), supplierDB));
-        }
+        }*/
             if (submit!=null){
                 reviewService.processSupplierResponseForm(loggedInConnection, orderRef, comments);
             }

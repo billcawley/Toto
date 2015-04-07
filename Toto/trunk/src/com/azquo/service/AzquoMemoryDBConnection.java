@@ -89,7 +89,7 @@ public class AzquoMemoryDBConnection {
         if (provenance == null) {
             try {
                 provenance = new Provenance(getAzquoMemoryDB(), where, new Date(), "", "", "-");
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
         }
         return provenance;

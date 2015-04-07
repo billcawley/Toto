@@ -61,6 +61,10 @@ public final class NameService {
         }
     };
 
+    public NameService(){
+        System.out.print("NameService starting, Java Version : " + System.getProperty("java.version"));
+    }
+
     // get names from a comma separated list. Well expressions describing names.
 
     public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
@@ -1083,7 +1087,7 @@ public final class NameService {
 
         result.append("\"");
         int maxdebug = 500;
-        if (children.size() > 0 || (details && name.getAttributes().size() > 1)) {
+        if (children.size() > 0 || (details && name!= null && name.getAttributes() != null && name.getAttributes().size() > 1)) {
             result.append(",\"children\":[");
             int lastId = loggedInConnection.getLastJstreeId();
             int count = 0;

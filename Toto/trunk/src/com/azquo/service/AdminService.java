@@ -9,7 +9,6 @@ import com.azquo.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
-import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.*;
 

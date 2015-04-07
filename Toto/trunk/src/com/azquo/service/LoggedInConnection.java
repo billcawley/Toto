@@ -50,7 +50,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     // for the map of values for a region. USed to be just a list of values for each cell but now given attributes it could be a lit of names and and attributes - typically will be just one attribute and name
     // a little similar to name or value I suppose though this needs attributes specified
 
-    public class ListOfValuesOrNamesAndAttributeName{
+    public static class ListOfValuesOrNamesAndAttributeName{
         private final List<Value> values;
         private final List<Name> names;
         private final List<String> attributeNames;

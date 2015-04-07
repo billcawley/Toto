@@ -17,6 +17,21 @@
         -->
     <context:annotation-config/>
 <!--    <context:property-placeholder location="/WEB-INF/azquo.properties"/> -->
+
+    <!-- NOTE : this is not a pooled connection! Not a problem for Azquo's purposes generally but one would want one for more intense MySQL hammering
+     something like
+
+<bean id="dataSource" class="org.apache.tomcat.jdbc.pool.DataSource" destroy-method="close">
+    <property name="driverClassName" value="org.h2.Driver" />
+    <property name="url" value="jdbc:h2:mem:xml-config" />
+    <property name="username" value="sa" />
+    <property name="password" value="" />
+    <property name="initialSize" value="5" />
+    <property name="maxActive" value="10" />
+    <property name="maxIdle" value="5" />
+    <property name="minIdle" value="2" />
+ </bean>
+     -->
     <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
         <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
         <!--<property name="url" value="jdbc:mysql://localhost:3306/azquo?jdbcCompliantTruncation=false&amp;useUnicode=true&amp;characterEncoding=UTF-8"/>-->

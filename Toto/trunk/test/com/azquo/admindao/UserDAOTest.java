@@ -16,7 +16,10 @@ import java.util.Date;
 @ContextConfiguration(locations = {"file:web/WEB-INF/azquospringdispatcher-servlet.xml"})
 
 public class UserDAOTest {
-    @Autowired
+
+    // I'm leaving this here in case we decide to back to unit tests
+
+/*    @Autowired
     UserDAO userDAO;
 
     @Test
@@ -28,5 +31,5 @@ public class UserDAOTest {
         System.out.println("id after insert : " + u.getId());
         System.out.println(userDAO.findById(u.getId()));
         //userDAO.removeById(u);
-    }
+    }*/
 }

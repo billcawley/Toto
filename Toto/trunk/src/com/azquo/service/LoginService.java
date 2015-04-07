@@ -2,11 +2,9 @@ package com.azquo.service;
 
 import com.azquo.admindao.*;
 import com.azquo.adminentities.*;
-import com.azquo.jsonrequestentities.StandardJsonRequest;
 import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.memorydb.MemoryDBManager;
 import com.azquo.memorydb.Name;
-import com.azquo.util.AzquoMailer;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.text.SimpleDateFormat;
@@ -39,8 +37,6 @@ public class LoginService {
     private DatabaseDAO databaseDao;
     @Autowired
     private AdminService adminService;
-    @Autowired
-    private AzquoMailer azquoMailer;
     @Autowired
     private NameService nameService;
     @Autowired
@@ -77,7 +73,7 @@ public class LoginService {
                 spreadsheetName = "unknown";
             }
 
-            User user = null;
+            User user;
 
             //for demo users, a new User id is made for each user.
             if (userEmail.startsWith("demo@user.com")) {
@@ -158,9 +154,9 @@ public class LoginService {
                 if (database!=null && !database.getName().equals("temp")){
                     loginRecordDAO.store(new LoginRecord(0,user.getId(),databaseId, new Date()));
                 }
-                if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
+                /*if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
                     //azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
-                }
+                }*/
                 connections.put(lic.getConnectionId(), lic);
                 if (database != null && lic.getAzquoMemoryDB()!=null){
                     anonymise(lic);
@@ -209,8 +205,7 @@ public class LoginService {
                     low = Double.parseDouble(limits[0]) / 100;
                     high = Double.parseDouble(limits[1])/ 100;
 
-                }catch(Exception e){
-
+                } catch (Exception ignored){
                 }
                 valueService.randomAdjust(set, low, high);
             }else {
@@ -219,8 +214,7 @@ public class LoginService {
                     try {
                         name.setTemporaryAttribute(Name.DEFAULT_DISPLAY_NAME, anonName.replace("[nn]", count + ""));
                         count++;
-                    } catch (Exception e) {
-
+                    } catch (Exception ignored) {
                     }
                 }
             }
@@ -318,7 +312,7 @@ public class LoginService {
 
     }
 
-    public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest, String callerIP) throws Exception{
+/*    public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest, String callerIP) throws Exception{
         String user = standardJsonRequest.user;
         if (user != null && user.equals("demo@user.com")){
             user = user + callerIP;
@@ -331,7 +325,7 @@ public class LoginService {
         }
         return null;
     }
-
+*/
     public void createAzquoMaster() throws  Exception{
 
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
@@ -380,7 +374,7 @@ public class LoginService {
             }
             List<User> users = userDao.findForBusinessId(b.getId());
             Map<Integer,Name> userMap = new HashMap<Integer, Name>();
-            Map<String, Name> statusMap = new HashMap<String, Name>();
+            //Map<String, Name> statusMap = new HashMap<String, Name>();
             for (User u : users) {
                 Name uName = nameService.findOrCreateNameInParent(masterDBConnection, u.getEmail(), bName, true);
                 userMap.put(u.getId(), uName);
@@ -418,17 +412,17 @@ public class LoginService {
                     pName.setAttributeWillBePersisted("End date", df.format(p.getEndDate()));
 
                 }
-                Map<Integer,Name>olrMap = new HashMap<Integer, Name>();
+                //Map<Integer,Name>olrMap = new HashMap<Integer, Name>();
                 List<OnlineReport> onlineReports = onlineReportDAO.findForBusinessId(b.getId());
                 for (OnlineReport olr : onlineReports) {
                     Name olrParent = bName;
                     if (olr.getDatabaseId() > 0) {
-                        olrParent = dbMap.get(olrParent);
-
+                        //olrParent = dbMap.get(olrParent); // what was there, I assume it means the below?
+                        olrParent = dbMap.get(olrParent.getId());
                     }
 
                     Name olrName = nameService.findOrCreateNameInParent(masterDBConnection, olr.getReportName(), olrParent, true);
-                    olrMap.put(olr.getId(), olrName);
+                    //olrMap.put(olr.getId(), olrName);
                     olrName.setAttributeWillBePersisted("filename", olr.getFilename());
                     olrName.setAttributeWillBePersisted("explanation", olr.getExplanation());
                     allReports.addChildWillBePersisted(olrName);

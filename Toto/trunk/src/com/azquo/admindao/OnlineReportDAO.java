@@ -1,6 +1,7 @@
 package com.azquo.admindao;
 
 import com.azquo.adminentities.OnlineReport;
+import com.sun.corba.se.impl.encoding.OSFCodeSetRegistry;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -80,19 +81,19 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
 
     public List<OnlineReport> findForBusinessIdAndUserStatus(final int businessId, String userStatus) {
         String[] statuses = userStatus.split(",");
-        String statusSelect = "(";
+        StringBuilder statusSelect = new StringBuilder("(");
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         for (int count=0; count < statuses.length;count++){
             if (count > 0) {
-                statusSelect += " or ";
+                statusSelect.append(" or ");
             }
             namedParams.addValue(USERSTATUS + count, "%" + statuses[count].trim() + "%" );
-            statusSelect += USERSTATUS + " like :" + USERSTATUS + count;
+            statusSelect.append(USERSTATUS + " like :" + USERSTATUS + count);
 
         }
-        statusSelect += ")";
+        statusSelect.append(")");
 
-         namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(BUSINESSID, businessId);
         namedParams.addValue(USERSTATUS, "%" + userStatus + "%");
         return findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " and " + statusSelect, namedParams, false);
     }
@@ -103,13 +104,6 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
 
-
-    public OnlineReport findForBusinessIdandName(final int businessId, final String name) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(BUSINESSID, businessId);
-        namedParams.addValue(REPORTNAME, name);
-        return findOneWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + REPORTNAME + " like :" + REPORTNAME, namedParams);
-    }
 
     public List<OnlineReport> findForDatabaseId(final int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -126,9 +120,9 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     public final void update(int id, Map<String, Object> parameters) {
         String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        for (String columnName : parameters.keySet()) {
-            updateSql += "`" + columnName + "` = :" + columnName + ", ";
-            namedParams.addValue(columnName, parameters.get(columnName));
+        for (Map.Entry<String, Object> columnNameValue : parameters.entrySet()) {
+            updateSql += "`" + columnNameValue.getKey() + "` = :" + columnNameValue.getKey() + ", ";
+            namedParams.addValue(columnNameValue.getKey(), columnNameValue.getValue());
         }
         updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
         updateSql += " where " + ID + " = :" + ID;
