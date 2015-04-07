@@ -19,7 +19,6 @@ import java.io.*;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.*;
-
 // it seems that trying to configure the properties in spring is a problem
 
 @Configuration
@@ -132,6 +131,7 @@ public class OnlineService {
         } catch (Exception e) {
             e.printStackTrace(); // may as well in case it goes wrong
         }
+        System.out.print("Java Version : " + System.getProperty("java.version"));
         System.out.println("host : " + thost);
         host = thost;
     }
@@ -188,7 +188,7 @@ public class OnlineService {
                             }
                         }
                     }
-                    executeLoop(loggedInConnection, spreadsheetName, onlineReport.getId(), nameLoop, 0);
+                    executeLoop(loggedInConnection,  onlineReport.getId(), nameLoop, 0);
                     return "";
                 }
             }
@@ -291,7 +291,7 @@ public class OnlineService {
     }*/
 
 
-    public void executeLoop(LoggedInConnection loggedInConnection, String spreadsheetName, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
+    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
         for (Name chosen : nameLoop.get(level).choiceList) {
             setUserChoice(loggedInConnection.getUser().getId(), reportId, nameLoop.get(level).setName, chosen.getDefaultDisplayName());
@@ -299,7 +299,7 @@ public class OnlineService {
             if (level == nameLoop.size()) {
                 azquoBook.executeSheet(loggedInConnection);
             } else {
-                executeLoop(loggedInConnection, spreadsheetName, reportId, nameLoop, level + 1);
+                executeLoop(loggedInConnection, reportId, nameLoop, level + 1);
             }
         }
     }

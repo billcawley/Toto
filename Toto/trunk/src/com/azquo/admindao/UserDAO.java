@@ -8,7 +8,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,13 +54,13 @@ public class UserDAO extends StandardDAO<User> {
         return toReturn;
     }
 
-    public static final class UserRowMapper implements RowMapper<User> {
+    public final class UserRowMapper implements RowMapper<User> {
         @Override
         public User mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
                 return new User(rs.getInt(ID)
-                        , rs.getDate(STARTDATE)
-                        , rs.getDate(ENDDATE)
+                        ,  getLocalDateTimeFromDate(rs.getDate(STARTDATE))
+                        , getLocalDateTimeFromDate(rs.getDate(ENDDATE))
                         , rs.getInt(BUSINESSID)
                         , rs.getString(EMAIL)
                         , rs.getString(NAME)
@@ -98,7 +98,7 @@ public class UserDAO extends StandardDAO<User> {
             if (u != null) {
                 id = u.getId();
             } else {
-                u = new User(0, new Date(), new Date(), businessId, "", "", "", "", "");
+                u = new User(0, LocalDateTime.now(), LocalDateTime.now(), businessId, "", "", "", "", "");
                 store(u);
                 id = u.getId();
             }

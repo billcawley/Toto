@@ -7,6 +7,7 @@ import com.azquo.adminentities.Database;
 import com.azquo.adminentities.User;
 import com.azquo.memorydb.MemoryDBManager;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -85,7 +86,7 @@ public class AppDBConnectionMap {
         }
         // todo - factor this it's in two places at the moment
         final String mysqlName = (business.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "") + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
-        final Database database = new Database(0, new Date(), new Date(130, 1, 1), business.getId(), databaseName, mysqlName, 0, 0);
+        final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), business.getId(), databaseName, mysqlName, 0, 0);
         // todo here and elsewhere, stop mysql dbs overwriting each other
             mySQLDatabaseManager.createNewDatabase(mysqlName);
             databaseDAO.store(database);

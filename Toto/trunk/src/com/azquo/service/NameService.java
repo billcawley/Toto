@@ -61,10 +61,6 @@ public final class NameService {
         }
     };
 
-    public NameService(){
-        System.out.print("NameService starting, Java Version : " + System.getProperty("java.version"));
-    }
-
     // get names from a comma separated list. Well expressions describing names.
 
     public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {

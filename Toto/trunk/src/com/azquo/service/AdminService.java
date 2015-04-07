@@ -10,6 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
 import java.security.MessageDigest;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.*;
 
 /**
@@ -63,10 +66,10 @@ public class AdminService {
         // we need to check for existing businesses
         final String key = shaHash(System.currentTimeMillis() + "");
         final Business.BusinessDetails bd = new Business.BusinessDetails(address1, address2, address3, address4, postcode, telephone, "website???", key);
-        final Business business = new Business(0, new Date(), new Date(), businessName, 0, bd);
+        final Business business = new Business(0, LocalDateTime.now(), LocalDateTime.now(), businessName, 0, bd);
         final Business existing = businessDao.findByName(businessName);
         if (existing != null) { // ok new criteria, overwrite if the business was not already key validated
-            if (existing.getEndDate().after(new Date())) {
+            if (existing.getEndDate().isAfter(LocalDateTime.now())) {
                 return "error: " + businessName + " already registered";
             } else {
                 businessDao.removeById(existing); // it will be created again
@@ -74,7 +77,7 @@ public class AdminService {
         }
         User existingUser = userDao.findByEmail(email);
         if (existingUser != null) {
-            if (existingUser.getEndDate().after(new Date())) { // active user
+            if (existingUser.getEndDate().isAfter(LocalDateTime.now())) { // active user
                 return "error: " + email + " already registered";
             } else {
                 userDao.removeById(existingUser); // it will be created again
@@ -82,7 +85,7 @@ public class AdminService {
         }
         businessDao.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
-        final User user = new User(0, new Date(), new Date(), business.getId(), email, userName, "administrator", encrypt(password, salt), salt);
+        final User user = new User(0, LocalDateTime.now(), LocalDateTime.now(), business.getId(), email, userName, "administrator", encrypt(password, salt), salt);
         userDao.store(user);
         azquoMailer.sendEMail(user.getEmail()
                 , user.getName()
@@ -99,10 +102,10 @@ public class AdminService {
     public String confirmKey(final String businessName, final String email, final String password, final String key, String spreadsheetName) throws Exception{
         final Business business = businessDao.findByName(businessName);
         if (business != null && business.getBusinessDetails().validationKey.equals(key)) {
-            business.setEndDate(new Date(130, 1, 1));
+            business.setEndDate(LocalDateTime.now().plusYears(30));
             businessDao.store(business);
             User user = userDao.findForBusinessId(business.getId()).get(0);
-            user.setEndDate(new Date(130, 1, 1));
+            user.setEndDate(LocalDateTime.now().plusYears(30));
             user.setStatus(User.STATUS_ADMINISTRATOR);
             userDao.store(user);
             LoggedInConnection loggedInConnection = loginService.login("unknown", email, password, 0, spreadsheetName, false);
@@ -148,7 +151,7 @@ public class AdminService {
             }
             final String mysqlName = getSQLDatabaseName(loggedInConnection, databaseName);
             final Business b = businessDao.findById(loggedInConnection.getBusinessId());
-            final Database database = new Database(0, new Date(), new Date(130, 1, 1), b.getId(), databaseName, mysqlName, 0, 0);
+            final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), b.getId(), databaseName, mysqlName, 0, 0);
             try{
                mySQLDatabaseManager.createNewDatabase(mysqlName);
             }catch (Exception e){
@@ -172,7 +175,7 @@ public class AdminService {
             , final LoggedInConnection loggedInConnection) throws Exception {
         if (loggedInConnection.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
-            final User user = new User(0, new Date(), new Date(130, 1, 1), loggedInConnection.getBusinessId(), email, userName, status, encrypt(password, salt), salt);
+            final User user = new User(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), loggedInConnection.getBusinessId(), email, userName, status, encrypt(password, salt), salt);
             userDao.store(user);
             return;
         }else{
@@ -182,7 +185,7 @@ public class AdminService {
 
     public void createUserPermission(final String email, final String readList, final String writeList, final LoggedInConnection loggedInConnection) throws Exception {
         if (loggedInConnection.getUser().isAdministrator() && loggedInConnection.getAzquoMemoryDB() != null) { // actually have a DB selected
-            final Permission permission = new Permission(0, new Date(), new Date(130, 1, 1), userDao.findByEmail(email).getId(), loggedInConnection.getAzquoMemoryDB().getDatabase().getId(), readList, writeList);
+            final Permission permission = new Permission(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), userDao.findByEmail(email).getId(), loggedInConnection.getAzquoMemoryDB().getDatabase().getId(), readList, writeList);
             permissionDao.store(permission);
             return;
         }else{
@@ -357,7 +360,7 @@ public class AdminService {
                     return "error: cannot modify/create users for a different business! (" + existingUser.getEmail() + ")";
                 }
                 if (user.getEndDate().getYear() > 129){
-                    user.setEndDate(new Date(130,1,1));
+                    user.setEndDate(LocalDateTime.now().plusYears(30));
                 }
                 if (user.getId() > 0) {
                     existingUser = userDao.findById(user.getId());
@@ -392,7 +395,7 @@ public class AdminService {
                 } else { // a new one. Possibly need checks on required fields but for the moment just sort the password and store.
                     if (user.getPassword() != null) {
                         final String salt = shaHash(System.currentTimeMillis() + "salt");
-                        final User newUser = new User(0, new Date(), new Date(), loggedInConnection.getBusinessId(), user.getEmail(), user.getName(), user.getStatus(), encrypt(user.getPassword(), salt), salt);
+                        final User newUser = new User(0, LocalDateTime.now(), LocalDateTime.now(), loggedInConnection.getBusinessId(), user.getEmail(), user.getName(), user.getStatus(), encrypt(user.getPassword(), salt), salt);
                         userDao.store(newUser);
                     }
                  }
@@ -438,7 +441,7 @@ public class AdminService {
         permissionDao.deleteForBusinessId(loggedInConnection.getBusinessId());
         for (Permission permission : permissionList) {
             if (permission.getEndDate().getYear() > 129){
-                permission.setEndDate(new Date(130,1,1));
+                permission.setEndDate(LocalDateTime.now().plusYears(30));
             }
 
 

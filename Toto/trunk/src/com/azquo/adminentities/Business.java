@@ -3,6 +3,7 @@ package com.azquo.adminentities;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -11,15 +12,15 @@ import java.util.Date;
  */
 public final class Business extends StandardEntity {
 
-    Date startDate;
-    Date endDate;
+    LocalDateTime startDate;
+    LocalDateTime endDate;
     String businessName;
     int parentId;
     BusinessDetails businessDetails;
 
     public Business(int id
-            , Date startDate
-            , Date endDate
+            , LocalDateTime startDate
+            , LocalDateTime endDate
             , String businessName
             , int parentId
             , BusinessDetails businessDetails) {
@@ -31,19 +32,19 @@ public final class Business extends StandardEntity {
         this.businessDetails = businessDetails;
     }
 
-    public Date getStartDate() {
+    public LocalDateTime getStartDate() {
         return startDate;
     }
 
-    public void setStartDate(Date startDate) {
+    public void setStartDate(LocalDateTime startDate) {
         this.startDate = startDate;
     }
 
-    public Date getEndDate() {
+    public LocalDateTime getEndDate() {
         return endDate;
     }
 
-    public void setEndDate(Date endDate) {
+    public void setEndDate(LocalDateTime endDate) {
         this.endDate = endDate;
     }
 

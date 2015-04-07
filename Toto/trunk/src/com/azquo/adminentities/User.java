@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * Representing a user who can log in
@@ -13,8 +13,8 @@ public final class User extends StandardEntity {
 
     public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
 
-    private Date startDate;
-    private Date endDate;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
     private int businessId;
     private String email;
     private String name;
@@ -25,8 +25,8 @@ public final class User extends StandardEntity {
     // salt will probably never be passed
     @JsonCreator
     public User(@JsonProperty("id") int id
-            , @JsonProperty("startDate") Date startDate
-            , @JsonProperty("endDate") Date endDate
+            , @JsonProperty("startDate") LocalDateTime startDate
+            , @JsonProperty("endDate") LocalDateTime endDate
             , @JsonProperty("businessId") int businessId
             , @JsonProperty("email") String email
             , @JsonProperty("name") String name
@@ -49,19 +49,19 @@ public final class User extends StandardEntity {
         return status.equalsIgnoreCase(STATUS_ADMINISTRATOR);
     }
 
-    public Date getStartDate() {
+    public LocalDateTime getStartDate() {
         return startDate;
     }
 
-    public void setEndDate(Date endDate) {
+    public void setEndDate(LocalDateTime endDate) {
         this.endDate = endDate;
     }
 
-    public Date getEndDate() {
+    public LocalDateTime getEndDate() {
         return endDate;
     }
 
-    public void setStartDate(Date startDate) {
+    public void setStartDate(LocalDateTime startDate) {
         this.startDate = startDate;
     }
 

@@ -70,15 +70,15 @@ public final class PermissionDAO extends StandardDAO<Permission> {
 
 
     }
-    public static final class PermissionRowMapper implements RowMapper<Permission> {
+    public final class PermissionRowMapper implements RowMapper<Permission> {
 
         @Override
         public Permission mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
                 return new Permission(rs.getInt(ID)
-                        , rs.getDate(STARTDATE)
-                        , rs.getDate(ENDDATE)
+                        , getLocalDateTimeFromDate(rs.getDate(STARTDATE))
+                        , getLocalDateTimeFromDate(rs.getDate(ENDDATE))
                         , rs.getInt(USERID)
                         , rs.getInt(DATABASEID)
                         , rs.getString(READLIST)

@@ -8,6 +8,7 @@ import com.azquo.memorydb.Name;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -173,15 +174,15 @@ public class LoginService {
         final Map<String, Database> okDatabases = new HashMap<String, Database>();
         if (user.isAdministrator() || user.getEmail().startsWith("demo@user")) { // automatically has all dbs regardless of permission
             for (Database database : databaseDao.findForBusinessId(user.getBusinessId())) {
-                if (database.getEndDate().after(new Date())) {
+                if (database.getEndDate().isAfter(LocalDateTime.now())) {
                     okDatabases.put(database.getName(), database);
                 }
             }
         } else {
             for (Permission permission : userAcceses) {
-                if (permission.getEndDate().after(new Date())) {
+                if (permission.getEndDate().isAfter(LocalDateTime.now())) {
                     Database database = databaseDao.findById(permission.getDatabaseId());
-                    if (database.getEndDate().after(new Date())) {
+                    if (database.getEndDate().isAfter(LocalDateTime.now())) {
                         okDatabases.put(database.getName(), database);
                     }
                 }

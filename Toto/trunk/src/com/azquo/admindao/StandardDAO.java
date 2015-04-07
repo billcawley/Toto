@@ -11,6 +11,10 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -138,6 +142,14 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
     public final void update(final String setclause, final MapSqlParameterSource namedParams) throws DataAccessException {
         final String SQL_UPDATE = "update `" + MASTER_DB + "`.`" + getTableName() + "` " + setclause;
         jdbcTemplate.update(SQL_UPDATE, namedParams);
+    }
 
+    // bottom two lines off the net, needed as resultsets don't use the new date classes
+    public LocalDateTime getLocalDateTimeFromDate(Date date){
+        if (date == null){
+            return null;
+        }
+        Instant instant = Instant.ofEpochMilli(date.getTime());
+        return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
     }
 }

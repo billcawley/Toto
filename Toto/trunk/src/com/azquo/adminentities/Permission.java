@@ -3,6 +3,7 @@ package com.azquo.adminentities;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -11,8 +12,8 @@ import java.util.Date;
  */
 public final class Permission extends StandardEntity {
 
-    private Date startDate;
-    private Date endDate;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
     private int userId;
     int databaseId;
     // these two may become arrays later
@@ -24,14 +25,14 @@ public final class Permission extends StandardEntity {
 
     // the normal use constructor, does not use the database and email fields which are there for the excel and are not persisted
 
-    public Permission(int id, Date startDate, Date endDate, int userId, int databaseId, String readList, String writeList) {
+    public Permission(int id, LocalDateTime startDate, LocalDateTime endDate, int userId, int databaseId, String readList, String writeList) {
         this(id, startDate, endDate, userId, databaseId, readList, writeList, null, null);
     }
 
     @JsonCreator
     public Permission(@JsonProperty("id") int id
-            , @JsonProperty("startDate") Date startDate
-            , @JsonProperty("endDate") Date endDate
+            , @JsonProperty("startDate") LocalDateTime startDate
+            , @JsonProperty("endDate") LocalDateTime endDate
             , @JsonProperty("userId") int userId
             , @JsonProperty("databaseId") int databaseId
             , @JsonProperty("readList") String readList
@@ -49,19 +50,19 @@ public final class Permission extends StandardEntity {
         this.email = email;
     }
 
-    public Date getStartDate() {
+    public LocalDateTime getStartDate() {
         return startDate;
     }
 
-    public void setStartDate(Date startDate) {
+    public void setStartDate(LocalDateTime startDate) {
         this.startDate = startDate;
     }
 
-    public Date getEndDate() {
+    public LocalDateTime getEndDate() {
         return endDate;
     }
 
-    public void setEndDate(Date endDate) {
+    public void setEndDate(LocalDateTime endDate) {
         this.endDate = endDate;
     }
 

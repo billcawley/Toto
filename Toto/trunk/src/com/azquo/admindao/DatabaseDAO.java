@@ -46,14 +46,14 @@ public final class DatabaseDAO extends StandardDAO<Database> {
         return toReturn;
     }
 
-    public static final class DatabaseRowMapper implements RowMapper<Database> {
+    public final class DatabaseRowMapper implements RowMapper<Database> {
 
         @Override
         public Database mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
                 return new Database(rs.getInt(ID)
-                        , rs.getDate(STARTDATE)
-                        , rs.getDate(ENDDATE)
+                        , getLocalDateTimeFromDate(rs.getDate(STARTDATE))
+                        , getLocalDateTimeFromDate(rs.getDate(ENDDATE))
                         , rs.getInt(BUSINESSID)
                         , rs.getString(NAME)
                         , rs.getString(MYSQLNAME)

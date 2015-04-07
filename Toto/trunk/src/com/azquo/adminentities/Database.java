@@ -1,5 +1,6 @@
 package com.azquo.adminentities;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -9,16 +10,16 @@ import java.util.Date;
  */
 public final class Database extends StandardEntity {
 
-    Date startDate;
-    Date endDate;
+    LocalDateTime startDate;
+    LocalDateTime endDate;
     int businessId;
     String name;
     String mySQLName;
     int nameCount;
     int valueCount;
 
-    public Database(int id, Date startDate
-            , Date endDate
+    public Database(int id, LocalDateTime startDate
+            , LocalDateTime endDate
             , int businessId
             , String name
             , String mySQLName
@@ -34,19 +35,19 @@ public final class Database extends StandardEntity {
         this.valueCount = valueCount;
     }
 
-    public Date getStartDate() {
+    public LocalDateTime getStartDate() {
         return startDate;
     }
 
-    public void setStartDate(Date startDate) {
+    public void setStartDate(LocalDateTime startDate) {
         this.startDate = startDate;
     }
 
-    public Date getEndDate() {
+    public LocalDateTime getEndDate() {
         return endDate;
     }
 
-    public void setEndDate(Date endDate) {
+    public void setEndDate(LocalDateTime endDate) {
         this.endDate = endDate;
     }
 
