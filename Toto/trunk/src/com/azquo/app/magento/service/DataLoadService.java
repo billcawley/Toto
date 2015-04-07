@@ -697,18 +697,24 @@ public final class DataLoadService {
         Name allGroupsName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"All customer groups", customersName, false, languages);
         languages.clear();
         languages.add("MagentoCustomerID");
-
+        counter = 0;
+        Name notLoggedIn = null;
+        System.out.print("Orders and shipping ");
         for (Map<String, String> orderRow : tableMap.get("sales_flat_order")) {
             //only importing the IDs at present
             Name orderName = azquoOrdersFound.get("Order " + orderRow.get("entity_id"));
-            if (orderName != null){
+             if (orderName != null){
                 String customer = orderRow.get("customer_id");
                 String magentoCustomer;
                 Name customerName;
                 if (customer == null || customer.length()== 0){
-                    magentoCustomer="NOT LOGGED IN";
-                    customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allGroupsName, true, languages);
-                    allCountriesName.addChildWillBePersisted(customerName);
+                    if (notLoggedIn==null) {
+                        magentoCustomer = "NOT LOGGED IN";
+                        //nb this next instruction seems to take a long time - hence storing 'notLoggedIn'
+                        notLoggedIn = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allGroupsName, true, languages);
+                        allCountriesName.addChildWillBePersisted(notLoggedIn);
+                    }
+                    customerName = notLoggedIn;
 
                 }
                 else {
@@ -735,12 +741,18 @@ public final class DataLoadService {
                         valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, shipping, namesForValue);
                     }
                 }
+                counter++;
+                if (counter % 1000 == 0){
+                    System.out.print(".");
+                }
 
             }
 
 
 
         }
+        System.out.println("");
+        System.out.println("shipments");
 
         if (tableMap.get("sales_flat_shipment") != null) {
             for (Map<String, String> orderRow : tableMap.get("sales_flat_shipment")) {
@@ -759,7 +771,7 @@ public final class DataLoadService {
 
 
 
-
+        System.out.println("customer groups");
         Map<String, Name> customerGroups = new HashMap<String, Name>();
         if (tableMap.get("customer_group") != null) {
              for (Map<String, String> group : tableMap.get("customer_group")) {
@@ -797,6 +809,7 @@ public final class DataLoadService {
             }
          }
 
+        System.out.println("custmer info");
         for (Map<String, String> customerRec : tableMap.get("customer_entity")) {
             String customerId = customerRec.get("entity_id");
             String email = customerRec.get("email");
@@ -871,6 +884,7 @@ public final class DataLoadService {
                 }
             }
             tableMap.remove("customer_address_entity_varchar");
+            System.out.println("customer info done");
         }
 
 
