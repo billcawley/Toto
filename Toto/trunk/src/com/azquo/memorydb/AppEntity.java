@@ -10,19 +10,18 @@ import com.azquo.service.AppEntityService;
  * Edd note in Dec 14 : the way we're going with sets this may not be used. Will leave it here for the moment.
  *
  */
-public abstract class AppEntity<ServiceType extends AppEntityService> extends AzquoMemoryDBEntity{
+public abstract class AppEntity extends AzquoMemoryDBEntity{
 
-    private final ServiceType service;
+    protected final AppEntityService service;
 
     public String getPersistTable(){
         return service.getTableName();
     }
 
-    protected <T extends AppEntity> AppEntity(AzquoMemoryDB azquoMemoryDB, int id, ServiceType service) throws Exception {
+    protected AppEntity(AzquoMemoryDB azquoMemoryDB, int id, AppEntityService service) throws Exception {
         super(azquoMemoryDB, id, true);
         this.service = service;
-        // this should be done in the super constructor but it will null pointer without the service being set . . .
         this.setNeedsPersisting();
-        service.addToIdMap(this); // I'm letting this annoy me far too much :)
+        // I did add to the id map here but it threw a compiler warning. Much wasted time trying to zap it . . .
     }
 }

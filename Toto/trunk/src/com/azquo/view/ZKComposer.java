@@ -55,12 +55,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         Menuitem item1 = new Menuitem("Provenance");
         item1.setId("viewInfo1");
         // this seems unreliable. Rather annoying
-        item1.addEventListener(Events.ON_CLICK, new EventListener() {
-            public void onEvent(Event event) {
-                System.out.println("provenance clicked" + event);
-            }
-        });
-
 
         editPopup.appendChild(item1);
         // by trial and error this gave us an element we could show. Not sure baout best practice etc. here

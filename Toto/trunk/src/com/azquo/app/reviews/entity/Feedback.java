@@ -14,7 +14,7 @@ import java.util.Date;
  *
  * From dad's email needs rating feedback date response date sale date product
  */
-public class Feedback extends AppEntity<FeedbackService>{
+public class Feedback extends AppEntity{
 
     private static final Logger logger = Logger.getLogger(Feedback.class);
 
@@ -26,6 +26,7 @@ public class Feedback extends AppEntity<FeedbackService>{
 
     public Feedback(AzquoMemoryDB azquoMemoryDB, int id, FeedbackService service, String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id, service);
+        service.addToIdMap(this);// I wanted this to be in the superclass but it meant a warning so here it lives for the moment
         JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
         this.timeStamp = transport.timeStamp;
         this.rating = transport.rating;

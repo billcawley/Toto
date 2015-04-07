@@ -1186,15 +1186,12 @@ public class ReviewService {
                                     InputStream loadFile = input.openStream();
                                     importService.importTheFile(azquoMemoryDBConnection,fName, loadFile);
                                 }else{
-                                       String fullPath = onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + subDir + "/" + URLEncoder.encode(fName);
+                                       String fullPath = onlineService.getHomeDir() + ImportService.dbPath + dbName + "/" + uploadDir + subDir + "/" + URLEncoder.encode(fName,"UTF-8");
                                        File output = new File(fullPath);
                                        FileUtils.copyURLToFile(input, output, 5000, 5000);
                                        nameToEdit.setAttributeWillBePersisted(field, fName);
                                 }
-
-
                             }
-
                         } else {
                             nameToEdit.setAttributeWillBePersisted(fieldName.getDefaultDisplayName(), values.get(fieldNo));
                         }
