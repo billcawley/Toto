@@ -6,6 +6,8 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,8 +38,8 @@ public final class DatabaseDAO extends StandardDAO<Database> {
     public Map<String, Object> getColumnNameValueMap(Database database) {
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, database.getId());
-        toReturn.put(STARTDATE, database.getStartDate());
-        toReturn.put(ENDDATE, database.getEndDate());
+        toReturn.put(STARTDATE, Date.from(database.getStartDate().atZone(ZoneId.systemDefault()).toInstant()));
+        toReturn.put(ENDDATE, Date.from(database.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(BUSINESSID, database.getBusinessId());
         toReturn.put(NAME, database.getName());
         toReturn.put(MYSQLNAME, database.getMySQLName());

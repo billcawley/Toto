@@ -13,11 +13,13 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.*;
 // it seems that trying to configure the properties in spring is a problem
 
@@ -134,6 +136,14 @@ public class OnlineService {
         System.out.print("Java Version : " + System.getProperty("java.version"));
         System.out.println("host : " + thost);
         host = thost;
+
+    }
+
+    @PostConstruct
+    public void test(){
+        User u = userDAO.findByEmail("eddMagento");
+        u.setEndDate(LocalDateTime.now().plusYears(5));
+        userDAO.store(u);
     }
 
     // What actually delivers the reports to the browser. Maybe change to an output writer? Save memory and increase speed.

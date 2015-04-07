@@ -8,6 +8,8 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,8 +38,8 @@ public final class PermissionDAO extends StandardDAO<Permission> {
     public Map<String, Object> getColumnNameValueMap(final Permission permission) {
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, permission.getId());
-        toReturn.put(STARTDATE, permission.getStartDate());
-        toReturn.put(ENDDATE, permission.getEndDate());
+        toReturn.put(STARTDATE, Date.from(permission.getStartDate().atZone(ZoneId.systemDefault()).toInstant()));
+        toReturn.put(ENDDATE, Date.from(permission.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(USERID, permission.getUserId());
         toReturn.put(DATABASEID, permission.getDatabaseId());
         toReturn.put(READLIST, permission.getReadList());

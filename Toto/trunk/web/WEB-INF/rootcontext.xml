@@ -103,6 +103,7 @@
     </bean>
     <bean name="reviewsAuthenticationProvider" class="com.azquo.app.reviews.misc.ReviewsAuthenticationProvider"/>
     <security:http auto-config="true" use-expressions="true" >
+        <security:csrf disabled="true"/>
 
 
 
