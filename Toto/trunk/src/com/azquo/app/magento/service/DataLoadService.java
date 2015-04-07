@@ -404,12 +404,13 @@ public final class DataLoadService {
         tableMap.remove("catalog_product_bundle_selection");
         Name entities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Entities",null,false);
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        Name allDates = nameService.findOrCreateNameStructure(azquoMemoryDBConnection,"All dates, date", null, false);
+        Name date = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"date", null, false);
+        Name allDates = nameService.findOrCreateNameStructure(azquoMemoryDBConnection,"All dates", date, false);
 
         if (tableMap.get("cataloginventory_stock_item") != null){
             Name inStockName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"In Stock",entities, true);
             Name today = nameService.findByName(azquoMemoryDBConnection,dateFormat.format(new Date()) +  ",date");
-            Name stockDates = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Stock dates, date", null, true);
+            Name stockDates = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Stock dates", date, true);
             stockDates.addChildWillBePersisted(today);
             if (today==null){
                 throw new Exception("the dates in the system do not extend sufficiently to store the stock");
