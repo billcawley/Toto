@@ -139,13 +139,6 @@ public class OnlineService {
 
     }
 
-    @PostConstruct
-    public void test(){
-        User u = userDAO.findByEmail("eddMagento");
-        u.setEndDate(LocalDateTime.now().plusYears(5));
-        userDAO.store(u);
-    }
-
     // What actually delivers the reports to the browser. Maybe change to an output writer? Save memory and increase speed.
 
     public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message) throws Exception {
