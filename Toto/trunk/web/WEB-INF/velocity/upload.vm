@@ -1,0 +1,60 @@
+<?doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"
+		doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" />
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <style>
+        #wrapper {
+            font-family:Arial;
+            font-size:10pt;
+            width:400px;
+
+        }
+
+        .databaseselect{
+            width: 200px;
+            height: 30px;
+            margin: 10px 0 10px 0;
+        }
+
+        .inputlist td{
+            margin 3px;
+        }
+        .submit {
+            position:relative;
+            left:100px;
+            top:10px;
+        }
+
+      </style>
+
+
+</head>
+<body>
+<div id="wrapper">
+    <form  method="post" id="upload" enctype="multipart/form-data" name="upload">
+        <h2>Upload file</h2>
+        <table class=""inputlist">
+            <tr>
+                <td>Select database</td>
+                <td>$azquodatabaselist</td>
+            </tr>
+            <tr>
+                <td>Choose the file</td>
+                <td><input type="file" name="uploadfile"/></td>
+
+            </tr>
+
+        </table>
+        <div class="submit">
+            <input type="submit" name="submit" value="Submit"/>
+         </div>
+      </form>
+
+
+
+
+</div>
+</body>
+</html>
+
+

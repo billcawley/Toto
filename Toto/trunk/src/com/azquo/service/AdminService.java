@@ -102,10 +102,10 @@ public class AdminService {
     public String confirmKey(final String businessName, final String email, final String password, final String key, String spreadsheetName) throws Exception{
         final Business business = businessDao.findByName(businessName);
         if (business != null && business.getBusinessDetails().validationKey.equals(key)) {
-            business.setEndDate(LocalDateTime.now().plusYears(30));
+            business.setEndDate(LocalDateTime.now().plusYears(10));
             businessDao.store(business);
             User user = userDao.findForBusinessId(business.getId()).get(0);
-            user.setEndDate(LocalDateTime.now().plusYears(30));
+            user.setEndDate(LocalDateTime.now().plusYears(10));
             user.setStatus(User.STATUS_ADMINISTRATOR);
             userDao.store(user);
             LoggedInConnection loggedInConnection = loginService.login("unknown", email, password, 0, spreadsheetName, false);
@@ -151,7 +151,7 @@ public class AdminService {
             }
             final String mysqlName = getSQLDatabaseName(loggedInConnection, databaseName);
             final Business b = businessDao.findById(loggedInConnection.getBusinessId());
-            final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), b.getId(), databaseName, mysqlName, 0, 0);
+            final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), b.getId(), databaseName, mysqlName, 0, 0);
             try{
                mySQLDatabaseManager.createNewDatabase(mysqlName);
             }catch (Exception e){
@@ -175,7 +175,7 @@ public class AdminService {
             , final LoggedInConnection loggedInConnection) throws Exception {
         if (loggedInConnection.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
-            final User user = new User(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), loggedInConnection.getBusinessId(), email, userName, status, encrypt(password, salt), salt);
+            final User user = new User(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), loggedInConnection.getBusinessId(), email, userName, status, encrypt(password, salt), salt);
             userDao.store(user);
             return;
         }else{
@@ -185,7 +185,7 @@ public class AdminService {
 
     public void createUserPermission(final String email, final String readList, final String writeList, final LoggedInConnection loggedInConnection) throws Exception {
         if (loggedInConnection.getUser().isAdministrator() && loggedInConnection.getAzquoMemoryDB() != null) { // actually have a DB selected
-            final Permission permission = new Permission(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), userDao.findByEmail(email).getId(), loggedInConnection.getAzquoMemoryDB().getDatabase().getId(), readList, writeList);
+            final Permission permission = new Permission(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), userDao.findByEmail(email).getId(), loggedInConnection.getAzquoMemoryDB().getDatabase().getId(), readList, writeList);
             permissionDao.store(permission);
             return;
         }else{
@@ -360,7 +360,7 @@ public class AdminService {
                     return "error: cannot modify/create users for a different business! (" + existingUser.getEmail() + ")";
                 }
                 if (user.getEndDate().getYear() > 129){
-                    user.setEndDate(LocalDateTime.now().plusYears(30));
+                    user.setEndDate(LocalDateTime.now().plusYears(10));
                 }
                 if (user.getId() > 0) {
                     existingUser = userDao.findById(user.getId());
@@ -441,7 +441,7 @@ public class AdminService {
         permissionDao.deleteForBusinessId(loggedInConnection.getBusinessId());
         for (Permission permission : permissionList) {
             if (permission.getEndDate().getYear() > 129){
-                permission.setEndDate(LocalDateTime.now().plusYears(30));
+                permission.setEndDate(LocalDateTime.now().plusYears(10));
             }
 
 

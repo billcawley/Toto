@@ -71,7 +71,7 @@
 
 </head>
 <body>
-<div id="wrapper">
+<div id="wrapper" onmmouseout="closeWindowDelay()">
     <form  method="post" id="names" name="names">
         <input type="hidden" name="itemschosen" value="" id="itemschosen">
         <div id="container"></div>
@@ -92,11 +92,16 @@
 
     <script>
         var parents = $parents;
+        var searchNames = "$searchnames";
         var seeParents = "See parents";
         if (parents==true){
            seeParents="See children";
         }
+        if (searchNames==null){
+            searchNames = "";
+        }
         var nameChosenNo = 0;
+
         $.jstree.defaults.dnd.check_while_dragging = false;
         $.jstree.defaults.dnd.inside_pos = "last";
         $(function() {
@@ -104,7 +109,7 @@
                 'core' : {
                     'data' : {
                         "state" : {"opened" : true },
-                        "url" : "/api/Jstree?op=children&connectionid=$connectionid&topnode=$rootid&parents=" + parents,
+                        "url" : "/api/Jstree?op=children&connectionid=$connectionid&topnode=$rootid&parents=" + parents + "&itemschosen=" + searchNames,
                         "dataType": "JSON",
                         "data" : function (node) {
                             return { "id" : node.id };
@@ -171,7 +176,7 @@
                                         url += "&parents=true";
                                     }
 
-                                    window.open(url, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=400, height=400")
+                                    window.open(url, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
                                 }
 
                             }
@@ -285,8 +290,9 @@
             }
         }
 
-
-
+        function closeWindowDelay(){
+            document.window.close();
+        }
 
 
     </script>
