@@ -66,7 +66,6 @@ public class MerchantAdminController {
         }
         String result = "";
         try {
-
             if (op==null){
                 op="displaypage";
                 if (itemName==null)  itemName="";
@@ -86,7 +85,6 @@ public class MerchantAdminController {
                     reviewService.saveData(response, itemName, values, id);
                 }
             }
-
         }catch(Exception e){
             result = e.getMessage();
             logger.error(result, e);

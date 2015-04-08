@@ -1,13 +1,10 @@
 package com.azquo.jsonrequestentities;
 
-
 /**
  * Created by bill on 03/03/14.
  *
  */
 public class ValueJsonRequest {
-
-
          public String rowheadings;
          public String columnheadings;
          public String context;
@@ -23,7 +20,4 @@ public class ValueJsonRequest {
          public String restrictcount; //show the top n rows by value (or bottom -n rows if n is negative)  RowHeadings only
          public String spreadsheetname;
          public String database;
-
-
-
 }

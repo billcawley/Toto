@@ -13,16 +13,14 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.annotation.PostConstruct;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
 import java.util.*;
 // it seems that trying to configure the properties in spring is a problem
-
+// todo : see if upgrading spring to 4.2 makes this easier?
 @Configuration
 @PropertySource({"classpath:azquo.properties"})
 
@@ -90,7 +88,6 @@ public class OnlineService {
         List<Name> choiceList;
         Name chosen;
     }
-
 
     public String getHomeDir() {
         if (homeDir == null) {

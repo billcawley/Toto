@@ -22,7 +22,6 @@
           <element id="library" level="project" name="org.apache.poi:poi-ooxml:3.10-FINAL" />
           <element id="library" level="project" name="aspose-cells-8.1.1" />
           <element id="library" level="project" name="velocity-tools:velocity-tools-view:2.0-beta1" />
-          <element id="library" level="project" name="net.openhft:koloboke-impl-jdk6-7:0.6.5" />
           <element id="library" level="project" name="zsjsp" />
           <element id="library" level="project" name="org.springframework:spring-jdbc:4.1.6.RELEASE" />
           <element id="library" level="project" name="org.springframework:spring-test:4.1.6.RELEASE" />

@@ -21,8 +21,6 @@ public class CronController {
     @Autowired
     LoginService loginService;
 
-
-
     @RequestMapping
     @ResponseBody
 

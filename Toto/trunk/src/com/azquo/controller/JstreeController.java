@@ -86,7 +86,6 @@ public class JstreeController {
 
             Map<String, LoggedInConnection.JsTreeNode> lookup = loggedInConnection.getJsTreeIds();
 
-            // todo : these error messages won't work!
             if (json != null && json.length() > 0) {
                 NameJsonRequest nameJsonRequest;
                 try {

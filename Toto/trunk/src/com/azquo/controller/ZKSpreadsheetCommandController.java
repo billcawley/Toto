@@ -49,44 +49,44 @@ public class ZKSpreadsheetCommandController {
             @Override
             protected void process(Desktop desktop) {
                 Spreadsheet ss = (Spreadsheet) desktop.getComponentByUuidIfAny(zssUuid);
-                try{
-                    if ("XLS".equals(action)){
+                try {
+                    if ("XLS".equals(action)) {
 
-                                Exporter exporter = Exporters.getExporter();
-        Book book = ss.getBook();
-        File file = File.createTempFile(Long.toString(System.currentTimeMillis()),"temp");
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(file);
-            exporter.export(book, fos);
-        }finally{
-            if(fos!=null){
-                fos.close();
-            }
-        }
+                        Exporter exporter = Exporters.getExporter();
+                        Book book = ss.getBook();
+                        File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
+                        FileOutputStream fos = null;
+                        try {
+                            fos = new FileOutputStream(file);
+                            exporter.export(book, fos);
+                        } finally {
+                            if (fos != null) {
+                                fos.close();
+                            }
+                        }
 
-        Filedownload.save(new AMedia(book.getBookName() + ".xlsx", null, null, file, true));
+                        Filedownload.save(new AMedia(book.getBookName() + ".xlsx", null, null, file, true));
                     }
-                    if ("PDF".equals(action)){
+                    if ("PDF".equals(action)) {
 
                         Exporter exporter = Exporters.getExporter("pdf");
 
                         Book book = ss.getBook();
 
-                        File file = File.createTempFile(Long.toString(System.currentTimeMillis()),"temp");
+                        File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
                         FileOutputStream fos = null;
                         try {
                             fos = new FileOutputStream(file);
                             exporter.export(book, file);
-                        }finally{
-                            if(fos!=null){
+                        } finally {
+                            if (fos != null) {
                                 fos.close();
                             }
                         }
-                        Filedownload.save(new AMedia(book.getBookName()+".pdf", "pdf", "application/pdf", file, true));
+                        Filedownload.save(new AMedia(book.getBookName() + ".pdf", "pdf", "application/pdf", file, true));
 
                     }
-                } catch (Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }

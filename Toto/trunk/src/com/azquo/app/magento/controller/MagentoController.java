@@ -71,7 +71,7 @@ public class MagentoController {
         LoggedInConnection loggedInConnection = null;
         try {
 
-            if (op == null) op = "";
+            if (op == null) op = "";// can this happen with the annotation above?
             if (connectionId != null && connectionId.length() > 0) {
                 loggedInConnection = loginService.getConnection(connectionId);
             }
@@ -94,17 +94,15 @@ public class MagentoController {
                     return loggedInConnection.getConnectionId();
                 }else{
                     return dataLoadService.findRequiredTables(loggedInConnection);
-
                 }
             }
+
+            // need to look at this carefully. I don't think the Logged InCOnnection is how I'd implement this if I started again. On the other hand
             if (op.equals("restart")){
                 Database existingDb = loggedInConnection.getCurrentDatabase();
-
                 adminService.emptyDatabase(loggedInConnection.getCurrentDBName());
                 loginService.switchDatabase(loggedInConnection,null);
                 loginService.switchDatabase(loggedInConnection,existingDb);
-
-
                 return dataLoadService.findRequiredTables(loggedInConnection);
             }
 
@@ -119,7 +117,7 @@ public class MagentoController {
                 if (data != null){
                     File moved = null;
                     long start = System.currentTimeMillis();
-                    if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't email us :)
+                    if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't save it :)
                         moved = new File(onlineService.getHomeDir() + "/temp/" + db + new Date());
                         data.transferTo(moved);
                     }
@@ -146,7 +144,6 @@ public class MagentoController {
             if (op.equals("reports")) {
                 OnlineReport onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
                 return onlineService.readExcel(loggedInConnection, onlineReport, null, "");
-
             }
             return "unknown op";
         } catch (Exception e) {
@@ -169,5 +166,4 @@ public class MagentoController {
     ) throws Exception {
         return handleRequest(request, db, op, logon, password, connectionId, null);
     }
-
 }

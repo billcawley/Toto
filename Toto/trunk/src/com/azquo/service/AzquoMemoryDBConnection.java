@@ -135,5 +135,15 @@ public class AzquoMemoryDBConnection {
         azquoMemoryDB.saveDataToMySQL();
     }
 
+    public void persistInBackground() {
+        (new Thread(new PersistenceRunner())).start();
+    }
+
+    public class PersistenceRunner implements Runnable{
+        @Override
+        public void run() {
+            azquoMemoryDB.saveDataToMySQL();
+        }
+    }
 
 }

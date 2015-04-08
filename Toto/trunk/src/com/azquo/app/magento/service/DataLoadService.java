@@ -13,6 +13,9 @@ import java.util.*;
 /**
  * Created by cawley on 07/08/14.
  *
+ * This class is used to parse files delivered by the Magento Plugin. If it ever needed to be really heavy duty one could use Spring Batch I suppose but I think
+ * that would be overkill.
+ *
  */
 public final class DataLoadService {
 
@@ -99,15 +102,13 @@ public final class DataLoadService {
         loadData(azquoMemoryDBConnection, data != null ? new BufferedReader(new InputStreamReader(data, StandardCharsets.UTF_8)) : null);
     }
 
+    // todo : since this is a single thread maybe use koloboke maps? I guess if it's going slowly. Also NIO options? We are on Java 8 now . . .
+
     public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, BufferedReader br) throws Exception {
-
-
-
         Map<String, List<Map<String, String>>> tableMap = new HashMap<String, List<Map<String, String>>>();
         if (br == null){
             br = new BufferedReader(new FileReader("/home/bill/Sear/magento/testdata_dump.txt"));
         }
-
         long marker = System.currentTimeMillis();
 
         String line;
@@ -151,7 +152,7 @@ public final class DataLoadService {
         System.out.println();
         System.out.println("initial load of magento data done");
         System.out.println("Trying to make some product objects");
-
+        // todo - address string literals here - not a good idea I don't think.
         Name topProduct = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "product", null, false);
         Name productAttributesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product Attributes", topProduct, false);
         Name productCategories = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product categories", topProduct, false);
@@ -898,7 +899,7 @@ public final class DataLoadService {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         order.setAttributeWillBePersisted(LATEST_UPDATE, sdf.format(new Date()));
         if (azquoMemoryDBConnection.getCurrentDatabase()!=null){
-            azquoMemoryDBConnection.persist();
+            azquoMemoryDBConnection.persistInBackground();// aim to return to them quickly, this is whre we get into multi threading . . .
         }
 
     }

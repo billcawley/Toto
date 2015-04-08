@@ -70,7 +70,6 @@ public class LoginController {
                 logger.error("name json parse problem", e);
                 return "error:badly formed json " + e.getMessage();
             }
-
             if (loginJsonRequest.database != null) database = loginJsonRequest.database;
             if (loginJsonRequest.user != null) userEmail = loginJsonRequest.user;
             if (loginJsonRequest.password != null) password = loginJsonRequest.password;
@@ -96,7 +95,6 @@ public class LoginController {
                     return "error:timeout is not an integer";
                 }
             }
-
             loggedInConnection = loginService.login(database, userEmail, password, minutesTimeout, spreadsheetName, false);
         } else {
             loggedInConnection = loginService.getConnection(connectionId);
