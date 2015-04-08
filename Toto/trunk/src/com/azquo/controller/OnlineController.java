@@ -254,6 +254,7 @@ public class OnlineController {
 
                 if (opcode.equals("provenance")) {
                     result = onlineService.getProvenance(loggedInConnection, row, Integer.parseInt(colStr), jsonFunction);
+                    return "utf8javascript";
                 }
                 if (opcode.equals("savedata")) {
                     onlineService.saveData(loggedInConnection);
