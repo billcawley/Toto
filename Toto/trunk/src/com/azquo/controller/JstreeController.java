@@ -168,7 +168,9 @@ public class JstreeController {
 
                 }
                 if (op.equals("children")) {
-
+                    if (itemsChosen.startsWith(",")){
+                        itemsChosen = itemsChosen.substring(1);
+                    }
 
                     jsonFunction = null;
                     boolean details = true;
