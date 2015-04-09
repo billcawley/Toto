@@ -410,7 +410,8 @@ public final class DataLoadService {
 
         if (tableMap.get("cataloginventory_stock_item") != null){
             Name inStockName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"In Stock",entities, true);
-            Name today = nameService.findByName(azquoMemoryDBConnection,dateFormat.format(new Date()) +  ",date");
+
+            Name today = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,dateFormat.format(new Date()), date,false);
             Name stockDates = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Stock dates", date, true);
             stockDates.addChildWillBePersisted(today);
             if (today==null){
