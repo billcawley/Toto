@@ -472,9 +472,7 @@ public class OnlineService {
         if (foundDatabases.size() > 1) {
             if (loggedInConnection.getAzquoMemoryDB() != null) chosen = loggedInConnection.getLocalCurrentDBName();
             sb.append("<select class=\"databaseselect\" name=\"database\" id=\"databasechosen\" value=\"").append(chosen).append("\">\n");
-            if (chosen.length() == 0) {
-                sb.append("<option value=\"\">No database chosen</option>");
-            }
+            sb.append("<option value=\"\">No database chosen</option>");
             for (String dbName : foundDatabases.keySet()) {
                 sb.append("<option value =\"").append(dbName).append("\"");
                 if (dbName.equals(chosen)) sb.append(" selected");
@@ -493,13 +491,17 @@ public class OnlineService {
         return sb;
     }
 
-    public String switchDatabase(LoggedInConnection loggedInConnection, String newDBName) throws Exception {
+    public void switchDatabase(LoggedInConnection loggedInConnection, String newDBName) throws Exception {
+        if (newDBName.length()==0){
+            loginService.switchDatabase(loggedInConnection,null);
+            return;
+        }
         Database db = databaseDAO.findForName(loggedInConnection.getBusinessId(), newDBName);
         if (db == null) {
-            return newDBName + " - no such database";
+            throw new Exception(newDBName + " - no such database");
         }
         loginService.switchDatabase(loggedInConnection, db);
-        return "";
+
     }
 
     // basic db wide functions, create delete db etc
@@ -537,9 +539,7 @@ public class OnlineService {
                 }
             }
         }
-        if (database.length() > 0) {
-            switchDatabase(loggedInConnection, database);
-        }
+        switchDatabase(loggedInConnection, database);
         if (op.equalsIgnoreCase("newdatabase")) {
             if (newdatabase.length() > 0) {
                 adminService.createDatabase(newdatabase, loggedInConnection);
