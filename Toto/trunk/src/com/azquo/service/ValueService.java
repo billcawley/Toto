@@ -1797,7 +1797,7 @@ seaports;children   container;children
     // again, should we be using jackson??
 
     private String jsonValue(String val1, String val2, boolean comma) {
-        String result = "\"" + val1 + "\":\"" + val2 + "\"";
+        String result = "\"" + val1 + "\":\"" + val2.replace("\"","\\\"") + "\"";
         if (!comma) {
             return result;
 
