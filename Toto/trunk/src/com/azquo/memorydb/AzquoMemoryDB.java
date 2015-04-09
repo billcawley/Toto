@@ -105,11 +105,20 @@ public final class AzquoMemoryDB {
 
     // now passing app services
     // TOdo : possible optimiseation from this : http://www.4pmp.com/2010/02/scalable-mysql-avoid-offset-for-large-tables/
+    int mb = 1024*1024;
 
     synchronized private void loadData(List<AppEntityService> appServices) {
         if (needsLoading) { // only allow it once!
             System.out.println("loading data for " + getMySQLName());
-
+            long marker = System.currentTimeMillis();
+            System.gc();
+            System.out.println("gc time : " + (System.currentTimeMillis() - marker));
+            Runtime runtime = Runtime.getRuntime();
+            long usedMB = (runtime.totalMemory() - runtime.freeMemory())/ mb;
+            System.out.println("Used Memory:"
+                    + usedMB);
+            System.out.println("Free Memory:"
+                    + runtime.freeMemory() / mb);
             try {
                 // here we'll populate the memory DB from the database
                 long track = System.currentTimeMillis();
@@ -169,6 +178,18 @@ public final class AzquoMemoryDB {
                 logger.error("could not load data for " + getMySQLName() + "!", e);
             }
             needsLoading = false;
+            marker = System.currentTimeMillis();
+            System.gc();
+            System.out.println("gc time : " + (System.currentTimeMillis() - marker));
+            long newUsed = (runtime.totalMemory() - runtime.freeMemory())/ mb;
+            System.out.println("Guess at DB size " + (newUsed - usedMB));
+            System.out.println("Used Memory:"
+                    + newUsed);
+            System.out.println("Free Memory:"
+                    + runtime.freeMemory() / mb);
+            System.out.println("Total Memory:" + runtime.totalMemory() / mb);
+            System.out.println("Max Memory:" + runtime.maxMemory() / mb);
+
         }
     }
 
@@ -185,6 +206,7 @@ public final class AzquoMemoryDB {
             if (!entitiesToPersist.isEmpty()) {
                 System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
                 List<JsonRecordTransport> recordsToStore = new ArrayList<JsonRecordTransport>();
+                // todo : write nlocking the db probably should start here
                 for (AzquoMemoryDBEntity entity : new ArrayList<AzquoMemoryDBEntity>(entities)) { // we're taking a copy of the set before running through it.
                     JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
                     if (entity.getNeedsDeleting()) {
@@ -196,6 +218,7 @@ public final class AzquoMemoryDB {
                     recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state));
                     entity.setAsPersisted(); // is this dangerous here???
                 }
+                // and end here
                 standardDAO.persistJsonRecords(this, tableToStoreIn, recordsToStore);
             }
         }

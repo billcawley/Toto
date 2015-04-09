@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -21,7 +22,8 @@ import javax.servlet.http.HttpServletRequest;
  * User: cawley
  * Date: 31/10/13
  * Time: 19:45
- * For logging in, should verify against a DB then return a connection id which expires if the credentials check out.
+ * Ok now we're not using Excel the purpose changes, it will serve a basic Login screen then jam a logged in conneciton against the session
+ * I plan to get rid of connection id!
  */
 @Controller
 @RequestMapping("/Login")
@@ -40,86 +42,29 @@ public class LoginController {
     private OnlineReportDAO onlineReportDAO;
 
     @RequestMapping
-    @ResponseBody
-    public String handleRequest(HttpServletRequest request
-            , @RequestParam(value = "user", required = false)  String userEmail
+    public String handleRequest(ModelMap model, HttpServletRequest request
+             , @RequestParam(value = "user", required = false)  String userEmail
             , @RequestParam(value = "password", required = false)  String password
-            , @RequestParam(value = "spreadsheetname", required = false)  String spreadsheetName
-            , @RequestParam(value = "timeout", required = false)  String timeout
-            , @RequestParam(value = "connectionid", required = false)  String connectionId
-            , @RequestParam(value = "json", required = false)  String json
-            , @RequestParam(value = "database", required = false)  String database
-            , @RequestParam(value = "checkconnectionid", required = false)  String checkConnectionId
             , @RequestParam(value = "online", required = false, defaultValue = "false")  boolean online
 
                                 ) throws Exception {
         String result;
-        if (userEmail != null && userEmail.equals("convert")) {
-            return "done";
-        }
         String callerId = request.getRemoteAddr();
         if (callerId != null && userEmail != null && userEmail.equals("demo@user.com")) {
             userEmail += callerId;
         }
-        if (json != null && json.length() > 0) {
-            // for Google sheets, better to send all parameters as JSON
-            LoginJsonRequest loginJsonRequest;
-            try {
-                loginJsonRequest = jacksonMapper.readValue(json, LoginJsonRequest.class);
-            } catch (Exception e) {
-                logger.error("name json parse problem", e);
-                return "error:badly formed json " + e.getMessage();
-            }
-            if (loginJsonRequest.database != null) database = loginJsonRequest.database;
-            if (loginJsonRequest.user != null) userEmail = loginJsonRequest.user;
-            if (loginJsonRequest.password != null) password = loginJsonRequest.password;
-            if (loginJsonRequest.spreadsheetname != null) spreadsheetName = loginJsonRequest.spreadsheetname;
-            if (loginJsonRequest.timeout != null) timeout = loginJsonRequest.timeout;
-            if (loginJsonRequest.connectionid != null) connectionId = loginJsonRequest.connectionid;
-        }
 
-        if (!online && connectionId != null && connectionId.length() > 0 && loginService.getConnection(connectionId) != null) {
-            return connectionId;
-        }
         LoggedInConnection loggedInConnection;
-        if ((connectionId == null || connectionId.length() == 0 || connectionId.equals("aborted")) && userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
-            logger.info("spreadsheet name " + spreadsheetName);
-            if (database == null || database.length() == 0) {
-                database = "unknown";
+        if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
+            model.put("userEmail", userEmail);
+            loggedInConnection = loginService.login(null, userEmail, password, 60, null, false);
+            if (loggedInConnection != null){
+                // redirect to online, I want to zap the connection id if I can
+                return "redirect:Online?connectionid=" + loggedInConnection.getConnectionId() + "&reportid=1";
+            } else {// feedback to users about incorrect details
+                model.put("error", "incorrect login details");
             }
-            int minutesTimeout = 0;
-            if (timeout != null && timeout.length() > 0) {
-                try {
-                    minutesTimeout = Integer.parseInt(timeout);
-                } catch (Exception ignored) {
-                    return "error:timeout is not an integer";
-                }
-            }
-            loggedInConnection = loginService.login(database, userEmail, password, minutesTimeout, spreadsheetName, false);
-        } else {
-            loggedInConnection = loginService.getConnection(connectionId);
         }
-        if (loggedInConnection != null) {
-            result = loggedInConnection.getConnectionId();
-            if (spreadsheetName != null && spreadsheetName.equals("createmaster")) {
-                loginService.createAzquoMaster();
-                return connectionId;
-            }
-
-            if (online) {
-                OnlineReport onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
-                return onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "");
-            }
-            return result;
-        }
-        if (checkConnectionId != null && checkConnectionId.length() > 0) {
-            if (loginService.getConnection(checkConnectionId) != null) {
-                result = "ok";
-            } else {
-                result = "error:expired or incorrect connection id";
-            }
-            return result;
-        }
-        return "error:incorrect login details";
+        return "login";
     }
 }
