@@ -83,7 +83,7 @@ public class MagentoController {
                 if (loggedInConnection == null) {
                     return "error: user " + logon + " with this password does not exist";
                 }
-                if (!db.equals("temp")) {
+                if (!db.equals("temp") && db.length() > 0) {
                     onlineService.switchDatabase(loggedInConnection, db);
                     //todo  consider what happens if there's an error here (check the result from the line above?)
                 }
@@ -111,9 +111,12 @@ public class MagentoController {
                 return dataLoadService.findRequiredTables(loggedInConnection);
             }
             if (op.equals("updatedb")) {
+                dataLoadService.findRequiredTables(loggedInConnection);//for curl commands only to load dates etc.
+
                 if (loggedInConnection.getCurrentDatabase() != null) {
                     System.out.println("Running a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
                 }
+
                 if (data != null){
                     File moved = null;
                     long start = System.currentTimeMillis();
@@ -128,8 +131,8 @@ public class MagentoController {
                     } else {
                         dataLoadService.loadData(loggedInConnection, data.getInputStream());
                     }
-                        if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't email us :)
-                            long elapsed = System.currentTimeMillis() - start;
+                    long elapsed = System.currentTimeMillis() - start;
+                    if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't email us :)
                             String title = "Magento file upload " + logon + " from " + request.getRemoteAddr() + " elapsed time " + elapsed +  " millisec";
                             azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
                             azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
