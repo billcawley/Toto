@@ -1080,6 +1080,7 @@ private void readBook (final AzquoMemoryDBConnection azquoMemoryDBConnection, fi
             String reportName = azquoBook.getReportName();
             if (reportName!=null){
                 uploadReport(azquoMemoryDBConnection, azquoBook, fileName, reportName);
+                return;
             }
             if (azquoMemoryDBConnection.getAzquoMemoryDB() == null){
                 throw new Exception("no database set");
