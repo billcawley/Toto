@@ -73,8 +73,8 @@
 <body>
 <div id="wrapper" onmmouseout="closeWindowDelay()">
     <form  method="post" id="names" name="names">
-        <input type="hidden" name="itemschosen" value="" id="itemschosen">
         <div id="container"></div>
+        Select items: <input class="itemselect" type="text" value="" id="itemschosen" name="itemschosen"/>
         <div class="choicesubmit"><p><a href="#" onclick="submitChoice()">Submit</a></p></div>
     </form>
     <div class="namedetails" id="namedetails" style="display:none">
@@ -195,14 +195,17 @@
 
 
        function submitChoice(){
-            var selected  = $('#container').jstree("get_selected");
-            var items = "";
-            for (item in selected){
-                items += selected[item] + ",";
+            if (document.getElementById("itemschosen").value = "") {
+                var selected  = $('#container').jstree("get_selected");
+                var items = "";
+               for (item in selected) {
+                   items += selected[item] + ",";
 
 
-            }
-            document.getElementById("itemschosen").value = items;
+               }
+
+               document.getElementById("itemschosen").value = items;
+           }
             document.getElementById("names").submit();
 
             window.close();
