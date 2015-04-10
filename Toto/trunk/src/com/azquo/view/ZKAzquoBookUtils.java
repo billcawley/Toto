@@ -540,7 +540,7 @@ public class ZKAzquoBookUtils {
                 String valFound = pairs.get(heading);
                 if (link != null) {
                     //new universal link...  REPORTS ONLY!
-                    String linkAddr = "/api/Online/?opcode=loadsheet&connectionid=" + loggedInConnection.getConnectionId() + "&reportid=" + pairs.get("id");
+                    String linkAddr = "/api/Online/?opcode=loadsheet&reportid=" + pairs.get("id");
                     //String linkAddr = evaluateExpression(link.replace("“", "\"").replace("”", "\""), pairs);//excel uses fancy quotes
                         cell.setHyperlink(new HyperlinkImpl(SHyperlink.HyperlinkType.URL,linkAddr,"link"));
                 }

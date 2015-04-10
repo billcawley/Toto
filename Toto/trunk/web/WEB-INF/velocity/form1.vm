@@ -183,8 +183,6 @@
                                         <p class="form-submit" align="center">
                                             <input id="submit" type="submit" value="Post Feedback" class="btn"
                                                    name="$submit">
-                                            <input type="hidden" name="connectionid" id="connectionid"
-                                                   value="$connectionid">
                                         </p>
                                     </form>
 

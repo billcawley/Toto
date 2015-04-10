@@ -9,7 +9,6 @@ public abstract class StandardJsonRequest {
     public String user;
     public String password;
     public String database;
-    public String connectionId;
     public String operation;
     public String jsonFunction;
     public String spreadsheetName;

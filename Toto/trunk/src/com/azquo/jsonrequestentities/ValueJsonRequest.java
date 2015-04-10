@@ -8,7 +8,6 @@ public class ValueJsonRequest {
          public String rowheadings;
          public String columnheadings;
          public String context;
-         public String connectionid;
          public String region;
          public String lockmap;
          public String editeddata;

@@ -84,7 +84,6 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
     private static final Logger logger = Logger.getLogger(LoggedInConnection.class);
 
-    private final String connectionId;
     private Date loginTime;
     private Date lastAccessed;
     private long timeOut;
@@ -113,9 +112,8 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
     private static final String defaultRegion = "default-region";
 
-    protected LoggedInConnection(final String connectionId, final AzquoMemoryDB azquoMemoryDB, final User user, final long timeOut, String spreadsheetName) {
+    protected LoggedInConnection(final AzquoMemoryDB azquoMemoryDB, final User user, final long timeOut, String spreadsheetName) {
         super(azquoMemoryDB, user);
-        this.connectionId = connectionId;
         this.spreadsheetName = spreadsheetName;
         loginTime = new Date();
         lastAccessed = new Date();
@@ -148,10 +146,6 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
             this.timeOut = 1000 * 60 * 120;
         }
 
-    }
-
-    public String getConnectionId() {
-        return connectionId;
     }
 
     public Date getLoginTime() {

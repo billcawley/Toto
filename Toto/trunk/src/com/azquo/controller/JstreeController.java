@@ -49,7 +49,6 @@ public class JstreeController {
     public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "op", required = false)  String op
             , @RequestParam(value = "id", required = false)  String jsTreeId
-            , @RequestParam(value = "connectionid", required = false)  String connectionId
             , @RequestParam(value = "user", required = false)  String user
             , @RequestParam(value = "password", required = false)  String password
             , @RequestParam(value = "database", required = false)  String database
@@ -65,22 +64,20 @@ public class JstreeController {
         String jsonFunction = "azquojsonfeed";
 
 
-        LoggedInConnection loggedInConnection;
+        LoggedInConnection loggedInConnection = (LoggedInConnection)request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
         try {
             StringBuffer result = new StringBuffer();
-            if (connectionId == null) {
+            if (loggedInConnection == null) {
                 if (user.equals("demo@user.com")) {
                     user += request.getRemoteAddr();
                 }
                 loggedInConnection = loginService.login(database, user, password, 0, "", false);
                 if (loggedInConnection == null) {
-                    model.addAttribute("content", "error:no connection id");
+                    model.addAttribute("content", "error:not logged in");
                     return "utf8page";
                 }
-                connectionId = loggedInConnection.getConnectionId();
             }
-            loggedInConnection = loginService.getConnection(connectionId);
-            if ((database == null || database.length() == 0) && loggedInConnection != null && loggedInConnection.getCurrentDatabase() != null) {
+            if ((database == null || database.length() == 0) && loggedInConnection.getCurrentDatabase() != null) {
                 database = loggedInConnection.getCurrentDatabase().getName();
             }
 
@@ -93,10 +90,6 @@ public class JstreeController {
                 } catch (Exception e) {
                     logger.error("name json parse problem", e);
                     model.addAttribute("content", "error:badly formed json " + e.getMessage());
-                    return "utf8page";
-                }
-                if (loggedInConnection == null) {
-                    model.addAttribute("content", "error:invalid connection id or login credentials");
                     return "utf8page";
                 }
                 LoggedInConnection.JsTreeNode currentNode = lookup.get(nameJsonRequest.id + "");
@@ -168,14 +161,12 @@ public class JstreeController {
 
                 }
                 if (op.equals("children")) {
-                    if (itemsChosen.startsWith(",")){
+                    if (itemsChosen != null && itemsChosen.startsWith(",")){
                         itemsChosen = itemsChosen.substring(1);
                     }
 
                     jsonFunction = null;
-                    boolean details = true;
-
-                    result.append(nameService.getJsonChildren(loggedInConnection, jsTreeId, current.child.name, parents, lookup, details, itemsChosen));
+                    result.append(nameService.getJsonChildren(loggedInConnection, jsTreeId, current.child.name, parents, lookup, true, itemsChosen));
 
                 }
                 if (current.child.name != null) {

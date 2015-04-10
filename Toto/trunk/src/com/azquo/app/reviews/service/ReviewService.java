@@ -719,8 +719,6 @@ public class ReviewService {
         Name supplier = topSupplier.getChildren().iterator().next();
 
         context.put("supplierlogo", supplier.getAttribute("logo"));
-        // todo : connection id shoult NOT be in here, its a DB access connection. Deal with later.
-        context.put("connectionid", loggedInConnection.getConnectionId());
         context.put("submit", "Submit");
         // todo : probably should not look up this way, config file and cache the object?
         Name rating = nameService.findByName(loggedInConnection, "All ratings");

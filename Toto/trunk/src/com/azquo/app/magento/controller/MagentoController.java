@@ -64,22 +64,16 @@ public class MagentoController {
             , @RequestParam(value = "op", required = false, defaultValue = "") String op
             , @RequestParam(value = "logon", required = false, defaultValue = "") String logon
             , @RequestParam(value = "password", required = false, defaultValue = "") String password
-            , @RequestParam(value = "connectionid", required = false, defaultValue = "") String connectionId
             , @RequestParam(value = "data", required = false) MultipartFile data
 
     ) throws Exception {
-        LoggedInConnection loggedInConnection = null;
         try {
 
             if (op == null) op = "";// can this happen with the annotation above?
-            if (connectionId != null && connectionId.length() > 0) {
-                loggedInConnection = loginService.getConnection(connectionId);
-            }
             System.out.println("==================== db sent  : " + db + " op= " + op);
-            if (loggedInConnection == null) {
                 //for testing only
                 if (db == null) db = "temp";
-                loggedInConnection = loginService.login(db, logon, password, 0, "", false);//will automatically switch the database to 'temp' if that's the only one
+            LoggedInConnection loggedInConnection = loginService.login(db, logon, password, 0, "", false);//will automatically switch the database to 'temp' if that's the only one
                 if (loggedInConnection == null) {
                     return "error: user " + logon + " with this password does not exist";
                 }
@@ -88,10 +82,10 @@ public class MagentoController {
                     //todo  consider what happens if there's an error here (check the result from the line above?)
                 }
                 //loggedInConnection = loginService.login("test","magentobill","password",0,"",false);
-            }
             if (op.equals("connect")) {
                 if (dataLoadService.findLastUpdate(loggedInConnection)!=null) {
-                    return loggedInConnection.getConnectionId();
+                    // was connection id here, why?
+                    return dataLoadService.findLastUpdate(loggedInConnection);
                 }else{
                     return dataLoadService.findRequiredTables(loggedInConnection);
                 }
@@ -138,7 +132,8 @@ public class MagentoController {
                             azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
                             azquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                       }
-                    return loggedInConnection.getConnectionId() + "";
+                    // was connection id here
+                    return "ok";
                 } else{
                     return "error: no data posted";
                 }
@@ -164,9 +159,8 @@ public class MagentoController {
             , @RequestParam(value = "op", required = false, defaultValue = "") String op
             , @RequestParam(value = "logon", required = false, defaultValue = "") String logon
             , @RequestParam(value = "password", required = false, defaultValue = "") String password
-            , @RequestParam(value = "connectionid", required = false, defaultValue = "") String connectionId
 
     ) throws Exception {
-        return handleRequest(request, db, op, logon, password, connectionId, null);
+        return handleRequest(request, db, op, logon, password, null);
     }
 }

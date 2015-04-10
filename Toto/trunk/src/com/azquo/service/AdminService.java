@@ -98,7 +98,7 @@ public class AdminService {
                 , "<html>Dear " + user.getName() + "<br/><br/>Welcome to Azquo!<br/><br/>Your account key is : " + key + "</html>");
         return "true";
     }
-
+/*
     public String confirmKey(final String businessName, final String email, final String password, final String key, String spreadsheetName) throws Exception{
         final Business business = businessDao.findByName(businessName);
         if (business != null && business.getBusinessDetails().validationKey.equals(key)) {
@@ -115,7 +115,7 @@ public class AdminService {
             return loggedInConnection.getConnectionId();
         }
         return "error:  incorrect key";
-    }
+    }*/
 
     public String getSQLDatabaseName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String databaseName) {
         Business b = businessDao.findById(azquoMemoryDBConnection.getBusinessId());

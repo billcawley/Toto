@@ -27,8 +27,8 @@ public class CronController {
     public String handleRequest(@RequestParam(value = "crontype") final String cronType) throws Exception {
 
         if (cronType.equals("minute")){
-            //remove defunct connections and open databases
-           loginService.zapConnectionsTimedOut();
+            // todo - addres dropping from memory databases that have been inactive for a while
+            //unloadInactiveDatabases();
         }
         return "OK";
 

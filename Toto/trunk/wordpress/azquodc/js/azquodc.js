@@ -1,7 +1,5 @@
 //javascript for Azquo DC
-var az_connectionId;
 var az_chosen;
-az_connectionId = "";
 az_chosen = "";
 az_logon = "demo@user.com";
 az_password = "password";

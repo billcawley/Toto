@@ -109,7 +109,7 @@
                 'core' : {
                     'data' : {
                         "state" : {"opened" : true },
-                        "url" : "/api/Jstree?op=children&connectionid=$connectionid&topnode=$rootid&parents=" + parents + "&itemschosen=" + searchNames,
+                        "url" : "/api/Jstree?op=children&topnode=$rootid&parents=" + parents + "&itemschosen=" + searchNames,
                         "dataType": "JSON",
                         "data" : function (node) {
                             return { "id" : node.id };
@@ -171,7 +171,7 @@
                             seeParents:{
                                 "label":  seeParents,
                                 "action" :function(obj) {
-                                    var url = "/api/Jstree?op=new&id=" + $node.id +"&connectionid=$connectionid";
+                                    var url = "/api/Jstree?op=new&id=" + $node.id;
                                     if (!parents) {
                                         url += "&parents=true";
                                     }
@@ -270,7 +270,6 @@
 
 
         function azquojson(functionName, params){
-            params +="&connectionid=$connectionid";
             var htmlText = "/api/" + functionName + "?" + params;
             var script = document.createElement('script'),
                     head = document.getElementsByTagName('head')[0] || document.documentElement;

@@ -58,7 +58,6 @@ public class LoginService {
 
 
 
-    private final HashMap<String, LoggedInConnection> connections = new HashMap<String, LoggedInConnection>();
     private final HashMap<Integer, Integer> openDBCount = new HashMap<Integer, Integer>();
 
 
@@ -118,12 +117,12 @@ public class LoginService {
                     }
                 }
                 // could be a null memory db . . .
-                //TODO : ask tomcat for a session id . . .
+                /*
                 LoggedInConnection lic = existingConnection(user);
                 if (lic!=null){
                     return lic;
-                }
-                lic = new LoggedInConnection(System.nanoTime() + "", memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
+                }*/
+                LoggedInConnection lic = new LoggedInConnection(memoryDB, user, timeOutInMinutes * 60 * 1000, spreadsheetName);
                 int databaseId = 0;
                 if (memoryDB != null && memoryDB.getDatabase() !=null){
                    databaseId = memoryDB.getDatabase().getId();
@@ -158,7 +157,6 @@ public class LoginService {
                 /*if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
                     //azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
                 }*/
-                connections.put(lic.getConnectionId(), lic);
                 if (database != null && lic.getAzquoMemoryDB()!=null){
                     anonymise(lic);
                 }
@@ -223,6 +221,7 @@ public class LoginService {
     }
 
 
+/*
     public void zapConnectionsTimedOut() {
         for (Iterator<Map.Entry<String, LoggedInConnection>> it = connections.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<String, LoggedInConnection> entry = it.next();
@@ -248,7 +247,7 @@ public class LoginService {
                 }
             }
         }
-    }
+    }*/
 
     public void switchDatabase(LoggedInConnection loggedInConnection, Database newDb)throws Exception{
         if (loggedInConnection.getAzquoMemoryDB()!= null){
@@ -287,7 +286,7 @@ public class LoginService {
 
     }
 
-    private LoggedInConnection existingConnection(final User user){
+/*    private LoggedInConnection existingConnection(final User user){
         if (!user.getEmail().equals("tempuser")){ // edd : not really happy about these sring literlas, fix later . . .
             for (String lic:connections.keySet()){
                 LoggedInConnection loggedInConnection = connections.get(lic);
@@ -297,21 +296,9 @@ public class LoginService {
             }
         }
         return null;
-    }
+    }*/
 
 
-
-    public LoggedInConnection getConnection(final String connectionId) {
-
-        zapConnectionsTimedOut();
-        final LoggedInConnection lic = connections.get(connectionId);
-        if (lic != null) {
-            logger.info("last accessed : " + lic.getLastAccessed() + " timeout " + lic.getTimeOut());
-            lic.setLastAccessed(new Date());
-        }
-        return lic;
-
-    }
 
 /*    public LoggedInConnection getConnectionFromJsonRequest(final StandardJsonRequest standardJsonRequest, String callerIP) throws Exception{
         String user = standardJsonRequest.user;

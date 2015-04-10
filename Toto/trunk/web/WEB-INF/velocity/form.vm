@@ -68,7 +68,6 @@
     <div id="supplierlogo>$supplierlogo</div>
     <div id="intro">$intro</div>
 <form  method="post" id="review" name="review">
-    <input type="hidden" name="connectionid" value="$connectionid"/>
 <div class="reviewsummary">
     <div class="reviewcategory"></div>
     #foreach($review in $reviews)

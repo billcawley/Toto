@@ -68,11 +68,10 @@ public class OnlineController {
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "user", required = false) String user
             , @RequestParam(value = "password", required = false) String password
-            , @RequestParam(value = "connectionid", required = false) String connectionId
             , @RequestParam(value = "editedname", required = false) String choiceName
             , @RequestParam(value = "editedvalue", required = false) String choiceValue
             , @RequestParam(value = "reportid", required = false) String reportId
-             , @RequestParam(value = "chart", required = false) String chart
+            , @RequestParam(value = "chart", required = false) String chart
             , @RequestParam(value = "jsonfunction", required = false, defaultValue = "azquojsonfeed") String jsonFunction
             , @RequestParam(value = "row", required = false, defaultValue = "") String rowStr
             , @RequestParam(value = "col", required = false, defaultValue = "") String colStr
@@ -103,7 +102,6 @@ public class OnlineController {
                 if (loggedInConnection.getCurrentDBName() != null) {
                     model.addAttribute("databaseChosen", loggedInConnection.getCurrentDBName());
                 }
-                model.addAttribute("connectionId", loggedInConnection.getConnectionId());
                 //return "zstest";
                 return "zstest";
             }
@@ -132,26 +130,20 @@ public class OnlineController {
                 if (workbookName == null) {
                     workbookName = "unknown";
                 }
-                if (connectionId == null) {
+                LoggedInConnection loggedInConnection = (LoggedInConnection)request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
+
+                if (loggedInConnection == null) {
                     if (user == null) {
                         return "utf8page";
                     }
                     if (user.equals("demo@user.com")) {
                         user += request.getRemoteAddr();
                     }
-                    LoggedInConnection loggedInConnection = loginService.login(database, user, password, 0, workbookName, false);
+                    loggedInConnection = loginService.login(database, user, password, 0, workbookName, false);
                     if (loggedInConnection == null) {
                         model.addAttribute("content", "error:no connection id");
                         return "utf8page";
                     }
-                    connectionId = loggedInConnection.getConnectionId();
-
-                }
-                final LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
-
-                if (loggedInConnection == null) {
-                    model.addAttribute("content", "error:invalid or expired connection id");
-                    return "utf8page";
                 }
                 if (onlineReport != null) {
                     if (onlineReport.getId() != 1) {
@@ -326,7 +318,6 @@ public class OnlineController {
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "user", required = false) String user
             , @RequestParam(value = "password", required = false) String password
-            , @RequestParam(value = "connectionid", required = false) String connectionId
             , @RequestParam(value = "editedname", required = false) String choiceName
             , @RequestParam(value = "editedvalue", required = false) String choiceValue
             , @RequestParam(value = "reportid", required = false) String reportId
@@ -341,6 +332,6 @@ public class OnlineController {
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
     ) {
-        return handleRequest(model,request,user,password,connectionId,choiceName,choiceValue,reportId,chart,jsonFunction,rowStr,colStr, changedValue, opcode, spreadsheetName, database, reportToLoad, submit, null);
+        return handleRequest(model,request,user,password,choiceName,choiceValue,reportId,chart,jsonFunction,rowStr,colStr, changedValue, opcode, spreadsheetName, database, reportToLoad, submit, null);
     }
 }

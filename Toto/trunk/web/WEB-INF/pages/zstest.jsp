@@ -208,12 +208,12 @@
 
     function inspectDatabase(){
         // deliberately leaving the database blank for the mo, it's in ${databaseChosen}
-        window.open("/api/Jstree?op=new&database=&connectionid=${connectionId}", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
+        window.open("/api/Jstree?op=new", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
     }
 
 
     function uploadFile(){
-         window.open("/api/Online?op=upload&connectionid=${connectionId}", "_blank", "toolbar=no, status=no,scrollbars=no, resizable=no, top=150, left=200, width=300, height=300")
+         window.open("/api/Online?op=upload", "_blank", "toolbar=no, status=no,scrollbars=no, resizable=no, top=150, left=200, width=300, height=300")
     }
 
 

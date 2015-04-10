@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 
@@ -28,8 +29,8 @@ public class DownloadController {
     OnlineService onlineService;
 
     @RequestMapping
-    public void handleRequest(HttpServletResponse response
-            , @RequestParam(value = "connectionid", required = false)  String connectionId
+    public void handleRequest(HttpServletRequest request
+            , HttpServletResponse response
             , @RequestParam(value = "macros", required = false, defaultValue = "false")  boolean withMacros
             , @RequestParam(value = "pdf", required = false, defaultValue = "false")  boolean pdf
             , @RequestParam(value = "image", required = false)  String image
@@ -73,7 +74,7 @@ public class DownloadController {
 
             return;
         }
-        LoggedInConnection loggedInConnection = loginService.getConnection(connectionId);
+        LoggedInConnection loggedInConnection = (LoggedInConnection)request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
         if (loggedInConnection == null) {
             return;
         }

@@ -652,13 +652,13 @@
             }
             document.azquoform.submit();
         }
-
+        // todo - should this pass the report id? I worry about multiple tabs
         function downloadAsXLS(){
-            window.open("/api/Download?connectionid=" + azquoform.connectionid.value);
+            window.open("/api/Download");
         }
 
         function downloadAsPDF(){
-            window.open("/api/Download?pdf=true&connectionid=" + azquoform.connectionid.value);
+            window.open("/api/Download?pdf=true");
 
         }
 
@@ -698,9 +698,7 @@
 
         function azquojson(functionName, params){
             if (functionName == "Name"){
-                params = "json={" + params + ",\"connectionId\":\"" + azquoform.connectionid.value + "\",\"jsonFunction\":\"azquojsonfeed\"}";
-            }else{
-                params +="&connectionid=" + azquoform.connectionid.value;
+                params = "json={" + params + ",\"jsonFunction\":\"azquojsonfeed\"}";
             }
             //var htmlText = "http://www.bomorgan.co.uk:8080/api/" + functionName + "?" + params;
             var htmlText = "/api/" + functionName + "?" + params;
@@ -913,7 +911,6 @@
         <div class="excelDefaults" style="height:$maxheight;overflow:auto" id="spreadsheet">
             <input type="hidden" name="reportid" id="reportId" value="$reportid"/>
             <input type="hidden" name="reporttoload" id="reportToLoad" value="$reportid"/>
-            <input type="hidden" name="connectionid" id="connectionId" value="$connectionid"/>
             <input type="hidden" name="editedname" id="editedName" value=""/>
             <input type="hidden" name="editedvalue" id="editedValue" value=""/>
             <input type="hidden" name="spreadsheetname" id="spreadsheetname" value="$spreadsheetname"/>

@@ -226,7 +226,6 @@ public class OnlineService {
         velocityContext.put("maxrow", azquoBook.getMaxRow() + "");
         velocityContext.put("maxcol", azquoBook.getMaxCol() + "");
         velocityContext.put("reportid", onlineReport.getId() + "");
-        velocityContext.put("connectionid", loggedInConnection.getConnectionId() + "");
         if (azquoBook.dataRegionPrefix.equals(AzquoBook.azDataRegion)) {
 
             velocityContext.put("menuitems", "[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"},{\"position\":3,\"name\":\"Highlight changes\",\"enabled\":true,\"link\":\"showHighlight()\"}]");
@@ -641,7 +640,7 @@ public class OnlineService {
             Map<String, String> vReport = new HashMap<String, String>();
             vReport.put("name", onlineReport.getReportName());
             vReport.put("explanation", onlineReport.getExplanation());
-            vReport.put("link", "/api/Online/?opcode=loadsheet&connectionid=" + loggedInConnection.getConnectionId() + "&reportid=" + onlineReport.getId());
+            vReport.put("link", "/api/Online/?opcode=loadsheet&reportid=" + onlineReport.getId());
             reports.add(vReport);
         }
         return convertToVelocity(context, "reports", reports, "azquoReports.vm");
@@ -657,7 +656,6 @@ public class OnlineService {
         }
         if (searchNames==null)searchNames = "";
         VelocityContext context = new VelocityContext();
-        context.put("connectionid", loggedInConnection.getConnectionId() + "");
         context.put("parents", parents);
         context.put("rootid", nameId + "");
         context.put("searchnames", searchNames);
