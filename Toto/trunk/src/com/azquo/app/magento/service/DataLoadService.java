@@ -19,15 +19,33 @@ import java.util.*;
  */
 public final class DataLoadService {
 
+    public static void logMemUseage(){
+
+        Runtime runtime = Runtime.getRuntime();
+        int mb = 1024*1024;
+        System.out.println("##### Heap utilization statistics [MB] #####");
+
+        //Print used memory
+        System.out.println("Used Memory:"
+                + (runtime.totalMemory() - runtime.freeMemory()) / mb);
+
+        //Print free memory
+        System.out.println("Free Memory:"
+                + runtime.freeMemory() / mb);
+
+        //Print total available memory
+        System.out.println("Total Memory:" + runtime.totalMemory() / mb);
+
+        //Print Maximum available memory
+        System.out.println("Max Memory:" + runtime.maxMemory() / mb);
+    }
+
     @Autowired
     OnlineService onlineService;
 
     @Autowired
     ImportService importService;
 
-    //Getting the runtime reference from system
-    Runtime runtime = Runtime.getRuntime();
-    int mb = 1024*1024;
 
     private final static String LATEST_UPDATE = "Latest update";
     private final static String REQUIRED_TABLES = "required tables";
@@ -115,6 +133,7 @@ public final class DataLoadService {
         List<Map<String, String>> currentTableDataMap = null;
         String[] currentColumnNames = null;
         int count = 0;
+        System.gc();
         while ((line = br.readLine()) != null) {
             if (line.startsWith("||||TABLE:")) {
                 count = 0;
@@ -124,6 +143,10 @@ public final class DataLoadService {
                 System.out.print("Initial load of : " + tableName);
                 // I'm not going to support tables being loaded in two chunks I see no point. THis would overwrite data if a table were referenced twice
                 currentTableDataMap = new ArrayList<Map<String, String>>(); // and I know this repeats keys for each row, the goal here is ease of use for importing, not efficiency
+                /* a further comment on efficiency :
+                this kind of loading means over 10x the size in memory vs the file size but cutting this down is a bit pointless as it will take about this much
+                in the memorydb. If we're really tight getting rid of the maps per line and leaving it as an arraylist might help but the existing removal of tables as they're used
+                probably goes a long way to stopping memory spikes.*/
                 tableMap.put(tableName, currentTableDataMap);
             } else { // data, is it the first one?
                 if (currentColumnNames == null) {
@@ -667,23 +690,7 @@ public final class DataLoadService {
                 System.out.println("name service time track" + nameService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
                 System.out.println("value service time track" + valueService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
 
-
-                System.out.println("##### Heap utilization statistics [MB] #####");
-
-                //Print used memory
-                System.out.println("Used Memory:"
-                        + (runtime.totalMemory() - runtime.freeMemory()) / mb);
-
-                //Print free memory
-                System.out.println("Free Memory:"
-                        + runtime.freeMemory() / mb);
-
-                //Print total available memory
-                System.out.println("Total Memory:" + runtime.totalMemory() / mb);
-
-                //Print Maximum available memory
-                System.out.println("Max Memory:" + runtime.maxMemory() / mb);
-
+                logMemUseage();
             }
 
         }
