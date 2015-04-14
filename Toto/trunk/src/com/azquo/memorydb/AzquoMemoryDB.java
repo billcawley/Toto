@@ -3,13 +3,15 @@ package com.azquo.memorydb;
 import com.azquo.adminentities.Database;
 import com.azquo.memorydbdao.JsonRecordTransport;
 import com.azquo.memorydbdao.StandardDAO;
-import com.azquo.service.AppEntityService;
 import com.github.holodnov.calculator.ObjectSizeCalculator;
 import org.apache.log4j.Logger;
 
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created with IntelliJ IDEA.
@@ -53,7 +55,7 @@ public final class AzquoMemoryDB {
 
     // Initialising maps concurrently here,
 
-    protected AzquoMemoryDB(Database database, StandardDAO standardDAO, List<AppEntityService> appServices) throws Exception {
+    protected AzquoMemoryDB(Database database, StandardDAO standardDAO) throws Exception {
         this.database = database;
         this.standardDAO = standardDAO;
         needsLoading = true;
@@ -72,15 +74,15 @@ public final class AzquoMemoryDB {
                 entitiesToPersist.put(persistedTable.name(), Collections.newSetFromMap(new HashMap<AzquoMemoryDBEntity, Boolean>()));
             }
         }
-        if (appServices != null) {
+/*        if (appServices != null) {
             for (AppEntityService appEntityService : appServices) {
                 // seems a good a place as any to create the MySQL table if it doesn't exist
                 appEntityService.checkCreateMySQLTable(this);
                 entitiesToPersist.put(appEntityService.getTableName(), Collections.newSetFromMap(new HashMap<AzquoMemoryDBEntity, Boolean>()));
             }
-        }
+        }*/
         if (standardDAO != null) {
-            loadData(appServices);
+            loadData();
         }
         needsLoading = false;
         nextId = maxIdAtLoad + 1;
@@ -104,61 +106,131 @@ public final class AzquoMemoryDB {
     }
 
     // now passing app services
-    // TOdo : possible optimiseation from this : http://www.4pmp.com/2010/02/scalable-mysql-avoid-offset-for-large-tables/
-    int mb = 1024*1024;
+    final int mb = 1024*1024;
+    // Todo : possible optimiseation from this : http://www.4pmp.com/2010/02/scalable-mysql-avoid-offset-for-large-tables/
 
-    synchronized private void loadData(List<AppEntityService> appServices) {
+    private static final int PROVENANCE_MODE = 0;
+    private static final int NAME_MODE = 1;
+    private static final int VALUE_MODE = 2;
+
+    private class SQLLoadRunner implements Runnable{
+        private final int mode;
+        private final List<JsonRecordTransport> dataToLoad;
+        private final AzquoMemoryDB memDB;
+
+        private SQLLoadRunner(int mode, List<JsonRecordTransport> dataToLoad, AzquoMemoryDB memDB) {
+            this.mode = mode;
+            this.dataToLoad = dataToLoad;
+            this.memDB = memDB;
+        }
+
+        @Override
+        public void run() {
+            try {
+            for (JsonRecordTransport dataRecord : dataToLoad) {
+                if (dataRecord.id > maxIdAtLoad) {
+                    maxIdAtLoad = dataRecord.id;
+                }
+                        if (mode == PROVENANCE_MODE){
+                            new Provenance(memDB, dataRecord.id, dataRecord.json);
+                        }
+                        if (mode == NAME_MODE){
+                            new Name(memDB, dataRecord.id, dataRecord.json);
+                        }
+                        if (mode == VALUE_MODE){
+                            new Value(memDB, dataRecord.id, dataRecord.json);
+                        }
+            }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    synchronized private void loadData() {
+        int loadingThreads = 3; // this may need adjusting depending on server power
+        boolean memoryTrack = false;
         if (needsLoading) { // only allow it once!
+            long track = System.currentTimeMillis();
             System.out.println("loading data for " + getMySQLName());
+            // using system.gc before and after loading to get an idea of DB memory overhead
             long marker = System.currentTimeMillis();
-            System.gc();
-            System.out.println("gc time : " + (System.currentTimeMillis() - marker));
             Runtime runtime = Runtime.getRuntime();
-            long usedMB = (runtime.totalMemory() - runtime.freeMemory())/ mb;
-            System.out.println("Used Memory:"
-                    + usedMB);
-            System.out.println("Free Memory:"
-                    + runtime.freeMemory() / mb);
+            long usedMB = 0;
+            if (memoryTrack){
+                System.gc();
+                System.out.println("gc time : " + (System.currentTimeMillis() - marker));
+                usedMB = (runtime.totalMemory() - runtime.freeMemory())/ mb;
+                System.out.println("Used Memory:"
+                        + usedMB);
+                System.out.println("Free Memory:"
+                        + runtime.freeMemory() / mb);
+            }
             try {
                 // here we'll populate the memory DB from the database
-                long track = System.currentTimeMillis();
 
                 /* ok this code is a bit annoying, one could run through the table names from the outside but then you need to switch on it for the constructor
                 one could use AzquomemoryDBEntity if having some kind of init from Json function but this makes the objects more mutable than I'd like
                 so we stay with this for the moment
                 these 3 commands will automatically load the data into the memory DB set as persisted
                 Load order is important as value and name use provenance and value uses names. Names uses itself hence all names need initialisation finished after the id map is sorted
+
+                //I'm going to load in chunks, should scale more.
                 */
-                final List<JsonRecordTransport> allProvenance = standardDAO.findFromTable(this, StandardDAO.PersistedTable.provenance.name());
-                for (JsonRecordTransport provenanceRecord : allProvenance) {
-                    if (provenanceRecord.id > maxIdAtLoad) {
-                        maxIdAtLoad = provenanceRecord.id;
-                    }
-                    new Provenance(this, provenanceRecord.id, provenanceRecord.json);
-                }
-                final List<JsonRecordTransport> allNames = standardDAO.findFromTable(this, StandardDAO.PersistedTable.name.name());
-                for (JsonRecordTransport nameRecord : allNames) {
-                    if (nameRecord.id > maxIdAtLoad) {
-                        maxIdAtLoad = nameRecord.id;
-                    }
-                    new Name(this, nameRecord.id, nameRecord.json);
-                }
-                final List<JsonRecordTransport> allValues = standardDAO.findFromTable(this, StandardDAO.PersistedTable.value.name());
-                for (JsonRecordTransport valueRecord : allValues) {
-                    if (valueRecord.id > maxIdAtLoad) {
-                        maxIdAtLoad = valueRecord.id;
-                    }
-                    new Value(this, valueRecord.id, valueRecord.json);
-                }
 
-                System.out.println(allNames.size() + allValues.size() + allProvenance.size() + " unlinked entities loaded in " + (System.currentTimeMillis() - track) + "ms");
+                int provenaceLoaded = 0;
+                int namesLoaded = 0;
+                int valuesLoaded = 0;
 
+                final int step = 500000;
+                int from = 0;
 
-                // sort out the maps in names, they couldn't be fixed on load as names link to themselves
+                ExecutorService executor = Executors.newFixedThreadPool(loadingThreads); // picking 10 based on an example I saw . . .
+                List<JsonRecordTransport> provenance = standardDAO.findFromTable(this, StandardDAO.PersistedTable.provenance.name(), from, step);
+                while (!provenance.isEmpty()){
+                    executor.execute(new SQLLoadRunner(PROVENANCE_MODE, provenance, this));
+                    provenaceLoaded += provenance.size();
+                    from += step;
+                    provenance = standardDAO.findFromTable(this, StandardDAO.PersistedTable.provenance.name(), from, step);
+
+                }
+                from = 0;
+                List<JsonRecordTransport> names = standardDAO.findFromTable(this, StandardDAO.PersistedTable.name.name(), from, step);
+                while (!names.isEmpty()) {
+                    executor.execute(new SQLLoadRunner(NAME_MODE, names, this));
+                    namesLoaded += names.size();
+                    from += step;
+                    names = standardDAO.findFromTable(this, StandardDAO.PersistedTable.name.name(), from, step);
+                }
+                from = 0;
+                List<JsonRecordTransport> values = standardDAO.findFromTable(this, StandardDAO.PersistedTable.value.name(), from, step);
+                while (!values.isEmpty()){
+                    executor.execute(new SQLLoadRunner(VALUE_MODE, values, this));
+                    valuesLoaded += values.size();
+                    from += step;
+                    values = standardDAO.findFromTable(this, StandardDAO.PersistedTable.value.name(), from, step);
+                }
+                executor.shutdown();
+                if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+                    throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
+                }
+                // wait untill all are loaded before linking
+                System.out.println(provenaceLoaded + valuesLoaded + namesLoaded + " unlinked entities loaded,  " + (System.currentTimeMillis() - track) + "ms");
+                if (memoryTrack) {
+                    System.out.println("Used Memory after list load:"
+                            + (runtime.totalMemory() - runtime.freeMemory()) / mb);
+                }
                 initNames();
-                System.out.println("names init in " + (System.currentTimeMillis() - track) + "ms");
+                if (memoryTrack) {
+                    System.out.println("Used Memory after init names :"
+                            + (runtime.totalMemory() - runtime.freeMemory()) / mb);
+                }
 
-                track = System.currentTimeMillis();
+
+                System.out.println("names init, " + (System.currentTimeMillis() - track) + "ms");
+                // forget appentities for the moment,we may never use them anyway
+/*
                 if (appServices != null) { // dunno why it wasn't there before
                     for (AppEntityService appEntityService : appServices) {
                         final List<JsonRecordTransport> appEntities = standardDAO.findFromTable(this, appEntityService.getTableName());
@@ -169,8 +241,7 @@ public final class AzquoMemoryDB {
                             appEntityService.loadEntityFromJson(this, appEntityRecord.id, appEntityRecord.json);
                         }
                     }
-                }
-                System.out.println("app entities loaded in " + (System.currentTimeMillis() - track) + "ms");
+                }*/
 
                 System.out.println("loaded data for " + getMySQLName());
 
@@ -178,18 +249,21 @@ public final class AzquoMemoryDB {
                 logger.error("could not load data for " + getMySQLName() + "!", e);
             }
             needsLoading = false;
-            marker = System.currentTimeMillis();
-            System.gc();
-            System.out.println("gc time : " + (System.currentTimeMillis() - marker));
-            long newUsed = (runtime.totalMemory() - runtime.freeMemory())/ mb;
-            System.out.println("Guess at DB size " + (newUsed - usedMB));
-            System.out.println("Used Memory:"
-                    + newUsed);
-            System.out.println("Free Memory:"
-                    + runtime.freeMemory() / mb);
-            System.out.println("Total Memory:" + runtime.totalMemory() / mb);
-            System.out.println("Max Memory:" + runtime.maxMemory() / mb);
-
+            if (memoryTrack) {
+                marker = System.currentTimeMillis();
+                // using system.gc before and after loading to get an idea of DB memory overhead
+                System.gc();
+                System.out.println("gc time : " + (System.currentTimeMillis() - marker));
+                long newUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
+                System.out.println("Guess at DB size " + (newUsed - usedMB));
+                System.out.println("Used Memory:"
+                        + newUsed);
+                System.out.println("Free Memory:"
+                        + runtime.freeMemory() / mb);
+                System.out.println("Total Memory:" + runtime.totalMemory() / mb);
+                System.out.println("Max Memory:" + runtime.maxMemory() / mb);
+            }
+            System.out.println("Total load time : " + (System.currentTimeMillis() - track) + "ms");
         }
     }
 
@@ -301,7 +375,7 @@ public final class AzquoMemoryDB {
     }*/
 
     public Name getNameByAttribute(final String attributeName, final String attributeValue, final Name parent) {
-        return getNameByAttribute(Arrays.asList(attributeName), attributeValue, parent);
+        return getNameByAttribute(Collections.singletonList(attributeName), attributeValue, parent);
     }
 
     public Name getNameByAttribute(final List<String> attributeNames, final String attributeValue, final Name parent) {

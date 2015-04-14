@@ -423,12 +423,15 @@ public final class DataLoadService {
                 String qty = stockVals.get("qty");
                 if (product!=null && qty!=null){
                     Name productName = azquoProductsFound.get(product);
-                    Set<Name> namesForValue = new HashSet<Name>();
-                    namesForValue.add(today);
-                    namesForValue.add(inStockName);
-                    namesForValue.add(productName);
-                    valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, qty, namesForValue);
-
+                    if (productName == null){
+                        System.out.println("unable to find product : " + product);
+                    } else {
+                        Set<Name> namesForValue = new HashSet<Name>();
+                        namesForValue.add(today);
+                        namesForValue.add(inStockName);
+                        namesForValue.add(productName);
+                        valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, qty, namesForValue);
+                    }
                 }
             }
         }

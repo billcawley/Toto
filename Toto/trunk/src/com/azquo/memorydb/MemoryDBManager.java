@@ -4,13 +4,11 @@ import com.azquo.admindao.OpenDatabaseDAO;
 import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OpenDatabase;
 import com.azquo.memorydbdao.StandardDAO;
-import com.azquo.service.AppEntityService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
-import java.util.List;
 
 /**
  * Oh-kay. While one can spin up a memory db from spring this is probably not the way to go, this will be the object that
@@ -21,7 +19,7 @@ public final class MemoryDBManager {
     @Autowired
     OpenDatabaseDAO openDatabaseDAO;
 
-    List<AppEntityService> appServices = null;
+//    List<AppEntityService> appServices = null;
 
     private final HashMap<String, AzquoMemoryDB> memoryDatabaseMap;
 
@@ -37,14 +35,14 @@ public final class MemoryDBManager {
     public synchronized AzquoMemoryDB getAzquoMemoryDB(Database database) throws Exception {
         AzquoMemoryDB loaded;
         if (database.getName().equals("temp")){
-            loaded =new AzquoMemoryDB(database, standardDAO, appServices);
+            loaded =new AzquoMemoryDB(database, standardDAO);
             return loaded;
         }
         loaded = memoryDatabaseMap.get(database.getMySQLName());
         if (loaded != null){
             return loaded;
         }
-        loaded = new AzquoMemoryDB(database, standardDAO, appServices);
+        loaded = new AzquoMemoryDB(database, standardDAO);
         memoryDatabaseMap.put(database.getMySQLName(), loaded);
         final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new GregorianCalendar(1900,0,0).getTime());// should start to get away from date
         openDatabaseDAO.store(openDatabase);
@@ -72,7 +70,7 @@ public final class MemoryDBManager {
         if (memoryDatabaseMap.get(database.getMySQLName()) != null){
             throw new Exception("cannot create new memory database one attached to that mysql database already exists");
         }
-        AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(database, standardDAO, appServices);
+        AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(database, standardDAO);
         memoryDatabaseMap.put(database.getMySQLName(), azquoMemoryDB);
     }
 

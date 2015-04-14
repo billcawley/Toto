@@ -178,4 +178,9 @@ WHERE id IN (1,2,3)
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` LIMIT 0," + SELECTLIMIT;
         return jdbcTemplate.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
     }
+
+    public final List<JsonRecordTransport> findFromTable(final AzquoMemoryDB azquoMemoryDB, final String tableName, int from, int limit) throws DataAccessException {
+        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` LIMIT " + from + "," + limit;
+        return jdbcTemplate.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
+    }
 }
