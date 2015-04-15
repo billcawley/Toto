@@ -214,6 +214,7 @@ public final class DataLoadService {
         String categoryNameId = null;
         String productNameId = null;
         String priceNameId = null;
+        String weightNameId = null;
         String countryNameId = null;
         String postcodeNameId = null;
         for (Map<String, String> attribute : tableMap.get("eav_attribute")) {
@@ -231,6 +232,9 @@ public final class DataLoadService {
             }
             if (attCode.equals("price") && entTypeId.equals(productEntityId)){
                 priceNameId = attId;
+            }
+            if (attCode.equals("weight") && entTypeId.equals(productEntityId)){
+                weightNameId = attId;
             }
            }
 
@@ -301,12 +305,17 @@ public final class DataLoadService {
         tableMap.remove("catalog_product_entity_varchar");
         //create a product structure
         for (Map<String, String> attributeRow : tableMap.get("catalog_product_entity_decimal")) {
-            if (attributeRow.get("attribute_id").equals(priceNameId) && attributeRow.get("store_id").equals("0")) {
+            if (attributeRow.get("store_id").equals("0")) {
                 //Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + attributeRow.get("entity_id"), topProduct, true,languages);
                 if (azquoProductsFound.get(attributeRow.get("entity_id")) == null){
                     System.out.println("Entity id linked in catalog_product_entity_varchar that doesn't exist in catalog_product_entity : " + attributeRow.get("entity_id"));
                 } else {
-                    azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted("PRICE", attributeRow.get("value"));
+                    if (attributeRow.get("attribute_id").equals(priceNameId)){
+                        azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted("PRICE", attributeRow.get("value"));
+                    }
+                    if (attributeRow.get("attribute_id").equals(weightNameId)){
+                        azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted("PRODUCT WEIGHT", attributeRow.get("value"));
+                    }
                 }
             }
         }
@@ -447,7 +456,7 @@ public final class DataLoadService {
                 if (product!=null && qty!=null){
                     Name productName = azquoProductsFound.get(product);
                     if (productName == null){
-                        System.out.println("unable to find product : " + product);
+                        System.out.println("unable to find product_id : " + product + " used in cataloginventory_stock_item");
                     } else {
                         Set<Name> namesForValue = new HashSet<Name>();
                         namesForValue.add(today);
@@ -668,8 +677,8 @@ public final class DataLoadService {
 
             }
             counter++;
-            if (counter == 10000){
-                System.out.println("10000 lines sales flat order item " + (System.currentTimeMillis() - marker));
+            if (counter == 100000){
+                System.out.println("100000 lines sales flat order item " + (System.currentTimeMillis() - marker));
                 System.out.println("Total part breakdown");
                 System.out.println("part 1 " + part1);
                 System.out.println("part 2 " + part2);
