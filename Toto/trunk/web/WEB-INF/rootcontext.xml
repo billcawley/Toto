@@ -67,12 +67,6 @@
     <bean name="openDatabaseDao" class="com.azquo.admindao.OpenDatabaseDAO"/>
     <bean name="onlineReportDao" class="com.azquo.admindao.OnlineReportDAO"/>
 
-    <!--<bean name="magentoDataLoadService" class="com.azquo.app.magento.service.DataLoadService"/>-->
-
-    <!-- define app services and their load order in a list -->
-    <!-- <bean name="feedbackService" class="com.azquo.app.reviews.service.FeedbackService"/> -->
-    <bean name="reviewService" class="com.azquo.app.reviews.service.ReviewService"/>
-
     <bean name="magentoService" class="com.azquo.app.magento.service.DataLoadService"/>
 
 
@@ -92,35 +86,21 @@
         <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
         <constructor-arg type="int" value="11"/>
     </bean>
-    <bean name="reviewsCustomer" class="com.azquo.app.reviews.service.ReviewsCustomerService">
-        <constructor-arg index="0" ref="nameService"/>
-        <constructor-arg index="1" ref="reviewsConnectionMap"/>
-    </bean>
-    <bean name="userService" class="com.azquo.app.reviews.service.UserService">
-        <constructor-arg index="0" ref="nameService"/>
-        <constructor-arg index="1" ref="adminService"/>
-        <constructor-arg index="2" ref="reviewsConnectionMap"/>
-    </bean>
-    <bean name="reviewsAuthenticationProvider" class="com.azquo.app.reviews.misc.ReviewsAuthenticationProvider"/>
+<!--    <bean name="reviewsAuthenticationProvider" class="com.azquo.app.reviews.misc.ReviewsAuthenticationProvider"/>
     <security:http auto-config="true" use-expressions="true" >
         <security:csrf disabled="true"/>
 
 
 
-        <!--        <security:intercept-url pattern="/phase1/login.html"       access="permitAll"            requires-channel="https" />
-                <security:intercept-url pattern="/phase1/errorPage.html"   access="permitAll"            requires-channel="http" />
-                <security:intercept-url pattern="/phase1/**"               access="hasRole('ROLE_USER')" requires-channel="https" />
-
-                <security:intercept-url pattern="/api/**"                  access="permitAll" requires-channel="http" /> -->
         <security:intercept-url pattern="/api/MerchantAdmin*"               access="hasRole('ROLE_USER')" requires-channel="http" />
         <security:intercept-url pattern="/api/MerchantAdmin/*"               access="hasRole('ROLE_USER')" requires-channel="http" />
         <security:intercept-url pattern="/api/SupplierResponse*"               access="hasRole('ROLE_USER')" requires-channel="http" />
         <security:intercept-url pattern="/api/SupplierResponse/*"               access="hasRole('ROLE_USER')" requires-channel="http" />
         <security:logout logout-url="/logout" logout-success-url="/logoutSuccess.html" />
-        <!--<security:form-login login-page="/phase1/login.html" authentication-failure-url="/phase1/errorPage.html"  default-target-url="/phase1/test.html"/>-->
+        <security:form-login login-page="/phase1/login.html" authentication-failure-url="/phase1/errorPage.html"  default-target-url="/phase1/test.html"/>
 
     </security:http>
     <security:authentication-manager>
         <security:authentication-provider ref="reviewsAuthenticationProvider"/>
-    </security:authentication-manager>
+    </security:authentication-manager>-->
 </beans>

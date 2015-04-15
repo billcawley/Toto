@@ -208,7 +208,7 @@ public class OnlineService {
         }
         head.append("<style>\n");
         head.append(azquoBook.printAllStyles());
-        head.append(readFile("excelStyle.css"));
+        head.append(readFile("css/excelStyle.css"));
         head.append("</style>\n");
         //velocityContext.put("script",readFile("online.js").toString());
         //velocityContext.put("topmenu",createTopMenu(loggedInConnection).toString());
@@ -304,13 +304,15 @@ public class OnlineService {
     }
 
     // to put a referenced CSS inline for example
+    // edd changing to read from web-inf
 
     StringBuilder readFile(String filename) {
         // First, copy the base css
         StringBuilder sb = new StringBuilder();
         BufferedReader in = null;
         try {
-            in = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream(filename)));
+
+            in = new BufferedReader(new InputStreamReader(servletContext.getResourceAsStream("/WEB-INF/"+ filename)));
             String line;
             while ((line = in.readLine()) != null) {
                 sb.append(line).append("\n");

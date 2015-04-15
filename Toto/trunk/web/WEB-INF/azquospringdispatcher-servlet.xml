@@ -22,8 +22,6 @@
     <context:component-scan base-package="com.azquo.controller">
     </context:component-scan>
     <!-- for app conntrollers -->
-    <context:component-scan base-package="com.azquo.app.reviews.controller">
-    </context:component-scan>
     <context:component-scan base-package="com.azquo.app.magento.controller">
     </context:component-scan>
 </beans>

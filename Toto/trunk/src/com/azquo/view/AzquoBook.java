@@ -10,6 +10,7 @@ import com.azquo.memorydb.Name;
 import com.azquo.service.*;
 import com.csvreader.CsvWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.apache.velocity.VelocityContext;
@@ -156,6 +157,7 @@ public class AzquoBook {
         this.nameService = nameService;
         this.importService = importService;
         this.onlineService = onlineService;
+        jacksonMapper.registerModule(new JSR310Module());
     }
 
 
@@ -908,6 +910,12 @@ public class AzquoBook {
                 data = jacksonMapper.writeValueAsString(adminService.getReportList(loggedInConnection));
             }
             if (data == null) return "";
+            // Edd: this is really hacky, I'm going to get rid of this problem
+            while (data.indexOf("[", 1) != -1){ // jackson serialiseation of localdatetime. ignore the outermost brackets
+                String dateString = data.substring(data.indexOf("[", 1), data.indexOf("]"));
+                dateString = dateString.substring(1); // trimmed to size
+                data = data.substring(0, data.indexOf("[", 1)) + dateString.replace(",", "-") + data.substring(data.indexOf("]") + 1);
+            }
             int lastHeading = headingsRange.getColumnCount();
             int rowNo = 0;
             //strip the square brackets
