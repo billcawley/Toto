@@ -17,16 +17,16 @@ import java.util.*;
  * Time: 19:25
  * To change this template use File | Settings | File Templates.
  * <p/>
- * I would use spring for session management but we can't use cookies here, it's requests from Excel. There may be a way around this.
- * I've moved it to the service package as I want to protect calls to get the database object
- * Has become more complex but still fairly simple, useful session stuff is more basic things like the connection id and database and timeout
  * A little more complex ins things like row headings. Used to just be a list but now it's maps (due to multiple regions on the excel sheet)
  * of lists of lists of names. Lists of lists due to mult level headings, e.g. London by container as two column headings above each other (the next one being london not by container)
  * Lockmaps and sent data maps are maps of the actual data sent to excel, this generally is read back by the csv reader
  *
- * Since Excel is no longer the priority this class might be a bit different if rewritten
+ * Not thread safe really although it should be one per session. As in multiple tabs or fast refreshes could cause problems - that's something to look into.
  *
- * Not thread safe really although it should be one per session. As in multiple tabs or fast refreshes could cause problems.
+ * Since Excel is no longer the priority this class might be a bit different if rewritten - I'm going to be working on this, row and column heading for example may be removed.
+ *
+ *
+ *
  *
  */
 public final class LoggedInConnection extends AzquoMemoryDBConnection {
@@ -46,40 +46,6 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
         }
     }
-
-    // for the map of values for a region. USed to be just a list of values for each cell but now given attributes it could be a lit of names and and attributes - typically will be just one attribute and name
-    // a little similar to name or value I suppose though this needs attributes specified
-
-    public static class ListOfValuesOrNamesAndAttributeName{
-        private final List<Value> values;
-        private final List<Name> names;
-        private final List<String> attributeNames;
-
-        public ListOfValuesOrNamesAndAttributeName(List<Name> names, List<String> attributeNames) {
-            this.names = names;
-            this.attributeNames = attributeNames;
-            this.values = null;
-        }
-
-        public ListOfValuesOrNamesAndAttributeName(List<Value> values) {
-            this.values = values;
-            this.names = null;
-            this.attributeNames = null;
-        }
-
-        public List<Value> getValues() {
-            return values;
-        }
-
-        public List<Name> getNames() {
-            return names;
-        }
-
-        public List<String> getAttributeNames() {
-            return attributeNames;
-        }
-    }
-
 
 
     private static final Logger logger = Logger.getLogger(LoggedInConnection.class);

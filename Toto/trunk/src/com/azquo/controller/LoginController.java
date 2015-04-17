@@ -33,6 +33,7 @@ public class LoginController {
     public String handleRequest(ModelMap model, HttpServletRequest request
              , @RequestParam(value = "user", required = false)  String userEmail
             , @RequestParam(value = "password", required = false)  String password
+            , @RequestParam(value = "connectionid", required = false)  String connectionid
 
                                 ) throws Exception {
         String callerId = request.getRemoteAddr();
@@ -40,16 +41,22 @@ public class LoginController {
             userEmail += callerId;
         }
 
-        LoggedInConnection loggedInConnection;
-        if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
-            model.put("userEmail", userEmail);
-            loggedInConnection = loginService.login(null, userEmail, password, 60, null, false);
-            if (loggedInConnection != null){
-                request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
-                // redirect to online, I want to zap the connection id if I can
-                return "redirect:Online?reportid=1";
-            } else {// feedback to users about incorrect details
-                model.put("error", "incorrect login details");
+        if (connectionid != null && connectionid.length() > 0){ // nasty hack to support connection id from the plugin
+            if (request.getServletContext().getAttribute(connectionid) != null){ // then pick up the temp logged in conneciton
+                request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, request.getServletContext().getAttribute(connectionid));
+                request.getServletContext().removeAttribute(connectionid); // take it off the context
+                return "redirect:/api/Online?reportid=1";
+            }
+        } else {
+            if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
+                model.put("userEmail", userEmail);
+                LoggedInConnection loggedInConnection = loginService.login(null, userEmail, password, 60, null, false);
+                if (loggedInConnection != null){
+                    request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
+                    return "redirect:/api/Online?reportid=1";
+                } else {// feedback to users about incorrect details
+                    model.put("error", "incorrect login details");
+                }
             }
         }
         return "login";

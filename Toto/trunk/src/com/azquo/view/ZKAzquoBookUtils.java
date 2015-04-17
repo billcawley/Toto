@@ -7,6 +7,7 @@ import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Value;
 import com.azquo.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
@@ -166,25 +167,30 @@ public class ZKAzquoBookUtils {
             List<List<List<DataRegionHeading>>> columnHeadings = getHeadingsLists(columnHeadingsDescription, sheet, loggedInConnection);
             List<List<List<DataRegionHeading>>> rowHeadings = getHeadingsLists(rowHeadingsDescription, sheet, loggedInConnection);
             // transpose, expand, transpose again
-            List<List<Object>> displayObjectsForNewSheet = new ArrayList<List<Object>>();
-
             loggedInConnection.setRowHeadings(region, valueService.expandHeadings(rowHeadings));
             loggedInConnection.setColumnHeadings(region, valueService.expandHeadings(valueService.transpose2DList(columnHeadings)));
             // deal with context
             // copied from valueservice.getdatareegion. Seems a bit odd but this is the old behavior
+            // ok IU'd made a mistake here assuming context was only ever one cell, it can be multiple, hcen scan through the cells but just tack on names, the placing in the cells is irrelevant
             final List<Name> contextNames = new ArrayList<Name>();
             if (contextDescription != null) {
-                String contextString = sheet.getInternalSheet().getCell(contextDescription.getRow(), contextDescription.getColumn()).getStringValue();
-                if (contextString != null) {
-                    final StringTokenizer st = new StringTokenizer(contextString, "\n");
-                    while (st.hasMoreTokens()) {
-                        final List<Name> thisContextNames = nameService.parseQuery(loggedInConnection, st.nextToken().trim());
-                        if (thisContextNames.size() > 1) {
-                            throw new Exception("error: context names must be individual - use 'as' to put sets in context");
-                        }
-                        if (thisContextNames.size() > 0) {
-                            //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
-                            contextNames.add(thisContextNames.get(0));
+                for (int rowIndex = contextDescription.getRow(); rowIndex <= contextDescription.getLastRow(); rowIndex++) {
+                    List<List<DataRegionHeading>> row = new ArrayList<List<DataRegionHeading>>();
+                    for (int colIndex = contextDescription.getColumn(); colIndex <= contextDescription.getLastColumn(); colIndex++) {
+                        SCell cell = sheet.getInternalSheet().getCell(rowIndex, colIndex);
+                        String contextString = cell.getStringValue();
+                        if (contextString != null) {
+                            final StringTokenizer st = new StringTokenizer(contextString, "\n");
+                            while (st.hasMoreTokens()) {
+                                final List<Name> thisContextNames = nameService.parseQuery(loggedInConnection, st.nextToken().trim());
+                                if (thisContextNames.size() > 1) {
+                                    throw new Exception("error: context names must be individual - use 'as' to put sets in context");
+                                }
+                                if (thisContextNames.size() > 0) {
+                                    //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
+                                    contextNames.add(thisContextNames.get(0));
+                                }
+                            }
                         }
                     }
                 }
@@ -192,8 +198,12 @@ public class ZKAzquoBookUtils {
             loggedInConnection.setContext(region, contextNames);
 
             // ok now ready for the data
-            valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, loggedInConnection.getContext(region), region, filterCount, maxRows, maxCols, displayObjectsForNewSheet);
-
+            // ok going to try to use the new funciton
+            //valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, loggedInConnection.getContext(region), region, filterCount, maxRows, maxCols, displayObjectsForNewSheet);
+            List<List<AzquoCell>> dataToShow = valueService.getAzquoCellsForColumnsRowsAndContext(loggedInConnection, loggedInConnection.getColumnHeadings(region)
+                    , loggedInConnection.getRowHeadings(region), loggedInConnection.getContext(region), loggedInConnection.getLanguages());
+            // not going to do this just yet
+            //valueService.sortAndFilterCells()
 
             List<List<DataRegionHeading>> expandedColumnHeadings = valueService.getColumnHeadingsAsArray(loggedInConnection, region);
             List<List<DataRegionHeading>> expandedRowHeadings = valueService.getRowHeadingsAsArray(loggedInConnection, region, filterCount);
@@ -279,10 +289,17 @@ public class ZKAzquoBookUtils {
                     row++;
                 }
                 row = displayDataRegion.getRow();
-                for (List<Object> rowCellValues : displayObjectsForNewSheet) {
+                for (List<AzquoCell> rowCellValues : dataToShow) {
                     int col = displayDataRegion.getColumn();
-                    for (Object cellValue : rowCellValues) {
-                        sheet.getInternalSheet().getCell(row, col).setValue(cellValue);
+                    for (AzquoCell cellValue : rowCellValues) {
+                        if (!cellValue.stringValue.isEmpty()){ // then something to set
+                            // the notable thing ehre is that ZK uses the object type to work out data type
+                            if (NumberUtils.isNumber(cellValue.stringValue)){
+                                sheet.getInternalSheet().getCell(row, col).setValue(cellValue.doubleValue);// think that works . . .
+                            } else {
+                                sheet.getInternalSheet().getCell(row, col).setValue(cellValue.stringValue);// think that works . . .
+                            }
+                        }
                         col++;
                     }
                     row++;

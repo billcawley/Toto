@@ -5,6 +5,7 @@ import com.azquo.admindao.OnlineReportDAO;
 import com.azquo.adminentities.Database;
 import com.azquo.adminentities.OnlineReport;
 import com.azquo.app.magento.service.DataLoadService;
+import com.azquo.controller.LoginController;
 import com.azquo.service.*;
 import com.azquo.util.AzquoMailer;
 //import org.apache.log4j.Logger;
@@ -84,10 +85,12 @@ public class MagentoController {
                 //loggedInConnection = loginService.login("test","magentobill","password",0,"",false);
             if (op.equals("connect")) {
                 if (dataLoadService.findLastUpdate(loggedInConnection)!=null) {
-                    // was connection id here, why?
-                    return dataLoadService.findLastUpdate(loggedInConnection);
+                    // was connection id here, hacking ths back in to get the logged in conneciton
+                    String tempConnectionId = System.currentTimeMillis() + "";
+                    request.getServletContext().setAttribute(tempConnectionId, loggedInConnection);
+                    return tempConnectionId;
                 }else{
-                    return dataLoadService.findRequiredTables(loggedInConnection);
+                    dataLoadService.findRequiredTables(loggedInConnection);
                 }
             }
 
@@ -132,8 +135,10 @@ public class MagentoController {
                             azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
                             azquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                       }
-                    // was connection id here
-                    return "ok";
+                    // was connection id here, hacking ths back in to get the logged in conneciton
+                    String tempConnectionId = System.currentTimeMillis() + "";
+                    request.getServletContext().setAttribute(tempConnectionId, loggedInConnection);
+                    return tempConnectionId;
                 } else{
                     return "error: no data posted";
                 }
