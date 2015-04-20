@@ -1,7 +1,8 @@
 package com.azquo.app.magento.service;
 
+import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Name;
+import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.*;

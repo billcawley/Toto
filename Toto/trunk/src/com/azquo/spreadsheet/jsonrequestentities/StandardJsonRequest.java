@@ -1,4 +1,4 @@
-package com.azquo.jsonrequestentities;
+package com.azquo.spreadsheet.jsonrequestentities;
 
 /**
  * Created by cawley on 17/01/14

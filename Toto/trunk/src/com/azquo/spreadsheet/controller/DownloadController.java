@@ -1,4 +1,4 @@
-package com.azquo.controller;
+package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.onlinereport.OnlineReport;

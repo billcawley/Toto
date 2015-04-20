@@ -1,8 +1,8 @@
 package com.azquo.memorydb.service;
 
-import com.azquo.jsonrequestentities.NameJsonRequest;
-import com.azquo.memorydb.Name;
-import com.azquo.memorydb.Provenance;
+import com.azquo.spreadsheet.jsonrequestentities.NameJsonRequest;
+import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.spreadsheet.LoggedInConnection;
 import com.azquo.spreadsheet.StringUtils;
@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.*;
-//import java.util.concurrent.ConcurrentHashMap;
+//dataimport java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -271,7 +271,7 @@ public final class NameService {
         if (name.length() == 0) {
             return null;
         }
-     /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an import),and insert a structure into it*/
+     /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an dataimport),and insert a structure into it*/
         if (attributeNames == null) {
             attributeNames = new ArrayList<String>();
             attributeNames.add(Name.DEFAULT_DISPLAY_NAME);

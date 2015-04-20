@@ -1,4 +1,4 @@
-package com.azquo.memorydb;
+package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.dao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;

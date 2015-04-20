@@ -1,4 +1,4 @@
-package com.azquo.memorydb;
+package com.azquo.memorydb.core;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,9 +1,9 @@
 package com.github.holodnov.calculator;
 
-import com.azquo.memorydb.AzquoMemoryDB;
-import com.azquo.memorydb.Name;
-import com.azquo.memorydb.Provenance;
-import com.azquo.memorydb.Value;
+import com.azquo.memorydb.core.AzquoMemoryDB;
+import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Provenance;
+import com.azquo.memorydb.core.Value;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;

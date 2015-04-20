@@ -1,7 +1,7 @@
 package com.azquo.spreadsheet;
 
-import com.azquo.memorydb.Name;
-import com.azquo.memorydb.Value;
+import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Value;
 
 import java.util.List;
 

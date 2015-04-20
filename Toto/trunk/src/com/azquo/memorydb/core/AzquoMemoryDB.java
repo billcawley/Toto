@@ -1,4 +1,4 @@
-package com.azquo.memorydb;
+package com.azquo.memorydb.core;
 
 import com.azquo.admin.database.Database;
 import com.azquo.memorydb.dao.JsonRecordTransport;

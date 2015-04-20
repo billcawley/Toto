@@ -2,6 +2,10 @@ package com.azquo.spreadsheet;
 
 import com.azquo.admin.user.User;
 import com.azquo.memorydb.*;
+import com.azquo.memorydb.core.AzquoMemoryDB;
+import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Provenance;
+import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.view.AzquoBook;
 import org.apache.log4j.Logger;
 

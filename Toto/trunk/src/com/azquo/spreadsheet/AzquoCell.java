@@ -1,6 +1,6 @@
 package com.azquo.spreadsheet;
 
-import com.azquo.memorydb.Name;
+import com.azquo.memorydb.core.Name;
 
 import java.util.List;
 

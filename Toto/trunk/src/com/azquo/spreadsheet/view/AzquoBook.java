@@ -6,8 +6,9 @@ import com.aspose.cells.Font;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
-import com.azquo.memorydb.*;
-import com.azquo.memorydb.Name;
+import com.azquo.dataimport.ImportService;
+import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.*;
@@ -439,7 +440,7 @@ public class AzquoBook {
 
         Range rowHeadings = getRange("az_rowheadings" + region);
         if (rowHeadings == null) {
-            //assume this is an import region
+            //assume this is an dataimport region
             return "";
             //return "error: no range az_RowHeadings" + region;
         }
@@ -877,22 +878,22 @@ public class AzquoBook {
         int headingsCol = headingsRange.getFirstColumn();
         int firstHeading = headingsRange.getFirstColumn();
         if (regionName.equals("data") && loggedInConnection.getNamesToSearch() != null) {
-            Map<Set<com.azquo.memorydb.Name>, Set<Value>> shownValues = valueService.getSearchValues(loggedInConnection.getNamesToSearch());
+            Map<Set<Name>, Set<Value>> shownValues = valueService.getSearchValues(loggedInConnection.getNamesToSearch());
             loggedInConnection.setValuesFound(shownValues);
-            LinkedHashSet<com.azquo.memorydb.Name> nameHeadings = valueService.getHeadings(shownValues);
+            LinkedHashSet<Name> nameHeadings = valueService.getHeadings(shownValues);
             int colNo = firstHeading + 1;
             int rowNo = 0;
-            for (com.azquo.memorydb.Name name : nameHeadings) {
+            for (Name name : nameHeadings) {
                 azquoCells.get(headingsRow, headingsCol + colNo).setValue(name.getDefaultDisplayName());
                 colNo++;
             }
-            for (Set<com.azquo.memorydb.Name> names : shownValues.keySet()) {
+            for (Set<Name> names : shownValues.keySet()) {
                 rowNo++;
                 colNo = firstHeading;
                 azquoCells.get(headingsRow + rowNo, headingsCol + colNo).setValue(valueService.addValues(shownValues.get(names)));
                 colNo++;
-                for (com.azquo.memorydb.Name name : nameHeadings) {
-                    for (com.azquo.memorydb.Name valueName : names) {
+                for (Name name : nameHeadings) {
+                    for (Name valueName : names) {
                         if (valueName.findAllParents().contains(name)) {
                             azquoCells.get(headingsRow + rowNo, headingsCol + colNo).setValue(valueName.getDefaultDisplayName());
                         }
@@ -1344,7 +1345,7 @@ public class AzquoBook {
             if (choice != null) {
                 int choiceRow = 0;
                 if (choice.getRowCount() > 1) choiceRow = cell.getRow() - chosenRange.getFirstRow();
-                List<com.azquo.memorydb.Name> choiceList = new ArrayList<Name>();
+                List<Name> choiceList = new ArrayList<Name>();
                 String cellChoice = choice.get(choiceRow, 0).getStringValue();
                 List<String> constants = new ArrayList<String>();
                 if (cellChoice.startsWith("\"") || cellChoice.startsWith("“")) {
@@ -1373,7 +1374,7 @@ public class AzquoBook {
                     for (String constant : constants) {
                         content += addOption(constant, origContent);
                     }
-                    for (com.azquo.memorydb.Name name : choiceList) {
+                    for (Name name : choiceList) {
                         if (name != null) {
                             content += addOption(name.getDefaultDisplayName(), origContent);
                         }
@@ -1853,17 +1854,17 @@ public class AzquoBook {
         if (regionInfo == null) return "";
         if (regionInfo.region.equals("az_headingsdata")) {
             //Admin inspect names only
-            for (Set<com.azquo.memorydb.Name> names : loggedInConnection.getValuesFound().keySet()) {
+            for (Set<Name> names : loggedInConnection.getValuesFound().keySet()) {
                 if (regionInfo.row-- == 0) {
                     if (regionInfo.col == 0) {
                         List<Value> tempList = new ArrayList<Value>();
-                        for (com.azquo.memorydb.Value value : loggedInConnection.getValuesFound().get(names)) {
+                        for (Value value : loggedInConnection.getValuesFound().get(names)) {
                             tempList.add(value);
                         }
                         return valueService.formatCellProvenanceForOutput(loggedInConnection, tempList, jsonFunction);
 
                     } else {
-                        for (com.azquo.memorydb.Name tempname : names) {
+                        for (Name tempname : names) {
                             if (--regionInfo.col == 0) {
                                 return valueService.formatProvenanceForOutput(tempname.getProvenance(), jsonFunction);
 

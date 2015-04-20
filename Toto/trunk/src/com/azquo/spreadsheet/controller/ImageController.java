@@ -1,4 +1,4 @@
-package com.azquo.controller;
+package com.azquo.spreadsheet.controller;
 
 import com.azquo.spreadsheet.OnlineService;
 import org.springframework.beans.factory.annotation.Autowired;

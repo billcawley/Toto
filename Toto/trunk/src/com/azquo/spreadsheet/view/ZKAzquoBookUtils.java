@@ -3,9 +3,9 @@ package com.azquo.spreadsheet.view;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
-import com.azquo.controller.OnlineController;
-import com.azquo.memorydb.Name;
-import com.azquo.memorydb.Value;
+import com.azquo.spreadsheet.controller.OnlineController;
+import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.*;
@@ -483,22 +483,22 @@ public class ZKAzquoBookUtils {
         int headingsCol = headingsRange.getColumn();
         int firstHeading = headingsRange.getColumn();
         if (region.equals("data") && loggedInConnection.getNamesToSearch() != null) {
-            Map<Set<com.azquo.memorydb.Name>, Set<Value>> shownValues = valueService.getSearchValues(loggedInConnection.getNamesToSearch());
+            Map<Set<Name>, Set<Value>> shownValues = valueService.getSearchValues(loggedInConnection.getNamesToSearch());
             loggedInConnection.setValuesFound(shownValues);
-            LinkedHashSet<com.azquo.memorydb.Name> nameHeadings = valueService.getHeadings(shownValues);
+            LinkedHashSet<Name> nameHeadings = valueService.getHeadings(shownValues);
             int colNo = firstHeading + 1;
             int rowNo = 0;
-            for (com.azquo.memorydb.Name name : nameHeadings) {
+            for (Name name : nameHeadings) {
                 sheet.getInternalSheet().getCell(headingsRow, headingsCol + colNo).setValue(name.getDefaultDisplayName());
                 colNo++;
             }
-            for (Set<com.azquo.memorydb.Name> names : shownValues.keySet()) {
+            for (Set<Name> names : shownValues.keySet()) {
                 rowNo++;
                 colNo = firstHeading;
                 sheet.getInternalSheet().getCell(headingsRow + rowNo, headingsCol + colNo).setValue(valueService.addValues(shownValues.get(names)));
                 colNo++;
-                for (com.azquo.memorydb.Name name : nameHeadings) {
-                    for (com.azquo.memorydb.Name valueName : names) {
+                for (Name name : nameHeadings) {
+                    for (Name valueName : names) {
                         if (valueName.findAllParents().contains(name)) {
                             sheet.getInternalSheet().getCell(headingsRow + rowNo, headingsCol + colNo).setValue(valueName.getDefaultDisplayName());
                         }

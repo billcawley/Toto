@@ -1,9 +1,9 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Name;
-import com.azquo.memorydb.Provenance;
-import com.azquo.memorydb.Value;
+import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Provenance;
+import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.*;
 import com.csvreader.CsvReader;
 import org.apache.commons.lang.math.NumberUtils;
@@ -96,7 +96,7 @@ public final class ValueService {
         boolean alreadyInDatabase = false;
         for (Value existingValue : existingValues) { // really should only be one
             if (existingValue.getProvenance().equals(azquoMemoryDBConnection.getProvenance()) && existingValue.getProvenance().getMethod().equals("import")) {
-                //new behaviour - add values from same import.
+                //new behaviour - add values from same dataimport.
                 try {
                     Double existingDouble = Double.parseDouble(existingValue.getText());
                     Double newValue = Double.parseDouble(valueString);

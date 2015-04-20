@@ -1,6 +1,6 @@
 package com.azquo.spreadsheet;
 
-import com.azquo.memorydb.Name;
+import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import org.apache.commons.lang.math.NumberUtils;
 

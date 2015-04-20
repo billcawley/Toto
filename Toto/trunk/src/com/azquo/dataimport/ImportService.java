@@ -1,4 +1,4 @@
-package com.azquo.spreadsheet;
+package com.azquo.dataimport;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
@@ -7,9 +7,10 @@ import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.database.UploadRecord;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Name;
+import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
+import com.azquo.spreadsheet.OnlineService;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.csvreader.CsvReader;
 import org.apache.commons.io.FileUtils;
@@ -22,7 +23,7 @@ import java.util.zip.ZipInputStream;
 
 /**
  * Created by bill on 13/12/13.
- * spreadsheet to process files used to import data into the database
+ * spreadsheet to process files used to dataimport data into the database
  *
  *
  * edd : I don't really understand all this code but for the moment I'm not that concerned by that.
@@ -42,7 +43,7 @@ public final class ImportService {
     }
 
 
-    //private static final String reportPath = "/home/bill/apache-tomcat-7.0.47/import/";
+    //private static final String reportPath = "/home/bill/apache-tomcat-7.0.47/dataimport/";
 //    public static final String homePath = "/home/cawley/";
     public static final String dbPath = "/databases/";
 
@@ -137,7 +138,7 @@ public final class ImportService {
     public void importTheFile(final AzquoMemoryDBConnection azquoMemoryDBConnection, String fileName, InputStream uploadFile, String fileType,boolean skipBase64, List<String> attributeNames)
             throws Exception {
 
-        //fileType is now always the first word of the spreadsheet/import file name
+        //fileType is now always the first word of the spreadsheet/dataimport file name
 
            azquoMemoryDBConnection.setNewProvenance("import", fileName);
         if (azquoMemoryDBConnection.getAzquoMemoryDB() == null && !fileName.endsWith(".xls") && !fileName.endsWith(".xlsx")) {
@@ -475,7 +476,7 @@ public final class ImportService {
             }
 
          }
-        System.out.println("csv import took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
+        System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
 
         azquoMemoryDBConnection.persist();
 
@@ -487,9 +488,9 @@ public final class ImportService {
 
         int col = 0;
         String error = "";
-        //if the file is of type (e.g.) 'sales' and there is a name 'import sales', thisis uses as an interpreter.  It need not interpret every column heading, but
+        //if the file is of type (e.g.) 'sales' and there is a name 'dataimport sales', thisis uses as an interpreter.  It need not interpret every column heading, but
         // any attribute of the same name as a column heading will be used.
-        Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "import " + fileType, attributeNames);
+        Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         for (String header : headers) {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 ImportHeading heading = new ImportHeading();

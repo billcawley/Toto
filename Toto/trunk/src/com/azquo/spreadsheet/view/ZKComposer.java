@@ -2,7 +2,7 @@ package com.azquo.spreadsheet.view;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.user.UserChoiceDAO;
-import com.azquo.controller.OnlineController;
+import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.*;

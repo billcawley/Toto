@@ -1,6 +1,6 @@
 package com.azquo.memorydb.dao;
 
-import com.azquo.memorydb.AzquoMemoryDB;
+import com.azquo.memorydb.core.AzquoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;

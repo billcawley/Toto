@@ -1,8 +1,8 @@
-package com.azquo.controller;
+package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.jsonrequestentities.NameJsonRequest;
-import com.azquo.memorydb.Name;
+import com.azquo.spreadsheet.jsonrequestentities.NameJsonRequest;
+import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.*;

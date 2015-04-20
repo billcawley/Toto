@@ -2,6 +2,9 @@ package com.azquo.memorydb;
 
 import com.azquo.admin.database.Database;
 import com.azquo.admin.user.User;
+import com.azquo.memorydb.core.AzquoMemoryDB;
+import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Provenance;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;

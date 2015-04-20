@@ -1,4 +1,4 @@
-package com.azquo.jsonrequestentities;
+package com.azquo.spreadsheet.jsonrequestentities;
 
 import java.util.Map;
 

@@ -1,6 +1,6 @@
 package com.azquo.spreadsheet;
 
-import com.azquo.memorydb.Name;
+import com.azquo.memorydb.core.Name;
 
 /**
  * Created by cawley on 03/02/15.
