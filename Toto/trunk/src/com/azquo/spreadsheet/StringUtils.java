@@ -1,6 +1,7 @@
-package com.azquo.service;
+package com.azquo.spreadsheet;
 
 import com.azquo.memorydb.Name;
+import com.azquo.memorydb.service.NameService;
 import org.apache.commons.lang.math.NumberUtils;
 
 import java.text.DecimalFormat;
@@ -209,7 +210,7 @@ I should be ok for stringtokenizer at this point
                 while (term.indexOf(NameService.NAMEMARKER) != -1){ // we need to put the quoted ones back in, it will be the same order they were taken out in, hence remove(0) will work.
                     term = term.substring(0, term.indexOf(NameService.NAMEMARKER)) + quotedNameCache.remove(0) + term.substring(term.indexOf(NameService.NAMEMARKER) + 3);
                 }
-                /* ok the use of name marker might be a bit ambiguous. First used internally here for names or fragments in quotes. Now used in the returned string and the names strings are chucked into an array to be resolved in name service
+                /* ok the use of name marker might be a bit ambiguous. First used internally here for names or fragments in quotes. Now used in the returned string and the names strings are chucked into an array to be resolved in name spreadsheet
                 we also need attribute names in array so attribute names don't trip the shunting hard algorithm etc. Of course attributes aren't fit for batch resolution after this  parse
                 I'm not completely clear this is the best way but it the resultant statement is "safe" for the shunting yard algorithm
                 */
@@ -250,7 +251,7 @@ I should be ok for stringtokenizer at this point
 
     // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
 
-    protected String shuntingYardAlgorithm(String calc) {
+    public String shuntingYardAlgorithm(String calc) {
         // note from Edd, this function assumes a string ready to parse, quoted areas dealt with
 /*
         Routine to convert a formula (if it exists) to reverse polish.

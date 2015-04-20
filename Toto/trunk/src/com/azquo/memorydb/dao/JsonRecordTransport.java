@@ -1,4 +1,4 @@
-package com.azquo.memorydbdao;
+package com.azquo.memorydb.dao;
 
 /**
  * now we've simplified the way records are persisted we need to be able to move them around

@@ -1,4 +1,4 @@
-package com.azquo.service;
+package com.azquo.spreadsheet;
 
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Value;

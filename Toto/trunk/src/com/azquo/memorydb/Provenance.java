@@ -1,6 +1,6 @@
 package com.azquo.memorydb;
 
-import com.azquo.memorydbdao.StandardDAO;
+import com.azquo.memorydb.dao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.log4j.Logger;

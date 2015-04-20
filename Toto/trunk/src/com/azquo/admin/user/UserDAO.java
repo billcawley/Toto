@@ -1,7 +1,7 @@
 package com.azquo.admin.user;
 
 import com.azquo.admin.StandardDAO;
-import com.azquo.service.AdminService;
+import com.azquo.admin.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;

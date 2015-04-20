@@ -2,9 +2,9 @@ package com.azquo.controller;
 
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
-import com.azquo.service.LoggedInConnection;
-import com.azquo.service.LoginService;
-import com.azquo.service.OnlineService;
+import com.azquo.spreadsheet.LoggedInConnection;
+import com.azquo.spreadsheet.LoginService;
+import com.azquo.spreadsheet.OnlineService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;

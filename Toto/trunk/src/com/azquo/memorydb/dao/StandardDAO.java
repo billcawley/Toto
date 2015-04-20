@@ -1,4 +1,4 @@
-package com.azquo.memorydbdao;
+package com.azquo.memorydb.dao;
 
 import com.azquo.memorydb.AzquoMemoryDB;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +39,7 @@ public class StandardDAO {
     private static final String ID = "id";
     private static final String JSON = "json";
 
-    // there will be others for app stuff, their table names will live in the service
+    // there will be others for app stuff, their table names will live in the spreadsheet
     // given how wonderfully generic this class is I could take these out . . .no harm here I suppose
 
     public enum PersistedTable {provenance, name, value}

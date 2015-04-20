@@ -4,7 +4,7 @@ import java.util.Map;
 
 /**
  * Created by cawley on 17/01/14
- * to be used by the name controller and service, easy way to parse the sent json with a jackson mapper
+ * to be used by the name controller and spreadsheet, easy way to parse the sent json with a jackson mapper
  */
 public class NameJsonRequest extends StandardJsonRequest {
     public String name;

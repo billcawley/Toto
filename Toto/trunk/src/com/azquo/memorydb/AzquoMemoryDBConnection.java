@@ -1,10 +1,7 @@
-package com.azquo.service;
+package com.azquo.memorydb;
 
 import com.azquo.admin.database.Database;
 import com.azquo.admin.user.User;
-import com.azquo.memorydb.AzquoMemoryDB;
-import com.azquo.memorydb.Name;
-import com.azquo.memorydb.Provenance;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
@@ -42,7 +39,7 @@ public class AzquoMemoryDBConnection {
         writePermissions = new ArrayList<Set<Name>>();
     }
 
-    protected AzquoMemoryDB getAzquoMemoryDB() {
+    public AzquoMemoryDB getAzquoMemoryDB() {
         return azquoMemoryDB;
     }
 
@@ -75,7 +72,9 @@ public class AzquoMemoryDBConnection {
         return azquoMemoryDB.getDatabase().getName();
     }
 
-    protected void setAzquoMemoryDB(final AzquoMemoryDB azquoMemoryDB) {
+    // todo, address this being public now I've refactored, a big issue??
+
+    public void setAzquoMemoryDB(final AzquoMemoryDB azquoMemoryDB) {
         this.azquoMemoryDB = azquoMemoryDB;
     }
 

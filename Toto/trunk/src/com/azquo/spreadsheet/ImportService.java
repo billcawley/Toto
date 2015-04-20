@@ -1,11 +1,15 @@
-package com.azquo.service;
+package com.azquo.spreadsheet;
 
+import com.azquo.admin.AdminService;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.database.UploadRecordDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.database.UploadRecord;
+import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Name;
+import com.azquo.memorydb.service.NameService;
+import com.azquo.memorydb.service.ValueService;
 import com.azquo.view.AzquoBook;
 import com.csvreader.CsvReader;
 import org.apache.commons.io.FileUtils;
@@ -18,7 +22,7 @@ import java.util.zip.ZipInputStream;
 
 /**
  * Created by bill on 13/12/13.
- * service to process files used to import data into the database
+ * spreadsheet to process files used to import data into the database
  *
  *
  * edd : I don't really understand all this code but for the moment I'm not that concerned by that.
@@ -277,7 +281,7 @@ public final class ImportService {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
             heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
             String peersString = readClause(PEERS, clause);
-            if (peersString.startsWith("{")) { // array, typically when creating in the first place, the service call will insert after any existing
+            if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
                 if (peersString.contains("}")) {
                     peersString = peersString.substring(1, peersString.indexOf("}"));
                     final StringTokenizer st = new StringTokenizer(peersString, ",");

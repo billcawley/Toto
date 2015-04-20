@@ -1,6 +1,5 @@
-package com.azquo.service;
+package com.azquo.admin;
 
-import com.azquo.admin.MySQLDatabaseManager;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
@@ -16,6 +15,11 @@ import com.azquo.admin.user.UserDAO;
 import com.azquo.memorydb.MemoryDBManager;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Value;
+import com.azquo.memorydb.service.NameService;
+import com.azquo.memorydb.service.ValueService;
+import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.spreadsheet.LoggedInConnection;
+import com.azquo.spreadsheet.LoginService;
 import com.azquo.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;

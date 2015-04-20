@@ -1,10 +1,7 @@
-package com.azquo.service;
+package com.azquo.spreadsheet;
 
 import com.azquo.admin.user.User;
-import com.azquo.memorydb.AzquoMemoryDB;
-import com.azquo.memorydb.Name;
-import com.azquo.memorydb.Provenance;
-import com.azquo.memorydb.Value;
+import com.azquo.memorydb.*;
 import com.azquo.view.AzquoBook;
 import org.apache.log4j.Logger;
 

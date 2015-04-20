@@ -1,8 +1,11 @@
 package com.azquo.view;
 
+import com.azquo.admin.AdminService;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.controller.OnlineController;
-import com.azquo.service.*;
+import com.azquo.memorydb.service.NameService;
+import com.azquo.memorydb.service.ValueService;
+import com.azquo.spreadsheet.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.zk.ui.Component;
@@ -41,7 +44,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
-        // perhaps a bit long winded but it gets us the service
+        // perhaps a bit long winded but it gets us the spreadsheet
         Session session = Sessions.getCurrent();
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
         onlineService = (OnlineService)applicationContext.getBean("onlineService");

@@ -1,5 +1,6 @@
-package com.azquo.service;
+package com.azquo.spreadsheet;
 
+import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.OpenDatabaseDAO;
@@ -8,6 +9,8 @@ import com.azquo.admin.user.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.memorydb.Name;
+import com.azquo.memorydb.service.NameService;
+import com.azquo.memorydb.service.ValueService;
 import com.azquo.view.AzquoBook;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;

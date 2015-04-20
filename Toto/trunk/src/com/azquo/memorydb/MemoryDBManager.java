@@ -3,7 +3,7 @@ package com.azquo.memorydb;
 import com.azquo.admin.database.OpenDatabaseDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.OpenDatabase;
-import com.azquo.memorydbdao.StandardDAO;
+import com.azquo.memorydb.dao.StandardDAO;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;

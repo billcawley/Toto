@@ -42,7 +42,7 @@ public abstract class AzquoMemoryDBEntity {
     }
 
     //key with this is it makes the setting of an Id only in context of a memory db and hence one can only make one of these in this package (I think!)
-    // ok that boolean is for the app entities, trying to set the persist flag before teh service has been set will result in a null pointer so I need this option
+    // ok that boolean is for the app entities, trying to set the persist flag before teh spreadsheet has been set will result in a null pointer so I need this option
     // kind of messy but not sure how to get around that
     protected AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id, boolean dontSetPersistFlag) throws Exception {
         this.azquoMemoryDB = azquoMemoryDB;
@@ -52,7 +52,7 @@ public abstract class AzquoMemoryDBEntity {
             this.id = id;
             // does not need inserting
             needsInserting = false;
-        } else { // normal create - as in a service has made a new one
+        } else { // normal create - as in a spreadsheet has made a new one
             if (id != 0) {
                 throw new Exception("id is trying to be assigned to an entity after the database is loaded!");
             }

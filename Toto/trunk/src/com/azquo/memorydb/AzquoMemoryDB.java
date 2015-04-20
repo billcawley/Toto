@@ -1,8 +1,8 @@
 package com.azquo.memorydb;
 
 import com.azquo.admin.database.Database;
-import com.azquo.memorydbdao.JsonRecordTransport;
-import com.azquo.memorydbdao.StandardDAO;
+import com.azquo.memorydb.dao.JsonRecordTransport;
+import com.azquo.memorydb.dao.StandardDAO;
 import com.github.holodnov.calculator.ObjectSizeCalculator;
 import org.apache.log4j.Logger;
 

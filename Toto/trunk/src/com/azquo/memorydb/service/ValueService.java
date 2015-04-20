@@ -1,8 +1,10 @@
-package com.azquo.service;
+package com.azquo.memorydb.service;
 
+import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
 import com.azquo.memorydb.Value;
+import com.azquo.spreadsheet.*;
 import com.csvreader.CsvReader;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -2257,7 +2259,7 @@ ok I'm going for that object type, outer list rows inner items on those rows, ho
 
                             final ListOfValuesOrNamesAndAttributeName valuesForCell = rowValues.get(columnCounter);
                             final Set<DataRegionHeading> headingsForCell = rowHeadings.get(columnCounter);
-                            // one thing about these store functions to the value service, they expect the provenance on the logged in connection to be appropriate
+                            // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
                             // right, switch here to deal with attribute based cell values
 
                             if (valuesForCell.getValues() != null) {

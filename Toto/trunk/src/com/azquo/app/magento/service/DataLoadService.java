@@ -1,7 +1,10 @@
 package com.azquo.app.magento.service;
 
+import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Name;
-import com.azquo.service.*;
+import com.azquo.memorydb.service.NameService;
+import com.azquo.memorydb.service.ValueService;
+import com.azquo.spreadsheet.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
@@ -696,8 +699,8 @@ public final class DataLoadService {
                 marker = System.currentTimeMillis();
                 counter = 0;
 
-                System.out.println("name service time track" + nameService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
-                System.out.println("value service time track" + valueService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
+                System.out.println("name spreadsheet time track" + nameService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
+                System.out.println("value spreadsheet time track" + valueService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
 
                 logMemUseage();
             }

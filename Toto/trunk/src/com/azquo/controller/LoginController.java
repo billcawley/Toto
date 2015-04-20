@@ -1,7 +1,7 @@
 package com.azquo.controller;
 
-import com.azquo.service.LoggedInConnection;
-import com.azquo.service.LoginService;
+import com.azquo.spreadsheet.LoggedInConnection;
+import com.azquo.spreadsheet.LoginService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;

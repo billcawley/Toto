@@ -1,8 +1,11 @@
-package com.azquo.service;
+package com.azquo.memorydb.service;
 
 import com.azquo.jsonrequestentities.NameJsonRequest;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
+import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.spreadsheet.LoggedInConnection;
+import com.azquo.spreadsheet.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 

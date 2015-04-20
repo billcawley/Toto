@@ -56,14 +56,14 @@
     <bean name="databaseDao" class="com.azquo.admin.database.DatabaseDAO"/>
     <bean name="loginRecordDao" class="com.azquo.admin.user.LoginRecordDAO"/>
     <bean name="accessDao" class="com.azquo.admin.user.PermissionDAO"/>
-    <bean name="nameService" class="com.azquo.service.NameService"/>
-    <bean name="valueService" class="com.azquo.service.ValueService"/>
-    <bean name="standardDao" class="com.azquo.memorydbdao.StandardDAO"/>
-    <bean name="provenanceService" class="com.azquo.service.ProvenanceService"/>
-    <bean name="loginService" class="com.azquo.service.LoginService"/>
-    <bean name="importService" class="com.azquo.service.ImportService"/>
-    <bean name="adminService" class="com.azquo.service.AdminService"/>
-    <bean name="onlineService" class="com.azquo.service.OnlineService"/>
+    <bean name="nameService" class="com.azquo.memorydb.service.NameService"/>
+    <bean name="valueService" class="com.azquo.memorydb.service.ValueService"/>
+    <bean name="standardDao" class="com.azquo.memorydb.dao.StandardDAO"/>
+    <bean name="provenanceService" class="com.azquo.memorydb.service.ProvenanceService"/>
+    <bean name="loginService" class="com.azquo.spreadsheet.LoginService"/>
+    <bean name="importService" class="com.azquo.spreadsheet.ImportService"/>
+    <bean name="adminService" class="com.azquo.admin.AdminService"/>
+    <bean name="onlineService" class="com.azquo.spreadsheet.OnlineService"/>
     <bean name="openDatabaseDao" class="com.azquo.admin.database.OpenDatabaseDAO"/>
     <bean name="onlineReportDao" class="com.azquo.admin.onlinereport.OnlineReportDAO"/>
 
@@ -71,16 +71,16 @@
 
 
 
-    <!--    <util:list id="appServices" value-type="com.azquo.service.AppEntityService">
+    <!--    <util:list id="appServices" value-type="com.azquo.spreadsheetheet.AppEntityService">
             <ref bean="feedbackService"/>
         </util:list> -->
     <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
     <bean name="memoryDBManager" class="com.azquo.memorydb.MemoryDBManager">
-        <constructor-arg type="com.azquo.memorydbdao.StandardDAO" ref="standardDao"/>
+        <constructor-arg type="com.azquo.memorydb.dao.StandardDAO" ref="standardDao"/>
     </bean>
     <!-- and now app conneciton maps, firs one will be for  -->
-    <bean name="reviewsConnectionMap" class="com.azquo.service.AppDBConnectionMap">
-        <constructor-arg type="com.azquo.service.AdminService" ref="adminService"/>
+    <bean name="reviewsConnectionMap" class="com.azquo.memorydb.AppDBConnectionMap">
+        <constructor-arg type="com.azquo.admin.AdminService" ref="adminService"/>
         <constructor-arg type="com.azquo.admin.MySQLDatabaseManager" ref="mySQLDatabaseManager"/>
         <constructor-arg type="com.azquo.memorydb.MemoryDBManager" ref="memoryDBManager"/>
         <constructor-arg type="com.azquo.admin.database.DatabaseDAO" ref="databaseDao"/>

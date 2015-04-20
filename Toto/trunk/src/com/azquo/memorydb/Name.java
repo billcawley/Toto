@@ -1,6 +1,6 @@
 package com.azquo.memorydb;
 
-import com.azquo.memorydbdao.StandardDAO;
+import com.azquo.memorydb.dao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -285,7 +285,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // returns a collection, I think this is just iterated over to check stuff
     // todo - check use of this and then whether we use sets internally or not
-    // these two functions moved here from the service
+    // these two functions moved here from the spreadsheet
 
     public Collection<Name> findAllParents() {
         final Set<Name> allParents = new HashSet<Name>();
