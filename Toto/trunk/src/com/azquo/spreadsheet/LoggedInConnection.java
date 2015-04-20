@@ -2,7 +2,7 @@ package com.azquo.spreadsheet;
 
 import com.azquo.admin.user.User;
 import com.azquo.memorydb.*;
-import com.azquo.view.AzquoBook;
+import com.azquo.spreadsheet.view.AzquoBook;
 import org.apache.log4j.Logger;
 
 import java.util.*;

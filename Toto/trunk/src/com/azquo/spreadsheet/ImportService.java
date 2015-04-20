@@ -10,7 +10,7 @@ import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import com.azquo.view.AzquoBook;
+import com.azquo.spreadsheet.view.AzquoBook;
 import com.csvreader.CsvReader;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;

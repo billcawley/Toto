@@ -2,7 +2,7 @@ package com.azquo.admin.user;
 
 
 import com.azquo.admin.StandardDAO;
-import com.azquo.view.AzquoBook;
+import com.azquo.spreadsheet.view.AzquoBook;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 

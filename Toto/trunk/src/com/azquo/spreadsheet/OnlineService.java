@@ -11,7 +11,7 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import com.azquo.view.AzquoBook;
+import com.azquo.spreadsheet.view.AzquoBook;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;

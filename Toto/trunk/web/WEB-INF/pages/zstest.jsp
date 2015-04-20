@@ -280,14 +280,14 @@
 </div>
 <div>
     <zssjsp:spreadsheet id="myzss"
-                        bookProvider="com.azquo.view.ZKAzquoBookProvider"
-                        apply="com.azquo.view.ZKComposer"
+                        bookProvider="com.azquo.spreadsheet.view.ZKAzquoBookProvider"
+                        apply="com.azquo.spreadsheet.view.ZKComposer"
                         width="100%" height="900px"
                         maxrows="200" maxcolumns="80"
                         showSheetbar="true" showToolbar="true" showFormulabar="true" showContextMenu="true"/>
     <!--    zssjsp:spreadsheet id="myzss"
-                            bookProvider="com.azquo.view.ZKAzquoBookProvider"
-                            apply="com.azquo.view.ZKComposer"
+                            bookProvider="com.azquo.spreadsheet.view.ZKAzquoBookProvider"
+                            apply="com.azquo.spreadsheet.view.ZKComposer"
                             width="1850px" height="900px"
                             maxrows="1000" maxcolumns="80"
                             showToolbar="true" showFormulabar="true" showContextMenu="true"/>-->
