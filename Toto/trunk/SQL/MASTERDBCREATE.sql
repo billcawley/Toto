@@ -1,4 +1,4 @@
--- as a general rule any non linking tables need an auto increment id as defined in adminentities.StandardEntity
+-- as a general rule any non linking tables need an auto increment id as defined in admin.entities.StandardEntity
 
 
 CREATE TABLE IF NOT EXISTS `business` (

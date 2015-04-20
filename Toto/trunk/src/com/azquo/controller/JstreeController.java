@@ -1,6 +1,6 @@
 package com.azquo.controller;
 
-import com.azquo.admindao.OnlineReportDAO;
+import com.azquo.admin.dao.OnlineReportDAO;
 import com.azquo.jsonrequestentities.NameJsonRequest;
 import com.azquo.memorydb.Name;
 import com.azquo.service.*;

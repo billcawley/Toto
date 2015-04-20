@@ -48,14 +48,14 @@
         <property name="maxUploadSize" value="500000000"/>
     </bean>
     <bean name="azquoMailer" class="com.azquo.util.AzquoMailer"/>
-    <bean name="mySQLDatabaseManager" class="com.azquo.admindao.MySQLDatabaseManager"/>
-    <bean name="uploadRecordDao" class="com.azquo.admindao.UploadRecordDAO"/>
-    <bean name="businessDao" class="com.azquo.admindao.BusinessDAO"/>
-    <bean name="userDao" class="com.azquo.admindao.UserDAO"/>
-    <bean name="userChoiceDao" class="com.azquo.admindao.UserChoiceDAO"/>
-    <bean name="databaseDao" class="com.azquo.admindao.DatabaseDAO"/>
-    <bean name="loginRecordDao" class="com.azquo.admindao.LoginRecordDAO"/>
-    <bean name="accessDao" class="com.azquo.admindao.PermissionDAO"/>
+    <bean name="mySQLDatabaseManager" class="com.azquo.admin.dao.MySQLDatabaseManager"/>
+    <bean name="uploadRecordDao" class="com.azquo.admin.dao.UploadRecordDAO"/>
+    <bean name="businessDao" class="com.azquo.admin.dao.BusinessDAO"/>
+    <bean name="userDao" class="com.azquo.admin.dao.UserDAO"/>
+    <bean name="userChoiceDao" class="com.azquo.admin.dao.UserChoiceDAO"/>
+    <bean name="databaseDao" class="com.azquo.admin.dao.DatabaseDAO"/>
+    <bean name="loginRecordDao" class="com.azquo.admin.dao.LoginRecordDAO"/>
+    <bean name="accessDao" class="com.azquo.admin.dao.PermissionDAO"/>
     <bean name="nameService" class="com.azquo.service.NameService"/>
     <bean name="valueService" class="com.azquo.service.ValueService"/>
     <bean name="standardDao" class="com.azquo.memorydbdao.StandardDAO"/>
@@ -64,8 +64,8 @@
     <bean name="importService" class="com.azquo.service.ImportService"/>
     <bean name="adminService" class="com.azquo.service.AdminService"/>
     <bean name="onlineService" class="com.azquo.service.OnlineService"/>
-    <bean name="openDatabaseDao" class="com.azquo.admindao.OpenDatabaseDAO"/>
-    <bean name="onlineReportDao" class="com.azquo.admindao.OnlineReportDAO"/>
+    <bean name="openDatabaseDao" class="com.azquo.admin.dao.OpenDatabaseDAO"/>
+    <bean name="onlineReportDao" class="com.azquo.admin.dao.OnlineReportDAO"/>
 
     <bean name="magentoService" class="com.azquo.app.magento.service.DataLoadService"/>
 
@@ -81,9 +81,9 @@
     <!-- and now app conneciton maps, firs one will be for  -->
     <bean name="reviewsConnectionMap" class="com.azquo.service.AppDBConnectionMap">
         <constructor-arg type="com.azquo.service.AdminService" ref="adminService"/>
-        <constructor-arg type="com.azquo.admindao.MySQLDatabaseManager" ref="mySQLDatabaseManager"/>
+        <constructor-arg type="com.azquo.admin.dao.MySQLDatabaseManager" ref="mySQLDatabaseManager"/>
         <constructor-arg type="com.azquo.memorydb.MemoryDBManager" ref="memoryDBManager"/>
-        <constructor-arg type="com.azquo.admindao.DatabaseDAO" ref="databaseDao"/>
+        <constructor-arg type="com.azquo.admin.dao.DatabaseDAO" ref="databaseDao"/>
         <constructor-arg type="int" value="11"/>
     </bean>
 <!--    <bean name="reviewsAuthenticationProvider" class="com.azquo.app.reviews.misc.ReviewsAuthenticationProvider"/>

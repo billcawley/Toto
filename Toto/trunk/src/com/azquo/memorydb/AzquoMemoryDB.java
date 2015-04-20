@@ -1,6 +1,6 @@
 package com.azquo.memorydb;
 
-import com.azquo.adminentities.Database;
+import com.azquo.admin.entities.Database;
 import com.azquo.memorydbdao.JsonRecordTransport;
 import com.azquo.memorydbdao.StandardDAO;
 import com.github.holodnov.calculator.ObjectSizeCalculator;

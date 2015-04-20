@@ -1,6 +1,6 @@
 package com.azquo.view;
 
-import com.azquo.admindao.UserChoiceDAO;
+import com.azquo.admin.dao.UserChoiceDAO;
 import com.azquo.controller.OnlineController;
 import com.azquo.service.*;
 import org.springframework.context.ApplicationContext;

@@ -1,8 +1,7 @@
 package com.azquo.controller;
 
-
-import com.azquo.admindao.OnlineReportDAO;
-import com.azquo.adminentities.OnlineReport;
+import com.azquo.admin.dao.OnlineReportDAO;
+import com.azquo.admin.entities.OnlineReport;
 import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
 import com.azquo.service.OnlineService;
@@ -68,10 +67,7 @@ public class DownloadController {
             catch (IOException ex){
                 ex.printStackTrace();
             }
-
-
             out.flush();
-
             return;
         }
         LoggedInConnection loggedInConnection = (LoggedInConnection)request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);

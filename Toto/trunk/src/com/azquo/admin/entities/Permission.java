@@ -1,4 +1,4 @@
-package com.azquo.adminentities;
+package com.azquo.admin.entities;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

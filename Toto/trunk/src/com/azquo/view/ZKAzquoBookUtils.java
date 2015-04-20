@@ -1,7 +1,7 @@
 package com.azquo.view;
 
-import com.azquo.admindao.UserChoiceDAO;
-import com.azquo.adminentities.UserChoice;
+import com.azquo.admin.dao.UserChoiceDAO;
+import com.azquo.admin.entities.UserChoice;
 import com.azquo.controller.OnlineController;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Value;
@@ -14,7 +14,6 @@ import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.api.model.Validation;
-import org.zkoss.zss.jsp.BookProvider;
 import org.zkoss.zss.model.*;
 import org.zkoss.zss.model.impl.HyperlinkImpl;
 
@@ -23,7 +22,7 @@ import java.util.*;
 
 /**
  * Created by cawley on 03/03/15.
- * TO manipulate the ZK book, practically speak a lot of what's in here might be functionally similar to what was in AzquoBook
+ * TO manipulate the ZK book, practically speak a lot of what's in here might be functionally similar to what is in AzquoBook
  */
 public class ZKAzquoBookUtils {
 
@@ -67,18 +66,14 @@ public class ZKAzquoBookUtils {
         }
         // I guess run through all sheets?
 
-        if (loggedInConnection.getReportId()==1){
+        if (loggedInConnection.getReportId() == 1){
             for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
                 Sheet sheet = book.getSheetAt(sheetNumber);
                 loadAdminData(loggedInConnection, sheet);
             }
             //fill admin date
         }else {
-
-
             for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
-
-
                 Sheet sheet = book.getSheetAt(sheetNumber);
                 // see if we can impose the user choices on the sheet
                 for (String choiceName : userChoices.keySet()) {
@@ -87,14 +82,11 @@ public class ZKAzquoBookUtils {
                         sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoices.get(choiceName));
                     }
                 }
-
                 // ok the plan here is remove all the merges then put them back in after the regions are expanded.
                 List<CellRegion> merges = new ArrayList<CellRegion>(sheet.getInternalSheet().getMergedRegions());
-
                 for (CellRegion merge : merges) {
                     CellOperationUtil.unmerge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()));
                 }
-
                 // and now we want to run through all regions for this sheet, will look at the old code for this, I think it's fill region that we take cues from
                 // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
                 List<SName> namesForSheet = getNamesForSheet(sheet);
@@ -113,7 +105,6 @@ public class ZKAzquoBookUtils {
                         fillRegion(sheet, region, userChoices, optionsForRegion, loggedInConnection);
                     }
                 }
-
                 // all data for that sheet should be populated
                 // snap the charts - currently just top left, do bottom right also?
                 for (SChart chart : sheet.getInternalSheet().getCharts()) {
@@ -130,14 +121,12 @@ public class ZKAzquoBookUtils {
                     CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), true);
                 }
                 // now sort out dropdowns
-                // todo, sort out saved choiced on the dropdowns
+                // todo, sort out saved choiced on the dropdowns - is this done above??
                 /*                     UserChoice userChoice = userChoiceDAO.findForUserIdReportIdAndChoice(loggedInConnection.getUser().getId(), reportId, choiceName);
                 if (userChoice != null) {
                     range.setValue(userChoice.getChoiceValue());
                 }*/
-
                 addValidation(namesForSheet, sheet, loggedInConnection);
-
             }
         }
     }
@@ -199,9 +188,10 @@ public class ZKAzquoBookUtils {
 
             // ok now ready for the data
             // ok going to try to use the new funciton
-            //valueService.getExcelDataForColumnsRowsAndContext(loggedInConnection, loggedInConnection.getContext(region), region, filterCount, maxRows, maxCols, displayObjectsForNewSheet);
             List<List<AzquoCell>> dataToShow = valueService.getAzquoCellsForColumnsRowsAndContext(loggedInConnection, loggedInConnection.getColumnHeadings(region)
                     , loggedInConnection.getRowHeadings(region), loggedInConnection.getContext(region), loggedInConnection.getLanguages());
+            dataToShow = valueService.sortAndFilterCells(dataToShow,loggedInConnection.getRowHeadings(region), loggedInConnection.getColumnHeadings(region)
+                    , filterCount, maxRows, maxCols,loggedInConnection.getSortRow(region),loggedInConnection.getSortCol(region));
             // not going to do this just yet
             //valueService.sortAndFilterCells()
 

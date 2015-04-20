@@ -1,6 +1,6 @@
 package com.azquo.service;
 
-import com.azquo.adminentities.User;
+import com.azquo.admin.entities.User;
 import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Provenance;
@@ -56,7 +56,7 @@ public class AzquoMemoryDBConnection {
         return null;
     }
 
-    public com.azquo.adminentities.Database getCurrentDatabase() {
+    public com.azquo.admin.entities.Database getCurrentDatabase() {
         if (azquoMemoryDB!=null){
             return azquoMemoryDB.getDatabase();
         }

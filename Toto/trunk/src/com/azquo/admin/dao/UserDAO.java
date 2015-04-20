@@ -1,6 +1,6 @@
-package com.azquo.admindao;
+package com.azquo.admin.dao;
 
-import com.azquo.adminentities.User;
+import com.azquo.admin.entities.User;
 import com.azquo.service.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.RowMapper;

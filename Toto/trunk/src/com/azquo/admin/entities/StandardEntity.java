@@ -1,4 +1,4 @@
-package com.azquo.adminentities;
+package com.azquo.admin.entities;
 
 /**
  * Created by cawley on 07/01/14.

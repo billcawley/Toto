@@ -1,8 +1,8 @@
 package com.azquo.memorydb;
 
-import com.azquo.admindao.OpenDatabaseDAO;
-import com.azquo.adminentities.Database;
-import com.azquo.adminentities.OpenDatabase;
+import com.azquo.admin.dao.OpenDatabaseDAO;
+import com.azquo.admin.entities.Database;
+import com.azquo.admin.entities.OpenDatabase;
 import com.azquo.memorydbdao.StandardDAO;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -35,7 +35,7 @@ public final class MemoryDBManager {
     public synchronized AzquoMemoryDB getAzquoMemoryDB(Database database) throws Exception {
         AzquoMemoryDB loaded;
         if (database.getName().equals("temp")){
-            loaded =new AzquoMemoryDB(database, standardDAO);
+            loaded = new AzquoMemoryDB(database, standardDAO);
             return loaded;
         }
         loaded = memoryDatabaseMap.get(database.getMySQLName());
@@ -60,7 +60,7 @@ public final class MemoryDBManager {
         */
     }
 
-// todo : what if referenced to the memory db held in memory still??
+// todo : what if references to the memory db held in memory still??
     public synchronized void removeDatabase(Database db){
         memoryDatabaseMap.remove(db.getMySQLName());
 

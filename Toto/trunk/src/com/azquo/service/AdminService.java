@@ -1,7 +1,7 @@
 package com.azquo.service;
 
-import com.azquo.admindao.*;
-import com.azquo.adminentities.*;
+import com.azquo.admin.dao.*;
+import com.azquo.admin.entities.*;
 import com.azquo.memorydb.MemoryDBManager;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Value;

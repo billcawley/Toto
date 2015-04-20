@@ -1785,8 +1785,6 @@ ok I'm going for that object type, outer list rows inner items on those rows, ho
                         List<Value> values = new ArrayList<Value>();
                         cellValue = findValueForNames(loggedInConnection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, loggedInConnection.getLanguages()); // true = pay attention to names additive flag
                         //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-
-
                         if (values.size() == 1 && !locked.isTrue) {
 
                             Value value = values.get(0);

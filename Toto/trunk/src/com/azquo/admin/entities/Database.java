@@ -1,4 +1,4 @@
-package com.azquo.adminentities;
+package com.azquo.admin.entities;
 
 import java.time.LocalDateTime;
 import java.util.Date;

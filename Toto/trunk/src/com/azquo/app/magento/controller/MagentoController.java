@@ -1,9 +1,9 @@
 package com.azquo.app.magento.controller;
 
-import com.azquo.admindao.DatabaseDAO;
-import com.azquo.admindao.OnlineReportDAO;
-import com.azquo.adminentities.Database;
-import com.azquo.adminentities.OnlineReport;
+import com.azquo.admin.dao.DatabaseDAO;
+import com.azquo.admin.dao.OnlineReportDAO;
+import com.azquo.admin.entities.Database;
+import com.azquo.admin.entities.OnlineReport;
 import com.azquo.app.magento.service.DataLoadService;
 import com.azquo.controller.LoginController;
 import com.azquo.service.*;
