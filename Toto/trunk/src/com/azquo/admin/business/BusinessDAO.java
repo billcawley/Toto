@@ -1,6 +1,6 @@
-package com.azquo.admin.dao;
+package com.azquo.admin.business;
 
-import com.azquo.admin.entities.Business;
+import com.azquo.admin.StandardDAO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;

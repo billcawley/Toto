@@ -1,7 +1,11 @@
 package com.azquo.service;
 
-import com.azquo.admin.dao.*;
-import com.azquo.admin.entities.*;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
+import com.azquo.admin.database.*;
+import com.azquo.admin.user.*;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.memorydb.AzquoMemoryDB;
 import com.azquo.memorydb.MemoryDBManager;
 import com.azquo.memorydb.Name;

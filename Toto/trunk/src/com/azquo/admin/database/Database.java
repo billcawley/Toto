@@ -1,7 +1,8 @@
-package com.azquo.admin.entities;
+package com.azquo.admin.database;
+
+import com.azquo.admin.StandardEntity;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
  * Created by Cawley on 08/01/14.

@@ -1,7 +1,6 @@
-package com.azquo.admin.dao;
+package com.azquo.admin.onlinereport;
 
-import com.azquo.admin.entities.OnlineReport;
-import com.sun.corba.se.impl.encoding.OSFCodeSetRegistry;
+import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 

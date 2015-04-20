@@ -1,6 +1,6 @@
-package com.azquo.admin.dao;
+package com.azquo.admin;
 
-import com.azquo.admin.entities.StandardEntity;
+import com.azquo.admin.StandardEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;

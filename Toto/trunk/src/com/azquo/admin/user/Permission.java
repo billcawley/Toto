@@ -1,10 +1,10 @@
-package com.azquo.admin.entities;
+package com.azquo.admin.user;
 
+import com.azquo.admin.StandardEntity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
  * Representing access a user can have

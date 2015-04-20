@@ -1,5 +1,6 @@
-package com.azquo.admin.entities;
+package com.azquo.admin.user;
 
+import com.azquo.admin.StandardEntity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;

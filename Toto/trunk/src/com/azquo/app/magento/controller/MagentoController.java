@@ -1,11 +1,10 @@
 package com.azquo.app.magento.controller;
 
-import com.azquo.admin.dao.DatabaseDAO;
-import com.azquo.admin.dao.OnlineReportDAO;
-import com.azquo.admin.entities.Database;
-import com.azquo.admin.entities.OnlineReport;
+import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.app.magento.service.DataLoadService;
-import com.azquo.controller.LoginController;
 import com.azquo.service.*;
 import com.azquo.util.AzquoMailer;
 //import org.apache.log4j.Logger;

@@ -1,7 +1,7 @@
-package com.azquo.admin.dao;
+package com.azquo.admin.user;
 
 
-import com.azquo.admin.entities.UserChoice;
+import com.azquo.admin.StandardDAO;
 import com.azquo.view.AzquoBook;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -16,7 +16,7 @@ import java.util.Map;
  * Created by bill on 22/04/14.
  *
  */
-public final class UserChoiceDAO extends  StandardDAO<UserChoice> {
+public final class UserChoiceDAO extends StandardDAO<UserChoice> {
 
     // the default table name for this data.
     @Override

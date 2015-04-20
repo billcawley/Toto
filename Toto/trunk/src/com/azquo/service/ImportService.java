@@ -1,10 +1,10 @@
 package com.azquo.service;
 
-import com.azquo.admin.dao.OnlineReportDAO;
-import com.azquo.admin.dao.UploadRecordDAO;
-import com.azquo.admin.dao.UserChoiceDAO;
-import com.azquo.admin.entities.OnlineReport;
-import com.azquo.admin.entities.UploadRecord;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.database.UploadRecordDAO;
+import com.azquo.admin.user.UserChoiceDAO;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.database.UploadRecord;
 import com.azquo.memorydb.Name;
 import com.azquo.view.AzquoBook;
 import com.csvreader.CsvReader;

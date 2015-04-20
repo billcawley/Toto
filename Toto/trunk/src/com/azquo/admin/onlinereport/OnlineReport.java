@@ -1,5 +1,6 @@
-package com.azquo.admin.entities;
+package com.azquo.admin.onlinereport;
 
+import com.azquo.admin.StandardEntity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 

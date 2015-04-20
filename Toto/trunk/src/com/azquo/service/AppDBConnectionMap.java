@@ -1,14 +1,13 @@
 package com.azquo.service;
 
-import com.azquo.admin.dao.DatabaseDAO;
-import com.azquo.admin.dao.MySQLDatabaseManager;
-import com.azquo.admin.entities.Business;
-import com.azquo.admin.entities.Database;
-import com.azquo.admin.entities.User;
+import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.MySQLDatabaseManager;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.user.User;
 import com.azquo.memorydb.MemoryDBManager;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

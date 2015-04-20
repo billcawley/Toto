@@ -1,8 +1,8 @@
 package com.azquo.memorydb;
 
-import com.azquo.admin.dao.OpenDatabaseDAO;
-import com.azquo.admin.entities.Database;
-import com.azquo.admin.entities.OpenDatabase;
+import com.azquo.admin.database.OpenDatabaseDAO;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.OpenDatabase;
 import com.azquo.memorydbdao.StandardDAO;
 import org.springframework.beans.factory.annotation.Autowired;
 

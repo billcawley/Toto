@@ -1,10 +1,10 @@
 package com.azquo.controller;
 
-import com.azquo.admin.dao.DatabaseDAO;
-import com.azquo.admin.dao.OnlineReportDAO;
-import com.azquo.admin.dao.UserChoiceDAO;
-import com.azquo.admin.entities.Database;
-import com.azquo.admin.entities.OnlineReport;
+import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.user.UserChoiceDAO;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.memorydb.Name;
 import com.azquo.service.*;
 import com.azquo.view.AzquoBook;

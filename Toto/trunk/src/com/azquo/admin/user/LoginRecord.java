@@ -1,4 +1,6 @@
-package com.azquo.admin.entities;
+package com.azquo.admin.user;
+
+import com.azquo.admin.StandardEntity;
 
 import java.util.Date;
 

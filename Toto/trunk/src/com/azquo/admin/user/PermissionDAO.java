@@ -1,8 +1,8 @@
-package com.azquo.admin.dao;
+package com.azquo.admin.user;
 
-import com.azquo.admin.entities.Database;
-import com.azquo.admin.entities.Permission;
-import com.azquo.admin.entities.User;
+import com.azquo.admin.StandardDAO;
+import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.database.Database;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 

@@ -1,7 +1,12 @@
 package com.azquo.service;
 
-import com.azquo.admin.dao.*;
-import com.azquo.admin.entities.*;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.database.OpenDatabaseDAO;
+import com.azquo.admin.database.UploadRecordDAO;
+import com.azquo.admin.user.*;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.memorydb.Name;
 import com.azquo.view.AzquoBook;
 import org.apache.velocity.Template;

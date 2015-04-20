@@ -1,4 +1,4 @@
-package com.azquo.admin.dao;
+package com.azquo.admin;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;

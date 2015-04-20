@@ -1,6 +1,6 @@
 package com.azquo.view;
 
-import com.azquo.admin.dao.UserChoiceDAO;
+import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.controller.OnlineController;
 import com.azquo.service.*;
 import org.springframework.context.ApplicationContext;
@@ -9,8 +9,6 @@ import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Session;
 import org.zkoss.zk.ui.Sessions;
 import org.zkoss.zk.ui.event.Event;
-import org.zkoss.zk.ui.event.EventListener;
-import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;

@@ -1,7 +1,7 @@
 package com.azquo.view;
 
-import com.azquo.admin.dao.UserChoiceDAO;
-import com.azquo.admin.entities.UserChoice;
+import com.azquo.admin.user.UserChoiceDAO;
+import com.azquo.admin.user.UserChoice;
 import com.azquo.controller.OnlineController;
 import com.azquo.memorydb.Name;
 import com.azquo.memorydb.Value;

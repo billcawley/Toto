@@ -1,7 +1,7 @@
 package com.azquo.controller;
 
-import com.azquo.admin.dao.OnlineReportDAO;
-import com.azquo.admin.entities.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.service.LoggedInConnection;
 import com.azquo.service.LoginService;
 import com.azquo.service.OnlineService;
