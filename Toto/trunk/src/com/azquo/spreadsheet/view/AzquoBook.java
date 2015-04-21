@@ -40,7 +40,7 @@ public class AzquoBook {
     private ImportService importService;
     private AdminService adminService;
     private NameService nameService;
-    private OnlineService onlineService;
+    private SpreadsheetService spreadsheetService;
     private UserChoiceDAO userChoiceDAO;
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
     private SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
@@ -154,13 +154,13 @@ public class AzquoBook {
         }
     };
 
-    public AzquoBook(final ValueService valueService, AdminService adminService, NameService nameService, ImportService importService, UserChoiceDAO userChoiceDAO, OnlineService onlineService) throws Exception {
+    public AzquoBook(final ValueService valueService, AdminService adminService, NameService nameService, ImportService importService, UserChoiceDAO userChoiceDAO, SpreadsheetService spreadsheetService) throws Exception {
         this.valueService = valueService;
         this.adminService = adminService;
         this.userChoiceDAO = userChoiceDAO;
         this.nameService = nameService;
         this.importService = importService;
-        this.onlineService = onlineService;
+        this.spreadsheetService = spreadsheetService;
         jacksonMapper.registerModule(new JSR310Module());
     }
 
@@ -350,7 +350,7 @@ public class AzquoBook {
                         Cell cell = range.getCellOrNull(rowNo, colNo);
                         if (cell != null && cell.getValue() != null) {
 
-                            if (highlightDays >= valueService.getAge(loggedInConnection, region, rowNo, colNo)) {
+                            if (highlightDays >= spreadsheetService.getAge(loggedInConnection, region, rowNo, colNo)) {
                                 cell.setStyle(highlightStyle(cell));
                                 highlighted.put(cell, true);
                             }
@@ -448,7 +448,7 @@ public class AzquoBook {
         if (headings.startsWith("error:")) {
             return headings;
         }
-        String result = valueService.setupRowHeadings(loggedInConnection, region, headings);
+        String result = spreadsheetService.setupRowHeadings(loggedInConnection, region, headings);
         if (result.startsWith("error:")) {
             return result;
         }
@@ -461,7 +461,7 @@ public class AzquoBook {
         if (headings.startsWith("error:")) {
             return headings;
         }
-        result = valueService.setupColumnHeadings(loggedInConnection, region, headings);
+        result = spreadsheetService.setupColumnHeadings(loggedInConnection, region, headings);
         if (result.startsWith("error:")) return result;
         //fillRange("az_displaycolumnheadings" + region, result, "LOCKED");
         Range context = getRange("az_context" + region);
@@ -473,11 +473,11 @@ public class AzquoBook {
             return headings;
         }
         try {
-            result = valueService.getDataRegion(loggedInConnection, headings, region, filterCount, maxRows, maxCols);
+            result = spreadsheetService.getDataRegion(loggedInConnection, headings, region, filterCount, maxRows, maxCols);
             if (result.startsWith("error:")) return result;
             String language = Name.DEFAULT_DISPLAY_NAME;//TODO  Find the language!
             fillRange(dataRegionPrefix + region, result, loggedInConnection.getLockMap(region), true);
-            result = valueService.getColumnHeadings(loggedInConnection, region, language);
+            result = spreadsheetService.getColumnHeadings(loggedInConnection, region, language);
             fillRange("az_displaycolumnheadings" + region, result, "LOCKED", false);
             String sortable = hasOption(region, "sortable");
             if (sortable != null) {
@@ -488,7 +488,7 @@ public class AzquoBook {
                 }
             }
 
-            result = valueService.getRowHeadings(loggedInConnection, region, language, filterCount);
+            result = spreadsheetService.getRowHeadings(loggedInConnection, region, language, filterCount);
             fillRange("az_displayrowheadings" + region, result, "LOCKED", false);
             if (sortable!=null && sortable.equalsIgnoreCase("all")) {
                 Range displayRowHeadings = getRange("az_displayrowheadings" + region);
@@ -880,7 +880,7 @@ public class AzquoBook {
         if (regionName.equals("data") && loggedInConnection.getNamesToSearch() != null) {
             Map<Set<Name>, Set<Value>> shownValues = valueService.getSearchValues(loggedInConnection.getNamesToSearch());
             loggedInConnection.setValuesFound(shownValues);
-            LinkedHashSet<Name> nameHeadings = valueService.getHeadings(shownValues);
+            LinkedHashSet<Name> nameHeadings = spreadsheetService.getHeadings(shownValues);
             int colNo = firstHeading + 1;
             int rowNo = 0;
             for (Name name : nameHeadings) {
@@ -1861,12 +1861,12 @@ public class AzquoBook {
                         for (Value value : loggedInConnection.getValuesFound().get(names)) {
                             tempList.add(value);
                         }
-                        return valueService.formatCellProvenanceForOutput(loggedInConnection, tempList, jsonFunction);
+                        return spreadsheetService.formatCellProvenanceForOutput(loggedInConnection, tempList, jsonFunction);
 
                     } else {
                         for (Name tempname : names) {
                             if (--regionInfo.col == 0) {
-                                return valueService.formatProvenanceForOutput(tempname.getProvenance(), jsonFunction);
+                                return spreadsheetService.formatProvenanceForOutput(tempname.getProvenance(), jsonFunction);
 
                             }
                         }
@@ -1879,7 +1879,7 @@ public class AzquoBook {
 
                 DataRegionHeading dataRegionHeading = loggedInConnection.getRowHeadings(region).get(regionInfo.row).get(regionInfo.col);
                 if (dataRegionHeading != null && dataRegionHeading.getName() != null) {
-                    return valueService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
+                    return spreadsheetService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
                 } else {
                     return "";
                 }
@@ -1887,13 +1887,13 @@ public class AzquoBook {
                 String region = regionInfo.region.substring(24);
                 DataRegionHeading dataRegionHeading = loggedInConnection.getColumnHeadings(region).get(regionInfo.col).get(regionInfo.row);//note that the array is transposed
                 if (dataRegionHeading != null && dataRegionHeading.getName() != null) {
-                    return valueService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
+                    return spreadsheetService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
                 } else {
                     return "";
                 }
             } else if (regionInfo.region.startsWith(dataRegionPrefix)) {
                 String region = regionInfo.region.substring(dataRegionPrefix.length());
-                return valueService.formatDataRegionProvenanceForOutput(loggedInConnection, region, regionInfo.row, regionInfo.col, jsonFunction);
+                return spreadsheetService.formatDataRegionProvenanceForOutput(loggedInConnection, region, regionInfo.row, regionInfo.col, jsonFunction);
             }
         }
         return "";
@@ -2033,7 +2033,7 @@ public class AzquoBook {
                     importRangeFromScreen(loggedInConnection, region, newNames);
                 } else {
                     StringBuilder sb = rangeToText(name.getRange(), false);
-                    valueService.saveData(loggedInConnection, region.toLowerCase(), sb.toString());
+                    spreadsheetService.saveData(loggedInConnection, region.toLowerCase(), sb.toString());
                 }
             }
         }
@@ -2105,7 +2105,7 @@ public class AzquoBook {
         if (useLicense) {
             // should this be called on every book load or just once somewhere?
             License license = new License();
-            license.setLicense(onlineService.getHomeDir() + "/aspose/Aspose.Cells.lic");
+            license.setLicense(spreadsheetService.getHomeDir() + "/aspose/Aspose.Cells.lic");
         }
         System.out.println("loaded Aspose licence");
         wb = new Workbook(new FileInputStream(fileName));
@@ -2191,7 +2191,7 @@ public class AzquoBook {
         InputStream uploadFile = new FileInputStream(tempName);
         fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
         importService.readPreparedFile(loggedInConnection, uploadFile, fileType, loggedInConnection.getLanguages());
-        String saveFileName = onlineService.getHomeDir() + "/databases/" + loggedInConnection.getCurrentDBName() + "/uploads/" + azquoSheet.getName() + " " + df.format(new Date()) + ".xlsx";
+        String saveFileName = spreadsheetService.getHomeDir() + "/databases/" + loggedInConnection.getCurrentDBName() + "/uploads/" + azquoSheet.getName() + " " + df.format(new Date()) + ".xlsx";
         File file = new File(saveFileName);
         if (file.getParentFile().mkdirs()){ // intellij said I should pay attention to the result of mkdirs, I did this
             wb.save(saveFileName, SaveFormat.XLSX);

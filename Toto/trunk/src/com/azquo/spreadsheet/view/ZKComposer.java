@@ -36,7 +36,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     Spreadsheet myzss;
 
     Menupopup editPopup = new Menupopup();
-    OnlineService onlineService;
+    SpreadsheetService spreadsheetService;
     NameService nameService;
     ValueService valueService;
     UserChoiceDAO userChoiceDAO;
@@ -47,7 +47,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         // perhaps a bit long winded but it gets us the spreadsheet
         Session session = Sessions.getCurrent();
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
-        onlineService = (OnlineService)applicationContext.getBean("onlineService");
+        spreadsheetService = (SpreadsheetService)applicationContext.getBean("onlineService");
         nameService = (NameService)applicationContext.getBean("nameService");
         valueService = (ValueService)applicationContext.getBean("valueService");
         userChoiceDAO = (UserChoiceDAO)applicationContext.getBean("userChoiceDao");
@@ -97,7 +97,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     && name.getRefersToCellRegion().getColumn() == col) {
                 // ok it matches a name
                 if (name.getName().endsWith("Chosen")){
-                    onlineService.setUserChoice(loggedInConnection.getUser().getId(), reportId, name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
+                    spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), reportId, name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
                     reload = true;
                 }
             }
@@ -109,7 +109,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
-                ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, nameService, userChoiceDAO, adminService);
+                ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO, adminService);
                 zkAzquoBookUtils.populateBook(newBook); // reload the data
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
             } catch (Exception e) {
@@ -121,7 +121,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onSheetSelect = #myzss")
     public void onSheetSelect(SheetSelectEvent sheetSelectEvent) {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
-        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, nameService, userChoiceDAO, adminService);
+        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService,spreadsheetService, nameService, userChoiceDAO, adminService);
         Book book = sheetSelectEvent.getSheet().getBook();
         zkAzquoBookUtils.addValidation(zkAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()),sheetSelectEvent.getSheet(),
                 (LoggedInConnection)book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_CONNECTION));

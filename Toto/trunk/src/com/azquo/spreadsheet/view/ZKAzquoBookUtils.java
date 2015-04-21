@@ -41,12 +41,14 @@ public class ZKAzquoBookUtils {
 
 
     final ValueService valueService;
+    final SpreadsheetService spreadsheetService;
     final NameService nameService;
     final UserChoiceDAO userChoiceDAO;
     final AdminService adminService;
 
-    public ZKAzquoBookUtils(ValueService valueService, NameService nameService, UserChoiceDAO userChoiceDAO, AdminService adminService) {
+    public ZKAzquoBookUtils(ValueService valueService,SpreadsheetService spreadsheetService, NameService nameService, UserChoiceDAO userChoiceDAO, AdminService adminService) {
         this.valueService = valueService;
+        this.spreadsheetService = spreadsheetService;
         this.nameService = nameService;
         this.userChoiceDAO = userChoiceDAO;
         this.adminService = adminService;
@@ -159,8 +161,8 @@ public class ZKAzquoBookUtils {
             List<List<List<DataRegionHeading>>> columnHeadings = getHeadingsLists(columnHeadingsDescription, sheet, loggedInConnection);
             List<List<List<DataRegionHeading>>> rowHeadings = getHeadingsLists(rowHeadingsDescription, sheet, loggedInConnection);
             // transpose, expand, transpose again
-            loggedInConnection.setRowHeadings(region, valueService.expandHeadings(rowHeadings));
-            loggedInConnection.setColumnHeadings(region, valueService.expandHeadings(valueService.transpose2DList(columnHeadings)));
+            loggedInConnection.setRowHeadings(region, spreadsheetService.expandHeadings(rowHeadings));
+            loggedInConnection.setColumnHeadings(region, spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadings)));
             // deal with context
             // copied from valueservice.getdatareegion. Seems a bit odd but this is the old behavior
             // ok IU'd made a mistake here assuming context was only ever one cell, it can be multiple, hcen scan through the cells but just tack on names, the placing in the cells is irrelevant
@@ -191,15 +193,15 @@ public class ZKAzquoBookUtils {
 
             // ok now ready for the data
             // ok going to try to use the new funciton
-            List<List<AzquoCell>> dataToShow = valueService.getAzquoCellsForColumnsRowsAndContext(loggedInConnection, loggedInConnection.getColumnHeadings(region)
+            List<List<AzquoCell>> dataToShow = spreadsheetService.getAzquoCellsForColumnsRowsAndContext(loggedInConnection, loggedInConnection.getColumnHeadings(region)
                     , loggedInConnection.getRowHeadings(region), loggedInConnection.getContext(region), loggedInConnection.getLanguages());
-            dataToShow = valueService.sortAndFilterCells(dataToShow,loggedInConnection.getRowHeadings(region), loggedInConnection.getColumnHeadings(region)
+            dataToShow = spreadsheetService.sortAndFilterCells(dataToShow,loggedInConnection.getRowHeadings(region), loggedInConnection.getColumnHeadings(region)
                     , filterCount, maxRows, maxCols,loggedInConnection.getSortRow(region),loggedInConnection.getSortCol(region));
             // not going to do this just yet
             //valueService.sortAndFilterCells()
 
-            List<List<DataRegionHeading>> expandedColumnHeadings = valueService.getColumnHeadingsAsArray(loggedInConnection, region);
-            List<List<DataRegionHeading>> expandedRowHeadings = valueService.getRowHeadingsAsArray(loggedInConnection, region, filterCount);
+            List<List<DataRegionHeading>> expandedColumnHeadings = spreadsheetService.getColumnHeadingsAsArray(loggedInConnection, region);
+            List<List<DataRegionHeading>> expandedRowHeadings = spreadsheetService.getRowHeadingsAsArray(loggedInConnection, region, filterCount);
             // todo : how to indicate sortable rows/cols
             // now, put the headings into the sheet!
             // might be factored into fill range in a bit
@@ -395,7 +397,7 @@ public class ZKAzquoBookUtils {
                     } else {
                         try {
 
-                            row.add(valueService.dataRegionHeadingsFromNames(nameService.parseQuery(loggedInConnection, cellString, loggedInConnection.getLanguages()), loggedInConnection));
+                            row.add(spreadsheetService.dataRegionHeadingsFromNames(nameService.parseQuery(loggedInConnection, cellString, loggedInConnection.getLanguages()), loggedInConnection));
                         } catch (Exception e) {
                             // todo, error handling??
                             e.printStackTrace();
@@ -485,7 +487,7 @@ public class ZKAzquoBookUtils {
         if (region.equals("data") && loggedInConnection.getNamesToSearch() != null) {
             Map<Set<Name>, Set<Value>> shownValues = valueService.getSearchValues(loggedInConnection.getNamesToSearch());
             loggedInConnection.setValuesFound(shownValues);
-            LinkedHashSet<Name> nameHeadings = valueService.getHeadings(shownValues);
+            LinkedHashSet<Name> nameHeadings = spreadsheetService.getHeadings(shownValues);
             int colNo = firstHeading + 1;
             int rowNo = 0;
             for (Name name : nameHeadings) {

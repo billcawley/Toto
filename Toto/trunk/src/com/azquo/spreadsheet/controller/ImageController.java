@@ -1,6 +1,6 @@
 package com.azquo.spreadsheet.controller;
 
-import com.azquo.spreadsheet.OnlineService;
+import com.azquo.spreadsheet.SpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +25,7 @@ import java.io.OutputStream;
 public class ImageController {
 
     @Autowired
-    private OnlineService onlineService;
+    private SpreadsheetService spreadsheetService;
 
     @RequestMapping
     public String handleRequest(HttpServletResponse response
@@ -36,7 +36,7 @@ public class ImageController {
         if (image != null) {
             if (image.length() > 0 && image.indexOf(".") > 0) {
                 //may need some security check...
-                String path = onlineService.getHomeDir() + "/databases/" + db + "/" +  image;
+                String path = spreadsheetService.getHomeDir() + "/databases/" + db + "/" +  image;
                 File file = new File(path);
                 String ext = image.substring(image.indexOf(".") + 1).toLowerCase();
                 if (ext.equals("jpg")) {

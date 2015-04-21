@@ -34,7 +34,7 @@ public class JstreeController {
     private LoginService loginService;
 
     @Autowired
-    OnlineService onlineService;
+    SpreadsheetService spreadsheetService;
 
     @Autowired
     ValueService valueService;
@@ -157,7 +157,7 @@ public class JstreeController {
                     if (current.child.name != null) {
                         rootId = current.child.name.getId();
                     }
-                    result.append(onlineService.showNameDetails(loggedInConnection, database, rootId, parents, itemsChosen));
+                    result.append(spreadsheetService.showNameDetails(loggedInConnection, database, rootId, parents, itemsChosen));
                     model.addAttribute("content", result);
                     return "utf8page";
 

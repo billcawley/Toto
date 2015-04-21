@@ -45,7 +45,7 @@ public final class DataLoadService {
     }
 
     @Autowired
-    OnlineService onlineService;
+    SpreadsheetService spreadsheetService;
 
     @Autowired
     ImportService importService;
@@ -95,7 +95,7 @@ public final class DataLoadService {
     public String findRequiredTables(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         String requiredTables = defaultData().replace("$starttime","");
         if (nameService.findByName(azquoMemoryDBConnection,"all years") == null){
-            String magentoSetupFile = onlineService.getHomeDir() + "/databases/Magen/setup/magentosetup.xlsx";
+            String magentoSetupFile = spreadsheetService.getHomeDir() + "/databases/Magen/setup/magentosetup.xlsx";
             InputStream uploadFile = new FileInputStream(magentoSetupFile);
             String fileName = "magentosetup.xlsx";
             importService.importTheFile(azquoMemoryDBConnection, fileName, uploadFile);

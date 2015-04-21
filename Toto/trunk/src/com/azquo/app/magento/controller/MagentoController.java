@@ -40,7 +40,7 @@ public class MagentoController {
     OnlineReportDAO onlineReportDAO;
 
     @Autowired
-    OnlineService onlineService;
+    SpreadsheetService spreadsheetService;
 
     @Autowired
     LoginService loginService;
@@ -79,7 +79,7 @@ public class MagentoController {
                     return "error: user " + logon + " with this password does not exist";
                 }
                 if (!db.equals("temp") && db.length() > 0) {
-                    onlineService.switchDatabase(loggedInConnection, db);
+                    spreadsheetService.switchDatabase(loggedInConnection, db);
                     //todo  consider what happens if there's an error here (check the result from the line above?)
                 }
                 //loggedInConnection = loginService.login("test","magentobill","password",0,"",false);
@@ -117,8 +117,8 @@ public class MagentoController {
                 if (data != null){
                     File moved = null;
                     long start = System.currentTimeMillis();
-                    if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't save it :)
-                        moved = new File(onlineService.getHomeDir() + "/temp/" + db + new Date());
+                    if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't save it :)
+                        moved = new File(spreadsheetService.getHomeDir() + "/temp/" + db + new Date());
                         data.transferTo(moved);
                     }
                     if (moved != null){
@@ -129,7 +129,7 @@ public class MagentoController {
                         dataLoadService.loadData(loggedInConnection, data.getInputStream());
                     }
                     long elapsed = System.currentTimeMillis() - start;
-                    if (!onlineService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't email us :)
+                    if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't email us :)
                             String title = "Magento file upload " + logon + " from " + request.getRemoteAddr() + " elapsed time " + elapsed +  " millisec";
                             azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
                             azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
@@ -146,7 +146,7 @@ public class MagentoController {
             }
             if (op.equals("reports")) {
                 OnlineReport onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
-                return onlineService.readExcel(loggedInConnection, onlineReport, null, "");
+                return spreadsheetService.readExcel(loggedInConnection, onlineReport, null, "");
             }
             return "unknown op";
         } catch (Exception e) {

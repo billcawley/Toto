@@ -10,7 +10,7 @@ import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import com.azquo.spreadsheet.OnlineService;
+import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.csvreader.CsvReader;
 import org.apache.commons.io.FileUtils;
@@ -59,7 +59,7 @@ public final class ImportService {
     @Autowired
     private AdminService adminService;
     @Autowired
-    private OnlineService onlineService;
+    private SpreadsheetService spreadsheetService;
     @Autowired
     private UserChoiceDAO userChoiceDAO;
 
@@ -1059,7 +1059,7 @@ public final class ImportService {
             reportId = or.getId();
         }
 
-        String fullPath = onlineService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
+        String fullPath = spreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
 
@@ -1080,8 +1080,8 @@ public final class ImportService {
 private void readBook (final AzquoMemoryDBConnection azquoMemoryDBConnection, final String fileName, final String tempName, List<String> attributeNames) throws Exception{
 
 
-            AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, this, userChoiceDAO, onlineService);
-            azquoBook.loadBook(tempName, onlineService.useAsposeLicense());
+            AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, this, userChoiceDAO, spreadsheetService);
+            azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
             String reportName = azquoBook.getReportName();
             if (reportName!=null){
                 uploadReport(azquoMemoryDBConnection, azquoBook, fileName, reportName);

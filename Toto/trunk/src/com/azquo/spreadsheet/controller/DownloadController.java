@@ -4,7 +4,7 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.spreadsheet.LoggedInConnection;
 import com.azquo.spreadsheet.LoginService;
-import com.azquo.spreadsheet.OnlineService;
+import com.azquo.spreadsheet.SpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +25,7 @@ public class DownloadController {
     OnlineReportDAO onlineReportDAO;
 
     @Autowired
-    OnlineService onlineService;
+    SpreadsheetService spreadsheetService;
 
     @RequestMapping
     public void handleRequest(HttpServletRequest request
@@ -36,7 +36,7 @@ public class DownloadController {
                               ) throws Exception {
         // deliver a preprepared image. Are these names unique? Could images move between spreadsheets unintentionally?
         if (image != null && image.length() > 0){
-            InputStream input = new BufferedInputStream((new FileInputStream(onlineService.getHomeDir() +  "/temp/" + image)));
+            InputStream input = new BufferedInputStream((new FileInputStream(spreadsheetService.getHomeDir() +  "/temp/" + image)));
             response.setContentType("image/png"); // Set up mime type
             OutputStream out = response.getOutputStream();
             byte[] bucket = new byte[32*1024];
@@ -92,12 +92,12 @@ public class DownloadController {
             fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
         }
         if (pdf){
-            onlineService.saveBookasPDF(response, loggedInConnection, fileName);
+            spreadsheetService.saveBookasPDF(response, loggedInConnection, fileName);
         }else {
             if (withMacros) {
-                onlineService.saveBookActive(response, loggedInConnection, fileName);
+                spreadsheetService.saveBookActive(response, loggedInConnection, fileName);
             } else {
-                onlineService.saveBook(response, loggedInConnection, fileName);
+                spreadsheetService.saveBook(response, loggedInConnection, fileName);
             }
         }
     }

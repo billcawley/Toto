@@ -1,5 +1,6 @@
 package com.azquo.memorydb.service;
 
+import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.jsonrequestentities.NameJsonRequest;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
@@ -24,11 +25,17 @@ import java.util.regex.Pattern;
  * <p/>
  * Ok, outside of the memorydb package this may be the the most fundamental class.
  * Edd trying to understand it properly and trying to get string parsing out of it but not sure how easy that will be
+ *
+ * I don't feel that tere are obviously better places for the funcitons right now except that
+ * todo : can the string parsing and json generation be moved out of here?
+ *
  */
 public final class NameService {
 
     @Autowired
     ValueService valueService;//used only in formating children for output
+    @Autowired
+    SpreadsheetService spreadsheetService;//used only in formating children for output
 
     public StringUtils stringUtils = new StringUtils(); // just make it quickly like this for the mo
     //    private static final ObjectMapper jacksonMapper = new ObjectMapper();
@@ -596,7 +603,6 @@ public final class NameService {
     }
 
     public boolean isAllowed(Name name, List<Set<Name>> names) {
-
         if (name == null || names == null) {
             return true;
         }
@@ -687,9 +693,7 @@ public final class NameService {
             }
             lastPos = andPos + 5;
              andPos = condition.toLowerCase().indexOf(" and ", lastPos);
-
         }
-
     }
 
     private List<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
@@ -1134,7 +1138,7 @@ public final class NameService {
 
             result.append("]");
         } else {
-            result.append(valueService.getJsonDataforOneName(loggedInConnection, name, lookup));
+            result.append(spreadsheetService.getJsonDataforOneName(loggedInConnection, name, lookup));
         }
         result.append(",\"type\":\"");
         if (children.size() > 0) {
@@ -1187,5 +1191,30 @@ public final class NameService {
             }
         }
         return toReturn;
+    }
+
+        /* only relevant where there are peers, not completely sure of it
+    It wants to make sure all names are in the same top set as peers
+    but only up to the number of peers? Well leave for the mo.
+
+    was in value service, not sure why
+    */
+
+
+    Set<Name> trimNames(Name name, Set<Name> nameSet) {
+        //this is for weeding out peers when an element of the calc has less peers
+        int required = name.getPeers().size();
+        Set<Name> applicableNames = new HashSet<Name>();
+        for (Name peer : name.getPeers().keySet()) {
+            for (Name listName : nameSet) {
+                if (listName.findATopParent() == peer.findATopParent()) {
+                    applicableNames.add(listName);
+                    if (--required == 0) {
+                        return applicableNames;
+                    }
+                }
+            }
+        }
+        return applicableNames;
     }
 }

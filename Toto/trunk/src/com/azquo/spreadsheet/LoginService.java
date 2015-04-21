@@ -52,6 +52,8 @@ public class LoginService {
     private OpenDatabaseDAO openDatabaseDAO;
     @Autowired
     private ValueService valueService;
+    @Autowired
+    private SpreadsheetService spreadsheetService;
 
     @Autowired
     private AppDBConnectionMap connectionMap;
@@ -214,7 +216,7 @@ public class LoginService {
 
                 } catch (Exception ignored){
                 }
-                valueService.randomAdjust(set, low, high);
+                spreadsheetService.randomAdjust(set, low, high);
             }else {
                 int count = 1;
                 for (Name name : set.getChildren()) {

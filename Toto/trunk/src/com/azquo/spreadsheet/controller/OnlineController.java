@@ -51,7 +51,7 @@ public class OnlineController {
     @Autowired
     private UserChoiceDAO userChoiceDAO;
     @Autowired
-    private OnlineService onlineService;
+    private SpreadsheetService spreadsheetService;
     @Autowired
     private AdminService adminService;
     @Autowired
@@ -100,7 +100,7 @@ public class OnlineController {
                 book.getInternalBook().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(REPORT_ID, loggedInConnection.getReportId());
-                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, nameService, userChoiceDAO, adminService);
+                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService,nameService, userChoiceDAO, adminService);
                 bookUtils.populateBook(book);
                 request.setAttribute(BOOK, book);
                 if (loggedInConnection.getCurrentDBName() != null) {
@@ -199,22 +199,22 @@ public class OnlineController {
                         String region = choiceName.substring(15);
                         System.out.println("saving choices: " + choiceName + " " + choiceValue);
                         if (choiceValue.equals("clear")) {
-                            onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "clear overrides", "");
+                            spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "clear overrides", "");
                         } else {
-                            onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxrows" + region, request.getParameter("maxrows" + region));
-                            onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxcols" + region, request.getParameter("maxcols" + region));
-                            onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "hiderows" + region, request.getParameter("hiderows" + region));
-                            onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "sortable" + region, request.getParameter("sortable" + region));
+                            spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxrows" + region, request.getParameter("maxrows" + region));
+                            spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxcols" + region, request.getParameter("maxcols" + region));
+                            spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "hiderows" + region, request.getParameter("hiderows" + region));
+                            spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "sortable" + region, request.getParameter("sortable" + region));
                         }
                     } else {
-                        onlineService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
+                        spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
                     }
                     opcode = "loadsheet";
                 }
                 if (opcode.equals("upload")) {
                     if (submit.length() > 0) {
                         if (database.length() > 0){
-                            onlineService.switchDatabase(loggedInConnection, database);
+                            spreadsheetService.switchDatabase(loggedInConnection, database);
                         }
                         InputStream uploadFile = uploadfile.getInputStream();
                         String fileName = uploadfile.getOriginalFilename();
@@ -222,12 +222,12 @@ public class OnlineController {
                         result = "File imported successfully";
 
                     } else {
-                        result = onlineService.showUploadFile(loggedInConnection);
+                        result = spreadsheetService.showUploadFile(loggedInConnection);
                     }
 
                 }
                 if (opcode.equals("valuesent")) {
-                    result = onlineService.changeValue(loggedInConnection, row, Integer.parseInt(colStr), changedValue);
+                    result = spreadsheetService.changeValue(loggedInConnection, row, Integer.parseInt(colStr), changedValue);
                     result = jsonFunction + "({\"changedvalues\":" + result + "})";
                 }
                 if (opcode.equals("nameidchosen")) {
@@ -249,13 +249,13 @@ public class OnlineController {
                 }
 
                 if (opcode.equals("provenance")) {
-                    result = onlineService.getProvenance(loggedInConnection, row, Integer.parseInt(colStr), jsonFunction);
+                    result = spreadsheetService.getProvenance(loggedInConnection, row, Integer.parseInt(colStr), jsonFunction);
                     model.addAttribute("content", result);
 
                     return "utf8javascript";
                 }
                 if (opcode.equals("savedata")) {
-                    onlineService.saveData(loggedInConnection);
+                    spreadsheetService.saveData(loggedInConnection);
                     result = "data saved successfully";
                 }
                 //if (opcode.equals("children")){
@@ -275,7 +275,7 @@ public class OnlineController {
 
                 if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
                     if (onlineReport.getId() != 1) {
-                        request.getSession().setAttribute(BOOK_PATH, onlineService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
+                        request.getSession().setAttribute(BOOK_PATH, spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
                         if (spreadsheetName.length() > 0) {
                             loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName, "");
                         }
@@ -287,16 +287,16 @@ public class OnlineController {
                     loggedInConnection.setReportId(onlineReport.getId());
                     // jam 'em in the session for the moment, makes testing easier. As in see a report then try with &trynewsheet=true after
                     request.getSession().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
-                    result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "Right-click mouse for provenance");
+                    result = spreadsheetService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "Right-click mouse for provenance");
                  }
                 if (opcode.equals("buttonpressed") && row > 0) {//button pressed - follow instructions and reload admin sheet
                     // json function was being passed but ignored!
-                    onlineService.followInstructionsAt(loggedInConnection, row, Integer.parseInt(colStr), database, uploadfile);
+                    spreadsheetService.followInstructionsAt(loggedInConnection, row, Integer.parseInt(colStr), database, uploadfile);
 
                     if (onlineReport == null) {
                         onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
                     }
-                    result = onlineService.readExcel(loggedInConnection, onlineReport, spreadsheetName, result);
+                    result = spreadsheetService.readExcel(loggedInConnection, onlineReport, spreadsheetName, result);
                 }
             /*
             BufferedReader br = new BufferedReader(new StringReader(result));
