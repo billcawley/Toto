@@ -35,6 +35,11 @@ import java.io.*;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 // it seems that trying to configure the properties in spring is a problem
 // todo : see if upgrading spring to 4.2 makes this easier?
 // todo : try to address proper use of protected and private given how I've shifter lots of classes around. This could apply to all sorts in the system.
@@ -144,6 +149,8 @@ public class SpreadsheetService {
         return devMachine == 1;
     }
 
+    public final int availableProcessors;
+    public final int threadsToTry;
 
     public SpreadsheetService() {
         String thost = "";
@@ -152,10 +159,14 @@ public class SpreadsheetService {
         } catch (Exception e) {
             e.printStackTrace(); // may as well in case it goes wrong
         }
-        System.out.print("Java Version : " + System.getProperty("java.version"));
         System.out.println("host : " + thost);
+        availableProcessors = Runtime.getRuntime().availableProcessors();
+        System.out.println("Available processors : " + availableProcessors);
         host = thost;
         stringUtils = new StringUtils();
+
+        threadsToTry = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
+
     }
 
     // What actually delivers the reports to the browser. Maybe change to an output writer? Save memory and increase speed.
@@ -210,7 +221,7 @@ public class SpreadsheetService {
                             }
                         }
                     }
-                    executeLoop(loggedInConnection,  onlineReport.getId(), nameLoop, 0);
+                    executeLoop(loggedInConnection, onlineReport.getId(), nameLoop, 0);
                     return "";
                 }
             }
@@ -298,7 +309,7 @@ public class SpreadsheetService {
         BufferedReader in = null;
         try {
 
-            in = new BufferedReader(new InputStreamReader(servletContext.getResourceAsStream("/WEB-INF/"+ filename)));
+            in = new BufferedReader(new InputStreamReader(servletContext.getResourceAsStream("/WEB-INF/" + filename)));
             String line;
             while ((line = in.readLine()) != null) {
                 sb.append(line).append("\n");
@@ -479,8 +490,8 @@ public class SpreadsheetService {
     }
 
     public void switchDatabase(LoggedInConnection loggedInConnection, String newDBName) throws Exception {
-        if (newDBName.length()==0){
-            loginService.switchDatabase(loggedInConnection,null);
+        if (newDBName.length() == 0) {
+            loginService.switchDatabase(loggedInConnection, null);
             return;
         }
         Database db = databaseDAO.findForName(loggedInConnection.getBusinessId(), newDBName);
@@ -599,22 +610,14 @@ public class SpreadsheetService {
     }
 
 
-
-    public String showUploadFile(LoggedInConnection loggedInConnection){
-
+    public String showUploadFile(LoggedInConnection loggedInConnection) {
         VelocityContext context = new VelocityContext();
         context.put("azquodatabaselist", createDatabaseSelect(loggedInConnection));
-
-
         return convertToVelocity(context, "upload", null, "upload.vm");
-
-
     }
 
 
     // on logging into Magento reports for example
-
-
 
     public String showUserMenu(LoggedInConnection loggedInConnection) {
         List<OnlineReport> onlineReports = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getBusinessId(), loggedInConnection.getUser().getStatus());
@@ -642,7 +645,7 @@ public class SpreadsheetService {
             }
             loginService.switchDatabase(loggedInConnection, newDB);
         }
-        if (searchNames==null)searchNames = "";
+        if (searchNames == null) searchNames = "";
         VelocityContext context = new VelocityContext();
         context.put("parents", parents);
         context.put("rootid", nameId + "");
@@ -684,36 +687,6 @@ public class SpreadsheetService {
         return writer.toString();
     }
 
-    public String outputHeadings(final List<List<DataRegionHeading>> headings, String language) {
-
-        final StringBuilder sb = new StringBuilder();
-
-        if (language == null || language.length() == 0) language = Name.DEFAULT_DISPLAY_NAME;
-        for (int x = 0; x < headings.size(); x++) {
-            List<DataRegionHeading> dataRegionHeadings = headings.get(x);
-            if (x > 0) sb.append("\n");
-            for (int y = 0; y < dataRegionHeadings.size(); y++) {
-                if (y > 0) sb.append("\t");
-                //NOW - LEAVE THE PRUNING OF NAMES TO EXCEL - MAYBE THE LIST WILL BE SORTED.
-                DataRegionHeading rowName = dataRegionHeadings.get(y);
-                if (rowName != null) {
-                    Name name = rowName.getName();
-                    if (name != null) {
-                        String nameInLanguage = name.getAttribute(language);
-                        if (nameInLanguage == null) {
-                            nameInLanguage = name.getDefaultDisplayName();
-                        }
-                        sb.append(nameInLanguage);
-                    } else {
-                        String attribute = dataRegionHeadings.get(y).getAttribute();
-                        if (attribute != null) sb.append(attribute);
-                    }
-                }
-            }
-        }
-        return sb.toString();
-    }
-
     /*
 
     Ok, select a region of names in excel and paste and this function will build a multidimentional array of heading objects from that paste
@@ -732,7 +705,8 @@ seaports;children   container;children
      */
 
 
-    public String createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<List<DataRegionHeading>>> nameLists, final String excelRegionPasted, List<String> attributeNames) throws Exception {
+    public List<List<List<DataRegionHeading>>> createNameListsFromExcelRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String excelRegionPasted, List<String> attributeNames) throws Exception {
+        List<List<List<DataRegionHeading>>> nameLists = new ArrayList<List<List<DataRegionHeading>>>();
         //logger.info("excel region pasted : " + excelRegionPasted);
         int maxColCount = 1;
         CsvReader pastedDataReader = new CsvReader(new StringReader(excelRegionPasted), '\t');
@@ -757,18 +731,14 @@ seaports;children   container;children
                         // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
                         row.add(Arrays.asList(new DataRegionHeading(cellString, true))); // we say that an attribuite heading defaults to writeable, it will defer to the name
                     } else {
-                        try {
-                            row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, cellString, attributeNames), azquoMemoryDBConnection));
-                        } catch (Exception e) {
-                            return "error:" + e.getMessage();
-                        }
+                        row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, cellString, attributeNames), azquoMemoryDBConnection));
                     }
                 }
             }
             while (row.size() < maxColCount) row.add(null);
             nameLists.add(row);
         }
-        return "";
+        return nameLists;
     }
 
     /* ok we're passed a list of lists
@@ -928,26 +898,6 @@ seaports;children   container;children
         return false; // it was ALL null, error time?
     }
 
-    private boolean theseRowsInThisRegionAreBlank(LoggedInConnection loggedInConnection, String region, int rowInt, int count) {
-
-        final List<List<ListOfValuesOrNamesAndAttributeName>> dataValueMap = loggedInConnection.getDataValueMap(region);
-
-        if (dataValueMap != null) {
-            for (int rowCount = 0; rowCount < count; rowCount++) {
-                if (dataValueMap.get(rowInt + rowCount) != null) {
-                    final List<ListOfValuesOrNamesAndAttributeName> rowContents = dataValueMap.get(rowInt + rowCount);
-                    for (ListOfValuesOrNamesAndAttributeName oneCell : rowContents) {
-                        // names should only be set if there is a value
-                        if ((oneCell.getValues() != null && oneCell.getValues().size() > 0) || (oneCell.getNames() != null && oneCell.getNames().size() > 0)) {
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-        return true;
-    }
-
     // todo make sense of the bloody restrictcount parameter
 
     public List<Integer> sortDoubleValues(int restrictCount, Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
@@ -994,170 +944,6 @@ seaports;children   container;children
             }
         }
         return sortedValues;
-    }
-
-    public List<Integer> sortValues(int restrictCount, Map<Integer, Object> sortTotals, boolean isNumber, boolean sortRowsUp) {
-
-        List<Integer> sortedValues = new ArrayList<Integer>();
-        if (restrictCount != 0) {
-            List<Map.Entry<Integer, Object>> list = new ArrayList<Map.Entry<Integer, Object>>(sortTotals.entrySet());
-            if (isNumber) {
-
-                // sort list based on
-                if (sortRowsUp) {
-                    Collections.sort(list, new Comparator<Map.Entry<Integer, Object>>() {
-                        public int compare(Map.Entry<Integer, Object> o1, Map.Entry<Integer, Object> o2) {
-                            Double d1 = (Double) o1.getValue();
-                            Double d2 = (Double) o2.getValue();
-                            return d1.compareTo(d2);
-                        }
-                    });
-                } else {
-                    Collections.sort(list, new Comparator<Map.Entry<Integer, Object>>() {
-                        public int compare(Map.Entry<Integer, Object> o1, Map.Entry<Integer, Object> o2) {
-                            Double d1 = (Double) o1.getValue();
-                            Double d2 = (Double) o2.getValue();
-                            return d2.compareTo(d1);
-                        }
-                    });
-
-                }
-            } else {
-                if (sortRowsUp) {
-                    Collections.sort(list, new Comparator<Map.Entry<Integer, Object>>() {
-                        public int compare(Map.Entry<Integer, Object> o1, Map.Entry<Integer, Object> o2) {
-                            String s1 = (String) o1.getValue();
-                            String s2 = (String) o2.getValue();
-                            return s1.compareTo(s2);
-                        }
-                    });
-                } else {
-                    Collections.sort(list, new Comparator<Map.Entry<Integer, Object>>() {
-                        public int compare(Map.Entry<Integer, Object> o1, Map.Entry<Integer, Object> o2) {
-                            String s1 = (String) o1.getValue();
-                            String s2 = (String) o2.getValue();
-                            return s2.compareTo(s1);
-                        }
-                    });
-
-                }
-            }
-            for (Map.Entry<Integer, Object> aList : list) {
-                sortedValues.add(aList.getKey());
-            }
-        } else {
-            for (int i = 0; i < sortTotals.size(); i++) {
-                sortedValues.add(i);
-            }
-        }
-        return sortedValues;
-    }
-
-    public String setupRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        long start = System.currentTimeMillis();
-        final List<List<List<DataRegionHeading>>> rowHeadingLists = new ArrayList<List<List<DataRegionHeading>>>();
-        String error = createNameListsFromExcelRegion(loggedInConnection, rowHeadingLists, headingsSent, loggedInConnection.getLanguages());
-        System.out.println("row heading setup took " + (System.currentTimeMillis() - start) + " millisecs");
-        loggedInConnection.setRowHeadings(region, expandHeadings(rowHeadingLists));
-        return error;
-    }
-
-    // THis returns the headings as they're meant to be seen in Excel I think
-    // not this is called AFTER the data has been populated, hence how it can determine if rows are blank or not
-    // broken into 2 functions to help use the new sheet display
-
-    public String getRowHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent, final int filterCount) throws Exception {
-        String language = stringUtils.getInstruction(headingsSent, "language");
-        return outputHeadings(getRowHeadingsAsArray(loggedInConnection, region, filterCount), language);
-    }
-
-    public List<List<DataRegionHeading>> getRowHeadingsAsArray(final LoggedInConnection loggedInConnection, final String region, final int filterCount) throws Exception {
-        // do we want to try removing blank rows?
-        if (filterCount > 0) {
-            //send back only those headings that have data - considered in batches of length filtercount.
-            List<List<DataRegionHeading>> rowHeadingsWithData = new ArrayList<List<DataRegionHeading>>();
-            List<List<DataRegionHeading>> allRowHeadings = loggedInConnection.getRowHeadings(region);
-            int rowInt = 0;
-            while (rowInt < allRowHeadings.size()) {
-                if (!theseRowsInThisRegionAreBlank(loggedInConnection, region, rowInt, filterCount)) {
-                    for (int rowCount = 0; rowCount < filterCount; rowCount++) {
-                        rowHeadingsWithData.add(allRowHeadings.get(rowInt + rowCount));
-                    }
-                }
-                rowInt += filterCount;
-            }
-            //note that the sort order has already been set.... there cannot be both a restrict count and a filter count
-            return rowHeadingsWithData;
-        } else if (loggedInConnection.getRestrictRowCount(region) != null && loggedInConnection.getRestrictRowCount(region) != 0) {//if not blanking then restrict by other criteria
-            int restrictRowCount = loggedInConnection.getRestrictRowCount(region);
-            List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
-            List<List<DataRegionHeading>> rowHeadingsWithData = new ArrayList<List<DataRegionHeading>>();
-            List<List<DataRegionHeading>> allRowHeadings = loggedInConnection.getRowHeadings(region);
-            if (restrictRowCount > allRowHeadings.size()) {
-                restrictRowCount = allRowHeadings.size();
-                loggedInConnection.setRestrictRowCount(region, restrictRowCount);
-            }
-            if (restrictRowCount > sortedRows.size()) {
-                restrictRowCount = sortedRows.size();
-                loggedInConnection.setRestrictRowCount(region, restrictRowCount);
-            }
-
-            for (int rowInt = 0; rowInt < restrictRowCount; rowInt++) {
-                rowHeadingsWithData.add(allRowHeadings.get(sortedRows.get(rowInt)));
-            }
-            return rowHeadingsWithData;
-        }
-        return loggedInConnection.getRowHeadings(region);
-    }
-
-    /* ok so transposing happens here
-    this is because the expand headings function is orientated for row headings and the column heading definitions are unsurprisingly set up for columns
-     what is notable here is that the headings are then stored this way in column headings, we need to say "give me the headings for column x"
-
-     NOTE : this means the column heading are not stored according to the orientation used in the above function
-
-      hence, to output them we have to transpose them again!
-
-      should they be being transposed back again here after expanding? Or make expanding deal with this? Something to investigate
-
-     */
-
-
-    public String setupColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String headingsSent) throws Exception {
-        List<List<List<DataRegionHeading>>> columnHeadingLists = new ArrayList<List<List<DataRegionHeading>>>();
-        String error = createNameListsFromExcelRegion(loggedInConnection, columnHeadingLists, headingsSent, loggedInConnection.getLanguages());
-        loggedInConnection.setColumnHeadings(region, (expandHeadings(transpose2DList(columnHeadingLists))));
-        return error;
-    }
-
-    // ok this seems rather similar ot the get RowHeadingsLogic - probabtl some factoring and perhaps better dealing with
-    // transpose2DList. Todo!
-
-    public String getColumnHeadings(final LoggedInConnection loggedInConnection, final String region, final String language) throws Exception {
-        return outputHeadings(getColumnHeadingsAsArray(loggedInConnection, region), language);
-    }
-
-    public List<List<DataRegionHeading>> getColumnHeadingsAsArray(final LoggedInConnection loggedInConnection, final String region) throws Exception {
-        if (loggedInConnection.getRestrictColCount(region) != null && loggedInConnection.getRestrictColCount(region) != 0) {
-            int restrictColCount = loggedInConnection.getRestrictColCount(region);
-            List<Integer> sortedCols = loggedInConnection.getColOrder(region);
-            List<List<DataRegionHeading>> ColHeadingsWithData = new ArrayList<List<DataRegionHeading>>();
-            List<List<DataRegionHeading>> allColHeadings = loggedInConnection.getColumnHeadings(region);
-            if (restrictColCount > allColHeadings.size()) {
-                restrictColCount = allColHeadings.size();
-                loggedInConnection.setRestrictColCount(region, restrictColCount);
-            }
-            if (restrictColCount > sortedCols.size()) {
-                restrictColCount = sortedCols.size();
-                loggedInConnection.setRestrictColCount(region, restrictColCount);
-            }
-
-            for (int ColInt = 0; ColInt < restrictColCount; ColInt++) {
-                ColHeadingsWithData.add(allColHeadings.get(sortedCols.get(ColInt)));
-            }
-            return transpose2DList(ColHeadingsWithData);
-        }
-        return transpose2DList(loggedInConnection.getColumnHeadings(region));
     }
 
     /* ok so transposing happens here
@@ -1262,101 +1048,32 @@ seaports;children   container;children
         return sb.toString();
     }
 
-    private void formatLockMap(LoggedInConnection loggedInConnection, String region, List<List<Boolean>> lockMap) {
-        StringBuilder sb = new StringBuilder();
-        boolean firstRow = true;
-        for (List<Boolean> row : lockMap) {
-            if (firstRow) {
-                firstRow = false;
-            } else {
-                sb.append("\n");
-            }
-            boolean firstCol = true;
-            for (Boolean lock : row) {
-                if (firstCol) {
-                    firstCol = false;
-                } else {
-                    sb.append("\t");
-                }
-                if (lock) {
-                    sb.append("LOCKED");
-                }
-            }
-        }
-        loggedInConnection.setLockMap(region, sb.toString());
-    }
 
-    // having built shownValueArray in getExcelDataForColumnsRowsAndContext need to format it. Whether such a function should go back in there is a question
-
-    public final StringBuilder formatDataRegion(LoggedInConnection loggedInConnection, String region, List<List<String>> shownValueArray, int filterCount, int restrictRowCount, int restrictColCount) {
-
-        int rowInt = 0;
-        int blockRowCount = 0;
-        int outputMarker = 0;
-        boolean firstRow = true;
-        List<Integer> sortedRows = loggedInConnection.getRowOrder(region);
-        List<Integer> sortedCols = loggedInConnection.getColOrder(region);
-        final StringBuilder sb = new StringBuilder();
-        if (restrictRowCount == 0 || restrictRowCount > sortedRows.size()) {
-            restrictRowCount = sortedRows.size();
-        }
-        if (restrictColCount == 0 || restrictColCount > sortedCols.size()) {
-            restrictColCount = sortedCols.size();
-        }
-        for (int rowNo = 0; rowNo < restrictRowCount; rowNo++) {
-
-            List<String> rowValuesShown = shownValueArray.get(sortedRows.get(rowNo));
-            if (blockRowCount == 0) {
-                outputMarker = sb.length();// in case we need to truncate it.
-            }
-            if (!firstRow) {
-                sb.append("\n");
-            }
-            boolean newRow = true;
-            for (int colNo = 0; colNo < restrictColCount; colNo++) {
-                if (!newRow) {
-                    sb.append("\t");
-                }
-                sb.append(rowValuesShown.get(sortedCols.get(colNo)));
-                newRow = false;
-            }
-            rowInt++;
-            firstRow = false;
-            if (++blockRowCount == filterCount) {
-                if (theseRowsInThisRegionAreBlank(loggedInConnection, region, rowInt - filterCount, filterCount)) {
-                    sb.delete(outputMarker, sb.length());
-                    // this should be the equivalent of the above delete
-                }
-                blockRowCount = 0;
-            }
-        }
-        loggedInConnection.setSentDataMap(region, sb.toString());
-
-        return sb;
-    }
-
-    public String getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows, int maxCols) throws Exception {
-
+    public List<List<AzquoCell>> getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows, int maxCols) throws Exception {
         if (loggedInConnection.getRowHeadings(region) == null || loggedInConnection.getRowHeadings(region).size() == 0 || loggedInConnection.getColumnHeadings(region) == null || loggedInConnection.getColumnHeadings(region).size() == 0) {
-            return "error: no headings passed";
+            throw new Exception("no headings passed");
         }
-
-
         loggedInConnection.getProvenance("in spreadsheet").setContext(context);
-
         final StringTokenizer st = new StringTokenizer(context, "\n");
         final List<Name> contextNames = new ArrayList<Name>();
         while (st.hasMoreTokens()) {
             final List<Name> thisContextNames = nameService.parseQuery(loggedInConnection, st.nextToken().trim());
             if (thisContextNames.size() > 1) {
-                return "error: context names must be individual - use 'as' to put sets in context";
+                throw new Exception("context names must be individual - use 'as' to put sets in context");
             }
             if (thisContextNames.size() > 0) {
                 //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
                 contextNames.add(thisContextNames.get(0));
             }
         }
-        return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows, maxCols);
+        // note, didn't se the context against the logged in connection, should I?
+        // ok going to try to use the new function
+        List<List<AzquoCell>> dataToShow = getAzquoCellsForColumnsRowsAndContext(loggedInConnection, loggedInConnection.getColumnHeadings(region)
+                , loggedInConnection.getRowHeadings(region), contextNames, loggedInConnection.getLanguages());
+        dataToShow = sortAndFilterCells(dataToShow, loggedInConnection.getRowHeadings(region), loggedInConnection.getColumnHeadings(region)
+                , filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
+        return dataToShow;
+        //return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows, maxCols);
     }
 
     // for looking up a heading given a string. Seems used for looking up teh right col or row to sort on
@@ -1528,16 +1245,16 @@ seaports;children   container;children
                 // we need the equivalent check of blank rows, checking the cell's list of names or values should do this
                 // go back from the beginning
                 boolean rowsBlank = true;
-                for (int j = 0; j < filterCount; j++){
+                for (int j = 0; j < filterCount; j++) {
                     List<AzquoCell> rowToCheck = sortedCells.get((sortedRows.size() - 1) - j); // size - 1 for the last index
-                    for (AzquoCell cellToCheck : rowToCheck){
+                    for (AzquoCell cellToCheck : rowToCheck) {
                         if ((cellToCheck.listOfValuesOrNamesAndAttributeName.getNames() != null && !cellToCheck.listOfValuesOrNamesAndAttributeName.getNames().isEmpty())
-                                || (cellToCheck.listOfValuesOrNamesAndAttributeName.getValues() != null && !cellToCheck.listOfValuesOrNamesAndAttributeName.getValues().isEmpty())){// there were values or names for the call
+                                || (cellToCheck.listOfValuesOrNamesAndAttributeName.getValues() != null && !cellToCheck.listOfValuesOrNamesAndAttributeName.getValues().isEmpty())) {// there were values or names for the call
                             rowsBlank = false;
                             break;
                         }
                     }
-                    if (!rowsBlank){
+                    if (!rowsBlank) {
                         break;
                     }
                 }
@@ -1574,329 +1291,208 @@ seaports;children   container;children
     So,it's going to return relevant data to the region. The values actually shown, (typed?) objects for ZKspreadsheet, locked or not, the headings are useful (though one could perhaps derive them)
 it seems that there should be a cell map or object and that's what this should return rather than having a bunch of multidimensional arrays
 
-ok I'm going for that object type, outer list rows inner items on those rows, hope that's standard. Outside this function the sorting etc will happen.
+ok I'm going for that object type (AzquoCell), outer list rows inner items on those rows, hope that's standard. Outside this function the sorting etc will happen.
+
+I think that this is an ideal candidate for multithreading to speed things up
 
 
     */
+
+    boolean tryMultiThreaded = true;
+
+    public class RowFiller implements Runnable {
+
+        private final int startRow;
+        private final int endRow;
+        private final List<List<AzquoCell>> targetArray;
+        private final List<List<DataRegionHeading>> headingsForEachColumn;
+        private final List<List<DataRegionHeading>> headingsForEachRow;
+        private final List<Name> contextNames;
+        private final List<String> languages;
+        private final AzquoMemoryDBConnection connection;
+        private final Map<Name, Integer> totalSetSize;
+        private final StringBuffer errorTrack;
+
+        public RowFiller(int startRow, int endRow, List<List<AzquoCell>> targetArray, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow, List<Name> contextNames, List<String> languages, AzquoMemoryDBConnection connection, Map<Name, Integer> totalSetSize, StringBuffer errorTrack) {
+            this.startRow = startRow;
+            this.endRow = endRow;
+            this.targetArray = targetArray;
+            this.headingsForEachColumn = headingsForEachColumn;
+            this.headingsForEachRow = headingsForEachRow;
+            this.contextNames = contextNames;
+            this.languages = languages;
+            this.connection = connection;
+            this.totalSetSize = totalSetSize;
+            this.errorTrack = errorTrack;
+        }
+
+        @Override
+        public void run() {
+            try {
+                //System.out.println("Filling " + startRow + " to " + endRow);
+                for (int rowNo = startRow; rowNo <= endRow; rowNo++) {
+                    List<DataRegionHeading> rowHeadings = headingsForEachRow.get(rowNo);
+                    if (rowNo % 1000 == 0) System.out.print(".");
+                    List<AzquoCell> returnRow = new ArrayList<AzquoCell>();
+                    //todo, multithread on building this region? Since it's already added a different thread could modify the lists, that SHOULD work? Possible to have non udpated lists at the end? sort later!
+                    for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
+                        // values I need to build the CellUI
+                        String stringValue;
+                        double doubleValue = 0;
+                        Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
+                        ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
+
+                        //check that we do have both row and column headings, oterhiwse blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
+                        for (DataRegionHeading heading : rowHeadings) {
+                            if (heading != null) {
+                                headingsForThisCell.add(heading);
+                            }
+                        }
+                        int hCount = headingsForThisCell.size();
+                        if (hCount > 0) {
+                            for (DataRegionHeading heading : columnHeadings) {
+                                if (heading != null) {
+                                    headingsForThisCell.add(heading);
+                                }
+                            }
+                            if (headingsForThisCell.size() > hCount) {
+                                headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection));
+                            } else {
+                                headingsForThisCell.clear();
+                            }
+                        }
+                        MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
+                        boolean checked = true;
+                        for (DataRegionHeading heading : headingsForThisCell) {
+                            if (heading.getName() == null && heading.getAttribute() == null) {
+                                checked = false;
+                            }
+                            if (!heading.isWriteAllowed()) { // this replaces the isallowed check that was in the functions that resolved the cell values
+                                locked.isTrue = true;
+                            }
+                        }
+                        if (!checked) { // not a valid peer set? Lock and no values set (blank)
+                            locked.isTrue = true;
+                            stringValue = "";
+                        } else {
+                            // ok new logic here, we need to know if we're going to use attributes or values
+                            boolean headingsHaveAttributes = headingsHaveAttributes(headingsForThisCell);
+                            if (!headingsHaveAttributes) { // we go the value route (the standard/old one), need the headings as names,
+                                // TODO - peer additive check. If using peers and not additive, don't include children
+                                List<Value> values = new ArrayList<Value>();
+                                doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, languages); // true = pay attention to names additive flag
+                                //if there's only one value, treat it as text (it may be text, or may include £,$,%)
+                                if (values.size() == 1 && !locked.isTrue) {
+
+                                    Value value = values.get(0);
+                                    stringValue = value.getText();
+                                    if (stringValue.contains("\n")) {
+                                        stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
+                                    }
+                                    // was isnumber test here to add a double to the
+                                } else {
+                                    stringValue = doubleValue + "";
+                                }
+                                listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(values);
+                            } else {  // now, new logic for attributes
+                                List<Name> names = new ArrayList<Name>();
+                                List<String> attributes = new ArrayList<String>();
+                                listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
+                                String attributeResult = valueService.findValueForHeadings(headingsForThisCell, locked, names, attributes);
+                                if (NumberUtils.isNumber(attributeResult)) { // there should be a more efficient way I feel given that the result is typed internally
+                                    doubleValue = Double.parseDouble(attributeResult);
+                                    // ZK would sant this typed? Maybe just sort out later?
+                                }
+                                attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
+                                stringValue = attributeResult;
+                            }
+                        }
+                /* something to note : in the old model there was a map of headings used for each cell. I could add headingsForThisCell to the cell which would be a unique set for each cell
+                 but instead I'll just add the headings and row and context, this should enable us to do what we need later (saving) and I think it would be less memory. 3 object references vs a set*/
+                        AzquoCell azquoCell = new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextNames, stringValue, doubleValue);
+                        returnRow.add(azquoCell);
+                    }
+                    targetArray.set(rowNo, returnRow);
+                }
+            } catch (Exception e) {
+                errorTrack.append(e.getMessage()).append("\n");
+                errorTrack.append(e.getStackTrace()[0]);
+            }
+        }
+    }
+
+
     public List<List<AzquoCell>> getAzquoCellsForColumnsRowsAndContext(AzquoMemoryDBConnection connection, final List<List<DataRegionHeading>> headingsForEachColumn
             , List<List<DataRegionHeading>> headingsForEachRow, final List<Name> contextNames, List<String> languages) throws Exception {
-        List<List<AzquoCell>> toReturn = new ArrayList<List<AzquoCell>>();
+        //tryMultiThreaded = !tryMultiThreaded;
         long track = System.currentTimeMillis();
         int totalRows = headingsForEachRow.size();
         int totalCols = headingsForEachColumn.size();
-        int rowNo = 0;
-        Map<Name, Integer> totalSetSize = new HashMap<Name, Integer>();// a cache to speed up cell calculation. Short hand of set sizes, we assume they won't change while creating this data.
+        List<List<AzquoCell>> toReturn = new ArrayList<List<AzquoCell>>(totalRows); // make it the right size so multithreading changes the values but not the structure
+        for (int i = 0; i < totalRows; i++) {
+            toReturn.add(null);// null the rows, basically adding spaces to the return list
+        }
+        Map<Name, Integer> totalSetSize = new ConcurrentHashMap<Name, Integer>();// a cache to speed up cell calculation. Short hand of set sizes, we assume they won't change while creating this data.
         System.out.println("data region size = " + totalRows + " * " + totalCols);
         int maxRegionSize = 500000;
         if (totalRows * totalCols > maxRegionSize) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }
-        for (List<DataRegionHeading> rowHeadings : headingsForEachRow) {
-            if (rowNo % 1000 == 0) System.out.print(".");
-            List<AzquoCell> returnRow = new ArrayList<AzquoCell>();
-            toReturn.add(returnRow);
-            //todo, multithread on building this region? Since it's already added a different thread could modify the lists, that SHOULD work? Possible to have non udpated lists at the end? sort later!
-            for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
-                // values I need to build the CellUI
-                String stringValue = null;
-                double doubleValue = 0;
-                Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
-                ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
-
-                //check that we do have both row and column headings, oterhiwse blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
-                for (DataRegionHeading heading : rowHeadings) {
-                    if (heading != null) {
-                        headingsForThisCell.add(heading);
-                    }
-                }
-                int hCount = headingsForThisCell.size();
-                if (hCount > 0) {
-                    for (DataRegionHeading heading : columnHeadings) {
-                        if (heading != null) {
-                            headingsForThisCell.add(heading);
-                        }
-                    }
-                    if (headingsForThisCell.size() > hCount) {
-                        headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection));
-                    } else {
-                        headingsForThisCell.clear();
-                    }
-                }
-                MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
-                boolean checked = true;
-                for (DataRegionHeading heading : headingsForThisCell) {
-                    if (heading.getName() == null && heading.getAttribute() == null) {
-                        checked = false;
-                    }
-                    if (!heading.isWriteAllowed()) { // this replaces the isallowed check that was in the functions that resolved the cell values
-                        locked.isTrue = true;
-                    }
-                }
-                if (!checked) { // not a valid peer set? Lock and no values set (blank)
-                    locked.isTrue = true;
-                    stringValue = "";
-                } else {
-                    // ok new logic here, we need to know if we're going to use attributes or values
-                    boolean headingsHaveAttributes = headingsHaveAttributes(headingsForThisCell);
-                    if (!headingsHaveAttributes) { // we go the value route (the standard/old one), need the headings as names,
-                        // TODO - peer additive check. If using peers and not additive, don't include children
-                        List<Value> values = new ArrayList<Value>();
-                        doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, languages); // true = pay attention to names additive flag
-                        //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                        if (values.size() == 1 && !locked.isTrue) {
-
-                            Value value = values.get(0);
-                            stringValue = value.getText();
-                            if (stringValue.contains("\n")) {
-                                stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
-                            }
-                            // was isnumber test here to add a double to the
-                        } else {
-                            stringValue = doubleValue + "";
-                        }
-                        listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(values);
-                    } else {  // now, new logic for attributes
-                        List<Name> names = new ArrayList<Name>();
-                        List<String> attributes = new ArrayList<String>();
-                        listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
-                        String attributeResult = valueService.findValueForHeadings(headingsForThisCell, locked, names, attributes);
-                        if (NumberUtils.isNumber(attributeResult)) { // there should be a more efficient way I feel given that the result is typed internally
-                            doubleValue = Double.parseDouble(attributeResult);
-                            // ZK would sant this typed? Maybe just sort out later?
-                        }
-                        attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
-                        stringValue = attributeResult;
-                    }
-                }
-                /* something to note : in the old model there was a map of headings used for each cell. I could add headingsForThisCell to the cell which would be a unique set for each cell
-                 but instead I'll just add the headings and row and context, this should enable us to do what we need later (saving) and I think it would be less memory. 3 object references vs a set*/
-                AzquoCell azquoCell = new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextNames, stringValue, doubleValue);
-                returnRow.add(azquoCell);
-            }
+        int threads = threadsToTry;
+        if (!tryMultiThreaded){
+            threads = 1;
         }
-        valueService.printSumStats();
-        valueService.printFindForNamesIncludeChildrenStats();
+        System.out.println("populating using " + threads + " threas(s)");
+        ExecutorService executor = Executors.newFixedThreadPool(threads); // picking 10 based on an example I saw . . .
+        StringBuffer errorTrack = new StringBuffer();// deliberately threadsafe, need to keep an eye on the report building . . .
+        // tried multithreaded, going for big chunks
+        int chunk = totalRows / threads;
+        int startRow = 0;
+        int endRow = startRow + chunk - 1; // - 1 as endrow is inclusive
+        for (int i = 1; i <= threads; i++) {
+            if (endRow >= totalRows || i == threads) { // the last one
+                endRow = totalRows - 1;
+            }
+            executor.execute(new RowFiller(startRow, endRow, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, totalSetSize, errorTrack));
+            startRow += chunk;
+            endRow += chunk;
+        }
+
+
+        if (errorTrack.length() > 0) {
+            throw new Exception(errorTrack.toString());
+        }
+        executor.shutdown();
+        if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+            throw new Exception("Data region took longer than an hour to load");
+        }
+        if (errorTrack.length() > 0) {
+            throw new Exception(errorTrack.toString());
+        }
+        //valueService.printSumStats();
+        //valueService.printFindForNamesIncludeChildrenStats();
         logger.info("time to execute : " + (System.currentTimeMillis() - track));
         return toReturn;
     }
 
-    // the guts of actually delivering the data for a region
-    // displayObjectsForNewSheet is similar to shown value array but the latter is made of strings, I need more dynamic objects
-
-    public String getExcelDataForColumnsRowsAndContext(final LoggedInConnection loggedInConnection, final List<Name> contextNames, final String region, int filterCount, int restrictRowCount, int restrictColCount) throws Exception {
-        loggedInConnection.setContext(region, contextNames); // needed for provenance
-        long track = System.currentTimeMillis();
-        int totalRows = loggedInConnection.getRowHeadings(region).size();
-        int totalCols = loggedInConnection.getColumnHeadings(region).size();
-        if (restrictRowCount < 0) {
-            //decide whether to sort the rows
-            if (totalRows + restrictRowCount < 0) {
-                restrictRowCount = 0;
-            } else {
-                restrictRowCount = -restrictRowCount;
-            }
+    // new logic, derive the headings from the data, no need to resort to resorting etc.
+    public List<List<DataRegionHeading>> getColumnHeadingsAsArray(List<List<AzquoCell>> cellArray) {
+        List<List<DataRegionHeading>> toReturn = new ArrayList<List<DataRegionHeading>>();
+        for (AzquoCell cell : cellArray.get(0)) {
+            toReturn.add(cell.columnHeadings);
         }
-        if (restrictColCount < 0) {
-            //decide whether to sort the Cols
-            if (totalCols + restrictColCount < 0) {
-                restrictColCount = 0;
-            } else {
-                restrictColCount = -restrictColCount;
-            }
-        }
-        if (restrictRowCount > totalRows) restrictRowCount = totalRows;
-        if (restrictColCount > totalCols) restrictColCount = totalCols;
-        Integer sortCol = findPosition(loggedInConnection.getColumnHeadings(region), loggedInConnection.getSortCol(region));
-        Integer sortRow = findPosition(loggedInConnection.getRowHeadings(region), loggedInConnection.getSortRow(region));
-
-        boolean sortRowsUp = false;
-        boolean sortColsRight = false;
-        if (sortCol == null) {
-            sortCol = 0;
-        } else {
-            if (sortCol > 0) {
-                sortRowsUp = true;
-            } else {
-                sortCol = -sortCol;
-            }
-        }
-        if (sortRow == null) {
-            sortRow = 0;
-        } else {
-            if (sortRow > 0) {
-                sortColsRight = true;
-            } else {
-                sortRow = -sortRow;
-            }
-        }
-        if (sortCol > 0 && restrictRowCount == 0) {
-            restrictRowCount = totalRows;//this is a signal to sort the rows
-        }
-        if (sortRow > 0 && restrictColCount == 0) {
-            restrictColCount = totalCols;//this is a signal to sort the cols
-        }
-        final List<List<ListOfValuesOrNamesAndAttributeName>> dataValuesMap
-                = new ArrayList<List<ListOfValuesOrNamesAndAttributeName>>(totalRows); // rows, columns, lists of values
-        loggedInConnection.setDataValueMap(region, dataValuesMap);
-        final Map<Integer, Object> sortRowTotals = new HashMap<Integer, Object>();
-        final Map<Integer, Object> sortRowStrings = new HashMap<Integer, Object>();
-        final Map<Integer, Object> sortColumnTotals = new HashMap<Integer, Object>();
-//        final Map<Integer, Object> sortColumnStrings = new HashMap<Integer, Object>();
-        List<List<Set<DataRegionHeading>>> dataHeadingsMap = new ArrayList<List<Set<DataRegionHeading>>>(totalRows); // rows, columns, lists of names for each cell
-        List<List<String>> shownValueArray = new ArrayList<List<String>>();
-        List<List<Boolean>> lockArray = new ArrayList<List<Boolean>>();
-        int rowNo = 0;
-        Map<Name, Integer> totalSetSize = new HashMap<Name, Integer>();
-        for (int colNo = 0; colNo < totalCols; colNo++) {
-            sortColumnTotals.put(colNo, 0.00);
-//            sortColumnStrings.put(colNo,"");
-        }
-        System.out.println("data region size = " + totalRows + " * " + totalCols);
-        if (totalRows * totalCols > 500000) {
-            throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells 500,000");
-        }
-        boolean rowNumbers = true;
-//        boolean colNumbers = true;
-        for (List<DataRegionHeading> rowHeadings : loggedInConnection.getRowHeadings(region)) { // make it like a document
-            if (rowNo % 1000 == 0) System.out.print(".");
-            ArrayList<ListOfValuesOrNamesAndAttributeName> thisRowValues
-                    = new ArrayList<ListOfValuesOrNamesAndAttributeName>(totalCols);
-            ArrayList<Set<DataRegionHeading>> thisRowHeadings = new ArrayList<Set<DataRegionHeading>>(totalCols);
-            List<String> shownValues = new ArrayList<String>();
-            List<Boolean> lockedCells = new ArrayList<Boolean>();
-            dataValuesMap.add(thisRowValues);
-            dataHeadingsMap.add(thisRowHeadings);
-            shownValueArray.add(shownValues);
-            lockArray.add(lockedCells);
-
-
-            double sortRowTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total.
-            int colNo = 0;
-            sortRowStrings.put(rowNo, "");
-            for (List<DataRegionHeading> columnHeadings : loggedInConnection.getColumnHeadings(region)) {
-                final Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
-                //check that we do have both row and column headings.....
-                for (DataRegionHeading heading : rowHeadings) {
-                    if (heading != null) {
-                        headingsForThisCell.add(heading);
-                    }
-                }
-                int hCount = headingsForThisCell.size();
-                if (hCount > 0) {
-                    for (DataRegionHeading heading : columnHeadings) {
-                        if (heading != null) {
-                            headingsForThisCell.add(heading);
-                        }
-                    }
-                    if (headingsForThisCell.size() > hCount) {
-                        headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, loggedInConnection));
-                    } else {
-                        headingsForThisCell.clear();
-                    }
-                }
-                // edd putting in peer check stuff here, should I not???
-                MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
-                // why bother?   Maybe leave it as 'on demand' when a data region doesn't work
-                // Map<String, String> result = nameService.isAValidNameSet(azquoMemoryDBConnection, namesForThisCell, new HashSet<Name>());
-                // much simpler check - simply that the list is complete.
-                boolean checked = true;
-                for (DataRegionHeading heading : headingsForThisCell) {
-                    if (heading.getName() == null && heading.getAttribute() == null) {
-                        checked = false;
-                    }
-                    if (!heading.isWriteAllowed()) { // this replaces the isallowed check that was in the functions that resolved the cell values
-                        locked.isTrue = true;
-                    }
-                }
-                if (!checked) { // not a valid peer set? Show a blank locked cell
-                    shownValues.add("");
-                    lockedCells.add(true);
-                    thisRowValues.add(null);
-                } else {
-                    // ok new logic here, we need to know if we're going to use attributes or values
-                    boolean headingsHaveAttributes = headingsHaveAttributes(headingsForThisCell);
-                    thisRowHeadings.add(headingsForThisCell);
-                    double cellValue = 0;
-                    ListOfValuesOrNamesAndAttributeName valuesOrNamesAndAttributeName;
-                    String text = "";
-                    if (!headingsHaveAttributes) { // we go the value route (the standard/old one), need the headings as names,
-                        // TODO - peer additive check. If using peers and not additive, don't include children
-                        List<Value> values = new ArrayList<Value>();
-                        cellValue = valueService.findValueForNames(loggedInConnection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, loggedInConnection.getLanguages()); // true = pay attention to names additive flag
-                        //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                        if (values.size() == 1 && !locked.isTrue) {
-
-                            Value value = values.get(0);
-                            text = value.getText();
-                            if (text.contains("\n")) {
-                                text = text.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
-                            }
-                            shownValues.add(text);
-                        } else {
-                            shownValues.add(cellValue + "");
-                        }
-                        valuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(values);
-                    } else {  // now, new logic for attributes
-                        List<Name> names = new ArrayList<Name>();
-                        List<String> attributes = new ArrayList<String>();
-                        valuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
-                        String attributeResult = valueService.findValueForHeadings(headingsForThisCell, locked, names, attributes);
-                        if (NumberUtils.isNumber(attributeResult)) { // there should be a more efficient way I feel given that the result is typed internally
-                            cellValue = Double.parseDouble(attributeResult);
-                        }
-                        attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
-                        shownValues.add(attributeResult);
-                        text = attributeResult;
-                    }
-                    thisRowValues.add(valuesOrNamesAndAttributeName);
-                    // ok these bits are for sorting. Could put a check on whether a number was actually the result but not so bothered
-                    // code was a bit higher, have moved it below the chunk that detects if we're using values or not, see no harm in this.
-
-                    if (sortCol == colNo + 1) {
-                        sortRowStrings.put(rowNo, text);
-                        if (text.length() > 0 && !NumberUtils.isNumber(text)) {
-                            rowNumbers = false;
-                        }
-                    }
-                    if (restrictRowCount > 0 && (sortCol == 0 || sortCol == colNo + 1)) {
-                        sortRowTotal += cellValue;
-                    }
-                    if (restrictColCount > 0 && (sortRow == 0 || sortRow == rowNo + 1)) {
-                        sortColumnTotals.put(colNo, (Double) sortColumnTotals.get(colNo) + cellValue);
-                    }
-
-                    if (locked.isTrue) {
-                        lockedCells.add(true);
-                    } else {
-                        lockedCells.add(false);
-                    }
-                }
-                colNo++;
-            }
-            sortRowTotals.put(rowNo++, sortRowTotal);
-
-        }
-
-        //sort and trim rows and cols
-        List<Integer> sortedRows;
-        if (rowNumbers) {
-            sortedRows = sortValues(restrictRowCount, sortRowTotals, rowNumbers, sortRowsUp);
-        } else {
-            sortedRows = sortValues(restrictRowCount, sortRowStrings, rowNumbers, sortRowsUp);
-        }
-        loggedInConnection.setRestrictRowCount(region, restrictRowCount);
-        loggedInConnection.setRowOrder(region, sortedRows);
-        List<Integer> sortedCols = sortValues(restrictColCount, sortColumnTotals, rowNumbers, sortColsRight);
-        loggedInConnection.setColOrder(region, sortedCols);
-        loggedInConnection.setRestrictColCount(region, restrictColCount);
-        final StringBuilder sb = formatDataRegion(loggedInConnection, region, shownValueArray, filterCount, restrictRowCount, restrictColCount);
-        formatLockMap(loggedInConnection, region, lockArray);
-        valueService.printSumStats();
-        valueService.printFindForNamesIncludeChildrenStats();
-        loggedInConnection.setDataHeadingsMap(region, dataHeadingsMap);
-        logger.info("time to execute : " + (System.currentTimeMillis() - track));
-        return sb.toString();
+        return transpose2DList(toReturn);
     }
+
+    // new logic, derive the headings from the data, no need to resort to resorting etc.
+    public List<List<DataRegionHeading>> getRowHeadingsAsArray(List<List<AzquoCell>> cellArray) {
+        List<List<DataRegionHeading>> toReturn = new ArrayList<List<DataRegionHeading>>();
+        for (List<AzquoCell> cell : cellArray) {
+            toReturn.add(cell.get(0).rowHeadings);
+        }
+        return toReturn;
+    }
+
 
     // for anonymiseing data
 

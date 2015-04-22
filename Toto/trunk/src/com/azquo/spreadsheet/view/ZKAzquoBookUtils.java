@@ -200,8 +200,8 @@ public class ZKAzquoBookUtils {
             // not going to do this just yet
             //valueService.sortAndFilterCells()
 
-            List<List<DataRegionHeading>> expandedColumnHeadings = spreadsheetService.getColumnHeadingsAsArray(loggedInConnection, region);
-            List<List<DataRegionHeading>> expandedRowHeadings = spreadsheetService.getRowHeadingsAsArray(loggedInConnection, region, filterCount);
+            List<List<DataRegionHeading>> expandedColumnHeadings = spreadsheetService.getColumnHeadingsAsArray(dataToShow);
+            List<List<DataRegionHeading>> expandedRowHeadings = spreadsheetService.getRowHeadingsAsArray(dataToShow);
             // todo : how to indicate sortable rows/cols
             // now, put the headings into the sheet!
             // might be factored into fill range in a bit

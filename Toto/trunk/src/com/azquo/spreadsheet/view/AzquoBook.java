@@ -52,6 +52,8 @@ public class AzquoBook {
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
+    private static final StringUtils stringUtils = new StringUtils();
+
     static class RegionInfo {
         String region;
         int row;
@@ -368,48 +370,81 @@ public class AzquoBook {
         return  row.split("\t", -1);
      }
 
-
-    private void fillRange(String regionName, String fillText, String lockMap, boolean overwrite) {
+    // this used to take an excel style paste string, changing to use the new AzquoCells . . .
+    private void fillRange(String regionName, List<List<AzquoCell>> cellArray, boolean overwrite) {
         // for the headings, the lockmap is "locked" rather than the full array.
-        boolean shapeAdjusted = false;
         Range range = getRange(regionName);
-        if (range == null) return;
-        String[] rows = fillText.split("\n", -1);
-        String[] rowLocks = lockMap.split("\n", -1);
-        for (int rowNo = 0; rowNo < rows.length; rowNo++) {
-            String row = rows[rowNo];
-            String rowLock = rowLocks[0];
-            if (rowNo < rowLocks.length) {
-                rowLock = rowLocks[rowNo];
-            }
-            String[] vals = row.split("\t", -1);
-            String[] locks = rowLock.split("\t", -1);
-            int colCount = vals.length;
-            if (!shapeAdjusted) {
-                int rowCount = rows.length;
-                insertRows(range, rowCount);
-                insertCols(range, colCount);
-                range = getRange(regionName);
-                createMergeMap();
-                shapeAdjusted = true;
-            }
-            for (int col = 0; col < vals.length; col++) {
-                String val = vals[col];
-                String locked = locks[0];
-                if (col < locks.length) {
-                    locked = locks[col];
-                }
+        if (range == null || cellArray == null || cellArray.isEmpty()) return;
+        insertRows(range, cellArray.size());
+        insertCols(range, cellArray.get(0).size());
+        range = getRange(regionName);
+        createMergeMap();
+        int rowNo = 0;
+        for (List<AzquoCell> row : cellArray) {
+            int col = 0;
+            for (AzquoCell azquoCell : row) {
+                String val = azquoCell.stringValue;
                 if (val.equals("0.0")) val = "";
                 Cell currentCell = azquoCells.get(range.getFirstRow() + rowNo, range.getFirstColumn() + col);
-                if (locked.equals("LOCKED")) {
+                if (azquoCell.locked) {
                     currentCell.getStyle().setLocked(true);
                 }
                 String existingCellVal = currentCell.getStringValue();
                 if (overwrite || existingCellVal==null || existingCellVal.length()==0){
                     setCellValue(currentCell, val);
                 }
+                col++;
             }
+            rowNo++;
         }
+    }
+
+    // like above for headings, auto lock for example. Might be some bits to factor
+    // ok I'm returning an Array of strings as some of the book code for soting needs it. It will be the bottom of columsn or the right of rows, as indicated by the boolean
+    private String[] fillRange(String regionName, List<List<DataRegionHeading>> headingArray, String language, boolean rowHeadings) {
+        // for the headings, the lockmap is "locked"
+        List<String> toReturn = new ArrayList<String>();
+        Range range = getRange(regionName);
+        if (range == null || headingArray == null || headingArray.isEmpty()) return new String[0];
+        insertRows(range, headingArray.size());
+        insertCols(range, headingArray.get(0).size());
+        range = getRange(regionName);
+        createMergeMap();
+        int rowNo = 0;
+        for (List<DataRegionHeading> row : headingArray) {
+            int col = 0;
+            for (DataRegionHeading heading : row) {
+                String cellValue = null;
+                Name name = heading.getName();
+                if (name != null) {
+                    String nameInLanguage = name.getAttribute(language);
+                    if (nameInLanguage == null) {
+                        nameInLanguage = name.getDefaultDisplayName();
+                    }
+                    cellValue = nameInLanguage;
+                } else {
+                    String attribute = heading.getAttribute();
+                    if (attribute != null) cellValue = attribute;
+                }
+                Cell currentCell = azquoCells.get(range.getFirstRow() + rowNo, range.getFirstColumn() + col);
+                currentCell.getStyle().setLocked(true);
+                String existingCellVal = currentCell.getStringValue();
+                // don't overwrite (based on old boolean)
+                if (cellValue != null && existingCellVal == null || existingCellVal.length() == 0){
+                    setCellValue(currentCell, cellValue);
+                }
+                col++;
+                // hacky bits to return sortable bits
+                if (rowNo == headingArray.size() - 1 && !rowHeadings){ // last row and we're doing col headings
+                    toReturn.add(cellValue != null ? cellValue : "");
+                }
+                if (col == row.size() - 1 && rowHeadings){ // last col and we're doing row headings
+                    toReturn.add(cellValue != null ? cellValue : "");
+                }
+            }
+            rowNo++;
+        }
+        return toReturn.toArray(new String[toReturn.size()]);
     }
 
 /*    private String colToLetters(int column) {
@@ -448,10 +483,10 @@ public class AzquoBook {
         if (headings.startsWith("error:")) {
             return headings;
         }
-        String result = spreadsheetService.setupRowHeadings(loggedInConnection, region, headings);
-        if (result.startsWith("error:")) {
-            return result;
-        }
+        long start = System.currentTimeMillis();
+        final List<List<List<DataRegionHeading>>> rowHeadingLists = spreadsheetService.createNameListsFromExcelRegion(loggedInConnection, headings, loggedInConnection.getLanguages());
+        System.out.println("row heading setup took " + (System.currentTimeMillis() - start) + " millisecs");
+        loggedInConnection.setRowHeadings(region, spreadsheetService.expandHeadings(rowHeadingLists));
         //don't bother to display yet - maybe need to filter out or sort
         Range columnHeadings = getRange("az_columnheadings" + region);
         if (columnHeadings == null) {
@@ -461,8 +496,8 @@ public class AzquoBook {
         if (headings.startsWith("error:")) {
             return headings;
         }
-        result = spreadsheetService.setupColumnHeadings(loggedInConnection, region, headings);
-        if (result.startsWith("error:")) return result;
+        List<List<List<DataRegionHeading>>> columnHeadingLists = spreadsheetService.createNameListsFromExcelRegion(loggedInConnection, headings, loggedInConnection.getLanguages());
+        loggedInConnection.setColumnHeadings(region, (spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadingLists))));
         //fillRange("az_displaycolumnheadings" + region, result, "LOCKED");
         Range context = getRange("az_context" + region);
         if (context == null) {
@@ -473,29 +508,30 @@ public class AzquoBook {
             return headings;
         }
         try {
-            result = spreadsheetService.getDataRegion(loggedInConnection, headings, region, filterCount, maxRows, maxCols);
-            if (result.startsWith("error:")) return result;
-            String language = Name.DEFAULT_DISPLAY_NAME;//TODO  Find the language!
-            fillRange(dataRegionPrefix + region, result, loggedInConnection.getLockMap(region), true);
-            result = spreadsheetService.getColumnHeadings(loggedInConnection, region, language);
-            fillRange("az_displaycolumnheadings" + region, result, "LOCKED", false);
+            List<List<AzquoCell>> cellArray = spreadsheetService.getDataRegion(loggedInConnection, headings, region, filterCount, maxRows, maxCols);
+            // think this language detection is sound
+            String language = stringUtils.getInstruction(headings, "language");
+            if (language == null){
+                language = Name.DEFAULT_DISPLAY_NAME;
+            }
+            fillRange(dataRegionPrefix + region, cellArray, true);
+            List<List<DataRegionHeading>> columnHeadingsAsArray = spreadsheetService.getColumnHeadingsAsArray(cellArray);
+
+            // I'm keen to get rid of the given row and column headings but will leave for the mo to get this to compile
+
+            String[] givenColumnHeadings = fillRange("az_displaycolumnheadings" + region, columnHeadingsAsArray,language, false);
             String sortable = hasOption(region, "sortable");
             if (sortable != null) {
                 Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
                 if (displayColumnHeadings != null) {
-                    givenHeadings.put("columns:" + region,splitRange(result));
-
+                    givenHeadings.put("columns:" + region,givenColumnHeadings);
                 }
             }
-
-            result = spreadsheetService.getRowHeadings(loggedInConnection, region, language, filterCount);
-            fillRange("az_displayrowheadings" + region, result, "LOCKED", false);
+            String[] givenRowHeadings = fillRange("az_displayrowheadings" + region, spreadsheetService.getRowHeadingsAsArray(cellArray), language, true);
             if (sortable!=null && sortable.equalsIgnoreCase("all")) {
                 Range displayRowHeadings = getRange("az_displayrowheadings" + region);
                 if (displayRowHeadings != null) {
-
-                    givenHeadings.put("rows:" + region,splitRange(result));
-
+                    givenHeadings.put("rows:" + region,givenRowHeadings);
                 }
             }
 
@@ -1923,6 +1959,8 @@ public class AzquoBook {
         }
         return null;
     }
+
+    // todo - maybe zap this, is it unnecessarily using strings??
 
     private StringBuilder rangeToText(Range range, boolean withId) {
         StringBuilder sb = new StringBuilder();
