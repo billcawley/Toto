@@ -46,7 +46,7 @@ public class ZKAzquoBookUtils {
     final UserChoiceDAO userChoiceDAO;
     final AdminService adminService;
 
-    public ZKAzquoBookUtils(ValueService valueService,SpreadsheetService spreadsheetService, NameService nameService, UserChoiceDAO userChoiceDAO, AdminService adminService) {
+    public ZKAzquoBookUtils(ValueService valueService, SpreadsheetService spreadsheetService, NameService nameService, UserChoiceDAO userChoiceDAO, AdminService adminService) {
         this.valueService = valueService;
         this.spreadsheetService = spreadsheetService;
         this.nameService = nameService;
@@ -71,13 +71,13 @@ public class ZKAzquoBookUtils {
         }
         // I guess run through all sheets?
 
-        if (loggedInConnection.getReportId() == 1){
+        if (loggedInConnection.getReportId() == 1) {
             for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
                 Sheet sheet = book.getSheetAt(sheetNumber);
                 loadAdminData(loggedInConnection, sheet);
             }
             //fill admin date
-        }else {
+        } else {
             for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
                 Sheet sheet = book.getSheetAt(sheetNumber);
                 // see if we can impose the user choices on the sheet
@@ -191,8 +191,8 @@ public class ZKAzquoBookUtils {
             // ok going to try to use the new funciton
             List<List<AzquoCell>> dataToShow = spreadsheetService.getAzquoCellsForRowsColumnsAndContext(loggedInConnection, spreadsheetService.expandHeadings(rowHeadings)
                     , spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadings)), contextNames, loggedInConnection.getLanguages());
-            dataToShow = spreadsheetService.sortAndFilterCells(dataToShow,spreadsheetService.expandHeadings(rowHeadings), spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadings))
-                    , filterCount, maxRows, maxCols,loggedInConnection.getSortRow(region),loggedInConnection.getSortCol(region));
+            dataToShow = spreadsheetService.sortAndFilterCells(dataToShow, spreadsheetService.expandHeadings(rowHeadings), spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadings))
+                    , filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
             // not going to do this just yet
             //valueService.sortAndFilterCells()
 
@@ -220,7 +220,7 @@ public class ZKAzquoBookUtils {
                     rowsToAdd = expandedRowHeadings.size() - (displayRowHeadings.getRowCount());
                     int insertRow = displayRowHeadings.getRow() + 2; // I think this is correct, middle row of 3?
                     Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
-                    Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1 , maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+                    Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
                     CellOperationUtil.insertRow(insertRange);
                     // will this paste the lot?
                     CellOperationUtil.paste(copySource, insertRange);
@@ -261,7 +261,7 @@ public class ZKAzquoBookUtils {
                 for (List<DataRegionHeading> rowHeading : expandedRowHeadings) {
                     int col = displayRowHeadings.getColumn();
                     for (DataRegionHeading heading : rowHeading) {
-                        if (heading!=null){
+                        if (heading != null) {
                             sheet.getInternalSheet().getCell(row, col).setValue(heading.getAttribute() != null ? heading.getAttribute() : heading.getName().getDisplayNameForLanguages(loggedInConnection.getLanguages()));
                         }
                         col++;
@@ -272,7 +272,7 @@ public class ZKAzquoBookUtils {
                 for (List<DataRegionHeading> colHeading : expandedColumnHeadings) {
                     int col = displayColumnHeadings.getColumn();
                     for (DataRegionHeading heading : colHeading) {
-                        if (heading!=null){
+                        if (heading != null) {
                             sheet.getInternalSheet().getCell(row, col).setValue(heading.getAttribute() != null ? heading.getAttribute() : heading.getName().getDisplayNameForLanguages(loggedInConnection.getLanguages()));
                         }
                         col++;
@@ -283,9 +283,9 @@ public class ZKAzquoBookUtils {
                 for (List<AzquoCell> rowCellValues : dataToShow) {
                     int col = displayDataRegion.getColumn();
                     for (AzquoCell cellValue : rowCellValues) {
-                        if (!cellValue.stringValue.isEmpty()){ // then something to set
+                        if (!cellValue.stringValue.isEmpty()) { // then something to set
                             // the notable thing ehre is that ZK uses the object type to work out data type
-                            if (NumberUtils.isNumber(cellValue.stringValue)){
+                            if (NumberUtils.isNumber(cellValue.stringValue)) {
                                 sheet.getInternalSheet().getCell(row, col).setValue(cellValue.doubleValue);// think that works . . .
                             } else {
                                 sheet.getInternalSheet().getCell(row, col).setValue(cellValue.stringValue);// think that works . . .
@@ -311,7 +311,7 @@ public class ZKAzquoBookUtils {
             }
         } else {
             CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);// this function should not be called without a valid data region
-            if (dataRegion != null){
+            if (dataRegion != null) {
                 sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching header and context regions for this data region : az_DataRegion" + region);
             } else {
                 System.out.println("no region found for az_DataRegion" + region);
@@ -322,7 +322,7 @@ public class ZKAzquoBookUtils {
     public List<SName> getNamesForSheet(Sheet sheet) {
         List<SName> names = new ArrayList<SName>();
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
-            if (name.getRefersToSheetName()!= null && name.getRefersToSheetName().equals(sheet.getSheetName())) {
+            if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(sheet.getSheetName())) {
                 names.add(name);
             }
         }
@@ -331,12 +331,12 @@ public class ZKAzquoBookUtils {
 
     // this works out case insensitive based on the API
 
-    public CellRegion getCellRegionForSheetAndName(Sheet sheet, String name){
+    public CellRegion getCellRegionForSheetAndName(Sheet sheet, String name) {
         SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
-        if (toReturn == null){// often may fail with explicit sheet name
+        if (toReturn == null) {// often may fail with explicit sheet name
             toReturn = sheet.getBook().getInternalBook().getNameByName(name);
         }
-        if (toReturn != null && toReturn.getRefersToSheetName().equals(sheet.getSheetName())){
+        if (toReturn != null && toReturn.getRefersToSheetName().equals(sheet.getSheetName())) {
             return toReturn.getRefersToCellRegion();
         }
         return null;
@@ -360,9 +360,9 @@ public class ZKAzquoBookUtils {
             if (foundPos != -1 && optionsForRegion.length() > foundPos + optionName.length()) {
                 optionsForRegion = optionsForRegion.substring(foundPos + optionName.length());//allow for a space or '=' at the end of the option name
                 char operator = optionsForRegion.charAt(0);
-                if (operator=='>' ) {//interpret the '>' symbol as '-' to create an integer
+                if (operator == '>') {//interpret the '>' symbol as '-' to create an integer
                     optionsForRegion = "-" + optionsForRegion.substring(1);
-                }else{
+                } else {
                     //ignore '=' or a space
                     optionsForRegion = optionsForRegion.substring(1);
                 }
@@ -409,8 +409,8 @@ public class ZKAzquoBookUtils {
 
     public static final String VALIDATION_SHEET = "VALIDATION_SHEET";
 
-    public void addValidation(List<SName> namesForSheet, Sheet sheet, LoggedInConnection loggedInConnection){
-        if (sheet.getBook().getSheet(VALIDATION_SHEET) == null){
+    public void addValidation(List<SName> namesForSheet, Sheet sheet, LoggedInConnection loggedInConnection) {
+        if (sheet.getBook().getSheet(VALIDATION_SHEET) == null) {
             sheet.getBook().getInternalBook().createSheet(VALIDATION_SHEET);
         }
         Sheet validationSheet = sheet.getBook().getSheet(VALIDATION_SHEET);
@@ -422,7 +422,7 @@ public class ZKAzquoBookUtils {
                     CellRegion chosen = getCellRegionForSheetAndName(sheet, name.getName().substring(0, name.getName().length() - "Choice".length()) + "Chosen");
                     if (choice != null && chosen != null) {
                         // ok I assume choice is a single cell
-                        try{
+                        try {
                             List<Name> choiceNames = nameService.parseQuery(loggedInConnection, sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).getStringValue());// I think this will do it??
                             int row = 0;
                             for (Name name1 : choiceNames) {
@@ -447,7 +447,7 @@ public class ZKAzquoBookUtils {
                                                     }
                                                 }
                                             });*/
-                        } catch (Exception e){
+                        } catch (Exception e) {
                             Range chosenRange = Ranges.range(sheet, chosen.getRow(), chosen.getColumn(), chosen.getLastRow(), chosen.getLastColumn());
                             chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "{\"" + e.getMessage() + "\"}", null,
                                     true, "title", "msg",
@@ -527,7 +527,7 @@ public class ZKAzquoBookUtils {
                 rowNo++;
                 for (int colNo = firstHeading; colNo < lastHeading; colNo++) {
                     String heading = sheet.getInternalSheet().getCell(headingsRow, headingsCol + colNo).getStringValue();
-                    SCell cell = sheet.getInternalSheet().getCell(headingsRow + rowNo, headingsCol  + colNo);
+                    SCell cell = sheet.getInternalSheet().getCell(headingsRow + rowNo, headingsCol + colNo);
                     String link = null;
                     int nameEnd = heading.indexOf(";");
                     if (nameEnd > 0) {
@@ -538,39 +538,39 @@ public class ZKAzquoBookUtils {
                         if (link.startsWith("href=")) {
                             link = link.substring(5);
 //                        linkStart = "<a href=";
-                    } else if (link.startsWith("onclick=")) {
-                        link = link.substring(8);
-                        //linkStart = "<a href='#' onclick=";
-                    } else {
-                        link = null;
+                        } else if (link.startsWith("onclick=")) {
+                            link = link.substring(8);
+                            //linkStart = "<a href='#' onclick=";
+                        } else {
+                            link = null;
+                        }
                     }
-                }
-                String valFound = pairs.get(heading);
-                if (link != null) {
-                    //new universal link...  REPORTS ONLY!
-                    String linkAddr = "/api/Online/?opcode=loadsheet&reportid=" + pairs.get("id");
-                    //String linkAddr = evaluateExpression(link.replace("“", "\"").replace("”", "\""), pairs);//excel uses fancy quotes
-                        cell.setHyperlink(new HyperlinkImpl(SHyperlink.HyperlinkType.URL,linkAddr,"link"));
-                }
-                if (valFound != null) {
-                    try {
-                        //if it can be parsed as a date, it is a date!
-                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-                        Date date = df.parse(valFound);
-                        cell.setDateValue(date);
-                    } catch (Exception e) {
+                    String valFound = pairs.get(heading);
+                    if (link != null) {
+                        //new universal link...  REPORTS ONLY!
+                        String linkAddr = "/api/Online/?opcode=loadsheet&reportid=" + pairs.get("id");
+                        //String linkAddr = evaluateExpression(link.replace("“", "\"").replace("”", "\""), pairs);//excel uses fancy quotes
+                        cell.setHyperlink(new HyperlinkImpl(SHyperlink.HyperlinkType.URL, linkAddr, "link"));
+                    }
+                    if (valFound != null) {
+                        try {
+                            //if it can be parsed as a date, it is a date!
+                            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+                            Date date = df.parse(valFound);
+                            cell.setDateValue(date);
+                        } catch (Exception e) {
 
 
-                        cell.setValue(valFound);
+                            cell.setValue(valFound);
+                        }
                     }
                 }
             }
         }
+        return "";
     }
-    return "";
-}
 
-    public String readJsonData(String data, Map<String, String> pairs) throws Exception{
+    public String readJsonData(String data, Map<String, String> pairs) throws Exception {
         //should use Jackson for this,....
         /*
         final String json = "{}";
@@ -613,7 +613,7 @@ public class ZKAzquoBookUtils {
 
     }
 
-    public String jsonError(String data, int pos) throws Exception{
+    public String jsonError(String data, int pos) throws Exception {
         int end = data.length();
         if (pos < end - 30) {
             end = pos + 30;

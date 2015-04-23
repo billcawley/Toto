@@ -43,7 +43,7 @@ public final class AzquoMemoryDB {
     private boolean needsLoading;
 
     // reference to the mysql db
-    private  Database database;//removed 'final' to allow temporary database to be loaded
+    private Database database;//removed 'final' to allow temporary database to be loaded
 
     // object ids. We handle this here, it's not done by MySQL
     private int maxIdAtLoad;
@@ -97,7 +97,7 @@ public final class AzquoMemoryDB {
         return database;
     }
 
-    public void zapDatabase(){
+    public void zapDatabase() {
         database = null;
     }
 
@@ -106,14 +106,14 @@ public final class AzquoMemoryDB {
     }
 
     // now passing app services
-    final int mb = 1024*1024;
+    final int mb = 1024 * 1024;
     // Todo : possible optimiseation from this : http://www.4pmp.com/2010/02/scalable-mysql-avoid-offset-for-large-tables/
 
     private static final int PROVENANCE_MODE = 0;
     private static final int NAME_MODE = 1;
     private static final int VALUE_MODE = 2;
 
-    private class SQLLoadRunner implements Runnable{
+    private class SQLLoadRunner implements Runnable {
         private final int mode;
         private final List<JsonRecordTransport> dataToLoad;
         private final AzquoMemoryDB memDB;
@@ -127,20 +127,20 @@ public final class AzquoMemoryDB {
         @Override
         public void run() {
             try {
-            for (JsonRecordTransport dataRecord : dataToLoad) {
-                if (dataRecord.id > maxIdAtLoad) {
-                    maxIdAtLoad = dataRecord.id;
+                for (JsonRecordTransport dataRecord : dataToLoad) {
+                    if (dataRecord.id > maxIdAtLoad) {
+                        maxIdAtLoad = dataRecord.id;
+                    }
+                    if (mode == PROVENANCE_MODE) {
+                        new Provenance(memDB, dataRecord.id, dataRecord.json);
+                    }
+                    if (mode == NAME_MODE) {
+                        new Name(memDB, dataRecord.id, dataRecord.json);
+                    }
+                    if (mode == VALUE_MODE) {
+                        new Value(memDB, dataRecord.id, dataRecord.json);
+                    }
                 }
-                        if (mode == PROVENANCE_MODE){
-                            new Provenance(memDB, dataRecord.id, dataRecord.json);
-                        }
-                        if (mode == NAME_MODE){
-                            new Name(memDB, dataRecord.id, dataRecord.json);
-                        }
-                        if (mode == VALUE_MODE){
-                            new Value(memDB, dataRecord.id, dataRecord.json);
-                        }
-            }
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -158,10 +158,10 @@ public final class AzquoMemoryDB {
             long marker = System.currentTimeMillis();
             Runtime runtime = Runtime.getRuntime();
             long usedMB = 0;
-            if (memoryTrack){
+            if (memoryTrack) {
                 System.gc();
                 System.out.println("gc time : " + (System.currentTimeMillis() - marker));
-                usedMB = (runtime.totalMemory() - runtime.freeMemory())/ mb;
+                usedMB = (runtime.totalMemory() - runtime.freeMemory()) / mb;
                 System.out.println("Used Memory:"
                         + usedMB);
                 System.out.println("Free Memory:"
@@ -188,7 +188,7 @@ public final class AzquoMemoryDB {
 
                 ExecutorService executor = Executors.newFixedThreadPool(loadingThreads); // picking 10 based on an example I saw . . .
                 List<JsonRecordTransport> provenance = standardDAO.findFromTable(this, StandardDAO.PersistedTable.provenance.name(), from, step);
-                while (!provenance.isEmpty()){
+                while (!provenance.isEmpty()) {
                     executor.execute(new SQLLoadRunner(PROVENANCE_MODE, provenance, this));
                     provenaceLoaded += provenance.size();
                     from += step;
@@ -205,7 +205,7 @@ public final class AzquoMemoryDB {
                 }
                 from = 0;
                 List<JsonRecordTransport> values = standardDAO.findFromTable(this, StandardDAO.PersistedTable.value.name(), from, step);
-                while (!values.isEmpty()){
+                while (!values.isEmpty()) {
                     executor.execute(new SQLLoadRunner(VALUE_MODE, values, this));
                     valuesLoaded += values.size();
                     from += step;
@@ -471,7 +471,7 @@ public final class AzquoMemoryDB {
             throw new Exception("tried to add a name to the database with an existing id! new id = " + newName.getId());
         } else {
             //synchronized (nameByIdMap){
-                nameByIdMap.put(newName.getId(), newName);
+            nameByIdMap.put(newName.getId(), newName);
             //}
         }
     }
@@ -479,7 +479,7 @@ public final class AzquoMemoryDB {
     protected void removeNameFromDb(final Name toRemove) throws Exception {
         toRemove.checkDatabaseMatches(this);
         //synchronized (nameByIdMap) {
-            nameByIdMap.remove(toRemove.getId());
+        nameByIdMap.remove(toRemove.getId());
         //}
     }
 
@@ -509,7 +509,7 @@ public final class AzquoMemoryDB {
         }
         List<Name> names = namesForThisAttribute.get(lcAttributeValue);
         if (names != null) {
-            if (!names.contains(name)){
+            if (!names.contains(name)) {
                 names.add(name);
             }
         } else {
@@ -628,7 +628,7 @@ public final class AzquoMemoryDB {
             long totalNameSize = 0;
             Collection<Name> names = nameByIdMap.values();
             DecimalFormat df = new DecimalFormat("###,###,###,###");
-            for (Name name : names){
+            for (Name name : names) {
                 //System.out.println("trying for " + name);
                 long nameSize = ObjectSizeCalculator.sizeOfForAzquo(name, null);
                 totalNameSize += nameSize;
@@ -645,12 +645,9 @@ public final class AzquoMemoryDB {
             System.out.println("size per name : " + totalNameSize / nameByIdMap.size());
 
 
-
-
-
             long totalValuesSize = 0;
             Collection<Value> values = valueByIdMap.values();
-            for (Value value : values){
+            for (Value value : values) {
                 long valueSize = ObjectSizeCalculator.sizeOfForAzquo(value, null);
                 totalValuesSize += valueSize;
 /*                if (count%10000 == 0){

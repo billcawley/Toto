@@ -25,10 +25,9 @@ import java.util.regex.Pattern;
  * <p/>
  * Ok, outside of the memorydb package this may be the the most fundamental class.
  * Edd trying to understand it properly and trying to get string parsing out of it but not sure how easy that will be
- *
+ * <p/>
  * I don't feel that tere are obviously better places for the funcitons right now except that
  * todo : can the string parsing and json generation be moved out of here?
- *
  */
 public final class NameService {
 
@@ -559,12 +558,12 @@ public final class NameService {
                 }
                 nameStack.get(stackCount - 1).retainAll(allNames);
                 nameStack.remove(stackCount);
-            }else if (op == '/') {
-                    Set<Name> parents = new HashSet<Name>();
-                    for (Name child : nameStack.get(stackCount)) {
-                        parents.addAll(child.findAllParents());
+            } else if (op == '/') {
+                Set<Name> parents = new HashSet<Name>();
+                for (Name child : nameStack.get(stackCount)) {
+                    parents.addAll(child.findAllParents());
 
-                    }
+                }
                 nameStack.get(stackCount - 1).retainAll(parents);
                 nameStack.remove(stackCount);
             } else if (op == '-') {
@@ -582,9 +581,9 @@ public final class NameService {
             hasPermissions = true;
         }
         for (Name possible : nameStack.get(0)) {
-            if (possible==null  || (possible.getAttribute("CONFIDENTIAL")== null && (!hasPermissions || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())))) {
-                        toReturn.add(possible);
-             }
+            if (possible == null || (possible.getAttribute("CONFIDENTIAL") == null && (!hasPermissions || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())))) {
+                toReturn.add(possible);
+            }
         }
         return toReturn;
     }
@@ -626,7 +625,7 @@ public final class NameService {
     private void filter(List<Name> names, String condition, List<String> strings, List<String> attributeNames) {
         //NOT HANDLING 'OR' AT PRESENT
         int andPos = condition.toLowerCase().indexOf(" and ");
-         Set<Name> namesToRemove = new HashSet<Name>();
+        Set<Name> namesToRemove = new HashSet<Name>();
         int lastPos = 0;
         while (lastPos < condition.length()) {
             if (andPos < 0) {
@@ -645,12 +644,12 @@ public final class NameService {
                 // note, given the new parser these clauses will either be literals or begin .
                 // there may be code improvements that can be made knowing this
 
-                    if (clauseLhs.charAt(0) == ATTRIBUTEMARKER) {// we need to replace it
-                        clauseLhs = attributeNames.get(Integer.parseInt(clauseLhs.substring(1, 3)));
-                    }
-                    if (clauseRhs.charAt(0) == ATTRIBUTEMARKER) {// we need to replace it
-                        clauseRhs = attributeNames.get(Integer.parseInt(clauseRhs.substring(1, 3)));
-                    }
+                if (clauseLhs.charAt(0) == ATTRIBUTEMARKER) {// we need to replace it
+                    clauseLhs = attributeNames.get(Integer.parseInt(clauseLhs.substring(1, 3)));
+                }
+                if (clauseRhs.charAt(0) == ATTRIBUTEMARKER) {// we need to replace it
+                    clauseRhs = attributeNames.get(Integer.parseInt(clauseRhs.substring(1, 3)));
+                }
                 String valRhs = "";
                 boolean fixed = false;
                 if (clauseRhs.charAt(0) == '"') {
@@ -683,7 +682,7 @@ public final class NameService {
                                 break;
                             case '>':
                                 if (comp > 0) OK = true;
-                          }
+                        }
                     }
                     if (!OK) {
                         namesToRemove.add(name);
@@ -692,7 +691,7 @@ public final class NameService {
                 names.removeAll(namesToRemove);
             }
             lastPos = andPos + 5;
-             andPos = condition.toLowerCase().indexOf(" and ", lastPos);
+            andPos = condition.toLowerCase().indexOf(" and ", lastPos);
         }
     }
 
@@ -702,7 +701,7 @@ public final class NameService {
 
         final String levelString = stringUtils.getInstruction(setTerm, LEVEL);
         String fromString = stringUtils.getInstruction(setTerm, FROM);
-        String parentsString = stringUtils.getInstruction(setTerm,PARENTS);
+        String parentsString = stringUtils.getInstruction(setTerm, PARENTS);
         String childrenString = stringUtils.getInstruction(setTerm, CHILDREN);
         final String sorted = stringUtils.getInstruction(setTerm, SORTED);
         String toString = stringUtils.getInstruction(setTerm, TO);
@@ -760,11 +759,11 @@ public final class NameService {
         if (whereString != null) {
             filter(namesFound, whereString, strings, attributeStrings);
         }
-        if (parentsString!=null){
+        if (parentsString != null) {
             //remove the childless names
             List<Name> filteredList = new ArrayList<Name>();
-            for (Name possibleName:namesFound){
-                if (possibleName.getChildren().size()>0){
+            for (Name possibleName : namesFound) {
+                if (possibleName.getChildren().size() > 0) {
                     filteredList.add(possibleName);
                 }
 
@@ -1059,12 +1058,14 @@ public final class NameService {
 
     }
 
+    // todo : jackson!
+
     public String getJsonChildren(LoggedInConnection loggedInConnection, String jsTreeId, Name name, String parents, Map<String, LoggedInConnection.JsTreeNode> lookup, boolean details, String searchTerm) throws Exception {
         StringBuilder result = new StringBuilder();
         result.append("[{\"id\":" + jsTreeId + ",\"state\":{\"opened\":true},\"text\":\"");
         List<Name> children = new ArrayList<Name>();
         if (jsTreeId.equals("0") && name == null) {
-            if (searchTerm == null){
+            if (searchTerm == null) {
                 searchTerm = loggedInConnection.getAzquoBook().getRangeData("az_inputInspectChoice");
             }
             result.append("root");
@@ -1090,7 +1091,7 @@ public final class NameService {
 
         result.append("\"");
         int maxdebug = 500;
-        if (children.size() > 0 || (details && name!= null && name.getAttributes() != null && name.getAttributes().size() > 1)) {
+        if (children.size() > 0 || (details && name != null && name.getAttributes() != null && name.getAttributes().size() > 1)) {
             result.append(",\"children\":[");
             int lastId = loggedInConnection.getLastJstreeId();
             int count = 0;
@@ -1110,15 +1111,15 @@ public final class NameService {
                     break;
                 }
                 result.append("{\"id\":" + lastId + ",\"text\":\"" + child.getDefaultDisplayName().replace("\"", "\\\"") + "\"");
-                if (child.getChildren().size() > 0 || child.getValues().size() > 0 || (details && child.getAttributes().size()>1)) {
+                if (child.getChildren().size() > 0 || child.getValues().size() > 0 || (details && child.getAttributes().size() > 1)) {
                     result.append(",\"children\":true");
                 }
                 result.append("}");
 
             }
-            if (details&&name!=null) {
-                for (String attName:name.getAttributes().keySet()){
-                    if (!attName.equals(Name.DEFAULT_DISPLAY_NAME)){
+            if (details && name != null) {
+                for (String attName : name.getAttributes().keySet()) {
+                    if (!attName.equals(Name.DEFAULT_DISPLAY_NAME)) {
                         if (count++ > 0) {
                             result.append(",");
                         }

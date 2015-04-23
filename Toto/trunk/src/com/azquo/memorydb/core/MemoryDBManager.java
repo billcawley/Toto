@@ -3,7 +3,6 @@ package com.azquo.memorydb.core;
 import com.azquo.admin.database.OpenDatabaseDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.OpenDatabase;
-import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.dao.StandardDAO;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -26,7 +25,6 @@ public final class MemoryDBManager {
 
     private StandardDAO standardDAO;
 
-
     public MemoryDBManager(StandardDAO standardDAO) throws Exception {
         this.standardDAO = standardDAO;
         memoryDatabaseMap = new HashMap<String, AzquoMemoryDB>(); // by mysql name. Will be unique.
@@ -35,17 +33,17 @@ public final class MemoryDBManager {
 
     public synchronized AzquoMemoryDB getAzquoMemoryDB(Database database) throws Exception {
         AzquoMemoryDB loaded;
-        if (database.getName().equals("temp")){
+        if (database.getName().equals("temp")) {
             loaded = new AzquoMemoryDB(database, standardDAO);
             return loaded;
         }
         loaded = memoryDatabaseMap.get(database.getMySQLName());
-        if (loaded != null){
+        if (loaded != null) {
             return loaded;
         }
         loaded = new AzquoMemoryDB(database, standardDAO);
         memoryDatabaseMap.put(database.getMySQLName(), loaded);
-        final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new GregorianCalendar(1900,0,0).getTime());// should start to get away from date
+        final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new GregorianCalendar(1900, 0, 0).getTime());// should start to get away from date
         openDatabaseDAO.store(openDatabase);
         return loaded;
     }
@@ -61,14 +59,14 @@ public final class MemoryDBManager {
         */
     }
 
-// todo : what if references to the memory db held in memory still??
-    public synchronized void removeDatabase(Database db){
+    // todo : what if references to the memory db held in memory still??
+    public synchronized void removeDatabase(Database db) {
         memoryDatabaseMap.remove(db.getMySQLName());
 
     }
 
     public synchronized void addNewToDBMap(Database database) throws Exception {
-        if (memoryDatabaseMap.get(database.getMySQLName()) != null){
+        if (memoryDatabaseMap.get(database.getMySQLName()) != null) {
             throw new Exception("cannot create new memory database one attached to that mysql database already exists");
         }
         AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(database, standardDAO);

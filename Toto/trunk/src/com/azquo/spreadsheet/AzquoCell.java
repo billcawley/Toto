@@ -6,13 +6,12 @@ import java.util.List;
 
 /**
  * Created by cawley on 16/04/15.
- *
+ * <p/>
  * all we may need to know about a cell as seen on the screen by a user.
- *
+ * <p/>
  * One point here is holding the headings against each cell but if not the headings then indexes would need to be saved
  * the reference will be 8 bytes to an object that exists anyway (in headings) vs 4 bytes for an int, I'm going to leave it for the mo
  * It was a set here, not sure whether to use it ro not
- *
  */
 public class AzquoCell {
     public final boolean locked;

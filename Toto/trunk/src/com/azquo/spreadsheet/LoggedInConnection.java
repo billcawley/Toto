@@ -21,27 +21,23 @@ import java.util.*;
  * A little more complex ins things like row headings. Used to just be a list but now it's maps (due to multiple regions on the excel sheet)
  * of lists of lists of names. Lists of lists due to mult level headings, e.g. London by container as two column headings above each other (the next one being london not by container)
  * Lockmaps and sent data maps are maps of the actual data sent to excel, this generally is read back by the csv reader
- *
+ * <p/>
  * Not thread safe really although it should be one per session. As in multiple tabs or fast refreshes could cause problems - that's something to look into.
- *
+ * <p/>
  * Since Excel is no longer the priority this class might be a bit different if rewritten - I'm going to be working on this, row and column heading for example may be removed.
- *
- *
- *
- *
  */
 public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
-    public static final class NameOrValue{
+    public static final class NameOrValue {
         public Name name;
         public Set<Value> values;
     }
 
-    public static final class JsTreeNode{
+    public static final class JsTreeNode {
         public NameOrValue child;
         public Name parent;
 
-        public JsTreeNode(NameOrValue child, Name parent){
+        public JsTreeNode(NameOrValue child, Name parent) {
             this.child = child;
             this.parent = parent;
 
@@ -64,7 +60,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private List<Set<Name>> namesToSearch;
     private Map<Set<Name>, Set<Value>> valuesFound;
     private AzquoBook azquoBook;
-    private List<String>  languages;
+    private List<String> languages;
     private Map<String, JsTreeNode> jsTreeIds;
     int lastJstreeId;
 
@@ -105,9 +101,13 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         return lastAccessed;
     }
 
-    public int getReportId() { return  reportId; }
+    public int getReportId() {
+        return reportId;
+    }
 
-    public void setReportId(int reportId) { this.reportId = reportId; }
+    public void setReportId(int reportId) {
+        this.reportId = reportId;
+    }
 
     public long getTimeOut() {
         return timeOut;
@@ -126,7 +126,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
-    public void setSortCol(final String region, final String sortCol){
+    public void setSortCol(final String region, final String sortCol) {
         if (region == null || region.isEmpty()) {
             this.sortCol.put(defaultRegion, sortCol);
         } else {
@@ -134,7 +134,8 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
 
     }
-    public void clearSortCols(){
+
+    public void clearSortCols() {
         this.sortCol.clear();
 
     }
@@ -147,7 +148,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
-    public void setSortRow(final String region, final String sortRow){
+    public void setSortRow(final String region, final String sortRow) {
         if (region == null || region.isEmpty()) {
             this.sortRow.put(defaultRegion, sortRow);
         } else {
@@ -155,7 +156,8 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
 
     }
-    public void clearSortRows(){
+
+    public void clearSortRows() {
         this.sortRow.clear();
 
     }
@@ -189,23 +191,29 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         return provenance;
     }
 
-    public List<Set<Name>> getNamesToSearch(){
+    public List<Set<Name>> getNamesToSearch() {
         return this.namesToSearch;
     }
 
-    public void setNamesToSearch(List<Set<Name>> names){
+    public void setNamesToSearch(List<Set<Name>> names) {
         this.namesToSearch = names;
     }
 
-    public Map<Set<Name>, Set<Value>> getValuesFound(){
+    public Map<Set<Name>, Set<Value>> getValuesFound() {
         return this.valuesFound;
     }
 
-    public void setValuesFound(Map<Set<Name>,Set<Value>> valuesFound){ this.valuesFound = valuesFound; }
+    public void setValuesFound(Map<Set<Name>, Set<Value>> valuesFound) {
+        this.valuesFound = valuesFound;
+    }
 
-    public AzquoBook getAzquoBook() { return this.azquoBook; }
+    public AzquoBook getAzquoBook() {
+        return this.azquoBook;
+    }
 
-    public void setAzquoBook(AzquoBook azquoBook){    this.azquoBook = azquoBook;  }
+    public void setAzquoBook(AzquoBook azquoBook) {
+        this.azquoBook = azquoBook;
+    }
 
 
     public List<String> getLanguages() {
@@ -216,17 +224,17 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         this.languages = languages;
     }
 
-    public Map<String,JsTreeNode> getJsTreeIds(){
+    public Map<String, JsTreeNode> getJsTreeIds() {
         return jsTreeIds;
     }
 
 
-    public int getLastJstreeId(){
+    public int getLastJstreeId() {
         return lastJstreeId;
     }
 
 
-    public void setLastJstreeId(int lastJstreeId){
+    public void setLastJstreeId(int lastJstreeId) {
         this.lastJstreeId = lastJstreeId;
     }
 }

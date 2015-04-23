@@ -13,7 +13,6 @@ import java.util.Map;
 
 /**
  * Created by bill on 01/04/14.
- *
  */
 public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
 

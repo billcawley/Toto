@@ -70,8 +70,8 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         jdbcTemplate.update(SQL_DELETE, namedParams);
 
 
-
     }
+
     public final class PermissionRowMapper implements RowMapper<Permission> {
 
         @Override
@@ -110,7 +110,7 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         return findOneWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID + " and " + DATABASEID + "= :" + DATABASEID, namedParams);
     }
 
-    public void removeForDatabaseId(int databaseId){
+    public void removeForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
@@ -118,8 +118,8 @@ public final class PermissionDAO extends StandardDAO<Permission> {
 
     public final void update(int id, Map<String, Object> parameters) {
         if (id == 0) {
-            int dbId = (Integer)parameters.get("database_id");
-            int userId = (Integer)parameters.get("user_id");
+            int dbId = (Integer) parameters.get("database_id");
+            int userId = (Integer) parameters.get("user_id");
             Permission p = findForUserIdAndDatabaseId(userId, dbId);
             if (p != null) {
                 id = p.getId();
@@ -131,9 +131,9 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         }
         String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
         MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        for (String columnName:parameters.keySet()){
+        for (String columnName : parameters.keySet()) {
             namedParams.addValue(columnName, parameters.get(columnName));
-            updateSql +=  columnName + "= :" + columnName + ", ";
+            updateSql += columnName + "= :" + columnName + ", ";
         }
         namedParams.addValue(ID, id);
         updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "

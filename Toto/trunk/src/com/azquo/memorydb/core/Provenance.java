@@ -66,7 +66,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
         return timeStamp;
     }
 
-    public void setTimeStamp(){
+    public void setTimeStamp() {
         this.timeStamp = new Date();
     }
 
@@ -74,19 +74,23 @@ public final class Provenance extends AzquoMemoryDBEntity {
         return method;
     }
 
-    public void setMethod(String method){ this.method = method; }
+    public void setMethod(String method) {
+        this.method = method;
+    }
 
     public String getName() {
         return name;
     }
 
-    public void  setName(String name){ this.name = name; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
     public String getContext() {
         return context;
     }
 
-    public void setContext(String context){
+    public void setContext(String context) {
         this.context = context;
     }
 

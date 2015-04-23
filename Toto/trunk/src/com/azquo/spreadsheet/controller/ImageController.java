@@ -28,15 +28,14 @@ public class ImageController {
     private SpreadsheetService spreadsheetService;
 
     @RequestMapping
-    public String handleRequest(HttpServletResponse response
-            , @RequestParam(value = "image", required = false)  String image
-            , @RequestParam(value = "supplierdb", required = false)  String db
+    public void handleRequest(HttpServletResponse response
+            , @RequestParam(value = "image", required = false) String image
+            , @RequestParam(value = "supplierdb", required = false) String db
     ) throws Exception {
-
         if (image != null) {
             if (image.length() > 0 && image.indexOf(".") > 0) {
                 //may need some security check...
-                String path = spreadsheetService.getHomeDir() + "/databases/" + db + "/" +  image;
+                String path = spreadsheetService.getHomeDir() + "/databases/" + db + "/" + image;
                 File file = new File(path);
                 String ext = image.substring(image.indexOf(".") + 1).toLowerCase();
                 if (ext.equals("jpg")) {
@@ -61,7 +60,6 @@ public class ImageController {
                 }
             }
         }
-        return "";
     }
 }
 

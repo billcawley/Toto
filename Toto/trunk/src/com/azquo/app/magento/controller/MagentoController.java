@@ -23,9 +23,8 @@ import java.util.Date;
 
 /**
  * Created by bill on 28/10/14
- *
+ * <p/>
  * Created to handle requests from the plugin.
- *
  */
 
 @Controller
@@ -72,34 +71,35 @@ public class MagentoController {
 
             if (op == null) op = "";// can this happen with the annotation above?
             System.out.println("==================== db sent  : " + db + " op= " + op);
-                //for testing only
-                if (db == null) db = "temp";
+            //for testing only
+            if (db == null) {
+                db = "temp";
+            }
             LoggedInConnection loggedInConnection = loginService.login(db, logon, password, 0, "", false);//will automatically switch the database to 'temp' if that's the only one
-                if (loggedInConnection == null) {
-                    return "error: user " + logon + " with this password does not exist";
-                }
-                if (!db.equals("temp") && db.length() > 0) {
-                    spreadsheetService.switchDatabase(loggedInConnection, db);
-                    //todo  consider what happens if there's an error here (check the result from the line above?)
-                }
-                //loggedInConnection = loginService.login("test","magentobill","password",0,"",false);
+            if (loggedInConnection == null) {
+                return "error: user " + logon + " with this password does not exist";
+            }
+            if (!db.equals("temp") && db.length() > 0) {
+                spreadsheetService.switchDatabase(loggedInConnection, db);
+                //todo  consider what happens if there's an error here (check the result from the line above?)
+            }
             if (op.equals("connect")) {
-                if (dataLoadService.findLastUpdate(loggedInConnection)!=null) {
+                if (dataLoadService.findLastUpdate(loggedInConnection) != null) {
                     // was connection id here, hacking ths back in to get the logged in conneciton
                     String tempConnectionId = System.currentTimeMillis() + "";
                     request.getServletContext().setAttribute(tempConnectionId, loggedInConnection);
                     return tempConnectionId;
-                }else{
+                } else {
                     dataLoadService.findRequiredTables(loggedInConnection);
                 }
             }
 
             // need to look at this carefully. I don't think the Logged InCOnnection is how I'd implement this if I started again. On the other hand
-            if (op.equals("restart")){
+            if (op.equals("restart")) {
                 Database existingDb = loggedInConnection.getCurrentDatabase();
                 adminService.emptyDatabase(loggedInConnection.getCurrentDBName());
-                loginService.switchDatabase(loggedInConnection,null);
-                loginService.switchDatabase(loggedInConnection,existingDb);
+                loginService.switchDatabase(loggedInConnection, null);
+                loginService.switchDatabase(loggedInConnection, existingDb);
                 return dataLoadService.findRequiredTables(loggedInConnection);
             }
 
@@ -114,14 +114,14 @@ public class MagentoController {
                     System.out.println("Running a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
                 }
 
-                if (data != null){
+                if (data != null) {
                     File moved = null;
                     long start = System.currentTimeMillis();
-                    if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't save it :)
+                    if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1")) { // if it's from us don't save it :)
                         moved = new File(spreadsheetService.getHomeDir() + "/temp/" + db + new Date());
                         data.transferTo(moved);
                     }
-                    if (moved != null){
+                    if (moved != null) {
                         FileInputStream fis = new FileInputStream(moved);
                         dataLoadService.loadData(loggedInConnection, fis);
                         fis.close();
@@ -129,17 +129,17 @@ public class MagentoController {
                         dataLoadService.loadData(loggedInConnection, data.getInputStream());
                     }
                     long elapsed = System.currentTimeMillis() - start;
-                    if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254")  && !request.getRemoteAddr().equals("127.0.0.1")){ // if it's from us don't email us :)
-                            String title = "Magento file upload " + logon + " from " + request.getRemoteAddr() + " elapsed time " + elapsed +  " millisec";
-                            azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
-                            azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
-                            azquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
-                      }
+                    if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1")) { // if it's from us don't email us :)
+                        String title = "Magento file upload " + logon + " from " + request.getRemoteAddr() + " elapsed time " + elapsed + " millisec";
+                        azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
+                        azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
+                        azquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
+                    }
                     // was connection id here, hacking ths back in to get the logged in conneciton
                     String tempConnectionId = System.currentTimeMillis() + "";
                     request.getServletContext().setAttribute(tempConnectionId, loggedInConnection);
                     return tempConnectionId;
-                } else{
+                } else {
                     return "error: no data posted";
                 }
                 //return onlineService.readExcel(loggedInConnection, onlineReport, null, "");

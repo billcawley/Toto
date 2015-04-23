@@ -62,8 +62,8 @@ public class StringUtils {
             int commandStart = iPos + instructionName.length() + 1;
 
             if (commandStart < instructions.length()) {
-                int commandEnd =instructions.indexOf(" ", commandStart + 1);
-                if (commandEnd < 0){
+                int commandEnd = instructions.indexOf(" ", commandStart + 1);
+                if (commandEnd < 0) {
                     commandEnd = instructions.length();
                 }
                 toReturn = instructions.substring(commandStart, commandEnd).trim();
@@ -77,7 +77,7 @@ public class StringUtils {
         return toReturn;
     }
 
-    public boolean precededBy(String searchText, String testItem, int pos){
+    public boolean precededBy(String searchText, String testItem, int pos) {
         int len = testItem.length();
         return pos >= len + 2 && searchText.substring(pos - len - 1, pos).toLowerCase().equals(testItem + " ");
     }
@@ -111,29 +111,29 @@ I'll add better tracking of where an error is later
          with hierarchy and commas makes things more interesting e.g. `High Street`,London,Ontario. In this case we'll have !01,London,Ontario instead
          that will be resolved more properly below. Also note that this takes care of attribute quotes. Distinguished by starting with a . e.g. .`some attribute name` */
         StringBuilder modifiedStatement = new StringBuilder();
-        Pattern p = Pattern.compile(""+ Name.QUOTE + ".*?"+ Name.QUOTE + ""); // don't need escaping here I don't think. Possible to add though.
+        Pattern p = Pattern.compile("" + Name.QUOTE + ".*?" + Name.QUOTE + ""); // don't need escaping here I don't think. Possible to add though.
         Matcher matcher = p.matcher(statement);
         int lastEnd = 0;
         List<String> quotedNameCache = new ArrayList<String>();
-        while(matcher.find()){
-            if (modifiedStatement.length() == 0){
-                modifiedStatement.append(statement.substring(0,matcher.start()));
+        while (matcher.find()) {
+            if (modifiedStatement.length() == 0) {
+                modifiedStatement.append(statement.substring(0, matcher.start()));
             } else {
                 modifiedStatement.append(statement.substring(lastEnd, matcher.start()));
             }
             lastEnd = matcher.end();
             quotedNameCache.add(matcher.group());
             // it should never be more and it breaks our easy fixed length marker thing here
-            if (quotedNameCache.size() > 100){
+            if (quotedNameCache.size() > 100) {
                 throw new Exception("More than 100 quoted names.");
             }
             // I don't even need the number here but I'll leave it here for the moment
             modifiedStatement.append(NameService.NAMEMARKER).append(twoDigit.format(quotedNameCache.size()));
         }
-        if (lastEnd != 0){
+        if (lastEnd != 0) {
             modifiedStatement.append(statement.substring(lastEnd));
         }
-        if (modifiedStatement.length() > 0){
+        if (modifiedStatement.length() > 0) {
             statement = modifiedStatement.toString();
         }
 
@@ -144,9 +144,9 @@ I'll add better tracking of where an error is later
         p = Pattern.compile("(\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\")");
         matcher = p.matcher(statement);
         lastEnd = 0;
-        while(matcher.find()){
-            if (modifiedStatement.length() == 0){
-                modifiedStatement.append(statement.substring(0,matcher.start()));
+        while (matcher.find()) {
+            if (modifiedStatement.length() == 0) {
+                modifiedStatement.append(statement.substring(0, matcher.start()));
             } else {
                 modifiedStatement.append(statement.substring(lastEnd, matcher.start()));
             }
@@ -155,10 +155,10 @@ I'll add better tracking of where an error is later
             modifiedStatement.append("\"").append(twoDigit.format(stringLiterals.size())).append("\"");
             stringLiterals.add(matcher.group().substring(1, matcher.group().length() - 1)); // don't add the quotes. Should we unescape here???
         }
-        if (lastEnd != 0){
+        if (lastEnd != 0) {
             modifiedStatement.append(statement.substring(lastEnd));
         }
-        if (modifiedStatement.length() > 0){
+        if (modifiedStatement.length() > 0) {
             statement = modifiedStatement.toString();
         }
 
@@ -183,8 +183,8 @@ I'll add better tracking of where an error is later
         // added, as an operator, should make it more robust when used with decode string
         // this assumes that the , will be taken care of after the parsing
         statement = statement.replace(",", " , ").replace("  ", " ");
-        statement = statement.replace("level lowest","level 100");
-        statement = statement.replace("level all","level 101");
+        statement = statement.replace("level lowest", "level 100");
+        statement = statement.replace("level all", "level 101");
 
  /* so now we have things like this, should be ready for a basic test
         !1 level 2 from !2 to !3 as !4
@@ -203,21 +203,21 @@ I should be ok for stringtokenizer at this point
 
         StringTokenizer st = new StringTokenizer(statement, " ");
         modifiedStatement = new StringBuilder();
-        while (st.hasMoreTokens()){
+        while (st.hasMoreTokens()) {
             modifiedStatement.append(" ");
             String term = st.nextToken();
-            if (!isKeywordOrOperator(term) && !NumberUtils.isNumber(term) && !term.startsWith("\"")){ // then we assume a name or attribute
-                while (term.indexOf(NameService.NAMEMARKER) != -1){ // we need to put the quoted ones back in, it will be the same order they were taken out in, hence remove(0) will work.
+            if (!isKeywordOrOperator(term) && !NumberUtils.isNumber(term) && !term.startsWith("\"")) { // then we assume a name or attribute
+                while (term.indexOf(NameService.NAMEMARKER) != -1) { // we need to put the quoted ones back in, it will be the same order they were taken out in, hence remove(0) will work.
                     term = term.substring(0, term.indexOf(NameService.NAMEMARKER)) + quotedNameCache.remove(0) + term.substring(term.indexOf(NameService.NAMEMARKER) + 3);
                 }
                 /* ok the use of name marker might be a bit ambiguous. First used internally here for names or fragments in quotes. Now used in the returned string and the names strings are chucked into an array to be resolved in name spreadsheet
                 we also need attribute names in array so attribute names don't trip the shunting hard algorithm etc. Of course attributes aren't fit for batch resolution after this  parse
                 I'm not completely clear this is the best way but it the resultant statement is "safe" for the shunting yard algorithm
                 */
-                if (term.startsWith(".")){
+                if (term.startsWith(".")) {
                     // I was using name marker, no good as it would be caught by a later conditional parser
                     modifiedStatement.append(NameService.ATTRIBUTEMARKER).append(twoDigit.format(attributeStrings.size()));
-                    attributeStrings.add(term.substring(1).replace("`","")); // knock off the . and remove ``
+                    attributeStrings.add(term.substring(1).replace("`", "")); // knock off the . and remove ``
                 } else {
                     modifiedStatement.append(NameService.NAMEMARKER).append(twoDigit.format(nameNames.size()));
                     nameNames.add(term);
@@ -227,19 +227,19 @@ I should be ok for stringtokenizer at this point
             }
         }
         statement = modifiedStatement.toString().trim();
-        statement = statement.replace("> =",">=").replace("< =","<=");//remove unnecessary blanks
+        statement = statement.replace("> =", ">=").replace("< =", "<=");//remove unnecessary blanks
         return statement;
     }
 
-    public boolean isKeywordOrOperator(String term){
+    public boolean isKeywordOrOperator(String term) {
         return term.equals("*") || term.equals("/") || term.equals("+") || term.equals("-") || term.equals(">")
-                || term.equals("<")  || term.equals("=") || term.equals(",")
+                || term.equals("<") || term.equals("=") || term.equals(",")
                 || term.equals("(") || term.equals(")")
                 || term.equalsIgnoreCase("and")
                 || term.equalsIgnoreCase(NameService.LEVEL) || term.equalsIgnoreCase(NameService.FROM)
                 || term.equalsIgnoreCase(NameService.TO) || term.equalsIgnoreCase(NameService.COUNT)
                 || term.equalsIgnoreCase(NameService.SORTED) || term.equalsIgnoreCase(NameService.CHILDREN)
-                || term.equalsIgnoreCase(NameService.PEERS)  || term.equalsIgnoreCase(NameService.PARENTS)
+                || term.equalsIgnoreCase(NameService.PEERS) || term.equalsIgnoreCase(NameService.PARENTS)
                 || term.equalsIgnoreCase(NameService.COUNTBACK) || term.equalsIgnoreCase(NameService.COMPAREWITH)
                 || term.equalsIgnoreCase(NameService.AS) || term.equalsIgnoreCase(NameService.STRUCTURE)
                 || term.equalsIgnoreCase(NameService.NAMELIST) || term.equalsIgnoreCase(NameService.CREATE)

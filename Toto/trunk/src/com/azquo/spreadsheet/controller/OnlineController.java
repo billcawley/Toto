@@ -31,7 +31,6 @@ import java.util.*;
 
 /**
  * Created by bill on 22/04/14.
- *
  */
 
 @Controller
@@ -100,7 +99,7 @@ public class OnlineController {
                 book.getInternalBook().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(REPORT_ID, loggedInConnection.getReportId());
-                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService,nameService, userChoiceDAO, adminService);
+                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO, adminService);
                 bookUtils.populateBook(book);
                 request.setAttribute(BOOK, book);
                 if (loggedInConnection.getCurrentDBName() != null) {
@@ -134,7 +133,7 @@ public class OnlineController {
                 if (workbookName == null) {
                     workbookName = "unknown";
                 }
-                LoggedInConnection loggedInConnection = (LoggedInConnection)request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
+                LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
 
                 if (loggedInConnection == null) {
                     if (user == null) {
@@ -213,7 +212,7 @@ public class OnlineController {
                 }
                 if (opcode.equals("upload")) {
                     if (submit.length() > 0) {
-                        if (database.length() > 0){
+                        if (database.length() > 0) {
                             spreadsheetService.switchDatabase(loggedInConnection, database);
                         }
                         InputStream uploadFile = uploadfile.getInputStream();
@@ -254,11 +253,11 @@ public class OnlineController {
 
                     return "utf8javascript";
                 }
-                /* saving data arked for the moment
+                // will only work on admin
                 if (opcode.equals("savedata")) {
                     spreadsheetService.saveData(loggedInConnection);
                     result = "data saved successfully";
-                }*/
+                }
                 //if (opcode.equals("children")){
 
                 //result = nameService.getStructureForNameSearch(loggedInConnection,"", Integer.parseInt(nameId), loggedInConnection.getLanguages());
@@ -289,7 +288,7 @@ public class OnlineController {
                     // jam 'em in the session for the moment, makes testing easier. As in see a report then try with &trynewsheet=true after
                     request.getSession().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
                     result = spreadsheetService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "Right-click mouse for provenance");
-                 }
+                }
                 if (opcode.equals("buttonpressed") && row > 0) {//button pressed - follow instructions and reload admin sheet
                     // json function was being passed but ignored!
                     spreadsheetService.followInstructionsAt(loggedInConnection, row, Integer.parseInt(colStr), database, uploadfile);
@@ -312,7 +311,7 @@ public class OnlineController {
                 model.addAttribute("content", "error:" + e.getMessage());
             }
             return "utf8page";
-        }catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return e.getMessage();
         }
@@ -337,6 +336,6 @@ public class OnlineController {
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
     ) {
-        return handleRequest(model,request,user,password,choiceName,choiceValue,reportId,chart,jsonFunction,rowStr,colStr, changedValue, opcode, spreadsheetName, database, reportToLoad, submit, null);
+        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, chart, jsonFunction, rowStr, colStr, changedValue, opcode, spreadsheetName, database, reportToLoad, submit, null);
     }
 }

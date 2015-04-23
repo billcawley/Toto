@@ -30,32 +30,31 @@ public class DownloadController {
     @RequestMapping
     public void handleRequest(HttpServletRequest request
             , HttpServletResponse response
-            , @RequestParam(value = "macros", required = false, defaultValue = "false")  boolean withMacros
-            , @RequestParam(value = "pdf", required = false, defaultValue = "false")  boolean pdf
-            , @RequestParam(value = "image", required = false)  String image
-                              ) throws Exception {
+            , @RequestParam(value = "macros", required = false, defaultValue = "false") boolean withMacros
+            , @RequestParam(value = "pdf", required = false, defaultValue = "false") boolean pdf
+            , @RequestParam(value = "image", required = false) String image
+    ) throws Exception {
         // deliver a preprepared image. Are these names unique? Could images move between spreadsheets unintentionally?
-        if (image != null && image.length() > 0){
-            InputStream input = new BufferedInputStream((new FileInputStream(spreadsheetService.getHomeDir() +  "/temp/" + image)));
+        if (image != null && image.length() > 0) {
+            InputStream input = new BufferedInputStream((new FileInputStream(spreadsheetService.getHomeDir() + "/temp/" + image)));
             response.setContentType("image/png"); // Set up mime type
             OutputStream out = response.getOutputStream();
-            byte[] bucket = new byte[32*1024];
+            byte[] bucket = new byte[32 * 1024];
             int length = 0;
-            try  {
+            try {
                 try {
                     //Use buffering? No. Buffering avoids costly access to disk or network;
                     //buffering to an in-memory stream makes no sense.
                     int bytesRead = 0;
-                    while(bytesRead != -1){
+                    while (bytesRead != -1) {
                         //aInput.read() returns -1, 0, or more :
                         bytesRead = input.read(bucket);
-                        if(bytesRead > 0){
+                        if (bytesRead > 0) {
                             out.write(bucket, 0, bytesRead);
                             length += bytesRead;
                         }
                     }
-                }
-                finally {
+                } finally {
                     input.close();
                     //result.close(); this is a no-operation for ByteArrayOutputStream
                 }
@@ -63,14 +62,13 @@ public class DownloadController {
                 response.setHeader("Content-Length", String.valueOf(length));
                 out.flush();
                 return;
-            }
-            catch (IOException ex){
+            } catch (IOException ex) {
                 ex.printStackTrace();
             }
             out.flush();
             return;
         }
-        LoggedInConnection loggedInConnection = (LoggedInConnection)request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
+        LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
         if (loggedInConnection == null) {
             return;
         }
@@ -91,9 +89,9 @@ public class DownloadController {
         if (fileName.indexOf("/") > 0) {
             fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
         }
-        if (pdf){
+        if (pdf) {
             spreadsheetService.saveBookasPDF(response, loggedInConnection, fileName);
-        }else {
+        } else {
             if (withMacros) {
                 spreadsheetService.saveBookActive(response, loggedInConnection, fileName);
             } else {
@@ -101,9 +99,6 @@ public class DownloadController {
             }
         }
     }
-
-
-
 }
 
 

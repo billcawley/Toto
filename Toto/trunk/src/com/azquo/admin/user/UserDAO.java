@@ -61,7 +61,7 @@ public class UserDAO extends StandardDAO<User> {
         public User mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
                 return new User(rs.getInt(ID)
-                        ,  getLocalDateTimeFromDate(rs.getDate(STARTDATE))
+                        , getLocalDateTimeFromDate(rs.getDate(STARTDATE))
                         , getLocalDateTimeFromDate(rs.getDate(ENDDATE))
                         , rs.getInt(BUSINESSID)
                         , rs.getString(EMAIL)
@@ -93,10 +93,10 @@ public class UserDAO extends StandardDAO<User> {
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
 
-    public final void update(int id, int businessId, Map<String, Object> parameters) {
+    public final void update(int id, int businessId, Map<String, Object> parameters) throws Exception{
         String email = (String) parameters.get("email");
         if (id == 0 && email.length() > 0) {
-             User u = findByEmail(email);
+            User u = findByEmail(email);
             if (u != null) {
                 id = u.getId();
             } else {
@@ -107,21 +107,21 @@ public class UserDAO extends StandardDAO<User> {
         }
         String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
         MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        for (String columnName:parameters.keySet()){
-              if (columnName.equals(PASSWORD)){
-                String password = (String)parameters.get(columnName);
-                 if (password.length() > 0) {
-                     final String salt = adminService.shaHash(System.currentTimeMillis() + "salt");
-                     password = adminService.encrypt(password, salt);
-                     namedParams.addValue(PASSWORD, password);
-                     namedParams.addValue(SALT, salt);
-                     updateSql += PASSWORD + "= :" + PASSWORD + ", " + SALT + " = :" + SALT + ", ";
-                 }
+        for (String columnName : parameters.keySet()) {
+            if (columnName.equals(PASSWORD)) {
+                String password = (String) parameters.get(columnName);
+                if (password.length() > 0) {
+                    final String salt = adminService.shaHash(System.currentTimeMillis() + "salt");
+                    password = adminService.encrypt(password, salt);
+                    namedParams.addValue(PASSWORD, password);
+                    namedParams.addValue(SALT, salt);
+                    updateSql += PASSWORD + "= :" + PASSWORD + ", " + SALT + " = :" + SALT + ", ";
+                }
             } else {
-                  namedParams.addValue(columnName, parameters.get(columnName));
-                  updateSql +=  columnName + "= :" + columnName + ", ";
+                namedParams.addValue(columnName, parameters.get(columnName));
+                updateSql += columnName + "= :" + columnName + ", ";
 
-             }
+            }
         }
         namedParams.addValue(ID, id);
         updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "

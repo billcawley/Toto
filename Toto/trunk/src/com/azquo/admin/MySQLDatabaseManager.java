@@ -38,7 +38,7 @@ public class MySQLDatabaseManager {
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1  ;", new HashMap<String, Object>());
     }
 
-    public void emptyDatabase(String databaseName) throws IOException{
+    public void emptyDatabase(String databaseName) throws IOException {
         databaseName = databaseName.replace("`", "oh no you don't");
         jdbcTemplate.update("truncate `" + databaseName + "`.name", new HashMap<String, Object>());
         jdbcTemplate.update("truncate `" + databaseName + "`.value", new HashMap<String, Object>());

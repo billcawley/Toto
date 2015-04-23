@@ -8,7 +8,7 @@ import org.apache.commons.mail.HtmlEmail;
  * Created by cawley on 16/01/14.
  * Quick google showed the apache libraries to be a pretty easy way to do things. Email so unimportant compared to Feefo.
  * I've not made the functions static, I don't know if there will ever be multiple implementations but meh, why not
- *
+ * <p/>
  * Note in October : if this is to be used for Azquo reviews then it is going to be used a lot!
  */
 public class AzquoMailer {

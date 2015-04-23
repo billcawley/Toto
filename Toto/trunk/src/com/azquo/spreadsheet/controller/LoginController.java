@@ -23,7 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 
 public class LoginController {
 
- //   private static final Logger logger = Logger.getLogger(LoginController.class);
+    //   private static final Logger logger = Logger.getLogger(LoginController.class);
     @Autowired
     private LoginService loginService;
 
@@ -31,18 +31,18 @@ public class LoginController {
 
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
-             , @RequestParam(value = "user", required = false)  String userEmail
-            , @RequestParam(value = "password", required = false)  String password
-            , @RequestParam(value = "connectionid", required = false)  String connectionid
+            , @RequestParam(value = "user", required = false) String userEmail
+            , @RequestParam(value = "password", required = false) String password
+            , @RequestParam(value = "connectionid", required = false) String connectionid
 
-                                ) throws Exception {
+    ) throws Exception {
         String callerId = request.getRemoteAddr();
         if (callerId != null && userEmail != null && userEmail.equals("demo@user.com")) {
             userEmail += callerId;
         }
 
-        if (connectionid != null && connectionid.length() > 0){ // nasty hack to support connection id from the plugin
-            if (request.getServletContext().getAttribute(connectionid) != null){ // then pick up the temp logged in conneciton
+        if (connectionid != null && connectionid.length() > 0) { // nasty hack to support connection id from the plugin
+            if (request.getServletContext().getAttribute(connectionid) != null) { // then pick up the temp logged in conneciton
                 request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, request.getServletContext().getAttribute(connectionid));
                 request.getServletContext().removeAttribute(connectionid); // take it off the context
                 return "redirect:/api/Online?reportid=1";
@@ -51,7 +51,7 @@ public class LoginController {
             if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
                 model.put("userEmail", userEmail);
                 LoggedInConnection loggedInConnection = loginService.login(null, userEmail, password, 60, null, false);
-                if (loggedInConnection != null){
+                if (loggedInConnection != null) {
                     request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
                     return "redirect:/api/Online?reportid=1";
                 } else {// feedback to users about incorrect details

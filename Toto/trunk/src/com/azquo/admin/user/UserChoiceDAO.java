@@ -14,7 +14,6 @@ import java.util.Map;
 
 /**
  * Created by bill on 22/04/14.
- *
  */
 public final class UserChoiceDAO extends StandardDAO<UserChoice> {
 
@@ -73,7 +72,7 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
         namedParams.addValue(REPORTID, reportId);
         namedParams.addValue(CHOICENAME, choiceName);
         return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + REPORTID + "` = :" + REPORTID + " AND `" + CHOICENAME + "` = :" + CHOICENAME, namedParams);
-     }
+    }
 
 /*    public UserChoice findForUserIdAndChoice(final int userId, final String choiceName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -88,15 +87,15 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
         namedParams.addValue(USERID, userId);
         namedParams.addValue(REPORTID, reportId);
         return findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + REPORTID + "` = :" + REPORTID, namedParams, false);
-     }
-
-    public void deleteForReportId(final int reportId){
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-         namedParams.addValue(REPORTID, reportId);
-         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + REPORTID + " = :" + REPORTID, namedParams);
     }
 
-    public void deleteOverridesForUserAndReportId(final int userId, final int reportId){
+    public void deleteForReportId(final int reportId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(REPORTID, reportId);
+        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + REPORTID + " = :" + REPORTID, namedParams);
+    }
+
+    public void deleteOverridesForUserAndReportId(final int userId, final int reportId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(REPORTID, reportId);
         namedParams.addValue(USERID, userId);

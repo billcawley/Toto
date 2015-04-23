@@ -1,6 +1,5 @@
 package com.azquo.admin;
 
-import com.azquo.admin.StandardEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -145,8 +144,8 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
     }
 
     // bottom two lines off the net, needed as resultsets don't use the new date classes
-    public LocalDateTime getLocalDateTimeFromDate(Date date){
-        if (date == null){
+    public LocalDateTime getLocalDateTimeFromDate(Date date) {
+        if (date == null) {
             return null;
         }
         Instant instant = Instant.ofEpochMilli(date.getTime());

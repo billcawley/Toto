@@ -305,7 +305,6 @@ public final class ValueService {
         return values;
     }
 
-
     public void printFindForNamesIncludeChildrenStats() {
         if (numberOfTimesCalled1 > 0) {
             logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
@@ -315,15 +314,12 @@ public final class ValueService {
         }
     }
 
-
     long totalNanoCallTime = 0;
     long part1NanoCallTime = 0;
     long part2NanoCallTime = 0;
     int numberOfTimesCalled = 0;
 
-
     // the function that populates each cell.
-
     public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, List<String> attributeNames) throws Exception {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
@@ -427,12 +423,9 @@ public final class ValueService {
         if (names.size() != 1) {
             locked.isTrue = true;
         }
-
         Set<String> attributes = spreadsheetService.attributesFromDataRegionHeadings(headings);
-
         String stringResult = null;
         double numericResult = 0;
-
         // was on set intersection . . .
         int count = 0;
         String attValue = null;
@@ -554,7 +547,6 @@ public final class ValueService {
     }
 
     public String addValues(Set<Value> values) {
-
         String stringVal = null;
         Double doubleVal = 0.0;
         boolean percentage = false;
@@ -583,7 +575,6 @@ public final class ValueService {
             if (percentage) stringVal += "%";
         }
         return stringVal;
-
     }
 
     // find the most used name by a set of values, used by printBatch to derive headings
@@ -619,14 +610,12 @@ public final class ValueService {
 
 
     public void sortValues(List<Value> values) {
-
         Collections.sort(values, new Comparator<Value>() {
             public int compare(Value o1, Value o2) {
                 return (o1.getProvenance().getTimeStamp())
                         .compareTo(o2.getProvenance().getTimeStamp());
             }
         });
-
     }
 
     // pring a bunch of values in json. It seems to find the name which represents the most values and displays
@@ -725,5 +714,4 @@ public final class ValueService {
         sb.append("]");
         return sb;
     }
-
 }

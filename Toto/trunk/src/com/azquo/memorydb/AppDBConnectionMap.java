@@ -15,9 +15,8 @@ import java.util.Map;
 
 /**
  * Created by cawley on 22/10/14.
- *
+ * <p/>
  * TODO - concurrent maps???
- *
  */
 public class AppDBConnectionMap {
 
@@ -37,24 +36,25 @@ public class AppDBConnectionMap {
         connectionMap = new HashMap<String, AzquoMemoryDBConnection>();
         dbByNameMap = new HashMap<String, Database>();
         business = adminService.getBusinessById(businessId);
-        if (business != null){
+        if (business != null) {
             List<Database> databasesForBusiness = adminService.getDatabaseListForBusiness(business);
-            for (Database database : databasesForBusiness){
-                    dbByNameMap.put(database.getMySQLName(), database);
+            for (Database database : databasesForBusiness) {
+                dbByNameMap.put(database.getMySQLName(), database);
             }
         }
     }
+
     // was a simple get but we're going to lazy load
-    public AzquoMemoryDBConnection getConnection(String mysqlName){
+    public AzquoMemoryDBConnection getConnection(String mysqlName) {
         mysqlName = mysqlName.toLowerCase();
         AzquoMemoryDBConnection azquoMemoryDBConnection = connectionMap.get(mysqlName);
-        if (azquoMemoryDBConnection != null){
+        if (azquoMemoryDBConnection != null) {
             return azquoMemoryDBConnection;
         } else {
-            if (dbByNameMap.get(mysqlName) != null){
+            if (dbByNameMap.get(mysqlName) != null) {
                 try {
                     connectionMap.put(dbByNameMap.get(mysqlName).getMySQLName(),
-                            new AzquoMemoryDBConnection(memoryDBManager.getAzquoMemoryDB(dbByNameMap.get(mysqlName)), new User(0, null, null, business.getId(), "", "connection pool", "", "", "" )));
+                            new AzquoMemoryDBConnection(memoryDBManager.getAzquoMemoryDB(dbByNameMap.get(mysqlName)), new User(0, null, null, business.getId(), "", "connection pool", "", "", "")));
                     return connectionMap.get(mysqlName);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -64,9 +64,9 @@ public class AppDBConnectionMap {
         return null;
     }
 
-    public void deleteDatabase(String mysqlName){
+    public void deleteDatabase(String mysqlName) {
         Database db = dbByNameMap.get(mysqlName);
-        if (db != null){
+        if (db != null) {
             try {
                 adminService.dropDatabase(db.getMySQLName());
                 databaseDAO.removeById(db);
@@ -79,21 +79,21 @@ public class AppDBConnectionMap {
         }
     }
 
-    public void newDatabase(String databaseName) throws Exception{
-        Database existing = databaseDAO.findForName(business.getId(),databaseName);
-        if (existing != null){
+    public void newDatabase(String databaseName) throws Exception {
+        Database existing = databaseDAO.findForName(business.getId(), databaseName);
+        if (existing != null) {
             throw new Exception("that database " + databaseName + "already exists");
         }
         // todo - factor this it's in two places at the moment
         final String mysqlName = (business.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "") + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
         final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), business.getId(), databaseName, mysqlName, 0, 0);
         // todo here and elsewhere, stop mysql dbs overwriting each other
-            mySQLDatabaseManager.createNewDatabase(mysqlName);
-            databaseDAO.store(database);
-            memoryDBManager.addNewToDBMap(database);
-            dbByNameMap.put(database.getMySQLName(), database);
-            connectionMap.put(database.getMySQLName(),
-            new AzquoMemoryDBConnection(memoryDBManager.getAzquoMemoryDB(database), new User(0, null, null, business.getId(), "", "connection pool", "", "", "" )));
+        mySQLDatabaseManager.createNewDatabase(mysqlName);
+        databaseDAO.store(database);
+        memoryDBManager.addNewToDBMap(database);
+        dbByNameMap.put(database.getMySQLName(), database);
+        connectionMap.put(database.getMySQLName(),
+                new AzquoMemoryDBConnection(memoryDBManager.getAzquoMemoryDB(database), new User(0, null, null, business.getId(), "", "connection pool", "", "", "")));
     }
 
 }

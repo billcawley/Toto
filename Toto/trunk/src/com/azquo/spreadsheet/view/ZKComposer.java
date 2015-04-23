@@ -26,6 +26,7 @@ import org.zkoss.zss.ui.event.SheetSelectEvent;
 import org.zkoss.zss.ui.event.StopEditingEvent;
 import org.zkoss.zul.Menuitem;
 import org.zkoss.zul.Menupopup;
+
 import java.io.File;
 
 /**
@@ -47,10 +48,10 @@ public class ZKComposer extends SelectorComposer<Component> {
         // perhaps a bit long winded but it gets us the spreadsheet
         Session session = Sessions.getCurrent();
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
-        spreadsheetService = (SpreadsheetService)applicationContext.getBean("onlineService");
-        nameService = (NameService)applicationContext.getBean("nameService");
-        valueService = (ValueService)applicationContext.getBean("valueService");
-        userChoiceDAO = (UserChoiceDAO)applicationContext.getBean("userChoiceDao");
+        spreadsheetService = (SpreadsheetService) applicationContext.getBean("onlineService");
+        nameService = (NameService) applicationContext.getBean("nameService");
+        valueService = (ValueService) applicationContext.getBean("valueService");
+        userChoiceDAO = (UserChoiceDAO) applicationContext.getBean("userChoiceDao");
         adminService = (AdminService) applicationContext.getBean("adminService");
         editPopup.setId("editPopup");
         Menuitem item1 = new Menuitem("Provenance");
@@ -60,7 +61,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         editPopup.appendChild(item1);
         // by trial and error this gave us an element we could show. Not sure baout best practice etc. here
         // can't seem to find the context menu to edit. No matter, have one or the other.
-        if (myzss.getFirstChild() != null){
+        if (myzss.getFirstChild() != null) {
             myzss.getFirstChild().appendChild(editPopup);
         }
 
@@ -96,13 +97,13 @@ public class ZKComposer extends SelectorComposer<Component> {
                     && name.getRefersToCellRegion().getRow() == row
                     && name.getRefersToCellRegion().getColumn() == col) {
                 // ok it matches a name
-                if (name.getName().endsWith("Chosen")){
+                if (name.getName().endsWith("Chosen")) {
                     spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), reportId, name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
                     reload = true;
                 }
             }
         }
-        if (reload){
+        if (reload) {
             try {
                 // new book from same source
                 final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
@@ -121,16 +122,16 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onSheetSelect = #myzss")
     public void onSheetSelect(SheetSelectEvent sheetSelectEvent) {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
-        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService,spreadsheetService, nameService, userChoiceDAO, adminService);
+        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO, adminService);
         Book book = sheetSelectEvent.getSheet().getBook();
-        zkAzquoBookUtils.addValidation(zkAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()),sheetSelectEvent.getSheet(),
-                (LoggedInConnection)book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_CONNECTION));
+        zkAzquoBookUtils.addValidation(zkAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),
+                (LoggedInConnection) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_CONNECTION));
     }
 
     // to deal with provenance
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
-        if (!myzss.isShowContextMenu()){ // then show ours :)
+        if (!myzss.isShowContextMenu()) { // then show ours :)
             SCell cell = cellMouseEvent.getSheet().getInternalSheet().getCell(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
             // now we need to check if it's in a data region
             editPopup.open(cellMouseEvent.getClientx(), cellMouseEvent.getClienty());

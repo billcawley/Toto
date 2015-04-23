@@ -129,11 +129,10 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // for convenience but be careful where it is used . . .
-    public String getDisplayNameForLanguages(List<String> languages)
-    {
-        for (String language : languages){
+    public String getDisplayNameForLanguages(List<String> languages) {
+        for (String language : languages) {
             String toReturn = getAttribute(language, false, new HashSet<Name>());
-            if (toReturn != null){
+            if (toReturn != null) {
                 return toReturn;
             }
         }
@@ -461,12 +460,12 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     public Map<Name, Boolean> getPeers() {
-        if (peers!=null){
+        if (peers != null) {
             return Collections.unmodifiableMap(peers);
         }
         Collection<Name> parents = findAllParents();
-        for (Name parent:parents){
-            if (parent.peers !=null){
+        for (Name parent : parents) {
+            if (parent.peers != null) {
                 return Collections.unmodifiableMap(parent.peers);
             }
         }
@@ -624,9 +623,9 @@ public final class Name extends AzquoMemoryDBEntity {
     private String findParentAttributes(Name child, String attributeName, Set<Name> checked) {
         attributeName = attributeName.toUpperCase();
         for (Name parent : child.getParents()) {
-            if (!checked.contains(parent)){
+            if (!checked.contains(parent)) {
                 checked.add(parent);
-                if (parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
+                if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
                     return child.getDefaultDisplayName();
                 }
                 String attribute = parent.getAttribute(attributeName, true, checked);
@@ -634,7 +633,7 @@ public final class Name extends AzquoMemoryDBEntity {
                     return attribute;
 
                 }
-           }
+            }
         }
         return null;
 
@@ -657,7 +656,7 @@ public final class Name extends AzquoMemoryDBEntity {
         }
         if (attribute != null) return attribute;
         //look up the chain for any parent with the attribute
-        if (parentCheck){
+        if (parentCheck) {
             return findParentAttributes(this, attributeName, checked);
         }
         return null;

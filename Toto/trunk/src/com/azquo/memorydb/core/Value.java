@@ -45,7 +45,7 @@ public final class Value extends AzquoMemoryDBEntity {
 
     protected Value(final AzquoMemoryDB azquoMemoryDB, final int id, final String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id);
-        try{
+        try {
             JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
             this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
             this.text = transport.text;
@@ -62,7 +62,7 @@ public final class Value extends AzquoMemoryDBEntity {
             }
             setNamesWillBePersisted(names);
             getAzquoMemoryDB().addValueToDb(this);
-        } catch(Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -75,7 +75,7 @@ public final class Value extends AzquoMemoryDBEntity {
         return text;
     }
 
-    public void setText(String text){
+    public void setText(String text) {
         this.text = text;
     }
 
@@ -104,7 +104,7 @@ public final class Value extends AzquoMemoryDBEntity {
         return names;
     }
 
-    public void setNames(final Set<Name> names){
+    public void setNames(final Set<Name> names) {
         //this function is used only for temporary 'values' while creating provenance information on sets of values.
         this.names = Collections.unmodifiableSet(names);
     }

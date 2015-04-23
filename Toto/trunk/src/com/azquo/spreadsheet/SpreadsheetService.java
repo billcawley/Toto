@@ -172,7 +172,6 @@ public class SpreadsheetService {
     // What actually delivers the reports to the browser. Maybe change to an output writer? Save memory and increase speed.
 
     public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message) throws Exception {
-
         String path = getHomeDir() + "/temp/";
         if (onlineReport.getId() == 1 && !loggedInConnection.getUser().isAdministrator()) {
             return showUserMenu(loggedInConnection);// user menu being what magento users typically see when logging in, a velocity page
@@ -233,10 +232,7 @@ public class SpreadsheetService {
 
             }
             spreadsheetName = azquoBook.printTabs(tabs, spreadsheetName);
-            String error = azquoBook.convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), spreadsheetName, worksheet);
-            if (error.length() > 0) {
-                message = error;
-            }
+            azquoBook.convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), spreadsheetName, worksheet);
         } catch (Exception e) {
             e.printStackTrace();
             throw (e);
@@ -247,7 +243,7 @@ public class SpreadsheetService {
         head.append("</style>\n");
         //velocityContext.put("script",readFile("online.js").toString());
         //velocityContext.put("topmenu",createTopMenu(loggedInConnection).toString());
-        azquoBook.fillVelocityOptionInfo(loggedInConnection, velocityContext);
+        azquoBook.fillVelocityOptionInfo(velocityContext);
         velocityContext.put("tabs", tabs.toString());
         velocityContext.put("topmessage", message);
         if (onlineReport.getId() == 1 && spreadsheetName.equalsIgnoreCase("reports")) {
@@ -391,7 +387,7 @@ public class SpreadsheetService {
         return sb.toString();
     }
 
-    public String saveAdminData(LoggedInConnection loggedInConnection) {
+    public String saveAdminData(LoggedInConnection loggedInConnection) throws Exception {
         String result = "";
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
         String tableName = azquoBook.getAdminTableName();
@@ -455,15 +451,16 @@ public class SpreadsheetService {
         }
         return result;
     }
-// oarking saving for the moment
-/*    public void saveData(LoggedInConnection loggedInConnection) throws Exception {
+
+    // parking normal saving for the moment
+    public void saveData(LoggedInConnection loggedInConnection) throws Exception {
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
         if (azquoBook.dataRegionPrefix.equals(AzquoBook.azInput)) {
             saveAdminData(loggedInConnection);
         } else {
-            azquoBook.saveData(loggedInConnection);
+            //azquoBook.saveData(loggedInConnection);
         }
-    }*/
+    }
 
     private StringBuilder createDatabaseSelect(LoggedInConnection loggedInConnection) {
         StringBuilder sb = new StringBuilder();
@@ -1052,8 +1049,8 @@ seaports;children   container;children
 
     // still a little funny about whether a logged in conneciton should be passed
 
-    public List<List<AzquoCell>> getDataRegion(LoggedInConnection loggedInConnection,List<List<DataRegionHeading>> rowHeadings
-            , List<List<DataRegionHeading>> columnHeadings,  String context
+    public List<List<AzquoCell>> getDataRegion(LoggedInConnection loggedInConnection, List<List<DataRegionHeading>> rowHeadings
+            , List<List<DataRegionHeading>> columnHeadings, String context
             , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol) throws Exception {
         if (columnHeadings == null || columnHeadings.size() == 0 || rowHeadings == null || rowHeadings.size() == 0) {
             throw new Exception("no headings passed");
@@ -1444,7 +1441,7 @@ I think that this is an ideal candidate for multithreading to speed things up
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }
         int threads = threadsToTry;
-        if (!tryMultiThreaded){
+        if (!tryMultiThreaded) {
             threads = 1;
         }
         System.out.println("populating using " + threads + " threas(s)");

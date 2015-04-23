@@ -16,31 +16,19 @@ import java.util.*;
 
 /**
  * Created by cawley on 07/08/14.
- *
+ * <p/>
  * This class is used to parse files delivered by the Magento Plugin. If it ever needed to be really heavy duty one could use Spring Batch I suppose but I think
  * that would be overkill.
- *
  */
 public final class DataLoadService {
 
-    public static void logMemUseage(){
-
+    public static void logMemUseage() {
         Runtime runtime = Runtime.getRuntime();
-        int mb = 1024*1024;
+        int mb = 1024 * 1024;
         System.out.println("##### Heap utilization statistics [MB] #####");
-
-        //Print used memory
-        System.out.println("Used Memory:"
-                + (runtime.totalMemory() - runtime.freeMemory()) / mb);
-
-        //Print free memory
-        System.out.println("Free Memory:"
-                + runtime.freeMemory() / mb);
-
-        //Print total available memory
+        System.out.println("Used Memory:" + (runtime.totalMemory() - runtime.freeMemory()) / mb);
+        System.out.println("Free Memory:" + runtime.freeMemory() / mb);
         System.out.println("Total Memory:" + runtime.totalMemory() / mb);
-
-        //Print Maximum available memory
         System.out.println("Max Memory:" + runtime.maxMemory() / mb);
     }
 
@@ -49,7 +37,6 @@ public final class DataLoadService {
 
     @Autowired
     ImportService importService;
-
 
     private final static String LATEST_UPDATE = "Latest update";
     private final static String REQUIRED_TABLES = "required tables";
@@ -60,17 +47,17 @@ public final class DataLoadService {
     @Autowired
     private ValueService valueService;
 
-    private static class SaleItem{
+    private static class SaleItem {
         public Name itemName;
         public double price;
         public double tax;
         public double origPrice;
         public double qty;
 
-        public SaleItem(){
+        public SaleItem() {
             itemName = null;
             price = 0.0;
-            tax=0.0;
+            tax = 0.0;
             origPrice = 0.0;
             qty = 0.0;
 
@@ -83,9 +70,9 @@ public final class DataLoadService {
     //final Map<Integer, MagentoOrderLineItem> orderLineItems = new HashMap<Integer, MagentoOrderLineItem>();
     final Map<String, String> optionValueLookup = new HashMap<String, String>();*/
 
-    public String findLastUpdate(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception{
-        Name orderName =  nameService.findByName(azquoMemoryDBConnection,"order");
-        if (orderName==null){
+    public String findLastUpdate(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
+        Name orderName = nameService.findByName(azquoMemoryDBConnection, "order");
+        if (orderName == null) {
             return null;
         }
         return orderName.getAttribute(LATEST_UPDATE);
@@ -93,30 +80,27 @@ public final class DataLoadService {
 
 
     public String findRequiredTables(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
-        String requiredTables = defaultData().replace("$starttime","");
-        if (nameService.findByName(azquoMemoryDBConnection,"all years") == null){
+        String requiredTables = defaultData().replace("$starttime", "");
+        if (nameService.findByName(azquoMemoryDBConnection, "all years") == null) {
             String magentoSetupFile = spreadsheetService.getHomeDir() + "/databases/Magen/setup/magentosetup.xlsx";
             InputStream uploadFile = new FileInputStream(magentoSetupFile);
             String fileName = "magentosetup.xlsx";
             importService.importTheFile(azquoMemoryDBConnection, fileName, uploadFile);
-
-
         }
 
         String date = "never";
-         Name order = nameService.findByName(azquoMemoryDBConnection, "order");
-        if (order!=null){
+        Name order = nameService.findByName(azquoMemoryDBConnection, "order");
+        if (order != null) {
             String lastUpdate = order.getAttribute(LATEST_UPDATE);
-            if (lastUpdate!=null){
+            if (lastUpdate != null) {
                 date = lastUpdate;
             }
             requiredTables = order.getAttribute(REQUIRED_TABLES);
-            if (requiredTables == null){
+            if (requiredTables == null) {
                 requiredTables = defaultData();
             }
             requiredTables = requiredTables.replace("$starttime", date);
         }
-
         return requiredTables;
     }
 
@@ -128,11 +112,10 @@ public final class DataLoadService {
 
     public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, BufferedReader br) throws Exception {
         Map<String, List<Map<String, String>>> tableMap = new HashMap<String, List<Map<String, String>>>();
-        if (br == null){
+        if (br == null) {
             br = new BufferedReader(new FileReader("/home/bill/Sear/magento/testdata_dump.txt"));
         }
         long marker = System.currentTimeMillis();
-
         String line;
         List<Map<String, String>> currentTableDataMap = null;
         String[] currentColumnNames = null;
@@ -159,18 +142,17 @@ public final class DataLoadService {
                     count++;
                     String[] lineValues = line.split("\t", -1);
                     Map<String, String> dataRowMap = new HashMap<String, String>();
-                    for (int i = 0; i < lineValues.length;i++) {
+                    for (int i = 0; i < lineValues.length; i++) {
                         String val = lineValues[i].intern();
-                       // //zap the time element of any dates imported
-                       // Date date = valueService.interpretDate(val);
-                       // if (date!=null){
-                       //     val = val.substring(0,10);
-                       // }
-
-                        dataRowMap.put(currentColumnNames[i].intern(),val);
+                        // //zap the time element of any dates imported
+                        // Date date = valueService.interpretDate(val);
+                        // if (date!=null){
+                        //     val = val.substring(0,10);
+                        // }
+                        dataRowMap.put(currentColumnNames[i].intern(), val);
                     }
                     currentTableDataMap.add(dataRowMap);
-                    if (count%10000 == 0){
+                    if (count % 10000 == 0) {
                         System.out.print(".");
                     }
                 }
@@ -185,20 +167,20 @@ public final class DataLoadService {
         Name productCategories = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product categories", topProduct, false);
         Name allSKUs = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All SKUs", topProduct, false);
         Name allProducts = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All Products", topProduct, false);
-        Name orphans = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"SKU Orphans", topProduct, false);
+        Name orphans = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "SKU Orphans", topProduct, false);
         Name allCategories = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All Categories", topProduct, false);
-
         Name uncategorisedProducts = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Uncategorised Products", topProduct, false);
 
         //find out the name attribute numbers ....
         String categoryEntityId = null;
-         String productEntityId = null;
+        String productEntityId = null;
         String customerEntityId = null;
         String addressEntityId = null;
         String firstNameId = null;
         String lastNameId = null;
+
         for (Map<String, String> entityTypeRecord : tableMap.get("eav_entity_type")) {
-            if (entityTypeRecord.get("entity_type_code")!=null) {
+            if (entityTypeRecord.get("entity_type_code") != null) {
                 if (entityTypeRecord.get("entity_type_code").equals("catalog_category")) {
                     categoryEntityId = entityTypeRecord.get("entity_type_id");
                 }
@@ -212,7 +194,6 @@ public final class DataLoadService {
                     addressEntityId = entityTypeRecord.get("entity_type_id");
                 }
             }
-
         }
 
         String categoryNameId = null;
@@ -234,21 +215,19 @@ public final class DataLoadService {
                 }
 
             }
-            if (attCode.equals("price") && entTypeId.equals(productEntityId)){
+            if (attCode.equals("price") && entTypeId.equals(productEntityId)) {
                 priceNameId = attId;
             }
-            if (attCode.equals("weight") && entTypeId.equals(productEntityId)){
+            if (attCode.equals("weight") && entTypeId.equals(productEntityId)) {
                 weightNameId = attId;
             }
-           }
-
+        }
         //now start the real work - categories first
         Map<String, Name> azquoCategoriesFound = new HashMap<String, Name>();
         Map<String, Name> azquoProductsFound = new HashMap<String, Name>();
         List<String> languages = new ArrayList<String>();
         List<String> defaultLanguage = new ArrayList<String>();
         defaultLanguage.add(Name.DEFAULT_DISPLAY_NAME);
-
         for (Map<String, String> entityTypeRecord : tableMap.get("catalog_category_entity")) {
             //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1`
             StringTokenizer pathBits = new StringTokenizer(entityTypeRecord.get("path"), "/");
@@ -257,21 +236,19 @@ public final class DataLoadService {
                 path = "`" + pathBits.nextToken() + "`," + path;
             }
             languages.add("MagentoCategoryID");
-            Name categoryName =  nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, languages);
+            Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, languages);
 
-            azquoCategoriesFound.put(entityTypeRecord.get("entity_id"),categoryName);
+            azquoCategoriesFound.put(entityTypeRecord.get("entity_id"), categoryName);
             allCategories.addChildWillBePersisted(categoryName);
-
         }
         tableMap.remove("catalog_category_entity");
         //now name the categories
         for (Map<String, String> attributeRow : tableMap.get("catalog_category_entity_varchar")) { // should (!) have us looking in teh right place
             //only picking the name from all the category attributes
-
             if (attributeRow.get("attribute_id").equals(categoryNameId)) {
                 // can return the name
                 nameService.findByName(azquoMemoryDBConnection, attributeRow.get("entity_id"));
-                if (azquoCategoriesFound.get(attributeRow.get("entity_id")) == null){
+                if (azquoCategoriesFound.get(attributeRow.get("entity_id")) == null) {
                     System.out.println("Entity id linked in catalog_category_entity_varchar that doesn't exist in catalog_category_entity : " + attributeRow.get("entity_id"));
                 } else {
                     azquoCategoriesFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attributeRow.get("value"));
@@ -282,9 +259,8 @@ public final class DataLoadService {
         languages.clear();
         languages.add("MagentoProductID");
         List<String> productLanguages = new ArrayList<String>(languages);
-
         for (Map<String, String> entityRow : tableMap.get("catalog_product_entity")) {
-            Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + entityRow.get("entity_id"), allSKUs, true,languages);
+            Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + entityRow.get("entity_id"), allSKUs, true, languages);
             allProducts.addChildWillBePersisted(magentoName);
             if (!magentoName.findAllParents().contains(productCategories) && !magentoName.findAllParents().contains(uncategorisedProducts)) {
                 uncategorisedProducts.addChildWillBePersisted(magentoName);
@@ -294,12 +270,11 @@ public final class DataLoadService {
         }
         tableMap.remove("catalog_product_entity");
         //name the products...
-
         for (Map<String, String> attributeRow : tableMap.get("catalog_product_entity_varchar")) {
             //only picking the name from all the category attributes, and only choosing store 0 - other stores assumed to be different languages
             if (attributeRow.get("attribute_id").equals(productNameId) && attributeRow.get("store_id").equals("0")) {
                 //Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + attributeRow.get("entity_id"), topProduct, true,languages);
-                if (azquoProductsFound.get(attributeRow.get("entity_id")) == null){
+                if (azquoProductsFound.get(attributeRow.get("entity_id")) == null) {
                     System.out.println("Entity id linked in catalog_product_entity_varchar that doesn't exist in catalog_product_entity : " + attributeRow.get("entity_id"));
                 } else {
                     azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attributeRow.get("value"));
@@ -311,13 +286,13 @@ public final class DataLoadService {
         for (Map<String, String> attributeRow : tableMap.get("catalog_product_entity_decimal")) {
             if (attributeRow.get("store_id").equals("0")) {
                 //Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + attributeRow.get("entity_id"), topProduct, true,languages);
-                if (azquoProductsFound.get(attributeRow.get("entity_id")) == null){
+                if (azquoProductsFound.get(attributeRow.get("entity_id")) == null) {
                     System.out.println("Entity id linked in catalog_product_entity_varchar that doesn't exist in catalog_product_entity : " + attributeRow.get("entity_id"));
                 } else {
-                    if (attributeRow.get("attribute_id").equals(priceNameId)){
+                    if (attributeRow.get("attribute_id").equals(priceNameId)) {
                         azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted("PRICE", attributeRow.get("value"));
                     }
-                    if (attributeRow.get("attribute_id").equals(weightNameId)){
+                    if (attributeRow.get("attribute_id").equals(weightNameId)) {
                         azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted("PRODUCT WEIGHT", attributeRow.get("value"));
                     }
                 }
@@ -327,10 +302,10 @@ public final class DataLoadService {
         //create a product structure
         for (Map<String, String> relationRow : tableMap.get("catalog_product_super_link")) {
             Name child = azquoProductsFound.get(relationRow.get("product_id"));
-            if (child == null){
+            if (child == null) {
                 System.out.println("product id linked in catalog_product_super_link that doesn't exist in catalog_product_entity : " + relationRow.get("product_id"));
             } else {
-                if (azquoProductsFound.get(relationRow.get("parent_id")) == null){
+                if (azquoProductsFound.get(relationRow.get("parent_id")) == null) {
                     System.out.println("parent_id linked in catalog_product_super_link that doesn't exist in catalog_product_entity : " + relationRow.get("parent_id"));
                 } else {
                     azquoProductsFound.get(relationRow.get("parent_id")).addChildWillBePersisted(child);
@@ -340,17 +315,16 @@ public final class DataLoadService {
         }
         tableMap.remove("catalog_product_super_link");
         // and put products into categories
-
         for (Map<String, String> relationRow : tableMap.get("catalog_category_product")) {
             Name child = azquoProductsFound.get(relationRow.get("product_id"));
-            if (child == null){
+            if (child == null) {
                 System.out.println("product id linked in catalog_category_product that doesn't exist in catalog_product_entity : " + relationRow.get("product_id"));
             } else {
                 Name category = azquoCategoriesFound.get(relationRow.get("category_id"));
-                if (category == null){
+                if (category == null) {
                     System.out.println("category_id linked in catalog_category_product that doesn't exist in catalog_category_entity : " + relationRow.get("category_id"));
                 } else {
-                    if (!child.findAllParents().contains(category)){
+                    if (!child.findAllParents().contains(category)) {
                         category.addChildWillBePersisted(child);
                     }
                     uncategorisedProducts.removeFromChildrenWillBePersisted(child);
@@ -373,34 +347,31 @@ public final class DataLoadService {
             }
         }
         tableMap.remove("catalog_product_super_attribute");
-
-
         //name the option values
         Map<String, String> optionValues = new HashMap<String, String>();
         for (Map<String, String> optionVal : tableMap.get("eav_attribute_option_value")) {
             String storeId = optionVal.get("store_id");
-            if (storeId == null || (storeId!= null && storeId.equals("0"))) {
+            if (storeId == null || (storeId != null && storeId.equals("0"))) {
                 optionValues.put(optionVal.get("option_id"), optionVal.get("value"));
             }
         }
-
         tableMap.remove("eav_attribute_option_value");
         //.... and allocate them!
         for (Map<String, String> attVals : tableMap.get("catalog_product_entity_int")) {
             String attVal = attVals.get("attribute_id");
             if (attributes.contains(attVal)) {
                 Name magentoName = azquoProductsFound.get(attVals.get("entity_id"));
-                if (magentoName == null){
+                if (magentoName == null) {
                     System.out.println("entity_id linked in catalog_product_entity_int that doesn't exist in catalog_product_entity : " + attVals.get("entity_id"));
                 } else {
-                    Name magentoProductCategory = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeNames.get(attVal), productAttributesName, true,languages);
+                    Name magentoProductCategory = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeNames.get(attVal), productAttributesName, true, languages);
                     String val = attVals.get("value");
                     if (optionValues.get(val) != null) {
                         //note - this is NOT a product id, so don't use the product id to find it!
-                        Name magentoOptionName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, optionValues.get(val), magentoProductCategory, true,null);
+                        Name magentoOptionName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, optionValues.get(val), magentoProductCategory, true, null);
                         if (!magentoName.findAllParents().contains(magentoOptionName)) {
                             magentoOptionName.addChildWillBePersisted(magentoName);
-                            if (allProducts.getChildren().contains(magentoName)){
+                            if (allProducts.getChildren().contains(magentoName)) {
                                 orphans.addChildWillBePersisted(magentoName);
                             }
                         }
@@ -412,54 +383,51 @@ public final class DataLoadService {
         }
         tableMap.remove("catalog_product_entity_int");
         String currentParent = "";
-        Name bundleName  = null;
+        Name bundleName = null;
         String bundlePrices = "";
         for (Map<String, String> attVals : tableMap.get("catalog_product_bundle_selection")) {
             String parentId = attVals.get("parent_product_id");
-            if (!currentParent.equals(parentId)){
+            if (!currentParent.equals(parentId)) {
                 if (currentParent.length() > 0) {
                     bundleName.setAttributeWillBePersisted("bundleprices", bundlePrices);
                 }
                 bundlePrices = "";
                 currentParent = parentId;
-                bundleName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Product " + parentId, allSKUs, true, languages);
+                bundleName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + parentId, allSKUs, true, languages);
 
-             }
+            }
             String childId = attVals.get("product_id");
-            Name childName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Product " + childId, allSKUs, true, languages);
+            Name childName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + childId, allSKUs, true, languages);
             String sKU = childName.getAttribute("SKU");
             String price = attVals.get("selection_price_value");
             if (bundlePrices.length() > 0) bundlePrices += ",";
-            bundlePrices+=sKU+"="+ price;
-         }
+            bundlePrices += sKU + "=" + price;
+        }
         if (currentParent.length() > 0) {
             bundleName.setAttributeWillBePersisted("bundleprices", bundlePrices);
         }
 
 
-
         tableMap.remove("catalog_product_bundle_selection");
-        Name entities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Entities",null,false);
+        Name entities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Entities", null, false);
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        Name date = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"date", null, false);
-        Name allDates = nameService.findOrCreateNameStructure(azquoMemoryDBConnection,"All dates", date, false);
+        Name date = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "date", null, false);
+        Name allDates = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All dates", date, false);
 
-        if (tableMap.get("cataloginventory_stock_item") != null){
-            Name inStockName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"In Stock",entities, true);
-
-            Name today = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,dateFormat.format(new Date()), date,false);
-            Name stockDates = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Stock dates", date, true);
+        if (tableMap.get("cataloginventory_stock_item") != null) {
+            Name inStockName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "In Stock", entities, true);
+            Name today = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, dateFormat.format(new Date()), date, false);
+            Name stockDates = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Stock dates", date, true);
             stockDates.addChildWillBePersisted(today);
-            if (today==null){
+            if (today == null) {
                 throw new Exception("the dates in the system do not extend sufficiently to store the stock");
             }
-
-            for (Map<String, String> stockVals:tableMap.get("cataloginventory_stock_item")){
+            for (Map<String, String> stockVals : tableMap.get("cataloginventory_stock_item")) {
                 String product = stockVals.get("product_id");
                 String qty = stockVals.get("qty");
-                if (product!=null && qty!=null){
+                if (product != null && qty != null) {
                     Name productName = azquoProductsFound.get(product);
-                    if (productName == null){
+                    if (productName == null) {
                         System.out.println("unable to find product_id : " + product + " used in cataloginventory_stock_item");
                     } else {
                         Set<Name> namesForValue = new HashSet<Name>();
@@ -472,7 +440,6 @@ public final class DataLoadService {
             }
         }
 
-
         System.out.println("time to do initial non taxing bit " + (System.currentTimeMillis() - marker));
         marker = System.currentTimeMillis();
         SaleItem bundleTotal = new SaleItem();
@@ -484,16 +451,15 @@ public final class DataLoadService {
         double weight = 0.0;
         String configLine = null;
 //        String productId = null;
-         Name priceName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Price",entities, false);
-        Name shippingName= nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Shipping", entities, false);
-
-           Name qtyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Quantity",entities, false);
-        Name weightName =  nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Weight",entities, false);
-        Name taxName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Tax",entities, false);
-        Name ordersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection,"order",null, false);
-        Name allOrdersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection,"All orders", ordersName, false);
-        Name allCurrenciesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"All currencies", ordersName, false);
-         Name allHours = nameService.findOrCreateNameStructure(azquoMemoryDBConnection,"All hours, date", null, false);
+        Name priceName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Price", entities, false);
+        Name shippingName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Shipping", entities, false);
+        Name qtyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Quantity", entities, false);
+        Name weightName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Weight", entities, false);
+        Name taxName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Tax", entities, false);
+        Name ordersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "order", null, false);
+        Name allOrdersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All orders", ordersName, false);
+        Name allCurrenciesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All currencies", ordersName, false);
+        Name allHours = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All hours, date", null, false);
         final LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>(2);
         peers.put(allOrdersName, true);
         priceName.setPeersWillBePersisted(peers);
@@ -523,45 +489,45 @@ public final class DataLoadService {
         long part72 = 0;
         long part8 = 0;
         int counter = 0;
-        if (tableMap.get("sales_flat_order_item")==null){
-            if (azquoMemoryDBConnection.getCurrentDatabase()!=null){
+        if (tableMap.get("sales_flat_order_item") == null) {
+            if (azquoMemoryDBConnection.getCurrentDatabase() != null) {
                 azquoMemoryDBConnection.persist();
             }
             return;
         }
-       languages.clear();
-       languages.add("MagentoOrderID");
-       String bundleLine = "";
-       for (Map<String, String> salesRow : tableMap.get("sales_flat_order_item")) {
-            String parentItemId = salesRow.get("parent_item_id") ;
+        languages.clear();
+        languages.add("MagentoOrderID");
+        String bundleLine = "";
+        for (Map<String, String> salesRow : tableMap.get("sales_flat_order_item")) {
+            String parentItemId = salesRow.get("parent_item_id");
             String itemId = salesRow.get("item_id");
-           long thisCycleMarker = System.currentTimeMillis();
-           if (bundleLine.length() > 0 && (!parentItemId.equals(configLine))&& !parentItemId.equals(bundleLine)){
+            long thisCycleMarker = System.currentTimeMillis();
+            if (bundleLine.length() > 0 && (!parentItemId.equals(configLine)) && !parentItemId.equals(bundleLine)) {
                 calcBundle(azquoMemoryDBConnection, bundleTotal, bundleItems, priceName, taxName);
                 bundleItems = new ArrayList<SaleItem>();
                 bundleLine = "";
 
             }
-           part0a += (thisCycleMarker - System.currentTimeMillis());
-           thisCycleMarker = System.currentTimeMillis();
-           String productId = salesRow.get("product_id");
-           Name productName = azquoProductsFound.get(productId);
-            if (productName == null){
+            part0a += (thisCycleMarker - System.currentTimeMillis());
+            thisCycleMarker = System.currentTimeMillis();
+            String productId = salesRow.get("product_id");
+            Name productName = azquoProductsFound.get(productId);
+            if (productName == null) {
                 //not on the product list!!  in the demo database there was a giftcard in the sales that was not in the product list
-                productName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Product " + productId, allSKUs,true, productLanguages);
+                productName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + productId, allSKUs, true, productLanguages);
                 allProducts.addChildWillBePersisted(productName);
-                azquoProductsFound.put(productId,productName);
+                azquoProductsFound.put(productId, productName);
                 //productName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME,salesRow.get("product_type"));
             }
-           part0b += (thisCycleMarker - System.currentTimeMillis());
-           thisCycleMarker = System.currentTimeMillis();
-           if (configLine == null) {
+            part0b += (thisCycleMarker - System.currentTimeMillis());
+            thisCycleMarker = System.currentTimeMillis();
+            if (configLine == null) {
                 price = 0.0;
                 qty = 0.0;
 //                productId = salesRow.get("product_id");
                 try {
                     price = Double.parseDouble(salesRow.get("base_row_invoiced"));//not sure which figure to take - base_row_invoiced or base_row_total
-                    if (price==0.0){
+                    if (price == 0.0) {
                         price = Double.parseDouble(salesRow.get("base_row_total"));
                     }
                     double qtyOrdered = Double.parseDouble(salesRow.get("qty_ordered"));
@@ -569,74 +535,74 @@ public final class DataLoadService {
                     weight = Double.parseDouble(salesRow.get("weight"));
                     tax = Double.parseDouble(salesRow.get("base_tax_amount"));
                     qty = qtyOrdered - qtyCancelled;
-                    if (qty>1){
-                        weight *=qty;//store total weight
+                    if (qty > 1) {
+                        weight *= qty;//store total weight
                     }
 
 
                 } catch (Exception e) {
                     //ignore the line
                 }
-               part0c += (thisCycleMarker - System.currentTimeMillis());
-               thisCycleMarker = System.currentTimeMillis();
-                 String productType = salesRow.get("product_type");
+                part0c += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
+                String productType = salesRow.get("product_type");
                 if (productType.equals("configurable") || productType.equals("bundle")) {
-                     if (productType.equals("bundle")){
+                    if (productType.equals("bundle")) {
                         bundleTotal.itemName = productName;
                         bundleTotal.price = price;
                         bundleTotal.tax = tax;
                         bundleLine = itemId;
-                    }else{
-                         configLine = itemId;
+                    } else {
+                        configLine = itemId;
                     }
                 }
-               part0d += (thisCycleMarker - System.currentTimeMillis());
-               thisCycleMarker = System.currentTimeMillis();
+                part0d += (thisCycleMarker - System.currentTimeMillis());
+                thisCycleMarker = System.currentTimeMillis();
             } else {
 //                productId = salesRow.get("product_id");
-                    if (!configLine.equals(parentItemId)) {
-                        System.out.println("problem in importing sales items - config item " + configLine + " does not have a simple item associated");
-                        qty = 0;
-                    }
+                if (!configLine.equals(parentItemId)) {
+                    System.out.println("problem in importing sales items - config item " + configLine + " does not have a simple item associated");
+                    qty = 0;
+                }
                 configLine = null;
             }
             part1 += (thisCycleMarker - System.currentTimeMillis());
             thisCycleMarker = System.currentTimeMillis();
             if (configLine == null && !itemId.equals(bundleLine)) {
-                  //store the values.   Qty and price have attributes order, product.  order is in all orders, and in the relevant date
+                //store the values.   Qty and price have attributes order, product.  order is in all orders, and in the relevant date
                 String orderNo = "Order " + salesRow.get("order_id");
-                Name orderName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,orderNo, allOrdersName,true,languages);
+                Name orderName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderNo, allOrdersName, true, languages);
                 part3 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 azquoOrdersFound.put(orderNo, orderName);
                 //adding 'Item ' to the item number so as not to confuse with order number for the developer - the system should be happy without it.
-                Name orderItemName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Item " + salesRow.get("item_id"), orderName, true,languages);
+                Name orderItemName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Item " + salesRow.get("item_id"), orderName, true, languages);
                 part4 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
 
                 part5 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
-                String orderDate = salesRow.get("created_at").substring(0,10);
-                String orderTime = salesRow.get("created_at").substring(11,13);
+                String orderDate = salesRow.get("created_at").substring(0, 10);
+                String orderTime = salesRow.get("created_at").substring(11, 13);
                 int orderHour;
                 try {
                     orderHour = Integer.parseInt(orderTime);
-                    if (orderHour < 12){
+                    if (orderHour < 12) {
                         orderTime = orderHour + " AM";
-                    }else {
+                    } else {
                         if (orderHour == 12) {
                             orderHour = 24;
                         }
                         orderTime = (orderHour - 12) + " PM";
                     }
-                }catch (Exception e){
+                } catch (Exception e) {
                     //leave orderTime as is
                 }
 
-                 part51 += (thisCycleMarker - System.currentTimeMillis());
+                part51 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
-                Name dateName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderDate, allDates, false,defaultLanguage);
-                Name hourName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderTime,allHours, true, defaultLanguage);
+                Name dateName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderDate, allDates, false, defaultLanguage);
+                Name hourName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderTime, allHours, true, defaultLanguage);
                 part52 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 dateName.addChildWillBePersisted(orderName);
@@ -645,13 +611,13 @@ public final class DataLoadService {
                 part53 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 //namesForValue.add(productName);
-                   //NEW STORAGE METHOD  - PRICE + QUANTITY ATTRIBUTES OF THE ORDER ITEM
+                //NEW STORAGE METHOD  - PRICE + QUANTITY ATTRIBUTES OF THE ORDER ITEM
                 //orderItemName.setAttributeWillBePersisted("price", price+"");
                 //orderItemName.setAttributeWillBePersisted("quantity",qty + "");
 
                 //....................END OF NEW STORAGE METHOD - LINE BELOW TO BE DELETED
                 Set<Name> namesForValue = new HashSet<Name>();
-                if (bundleLine.length()==0) {
+                if (bundleLine.length() == 0) {
                     namesForValue.add(orderItemName);
                     namesForValue.add(priceName);
                     valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, price + "", namesForValue);
@@ -660,8 +626,8 @@ public final class DataLoadService {
                     namesForValue.add(taxName);
                     valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, tax + "", namesForValue);
                     namesForValue = new HashSet<Name>();
-                }else{
-                    SaleItem saleItem =new SaleItem();
+                } else {
+                    SaleItem saleItem = new SaleItem();
                     saleItem.itemName = orderItemName;
                     saleItem.price = price;
                     saleItem.tax = tax;
@@ -681,7 +647,7 @@ public final class DataLoadService {
 
             }
             counter++;
-            if (counter == 100000){
+            if (counter == 100000) {
                 System.out.println("100000 lines sales flat order item " + (System.currentTimeMillis() - marker));
                 System.out.println("Total part breakdown");
                 System.out.println("part 1 " + part1);
@@ -709,17 +675,17 @@ public final class DataLoadService {
         }
 
 
-        if (bundleLine.length() > 0){
-            calcBundle(azquoMemoryDBConnection,bundleTotal, bundleItems, priceName, taxName);
+        if (bundleLine.length() > 0) {
+            calcBundle(azquoMemoryDBConnection, bundleTotal, bundleItems, priceName, taxName);
         }
         languages.clear();
         languages.add(Name.DEFAULT_DISPLAY_NAME);
 
-        Name customersName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"customer", null, false, languages);
-        Name allCustomersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection,"All customers",customersName, false,languages);
+        Name customersName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "customer", null, false, languages);
+        Name allCustomersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All customers", customersName, false, languages);
 
-        Name allCountriesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"All countries", customersName, false, languages);
-        Name allGroupsName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"All customer groups", customersName, false, languages);
+        Name allCountriesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All countries", customersName, false, languages);
+        Name allGroupsName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All customer groups", customersName, false, languages);
         languages.clear();
         languages.add("MagentoCustomerID");
         counter = 0;
@@ -728,12 +694,12 @@ public final class DataLoadService {
         for (Map<String, String> orderRow : tableMap.get("sales_flat_order")) {
             //only importing the IDs at present
             Name orderName = azquoOrdersFound.get("Order " + orderRow.get("entity_id"));
-             if (orderName != null){
+            if (orderName != null) {
                 String customer = orderRow.get("customer_id");
                 String magentoCustomer;
                 Name customerName;
-                if (customer == null || customer.length()== 0){
-                    if (notLoggedIn==null) {
+                if (customer == null || customer.length() == 0) {
+                    if (notLoggedIn == null) {
                         magentoCustomer = "NOT LOGGED IN";
                         //nb this next instruction seems to take a long time - hence storing 'notLoggedIn'
                         notLoggedIn = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allGroupsName, true, languages);
@@ -741,23 +707,22 @@ public final class DataLoadService {
                     }
                     customerName = notLoggedIn;
 
-                }
-                else {
+                } else {
                     magentoCustomer = " Customer " + customer;
                     customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allCustomersName, true, languages);
                 }
                 customerName.addChildWillBePersisted(orderName);
                 String currency = orderRow.get("base_currency_code");
-                Name currencyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,currency, allCurrenciesName, true, languages);
+                Name currencyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, currency, allCurrenciesName, true, languages);
                 currencyName.addChildWillBePersisted(orderName);
                 String orderNo = orderRow.get("increment_id");
                 orderName.setAttributeWillBePersisted("order no", orderNo);
                 String shipping = orderRow.get("shipping_amount");
                 if (shipping != null && shipping.length() > 0) {
                     double dShipping = 0.0;
-                    try{
+                    try {
                         dShipping = Double.parseDouble(shipping);
-                    } catch (Exception ignored){
+                    } catch (Exception ignored) {
                     }
                     if (dShipping > 0) {
                         Set<Name> namesForValue = new HashSet<Name>();
@@ -767,12 +732,11 @@ public final class DataLoadService {
                     }
                 }
                 counter++;
-                if (counter % 1000 == 0){
+                if (counter % 1000 == 0) {
                     System.out.print(".");
                 }
 
             }
-
 
 
         }
@@ -795,11 +759,10 @@ public final class DataLoadService {
         }
 
 
-
         System.out.println("customer groups");
         Map<String, Name> customerGroups = new HashMap<String, Name>();
         if (tableMap.get("customer_group") != null) {
-             for (Map<String, String> group : tableMap.get("customer_group")) {
+            for (Map<String, String> group : tableMap.get("customer_group")) {
                 String groupId = group.get("customer_group_id");
                 String groupString = group.get("customer_group_code");
                 Name groupName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, groupString, allGroupsName, true, languages);
@@ -821,29 +784,29 @@ public final class DataLoadService {
                     lastNameId = attId;
                 }
             }
-            if (attribute.get("entity_type_id").equals(addressEntityId)){
+            if (attribute.get("entity_type_id").equals(addressEntityId)) {
                 String attCode = attribute.get("attribute_code");
                 String attId = attribute.get("attribute_id");
-                if (attCode.equals("country_id")){
+                if (attCode.equals("country_id")) {
                     countryNameId = attId;
 
                 }
-                if (attCode.equals("postcode")){
+                if (attCode.equals("postcode")) {
                     postcodeNameId = attId;
                 }
             }
-         }
+        }
 
         System.out.println("custmer info");
         for (Map<String, String> customerRec : tableMap.get("customer_entity")) {
             String customerId = customerRec.get("entity_id");
             String email = customerRec.get("email");
-            Name customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Customer " + customerId, allCustomersName, true, languages);
+            Name customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Customer " + customerId, allCustomersName, true, languages);
             customer.setAttributeWillBePersisted("email", email);
             String groupId = customerRec.get("group_id");
-            if (groupId!=null){
+            if (groupId != null) {
                 Name group = customerGroups.get(groupId);
-                if (group !=null){
+                if (group != null) {
                     group.addChildWillBePersisted(customer);
                 }
             }
@@ -853,29 +816,29 @@ public final class DataLoadService {
 
         for (Map<String, String> attributeRow : tableMap.get("customer_entity_varchar")) {
             //only picking the name from all the category attributes, and only choosing store 0 - other stores assumed to be different languages
-            String attId =attributeRow.get("attribute_id");
-            if (attId.equals(firstNameId) || attId.equals(lastNameId)){
+            String attId = attributeRow.get("attribute_id");
+            if (attId.equals(firstNameId) || attId.equals(lastNameId)) {
                 String valFound = attributeRow.get("value");
                 String attFound;
-                if (attId.equals(firstNameId)){
+                if (attId.equals(firstNameId)) {
                     attFound = "First name";
-                }else{
+                } else {
                     attFound = "Last name";
                 }
                 String customerId = attributeRow.get("entity_id");
-                Name customer = nameService.findByName(azquoMemoryDBConnection,"Customer " + customerId, languages);
-                if (customer != null){
+                Name customer = nameService.findByName(azquoMemoryDBConnection, "Customer " + customerId, languages);
+                if (customer != null) {
                     customer.setAttributeWillBePersisted(attFound, valFound);
                     String firstName = customer.getAttribute("First name");
                     String lastName = customer.getAttribute("Last name");
                     String customerName;
-                    if (firstName != null){
-                        if (lastName!=null){
+                    if (firstName != null) {
+                        if (lastName != null) {
                             customerName = firstName + " " + lastName;
-                        }else{
+                        } else {
                             customerName = firstName;
                         }
-                    }else{
+                    } else {
                         customerName = lastName;
                     }
                     customer.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, customerName);
@@ -883,7 +846,7 @@ public final class DataLoadService {
             }
         }
 
-        if (tableMap.get("customer_address_entity") !=null) {
+        if (tableMap.get("customer_address_entity") != null) {
             Map<String, Name> addressMap = new HashMap<String, Name>();
             for (Map<String, String> addressRec : tableMap.get("customer_address_entity")) {
                 Name customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Customer " + addressRec.get("parent_id"), allCustomersName, true, languages);
@@ -913,22 +876,20 @@ public final class DataLoadService {
         }
 
 
-
-
         languages.clear();
         languages.add(Name.DEFAULT_DISPLAY_NAME);
 
 
-        Name order = nameService.findByName(azquoMemoryDBConnection,"order", languages);
+        Name order = nameService.findByName(azquoMemoryDBConnection, "order", languages);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         order.setAttributeWillBePersisted(LATEST_UPDATE, sdf.format(new Date()));
-        if (azquoMemoryDBConnection.getCurrentDatabase()!=null){
+        if (azquoMemoryDBConnection.getCurrentDatabase() != null) {
             azquoMemoryDBConnection.persistInBackground();// aim to return to them quickly, this is whre we get into multi threading . . .
         }
 
     }
 
-    private void calcBundle(AzquoMemoryDBConnection azquoMemoryDBConnection, SaleItem bundleTotal, List<SaleItem> bundleItems, Name priceName, Name taxName)throws Exception{
+    private void calcBundle(AzquoMemoryDBConnection azquoMemoryDBConnection, SaleItem bundleTotal, List<SaleItem> bundleItems, Name priceName, Name taxName) throws Exception {
 
         /* Magento does not put prices into bundled items (though this routime checks just in case)
         so this routine looks up the bundled price in the bundle table.
@@ -941,27 +902,27 @@ public final class DataLoadService {
         double priceRemaining = bundleTotal.price;
         double taxRemaining = bundleTotal.tax;
 
-        Double taxAdjustment = priceRemaining/(priceRemaining + taxRemaining);
+        Double taxAdjustment = priceRemaining / (priceRemaining + taxRemaining);
 
 /*        List<String> productLanguage = new ArrayList<String>();
         productLanguage.add("MagentoProductId");*/
         String bundlePrices = bundleTotal.itemName.getAttribute("bundleprices");
-        if (bundlePrices==null){
+        if (bundlePrices == null) {
             bundlePrices = "";
         }
-        String[]skuPrices = bundlePrices.split(",");
+        String[] skuPrices = bundlePrices.split(",");
 
-        for (SaleItem saleItem:bundleItems) {
-             if (saleItem.price == 0) {
-                 for (String skuPrice:skuPrices){
-                     String sKU = saleItem.itemName.getAttribute("SKU");
-                     if (sKU!=null && skuPrice.startsWith(sKU)){
-                         String price = skuPrice.substring(sKU.length()+ 1);
-                         try {
+        for (SaleItem saleItem : bundleItems) {
+            if (saleItem.price == 0) {
+                for (String skuPrice : skuPrices) {
+                    String sKU = saleItem.itemName.getAttribute("SKU");
+                    if (sKU != null && skuPrice.startsWith(sKU)) {
+                        String price = skuPrice.substring(sKU.length() + 1);
+                        try {
                             saleItem.price = Double.parseDouble(price) * saleItem.qty * taxAdjustment;
                         } catch (Exception ignored) {
                         }
-                         break;
+                        break;
                     }
                 }
                 if (saleItem.price > 0) {
@@ -990,23 +951,23 @@ public final class DataLoadService {
         Double unallocatedPriceRemaining = priceRemaining;
 
 
-        for (SaleItem saleItem:bundleItems) {
-            if (saleItem.price==0.0){
-                if (--unknownCount==0){
+        for (SaleItem saleItem : bundleItems) {
+            if (saleItem.price == 0.0) {
+                if (--unknownCount == 0) {
                     saleItem.price = priceRemaining;
                     saleItem.tax = taxRemaining;
 
-                }else{
-                    saleItem.price = saleItem.origPrice * unallocatedPriceRemaining /totalOrigPrice * saleItem.qty;
-                    saleItem.tax = saleItem.price * bundleTotal.tax /bundleTotal.price;
+                } else {
+                    saleItem.price = saleItem.origPrice * unallocatedPriceRemaining / totalOrigPrice * saleItem.qty;
+                    saleItem.tax = saleItem.price * bundleTotal.tax / bundleTotal.price;
 
                 }
-                priceRemaining -=saleItem.price;
-                taxRemaining -=saleItem.tax;
+                priceRemaining -= saleItem.price;
+                taxRemaining -= saleItem.tax;
             }
         }
 
-        for (SaleItem saleItem:bundleItems){
+        for (SaleItem saleItem : bundleItems) {
             Set<Name> namesForValue = new HashSet<Name>();
             namesForValue.add(saleItem.itemName);
             namesForValue.add(priceName);
@@ -1022,9 +983,9 @@ public final class DataLoadService {
     }
 
 
-    private String defaultData(){
+    private String defaultData() {
         //version number followed by required data.  $starttime to be replaced by latest update
-        return  "1.0\n" +
+        return "1.0\n" +
                 "'*','catalog_category_entity','','entity_id'\n" +
                 "'*','catalog_category_product','', 'product_id'\n" +
                 "'*','catalog_product_entity','','entity_id'\n" +
@@ -1045,18 +1006,6 @@ public final class DataLoadService {
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 /*        int id;
         int parent_id;
         Date created;
@@ -1066,7 +1015,7 @@ public final class DataLoadService {
         double basePrice;
         double rowTotalIncludingTax;*/
 
-        //2013-04-04 01:23:18
+    //2013-04-04 01:23:18
 
         /*
 

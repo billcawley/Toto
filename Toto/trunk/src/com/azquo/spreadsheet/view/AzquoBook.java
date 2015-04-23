@@ -133,7 +133,7 @@ public class AzquoBook {
 
     private int highlightDays = 0;
 
-    @SuppressWarnings({"unchecked"})
+//    @SuppressWarnings({"unchecked"})
 
     private static final Map<String, String> SHORTSTYLES = new HashMap<String, String>() {
         {
@@ -207,7 +207,7 @@ public class AzquoBook {
         }
     }
 
-     private Range getRange(String rangeName) {
+    private Range getRange(String rangeName) {
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().equalsIgnoreCase(rangeName)) {
@@ -257,9 +257,7 @@ public class AzquoBook {
 
 
     public void calculateAll() {
-
         wb.calculateFormula();
-
     }
 
     private String rangeToText(Range range) {
@@ -276,7 +274,6 @@ public class AzquoBook {
             colWidth.add(colW);
             maxWidth += colW + 1;
         }
-
     }
 
     private void setupMaxHeight() {
@@ -298,19 +295,15 @@ public class AzquoBook {
         }
     }
 
-
     private void insertCols(Range range, int colCount) {
         int existingCols = range.getColumnCount();
         if (existingCols < colCount) {
             int copyCol = range.getFirstColumn() + existingCols - 2;
             azquoCells.insertColumns(copyCol + 1, colCount - existingCols);
             for (int colNo = copyCol + 1; colNo < range.getFirstColumn() + colCount - 1; colNo++) {
-
                 azquoCells.copyColumn(azquoCells, copyCol, colNo);
             }
-
             calculateAll();
-
         }
     }
 
@@ -340,7 +333,6 @@ public class AzquoBook {
 
     private void setHighlights(LoggedInConnection loggedInConnection, Map<Cell, Boolean> highlighted) {
         //NOTE - This may change the formatting of model cells for conditional formats, which may make a mess!
-
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
@@ -363,13 +355,6 @@ public class AzquoBook {
         }
     }
 
-
-    private String[] splitRange(String fillText) {
-        String[] rows = fillText.split("\n", -1);
-        String row = rows[rows.length - 1];
-        return  row.split("\t", -1);
-     }
-
     // this used to take an excel style paste string, changing to use the new AzquoCells . . .
     private void fillRange(String regionName, List<List<AzquoCell>> cellArray, boolean overwrite) {
         // for the headings, the lockmap is "locked" rather than the full array.
@@ -390,7 +375,7 @@ public class AzquoBook {
                     currentCell.getStyle().setLocked(true);
                 }
                 String existingCellVal = currentCell.getStringValue();
-                if (overwrite || existingCellVal==null || existingCellVal.length()==0){
+                if (overwrite || existingCellVal == null || existingCellVal.length() == 0) {
                     setCellValue(currentCell, val);
                 }
                 col++;
@@ -430,15 +415,15 @@ public class AzquoBook {
                 currentCell.getStyle().setLocked(true);
                 String existingCellVal = currentCell.getStringValue();
                 // don't overwrite (based on old boolean)
-                if (cellValue != null && existingCellVal == null || existingCellVal.length() == 0){
+                if (cellValue != null && existingCellVal == null || existingCellVal.length() == 0) {
                     setCellValue(currentCell, cellValue);
                 }
                 col++;
                 // hacky bits to return sortable bits
-                if (rowNo == headingArray.size() - 1 && !rowHeadings){ // last row and we're doing col headings
+                if (rowNo == headingArray.size() - 1 && !rowHeadings) { // last row and we're doing col headings
                     toReturn.add(cellValue != null ? cellValue : "");
                 }
-                if (col == row.size() - 1 && rowHeadings){ // last col and we're doing row headings
+                if (col == row.size() - 1 && rowHeadings) { // last col and we're doing row headings
                     toReturn.add(cellValue != null ? cellValue : "");
                 }
             }
@@ -464,7 +449,7 @@ public class AzquoBook {
         return (colToLetters(range.getFirstColumn() + 1) + (range.getFirstRow() + 1) + ":" + colToLetters(range.getFirstColumn() + range.getColumnCount()) + (range.getFirstRow() + range.getRowCount()));
     }*/
 
-    private String fillRegion(LoggedInConnection loggedInConnection, String region) throws Exception {
+    private void fillRegion(LoggedInConnection loggedInConnection, String region) throws Exception {
         logger.info("loading " + region);
         int filterCount = optionNumber(region, "hiderows");
         if (filterCount == 0)
@@ -475,44 +460,32 @@ public class AzquoBook {
 
         Range rowHeadings = getRange("az_rowheadings" + region);
         if (rowHeadings == null) {
-            //assume this is an dataimport region
-            return "";
-            //return "error: no range az_RowHeadings" + region;
+            return;
         }
         String rangeText = rangeToText(rowHeadings);
-        if (rangeText.startsWith("error:")) {
-            return rangeText;
-        }
+        // there was a detection for "error:" returned but I can't see where it might return this
         long start = System.currentTimeMillis();
         final List<List<List<DataRegionHeading>>> rowHeadingLists = spreadsheetService.createNameListsFromExcelRegion(loggedInConnection, rangeText, loggedInConnection.getLanguages());
         System.out.println("row heading setup took " + (System.currentTimeMillis() - start) + " millisecs");
         //don't bother to display yet - maybe need to filter out or sort
         Range columnHeadings = getRange("az_columnheadings" + region);
         if (columnHeadings == null) {
-            return "error: no range az_ColumnHeadings" + region;
+            throw new Exception("no range az_ColumnHeadings" + region);
         }
         rangeText = rangeToText(columnHeadings);
-        if (rangeText.startsWith("error:")) {
-            return rangeText;
-        }
         List<List<List<DataRegionHeading>>> columnHeadingLists = spreadsheetService.createNameListsFromExcelRegion(loggedInConnection, rangeText, loggedInConnection.getLanguages());
         //fillRange("az_displaycolumnheadings" + region, result, "LOCKED");
         Range context = getRange("az_context" + region);
         if (context == null) {
-            return "error: no range az_Context" + region;
+            throw new Exception("no range az_Context" + region);
         }
         rangeText = rangeToText(context);
-        if (rangeText.startsWith("error:")) {
-            return rangeText;
-        }
-
-        try {
-            List<List<AzquoCell>> cellArray = spreadsheetService.getDataRegion(loggedInConnection,spreadsheetService.expandHeadings(rowHeadingLists) ,spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadingLists)),
-                rangeText,  filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
+            List<List<AzquoCell>> cellArray = spreadsheetService.getDataRegion(loggedInConnection, spreadsheetService.expandHeadings(rowHeadingLists), spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadingLists)),
+                    rangeText, filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
             loggedInConnection.setSentCells(region, cellArray);
             // think this language detection is sound
             String language = stringUtils.getInstruction(rangeText, "language");
-            if (language == null){
+            if (language == null) {
                 language = Name.DEFAULT_DISPLAY_NAME;
             }
             fillRange(dataRegionPrefix + region, cellArray, true);
@@ -520,19 +493,19 @@ public class AzquoBook {
 
             // I'm keen to get rid of the given row and column headings but will leave for the mo to get this to compile
 
-            String[] givenColumnHeadings = fillRange("az_displaycolumnheadings" + region, columnHeadingsAsArray,language, false);
+            String[] givenColumnHeadings = fillRange("az_displaycolumnheadings" + region, columnHeadingsAsArray, language, false);
             String sortable = hasOption(region, "sortable");
             if (sortable != null) {
                 Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
                 if (displayColumnHeadings != null) {
-                    givenHeadings.put("columns:" + region,givenColumnHeadings);
+                    givenHeadings.put("columns:" + region, givenColumnHeadings);
                 }
             }
             String[] givenRowHeadings = fillRange("az_displayrowheadings" + region, spreadsheetService.getRowHeadingsAsArray(cellArray), language, true);
-            if (sortable!=null && sortable.equalsIgnoreCase("all")) {
+            if (sortable != null && sortable.equalsIgnoreCase("all")) {
                 Range displayRowHeadings = getRange("az_displayrowheadings" + region);
                 if (displayRowHeadings != null) {
-                    givenHeadings.put("rows:" + region,givenRowHeadings);
+                    givenHeadings.put("rows:" + region, givenRowHeadings);
                 }
             }
 
@@ -553,11 +526,6 @@ public class AzquoBook {
                     }
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return e.getMessage();
-        }
-        return "";
     }
 
 
@@ -613,9 +581,9 @@ public class AzquoBook {
         if (options.length() > foundPos + optionName.length()) {
             options = options.substring(foundPos + optionName.length());
             char operator = options.charAt(0);
-            if (operator=='>' ) {//interpret the '>' symbol as '-' to create an integer
+            if (operator == '>') {//interpret the '>' symbol as '-' to create an integer
                 options = "-" + options.substring(1);
-            }else{
+            } else {
                 //ignore '=' or a space
                 options = options.substring(1);
             }
@@ -654,9 +622,9 @@ public class AzquoBook {
 
     private String addOption(String item, String selected) {
         String content;
-        if (item.contains("'")){
+        if (item.contains("'")) {
             content = "<option value = \"" + item + "\"";
-        }else{
+        } else {
             content = "<option value = '" + item + "'";
         }
         if (item.toLowerCase().equals(selected.toLowerCase())) {
@@ -667,11 +635,8 @@ public class AzquoBook {
     }
 
     private void calcMaxCol() {
-
         maxCol = azquoCells.getMaxColumn();
-
     }
-
 
     private void addStyle(String styleName, String styleValue) {
         styleName = styleName.toLowerCase();
@@ -688,17 +653,7 @@ public class AzquoBook {
             shortStyles.put(fullstyle, shortStyle);
         }
         sOut.format(shortStyle + " ");
-
-
     }
-
-/*    private String hex2(short i) {
-        if (i < 16) {
-            return "0" + Integer.toHexString(i);
-        } else {
-            return Integer.toHexString(i);
-        }
-    }*/
 
     private void StyleColor(String attr, Color color) {
         int rgb = color.toArgb();
@@ -716,10 +671,10 @@ public class AzquoBook {
         int fontheight = font.getSize();
         fontheight = fontheight * 4 / 3;
 
-       // if (fontheight == 9) {
-       //     //fix for stupid ol Windows
+        // if (fontheight == 9) {
+        //     //fix for stupid ol Windows
         //    fontheight = 10;
-       // }
+        // }
         addStyle("font-size", fontheight + "px");
         // Font color is handled with the other colors
     }
@@ -817,19 +772,14 @@ public class AzquoBook {
         return "";
     }*/
 
-    private String loadAdminData(LoggedInConnection loggedInConnection) throws Exception {
+    private void loadAdminData(LoggedInConnection loggedInConnection) throws Exception {
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith("az_headings") && name.getRange().getWorksheet() == azquoSheet) {
                 String regionName = name.getText().substring(11).toLowerCase();
-                String error = fillAdminData(loggedInConnection, regionName);
-                if (error.startsWith("error:")) {
-                    return error;
-                }
+                fillAdminData(loggedInConnection, regionName);
             }
         }
-        return "";
-
     }
 
     public String jsonError(String data, int pos) {
@@ -908,7 +858,7 @@ public class AzquoBook {
         return sb.toString();
     }
 
-    public String fillAdminData(LoggedInConnection loggedInConnection, String regionName) throws Exception {
+    public void fillAdminData(LoggedInConnection loggedInConnection, String regionName) throws Exception {
         String data = null;
         Range headingsRange = getRange("az_headings" + regionName);
         int headingsRow = headingsRange.getFirstRow();
@@ -950,9 +900,11 @@ public class AzquoBook {
             } else if (regionName.equals("reports")) {
                 data = jacksonMapper.writeValueAsString(adminService.getReportList(loggedInConnection));
             }
-            if (data == null) return "";
+            if (data == null){
+                return;
+            }
             // Edd: this is really hacky, I'm going to get rid of this problem
-            while (data.indexOf("[", 1) != -1){ // jackson serialiseation of localdatetime. ignore the outermost brackets
+            while (data.indexOf("[", 1) != -1) { // jackson serialiseation of localdatetime. ignore the outermost brackets
                 String dateString = data.substring(data.indexOf("[", 1), data.indexOf("]"));
                 dateString = dateString.substring(1); // trimmed to size
                 data = data.substring(0, data.indexOf("[", 1)) + dateString.replace(",", "-") + data.substring(data.indexOf("]") + 1);
@@ -963,7 +915,9 @@ public class AzquoBook {
             while (data.length() > 2) {
                 Map<String, String> pairs = new HashMap<String, String>();
                 data = readJsonData(data, pairs);
-                if (data.startsWith("error:")) return data;
+                if (data.startsWith("error:")){// I don't like this, need to weed out todo
+                    throw  new Exception(data);
+                }
                 rowNo++;
                 for (int colNo = firstHeading; colNo < lastHeading; colNo++) {
                     String heading = headingsRange.get(0, colNo).getStringValue();
@@ -986,7 +940,9 @@ public class AzquoBook {
                     String valFound = pairs.get(heading);
                     if (link != null) {
                         String linkAddr = evaluateExpression(link.replace("“", "\"").replace("”", "\""), pairs);//excel uses fancy quotes
-                        if (linkAddr.startsWith("error:")) return linkAddr;
+                        if (linkAddr.startsWith("error:")){
+                                throw  new Exception(linkAddr);
+                        }
                         valFound = linkStart + linkAddr + ">" + valFound + "</a>";
                     }
                     if (valFound != null) {
@@ -1003,7 +959,6 @@ public class AzquoBook {
                 }
             }
         }
-        return "";
     }
 
     private String getHTMLTableData(String rangeName) {
@@ -1025,7 +980,7 @@ public class AzquoBook {
         return sb.toString();
     }
 
-    public void fillVelocityOptionInfo(LoggedInConnection loggedInConnection, VelocityContext velocityContext) {
+    public void fillVelocityOptionInfo(VelocityContext velocityContext) {
         List<VRegion> vRegions = new ArrayList<VRegion>();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
@@ -1047,46 +1002,34 @@ public class AzquoBook {
         }
         velocityContext.put("hdays", highlightDays + "");
         velocityContext.put("menuregions", vRegions);
-        velocityContext.put("regions", getRegions(loggedInConnection, dataRegionPrefix).toString());//this is for javascript routines
-
+        velocityContext.put("regions", getRegions(dataRegionPrefix).toString());//this is for javascript routines
     }
 
-    public String loadData(LoggedInConnection loggedInConnection) throws Exception {
-
-
+    public void loadData(LoggedInConnection loggedInConnection) throws Exception {
         calculateAll();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
                 String regionName = name.getText().substring(dataRegionPrefix.length()).toLowerCase();
                 long regStart = System.currentTimeMillis();
-                String error = fillRegion(loggedInConnection, regionName);
+                fillRegion(loggedInConnection, regionName);
                 System.out.println("fillregion took " + (System.currentTimeMillis() - regStart) + " millisecs");
                 regStart = System.currentTimeMillis();
                 calculateAll();
                 System.out.println("calcall took " + (System.currentTimeMillis() - regStart) + " millisecs");
-                if (error.startsWith("error:")) {
-                    return error;
-                }
             }
         }
-          return "";
     }
-
 
     public String printAllStyles() {
         StringBuilder sb = new StringBuilder();
-
         for (String className : shortStyles.keySet()) {
             sb.append(".").append(shortStyles.get(className)).append(" {").append(className).append("}\n");
         }
         return sb.toString();
-
     }
 
-
     private void setChoices(LoggedInConnection loggedInConnection, int reportId) {
-
         createChosenMap();
         createChoiceMap();//to check when choice cells may be changed
         for (Range range : chosenMap.keySet()) {
@@ -1118,7 +1061,6 @@ public class AzquoBook {
                 String region = name.getText().substring(dataRegionPrefix.length());
                 UserChoice userSortCol = userChoiceDAO.findForUserIdReportIdAndChoice(loggedInConnection.getUser().getId(), reportId, "sort " + region + " by row");
                 if (userSortCol != null) {
-
                     try {
                         String choiceVal = userSortCol.getChoiceValue();
                         sortChoices.put("rows:" + region, choiceVal);
@@ -1136,13 +1078,11 @@ public class AzquoBook {
                         //set by the system, so should not have an exception
                     }
                 }
-
             }
         }
     }
 
-    public String prepareSheet(LoggedInConnection loggedInConnection, int reportId, Map<Cell, Boolean> highlighted) throws Exception {
-        String error;
+    public void prepareSheet(LoggedInConnection loggedInConnection, int reportId, Map<Cell, Boolean> highlighted) throws Exception {
         calcMaxCol();
         setChoices(loggedInConnection, reportId);
         setSortCols(loggedInConnection, reportId);
@@ -1155,11 +1095,11 @@ public class AzquoBook {
             }
         }
         if (dataRegionPrefix.equals(azDataRegion)) {
-            error = loadData(loggedInConnection);
+            loadData(loggedInConnection);
 
         } else {
             //admin data only loaded on admin sheets
-            error = loadAdminData(loggedInConnection);
+            loadAdminData(loggedInConnection);
             // still ignoring error.....
         }
         if (highlightDays > 0) {
@@ -1169,7 +1109,6 @@ public class AzquoBook {
         calcMaxCol();
         setupColwidths();
         setupMaxHeight();
-        return error;
     }
 
 
@@ -1179,14 +1118,12 @@ public class AzquoBook {
 
     public String getCellContent(int rowNo, int colNo) {
         return getCellContentAsString(azquoCells.get(rowNo, colNo));
-
     }
 
     private String getCellContentAsString(Cell cell) {
         String content = "";
         if (cell != null) {
             content = cell.getStringValue();
-
         }
         return content;
     }
@@ -1299,7 +1236,6 @@ public class AzquoBook {
     }
     */
 
-
     private Range chosenRange(Cell cell) {
         return cellInMap(cell, chosenMap);
     }
@@ -1335,7 +1271,6 @@ public class AzquoBook {
         return 0;//should never get here!
     }
 
-
     private int getCellHeight(Cell cell) {
         int cellHeight = azquoCells.getRowHeightPixel(cell.getRow()) - 1;//the reduction is to cater for a border of width 1 px.cell.getRow().rowHeight;
         if (mergedCells.get(cell) != null) {
@@ -1361,7 +1296,7 @@ public class AzquoBook {
     private String createCellContentHTML(LoggedInConnection loggedInConnection, Cell cell, String cellClass, String overrideValue) {
         String content = getCellContentAsString(cell);
         // changed to rotation angle from rotation as depreciated, I assume the same value
-        if (overrideValue != null){
+        if (overrideValue != null) {
             content = overrideValue;
         }
 
@@ -1424,26 +1359,21 @@ public class AzquoBook {
             }
         }
         return content;
-
     }
 
-
-    private void createSortableHeadings(){
-        for (String range:givenHeadings.keySet()){
-            String type = range.substring(0,range.indexOf(":") - 1);
+    private void createSortableHeadings() {
+        for (String range : givenHeadings.keySet()) {
+            String type = range.substring(0, range.indexOf(":") - 1);
             String region = range.substring(type.length() + 2);
-            Range displayHeadings = getRange("az_display" +  type + "headings" + region);
+            Range displayHeadings = getRange("az_display" + type + "headings" + region);
             sortableHeadings.put(displayHeadings, range);
         }
-
     }
 
     public StringBuffer convertToHTML(LoggedInConnection loggedInConnection, Map<Cell, Boolean> highlighted) {
-
         StringBuffer output = new StringBuffer();
         createSortableHeadings();
         createChosenMap();//the chosen cells may have moved
-
         int rowNo = 0;
         int shownRowNo = 0;
         int cellTop = 0;
@@ -1458,7 +1388,6 @@ public class AzquoBook {
                     topCell = rowNo;
                 }
                 int rowHeight = azquoCells.getRowHeightPixel(rowNo) - 1;//the reduction is to cater for a border of width 1 px.
-
                 shortStyles.put("position:absolute;top:" + cellTop + "px;height:" + rowHeight + "px", "rp" + rowNo);
                 for (int colNo = 0; colNo <= maxCol; colNo++) {
                     Cell cell = null;
@@ -1481,10 +1410,9 @@ public class AzquoBook {
 
                         StringBuilder cellClass = createCellClass(rowNo, colNo, cell, cellHighlighted);
                         String overrideValue = null;
-                        if (shownRowNo > 500){
+                        if (shownRowNo > 500) {
                             overrideValue = "<br/><b>Spreadsheet truncated.  To see full report, download as XLSX</b>";
                         }
-
                         content = createCellContentHTML(loggedInConnection, cell, cellClass.toString(), overrideValue);
                         String sizeInfo = "";
                         if (mergedCells.get(cell) != null) {
@@ -1493,48 +1421,37 @@ public class AzquoBook {
                             addStyle("background-color", "white");
                             sizeInfo = " style='height:" + getCellHeight(cell) + "px;width:" + getCellWidth(cell) + "px;'";
                         }
-
-
                         Range headingsRange = cellInMap(cell, sortableHeadings);
                         if (headingsRange != null && content.length() > 0) {
                             String headingsRegion = sortableHeadings.get(headingsRange);
-                            String[]givenStrings = givenHeadings.get(headingsRegion);
+                            String[] givenStrings = givenHeadings.get(headingsRegion);
                             if (headingsRegion.startsWith("columns:")) {
                                 origContent = givenStrings[colNo - headingsRange.getFirstColumn()];
                                 String sortChoice = sortChoices.get(headingsRegion);
-
-
                                 headingsRegion = headingsRegion.substring(8);
                                 if (!origContent.equals(sortChoice)) {//sort is currently up
                                     content += "<div class='sortup'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','" + origContent + "');\"><img src='/images/sortup.png'></a></div>";
-
                                 } else {
                                     content += "<div class='sortup'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','');\"><img src='/images/sort0.png'></a></div>";
-
                                 }
                                 if (!(origContent + "-desc").equals(sortChoice)) {//sort down
                                     content += "<div class='sortdown'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','" + origContent + "-desc');\"><img src='/images/sortdown.png'></a></div>";
                                 } else {
                                     content += "<div class='sortdown'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','');\"><img src='/images/sort0.png'></a></div>";
-
                                 }
                             } else {
                                 origContent = givenStrings[colNo - headingsRange.getFirstColumn()];
                                 String sortChoice = sortChoices.get(headingsRegion);
                                 headingsRegion = headingsRegion.substring(5);
                                 if (!origContent.equals(sortChoice)) {//sort is currently left
-
                                     content += "<div class='sortleft'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','" + origContent + "');\"><img src='/images/sortleft.png'></a></div>";
-
                                 } else {
                                     content += "<div class='sortleft'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','');\"><img src='/images/sort.png'></a></div>";
-
                                 }
                                 if (!(origContent + "-desc").equals(sortChoice)) {
                                     content += "<div class='sortright'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','" + origContent + "-desc');\"><img src='/images/sortright.png'></a></div>";
                                 } else {
                                     content += "<div class='sortright'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','');\"><img src='/images/sort.png'></a></div>";
-
                                 }
                             }
                         }
@@ -1553,15 +1470,15 @@ public class AzquoBook {
                                 .append(rowNo).append("-").append(colNo).append("'>").append(content.trim()).append("</div>" + cr);
                         //out.format("    <td class=%s %s>%s</td>%n", styleName(style),
                         //        attrs, content);
-                        if (shownRowNo > 500){
+                        if (shownRowNo > 500) {
                             return output;
                         }
                     } else {
                         rowValues.add(getCellContentAsString(cell));
                     }
-                 }
+                }
                 cellTop += rowHeight + 1;
-              }
+            }
             rowNo++;
             lastRow = row;
         }
@@ -1670,65 +1587,9 @@ public class AzquoBook {
         return sb;
     }
 
-    private StringBuilder jsonRange(String name, String array) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(",\"").append(name).append("\":[");
-        if (array != null) {
-            String[] rows = array.split("\n", -1);
-            boolean firstRow = true;
-            for (String row : rows) {
-                String[] cells = row.split("\t", -1);
-                boolean firstCol = true;
-                if (firstRow) {
-                    firstRow = false;
-                } else {
-                    sb.append(",");
-
-                }
-                sb.append("[");
-                for (String cell : cells) {
-                    if (firstCol) {
-                        firstCol = false;
-                    } else {
-                        sb.append(",");
-
-                    }
-                    sb.append("\"").append(cell).append("\"");
-                }
-                sb.append("]");
-
-            }
-        }
-        sb.append("]");
-        return sb;
-    }
-
-    private String unlockRange(Range dataRange) {
-        boolean firstRow = true;
-        String lockMap = "";
-        for (int rowNo = dataRange.getFirstRow(); rowNo < dataRange.getFirstRow() + dataRange.getRowCount(); rowNo++) {
-            if (firstRow) {
-                firstRow = false;
-            } else {
-                lockMap += "\n";
-            }
-            boolean firstCol = true;
-            for (int colNo = dataRange.getFirstColumn(); colNo < dataRange.getFirstColumn() + dataRange.getColumnCount(); colNo++) {
-                if (firstCol) {
-                    firstCol = false;
-                } else {
-                    lockMap += "\t";
-                }
-            }
-
-        }
-        return lockMap;
-
-    }
-
     // todo : this manual JSON creating has to stop!
 
-    public StringBuilder getRegions(LoggedInConnection loggedInConnection, String regionNameStart) {
+    public StringBuilder getRegions(String regionNameStart) {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
         boolean firstRegion = true;
@@ -1771,19 +1632,13 @@ public class AzquoBook {
 
 
     public String changeValue(int row, int col, String value, LoggedInConnection loggedInConnection) {
-
-
         Cell cellChanged = azquoCells.get(row, col);
         setCellValue(cellChanged, value);
-
-
         calculateAll();
         Map<Cell, Boolean> highlighted = new HashMap<Cell, Boolean>();
         if (highlightDays > 0) {
             setHighlights(loggedInConnection, highlighted);
         }
-
-
         StringBuilder sb = new StringBuilder();
         sb.append("[");
         for (int rowNo = 0; rowNo < azquoCells.getMaxRow(); rowNo++) {
@@ -1792,7 +1647,6 @@ public class AzquoBook {
                 Cell cell = azquoCells.get(rowNo, colNo);
                 if (cell != null && cell.getType() != CellValueType.IS_NULL) {
                     String cellVal = cell.getStringValue();
-
                     if (rowValues.size() > colNo && !cellVal.equals(rowValues.get(colNo))) {
                         rowValues.remove(colNo);
                         rowValues.add(colNo, cellVal);
@@ -1895,12 +1749,10 @@ public class AzquoBook {
                             tempList.add(value);
                         }
                         return spreadsheetService.formatCellProvenanceForOutput(loggedInConnection, tempList, jsonFunction);
-
                     } else {
                         for (Name tempname : names) {
                             if (--regionInfo.col == 0) {
                                 return spreadsheetService.formatProvenanceForOutput(tempname.getProvenance(), jsonFunction);
-
                             }
                         }
                     }
@@ -1960,6 +1812,7 @@ public class AzquoBook {
     }
 
     // todo - maybe zap this, is it unnecessarily using strings??
+    // used by admin, can zap when I move that to HTML
 
     private StringBuilder rangeToText(Range range, boolean withId) {
         StringBuilder sb = new StringBuilder();
@@ -1989,12 +1842,12 @@ public class AzquoBook {
 /*                    if (firstRow) {
                         sb.append("id");
                     } else {*/
-                        Cell cell = azquoCells.get(aRowNo + rowNo, idCol);
-                        if (cell != null && cell.getStringValue().length() > 0) {
-                            sb.append(cell.getStringValue());
-                        } else {
-                            sb.append("0");
-                        }
+                    Cell cell = azquoCells.get(aRowNo + rowNo, idCol);
+                    if (cell != null && cell.getStringValue().length() > 0) {
+                        sb.append(cell.getStringValue());
+                    } else {
+                        sb.append("0");
+                    }
                     firstCol = false;
                 }
                 for (int colNo = 0; colNo < range.getColumnCount(); colNo++) {
@@ -2012,9 +1865,8 @@ public class AzquoBook {
             }
         }
         return sb;
-
     }
-
+/* save commented
     private String subsequent(String nameText) {
         //adds one on to any name (e.g.   Sale 001234  _> Sale 001235)
         int i;
@@ -2045,6 +1897,7 @@ public class AzquoBook {
         }
         return nameText;
     }
+    */
 // commenting azquobook saving for the moment, probably re enable on zkbook
 /*    public void saveData(LoggedInConnection loggedInConnection) throws Exception {
         Map<String, String> newNames = new HashMap<String, String>();// if there are ranges starting 'az_next' then substitute these names for the latest number
@@ -2125,7 +1978,6 @@ public class AzquoBook {
         return spreadsheetName;
     }
 
-
     public void saveBookActive(HttpServletResponse response, String fileName, String blankPath) throws Exception {
         Workbook wbOut = new Workbook(new FileInputStream(blankPath));
         wbOut.combine(wb);
@@ -2147,12 +1999,10 @@ public class AzquoBook {
         System.out.println("loaded Aspose licence");
         wb = new Workbook(new FileInputStream(fileName));
         System.out.println("file name = " + fileName);
-
-
     }
 
 
-    public String convertSpreadsheetToHTML(LoggedInConnection loggedInConnection, int reportId, String spreadsheetName, StringBuilder output) throws Exception {
+    public void convertSpreadsheetToHTML(LoggedInConnection loggedInConnection, int reportId, String spreadsheetName, StringBuilder output) throws Exception {
         setSheet(0);
         loggedInConnection.clearSortCols();
         if (spreadsheetName != null) {
@@ -2164,10 +2014,9 @@ public class AzquoBook {
             }
         }
         Map<Cell, Boolean> highlighted = new HashMap<Cell, Boolean>();
-        String error = prepareSheet(loggedInConnection, reportId, highlighted);
+        prepareSheet(loggedInConnection, reportId, highlighted);
         //TODO IGNORE ERROR CURRENTLY - SEND BACK IN MESSAGE
         output.append(convertToHTML(loggedInConnection, highlighted));
-        return error;
     }
 
     public void saveBook(String fileName) throws Exception {
@@ -2201,7 +2050,6 @@ public class AzquoBook {
         return wb.getWorksheets().getCount();
     }
 
-
     public String convertSheetToCSV(final String tempFileName, final int sheetNo) throws Exception {
         Worksheet sheet = wb.getWorksheets().get(sheetNo);
         String fileType = sheet.getName();
@@ -2213,9 +2061,8 @@ public class AzquoBook {
         convertRangeToCSV(sheet, csvW, null, null);
         csvW.close();
         return tempName;
-
     }
-
+/* another save function commented
     private void importRangeFromScreen(LoggedInConnection loggedInConnection, String region, Map<String, String> newNames) throws Exception {
         String fileType = azquoSheet.getName();
         File temp = File.createTempFile("fromscreen", "." + fileType);
@@ -2230,12 +2077,12 @@ public class AzquoBook {
         importService.readPreparedFile(loggedInConnection, uploadFile, fileType, loggedInConnection.getLanguages());
         String saveFileName = spreadsheetService.getHomeDir() + "/databases/" + loggedInConnection.getCurrentDBName() + "/uploads/" + azquoSheet.getName() + " " + df.format(new Date()) + ".xlsx";
         File file = new File(saveFileName);
-        if (file.getParentFile().mkdirs()){ // intellij said I should pay attention to the result of mkdirs, I did this
+        if (file.getParentFile().mkdirs()) { // intellij said I should pay attention to the result of mkdirs, I did this
             wb.save(saveFileName, SaveFormat.XLSX);
         }
-    }
+    }*/
 
-    public String convertRangeToCSV(final Worksheet sheet, final CsvWriter csvW, Range range, Map<String, String> newNames) throws Exception {
+    public void convertRangeToCSV(final Worksheet sheet, final CsvWriter csvW, Range range, Map<String, String> newNames) throws Exception {
         Row row;
         Cell cell;
         Cells cells = sheet.getCells();
@@ -2272,7 +2119,6 @@ public class AzquoBook {
                 csvW.endRecord();
             }
         }
-        return "";
     }
 
     private String convertDates(String possibleDate) {
@@ -2285,7 +2131,6 @@ public class AzquoBook {
             return possibleDate;
         }
         return df.format(date);
-
     }
 
     public String getReportName() {

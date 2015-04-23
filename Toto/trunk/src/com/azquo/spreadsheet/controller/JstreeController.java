@@ -21,7 +21,6 @@ import java.util.*;
 
 /**
  * Created by bill on 22/04/14.
- *
  */
 
 @Controller
@@ -49,24 +48,24 @@ public class JstreeController {
 
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
-            , @RequestParam(value = "op", required = false)  String op
-            , @RequestParam(value = "id", required = false)  String jsTreeId
-            , @RequestParam(value = "user", required = false)  String user
-            , @RequestParam(value = "password", required = false)  String password
-            , @RequestParam(value = "database", required = false)  String database
-            , @RequestParam(value = "position", required = false)  String position
-            , @RequestParam(value = "parent", required = false)  String parent
-            , @RequestParam(value = "json", required = false)  String json
-            , @RequestParam(value = "parents", required = false)  String parents
-            , @RequestParam(value = "topnode", required = false)  String topNode //only for use at root.
-            , @RequestParam(value = "itemschosen", required = false)  String itemsChosen
-                                ) throws Exception {
+            , @RequestParam(value = "op", required = false) String op
+            , @RequestParam(value = "id", required = false) String jsTreeId
+            , @RequestParam(value = "user", required = false) String user
+            , @RequestParam(value = "password", required = false) String password
+            , @RequestParam(value = "database", required = false) String database
+            , @RequestParam(value = "position", required = false) String position
+            , @RequestParam(value = "parent", required = false) String parent
+            , @RequestParam(value = "json", required = false) String json
+            , @RequestParam(value = "parents", required = false) String parents
+            , @RequestParam(value = "topnode", required = false) String topNode //only for use at root.
+            , @RequestParam(value = "itemschosen", required = false) String itemsChosen
+    ) throws Exception {
 
 
         String jsonFunction = "azquojsonfeed";
 
 
-        LoggedInConnection loggedInConnection = (LoggedInConnection)request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
+        LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
         try {
             StringBuffer result = new StringBuffer();
             if (loggedInConnection == null) {
@@ -102,7 +101,7 @@ public class JstreeController {
 
                 }
             } else {
-                if (!op.equals("new") && !op.equals("children")){
+                if (!op.equals("new") && !op.equals("children")) {
                     if (itemsChosen != null && itemsChosen.length() > 0) {
                         //find the relevant data and show it
                         String[] jsItems = itemsChosen.split(",");
@@ -163,7 +162,7 @@ public class JstreeController {
 
                 }
                 if (op.equals("children")) {
-                    if (itemsChosen != null && itemsChosen.startsWith(",")){
+                    if (itemsChosen != null && itemsChosen.startsWith(",")) {
                         itemsChosen = itemsChosen.substring(1);
                     }
 
@@ -208,8 +207,5 @@ public class JstreeController {
             model.addAttribute("content", "error:" + e.getMessage());
         }
         return "utf8page";
-
     }
-
-
 }

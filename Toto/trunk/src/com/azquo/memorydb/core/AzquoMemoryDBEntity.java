@@ -38,7 +38,7 @@ public abstract class AzquoMemoryDBEntity {
 
     //key with this is it makes the setting of an Id only in context of a memory db and hence one can only make one of these in this package (I think!)
     protected AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id) throws Exception {
-        this(azquoMemoryDB,id, false);
+        this(azquoMemoryDB, id, false);
     }
 
     //key with this is it makes the setting of an Id only in context of a memory db and hence one can only make one of these in this package (I think!)
@@ -60,7 +60,7 @@ public abstract class AzquoMemoryDBEntity {
             // point of this is attempt at lockdown on entity constructors. Any entity that's instantiated is part of the
             // memory database and fair game for persistence
             // if it's not been built with an assigned ID then it needs to be persisted
-            if (!dontSetPersistFlag){ // ergh, not ideal, maybe can sort later.
+            if (!dontSetPersistFlag) { // ergh, not ideal, maybe can sort later.
                 setNeedsPersisting();
             }
             // we assume new, inserting true
@@ -130,7 +130,7 @@ public abstract class AzquoMemoryDBEntity {
     }
 
     protected final void setNeedsPersisting() {
-        if (getPersistTable() != null){
+        if (getPersistTable() != null) {
             azquoMemoryDB.setEntityNeedsPersisting(getPersistTable(), this);
         }
     }

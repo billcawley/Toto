@@ -12,7 +12,6 @@ import java.util.Map;
 
 /**
  * Created by bill on 15/04/14.
- *
  */
 public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     // the default table name for this data.
@@ -82,11 +81,11 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         String[] statuses = userStatus.split(",");
         StringBuilder statusSelect = new StringBuilder("(");
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        for (int count=0; count < statuses.length;count++){
+        for (int count = 0; count < statuses.length; count++) {
             if (count > 0) {
                 statusSelect.append(" or ");
             }
-            namedParams.addValue(USERSTATUS + count, "%" + statuses[count].trim() + "%" );
+            namedParams.addValue(USERSTATUS + count, "%" + statuses[count].trim() + "%");
             statusSelect.append(USERSTATUS + " like :" + USERSTATUS + count);
 
         }
