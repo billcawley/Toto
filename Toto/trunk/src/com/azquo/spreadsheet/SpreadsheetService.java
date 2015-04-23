@@ -200,6 +200,8 @@ public class SpreadsheetService {
                 //note - the database specified in the report may not be the current database (as in applications such as Magento and reviews), but be 'temp'
                 String filepath = ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                 azquoBook.loadBook(getHomeDir() + filepath, useAsposeLicense());
+                // excecuting parked for the mo while saving is, will need to think about reenabling
+                /*
                 String executeSetName = azquoBook.getRangeValue("az_ExecuteSet");
                 List<SetNameChosen> nameLoop = new ArrayList<SetNameChosen>();
                 String executeSet = null;
@@ -223,7 +225,7 @@ public class SpreadsheetService {
                     }
                     executeLoop(loggedInConnection, onlineReport.getId(), nameLoop, 0);
                     return "";
-                }
+                }*/
             }
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
             if (onlineReport.getId() == 1 || onlineReport.getId() == -1) {//this is the maintenance workbook
@@ -286,8 +288,8 @@ public class SpreadsheetService {
         velocityContext.put("charts", azquoBook.drawCharts(loggedInConnection, path).toString());
         return convertToVelocity(velocityContext, null, null, "onlineReport.vm");
     }
-
-    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
+//executing parked while saving is
+/*    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
         for (Name chosen : nameLoop.get(level).choiceList) {
             setUserChoice(loggedInConnection.getUser().getId(), reportId, nameLoop.get(level).setName, chosen.getDefaultDisplayName());
@@ -298,7 +300,7 @@ public class SpreadsheetService {
                 executeLoop(loggedInConnection, reportId, nameLoop, level + 1);
             }
         }
-    }
+    }*/
 
     // to put a referenced CSS inline for example
     // edd changing to read from web-inf
@@ -453,15 +455,15 @@ public class SpreadsheetService {
         }
         return result;
     }
-
-    public void saveData(LoggedInConnection loggedInConnection) throws Exception {
+// oarking saving for the moment
+/*    public void saveData(LoggedInConnection loggedInConnection) throws Exception {
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
         if (azquoBook.dataRegionPrefix.equals(AzquoBook.azInput)) {
             saveAdminData(loggedInConnection);
         } else {
             azquoBook.saveData(loggedInConnection);
         }
-    }
+    }*/
 
     private StringBuilder createDatabaseSelect(LoggedInConnection loggedInConnection) {
         StringBuilder sb = new StringBuilder();
@@ -1048,12 +1050,14 @@ seaports;children   container;children
         return sb.toString();
     }
 
+    // still a little funny about whether a logged in conneciton should be passed
 
-    public List<List<AzquoCell>> getDataRegion(LoggedInConnection loggedInConnection, String context, String region, int filterCount, int maxRows, int maxCols) throws Exception {
-        if (loggedInConnection.getRowHeadings(region) == null || loggedInConnection.getRowHeadings(region).size() == 0 || loggedInConnection.getColumnHeadings(region) == null || loggedInConnection.getColumnHeadings(region).size() == 0) {
+    public List<List<AzquoCell>> getDataRegion(LoggedInConnection loggedInConnection,List<List<DataRegionHeading>> rowHeadings
+            , List<List<DataRegionHeading>> columnHeadings,  String context
+            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol) throws Exception {
+        if (columnHeadings == null || columnHeadings.size() == 0 || rowHeadings == null || rowHeadings.size() == 0) {
             throw new Exception("no headings passed");
         }
-        loggedInConnection.getProvenance("in spreadsheet").setContext(context);
         final StringTokenizer st = new StringTokenizer(context, "\n");
         final List<Name> contextNames = new ArrayList<Name>();
         while (st.hasMoreTokens()) {
@@ -1068,10 +1072,10 @@ seaports;children   container;children
         }
         // note, didn't se the context against the logged in connection, should I?
         // ok going to try to use the new function
-        List<List<AzquoCell>> dataToShow = getAzquoCellsForColumnsRowsAndContext(loggedInConnection, loggedInConnection.getColumnHeadings(region)
-                , loggedInConnection.getRowHeadings(region), contextNames, loggedInConnection.getLanguages());
-        dataToShow = sortAndFilterCells(dataToShow, loggedInConnection.getRowHeadings(region), loggedInConnection.getColumnHeadings(region)
-                , filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
+        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(loggedInConnection, rowHeadings
+                , columnHeadings, contextNames, loggedInConnection.getLanguages());
+        dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
+                , filterCount, maxRows, maxCols, sortRow, sortCol);
         return dataToShow;
         //return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows, maxCols);
     }
@@ -1422,8 +1426,9 @@ I think that this is an ideal candidate for multithreading to speed things up
     }
 
 
-    public List<List<AzquoCell>> getAzquoCellsForColumnsRowsAndContext(AzquoMemoryDBConnection connection, final List<List<DataRegionHeading>> headingsForEachColumn
-            , List<List<DataRegionHeading>> headingsForEachRow, final List<Name> contextNames, List<String> languages) throws Exception {
+    public List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
+            , final List<List<DataRegionHeading>> headingsForEachColumn
+            , final List<Name> contextNames, List<String> languages) throws Exception {
         //tryMultiThreaded = !tryMultiThreaded;
         long track = System.currentTimeMillis();
         int totalRows = headingsForEachRow.size();
@@ -1548,28 +1553,17 @@ I think that this is an ideal candidate for multithreading to speed things up
         Calendar cal = Calendar.getInstance();
         Date today = cal.getTime();
 
-        final List<List<ListOfValuesOrNamesAndAttributeName>> dataValueMap = loggedInConnection.getDataValueMap(region);
-        final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
-
-        if (rowOrder != null) {
-            if (rowInt >= rowOrder.size()) return 10000;
-            rowInt = rowOrder.get(rowInt);
-        }
-        final List<Integer> colOrder = loggedInConnection.getColOrder(region);
-        if (colOrder != null) {
-            if (colInt >= colOrder.size()) return 10000;
-            colInt = colOrder.get(colInt);
-        }
+        final List<List<AzquoCell>> sentCells = loggedInConnection.getSentCells(region);
         int age = 10000;
-        if (dataValueMap == null) return age;
-        if (rowInt >= dataValueMap.size()) return age;
-        if (dataValueMap.get(rowInt) == null) return age;
+        if (sentCells == null) return age;
+        if (rowInt >= sentCells.size()) return age;
+        if (sentCells.get(rowInt) == null) return age;
 
-        final List<ListOfValuesOrNamesAndAttributeName> rowValues = dataValueMap.get(rowInt);
+        final List<AzquoCell> rowValues = sentCells.get(rowInt);
         if (colInt >= rowValues.size()) {// a blank column
             return age;
         }
-        final ListOfValuesOrNamesAndAttributeName valuesForCell = rowValues.get(colInt);
+        final ListOfValuesOrNamesAndAttributeName valuesForCell = rowValues.get(colInt).listOfValuesOrNamesAndAttributeName;
         if (valuesForCell.getValues() == null || valuesForCell.getValues().size() == 0) {
             return 0;
         }
@@ -1600,19 +1594,15 @@ I think that this is an ideal candidate for multithreading to speed things up
     }
 
     // todo, when cell contents are from attributes??
+    // this function seemed to be opverly complex before taking into account ordering and things. All we care about is matching to what was sent. What was sent is what should be in the sent cells
     public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt, String jsonFunction) {
-        final List<List<ListOfValuesOrNamesAndAttributeName>> dataValueMap = loggedInConnection.getDataValueMap(region);
-        final List<Integer> rowOrder = loggedInConnection.getRowOrder(region);
-        final List<Integer> colOrder = loggedInConnection.getColOrder(region);
-
-        if (dataValueMap != null) {
-            if (dataValueMap.get(rowInt) != null) {
-                final List<ListOfValuesOrNamesAndAttributeName> rowValues = dataValueMap.get(rowOrder.get(rowInt));
-
-                if (rowValues.get(colOrder.get(colInt)) != null) {
-                    final ListOfValuesOrNamesAndAttributeName valuesForCell = rowValues.get(colOrder.get(colInt));
+        final List<List<AzquoCell>> sentCells = loggedInConnection.getSentCells(region);
+        if (sentCells != null) {
+            if (sentCells.get(rowInt) != null) {
+                final List<AzquoCell> rowValues = sentCells.get(rowInt);
+                if (rowValues.get(colInt) != null) {
+                    final ListOfValuesOrNamesAndAttributeName valuesForCell = rowValues.get(colInt).listOfValuesOrNamesAndAttributeName;
                     //Set<Name> specialForProvenance = new HashSet<Name>();
-
                     if (valuesForCell.getValues() != null) {
                         return formatCellProvenanceForOutput(loggedInConnection, valuesForCell.getValues(), jsonFunction);
                     }
@@ -1683,6 +1673,8 @@ I think that this is an ideal candidate for multithreading to speed things up
         }
     }
 
+    // todo - make work after other code has been rearranged
+/*
     public String saveData(LoggedInConnection loggedInConnection, String region, String editedData) throws Exception {
         String result = "";
         logger.info("------------------");
@@ -1786,7 +1778,7 @@ I think that this is an ideal candidate for multithreading to speed things up
         }
         return result;
     }
-
+*/
     // Four little utility functions added by Edd, required now headings are not names
 
     public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection) {

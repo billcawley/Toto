@@ -57,19 +57,10 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private String spreadsheetName;
     private int reportId;
 
-    private final Map<String, List<List<DataRegionHeading>>> rowHeadings;
-    private final Map<String, List<List<DataRegionHeading>>> columnHeadings;
-    private final Map<String, List<Integer>> rowOrder;//for when top or bottom values need to be returned.
-    private final Map<String, List<Integer>> colOrder; //as above
-    private final Map<String, Integer> restrictRowCount; //as above
-    private final Map<String, Integer> restrictColCount;
     private final Map<String, String> sortCol; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
     private final Map<String, String> sortRow; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
     private final Map<String, List<Name>> contexts;
-    private final Map<String, String> lockMaps;
-    private final Map<String, String> sentDataMaps;
-    private final Map<String, List<List<ListOfValuesOrNamesAndAttributeName>>> sentDataValuesMaps; // As in a 2 d array (lists of lists) of lists of valuer Useful for when data is saved - now has to support the name attribute combo
-    private final Map<String, List<List<Set<DataRegionHeading>>>> sentDataHeadingsMaps; // As in a 2 d array (lists of lists) of sets of names, identifying each cell. Necessary if saving new data in that cell. SHould the values map use sets also???
+    private final Map<String, List<List<AzquoCell>>> sentCellsMaps; // As in a 2 d array (lists of lists) of the sent cells, should replace a number of older maps
     private List<Set<Name>> namesToSearch;
     private Map<Set<Name>, Set<Value>> valuesFound;
     private AzquoBook azquoBook;
@@ -85,19 +76,10 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         loginTime = new Date();
         lastAccessed = new Date();
         reportId = 0;
-        rowHeadings = new HashMap<String, List<List<DataRegionHeading>>>();
-        columnHeadings = new HashMap<String, List<List<DataRegionHeading>>>();
-        rowOrder = new HashMap<String, List<Integer>>();
-        colOrder = new HashMap<String, List<Integer>>();
-        restrictRowCount = new HashMap<String, Integer>();
-        restrictColCount = new HashMap<String, Integer>();
         sortCol = new HashMap<String, String>();
         sortRow = new HashMap<String, String>();
         contexts = new HashMap<String, List<Name>>();
-        lockMaps = new HashMap<String, String>();
-        sentDataMaps = new HashMap<String, String>();
-        sentDataValuesMaps = new HashMap<String, List<List<ListOfValuesOrNamesAndAttributeName>>>();
-        sentDataHeadingsMaps = new HashMap<String, List<List<Set<DataRegionHeading>>>>();
+        sentCellsMaps = new HashMap<String, List<List<AzquoCell>>>();
         namesToSearch = null;
         valuesFound = null;
         azquoBook = null;
@@ -133,110 +115,6 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
     public void setLastAccessed(final Date lastAccessed) {
         this.lastAccessed = lastAccessed;
-    }
-
-    public List<List<DataRegionHeading>> getRowHeadings(final String region) {
-        if (region == null || region.isEmpty()) {
-            return rowHeadings.get(defaultRegion);
-        } else {
-            return rowHeadings.get(region);
-        }
-    }
-
-    public void setRowHeadings(final String region, final List<List<DataRegionHeading>> rowHeadings) {
-        if (region == null || region.isEmpty()) {
-            this.rowHeadings.put(defaultRegion, rowHeadings);
-        } else {
-            this.rowHeadings.put(region, rowHeadings);
-        }
-    }
-
-    public List<List<DataRegionHeading>> getColumnHeadings(final String region) {
-        if (region == null || region.isEmpty()) {
-            return columnHeadings.get(defaultRegion);
-        } else {
-            return columnHeadings.get(region);
-        }
-    }
-
-    public void setColumnHeadings(final String region, final List<List<DataRegionHeading>> columnHeadings) {
-        if (region == null || region.isEmpty()) {
-            this.columnHeadings.put(defaultRegion, columnHeadings);
-        } else {
-            this.columnHeadings.put(region, columnHeadings);
-        }
-    }
-
-    public List<Integer> getRowOrder(final String region) {
-        if (region == null || region.isEmpty()) {
-            return rowOrder.get(defaultRegion);
-        } else {
-            return rowOrder.get(region);
-        }
-    }
-
-      public void setRowOrder(final String region, final List<Integer> rowOrder){
-          if (region == null || region.isEmpty()) {
-              this.rowOrder.put(defaultRegion, rowOrder);
-          } else {
-              this.rowOrder.put(region, rowOrder);
-          }
-
-      }
-
-    public List<Integer> getColOrder(final String region) {
-        if (region == null || region.isEmpty()) {
-            return colOrder.get(defaultRegion);
-        } else {
-            return colOrder.get(region);
-        }
-    }
-
-    public void setColOrder(final String region, final List<Integer> colOrder){
-        if (region == null || region.isEmpty()) {
-            this.colOrder.put(defaultRegion, colOrder);
-        } else {
-            this.colOrder.put(region, colOrder);
-        }
-
-    }
-
-
-    public Integer getRestrictRowCount(final String region) {
-        if (region == null || region.isEmpty()) {
-            return restrictRowCount.get(defaultRegion);
-        } else {
-            return restrictRowCount.get(region);
-        }
-    }
-
-
-    public void setRestrictRowCount(final String region, final int restrictRowCount){
-        if (region == null || region.isEmpty()) {
-            this.restrictRowCount.put(defaultRegion, restrictRowCount);
-        } else {
-            this.restrictRowCount.put(region, restrictRowCount);
-        }
-
-    }
-
-
-
-    public Integer getRestrictColCount(final String region) {
-        if (region == null || region.isEmpty()) {
-            return restrictColCount.get(defaultRegion);
-        } else {
-            return restrictColCount.get(region);
-        }
-    }
-
-    public void setRestrictColCount(final String region, final int restrictColCount){
-        if (region == null || region.isEmpty()) {
-            this.restrictColCount.put(defaultRegion, restrictColCount);
-        } else {
-            this.restrictColCount.put(region, restrictColCount);
-        }
-
     }
 
 
@@ -283,83 +161,19 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     }
 
 
-    public List<Name> getContext(final String region) {
+    public List<List<AzquoCell>> getSentCells(final String region) {
         if (region == null || region.isEmpty()) {
-            return contexts.get(defaultRegion);
+            return sentCellsMaps.get(defaultRegion);
         } else {
-            return contexts.get(region);
+            return sentCellsMaps.get(region.toLowerCase());
         }
     }
 
-    public void setContext(final String region, final List<Name> contexts) {
+    public void setSentCells(final String region, final List<List<AzquoCell>> sentCells) {
         if (region == null || region.isEmpty()) {
-            this.contexts.put(defaultRegion, contexts);
+            this.sentCellsMaps.put(defaultRegion, sentCells);
         } else {
-            this.contexts.put(region, contexts);
-        }
-    }
-
-    public String getLockMap(final String region) {
-        if (region == null || region.isEmpty()) {
-            return lockMaps.get(defaultRegion);
-        } else {
-            return lockMaps.get(region);
-        }
-    }
-
-    public void setLockMap(final String region, final String lockMap) {
-        if (region == null || region.isEmpty()) {
-            this.lockMaps.put(defaultRegion, lockMap);
-        } else {
-            this.lockMaps.put(region, lockMap);
-        }
-    }
-
-    public String getSentDataMap(final String region) {
-        if (region == null || region.isEmpty()) {
-            return sentDataMaps.get(defaultRegion);
-        } else {
-            return sentDataMaps.get(region);
-        }
-    }
-
-    public void setSentDataMap(final String region, final String sentDataMap) {
-        if (region == null || region.isEmpty()) {
-            this.sentDataMaps.put(defaultRegion, sentDataMap);
-        } else {
-            this.sentDataMaps.put(region, sentDataMap);
-        }
-    }
-
-    public List<List<ListOfValuesOrNamesAndAttributeName>> getDataValueMap(final String region) {
-        if (region == null || region.isEmpty()) {
-            return sentDataValuesMaps.get(defaultRegion);
-        } else {
-            return sentDataValuesMaps.get(region.toLowerCase());
-        }
-    }
-
-    public void setDataValueMap(final String region, final List<List<ListOfValuesOrNamesAndAttributeName>> sentDataValuesMap) {
-        if (region == null || region.isEmpty()) {
-            this.sentDataValuesMaps.put(defaultRegion, sentDataValuesMap);
-        } else {
-            this.sentDataValuesMaps.put(region, sentDataValuesMap);
-        }
-    }
-
-    public List<List<Set<DataRegionHeading>>> getDataHeadingsMap(final String region) {
-        if (region == null || region.isEmpty()) {
-            return sentDataHeadingsMaps.get(defaultRegion);
-        } else {
-            return sentDataHeadingsMaps.get(region);
-        }
-    }
-
-    public void setDataHeadingsMap(final String region, final List<List<Set<DataRegionHeading>>> sentDataHeadingsMap) {
-        if (region == null || region.isEmpty()) {
-            this.sentDataHeadingsMaps.put(defaultRegion, sentDataHeadingsMap);
-        } else {
-            this.sentDataHeadingsMaps.put(region, sentDataHeadingsMap);
+            this.sentCellsMaps.put(region, sentCells);
         }
     }
 

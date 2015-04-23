@@ -479,38 +479,39 @@ public class AzquoBook {
             return "";
             //return "error: no range az_RowHeadings" + region;
         }
-        String headings = rangeToText(rowHeadings);
-        if (headings.startsWith("error:")) {
-            return headings;
+        String rangeText = rangeToText(rowHeadings);
+        if (rangeText.startsWith("error:")) {
+            return rangeText;
         }
         long start = System.currentTimeMillis();
-        final List<List<List<DataRegionHeading>>> rowHeadingLists = spreadsheetService.createNameListsFromExcelRegion(loggedInConnection, headings, loggedInConnection.getLanguages());
+        final List<List<List<DataRegionHeading>>> rowHeadingLists = spreadsheetService.createNameListsFromExcelRegion(loggedInConnection, rangeText, loggedInConnection.getLanguages());
         System.out.println("row heading setup took " + (System.currentTimeMillis() - start) + " millisecs");
-        loggedInConnection.setRowHeadings(region, spreadsheetService.expandHeadings(rowHeadingLists));
         //don't bother to display yet - maybe need to filter out or sort
         Range columnHeadings = getRange("az_columnheadings" + region);
         if (columnHeadings == null) {
             return "error: no range az_ColumnHeadings" + region;
         }
-        headings = rangeToText(columnHeadings);
-        if (headings.startsWith("error:")) {
-            return headings;
+        rangeText = rangeToText(columnHeadings);
+        if (rangeText.startsWith("error:")) {
+            return rangeText;
         }
-        List<List<List<DataRegionHeading>>> columnHeadingLists = spreadsheetService.createNameListsFromExcelRegion(loggedInConnection, headings, loggedInConnection.getLanguages());
-        loggedInConnection.setColumnHeadings(region, (spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadingLists))));
+        List<List<List<DataRegionHeading>>> columnHeadingLists = spreadsheetService.createNameListsFromExcelRegion(loggedInConnection, rangeText, loggedInConnection.getLanguages());
         //fillRange("az_displaycolumnheadings" + region, result, "LOCKED");
         Range context = getRange("az_context" + region);
         if (context == null) {
             return "error: no range az_Context" + region;
         }
-        headings = rangeToText(context);
-        if (headings.startsWith("error:")) {
-            return headings;
+        rangeText = rangeToText(context);
+        if (rangeText.startsWith("error:")) {
+            return rangeText;
         }
+
         try {
-            List<List<AzquoCell>> cellArray = spreadsheetService.getDataRegion(loggedInConnection, headings, region, filterCount, maxRows, maxCols);
+            List<List<AzquoCell>> cellArray = spreadsheetService.getDataRegion(loggedInConnection,spreadsheetService.expandHeadings(rowHeadingLists) ,spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadingLists)),
+                rangeText,  filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
+            loggedInConnection.setSentCells(region, cellArray);
             // think this language detection is sound
-            String language = stringUtils.getInstruction(headings, "language");
+            String language = stringUtils.getInstruction(rangeText, "language");
             if (language == null){
                 language = Name.DEFAULT_DISPLAY_NAME;
             }
@@ -1725,6 +1726,8 @@ public class AzquoBook {
 
     }
 
+    // todo : this manual JSON creating has to stop!
+
     public StringBuilder getRegions(LoggedInConnection loggedInConnection, String regionNameStart) {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
@@ -1737,19 +1740,13 @@ public class AzquoBook {
                 } else {
                     sb.append(",");
                 }
+                // edd zapped the locks, I wonder if this will cause a problem?
                 Range dataRange = name.getRange();
-                String lockMap;
-                if (regionNameStart.equals(azInput) && dataRange != null) {
-                    lockMap = unlockRange(dataRange);
-                } else {
-                    lockMap = loggedInConnection.getLockMap(name.getText().substring(dataRegionPrefix.length()).toLowerCase());
-                }
                 sb.append("{").append(jsonValue("name", name.getText().substring(regionNameStart.length()).toLowerCase(), false))
                         .append(jsonValue("top", dataRange != null ? dataRange.getFirstRow() : 0))
                         .append(jsonValue("left", dataRange != null ? dataRange.getFirstColumn() : 0))
                         .append(jsonValue("bottom", dataRange != null ? dataRange.getFirstRow() + dataRange.getRowCount() - 1 : 0))
                         .append(jsonValue("right", dataRange != null ? dataRange.getFirstColumn() + dataRange.getColumnCount() - 1 : 0))
-                        .append(jsonRange("locks", lockMap))
                         .append("}");
             }
         }
@@ -1912,8 +1909,9 @@ public class AzquoBook {
         } else {
             if (regionInfo.region.startsWith("az_displayrowheadings")) {
                 String region = regionInfo.region.substring(21);
-
-                DataRegionHeading dataRegionHeading = loggedInConnection.getRowHeadings(region).get(regionInfo.row).get(regionInfo.col);
+                // can derive them from the sent data :)
+                List<List<DataRegionHeading>> rowHeadings = spreadsheetService.getRowHeadingsAsArray(loggedInConnection.getSentCells(region));
+                DataRegionHeading dataRegionHeading = rowHeadings.get(regionInfo.row).get(regionInfo.col);
                 if (dataRegionHeading != null && dataRegionHeading.getName() != null) {
                     return spreadsheetService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
                 } else {
@@ -1921,7 +1919,8 @@ public class AzquoBook {
                 }
             } else if (regionInfo.region.startsWith("az_displaycolumnheadings")) {
                 String region = regionInfo.region.substring(24);
-                DataRegionHeading dataRegionHeading = loggedInConnection.getColumnHeadings(region).get(regionInfo.col).get(regionInfo.row);//note that the array is transposed
+                List<List<DataRegionHeading>> columnHeadings = spreadsheetService.getColumnHeadingsAsArray(loggedInConnection.getSentCells(region));
+                DataRegionHeading dataRegionHeading = columnHeadings.get(regionInfo.col).get(regionInfo.row);//note that the array is transposed
                 if (dataRegionHeading != null && dataRegionHeading.getName() != null) {
                     return spreadsheetService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
                 } else {
@@ -2046,8 +2045,8 @@ public class AzquoBook {
         }
         return nameText;
     }
-
-    public void saveData(LoggedInConnection loggedInConnection) throws Exception {
+// commenting azquobook saving for the moment, probably re enable on zkbook
+/*    public void saveData(LoggedInConnection loggedInConnection) throws Exception {
         Map<String, String> newNames = new HashMap<String, String>();// if there are ranges starting 'az_next' then substitute these names for the latest number
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
@@ -2075,12 +2074,12 @@ public class AzquoBook {
                 }
             }
         }
-    }
-
-    public void executeSheet(LoggedInConnection loggedInConnection) throws Exception {
+    }*/
+// executing parked for the mo due to saving not working
+/*    public void executeSheet(LoggedInConnection loggedInConnection) throws Exception {
             loadData(loggedInConnection);
             saveData(loggedInConnection);
-     }
+     }*/
 
 
     private String tabImage(int left, int right) {

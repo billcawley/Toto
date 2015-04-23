@@ -254,10 +254,11 @@ public class OnlineController {
 
                     return "utf8javascript";
                 }
+                /* saving data arked for the moment
                 if (opcode.equals("savedata")) {
                     spreadsheetService.saveData(loggedInConnection);
                     result = "data saved successfully";
-                }
+                }*/
                 //if (opcode.equals("children")){
 
                 //result = nameService.getStructureForNameSearch(loggedInConnection,"", Integer.parseInt(nameId), loggedInConnection.getLanguages());

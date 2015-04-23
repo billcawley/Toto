@@ -160,9 +160,6 @@ public class ZKAzquoBookUtils {
 
             List<List<List<DataRegionHeading>>> columnHeadings = getHeadingsLists(columnHeadingsDescription, sheet, loggedInConnection);
             List<List<List<DataRegionHeading>>> rowHeadings = getHeadingsLists(rowHeadingsDescription, sheet, loggedInConnection);
-            // transpose, expand, transpose again
-            loggedInConnection.setRowHeadings(region, spreadsheetService.expandHeadings(rowHeadings));
-            loggedInConnection.setColumnHeadings(region, spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadings)));
             // deal with context
             // copied from valueservice.getdatareegion. Seems a bit odd but this is the old behavior
             // ok IU'd made a mistake here assuming context was only ever one cell, it can be multiple, hcen scan through the cells but just tack on names, the placing in the cells is irrelevant
@@ -189,13 +186,12 @@ public class ZKAzquoBookUtils {
                     }
                 }
             }
-            loggedInConnection.setContext(region, contextNames);
 
             // ok now ready for the data
             // ok going to try to use the new funciton
-            List<List<AzquoCell>> dataToShow = spreadsheetService.getAzquoCellsForColumnsRowsAndContext(loggedInConnection, loggedInConnection.getColumnHeadings(region)
-                    , loggedInConnection.getRowHeadings(region), loggedInConnection.getContext(region), loggedInConnection.getLanguages());
-            dataToShow = spreadsheetService.sortAndFilterCells(dataToShow,loggedInConnection.getRowHeadings(region), loggedInConnection.getColumnHeadings(region)
+            List<List<AzquoCell>> dataToShow = spreadsheetService.getAzquoCellsForRowsColumnsAndContext(loggedInConnection, spreadsheetService.expandHeadings(rowHeadings)
+                    , spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadings)), contextNames, loggedInConnection.getLanguages());
+            dataToShow = spreadsheetService.sortAndFilterCells(dataToShow,spreadsheetService.expandHeadings(rowHeadings), spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadings))
                     , filterCount, maxRows, maxCols,loggedInConnection.getSortRow(region),loggedInConnection.getSortCol(region));
             // not going to do this just yet
             //valueService.sortAndFilterCells()
@@ -582,8 +578,6 @@ public class ZKAzquoBookUtils {
        final MapType type = mapper.getTypeFactory().constructMapType(
        Map.class, String.class, Object.class);
        final Map<String, Object> data = mapper.readValue(json, type);
-
-
         */
         int pos = 1;
         if (data.charAt(pos++) != '{') return jsonError(data, pos);
@@ -649,8 +643,5 @@ public class ZKAzquoBookUtils {
         }
         return sb.toString();
     }
-
-
-
 }
 
