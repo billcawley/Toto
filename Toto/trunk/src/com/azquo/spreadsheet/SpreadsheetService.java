@@ -116,6 +116,11 @@ public class SpreadsheetService {
         Name chosen;
     }
 
+    static class UniqueName{
+        Name name;
+        String string;
+    }
+
     public String getHomeDir() {
         if (homeDir == null) {
             homeDir = env.getProperty(host + "." + AZQUOHOME);
@@ -896,6 +901,93 @@ seaports;children   container;children
         }
         return false; // it was ALL null, error time?
     }
+
+    private void nameAndParent(UniqueName uName){
+        Name name = uName.name;
+        if (name.getParents()!=null) {
+            Iterator it = name.getParents().iterator();
+            while (it.hasNext()) {
+                Name parent = (Name) it.next();
+                //check that there are no duplicates with the same immediate parent
+                boolean duplicate = false;
+                for (Name sibling:parent.getChildren()) {
+                    if (sibling!=name && sibling.getDefaultDisplayName().equals(name.getDefaultDisplayName())){
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (!duplicate){
+                    uName.string = uName.string + "," + parent.getDefaultDisplayName();
+                    uName.name = parent;//we may need this to go up the chain if the job is not yet done
+                }
+            }
+        }
+     }
+
+
+    private List<String> findUniqueNames(List<UniqueName> pending){
+        List<String> output = new ArrayList<String>();
+        if (pending.size()==1){
+              output.add(pending.get(0).string);
+            return output;
+        }
+        //first add a unique parent onto each name
+        for (UniqueName uName:pending){
+            nameAndParent(uName);
+        }
+        //but maybe the parents are not unique names!
+        boolean unique = false;
+        int ucount = 10; //to prevent loops
+        while (!unique && ucount-- > 0) {
+            unique = true;
+            for (UniqueName uName : pending) {
+                String testName = uName.string;
+                int ncount = 0;
+                for (UniqueName uName2 :pending){
+                    if (uName2.string.equals(uName.string)) ncount++;
+                    if (ncount > 1){
+                        nameAndParent(uName2);
+                    }
+                }
+                if (ncount > 1){
+                    nameAndParent(uName);
+                    unique = false;
+                    break;
+                }
+            }
+        }
+        for (UniqueName uName:pending){
+            output.add(uName.string);
+        }
+        return output;
+
+
+
+}
+
+    public List<String> getIndividualNames(List<Name> sortedNames){
+        //this routine to output a list of names without duplicates by including parent names on duplicates
+        List<String> output = new ArrayList<String>();
+        String lastName = null;
+        List<UniqueName> pending = new ArrayList<UniqueName>();
+        for (Name name:sortedNames) {
+            if (lastName != null) {
+                if (!name.getDefaultDisplayName().equals(lastName)) {
+                    output.addAll(findUniqueNames(pending));
+                    pending = new ArrayList<UniqueName>();
+                }
+            }
+            lastName = name.getDefaultDisplayName();
+            UniqueName uName = new UniqueName();
+            uName.name = name;
+            uName.string = lastName;
+            pending.add(uName);
+
+            }
+            output.addAll(findUniqueNames(pending));
+            return output;
+        }
+
 
     // todo make sense of the bloody restrictcount parameter
 
