@@ -997,7 +997,7 @@ public final class ImportService {
     }
 
     private void readBook(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String fileName, final String tempName, List<String> attributeNames) throws Exception {
-        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, this, userChoiceDAO, spreadsheetService);
+        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, userChoiceDAO, spreadsheetService);
         azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = azquoBook.getReportName();
         if (reportName != null) {

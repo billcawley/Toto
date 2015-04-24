@@ -178,7 +178,7 @@ public class SpreadsheetService {
             //onlineReport = onlineReportDAO.findById(-1);//user report list replaces admin sheet
         }
 
-        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, importService, userChoiceDAO, this);
+        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, userChoiceDAO, this);
         StringBuilder worksheet = new StringBuilder();
         StringBuilder tabs = new StringBuilder();
         StringBuilder head = new StringBuilder();

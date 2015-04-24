@@ -6,7 +6,6 @@ import com.aspose.cells.Font;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
-import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
@@ -37,7 +36,6 @@ public class AzquoBook {
 
     private static final Logger logger = Logger.getLogger(AzquoBook.class);
     private ValueService valueService;
-    private ImportService importService;
     private AdminService adminService;
     private NameService nameService;
     private SpreadsheetService spreadsheetService;
@@ -156,12 +154,11 @@ public class AzquoBook {
         }
     };
 
-    public AzquoBook(final ValueService valueService, AdminService adminService, NameService nameService, ImportService importService, UserChoiceDAO userChoiceDAO, SpreadsheetService spreadsheetService) throws Exception {
+    public AzquoBook(final ValueService valueService, AdminService adminService, NameService nameService, UserChoiceDAO userChoiceDAO, SpreadsheetService spreadsheetService) throws Exception {
         this.valueService = valueService;
         this.adminService = adminService;
         this.userChoiceDAO = userChoiceDAO;
         this.nameService = nameService;
-        this.importService = importService;
         this.spreadsheetService = spreadsheetService;
         jacksonMapper.registerModule(new JSR310Module());
     }

@@ -105,7 +105,6 @@ public class OnlineController {
                 if (loggedInConnection.getCurrentDBName() != null) {
                     model.addAttribute("databaseChosen", loggedInConnection.getCurrentDBName());
                 }
-                //return "zstest";
                 return "zstest";
             }
 
