@@ -345,7 +345,7 @@ public final class AzquoMemoryDB {
 
     // work through a list of possible names for a given attribute in order that the attribute names are listed. Parent optional
 
-    private Set<Name> getNamesForAttributeNamesAndParent(final List<String> attributeNames, final String attributeValue, Name parent) {
+    public Set<Name> getNamesForAttributeNamesAndParent(final List<String> attributeNames, final String attributeValue, Name parent) {
         if (parent != null) {
             for (String attributeName : attributeNames) {
                 Set<Name> names = getNamesForAttributeAndParent(attributeName, attributeValue, parent);
