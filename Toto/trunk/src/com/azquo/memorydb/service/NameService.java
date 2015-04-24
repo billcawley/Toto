@@ -150,23 +150,44 @@ public final class NameService {
         if (name == null || name.length() == 0) return null;
         String parentName = stringUtils.findParentFromList(name);
         String remainder = name;
-        Name parent = null;
+        Set<Name> possibleParents = null;
         // keep chopping away at the string until we find the closest parent we can
         // the point of all of this is to be able to ask for a name with the nearest parent but we can't just try and get it from the string directly e.g. get me WHsmiths on High street
         // we need to look from the top to distinguish high street in different towns
         while (parentName != null) {
-            parent = getNameByAttribute(azquoMemoryDBConnection, parentName, parent, attributeNames);
-            if (parent == null) { // parent was null, since we're just trying to find that stops us right here
+            remainder = name.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length()));
+            if (possibleParents==null){
+                possibleParents= azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parentName.replace(Name.QUOTE, ' ').trim(),null);
+             }else{
+                Set<Name>nextParents = new HashSet<Name>();
+                for (Name parent:possibleParents) {
+                    Name foundParent = getNameByAttribute(azquoMemoryDBConnection, parentName, parent, attributeNames);
+                    if (foundParent!=null){
+                        nextParents.add(foundParent);
+                    }
+                    possibleParents = nextParents;
+                }
+            }
+            if (possibleParents == null || possibleParents.size() == 0) { // parent was null, since we're just trying to find that stops us right here
                 return null;
             }
             // so chop off the last name, lastindex of moves backwards from the index
             // the reason for this is to deal with quotes, we could have said simply the substring take off the parent name length but we don't know about quotes or spaces after the comma
             // remainder is the rest of the string, could be london, ontario - Canada was taken off
-            remainder = name.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length()));
             parentName = stringUtils.findParentFromList(remainder);
         }
+        if (possibleParents==null){
+            return getNameByAttribute(azquoMemoryDBConnection, remainder, null, attributeNames );
 
-        return getNameByAttribute(azquoMemoryDBConnection, remainder, parent, attributeNames);
+        }else {
+            for (Name parent : possibleParents) {
+                Name found = getNameByAttribute(azquoMemoryDBConnection, remainder, parent, attributeNames);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     public void clearChildren(Name name) throws Exception {
@@ -201,6 +222,9 @@ public final class NameService {
 
         It should also recognise ""    "London, North", "Ontario", "Place"     should recognise that the 'North' is part of 'London, North'
 
+         */
+        /* NEW BEHAVIOUR APRIL 2015
+           If, on the first pass at finding a parent, more than one parent is found, it will see if it can find the whole string in any of the parent sets.
          */
 
 
