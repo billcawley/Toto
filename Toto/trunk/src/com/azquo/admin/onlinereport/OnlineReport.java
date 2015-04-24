@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Created by bill on 15/04/14.
+ *
  */
 public class OnlineReport extends StandardEntity {
 

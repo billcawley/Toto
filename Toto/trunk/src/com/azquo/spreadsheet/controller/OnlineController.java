@@ -99,7 +99,7 @@ public class OnlineController {
                 book.getInternalBook().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(REPORT_ID, loggedInConnection.getReportId());
-                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO, adminService);
+                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO);
                 bookUtils.populateBook(book);
                 request.setAttribute(BOOK, book);
                 if (loggedInConnection.getCurrentDBName() != null) {

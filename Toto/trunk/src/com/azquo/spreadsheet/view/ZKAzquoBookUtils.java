@@ -1,15 +1,12 @@
 package com.azquo.spreadsheet.view;
 
-import com.azquo.admin.AdminService;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Range;
@@ -18,9 +15,7 @@ import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.api.model.Validation;
 import org.zkoss.zss.model.*;
-import org.zkoss.zss.model.impl.HyperlinkImpl;
 
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -31,27 +26,18 @@ public class ZKAzquoBookUtils {
 
     public static final String azDataRegion = "az_DataRegion";
     public static final String azOptions = "az_Options";
-    public static final String azHeadings = "az_headings";
-    public static final String azInput = "az_Input";
-    public static final String azNext = "az_Next";
     public static final String OPTIONPREFIX = "!";
-
-
-    private static final ObjectMapper jacksonMapper = new ObjectMapper();
-
 
     final ValueService valueService;
     final SpreadsheetService spreadsheetService;
     final NameService nameService;
     final UserChoiceDAO userChoiceDAO;
-    final AdminService adminService;
 
-    public ZKAzquoBookUtils(ValueService valueService, SpreadsheetService spreadsheetService, NameService nameService, UserChoiceDAO userChoiceDAO, AdminService adminService) {
+    public ZKAzquoBookUtils(ValueService valueService, SpreadsheetService spreadsheetService, NameService nameService, UserChoiceDAO userChoiceDAO) {
         this.valueService = valueService;
         this.spreadsheetService = spreadsheetService;
         this.nameService = nameService;
         this.userChoiceDAO = userChoiceDAO;
-        this.adminService = adminService;
     }
 
 
@@ -69,15 +55,6 @@ public class ZKAzquoBookUtils {
         for (UserChoice uc : allChoices) {
             userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
         }
-        // I guess run through all sheets?
-
-        if (loggedInConnection.getReportId() == 1) {
-            for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
-                Sheet sheet = book.getSheetAt(sheetNumber);
-                loadAdminData(loggedInConnection, sheet);
-            }
-            //fill admin date
-        } else {
             for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
                 Sheet sheet = book.getSheetAt(sheetNumber);
                 // see if we can impose the user choices on the sheet
@@ -133,7 +110,6 @@ public class ZKAzquoBookUtils {
                 }*/
                 addValidation(namesForSheet, sheet, loggedInConnection);
             }
-        }
     }
 
     // taking the function from old AzquoBook and rewriting
@@ -166,7 +142,6 @@ public class ZKAzquoBookUtils {
             final List<Name> contextNames = new ArrayList<Name>();
             if (contextDescription != null) {
                 for (int rowIndex = contextDescription.getRow(); rowIndex <= contextDescription.getLastRow(); rowIndex++) {
-                    List<List<DataRegionHeading>> row = new ArrayList<List<DataRegionHeading>>();
                     for (int colIndex = contextDescription.getColumn(); colIndex <= contextDescription.getLastColumn(); colIndex++) {
                         SCell cell = sheet.getInternalSheet().getCell(rowIndex, colIndex);
                         String contextString = cell.getStringValue();
@@ -389,10 +364,9 @@ public class ZKAzquoBookUtils {
                     // was just a name expression, now we allow an attribute also. May be more in future.
                     if (cellString.startsWith(".")) {
                         // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
-                        row.add(Arrays.asList(new DataRegionHeading(cellString, true))); // we say that an attribuite heading defaults to writeable, it will defer to the name
+                        row.add(Collections.singletonList(new DataRegionHeading(cellString, true))); // we say that an attribuite heading defaults to writeable, it will defer to the name
                     } else {
                         try {
-
                             row.add(spreadsheetService.dataRegionHeadingsFromNames(nameService.parseQuery(loggedInConnection, cellString, loggedInConnection.getLanguages()), loggedInConnection));
                         } catch (Exception e) {
                             // todo, error handling??
@@ -460,188 +434,4 @@ public class ZKAzquoBookUtils {
             }
         }
     }
-
-
-    private void loadAdminData(LoggedInConnection loggedInConnection, Sheet sheet) throws Exception {
-        List<SName> namesForSheet = getNamesForSheet(sheet);
-        for (SName name : namesForSheet) {
-            // Old one was case insensitive - not so happy about this. Will allow it on the prefix
-            if (name.getName().toLowerCase().startsWith(azHeadings)) { // then we have a data region to deal with here
-                String region = name.getName().substring(azHeadings.length()).toLowerCase(); // might well be an empty string
-                fillAdminData(loggedInConnection, sheet, region, valueService, adminService);
-            }
-        }
-    }
-
-
-    public String fillAdminData(LoggedInConnection loggedInConnection, Sheet sheet, String region, ValueService valueService, AdminService adminService) throws Exception {
-        String data = null;
-        CellRegion headingsRange = getCellRegionForSheetAndName(sheet, "az_Headings" + region);
-        int headingsRow = headingsRange.getRow();
-        int headingsCol = headingsRange.getColumn();
-        int firstHeading = headingsRange.getColumn();
-        if (region.equals("data") && loggedInConnection.getNamesToSearch() != null) {
-            Map<Set<Name>, Set<Value>> shownValues = valueService.getSearchValues(loggedInConnection.getNamesToSearch());
-            loggedInConnection.setValuesFound(shownValues);
-            LinkedHashSet<Name> nameHeadings = spreadsheetService.getHeadings(shownValues);
-            int colNo = firstHeading + 1;
-            int rowNo = 0;
-            for (Name name : nameHeadings) {
-                sheet.getInternalSheet().getCell(headingsRow, headingsCol + colNo).setValue(name.getDefaultDisplayName());
-                colNo++;
-            }
-            for (Set<Name> names : shownValues.keySet()) {
-                rowNo++;
-                colNo = firstHeading;
-                sheet.getInternalSheet().getCell(headingsRow + rowNo, headingsCol + colNo).setValue(valueService.addValues(shownValues.get(names)));
-                colNo++;
-                for (Name name : nameHeadings) {
-                    for (Name valueName : names) {
-                        if (valueName.findAllParents().contains(name)) {
-                            sheet.getInternalSheet().getCell(headingsRow + rowNo, headingsCol + colNo).setValue(valueName.getDefaultDisplayName());
-                        }
-                    }
-                    colNo++;
-                }
-            }
-        } else {
-            if (region.equals("databases")) {
-                data = jacksonMapper.writeValueAsString(adminService.getDatabaseListForBusiness(loggedInConnection));
-            } else if (region.equals("uploads")) {
-                data = jacksonMapper.writeValueAsString(adminService.getUploadRecordsForDisplayForBusiness(loggedInConnection));
-            } else if (region.equals("users")) {
-                data = jacksonMapper.writeValueAsString(adminService.getUserListForBusiness(loggedInConnection));
-            } else if (region.equals("permissions")) {
-                data = jacksonMapper.writeValueAsString(adminService.getPermissionList(loggedInConnection));
-            } else if (region.equals("reports")) {
-                data = jacksonMapper.writeValueAsString(adminService.getReportList(loggedInConnection));
-            }
-            if (data == null) return "";
-            int lastHeading = headingsRange.getColumnCount();
-            int rowNo = 0;
-            //strip the square brackets
-            while (data.length() > 2) {
-                Map<String, String> pairs = new HashMap<String, String>();
-                data = readJsonData(data, pairs);
-                if (data.startsWith("error:")) return data;
-                rowNo++;
-                for (int colNo = firstHeading; colNo < lastHeading; colNo++) {
-                    String heading = sheet.getInternalSheet().getCell(headingsRow, headingsCol + colNo).getStringValue();
-                    SCell cell = sheet.getInternalSheet().getCell(headingsRow + rowNo, headingsCol + colNo);
-                    String link = null;
-                    int nameEnd = heading.indexOf(";");
-                    if (nameEnd > 0) {
-                        //this is all left over from older versions of the spreadsheet.....
-                        link = heading.substring(nameEnd + 1);
-                        heading = heading.substring(0, nameEnd);
-
-                        if (link.startsWith("href=")) {
-                            link = link.substring(5);
-//                        linkStart = "<a href=";
-                        } else if (link.startsWith("onclick=")) {
-                            link = link.substring(8);
-                            //linkStart = "<a href='#' onclick=";
-                        } else {
-                            link = null;
-                        }
-                    }
-                    String valFound = pairs.get(heading);
-                    if (link != null) {
-                        //new universal link...  REPORTS ONLY!
-                        String linkAddr = "/api/Online/?opcode=loadsheet&reportid=" + pairs.get("id");
-                        //String linkAddr = evaluateExpression(link.replace("“", "\"").replace("”", "\""), pairs);//excel uses fancy quotes
-                        cell.setHyperlink(new HyperlinkImpl(SHyperlink.HyperlinkType.URL, linkAddr, "link"));
-                    }
-                    if (valFound != null) {
-                        try {
-                            //if it can be parsed as a date, it is a date!
-                            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-                            Date date = df.parse(valFound);
-                            cell.setDateValue(date);
-                        } catch (Exception e) {
-
-
-                            cell.setValue(valFound);
-                        }
-                    }
-                }
-            }
-        }
-        return "";
-    }
-
-    public String readJsonData(String data, Map<String, String> pairs) throws Exception {
-        //should use Jackson for this,....
-        /*
-        final String json = "{}";
-       final ObjectMapper mapper = new ObjectMapper();
-       final MapType type = mapper.getTypeFactory().constructMapType(
-       Map.class, String.class, Object.class);
-       final Map<String, Object> data = mapper.readValue(json, type);
-        */
-        int pos = 1;
-        if (data.charAt(pos++) != '{') return jsonError(data, pos);
-        while (data.charAt(pos++) == '"') {
-            int endName = data.indexOf("\"", pos);
-            if (endName < 0) return jsonError(data, pos);
-            String jsonName = data.substring(pos, endName);
-            pos = endName + 1;
-            if (data.charAt(pos++) != ':') return jsonError(data, pos);
-            String jsonValue;
-            if (data.charAt(pos) != '"') {
-                int endLine = data.indexOf("}", pos);
-                endName = data.indexOf(",", pos);
-                if (endName < 0 || (endName > 0 && endLine < endName)) endName = endLine;
-                if (endName < 0) return jsonError(data, pos);
-                jsonValue = data.substring(pos, endName);
-                pos = endName;
-            } else {
-                pos++;
-                endName = data.indexOf("\"", pos);
-                if (endName < 0) return jsonError(data, pos);
-                jsonValue = data.substring(pos, endName);
-                pos = endName + 1;
-            }
-            pairs.put(jsonName, jsonValue);
-            if (data.charAt(pos) == '}') {
-                break;
-            }
-            if (data.charAt(pos++) != ',') return jsonError(data, pos);
-        }
-        return data.substring(pos + 1);
-
-
-    }
-
-    public String jsonError(String data, int pos) throws Exception {
-        int end = data.length();
-        if (pos < end - 30) {
-            end = pos + 30;
-        }
-        throw new Exception("error: json parsing problem at " + data.substring(pos, end));
-    }
-
-    private String evaluateExpression(String expression, Map<String, String> pairs) throws Exception {
-        //evaluates simple text expressions
-        StringBuilder sb = new StringBuilder();
-        int pos = 0;
-        while (pos < expression.length()) {
-            if (expression.charAt(pos) == '"') {
-                int endQuote = expression.indexOf("\"", ++pos);
-                if (endQuote < 0) throw new Exception("error: expression not understood " + expression);
-                sb.append(expression.substring(pos, endQuote));
-                pos = endQuote + 1;
-            } else if (expression.charAt(pos) == '&' || expression.charAt(pos) == ' ') {
-                pos++;
-            } else {
-                int endTerm = (expression + "&").indexOf("&", pos);
-                String val = pairs.get(expression.substring(pos, endTerm).trim());
-                if (val == null) throw new Exception("error: expression not understood " + expression);
-                sb.append(val);
-                pos = endTerm;
-            }
-        }
-        return sb.toString();
-    }
 }
-

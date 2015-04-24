@@ -12,5 +12,20 @@
 </head>
 <body>
 Manage Users
+<c:forEach items="${users}" var="user">
+  <tr>
+    <td>${user.id}</td>
+    <td>${user.startDate}</td>
+    <td>${user.endDate}</td>
+    <td>${user.businessId}</td>
+    <td>${user.email}</td>
+    <td>${user.name}</td>
+    <td>${user.status}</td>
+    <td>${user.password}</td>
+    <td>${user.salt}</td>
+  </tr>
+</c:forEach>
+</table>
+
 </body>
 </html>

@@ -1,5 +1,6 @@
 package com.azquo.admin.controller;
 
+import com.azquo.admin.AdminService;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.LoggedInConnection;
@@ -21,15 +22,9 @@ import javax.servlet.http.HttpServletRequest;
 @RequestMapping("/ManagePermissions")
 public class ManagePermissionsController {
     @Autowired
-    private NameService nameService;
-    @Autowired
-    private ValueService valueService;
-    @Autowired
-    private LoginService loginService;
-    @Autowired
-    // TODO : break up into separate functions
+    private AdminService adminService;
 
-    private static final Logger logger = Logger.getLogger(ManageReportsController.class);
+    private static final Logger logger = Logger.getLogger(ManagePermissionsController.class);
 
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
@@ -42,6 +37,7 @@ public class ManagePermissionsController {
         if (loggedInConnection == null || !loggedInConnection.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
+            model.put("permissions", adminService.getPermissionList(loggedInConnection));
             return "managepermissions";
         }
     }

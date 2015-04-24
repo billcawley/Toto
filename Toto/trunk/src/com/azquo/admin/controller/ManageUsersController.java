@@ -1,5 +1,6 @@
 package com.azquo.admin.controller;
 
+import com.azquo.admin.AdminService;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.LoggedInConnection;
@@ -21,15 +22,10 @@ import javax.servlet.http.HttpServletRequest;
 @RequestMapping("/ManageUsers")
 public class ManageUsersController {
     @Autowired
-    private NameService nameService;
-    @Autowired
-    private ValueService valueService;
-    @Autowired
-    private LoginService loginService;
-    @Autowired
+    AdminService adminService;
     // TODO : break up into separate functions
 
-    private static final Logger logger = Logger.getLogger(ManageReportsController.class);
+    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
 
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
@@ -42,6 +38,7 @@ public class ManageUsersController {
         if (loggedInConnection == null || !loggedInConnection.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
+            model.put("users", adminService.getUserListForBusiness(loggedInConnection));
             return "manageusers";
         }
     }

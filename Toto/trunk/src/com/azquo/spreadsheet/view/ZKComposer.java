@@ -110,7 +110,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
-                ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO, adminService);
+                ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO);
                 zkAzquoBookUtils.populateBook(newBook); // reload the data
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
             } catch (Exception e) {
@@ -122,7 +122,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onSheetSelect = #myzss")
     public void onSheetSelect(SheetSelectEvent sheetSelectEvent) {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
-        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO, adminService);
+        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO);
         Book book = sheetSelectEvent.getSheet().getBook();
         zkAzquoBookUtils.addValidation(zkAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),
                 (LoggedInConnection) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_CONNECTION));
