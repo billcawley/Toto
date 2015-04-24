@@ -121,9 +121,17 @@ I'll add better tracking of where an error is later
             } else {
                 modifiedStatement.append(statement.substring(lastEnd, matcher.start()));
             }
+            int matchStart = matcher.start();
             lastEnd = matcher.end();
-            quotedNameCache.add(matcher.group());
-            // it should never be more and it breaks our easy fixed length marker thing here
+            while (lastEnd < statement.length() - 2 && statement.substring(lastEnd,lastEnd + 2).equals(",`")) {
+                int nextQuote = statement.indexOf("`", lastEnd + 2);
+                if (nextQuote > 0) {
+                    matcher.find();//skip the next field
+                    lastEnd = nextQuote + 1;
+                }
+            }
+            quotedNameCache.add(statement.substring(matchStart, lastEnd));
+              // it should never be more and it breaks our easy fixed length marker thing here
             if (quotedNameCache.size() > 100) {
                 throw new Exception("More than 100 quoted names.");
             }
