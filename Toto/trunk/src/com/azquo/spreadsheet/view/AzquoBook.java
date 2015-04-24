@@ -1343,10 +1343,9 @@ public class AzquoBook {
                     for (String constant : constants) {
                         content += addOption(constant, origContent);
                     }
-                    for (Name name : choiceList) {
-                        if (name != null) {
-                            content += addOption(name.getDefaultDisplayName(), origContent);
-                        }
+                    List<String> individualNames = spreadsheetService.getIndividualNames(choiceList);
+                    for (String nameString : individualNames) {
+                               content += addOption(nameString, origContent);
                     }
                     content += "</select>";
                 } else {
