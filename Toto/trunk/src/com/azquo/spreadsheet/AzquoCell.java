@@ -14,13 +14,14 @@ import java.util.List;
  * It was a set here, not sure whether to use it ro not
  */
 public class AzquoCell {
-    public final boolean locked;
-    public final ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName;
-    public final List<DataRegionHeading> rowHeadings;
-    public final List<DataRegionHeading> columnHeadings;
-    public final List<Name> contexts;
-    public final String stringValue;
-    public final double doubleValue;
+    private final boolean locked;
+    private final ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName;
+    private final List<DataRegionHeading> rowHeadings;
+    private final List<DataRegionHeading> columnHeadings;
+    private final List<Name> contexts;
+    private String stringValue;
+    private double doubleValue;
+    private boolean changed;
 
     public AzquoCell(boolean locked, ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings, List<Name> contexts, String stringValue, double doubleValue) {
         this.locked = locked;
@@ -30,5 +31,51 @@ public class AzquoCell {
         this.contexts = contexts;
         this.stringValue = stringValue;
         this.doubleValue = doubleValue;
+    }
+
+    public boolean isLocked() {
+        return locked;
+    }
+
+    public ListOfValuesOrNamesAndAttributeName getListOfValuesOrNamesAndAttributeName() {
+        return listOfValuesOrNamesAndAttributeName;
+    }
+
+    public List<DataRegionHeading> getRowHeadings() {
+        return rowHeadings;
+    }
+
+    public List<DataRegionHeading> getColumnHeadings() {
+        return columnHeadings;
+    }
+
+    public List<Name> getContexts() {
+        return contexts;
+    }
+
+    public String getStringValue() {
+        return stringValue;
+    }
+
+    public void setStringValue(String stringValue) {
+        this.stringValue = stringValue;
+        changed = true;
+    }
+
+    public double getDoubleValue() {
+        return doubleValue;
+    }
+
+    public void setDoubleValue(double doubleValue) {
+        this.doubleValue = doubleValue;
+        changed = true;
+    }
+
+    public boolean isChanged() {
+        return changed;
+    }
+
+    public void setChanged(boolean changed) {
+        this.changed = changed;
     }
 }

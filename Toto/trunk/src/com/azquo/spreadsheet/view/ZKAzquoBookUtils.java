@@ -258,12 +258,12 @@ public class ZKAzquoBookUtils {
                 for (List<AzquoCell> rowCellValues : dataToShow) {
                     int col = displayDataRegion.getColumn();
                     for (AzquoCell cellValue : rowCellValues) {
-                        if (!cellValue.stringValue.isEmpty()) { // then something to set
+                        if (!cellValue.getStringValue().isEmpty()) { // then something to set
                             // the notable thing ehre is that ZK uses the object type to work out data type
-                            if (NumberUtils.isNumber(cellValue.stringValue)) {
-                                sheet.getInternalSheet().getCell(row, col).setValue(cellValue.doubleValue);// think that works . . .
+                            if (NumberUtils.isNumber(cellValue.getStringValue())) {
+                                sheet.getInternalSheet().getCell(row, col).setValue(cellValue.getDoubleValue());// think that works . . .
                             } else {
-                                sheet.getInternalSheet().getCell(row, col).setValue(cellValue.stringValue);// think that works . . .
+                                sheet.getInternalSheet().getCell(row, col).setValue(cellValue.getStringValue());// think that works . . .
                             }
                         }
                         col++;

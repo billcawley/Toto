@@ -6,6 +6,7 @@ import com.aspose.cells.Font;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
+import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
@@ -37,6 +38,7 @@ public class AzquoBook {
     private static final Logger logger = Logger.getLogger(AzquoBook.class);
     private ValueService valueService;
     private AdminService adminService;
+    private ImportService importService;
     private NameService nameService;
     private SpreadsheetService spreadsheetService;
     private UserChoiceDAO userChoiceDAO;
@@ -365,10 +367,10 @@ public class AzquoBook {
         for (List<AzquoCell> row : cellArray) {
             int col = 0;
             for (AzquoCell azquoCell : row) {
-                String val = azquoCell.stringValue;
+                String val = azquoCell.getStringValue();
                 if (val.equals("0.0")) val = "";
                 Cell currentCell = azquoCells.get(range.getFirstRow() + rowNo, range.getFirstColumn() + col);
-                if (azquoCell.locked) {
+                if (azquoCell.isLocked()) {
                     currentCell.getStyle().setLocked(true);
                 }
                 String existingCellVal = currentCell.getStringValue();
@@ -1629,6 +1631,16 @@ public class AzquoBook {
 
     public String changeValue(int row, int col, String value, LoggedInConnection loggedInConnection) {
         Cell cellChanged = azquoCells.get(row, col);
+        // edd adding a line to alter the relevant AzquoCell (perhaps a little confusing given the array of azquo cells above!)
+        // I need to find the region - I assume (!) azquobook knows which sheet it's on. I know this code is prone to null pointers, it will be replaced by ZKbook in not long
+        RegionInfo regionInfo = getRegionInfo(row,col);
+        if (loggedInConnection.getSentCells(regionInfo.region) != null){
+            AzquoCell azquoCell = loggedInConnection.getSentCells(regionInfo.region).get(row - regionInfo.row).get(col - regionInfo.col);
+            if (NumberUtils.isNumber(value)){
+                azquoCell.setDoubleValue(Double.parseDouble(value));
+            }
+            azquoCell.setStringValue(value);
+        }
         setCellValue(cellChanged, value);
         calculateAll();
         Map<Cell, Boolean> highlighted = new HashMap<Cell, Boolean>();
@@ -1862,7 +1874,7 @@ public class AzquoBook {
         }
         return sb;
     }
-/* save commented
+
     private String subsequent(String nameText) {
         //adds one on to any name (e.g.   Sale 001234  _> Sale 001235)
         int i;
@@ -1893,9 +1905,9 @@ public class AzquoBook {
         }
         return nameText;
     }
-    */
+
 // commenting azquobook saving for the moment, probably re enable on zkbook
-/*    public void saveData(LoggedInConnection loggedInConnection) throws Exception {
+    public void saveData(LoggedInConnection loggedInConnection) throws Exception {
         Map<String, String> newNames = new HashMap<String, String>();// if there are ranges starting 'az_next' then substitute these names for the latest number
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
@@ -1918,12 +1930,11 @@ public class AzquoBook {
                 if (getRange("az_rowheadings" + region) == null) {
                     importRangeFromScreen(loggedInConnection, region, newNames);
                 } else {
-                    StringBuilder sb = rangeToText(name.getRange(), false);
-                    spreadsheetService.saveData(loggedInConnection, region.toLowerCase(), sb.toString());
+                    spreadsheetService.saveData(loggedInConnection, region.toLowerCase());
                 }
             }
         }
-    }*/
+    }
 // executing parked for the mo due to saving not working
 /*    public void executeSheet(LoggedInConnection loggedInConnection) throws Exception {
             loadData(loggedInConnection);
@@ -2058,7 +2069,7 @@ public class AzquoBook {
         csvW.close();
         return tempName;
     }
-/* another save function commented
+
     private void importRangeFromScreen(LoggedInConnection loggedInConnection, String region, Map<String, String> newNames) throws Exception {
         String fileType = azquoSheet.getName();
         File temp = File.createTempFile("fromscreen", "." + fileType);
@@ -2076,7 +2087,7 @@ public class AzquoBook {
         if (file.getParentFile().mkdirs()) { // intellij said I should pay attention to the result of mkdirs, I did this
             wb.save(saveFileName, SaveFormat.XLSX);
         }
-    }*/
+    }
 
     public void convertRangeToCSV(final Worksheet sheet, final CsvWriter csvW, Range range, Map<String, String> newNames) throws Exception {
         Row row;

@@ -67,7 +67,9 @@ public class AdminService {
     @Autowired
     private OnlineReportDAO onlineReportDAO;
 
-    public void registerBusiness(final String email
+    // from the old excel sheet (I mean register in Excel, not a browser!) keeping for the mo as it may be useful in the new admin or for Azquo.com
+
+/*    public void registerBusiness(final String email
             , final String userName
             , final String password
             , final String businessName
@@ -111,7 +113,7 @@ public class AdminService {
                 , "Azquo account activation for " + businessName
                 , "<html>Dear " + user.getName() + "<br/><br/>Welcome to Azquo!<br/><br/>Your account key is : " + key + "</html>");
     }
-/*
+
     public String confirmKey(final String businessName, final String email, final String password, final String key, String spreadsheetName) throws Exception{
         final Business business = businessDao.findByName(businessName);
         if (business != null && business.getBusinessDetails().validationKey.equals(key)) {
@@ -258,62 +260,6 @@ public class AdminService {
     }
 
 
-    public void saveOnlineReportList(final LoggedInConnection loggedInConnection, List<OnlineReport> reportsSent) throws Exception {
-        for (OnlineReport reportSent : reportsSent) {
-            //when saving a report from an Excel data sheet, the system does not know the ID, so the report can be identified by name
-            //when saving from the admin workbook, the name may be changed, so check for duplicate names.
-            final int EXISTINGREPORT = -1;
-            reportSent.setBusinessId(loggedInConnection.getBusinessId());
-            if (reportSent.getDatabaseId() == 0) {
-                Database d = databaseDao.findForName(loggedInConnection.getBusinessId(), reportSent.getDatabase());
-                if (d != null) {
-                    reportSent.setDatabaseId(d.getId());
-                } else {
-                    throw new Exception("database not recognised " + reportSent.getDatabase());
-                }
-
-            }
-            OnlineReport existingReport = onlineReportDAO.findForDatabaseIdAndName(reportSent.getDatabaseId(), reportSent.getReportName());
-            if (reportSent.getUserStatus() == null) {
-                reportSent.setUserStatus("");
-            }
-            if (reportSent.getId() == EXISTINGREPORT) {
-                if (existingReport == null) {
-                    reportSent.setId(0);
-                } else {
-                    reportSent.setId(existingReport.getId());
-                }
-            }
-            if (existingReport != null && existingReport.getId() != reportSent.getId()) {
-                throw new Exception("there already exists a report named " + reportSent.getReportName() + " in the database " + databaseDao.findById(reportSent.getDatabaseId()).getName());
-            }
-
-            if (reportSent.getId() > 0) {
-                existingReport = onlineReportDAO.findById(reportSent.getId());
-                if (existingReport != null) {
-                    if (reportSent.getReportName().length() == 0) {
-                        onlineReportDAO.removeById(reportSent);
-
-                    } else {
-                        existingReport.setDatabaseId(reportSent.getDatabaseId());
-                        existingReport.setReportName(reportSent.getReportName());
-                        if (reportSent.getUserStatus() != null && reportSent.getUserStatus().length() > 0) {
-                            existingReport.setUserStatus(reportSent.getUserStatus());
-                        }
-                        if (reportSent.getFilename() != null && reportSent.getFilename().length() > 0) {
-                            existingReport.setFilename(reportSent.getFilename());
-                        }
-                        onlineReportDAO.store(existingReport);
-                    }
-                } else {
-                    throw new Exception("the report id " + reportSent.getId() + " does not exist");
-                }
-            } else {
-                onlineReportDAO.store(reportSent);
-            }
-        }
-    }
-
     public List<OnlineReport> getReportList(final LoggedInConnection loggedInConnection) {
         List<OnlineReport> reportList;
         if (loggedInConnection.getUser().isAdministrator()) {
@@ -338,57 +284,6 @@ public class AdminService {
             reportList.add(notFound);
         }
         return reportList;
-    }
-
-    public void setUserListForBusiness(final LoggedInConnection loggedInConnection, List<User> userList) throws Exception {
-        if (loggedInConnection.getUser().isAdministrator()) {
-            for (User user : userList) {
-                User existingUser = userDao.findByEmail(user.getEmail());
-                if (existingUser != null && existingUser.getBusinessId() != loggedInConnection.getBusinessId()) {
-                    throw new Exception("cannot modify/create users for a different business! (" + existingUser.getEmail() + ")");
-                }
-                if (user.getEndDate().getYear() > 129) {
-                    user.setEndDate(LocalDateTime.now().plusYears(10));
-                }
-                if (user.getId() > 0) {
-                    existingUser = userDao.findById(user.getId());
-                    if (existingUser == null) {
-                        throw new Exception("error: passed used with an Id I can't find");
-                    } else {
-                        if (user.getStartDate() != null) {
-                            existingUser.setStartDate(user.getStartDate());
-                        }
-                        if (user.getEndDate() != null) {
-                            existingUser.setEndDate(user.getEndDate());
-                        }
-                        if (user.getBusinessId() > 0) {
-                            existingUser.setBusinessId(user.getBusinessId());
-                        }
-                        if (user.getEmail() != null) {
-                            existingUser.setEmail(user.getEmail());
-                        }
-                        if (user.getName() != null) {
-                            existingUser.setName(user.getName());
-                        }
-                        if (user.getStatus() != null) {
-                            existingUser.setStatus(user.getStatus());
-                        }
-                        if (user.getPassword() != null && user.getPassword().length() > 0) {
-                            final String salt = shaHash(System.currentTimeMillis() + "salt");
-                            existingUser.setSalt(salt);
-                            existingUser.setPassword(encrypt(user.getPassword(), salt));
-                        }
-                        userDao.store(existingUser);
-                    }
-                } else { // a new one. Possibly need checks on required fields but for the moment just sort the password and store.
-                    if (user.getPassword() != null) {
-                        final String salt = shaHash(System.currentTimeMillis() + "salt");
-                        final User newUser = new User(0, LocalDateTime.now(), LocalDateTime.now(), loggedInConnection.getBusinessId(), user.getEmail(), user.getName(), user.getStatus(), encrypt(user.getPassword(), salt), salt);
-                        userDao.store(newUser);
-                    }
-                }
-            }
-        }
     }
 
     public List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInConnection loggedInConnection) {
@@ -422,33 +317,6 @@ public class AdminService {
         }
         return null;
     }
-
-    // there is a constraint on here,only allow relevant user or database ids! Otherwise could cause all sort of trouble
-    public void setPermissionListForBusiness(LoggedInConnection loggedInConnection, List<Permission> permissionList) throws Exception {
-        permissionDao.deleteForBusinessId(loggedInConnection.getBusinessId());
-        for (Permission permission : permissionList) {
-            if (permission.getEndDate().getYear() > 129) {
-                permission.setEndDate(LocalDateTime.now().plusYears(10));
-            }
-
-
-            Database d = databaseDao.findForName(loggedInConnection.getBusinessId(), permission.getDatabase());
-            if (d == null || d.getBusinessId() != loggedInConnection.getBusinessId()) {
-                throw new Exception("database name " + permission.getDatabase() + " is invalid");
-            }
-            permission.setDatabaseId(d.getId());
-            User u = userDao.findByEmail(permission.getEmail());
-            if (u == null || u.getBusinessId() != loggedInConnection.getBusinessId()) {
-                throw new Exception("user email " + permission.getEmail() + " is invalid");
-            }
-            nameService.decodeString(loggedInConnection, permission.getReadList(), loggedInConnection.getLanguages());
-            nameService.decodeString(loggedInConnection, permission.getWriteList(), loggedInConnection.getLanguages());
-
-            permission.setUserId(u.getId());
-            permissionDao.store(permission);
-        }
-    }
-
 
     public Name copyName(AzquoMemoryDBConnection toDB, Name name, Name parent, List<String> languages, Collection<Name> allowed, Map<Name, Name> dictionary) throws Exception {
         Name name2 = dictionary.get(name);
@@ -518,5 +386,9 @@ public class AdminService {
             valueService.storeValueWithProvenanceAndNames(lic2, valueService.addValues(showValues.get(nameValues)), names2);
         }
         lic2.persist();
+    }
+
+    public void storeReport(OnlineReport report){
+        onlineReportDAO.store(report);
     }
 }
