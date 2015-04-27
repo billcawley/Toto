@@ -979,7 +979,7 @@ public class AzquoBook {
         return sb.toString();
     }
 
-    public void fillVelocityOptionInfo(VelocityContext velocityContext) {
+    public void fillVelocityOptionInfo(LoggedInConnection loggedInConnection, VelocityContext velocityContext) {
         List<VRegion> vRegions = new ArrayList<VRegion>();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
@@ -1001,7 +1001,7 @@ public class AzquoBook {
         }
         velocityContext.put("hdays", highlightDays + "");
         velocityContext.put("menuregions", vRegions);
-        velocityContext.put("regions", getRegions(dataRegionPrefix).toString());//this is for javascript routines
+        velocityContext.put("regions", getRegions(loggedInConnection, dataRegionPrefix).toString());//this is for javascript routines
     }
 
     public void loadData(LoggedInConnection loggedInConnection) throws Exception {
@@ -1587,7 +1587,7 @@ public class AzquoBook {
 
     // todo : this manual JSON creating has to stop!
 
-    public StringBuilder getRegions(String regionNameStart) {
+    public StringBuilder getRegions(LoggedInConnection loggedInConnection, String regionNameStart) {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
         boolean firstRegion = true;
@@ -1599,6 +1599,11 @@ public class AzquoBook {
                 } else {
                     sb.append(",");
                 }
+
+;
+                    loggedInConnection.getSentCells(name.getText().substring(dataRegionPrefix.length()));
+
+
                 // edd zapped the locks, I wonder if this will cause a problem?
                 Range dataRange = name.getRange();
                 sb.append("{").append(jsonValue("name", name.getText().substring(regionNameStart.length()).toLowerCase(), false))
@@ -1606,7 +1611,43 @@ public class AzquoBook {
                         .append(jsonValue("left", dataRange != null ? dataRange.getFirstColumn() : 0))
                         .append(jsonValue("bottom", dataRange != null ? dataRange.getFirstRow() + dataRange.getRowCount() - 1 : 0))
                         .append(jsonValue("right", dataRange != null ? dataRange.getFirstColumn() + dataRange.getColumnCount() - 1 : 0))
+                        .append(jsonLockRange("locks", loggedInConnection.getSentCells(name.getText().substring(dataRegionPrefix.length()))))
                         .append("}");
+            }
+        }
+        sb.append("]");
+        return sb;
+    }
+    // skip the middle man I don't want to make a string array then convert to JSON, this should do the trick
+
+        private StringBuilder jsonLockRange(String name, List<List<AzquoCell>> azquoCells) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(",\"").append(name).append("\":[");
+        if (azquoCells != null) {
+            boolean firstRow = true;
+            for (List<AzquoCell> cells : azquoCells) {
+                boolean firstCol = true;
+                if (firstRow) {
+                    firstRow = false;
+                } else {
+                    sb.append(",");
+
+                }
+                sb.append("[");
+                for (AzquoCell cell : cells) {
+                    if (firstCol) {
+                        firstCol = false;
+                    } else {
+                        sb.append(",");
+                    }
+                    if (cell.isLocked()){
+                        sb.append("\"LOCKED\"");
+                    } else {
+                        sb.append("\"\"");
+                    }
+                }
+                sb.append("]");
+
             }
         }
         sb.append("]");

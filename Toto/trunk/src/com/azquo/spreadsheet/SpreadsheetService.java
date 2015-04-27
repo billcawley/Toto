@@ -248,7 +248,7 @@ public class SpreadsheetService {
         head.append("</style>\n");
         //velocityContext.put("script",readFile("online.js").toString());
         //velocityContext.put("topmenu",createTopMenu(loggedInConnection).toString());
-        azquoBook.fillVelocityOptionInfo(velocityContext);
+        azquoBook.fillVelocityOptionInfo(loggedInConnection, velocityContext);
         velocityContext.put("tabs", tabs.toString());
         velocityContext.put("topmessage", message);
         if (onlineReport.getId() == 1 && spreadsheetName.equalsIgnoreCase("reports")) {
