@@ -1011,7 +1011,11 @@ public class AzquoBook {
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
                 String regionName = name.getText().substring(dataRegionPrefix.length()).toLowerCase();
                 long regStart = System.currentTimeMillis();
-                fillRegion(loggedInConnection, regionName);
+                try {
+                    fillRegion(loggedInConnection, regionName);
+                }catch (Exception e){
+                    //TODO handle 'cannot resolve reference to ....
+                }
                 System.out.println("fillregion took " + (System.currentTimeMillis() - regStart) + " millisecs");
                 regStart = System.currentTimeMillis();
                 calculateAll();
