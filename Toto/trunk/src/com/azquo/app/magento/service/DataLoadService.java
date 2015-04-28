@@ -225,47 +225,49 @@ public final class DataLoadService {
         //now start the real work - categories first
         Map<String, Name> azquoCategoriesFound = new HashMap<String, Name>();
         Map<String, Name> azquoProductsFound = new HashMap<String, Name>();
-        List<String> languages = new ArrayList<String>();
-        List<String> defaultLanguage = new ArrayList<String>();
+        Map<String, Name> azquoCustomersFound = new HashMap<String, Name>();
+         List<String> defaultLanguage = new ArrayList<String>();
         defaultLanguage.add(Name.DEFAULT_DISPLAY_NAME);
+        Map<String,String> categoryNames = new HashMap<String, String>();
+        //name the categories
+         for (Map<String, String> attributeRow : tableMap.get("catalog_category_entity_varchar")) { // should (!) have us looking in teh right place
+            //only picking the name from all the category attributes
+            if (attributeRow.get("attribute_id").equals(categoryNameId)) {
+                categoryNames.put(attributeRow.get("entity_id"), attributeRow.get("value"));
+            }
+        }
+        tableMap.remove("catalog_category_entity_varchar");
         for (Map<String, String> entityTypeRecord : tableMap.get("catalog_category_entity")) {
-            //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1`
+            //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1` becomes '`bottom`,`higher`,`top`
             StringTokenizer pathBits = new StringTokenizer(entityTypeRecord.get("path"), "/");
             String path = "";
             while (pathBits.hasMoreTokens()) {
-                path = "`" + pathBits.nextToken() + "`," + path;
+                String catNo = pathBits.nextToken();
+                String catName = categoryNames.get(catNo);
+                if (catName != null){
+                    path = "`" + catName + "`," + path;
+                }else{
+                    System.out.println("we have a category with no name!");
+                    path = "`" + catNo + "`," + path;
+                }
             }
-            languages.add("MagentoCategoryID");
-            Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, languages);
+             //TODO consider what might happen if importing categories from two different databases - don't do it!
+            Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, defaultLanguage);
 
             azquoCategoriesFound.put(entityTypeRecord.get("entity_id"), categoryName);
             allCategories.addChildWillBePersisted(categoryName);
         }
         tableMap.remove("catalog_category_entity");
-        //now name the categories
-        for (Map<String, String> attributeRow : tableMap.get("catalog_category_entity_varchar")) { // should (!) have us looking in teh right place
-            //only picking the name from all the category attributes
-            if (attributeRow.get("attribute_id").equals(categoryNameId)) {
-                // can return the name
-                nameService.findByName(azquoMemoryDBConnection, attributeRow.get("entity_id"));
-                if (azquoCategoriesFound.get(attributeRow.get("entity_id")) == null) {
-                    System.out.println("Entity id linked in catalog_category_entity_varchar that doesn't exist in catalog_category_entity : " + attributeRow.get("entity_id"));
-                } else {
-                    azquoCategoriesFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attributeRow.get("value"));
-                }
-            }
-        }
-        tableMap.remove("catalog_category_entity_varchar");
-        languages.clear();
-        languages.add("MagentoProductID");
+        List<String> languages = new ArrayList<String>();
+
+        languages.add("SKU");
         List<String> productLanguages = new ArrayList<String>(languages);
         for (Map<String, String> entityRow : tableMap.get("catalog_product_entity")) {
-            Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + entityRow.get("entity_id"), allSKUs, true, languages);
+            Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("sku"), allSKUs, true, languages);
             allProducts.addChildWillBePersisted(magentoName);
             if (!magentoName.findAllParents().contains(productCategories) && !magentoName.findAllParents().contains(uncategorisedProducts)) {
                 uncategorisedProducts.addChildWillBePersisted(magentoName);
             }
-            magentoName.setAttributeWillBePersisted("SKU", entityRow.get("sku"));
             azquoProductsFound.put(entityRow.get("entity_id"), magentoName);
         }
         tableMap.remove("catalog_product_entity");
@@ -393,11 +395,26 @@ public final class DataLoadService {
                 }
                 bundlePrices = "";
                 currentParent = parentId;
-                bundleName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + parentId, allSKUs, true, languages);
+                bundleName = azquoProductsFound.get(parentId);
+                if (bundleName==null){
+                    //this should not happen!
+                    bundleName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + parentId, allSKUs, true, languages);
+                    azquoProductsFound.put(parentId,bundleName);
+                    allProducts.addChildWillBePersisted(bundleName);
+
+
+                }
 
             }
             String childId = attVals.get("product_id");
-            Name childName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + childId, allSKUs, true, languages);
+            Name childName = azquoProductsFound.get(childId);
+            if (childName == null){
+                //this should not happen!
+                childName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + childId, allSKUs, true, languages);
+                azquoProductsFound.put(childId, childName);
+                allProducts.addChildWillBePersisted(childName);
+
+            }
             String sKU = childName.getAttribute("SKU");
             String price = attVals.get("selection_price_value");
             if (bundlePrices.length() > 0) bundlePrices += ",";
@@ -687,7 +704,7 @@ public final class DataLoadService {
         Name allCountriesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All countries", customersName, false, languages);
         Name allGroupsName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All customer groups", customersName, false, languages);
         languages.clear();
-        languages.add("MagentoCustomerID");
+        languages.add("email");
         counter = 0;
         Name notLoggedIn = null;
         System.out.print("Orders and shipping ");
@@ -797,12 +814,13 @@ public final class DataLoadService {
             }
         }
 
-        System.out.println("custmer info");
+        System.out.println("customer info");
         for (Map<String, String> customerRec : tableMap.get("customer_entity")) {
             String customerId = customerRec.get("entity_id");
             String email = customerRec.get("email");
-            Name customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Customer " + customerId, allCustomersName, true, languages);
-            customer.setAttributeWillBePersisted("email", email);
+            Name customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, email, allCustomersName, true, languages);
+            azquoCustomersFound.put(customerId, customer);
+            //customer.setAttributeWillBePersisted("email", email);
             String groupId = customerRec.get("group_id");
             if (groupId != null) {
                 Name group = customerGroups.get(groupId);
@@ -826,7 +844,7 @@ public final class DataLoadService {
                     attFound = "Last name";
                 }
                 String customerId = attributeRow.get("entity_id");
-                Name customer = nameService.findByName(azquoMemoryDBConnection, "Customer " + customerId, languages);
+                Name customer = azquoCustomersFound.get(customerId);
                 if (customer != null) {
                     customer.setAttributeWillBePersisted(attFound, valFound);
                     String firstName = customer.getAttribute("First name");
@@ -849,7 +867,11 @@ public final class DataLoadService {
         if (tableMap.get("customer_address_entity") != null) {
             Map<String, Name> addressMap = new HashMap<String, Name>();
             for (Map<String, String> addressRec : tableMap.get("customer_address_entity")) {
-                Name customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Customer " + addressRec.get("parent_id"), allCustomersName, true, languages);
+                Name customer = azquoCustomersFound.get(addressRec.get("parent_id"));
+                if (customer==null){
+                    customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Customer " + addressRec.get("parent_id"), allCustomersName, true, languages);
+                    azquoCustomersFound.put(addressRec.get("parent_id"), customer);
+                }
 
                 addressMap.put(addressRec.get("entity_id"), customer);
 
