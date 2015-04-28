@@ -821,49 +821,6 @@
   <script type='text/javascript' src='https://www.azquo.com/wp-content/themes/stylish-v1.2.2/scripts/custom.js?ver=3.9.5'></script>
   <script type='text/javascript' src='https://www.azquo.com/wp-content/themes/stylish-v1.2.2/scripts/plugins.js?ver=3.9.5'></script>
   <script type='text/javascript' src='https://www.azquo.com/wp-content/plugins/azquodc/js/azquodc.js?ver=3.9.5'></script>
-  <script type="text/javascript">
-    (function() {
-      var request, b = document.body, c = 'className', cs = 'customize-support', rcs = new RegExp('(^|\\s+)(no-)?'+cs+'(\\s+|$)');
-
-      request = true;
-
-      b[c] = b[c].replace( rcs, ' ' );
-      b[c] += ( window.postMessage && request ? ' ' : ' no-' ) + cs;
-    }());
-  </script>
-  <div id="wpadminbar" class="nojq nojs" role="navigation">
-    <a class="screen-reader-shortcut" href="#wp-toolbar" tabindex="1">Skip to toolbar</a>
-    <div class="quicklinks" id="wp-toolbar" role="navigation" aria-label="Top navigation toolbar." tabindex="0">
-      <ul id="wp-admin-bar-root-default" class="ab-top-menu">
-        <li id="wp-admin-bar-wp-logo" class="menupop"><a class="ab-item"  aria-haspopup="true" href="https://www.azquo.com/wp-admin/about.php" title="About WordPress"><span class="ab-icon"></span></a><div class="ab-sub-wrapper"><ul id="wp-admin-bar-wp-logo-default" class="ab-submenu">
-          <li id="wp-admin-bar-about"><a class="ab-item"  href="https://www.azquo.com/wp-admin/about.php">About WordPress</a>		</li></ul><ul id="wp-admin-bar-wp-logo-external" class="ab-sub-secondary ab-submenu">
-          <li id="wp-admin-bar-wporg"><a class="ab-item"  href="https://wordpress.org/">WordPress.org</a>		</li>
-          <li id="wp-admin-bar-documentation"><a class="ab-item"  href="http://codex.wordpress.org/">Documentation</a>		</li>
-          <li id="wp-admin-bar-support-forums"><a class="ab-item"  href="https://wordpress.org/support/">Support Forums</a>		</li>
-          <li id="wp-admin-bar-feedback"><a class="ab-item"  href="https://wordpress.org/support/forum/requests-and-feedback">Feedback</a>		</li></ul></div>		</li>
-        <li id="wp-admin-bar-site-name" class="menupop"><a class="ab-item"  aria-haspopup="true" href="https://www.azquo.com/wp-admin/">Azquo Reports</a><div class="ab-sub-wrapper"><ul id="wp-admin-bar-site-name-default" class="ab-submenu">
-          <li id="wp-admin-bar-dashboard"><a class="ab-item"  href="https://www.azquo.com/wp-admin/">Dashboard</a>		</li></ul><ul id="wp-admin-bar-appearance" class="ab-submenu">
-          <li id="wp-admin-bar-themes"><a class="ab-item"  href="https://www.azquo.com/wp-admin/themes.php">Themes</a>		</li>
-          <li id="wp-admin-bar-customize" class="hide-if-no-customize"><a class="ab-item"  href="https://www.azquo.com/wp-admin/customize.php?url=http%3A%2F%2Fwww.azquo.com%2Flogon-to-azquo%2F">Customize</a>		</li>
-          <li id="wp-admin-bar-widgets"><a class="ab-item"  href="https://www.azquo.com/wp-admin/widgets.php">Widgets</a>		</li>
-          <li id="wp-admin-bar-menus"><a class="ab-item"  href="https://www.azquo.com/wp-admin/nav-menus.php">Menus</a>		</li></ul></div>		</li>
-        <li id="wp-admin-bar-updates"><a class="ab-item"  href="https://www.azquo.com/wp-admin/update-core.php" title="3 Plugin Updates, 3 Theme Updates"><span class="ab-icon"></span><span class="ab-label">6</span><span class="screen-reader-text">3 Plugin Updates, 3 Theme Updates</span></a>		</li>
-        <li id="wp-admin-bar-comments"><a class="ab-item"  href="https://www.azquo.com/wp-admin/edit-comments.php" title="0 comments awaiting moderation"><span class="ab-icon"></span><span id="ab-awaiting-mod" class="ab-label awaiting-mod pending-count count-0">0</span></a>		</li>
-        <li id="wp-admin-bar-new-content" class="menupop"><a class="ab-item"  aria-haspopup="true" href="https://www.azquo.com/wp-admin/post-new.php" title="Add New"><span class="ab-icon"></span><span class="ab-label">New</span></a><div class="ab-sub-wrapper"><ul id="wp-admin-bar-new-content-default" class="ab-submenu">
-          <li id="wp-admin-bar-new-post"><a class="ab-item"  href="https://www.azquo.com/wp-admin/post-new.php">Post</a>		</li>
-          <li id="wp-admin-bar-new-media"><a class="ab-item"  href="https://www.azquo.com/wp-admin/media-new.php">Media</a>		</li>
-          <li id="wp-admin-bar-new-page"><a class="ab-item"  href="https://www.azquo.com/wp-admin/post-new.php?post_type=page">Page</a>		</li>
-          <li id="wp-admin-bar-new-portfolio"><a class="ab-item"  href="https://www.azquo.com/wp-admin/post-new.php?post_type=portfolio">Portfolio</a>		</li>
-          <li id="wp-admin-bar-new-testimonials"><a class="ab-item"  href="https://www.azquo.com/wp-admin/post-new.php?post_type=testimonials">Testimonial</a>		</li>
-          <li id="wp-admin-bar-new-user"><a class="ab-item"  href="https://www.azquo.com/wp-admin/user-new.php">User</a>		</li></ul></div>		</li>
-        <li id="wp-admin-bar-edit"><a class="ab-item"  href="https://www.azquo.com/wp-admin/post.php?post=2281&#038;action=edit">Edit Page</a>		</li></ul><ul id="wp-admin-bar-top-secondary" class="ab-top-secondary ab-top-menu">
-      <li id="wp-admin-bar-search" class="admin-bar-search"><div class="ab-item ab-empty-item" tabindex="-1"><form action="https://www.azquo.com/" method="get" id="adminbarsearch"><input class="adminbar-input" name="s" id="adminbar-search" type="text" value="" maxlength="150" /><input type="submit" class="adminbar-button" value="Search"/></form></div>		</li>
-      <li id="wp-admin-bar-my-account" class="menupop with-avatar"><a class="ab-item"  aria-haspopup="true" href="https://www.azquo.com/wp-admin/profile.php" title="My Account">Howdy, Bill Cawley<img alt='' src='http://0.gravatar.com/avatar/20709eaf4e6d76ea592d79ac3fcfd86a?s=26&amp;d=%2Fwp-content%2Fthemes%2Fnoisy%2Fimages%2Fdefault_avatar.jpg&amp;r=G' class='avatar avatar-26 photo' height='26' width='26' /></a><div class="ab-sub-wrapper"><ul id="wp-admin-bar-user-actions" class="ab-submenu">
-        <li id="wp-admin-bar-user-info"><a class="ab-item" tabindex="-1" href="https://www.azquo.com/wp-admin/profile.php"><img alt='' src='http://0.gravatar.com/avatar/20709eaf4e6d76ea592d79ac3fcfd86a?s=64&amp;d=%2Fwp-content%2Fthemes%2Fnoisy%2Fimages%2Fdefault_avatar.jpg&amp;r=G' class='avatar avatar-64 photo' height='64' width='64' /><span class='display-name'>Bill Cawley</span><span class='username'>bill</span></a>		</li>
-        <li id="wp-admin-bar-edit-profile"><a class="ab-item"  href="https://www.azquo.com/wp-admin/profile.php">Edit My Profile</a>		</li>
-        <li id="wp-admin-bar-logout"><a class="ab-item"  href="https://www.azquo.com/wp-login.php?action=logout&#038;_wpnonce=60706540d2">Log Out</a>		</li></ul></div>		</li></ul>			</div>
-    <a class="screen-reader-shortcut" href="https://www.azquo.com/wp-login.php?action=logout&#038;_wpnonce=60706540d2">Log Out</a>
-  </div>
 
 
 </body>
