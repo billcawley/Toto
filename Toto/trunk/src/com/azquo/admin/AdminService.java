@@ -177,12 +177,13 @@ public class AdminService {
 
     public void createUser(final String email
             , final String userName
+            , final LocalDateTime endDate
             , final String status
             , final String password
             , final LoggedInConnection loggedInConnection) throws Exception {
         if (loggedInConnection.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
-            final User user = new User(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), loggedInConnection.getBusinessId(), email, userName, status, encrypt(password, salt), salt);
+            final User user = new User(0, LocalDateTime.now(), endDate, loggedInConnection.getBusinessId(), email, userName, status, encrypt(password, salt), salt);
             userDao.store(user);
             return;
         } else {
@@ -390,5 +391,24 @@ public class AdminService {
 
     public void storeReport(OnlineReport report){
         onlineReportDAO.store(report);
+    }
+
+    public void deleteUserById(int userId, LoggedInConnection loggedInConnection) {
+        User user = userDao.findById(userId);
+        if (user != null && loggedInConnection.getBusinessId() == user.getBusinessId()){
+            userDao.removeById(user);
+        }
+    }
+
+    public User getUserById(int userId, LoggedInConnection loggedInConnection) {
+        User user = userDao.findById(userId);
+        if (user != null && loggedInConnection.getBusinessId() == user.getBusinessId()){
+            return user;
+        }
+        return null;
+    }
+
+    public void storeUser(User user){
+        userDao.store(user);
     }
 }
