@@ -63,9 +63,6 @@ public class ManageUsersController {
 
             if (editId != null && NumberUtils.isDigits(editId)){
                 User toEdit = adminService.getUserById(Integer.parseInt(editId), loggedInConnection);
-                if (toEdit == null){
-                    toEdit = new User(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), loggedInConnection.getBusinessId(), "","","","","");// dummy for editing
-                }
                 // ok check to see if data was submitted
                 StringBuilder error = new StringBuilder();
                 if (submit != null){
@@ -84,12 +81,12 @@ public class ManageUsersController {
                     if (name == null || name.isEmpty()){
                         error.append("Name required<br/>");
                     }
-                    if (toEdit.getId() == 0 && (password == null || password.isEmpty())){
+                    if (toEdit == null && (password == null || password.isEmpty())){
                         error.append("Password required<br/>");
                     }
                     if (error.length() == 0){
                         // then store, it might be new
-                        if (toEdit.getId() == 0){
+                        if (toEdit == null){
                             // Have to use  alocadate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
                             adminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInConnection);
                         } else {
@@ -115,11 +112,15 @@ public class ManageUsersController {
                     model.put("name", name);
                     model.put("status", status);
                 } else {
-                    model.put("id", toEdit.getId());
-                    model.put("endDate", formatter.format(toEdit.getEndDate()));
-                    model.put("email", toEdit.getEmail());
-                    model.put("name", toEdit.getName());
-                    model.put("status", toEdit.getStatus());
+                    if (toEdit != null){
+                        model.put("id", toEdit.getId());
+                        model.put("endDate", formatter.format(toEdit.getEndDate()));
+                        model.put("email", toEdit.getEmail());
+                        model.put("name", toEdit.getName());
+                        model.put("status", toEdit.getStatus());
+                    } else {
+                        model.put("id", "0");
+                    }
                 }
                 return "edituser";
             }

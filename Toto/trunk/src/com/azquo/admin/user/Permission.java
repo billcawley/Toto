@@ -1,6 +1,8 @@
 package com.azquo.admin.user;
 
 import com.azquo.admin.StandardEntity;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -15,19 +17,10 @@ public final class Permission extends StandardEntity {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private int userId;
-    int databaseId;
+    private int databaseId;
     // these two may become arrays later
-    String readList;
-    String writeList;
-    // used by the excel not the database. Easiest to put here
-    String database;
-    String email;
-
-    // the normal use constructor, does not use the database and email fields which are there for the excel and are not persisted
-
-    public Permission(int id, LocalDateTime startDate, LocalDateTime endDate, int userId, int databaseId, String readList, String writeList) {
-        this(id, startDate, endDate, userId, databaseId, readList, writeList, null, null);
-    }
+    private String readList;
+    private String writeList;
 
     @JsonCreator
     public Permission(@JsonProperty("id") int id
@@ -37,8 +30,7 @@ public final class Permission extends StandardEntity {
             , @JsonProperty("databaseId") int databaseId
             , @JsonProperty("readList") String readList
             , @JsonProperty("writeList") String writeList
-            , @JsonProperty("database") String database
-            , @JsonProperty("email") String email) {
+) {
         this.id = id;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -46,8 +38,6 @@ public final class Permission extends StandardEntity {
         this.databaseId = databaseId;
         this.readList = readList;
         this.writeList = writeList;
-        this.database = database;
-        this.email = email;
     }
 
     public LocalDateTime getStartDate() {
@@ -98,22 +88,6 @@ public final class Permission extends StandardEntity {
         this.writeList = writeList;
     }
 
-    public String getDatabase() {
-        return database;
-    }
-
-    public void setDatabase(String database) {
-        this.database = database;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
     @Override
     public String toString() {
         return "Permission{" +
@@ -128,4 +102,79 @@ public final class Permission extends StandardEntity {
     }
 
 
+    /**
+     * Created by cawley on 29/04/15.
+     */
+    public static class PermissionForDisplay {
+
+        private final int id;
+        private final LocalDateTime startDate;
+        private final LocalDateTime endDate;
+        private final int userId;
+        private final int databaseId;
+        // these two may become arrays later
+        private final String readList;
+        private final String writeList;
+        private final String databaseName;
+        private final String userEmail;
+
+        // todo - maybe move the DAO calls out?
+        public PermissionForDisplay(Permission permission, DatabaseDAO databaseDAO, UserDAO userDAO){
+            this.id = permission.getUserId();
+            this.startDate = permission.getStartDate();
+            this.endDate = permission.getEndDate();
+            this.userId = permission.getUserId();
+            this.databaseId = permission.getDatabaseId();
+            this.readList = permission.getReadList();
+            this.writeList = permission.getWriteList();
+            Database database = databaseDAO.findById(databaseId);
+            if (database != null){
+                databaseName = database.getName();
+            } else {
+                databaseName = null;
+            }
+            User user = userDAO.findById(userId);
+            if (user != null){
+                userEmail = user.getEmail();
+            } else {
+                userEmail = null;
+            }
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public LocalDateTime getStartDate() {
+            return startDate;
+        }
+
+        public LocalDateTime getEndDate() {
+            return endDate;
+        }
+
+        public int getUserId() {
+            return userId;
+        }
+
+        public int getDatabaseId() {
+            return databaseId;
+        }
+
+        public String getReadList() {
+            return readList;
+        }
+
+        public String getWriteList() {
+            return writeList;
+        }
+
+        public String getDatabaseName() {
+            return databaseName;
+        }
+
+        public String getUserEmail() {
+            return userEmail;
+        }
+    }
 }

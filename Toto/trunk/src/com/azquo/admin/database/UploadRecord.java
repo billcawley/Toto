@@ -79,7 +79,7 @@ public final class UploadRecord extends StandardEntity {
                 '}';
     }
 
-    // convenience object for returning JSON to Excel, one can build a list of these and let Jackson serialise it
+    // Saw for JSON, now JSTL, neeed the getters
 
     public static class UploadRecordForDisplay {
         public final Date date;
@@ -98,6 +98,34 @@ public final class UploadRecord extends StandardEntity {
             fileName = ur.fileName;
             fileType = ur.fileType;
             comments = ur.comments;
+        }
+
+        public Date getDate() {
+            return date;
+        }
+
+        public String getBusinessName() {
+            return businessName;
+        }
+
+        public String getDatabaseName() {
+            return databaseName;
+        }
+
+        public String getUserName() {
+            return userName;
+        }
+
+        public String getFileName() {
+            return fileName;
+        }
+
+        public String getFileType() {
+            return fileType;
+        }
+
+        public String getComments() {
+            return comments;
         }
     }
 }

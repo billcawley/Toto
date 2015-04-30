@@ -12,20 +12,38 @@
     <title>Manage Permissions</title>
 </head>
 <body>
-Manage Permissions
-<c:forEach items="${permissions}" var="permission">
+<body>
+Manage Permissions - todo : add pagination<br/>
+<a href="/api/ManagePermissions?editId=0">New</a>
+<br/>
+<table>
   <tr>
-    <td>${permission.id}</td>
-    <td>${permission.startDate}</td>
-    <td>${permission.endDate}</td>
-    <td>${permission.userId}</td>
-    <td>${permission.databaseId}</td>
-    <td>${permission.readList}</td>
-    <td>${permission.writeList}</td>
-    <td>${permission.database}</td>
-    <td>${permission.email}</td>
+    <td>Start Date</td>
+    <td>End Date</td>
+    <td>Read List</td>
+    <td>Write List</td>
+    <td>Database</td>
+    <td>Email</td>
+    <td></td>
+    <!-- password and salt pointless here -->
   </tr>
-</c:forEach>
+    <c:forEach items="${permissions}" var="permission">
+      <tr>
+        <td>${permission.startDate}</td>
+        <td>${permission.endDate}</td>
+        <td>${permission.readList}</td>
+        <td>${permission.writeList}</td>
+        <td>${permission.databaseName}</td>
+        <td>${permission.userEmail}</td>
+      <td><a href="/api/ManagePermissions?editId=${permission.id}">Edit</a>&nbsp;<a href="/api/ManagePermissions?deleteId=${permission.id}" onclick="return confirm('Are you sure?')">Delete</a></td>
+    </tr>
+  </c:forEach>
 </table>
+
+
+
+
+
+
 </body>
 </html>
