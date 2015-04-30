@@ -85,7 +85,7 @@ public final class DataLoadService {
     }
 
 
-    public String findRequiredTables(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
+    public String findRequiredTables(AzquoMemoryDBConnection azquoMemoryDBConnection, String remoteAddress) throws Exception {
         String requiredTables = defaultData().replace("$starttime", "");
         if (nameService.findByName(azquoMemoryDBConnection, "all years") == null) {
             String magentoSetupFile = spreadsheetService.getHomeDir() + "/databases/Magen/setup/magentosetup.xlsx";
@@ -95,10 +95,10 @@ public final class DataLoadService {
         }
 
         String date = "never";
+        String lastUpdate = findLastUpdate(azquoMemoryDBConnection, remoteAddress);
         Name order = nameService.findByName(azquoMemoryDBConnection, "order");
         if (order != null) {
-            String lastUpdate = order.getAttribute(LATEST_UPDATE);
-            if (lastUpdate != null) {
+             if (lastUpdate != null) {
                 date = lastUpdate;
             }
             requiredTables = order.getAttribute(REQUIRED_TABLES);
@@ -110,13 +110,13 @@ public final class DataLoadService {
         return requiredTables;
     }
 
-    public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, InputStream data) throws Exception {
-        loadData(azquoMemoryDBConnection, data != null ? new BufferedReader(new InputStreamReader(data, StandardCharsets.UTF_8)) : null);
+    public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, InputStream data, String remoteAddress) throws Exception {
+        loadData(azquoMemoryDBConnection, data != null ? new BufferedReader(new InputStreamReader(data, StandardCharsets.UTF_8)) : null, remoteAddress);
     }
 
     // todo : since this is a single thread maybe use koloboke maps? I guess if it's going slowly. Also NIO options? We are on Java 8 now . . .
 
-    public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, BufferedReader br) throws Exception {
+    public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, BufferedReader br, String remoteAddress) throws Exception {
         Map<String, List<Map<String, String>>> tableMap = new HashMap<String, List<Map<String, String>>>();
         if (br == null) {
             br = new BufferedReader(new FileReader("/home/bill/Sear/magento/testdata_dump.txt"));
@@ -886,7 +886,7 @@ public final class DataLoadService {
 
         Name order = nameService.findByName(azquoMemoryDBConnection, "order", languages);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        order.setAttributeWillBePersisted(LATEST_UPDATE, sdf.format(new Date()));
+        order.setAttributeWillBePersisted(LATEST_UPDATE + " " + remoteAddress, sdf.format(new Date()));
         if (azquoMemoryDBConnection.getCurrentDatabase() != null) {
             azquoMemoryDBConnection.persistInBackground();// aim to return to them quickly, this is whre we get into multi threading . . .
         }

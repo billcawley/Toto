@@ -90,7 +90,7 @@ public class MagentoController {
                     request.getServletContext().setAttribute(tempConnectionId, loggedInConnection);
                     return tempConnectionId;
                 } else {
-                    dataLoadService.findRequiredTables(loggedInConnection);
+                    dataLoadService.findRequiredTables(loggedInConnection, request.getRemoteAddr());
                 }
             }
 
@@ -100,15 +100,15 @@ public class MagentoController {
                 adminService.emptyDatabase(loggedInConnection.getCurrentDBName());
                 loginService.switchDatabase(loggedInConnection, null);
                 loginService.switchDatabase(loggedInConnection, existingDb);
-                return dataLoadService.findRequiredTables(loggedInConnection);
+                return dataLoadService.findRequiredTables(loggedInConnection, request.getRemoteAddr());
             }
 
             if (op.equals("lastupdate") || op.equals("requiredtables")) { // 'lastupdate' applies only to versions 1.1.0 and 1.1.1  (LazySusan and Lyco)
 
-                return dataLoadService.findRequiredTables(loggedInConnection);
+                return dataLoadService.findRequiredTables(loggedInConnection, request.getRemoteAddr());
             }
             if (op.equals("updatedb")) {
-                dataLoadService.findRequiredTables(loggedInConnection);//for curl commands only to load dates etc.
+                dataLoadService.findRequiredTables(loggedInConnection, request.getRemoteAddr());//for curl commands only to load dates etc.
 
                 if (loggedInConnection.getCurrentDatabase() != null) {
                     System.out.println("Running a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
@@ -123,10 +123,10 @@ public class MagentoController {
                     }
                     if (moved != null) {
                         FileInputStream fis = new FileInputStream(moved);
-                        dataLoadService.loadData(loggedInConnection, fis);
+                        dataLoadService.loadData(loggedInConnection, fis, request.getRemoteAddr());
                         fis.close();
                     } else {
-                        dataLoadService.loadData(loggedInConnection, data.getInputStream());
+                        dataLoadService.loadData(loggedInConnection, data.getInputStream(),request.getRemoteAddr());
                     }
                     long elapsed = System.currentTimeMillis() - start;
                     if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1")) { // if it's from us don't email us :)
