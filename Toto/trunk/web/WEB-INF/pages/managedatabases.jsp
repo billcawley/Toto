@@ -27,6 +27,7 @@ Manage Databases<br/>
     </tr>
   </form>
 </table>
+<br/><br/>
 <table>
   <tr>
     <!--      <td>${database.id}</td> -->
@@ -37,7 +38,8 @@ Manage Databases<br/>
     <td>MySQLName</td>
     <td>Name Count</td>
     <td>Value Count</td>
-    <td></td>
+      <td></td>
+      <td></td>
   </tr>
   <c:forEach items="${databases}" var="database">
     <tr>
@@ -49,11 +51,14 @@ Manage Databases<br/>
       <td>${database.mySQLName}</td>
       <td>${database.nameCount}</td>
       <td>${database.valueCount}</td>
-      <td><a href="/api/ManageDatabases?deleteId=${database.id}" onclick="return confirm('Are you sure?')">Delete</a></td>
+        <td><a href="#" onclick="window.open('/api/Jstree?op=new&database=${database.urlEncodedName}', '_blank', 'toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600')">Inspect</a></td>
+        <td><a href="/api/ManageDatabases?deleteId=${database.id}" onclick="return confirm('Are you sure?')">Delete</a></td>
     </tr>
   </c:forEach>
 </table>
+<br/><br/>
 Uploads
+<br/><br/>
 <table>
   <tr>
     <td>Date</td>
@@ -64,14 +69,6 @@ Uploads
     <td>File Type</td>
     <td>Comments</td>
   </tr>
-          public final Date date;
-        public final String businessName;
-        public final String databaseName;
-        public final String userName;
-        public final String fileName;
-        public final String fileType;
-        public final String comments;
-
   <c:forEach items="${uploads}" var="upload">
     <tr>
       <td>${upload.date}</td>
@@ -84,6 +81,20 @@ Uploads
     </tr>
   </c:forEach>
 </table>
+<table>
+    <tr>
+        <form action="/api/ManageDatabases" method="post" enctype="multipart/form-data"><td>Upload File</td><td><input type="file" name="uploadFile"></td>
+            <td>
+                <select name="database">
+            <c:forEach items="${databases}" var="database">
+                <option value="${database.name}">${database.name}</option>
+            </c:forEach>
+            </select>
+            </td>
+
+            <td><input type="submit" name="Upload" value="Upload"/></td></form>
+    </tr>
+    </table>
 
 </body>
 </html>

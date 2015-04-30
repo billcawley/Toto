@@ -2,6 +2,8 @@ package com.azquo.admin.database;
 
 import com.azquo.admin.StandardEntity;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.time.LocalDateTime;
 
 /**
@@ -61,6 +63,17 @@ public final class Database extends StandardEntity {
     }
 
     public String getName() {
+        return name;
+    }
+
+    public String getUrlEncodedName() {
+        if (name != null){
+            try {
+                URLEncoder.encode(name, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        }
         return name;
     }
 

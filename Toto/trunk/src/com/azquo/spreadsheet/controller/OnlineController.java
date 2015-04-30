@@ -91,6 +91,7 @@ public class OnlineController {
             // test code, the useful objects will have been set up below
             if (request.getParameter("trynewsheet") != null && request.getParameter("trynewsheet").length() > 0) {
                 // ok new plan, make the book with all it needs here and set against the request for the provider to return
+                long time = System.currentTimeMillis();
                 String bookPath = (String) request.getSession().getAttribute(BOOK_PATH);
                 final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                 final LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LOGGED_IN_CONNECTION);
@@ -105,6 +106,7 @@ public class OnlineController {
                 if (loggedInConnection.getCurrentDBName() != null) {
                     model.addAttribute("databaseChosen", loggedInConnection.getCurrentDBName());
                 }
+                System.out.println("time to prepare the book : " + (System.currentTimeMillis() - time));
                 return "zstest";
             }
 
