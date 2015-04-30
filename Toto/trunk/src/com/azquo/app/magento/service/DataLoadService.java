@@ -22,6 +22,8 @@ import java.util.*;
  */
 public final class DataLoadService {
 
+    private static final String[] productAtts = {"url_path","meta_description","country_of_manufacture", "meta_title","price","weight", "ship_height","ship_width", "ship_depth"};
+
     public static void logMemUseage() {
         Runtime runtime = Runtime.getRuntime();
         int mb = 1024 * 1024;
@@ -70,12 +72,16 @@ public final class DataLoadService {
     //final Map<Integer, MagentoOrderLineItem> orderLineItems = new HashMap<Integer, MagentoOrderLineItem>();
     final Map<String, String> optionValueLookup = new HashMap<String, String>();*/
 
-    public String findLastUpdate(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
+    public String findLastUpdate(AzquoMemoryDBConnection azquoMemoryDBConnection, String remoteAddress) throws Exception {
         Name orderName = nameService.findByName(azquoMemoryDBConnection, "order");
         if (orderName == null) {
             return null;
         }
-        return orderName.getAttribute(LATEST_UPDATE);
+        String lastUpdate =  orderName.getAttribute(LATEST_UPDATE + " " + remoteAddress);
+        if (lastUpdate==null){
+            lastUpdate = orderName.getAttribute(LATEST_UPDATE);
+        }
+        return lastUpdate;
     }
 
 
@@ -196,12 +202,14 @@ public final class DataLoadService {
             }
         }
 
+        Map<String, String> attIds = new HashMap<String, String>();
+
         String categoryNameId = null;
         String productNameId = null;
-        String priceNameId = null;
-        String weightNameId = null;
         String countryNameId = null;
         String postcodeNameId = null;
+
+
         for (Map<String, String> attribute : tableMap.get("eav_attribute")) {
             String attCode = attribute.get("attribute_code");
             String entTypeId = attribute.get("entity_type_id");
@@ -210,16 +218,18 @@ public final class DataLoadService {
                 if (entTypeId.equals(categoryEntityId)) {
                     categoryNameId = attId;
                 }
-                if (entTypeId.equals(productEntityId)) {
-                    productNameId = attId;
-                }
 
             }
-            if (attCode.equals("price") && entTypeId.equals(productEntityId)) {
-                priceNameId = attId;
-            }
-            if (attCode.equals("weight") && entTypeId.equals(productEntityId)) {
-                weightNameId = attId;
+            if (entTypeId.equals(productEntityId)) {
+                if (attCode.equals("name")) {
+                    productNameId = attId;
+                }
+                for (String att:productAtts){
+                    if (attCode.equals(att)){
+                        attIds.put(att,attId);
+                    }
+                }
+
             }
         }
         //now start the real work - categories first
@@ -271,37 +281,9 @@ public final class DataLoadService {
             azquoProductsFound.put(entityRow.get("entity_id"), magentoName);
         }
         tableMap.remove("catalog_product_entity");
-        //name the products...
-        for (Map<String, String> attributeRow : tableMap.get("catalog_product_entity_varchar")) {
-            //only picking the name from all the category attributes, and only choosing store 0 - other stores assumed to be different languages
-            if (attributeRow.get("attribute_id").equals(productNameId) && attributeRow.get("store_id").equals("0")) {
-                //Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + attributeRow.get("entity_id"), topProduct, true,languages);
-                if (azquoProductsFound.get(attributeRow.get("entity_id")) == null) {
-                    System.out.println("Entity id linked in catalog_product_entity_varchar that doesn't exist in catalog_product_entity : " + attributeRow.get("entity_id"));
-                } else {
-                    azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attributeRow.get("value"));
-                }
-            }
-        }
-        tableMap.remove("catalog_product_entity_varchar");
-        //create a product structure
-        for (Map<String, String> attributeRow : tableMap.get("catalog_product_entity_decimal")) {
-            if (attributeRow.get("store_id").equals("0")) {
-                //Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + attributeRow.get("entity_id"), topProduct, true,languages);
-                if (azquoProductsFound.get(attributeRow.get("entity_id")) == null) {
-                    System.out.println("Entity id linked in catalog_product_entity_varchar that doesn't exist in catalog_product_entity : " + attributeRow.get("entity_id"));
-                } else {
-                    if (attributeRow.get("attribute_id").equals(priceNameId)) {
-                        azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted("PRICE", attributeRow.get("value"));
-                    }
-                    if (attributeRow.get("attribute_id").equals(weightNameId)) {
-                        azquoProductsFound.get(attributeRow.get("entity_id")).setAttributeWillBePersisted("PRODUCT WEIGHT", attributeRow.get("value"));
-                    }
-                }
-            }
-        }
-        tableMap.remove("catalog_product_entity_decimal");
-        //create a product structure
+        readProductAttributes("catalog_product_entity_varchar", tableMap, azquoProductsFound,attIds,productNameId);
+        readProductAttributes("catalog_product_entity_decimal", tableMap, azquoProductsFound,attIds,productNameId);
+           //create a product structure
         for (Map<String, String> relationRow : tableMap.get("catalog_product_super_link")) {
             Name child = azquoProductsFound.get(relationRow.get("product_id"));
             if (child == null) {
@@ -908,6 +890,34 @@ public final class DataLoadService {
         if (azquoMemoryDBConnection.getCurrentDatabase() != null) {
             azquoMemoryDBConnection.persistInBackground();// aim to return to them quickly, this is whre we get into multi threading . . .
         }
+
+    }
+
+
+    private void readProductAttributes(String tableName,  Map<String, List<Map<String, String>>> tableMap, Map<String,Name>azquoProductsFound, Map<String,String>attIds, String productNameId)throws Exception{
+        for (Map<String,String>attributeRow:tableMap.get(tableName)) {
+            if (attributeRow.get("store_id").equals("0")) {
+                String attId = attributeRow.get("attribute_id");
+                String attVal = attributeRow.get("value");
+                Name productName = azquoProductsFound.get(attributeRow.get("entity_id"));
+                //Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + attributeRow.get("entity_id"), topProduct, true,languages);
+                if (productName == null) {
+                    System.out.println("Entity id linked in catalog_product_entity_varchar that doesn't exist in catalog_product_entity : " + attributeRow.get("entity_id"));
+                } else {
+                    if (attId.equals(productNameId)) {
+                        productName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, attVal);
+                    }
+                    for (String att : productAtts) {
+                        String thisAttId = attIds.get(att);
+                        if (thisAttId != null && thisAttId.equals(attId)) {
+                            productName.setAttributeWillBePersisted(att.replace("_", " ").toUpperCase(), attVal);
+                        }
+                    }
+                }
+
+            }
+        }
+        tableMap.remove(tableName);
 
     }
 
