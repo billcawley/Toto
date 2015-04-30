@@ -84,7 +84,7 @@ public class MagentoController {
                 //todo  consider what happens if there's an error here (check the result from the line above?)
             }
             if (op.equals("connect")) {
-                if (dataLoadService.findLastUpdate(loggedInConnection) != null) {
+                if (dataLoadService.findLastUpdate(loggedInConnection, request.getRemoteAddr()) != null) {
                     // was connection id here, hacking ths back in to get the logged in conneciton
                     String tempConnectionId = System.currentTimeMillis() + "";
                     request.getServletContext().setAttribute(tempConnectionId, loggedInConnection);
