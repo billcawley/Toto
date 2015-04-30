@@ -50,7 +50,9 @@ public class LoginController {
                 request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
                 request.getServletContext().removeAttribute(connectionid); // take it off the context
                 if (!loggedInConnection.getUser().isAdministrator()) {
-                    return spreadsheetService.showUserMenu(loggedInConnection);// user menu being what magento users typically see when logging in, a velocity page
+                    // I relaise making a velocity and passing it to jsp is a bit crap, I just want it to work
+                    model.put("content",spreadsheetService.showUserMenu(loggedInConnection) );// user menu being what magento users typically see when logging in, a velocity page
+                    return "utf8page";
                 } else {
                     return "redirect:/api/ManageReports";
                 }
@@ -62,7 +64,9 @@ public class LoginController {
                 if (loggedInConnection != null) {
                     request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
                     if (!loggedInConnection.getUser().isAdministrator()) {
-                        return spreadsheetService.showUserMenu(loggedInConnection);// user menu being what magento users typically see when logging in, a velocity page
+                        // I relaise making a velocity and passing it to jsp is a bit crap, I just want it to work
+                        model.put("content",spreadsheetService.showUserMenu(loggedInConnection) );// user menu being what magento users typically see when logging in, a velocity page
+                        return "utf8page";
                     } else {
                         return "redirect:/api/ManageReports";
                     }
