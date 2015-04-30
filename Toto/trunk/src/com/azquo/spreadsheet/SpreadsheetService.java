@@ -178,11 +178,6 @@ public class SpreadsheetService {
 
     public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message) throws Exception {
         String path = getHomeDir() + "/temp/";
-        if (onlineReport.getId() == 1 && !loggedInConnection.getUser().isAdministrator()) {
-            return showUserMenu(loggedInConnection);// user menu being what magento users typically see when logging in, a velocity page
-            //onlineReport = onlineReportDAO.findById(-1);//user report list replaces admin sheet
-        }
-
         AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, userChoiceDAO, this);
         StringBuilder worksheet = new StringBuilder();
         StringBuilder tabs = new StringBuilder();

@@ -12,7 +12,8 @@
     <title>Manage Users</title>
 </head>
 <body>
-Manage Users - todo : add pagination<br/>
+<a href="/api/ManageReports">Manage Reports</a> &nbsp;<a href="/api/ManageDatabases">Manage Databases</a> &nbsp;<a href="/api/ManageUsers">Manage Users</a> &nbsp;<a href="/api/ManagePermissions">Manage Permissions</a> &nbsp;<br/>
+<h1>Manage Users</h1><br/>
 <a href="/api/ManageUsers?editId=0">New</a>
 <br/>
 <table>

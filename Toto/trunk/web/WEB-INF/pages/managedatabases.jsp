@@ -12,7 +12,8 @@
     <title>Manage Databases</title>
 </head>
 <body>
-Manage Databases<br/>
+<a href="/api/ManageReports">Manage Reports</a> &nbsp;<a href="/api/ManageDatabases">Manage Databases</a> &nbsp;<a href="/api/ManageUsers">Manage Users</a> &nbsp;<a href="/api/ManagePermissions">Manage Permissions</a> &nbsp;<br/>
+<h1>Manage Databases</h1><br/>
 <br/>${error}
 <table>
   <tr>

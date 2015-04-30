@@ -2,6 +2,7 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.spreadsheet.LoggedInConnection;
 import com.azquo.spreadsheet.LoginService;
+import com.azquo.spreadsheet.SpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -26,6 +27,8 @@ public class LoginController {
     //   private static final Logger logger = Logger.getLogger(LoginController.class);
     @Autowired
     private LoginService loginService;
+    @Autowired
+    private SpreadsheetService spreadsheetService;
 
     public static final String LOGGED_IN_CONNECTION_SESSION = "LOGGED_IN_CONNECTION_SESSION";
 
@@ -43,9 +46,14 @@ public class LoginController {
 
         if (connectionid != null && connectionid.length() > 0) { // nasty hack to support connection id from the plugin
             if (request.getServletContext().getAttribute(connectionid) != null) { // then pick up the temp logged in conneciton
-                request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, request.getServletContext().getAttribute(connectionid));
+                LoggedInConnection loggedInConnection = (LoggedInConnection)request.getServletContext().getAttribute(connectionid);
+                request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
                 request.getServletContext().removeAttribute(connectionid); // take it off the context
-                return "redirect:/api/Online?reportid=1";
+                if (!loggedInConnection.getUser().isAdministrator()) {
+                    return spreadsheetService.showUserMenu(loggedInConnection);// user menu being what magento users typically see when logging in, a velocity page
+                } else {
+                    return "redirect:/api/ManageReports";
+                }
             }
         } else {
             if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
@@ -53,7 +61,11 @@ public class LoginController {
                 LoggedInConnection loggedInConnection = loginService.login(null, userEmail, password, 60, null, false);
                 if (loggedInConnection != null) {
                     request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
-                    return "redirect:/api/Online?reportid=1";
+                    if (!loggedInConnection.getUser().isAdministrator()) {
+                        return spreadsheetService.showUserMenu(loggedInConnection);// user menu being what magento users typically see when logging in, a velocity page
+                    } else {
+                        return "redirect:/api/ManageReports";
+                    }
                 } else {// feedback to users about incorrect details
                     model.put("error", "incorrect login details");
                 }

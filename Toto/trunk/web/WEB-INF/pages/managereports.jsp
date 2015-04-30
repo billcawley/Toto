@@ -5,6 +5,8 @@
     <title>Manage Reports</title>
 </head>
 <body>
+<a href="/api/ManageReports">Manage Reports</a> &nbsp;<a href="/api/ManageDatabases">Manage Databases</a> &nbsp;<a href="/api/ManageUsers">Manage Users</a> &nbsp;<a href="/api/ManagePermissions">Manage Permissions</a> &nbsp;<br/>
+<h1>Manage Reports</h1><br/>
 <form action="/api/ManageReports" method="post">
 <table>
     <tr>
@@ -21,6 +23,7 @@
              <!--            <td>${report.id}</td>
             <td>${report.businessId}</td>-->
              <td>${report.databaseId}</td>
+             <!-- should reportid be 1??? -->
              <td><a href="/api/Online?reportid=1&amp;opcode=loadsheet&amp;reporttoload=${report.id}"> ${report.reportName}</a></td>
              <td><input name="userStatus${report.id}" value="${report.userStatus}" size="50"/></td>
              <!-- <td>${report.filename}</td> -->
