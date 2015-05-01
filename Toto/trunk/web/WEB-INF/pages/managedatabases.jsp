@@ -87,6 +87,7 @@ Uploads
         <form action="/api/ManageDatabases" method="post" enctype="multipart/form-data"><td>Upload File</td><td><input type="file" name="uploadFile"></td>
             <td>
                 <select name="database">
+                    <option value="">None</option>
             <c:forEach items="${databases}" var="database">
                 <option value="${database.name}">${database.name}</option>
             </c:forEach>

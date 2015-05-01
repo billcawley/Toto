@@ -120,7 +120,7 @@ public final class Permission extends StandardEntity {
 
         // todo - maybe move the DAO calls out?
         public PermissionForDisplay(Permission permission, DatabaseDAO databaseDAO, UserDAO userDAO){
-            this.id = permission.getUserId();
+            this.id = permission.getId();
             this.startDate = permission.getStartDate();
             this.endDate = permission.getEndDate();
             this.userId = permission.getUserId();

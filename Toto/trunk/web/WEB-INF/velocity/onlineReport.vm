@@ -615,14 +615,6 @@
             }
         }
 
-
-        function buttonPressed(rowNo, colNo){
-            document.getElementById("row").value = rowNo;
-            document.getElementById("col").value = colNo;
-            document.getElementById("opcode").value = "buttonpressed";
-            document.azquoform.submit();
-        }
-
         function inspectDatabase(){
             var databasechosen = document.getElementById("databasechosen");
             var searchItems = "";

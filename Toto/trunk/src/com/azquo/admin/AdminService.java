@@ -55,8 +55,6 @@ public class AdminService {
     @Autowired
     MySQLDatabaseManager mySQLDatabaseManager;
     @Autowired
-    private AzquoMailer azquoMailer;
-    @Autowired
     private MemoryDBManager memoryDBManager;
     @Autowired
     private LoginService loginService;
@@ -185,7 +183,6 @@ public class AdminService {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
             final User user = new User(0, LocalDateTime.now(), endDate, loggedInConnection.getBusinessId(), email, userName, status, encrypt(password, salt), salt);
             userDao.store(user);
-            return;
         } else {
             throw new Exception("error: you do not have permission to create a user");
         }
@@ -201,7 +198,6 @@ public class AdminService {
                 && database != null && database.getBusinessId() == loggedInConnection.getBusinessId()) {
             final Permission permission = new Permission(0, startDate, endDate, userId, databaseId, readList, writeList);
             permissionDAO.store(permission);
-            return;
         } else {
             throw new Exception("error: you do not have permission to perform this action");
         }
@@ -272,12 +268,8 @@ public class AdminService {
         if (loggedInConnection.getUser().isAdministrator()) {
             reportList = onlineReportDAO.findForBusinessId(loggedInConnection.getBusinessId());
         } else {
-            String userStatus = loggedInConnection.getUser().getStatus();
-            String[] status = userStatus.split(",");//user may have more than one status
-            reportList = new ArrayList<OnlineReport>();
-            for (int i = 0; i < status.length; i++) {
-                reportList.addAll(onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getBusinessId(), loggedInConnection.getUser().getStatus()));
-            }
+            // there was a look here based on splitting te user status by , but it made no sense, this happens inside this function
+            reportList = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getBusinessId(), loggedInConnection.getUser().getStatus());
         }
         if (reportList != null) {
             for (OnlineReport onlineReport : reportList) {

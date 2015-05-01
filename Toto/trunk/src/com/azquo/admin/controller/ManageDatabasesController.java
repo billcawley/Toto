@@ -83,9 +83,9 @@ public class ManageDatabasesController {
         if (loggedInConnection == null || !loggedInConnection.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
-            if (database != null && database.length() > 0 && uploadFile != null) {
+            if (database != null && uploadFile != null) {
                 try{
-                    spreadsheetService.switchDatabase(loggedInConnection, database);
+                        spreadsheetService.switchDatabase(loggedInConnection, database); // could be blank now
                     String fileName = uploadFile.getOriginalFilename();
                     importService.importTheFile(loggedInConnection, fileName, uploadFile.getInputStream(), "", true, loggedInConnection.getLanguages());
                 } catch (Exception e){

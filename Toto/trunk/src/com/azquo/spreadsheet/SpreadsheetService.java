@@ -178,7 +178,7 @@ public class SpreadsheetService {
 
     public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message) throws Exception {
         String path = getHomeDir() + "/temp/";
-        AzquoBook azquoBook = new AzquoBook(valueService, adminService, nameService, userChoiceDAO, this);
+        AzquoBook azquoBook = new AzquoBook(nameService, userChoiceDAO, this, importService);
         StringBuilder worksheet = new StringBuilder();
         StringBuilder tabs = new StringBuilder();
         StringBuilder head = new StringBuilder();
@@ -200,7 +200,7 @@ public class SpreadsheetService {
                 String filepath = ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                 azquoBook.loadBook(getHomeDir() + filepath, useAsposeLicense());
                 // excecuting parked for the mo while saving is, will need to think about reenabling
-                /*
+
                 String executeSetName = azquoBook.getRangeValue("az_ExecuteSet");
                 List<SetNameChosen> nameLoop = new ArrayList<SetNameChosen>();
                 String executeSet = null;
@@ -224,13 +224,9 @@ public class SpreadsheetService {
                     }
                     executeLoop(loggedInConnection, onlineReport.getId(), nameLoop, 0);
                     return "";
-                }*/
+                }
             }
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
-            if (onlineReport.getId() == 1 || onlineReport.getId() == -1) {//this is the maintenance workbook
-                azquoBook.dataRegionPrefix = AzquoBook.azInput;
-
-            }
             spreadsheetName = azquoBook.printTabs(tabs, spreadsheetName);
             azquoBook.convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), spreadsheetName, worksheet);
         } catch (Exception e) {
@@ -284,8 +280,8 @@ public class SpreadsheetService {
         velocityContext.put("charts", azquoBook.drawCharts(loggedInConnection, path).toString());
         return convertToVelocity(velocityContext, null, null, "onlineReport.vm");
     }
-//executing parked while saving is
-/*    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
+
+    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
         for (Name chosen : nameLoop.get(level).choiceList) {
             setUserChoice(loggedInConnection.getUser().getId(), reportId, nameLoop.get(level).setName, chosen.getDefaultDisplayName());
@@ -296,7 +292,7 @@ public class SpreadsheetService {
                 executeLoop(loggedInConnection, reportId, nameLoop, level + 1);
             }
         }
-    }*/
+    }
 
     // to put a referenced CSS inline for example
     // edd changing to read from web-inf
@@ -387,79 +383,9 @@ public class SpreadsheetService {
         return sb.toString();
     }
 
-    public String saveAdminData(LoggedInConnection loggedInConnection) throws Exception {
-        String result = "";
-        AzquoBook azquoBook = loggedInConnection.getAzquoBook();
-        String tableName = azquoBook.getAdminTableName();
-        StringBuilder data = azquoBook.getAdminData();
-        if (data == null) {
-            result = "error: no data to save";
-        } else {
-            StringTokenizer st = new StringTokenizer(data.toString(), "\n");
-            String headingsList = st.nextToken();
-            String[] headings = headingsList.split("\t");
-            while (st.hasMoreTokens()) {
-                String dataLine = st.nextToken();
-                final Map<String, Object> parameters = new HashMap<String, Object>();
-                StringTokenizer st2 = new StringTokenizer(dataLine, "\t");
-                String idVal = st2.nextToken();
-                int id = 0;
-                if (idVal.length() > 0) {
-                    try {
-                        id = Integer.parseInt(idVal);
-                    } catch (Exception ignored) {
-                    }
-                }
-                for (int i = 1; i < headings.length; i++) {
-                    String value = "";
-                    if (st2.hasMoreTokens()) {
-                        value = st2.nextToken();
-                    }
-                    String heading = convertNameToSQL(headings[i]);
-                    if (heading.contains("date")) {
-                        parameters.put(heading, interpretDate(value));
-                    } else {
-                        parameters.put(convertNameToSQL(headings[i]), value);
-                    }
-
-                }
-                if (tableName.equalsIgnoreCase("online_report")) {
-                    onlineReportDAO.update(id, parameters);
-                } else if (tableName.equals("permission")) {
-                    String dbName = (String) parameters.get("database");
-                    if (dbName != null && dbName.length() > 0) {
-                        Database db = databaseDAO.findForName(loggedInConnection.getBusinessId(), dbName);
-                        if (db != null) {
-                            parameters.put("database_id", db.getId());
-                            String email = (String) parameters.get("email");
-                            if (email != null && email.length() > 0) {
-                                User user = userDAO.findByEmail(email);
-                                if (user != null) {
-                                    parameters.put("user_id", user.getId());
-                                    parameters.remove("email");
-                                    parameters.remove("database");
-                                    permissionDAO.update(id, parameters);
-
-                                }
-                            }
-                        }
-                    }
-                } else if (tableName.equals("user")) {
-                    userDAO.update(id, loggedInConnection.getBusinessId(), parameters);
-                }
-            }
-        }
-        return result;
-    }
-
-    // parking normal saving for the moment
     public void saveData(LoggedInConnection loggedInConnection) throws Exception {
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
-        if (azquoBook.dataRegionPrefix.equals(AzquoBook.azInput)) {
-            saveAdminData(loggedInConnection);
-        } else {
-            azquoBook.saveData(loggedInConnection);
-        }
+        azquoBook.saveData(loggedInConnection);
     }
 
     private StringBuilder createDatabaseSelect(LoggedInConnection loggedInConnection) {
@@ -501,120 +427,11 @@ public class SpreadsheetService {
 
     }
 
-    // basic db wide functions, create delete db etc
-
-    public void followInstructionsAt(LoggedInConnection loggedInConnection, int rowNo, int colNo, String database, MultipartFile file) throws Exception {
-        //this routine is called when a button on the maintenance spreadsheet is pressed
-        AzquoBook azquoBook = loggedInConnection.getAzquoBook();
-        String result = azquoBook.getCellContent(rowNo, colNo);
-        String op = "";
-        String newdatabase = "";
-        String nameList = "";
-        if (result.startsWith("$button;name=") && result.indexOf("op=") > 0) {
-            String link = result.substring(result.indexOf("op=") + 3);
-            String paramName = "op";
-            while (paramName.length() > 0) {
-                String paramValue = link.substring(0, (link + "&").indexOf("&"));
-                if (paramValue.length() < link.length()) {
-                    link = link.substring(paramValue.length() + 1);
-                } else {
-                    link = "";
-                }
-                if (paramName.equals("op")) {
-                    op = paramValue;
-                } else if (paramName.equals("database")) {
-                    database = paramValue;
-                } else if (paramName.equals("newdatabase")) {
-                    newdatabase = paramValue;
-                } else if (paramName.equals("namelist")) {
-                    nameList = paramValue;
-                }
-                paramName = "";
-                if (link.indexOf("=") > 0) {
-                    paramName = link.substring(0, link.indexOf("="));
-                    link = link.substring(paramName.length() + 1);
-                }
-            }
-        }
-        switchDatabase(loggedInConnection, database);
-        if (op.equalsIgnoreCase("newdatabase")) {
-            if (newdatabase.length() > 0) {
-                adminService.createDatabase(newdatabase, loggedInConnection);
-            }
-        }
-        if (op.equalsIgnoreCase("copydatabase")) {
-            adminService.copyDatabase(loggedInConnection, database, nameList);
-        }
-        if (op.equals("delete")) {
-            loginService.switchDatabase(loggedInConnection, null);
-            Database db = databaseDAO.findForName(loggedInConnection.getBusinessId(), database);
-            if (db != null) {
-                List<OnlineReport> onlineReports = onlineReportDAO.findForDatabaseId(db.getId());
-                for (OnlineReport onlineReport : onlineReports) {
-                    userChoiceDAO.deleteForReportId(onlineReport.getId());
-                }
-                loginRecordDAO.removeForDatabaseId(db.getId());
-                onlineReportDAO.removeForDatabaseId(db.getId());
-                openDatabaseDAO.removeForDatabaseId(db.getId());
-                permissionDAO.removeForDatabaseId(db.getId());
-                uploadRecordDAO.removeForDatabaseId(db.getId());
-                String mySQLName = db.getMySQLName();
-                databaseDAO.removeById(db);
-                adminService.dropDatabase(mySQLName);
-                // we were returning some of the results from this function, it seems not any more?
-            }
-        }
-        if (op.equalsIgnoreCase("upload")) {
-            InputStream uploadFile = file.getInputStream();
-            String fileName = file.getOriginalFilename();
-            importService.importTheFile(loggedInConnection, fileName, uploadFile, "", true, loggedInConnection.getLanguages());
-        }
-    }
-
-    public static Date interpretDate(String dateString) {
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        SimpleDateFormat dateFormat2 = new SimpleDateFormat("dd/MM/yy");
-        SimpleDateFormat dateFormat3 = new SimpleDateFormat("dd/MM/yyyy");
-        SimpleDateFormat dateFormat4 = new SimpleDateFormat("dd-MM-yyyy");
-        Date dateFound = null;
-        if (dateString.length() > 5) {
-            if (dateString.substring(2, 3).equals("/")) {
-                if (dateString.length() > 8) {
-                    try {
-                        dateFound = dateFormat3.parse(dateString);
-                    } catch (Exception ignored) {
-                    }
-
-                } else {
-                    try {
-                        dateFound = dateFormat2.parse(dateString);
-                    } catch (Exception ignored) {
-                    }
-                }
-            } else {
-                if (dateString.substring(2, 3).equals("-")) {
-                    try {
-                        dateFound = dateFormat4.parse(dateString);
-                    } catch (Exception ignored) {
-                    }
-                } else {
-                    try {
-                        dateFound = simpleDateFormat.parse(dateString);
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-        }
-        return dateFound;
-    }
-
-
     public String showUploadFile(LoggedInConnection loggedInConnection) {
         VelocityContext context = new VelocityContext();
         context.put("azquodatabaselist", createDatabaseSelect(loggedInConnection));
         return convertToVelocity(context, "upload", null, "upload.vm");
     }
-
 
     // on logging into Magento reports for example
 
@@ -919,7 +736,6 @@ seaports;children   container;children
         }
      }
 
-
     private List<String> findUniqueNames(List<UniqueName> pending){
         List<String> output = new ArrayList<String>();
         if (pending.size()==1){
@@ -955,10 +771,7 @@ seaports;children   container;children
             output.add(uName.string);
         }
         return output;
-
-
-
-}
+    }
 
     public List<String> getIndividualNames(List<Name> sortedNames){
         //this routine to output a list of names without duplicates by including parent names on duplicates
@@ -1086,7 +899,6 @@ seaports;children   container;children
             }
         }
         return headings;
-
     }
 
     // vanilla jackson might not be good enough but this is too much manual json writing I think
@@ -1383,13 +1195,11 @@ ok I'm going for that object type (AzquoCell), outer list rows inner items on th
 
 I think that this is an ideal candidate for multithreading to speed things up
 
-
     */
 
     boolean tryMultiThreaded = true;
 
     public class RowFiller implements Runnable {
-
         private final int startRow;
         private final int endRow;
         private final List<List<AzquoCell>> targetArray;
@@ -1400,7 +1210,6 @@ I think that this is an ideal candidate for multithreading to speed things up
         private final AzquoMemoryDBConnection connection;
         private final Map<Name, Integer> totalSetSize;
         private final StringBuffer errorTrack;
-
         public RowFiller(int startRow, int endRow, List<List<AzquoCell>> targetArray, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow, List<Name> contextNames, List<String> languages, AzquoMemoryDBConnection connection, Map<Name, Integer> totalSetSize, StringBuffer errorTrack) {
             this.startRow = startRow;
             this.endRow = endRow;
@@ -1707,7 +1516,6 @@ I think that this is an ideal candidate for multithreading to speed things up
     // this might make it a bit more difficult to jackson but we should aim to do it really
 
     public String formatCellProvenanceForOutput(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, String jsonFunction) {
-
         StringBuilder output = new StringBuilder();
         output.append(jsonFunction + "({\"provenance\":[{");
         int count = 0;
@@ -1854,6 +1662,4 @@ I think that this is an ideal candidate for multithreading to speed things up
         }
         return false;
     }
-
-
 }

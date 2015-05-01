@@ -290,15 +290,6 @@ public class OnlineController {
                     request.getSession().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
                     result = spreadsheetService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "Right-click mouse for provenance");
                 }
-                if (opcode.equals("buttonpressed") && row > 0) {//button pressed - follow instructions and reload admin sheet
-                    // json function was being passed but ignored!
-                    spreadsheetService.followInstructionsAt(loggedInConnection, row, Integer.parseInt(colStr), database, uploadfile);
-
-                    if (onlineReport == null) {
-                        onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
-                    }
-                    result = spreadsheetService.readExcel(loggedInConnection, onlineReport, spreadsheetName, result);
-                }
             /*
             BufferedReader br = new BufferedReader(new StringReader(result));
            / String line;
