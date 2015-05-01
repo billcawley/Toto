@@ -27,13 +27,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.InetAddress;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -674,7 +672,6 @@ seaports;children   container;children
 
 
     public List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists) {
-
         List<List<DataRegionHeading>> output = new ArrayList<List<DataRegionHeading>>();
         final int noOfHeadingDefinitionRows = headingLists.size();
         if (noOfHeadingDefinitionRows == 0) {
@@ -800,7 +797,6 @@ seaports;children   container;children
     // todo make sense of the bloody restrictcount parameter
 
     public List<Integer> sortDoubleValues(int restrictCount, Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
-
         final List<Integer> sortedValues = new ArrayList<Integer>();
         if (restrictCount != 0) {
             List<Map.Entry<Integer, Double>> list = new ArrayList<Map.Entry<Integer, Double>>(sortTotals.entrySet());
@@ -940,7 +936,6 @@ seaports;children   container;children
             }
             sb.append("\"");
             sb.append("}");
-
         }
         sb.append("]");
         return sb.toString();
@@ -1040,7 +1035,6 @@ seaports;children   container;children
         if (restrictColCount > totalCols) restrictColCount = totalCols;
         Integer sortCol = findPosition(columnHeadings, sortColString);
         Integer sortRow = findPosition(rowHeadings, sortRowString);
-
         boolean sortRowsUp = false;
         boolean sortColsRight = false;
         if (sortCol == null) {
@@ -1120,7 +1114,6 @@ seaports;children   container;children
 
         // OK pasting and changing what was in format data region, it's only called by this
 
-        int rowInt = 0;
         int blockRowCount = 0;
         if (restrictRowCount == 0 || restrictRowCount > sortedRows.size()) {
             restrictRowCount = sortedRows.size();
@@ -1138,7 +1131,6 @@ seaports;children   container;children
             for (int colNo = 0; colNo < restrictColCount; colNo++) {
                 newRow.add(rowCells.get(sortedCols.get(colNo)));
             }
-            rowInt++;
 
             // ok here's a thing . . . I think this code that used to cchop didn't take into account row sorting. Should be pretty easy to just do here I think
             if (++blockRowCount == filterCount) {
@@ -1210,6 +1202,7 @@ I think that this is an ideal candidate for multithreading to speed things up
         private final AzquoMemoryDBConnection connection;
         private final Map<Name, Integer> totalSetSize;
         private final StringBuffer errorTrack;
+
         public RowFiller(int startRow, int endRow, List<List<AzquoCell>> targetArray, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow, List<Name> contextNames, List<String> languages, AzquoMemoryDBConnection connection, Map<Name, Integer> totalSetSize, StringBuffer errorTrack) {
             this.startRow = startRow;
             this.endRow = endRow;
@@ -1318,7 +1311,6 @@ I think that this is an ideal candidate for multithreading to speed things up
         }
     }
 
-
     public List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
             , final List<List<DataRegionHeading>> headingsForEachColumn
             , final List<Name> contextNames, List<String> languages) throws Exception {
@@ -1355,8 +1347,6 @@ I think that this is an ideal candidate for multithreading to speed things up
             startRow += chunk;
             endRow += chunk;
         }
-
-
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());
         }
@@ -1391,9 +1381,7 @@ I think that this is an ideal candidate for multithreading to speed things up
         return toReturn;
     }
 
-
     // for anonymiseing data
-
     public void randomAdjust(Name name, double low, double high) {
         for (Value value : name.getValues()) {
             try {
@@ -1409,7 +1397,6 @@ I think that this is an ideal candidate for multithreading to speed things up
     }
 
     // used when comparing values. So ignore the currency symbol if the numbers are the same
-
     private String stripCurrency(String val) {
         //TODO we need to be able to detect other currencies
 
@@ -1441,7 +1428,6 @@ I think that this is an ideal candidate for multithreading to speed things up
 
     // todo : does this need to deal with name/attribute combos?
     // for highlighting cells based on provenance time, seems quite the effort
-
     public int getAge(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt) {
         Calendar cal = Calendar.getInstance();
         Date today = cal.getTime();

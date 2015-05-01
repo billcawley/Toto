@@ -1368,26 +1368,6 @@ public class AzquoBook {
     public String getProvenance(LoggedInConnection loggedInConnection, int row, int col, String jsonFunction) {
         RegionInfo regionInfo = getRegionInfo(row, col);
         if (regionInfo == null) return "";
-        if (regionInfo.region.equals("az_headingsdata")) {
-            //Admin inspect names only
-            for (Set<Name> names : loggedInConnection.getValuesFound().keySet()) {
-                if (regionInfo.row-- == 0) {
-                    if (regionInfo.col == 0) {
-                        List<Value> tempList = new ArrayList<Value>();
-                        for (Value value : loggedInConnection.getValuesFound().get(names)) {
-                            tempList.add(value);
-                        }
-                        return spreadsheetService.formatCellProvenanceForOutput(loggedInConnection, tempList, jsonFunction);
-                    } else {
-                        for (Name tempname : names) {
-                            if (--regionInfo.col == 0) {
-                                return spreadsheetService.formatProvenanceForOutput(tempname.getProvenance(), jsonFunction);
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
             if (regionInfo.region.startsWith("az_displayrowheadings")) {
                 String region = regionInfo.region.substring(21);
                 // can derive them from the sent data :)
@@ -1411,7 +1391,6 @@ public class AzquoBook {
                 String region = regionInfo.region.substring(dataRegionPrefix.length());
                 return spreadsheetService.formatDataRegionProvenanceForOutput(loggedInConnection, region, regionInfo.row, regionInfo.col, jsonFunction);
             }
-        }
         return "";
     }
 

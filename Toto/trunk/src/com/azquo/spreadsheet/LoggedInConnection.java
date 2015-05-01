@@ -55,10 +55,8 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
     private final Map<String, String> sortCol; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
     private final Map<String, String> sortRow; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
-    private final Map<String, List<Name>> contexts;
     private final Map<String, List<List<AzquoCell>>> sentCellsMaps; // As in a 2 d array (lists of lists) of the sent cells, should replace a number of older maps
     private List<Set<Name>> namesToSearch;
-    private Map<Set<Name>, Set<Value>> valuesFound;
     private AzquoBook azquoBook;
     private List<String> languages;
     private Map<String, JsTreeNode> jsTreeIds;
@@ -74,10 +72,8 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         reportId = 0;
         sortCol = new HashMap<String, String>();
         sortRow = new HashMap<String, String>();
-        contexts = new HashMap<String, List<Name>>();
         sentCellsMaps = new HashMap<String, List<List<AzquoCell>>>();
         namesToSearch = null;
-        valuesFound = null;
         azquoBook = null;
 
         languages = new ArrayList<String>();
@@ -197,14 +193,6 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
     public void setNamesToSearch(List<Set<Name>> names) {
         this.namesToSearch = names;
-    }
-
-    public Map<Set<Name>, Set<Value>> getValuesFound() {
-        return this.valuesFound;
-    }
-
-    public void setValuesFound(Map<Set<Name>, Set<Value>> valuesFound) {
-        this.valuesFound = valuesFound;
     }
 
     public AzquoBook getAzquoBook() {

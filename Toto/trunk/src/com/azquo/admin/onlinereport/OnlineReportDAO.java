@@ -87,7 +87,6 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
             }
             namedParams.addValue(USERSTATUS + count, "%" + statuses[count].trim() + "%");
             statusSelect.append(USERSTATUS + " like :" + USERSTATUS + count);
-
         }
         statusSelect.append(")");
 

@@ -31,6 +31,9 @@ import java.util.*;
 
 /**
  * Created by bill on 22/04/14.
+ *
+ * Currently deals with a fair bit for AzquoBook, this may shrink in time.
+ *
  */
 
 @Controller

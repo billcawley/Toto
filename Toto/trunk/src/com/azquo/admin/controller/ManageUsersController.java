@@ -2,10 +2,7 @@ package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.user.User;
-import com.azquo.memorydb.service.NameService;
-import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.LoggedInConnection;
-import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -16,10 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
@@ -39,7 +33,6 @@ public class ManageUsersController {
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "editId", required = false) String editId
             , @RequestParam(value = "deleteId", required = false) String deleteId
-//            , @RequestParam(value = "startDate", required = false) String startDate
             , @RequestParam(value = "endDate", required = false) String endDate
             , @RequestParam(value = "email", required = false) String email
             , @RequestParam(value = "name", required = false) String name

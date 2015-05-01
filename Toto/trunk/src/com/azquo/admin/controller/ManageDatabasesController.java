@@ -1,12 +1,8 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
-import com.azquo.admin.database.Database;
 import com.azquo.dataimport.ImportService;
-import com.azquo.memorydb.service.NameService;
-import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.LoggedInConnection;
-import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.commons.lang.math.NumberUtils;
@@ -19,10 +15,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.InputStream;
 
 /**
  * Created by cawley on 24/04/15.
+ *
+ * New HTML admin, upload files and manage databases
+ *
  */
 @Controller
 @RequestMapping("/ManageDatabases")
@@ -33,6 +31,7 @@ public class ManageDatabasesController {
     private SpreadsheetService spreadsheetService;
     @Autowired
     private ImportService importService;
+
     private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
 
     @RequestMapping

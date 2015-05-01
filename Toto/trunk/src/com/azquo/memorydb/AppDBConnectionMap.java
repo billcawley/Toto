@@ -64,7 +64,7 @@ public class AppDBConnectionMap {
         return null;
     }
 
-    public void deleteDatabase(String mysqlName) {
+/*    public void deleteDatabase(String mysqlName) {
         Database db = dbByNameMap.get(mysqlName);
         if (db != null) {
             try {
@@ -94,6 +94,6 @@ public class AppDBConnectionMap {
         dbByNameMap.put(database.getMySQLName(), database);
         connectionMap.put(database.getMySQLName(),
                 new AzquoMemoryDBConnection(memoryDBManager.getAzquoMemoryDB(database), new User(0, null, null, business.getId(), "", "connection pool", "", "", "")));
-    }
+    }*/
 
 }

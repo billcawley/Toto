@@ -63,14 +63,12 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " and " + DATABASEID + " =:" + DATABASEID, namedParams);
     }
 
-    public void deleteForBusinessId(int businessId) {
+/*    public void deleteForBusinessId(int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DatabaseDAO.BUSINESSID, businessId);
         final String SQL_DELETE = "DELETE  from `" + MASTER_DB + "`.`" + getTableName() + "` where `" + DATABASEID + "` =:" + DATABASEID;
         jdbcTemplate.update(SQL_DELETE, namedParams);
-
-
-    }
+    }*/
 
     public final class PermissionRowMapper implements RowMapper<Permission> {
 

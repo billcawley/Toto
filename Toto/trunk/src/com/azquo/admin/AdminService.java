@@ -14,7 +14,6 @@ import com.azquo.memorydb.service.ValueService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.spreadsheet.LoggedInConnection;
 import com.azquo.spreadsheet.LoginService;
-import com.azquo.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
@@ -158,11 +157,7 @@ public class AdminService {
             final String mysqlName = getSQLDatabaseName(loggedInConnection, databaseName);
             final Business b = businessDAO.findById(loggedInConnection.getBusinessId());
             final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), b.getId(), databaseName, mysqlName, 0, 0);
-            try {
                 mySQLDatabaseManager.createNewDatabase(mysqlName);
-            } catch (Exception e) {
-                throw e;
-            }
             databaseDAO.store(database);
             memoryDBManager.addNewToDBMap(database);
             if (loggedInConnection.getAzquoMemoryDB() == null) { // creating their first db I guess?

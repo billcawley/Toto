@@ -6,6 +6,9 @@ import java.util.Date;
 
 /**
  * Created by bill on 22/04/14.
+ *
+ * A choice typically is a drop down selection but it could be other things also, e.g. a text field that used in a search
+ *
  */
 public class UserChoice extends StandardEntity {
 
