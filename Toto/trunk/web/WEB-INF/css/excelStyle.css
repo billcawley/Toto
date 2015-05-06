@@ -183,10 +183,10 @@ a, img {
     width:300px;
     border:1px solid black;
     position:fixed;
-    top:100px;
+    top:200px;
     left:100px;
     display:none;
-    z-index:4;
+    z-index:10;
     background-color:white;
     padding:5px;
 }
@@ -194,6 +194,11 @@ a, img {
 .provenance .content{
     height:300px;
     overflow:auto;
+}
+
+.provenance .content select,option{
+    width:300px;
+    background:white;
 }
 
 .closebutton{
