@@ -615,6 +615,17 @@
             }
         }
 
+        function selectFromListChosen(selectName){
+            var chosen = document.getElementById("selectionListItem").value;
+            if (chosen==null) chosen="";
+            document.getElementById("editedName").value = selectName;
+            document.getElementById("editedValue").value = chosen;
+            document.getElementById("opcode").value = "setchosen"
+            document.azquoform.submit();
+
+        }
+
+
         function inspectDatabase(){
             var databasechosen = document.getElementById("databasechosen");
             var searchItems = "";
@@ -760,6 +771,26 @@
             if (obj.names > ""){
                 showSubset(obj.names);
             }
+            if (obj.choices> ""){
+                 var selection='<select onclick=\'selectFromListChosen("' + obj.selection + '")\' id="selectionListItem">\n';
+                for (var i=0; i <obj.choices.length; i++){
+                    var choice = obj.choices[i];
+                    selection += '<option value="' + choice + '">' + choice + '</option>\n';
+
+                }
+                selection += '</select>\n';
+                var selectionListPanel = document.getElementById("selectionListPanel");
+                var selectionList = document.getElementById("selectionList");
+                selectionList.innerHTML=selection;
+                if (obj.choices.length == 1){
+                    selectFromListChosen(obj.selection);
+
+                }
+                selectionListPanel.style.display="block";
+                var selectionListItem = document.getElementById("selectionListItem");
+                selectionListItem.size = selectionListItem.options.length;
+
+            }
         }
 
         function showSubset(names){
@@ -865,7 +896,13 @@
             return ok;
         }
 
+        function chooseFromList(editedName){
+           var entered = document.getElementById("select" + editedName).value.trim();
 
+            azquojson("Online","opcode=choosefromlist&editedname=" + editedName + "&editedvalue=" + encodeURIComponent(entered));
+
+
+        }
 
 
     </script>
@@ -913,6 +950,7 @@
 
 
             <div id="selector" class="selector"></div>
+            <div id="selectionListPanel" class="provenance"><div class="closebutton"><a href="#" onclick="document.getElementById('selectionListPanel').style.display = 'none';"><img src="https://data.azquo.com/images/closebutton.png" alt="close button"/></a></div><div id="selectionList" class="content"></div></div>
             <div id="provenance" class="provenance"><div class="closebutton"><a href="#" onclick="document.getElementById('provenance').style.display = 'none';"><img src="https://data.azquo.com/images/closebutton.png" alt="close button"/></a></div><div id="provenancecontent" class="content"></div></div>
             #foreach($mregion in $menuregions)
                 <div id="menu${mregion.name}" class="dataregionmenu">
