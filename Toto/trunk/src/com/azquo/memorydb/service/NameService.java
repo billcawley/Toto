@@ -47,6 +47,7 @@ public final class NameService {
     public static final String COUNT = "count";
     public static final String SORTED = "sorted";
     public static final String CHILDREN = "children";
+    public static final String SELECT = "select";
     //public static final String LOWEST = "lowest";
     //public static final String ALL = "all";
     public static final char NAMEMARKER = '!';
@@ -547,6 +548,7 @@ public final class NameService {
         Pattern p = Pattern.compile("[\\+\\-\\*/" + NAMEMARKER + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
         logger.debug("Set formula after SYA " + setFormula);
+        logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
         int stackCount = 0;
         //int stringCount = 0;
@@ -733,6 +735,7 @@ public final class NameService {
         final String countbackString = stringUtils.getInstruction(setTerm, COUNTBACK);
         final String compareWithString = stringUtils.getInstruction(setTerm, COMPAREWITH);
         String totalledAsString = stringUtils.getInstruction(setTerm, AS);
+        String selectString = stringUtils.getInstruction(setTerm, SELECT);
         // removed totalled as
 
         //final String associatedString = stringUtils.getInstruction(setTerm, ASSOCIATED);
@@ -763,9 +766,6 @@ public final class NameService {
             if (toString == null) toString = "";
             if (countString == null) countString = "";
             // SECOND  Sort if necessary
-            if (sorted != null) {
-                Collections.sort(names, defaultLanguageCaseInsensitiveNameComparator);
-            }
 
             //THIRD  trim that down to the subset defined by from, to, count
             if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
@@ -793,6 +793,19 @@ public final class NameService {
 
             }
             namesFound = filteredList;
+        }
+        if (sorted != null) {
+            Collections.sort(namesFound, defaultLanguageCaseInsensitiveNameComparator);
+        }
+        if (selectString != null){
+            String toFind = strings.get(Integer.parseInt(selectString.substring(1, 3)));
+            List<Name> selectedNames = new ArrayList<Name>();
+            for (Name sname:namesFound){
+                if (sname.getDefaultDisplayName().contains(toFind)){
+                    selectedNames.add(sname);
+                }
+            }
+            namesFound = selectedNames;
         }
         if (sorted != null) {
             Collections.sort(namesFound, defaultLanguageCaseInsensitiveNameComparator);
