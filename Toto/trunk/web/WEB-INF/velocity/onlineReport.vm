@@ -898,8 +898,9 @@
 
         function chooseFromList(editedName){
            var entered = document.getElementById("select" + editedName).value.trim();
-
-            azquojson("Online","opcode=choosefromlist&editedname=" + editedName + "&editedvalue=" + encodeURIComponent(entered));
+            if (entered.length > 3) {
+                azquojson("Online", "opcode=choosefromlist&editedname=" + editedName + "&editedvalue=" + encodeURIComponent(entered));
+            }
 
 
         }
