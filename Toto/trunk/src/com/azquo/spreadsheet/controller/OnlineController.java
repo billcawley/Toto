@@ -290,6 +290,13 @@ public class OnlineController {
 
                     } else {
                         request.getSession().setAttribute(BOOK_PATH, onlineReport.getFilename());
+                        if (!loggedInConnection.getUser().isAdministrator()) {
+                            // I relaise making a velocity and passing it to jsp is a bit crap, I just want it to work
+                            model.put("content",spreadsheetService.showUserMenu(loggedInConnection) );// user menu being what magento users typically see when logging in, a velocity page
+                            return "utf8page";
+                        } else {
+                            return "redirect:/api/ManageReports";
+                        }
 
                     }
                     loggedInConnection.setReportId(onlineReport.getId());
