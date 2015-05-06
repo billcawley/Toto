@@ -252,6 +252,7 @@ I should be ok for stringtokenizer at this point
                 || term.equalsIgnoreCase(NameService.AS) || term.equalsIgnoreCase(NameService.STRUCTURE)
                 || term.equalsIgnoreCase(NameService.NAMELIST) || term.equalsIgnoreCase(NameService.CREATE)
                 || term.equalsIgnoreCase(NameService.EDIT) || term.equalsIgnoreCase(NameService.NEW)
+                || term.equalsIgnoreCase(NameService.SELECT)
                 || term.equalsIgnoreCase(NameService.DELETE) || term.equalsIgnoreCase(NameService.WHERE);
 
     }
