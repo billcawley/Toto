@@ -1014,8 +1014,8 @@ public class AzquoBook {
                         constants.add(e.getMessage());
                     }
                 }
-                if (constants.size() > 0 || choiceList.size() > 0) {
-                    String origContent = content;
+                String origContent = content;
+                if (constants.size() > 0 || (choiceList.size() > 0 && choiceList.size() < 1500)) {
                     String onChange;
                     int choiceOffset = choiceOffset(cell);
                     if (choiceOffset == 0) {
@@ -1036,8 +1036,13 @@ public class AzquoBook {
                     }
                     content += "</select>";
                 } else {
+                    if (choiceList.size() > 1499){
+                        content = "<input class = '" + selectClass + "' type='text' oninput='chooseFromList(\"" + choiceName + "\")' id='select" + choiceName + "' class='" + cellClass + "' value='" + origContent + "' />" + cr;
+                    }else {
                     content = "";
+                    }
                     cell.setValue("");
+
                 }
             }
         }
@@ -1510,7 +1515,6 @@ public class AzquoBook {
             }
         }
     }
-
     // executing parked for the mo due to saving not working
     public void executeSheet(LoggedInConnection loggedInConnection) throws Exception {
         loadData(loggedInConnection);
