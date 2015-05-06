@@ -197,6 +197,10 @@ public class OnlineController {
 
              */
                 //String sortRegion = "";
+                if (opcode.equals("choosefromlist")){
+                    result =  spreadsheetService.getJsonList(loggedInConnection,choiceName,choiceValue, jsonFunction);
+
+                }
                 if ((opcode.equals("setchosen")) && choiceName != null) {
                     if (choiceName.startsWith("region options:")) {
                         String region = choiceName.substring(15);
