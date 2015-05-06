@@ -393,7 +393,10 @@ public class AzquoBook {
             int col = 0;
             for (DataRegionHeading heading : row) {
                 String cellValue = null;
-                Name name = heading.getName();
+                Name name = null;
+                if (heading!=null){
+                    name = heading.getName();
+                }
                 if (name != null) {
                     String nameInLanguage = name.getAttribute(language);
                     if (nameInLanguage == null) {
@@ -401,8 +404,12 @@ public class AzquoBook {
                     }
                     cellValue = nameInLanguage;
                 } else {
-                    String attribute = heading.getAttribute();
-                    if (attribute != null) cellValue = attribute;
+                    if (heading==null){
+                        cellValue = "";
+                    }else {
+                        String attribute = heading.getAttribute();
+                        if (attribute != null) cellValue = attribute;
+                    }
                 }
                 Cell currentCell = azquoCells.get(range.getFirstRow() + rowNo, range.getFirstColumn() + col);
                 currentCell.getStyle().setLocked(true);
@@ -802,6 +809,7 @@ public class AzquoBook {
                 try {
                     fillRegion(loggedInConnection, regionName);
                 } catch (Exception e) {
+                    throw e;
                     //TODO handle 'cannot resolve reference to ....
                 }
                 System.out.println("fillregion took " + (System.currentTimeMillis() - regStart) + " millisecs");
