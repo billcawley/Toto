@@ -794,14 +794,12 @@ public final class NameService {
             }
             namesFound = filteredList;
         }
-        if (sorted != null) {
-            Collections.sort(namesFound, defaultLanguageCaseInsensitiveNameComparator);
-        }
         if (selectString != null){
-            String toFind = strings.get(Integer.parseInt(selectString.substring(1, 3)));
+            String toFind = strings.get(Integer.parseInt(selectString.substring(1, 3))).toLowerCase();
             List<Name> selectedNames = new ArrayList<Name>();
             for (Name sname:namesFound){
-                if (sname.getDefaultDisplayName().contains(toFind)){
+                if (sname.getDefaultDisplayName().toLowerCase().contains(toFind)){
+
                     selectedNames.add(sname);
                 }
             }
