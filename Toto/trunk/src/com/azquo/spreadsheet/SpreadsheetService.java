@@ -361,6 +361,28 @@ public class SpreadsheetService {
         return loggedInConnection.getAzquoBook().changeValue(row, col, value, loggedInConnection);
     }
 
+    public String getJsonList(LoggedInConnection loggedInConnection, String listName, String entered, String jsonFunction){
+        String listChoice = loggedInConnection.getAzquoBook().getRangeData(listName + "choice");
+        try {
+            List<Name> possibles = nameService.parseQuery(loggedInConnection, listChoice + " select \"" + entered + "\"");
+            List<String>nameStrings = getIndividualNames(possibles);
+            StringBuffer output = new StringBuffer();
+            output.append(jsonFunction + "({\"selection\":\"" + listName + "\",\"choices\":[");
+            int count = 0;
+            for (String nameString:nameStrings){
+                if (count++ > 0) output.append(",");
+                output.append("\"" + nameString.replace("\"", "\\\"") + "\"");
+            }
+
+
+            output.append("]})");
+            return output.toString();
+
+        }catch (Exception e){
+            return "";
+        }
+    }
+
     public String getProvenance(LoggedInConnection loggedInConnection, int row, int col, String jsonFunction) {
         return loggedInConnection.getAzquoBook().getProvenance(loggedInConnection, row, col, jsonFunction);
     }
@@ -780,6 +802,7 @@ seaports;children   container;children
                 if (!name.getDefaultDisplayName().equals(lastName)) {
                     output.addAll(findUniqueNames(pending));
                     pending = new ArrayList<UniqueName>();
+                    if (output.size() > 1500) break;
                 }
             }
             lastName = name.getDefaultDisplayName();
