@@ -31,6 +31,7 @@ import java.util.List;
 public class AzquoBook {
 
     public static final String cr = "";//removing unnecessary carriage returns
+    public String errorMessage = "";
 
 
     private static final Logger logger = Logger.getLogger(AzquoBook.class);
@@ -800,6 +801,7 @@ public class AzquoBook {
     }
 
     public void loadData(LoggedInConnection loggedInConnection) throws Exception {
+        errorMessage = "";
         calculateAll();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
@@ -809,8 +811,8 @@ public class AzquoBook {
                 try {
                     fillRegion(loggedInConnection, regionName);
                 } catch (Exception e) {
-                    throw e;
-                    //TODO handle 'cannot resolve reference to ....
+                    errorMessage = e.getMessage();
+                    System.out.println(errorMessage);
                 }
                 System.out.println("fillregion took " + (System.currentTimeMillis() - regStart) + " millisecs");
                 regStart = System.currentTimeMillis();
@@ -1597,7 +1599,7 @@ public class AzquoBook {
     }
 
 
-    public void convertSpreadsheetToHTML(LoggedInConnection loggedInConnection, int reportId, String spreadsheetName, StringBuilder output) throws Exception {
+    public String convertSpreadsheetToHTML(LoggedInConnection loggedInConnection, int reportId, String spreadsheetName, StringBuilder output) throws Exception {
         setSheet(0);
         loggedInConnection.clearSortCols();
         if (spreadsheetName != null) {
@@ -1612,6 +1614,7 @@ public class AzquoBook {
         prepareSheet(loggedInConnection, reportId, highlighted);
         //TODO IGNORE ERROR CURRENTLY - SEND BACK IN MESSAGE
         output.append(convertToHTML(loggedInConnection, highlighted));
+        return errorMessage;
     }
 
     public void saveBook(String fileName) throws Exception {
