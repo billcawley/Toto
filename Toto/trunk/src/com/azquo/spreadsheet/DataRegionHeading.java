@@ -11,6 +11,8 @@ import com.azquo.memorydb.core.Name;
  * used to represent these headers and context.
  * <p/>
  * See no reason not to make this simple and immutable. Bottom line is that this can be either an attribute or a name
+ *
+ * OK, in preparation for splitting the the UI/Rendering I need to get name out of here
  */
 public class DataRegionHeading {
 

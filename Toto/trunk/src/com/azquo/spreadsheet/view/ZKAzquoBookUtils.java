@@ -112,6 +112,24 @@ public class ZKAzquoBookUtils {
             }
     }
 
+    // like rangeToStringLists in azquobook
+
+    private List<List<String>> regionToStringLists(CellRegion region, Sheet sheet) {
+        List<List<String>> toReturn = new ArrayList<List<String>>();
+        for (int rowIndex = region.getRow(); rowIndex <= region.getLastRow(); rowIndex++) {
+            List<String> row = new ArrayList<String>();
+            toReturn.add(row);
+            for (int colIndex = region.getColumn(); colIndex <= region.getLastColumn(); colIndex++) {
+                SCell cell = sheet.getInternalSheet().getCell(rowIndex, colIndex);
+                // I assume non null cell has a non null sting value, do I need to check for null?
+                row.add(cell != null ? cell.getStringValue() : null);
+            }
+        }
+        return toReturn;
+    }
+
+
+
     // taking the function from old AzquoBook and rewriting
 
     private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, String optionsForRegion, LoggedInConnection loggedInConnection) throws Exception {
@@ -127,49 +145,13 @@ public class ZKAzquoBookUtils {
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
 
-        // ok the old style got the region as an Excel copy/paste string then converted that into headers
-        // I think I'll try to skip the middle man
-        // adapted from createnames list form excel region
-        if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
-            // instead of valueService.setupRowHeadings, used not for straight display but for the excel data bit, it will constain them and after we output.
-            // while running in parallel with the old code it might work without this as the headings would have been set up in a previous call to the logged in connection
-
-            List<List<List<DataRegionHeading>>> columnHeadings = getHeadingsLists(columnHeadingsDescription, sheet, loggedInConnection);
-            List<List<List<DataRegionHeading>>> rowHeadings = getHeadingsLists(rowHeadingsDescription, sheet, loggedInConnection);
-            // deal with context
-            // copied from valueservice.getdatareegion. Seems a bit odd but this is the old behavior
-            // ok IU'd made a mistake here assuming context was only ever one cell, it can be multiple, hcen scan through the cells but just tack on names, the placing in the cells is irrelevant
-            final List<Name> contextNames = new ArrayList<Name>();
-            if (contextDescription != null) {
-                for (int rowIndex = contextDescription.getRow(); rowIndex <= contextDescription.getLastRow(); rowIndex++) {
-                    for (int colIndex = contextDescription.getColumn(); colIndex <= contextDescription.getLastColumn(); colIndex++) {
-                        SCell cell = sheet.getInternalSheet().getCell(rowIndex, colIndex);
-                        String contextString = cell.getStringValue();
-                        if (contextString != null) {
-                            final StringTokenizer st = new StringTokenizer(contextString, "\n");
-                            while (st.hasMoreTokens()) {
-                                final List<Name> thisContextNames = nameService.parseQuery(loggedInConnection, st.nextToken().trim());
-                                if (thisContextNames.size() > 1) {
-                                    throw new Exception("error: context names must be individual - use 'as' to put sets in context");
-                                }
-                                if (thisContextNames.size() > 0) {
-                                    //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
-                                    contextNames.add(thisContextNames.get(0));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ok now ready for the data
             // ok going to try to use the new funciton
-            List<List<AzquoCell>> dataToShow = spreadsheetService.getAzquoCellsForRowsColumnsAndContext(loggedInConnection, spreadsheetService.expandHeadings(rowHeadings)
-                    , spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadings)), contextNames, loggedInConnection.getLanguages());
-            dataToShow = spreadsheetService.sortAndFilterCells(dataToShow, spreadsheetService.expandHeadings(rowHeadings), spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadings))
-                    , filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
+
             // not going to do this just yet
-            //valueService.sortAndFilterCells()
+         if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
+            List<List<AzquoCell>> dataToShow = spreadsheetService.getDataRegion(loggedInConnection, regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
+                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
+
 
             List<List<DataRegionHeading>> expandedColumnHeadings = spreadsheetService.getColumnHeadingsAsArray(dataToShow);
             List<List<DataRegionHeading>> expandedRowHeadings = spreadsheetService.getRowHeadingsAsArray(dataToShow);

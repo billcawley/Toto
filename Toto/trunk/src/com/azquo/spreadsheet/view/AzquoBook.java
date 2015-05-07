@@ -7,7 +7,6 @@ import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.spreadsheet.*;
 import com.csvreader.CsvWriter;
@@ -254,10 +253,6 @@ public class AzquoBook {
         wb.calculateFormula();
     }
 
-    private String rangeToText(Range range) {
-        return rangeToText(range, false).toString();
-    }
-
 
     private void setupColwidths() {
         maxWidth = 0;
@@ -454,47 +449,36 @@ public class AzquoBook {
         logger.info("loading " + region);
         int filterCount = optionNumber(region, "hiderows");
         if (filterCount == 0)
-            filterCount = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
+            filterCount = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second. Edd : what does this mean??
         int maxRows = optionNumber(region, "maxrows");
         //if (maxRows == 0) loggedInConnection.clearSortCols();//clear it.  not sure why this is done - pushes the sort from the load into the spreadsheet if there is no restriction on si
         int maxCols = optionNumber(region, "maxcols");
 
         Range rowHeadings = getRange("az_rowheadings" + region);
         if (rowHeadings == null) {
-            return;
+            throw new Exception("no range az_rowHeadings" + region);
         }
-        String rangeText = rangeToText(rowHeadings);
-        // there was a detection for "error:" returned but I can't see where it might return this
-        long start = System.currentTimeMillis();
-        final List<List<List<DataRegionHeading>>> rowHeadingLists = spreadsheetService.createNameListsFromExcelRegion(loggedInConnection, rangeText, loggedInConnection.getLanguages());
-        System.out.println("row heading setup took " + (System.currentTimeMillis() - start) + " millisecs");
+        // todo, get rid of the column and row heading lists, do this inside the service function, preparing for the server split.
         //don't bother to display yet - maybe need to filter out or sort
         Range columnHeadings = getRange("az_columnheadings" + region);
         if (columnHeadings == null) {
             throw new Exception("no range az_ColumnHeadings" + region);
         }
-        rangeText = rangeToText(columnHeadings);
-        List<List<List<DataRegionHeading>>> columnHeadingLists = spreadsheetService.createNameListsFromExcelRegion(loggedInConnection, rangeText, loggedInConnection.getLanguages());
         //fillRange("az_displaycolumnheadings" + region, result, "LOCKED");
         Range context = getRange("az_context" + region);
         if (context == null) {
             throw new Exception("no range az_Context" + region);
         }
-        rangeText = rangeToText(context);
-        List<List<AzquoCell>> cellArray = spreadsheetService.getDataRegion(loggedInConnection, spreadsheetService.expandHeadings(rowHeadingLists), spreadsheetService.expandHeadings(spreadsheetService.transpose2DList(columnHeadingLists)),
-                rangeText, filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
+        List<List<AzquoCell>> cellArray = spreadsheetService.getDataRegion(loggedInConnection, rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
+                rangeToStringLists(context), filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
         loggedInConnection.setSentCells(region, cellArray);
+        // did this mean the language is in the context? Check with Bill . . .
         // think this language detection is sound
-        String language = stringUtils.getInstruction(rangeText, "language");
-        if (language == null) {
-            language = Name.DEFAULT_DISPLAY_NAME;
-        }
         fillRange(dataRegionPrefix + region, cellArray, true);
         List<List<DataRegionHeading>> columnHeadingsAsArray = spreadsheetService.getColumnHeadingsAsArray(cellArray);
 
         // I'm keen to get rid of the given row and column headings but will leave for the mo to get this to compile
-
-        String[] givenColumnHeadings = fillRange("az_displaycolumnheadings" + region, columnHeadingsAsArray, language, false);
+        String[] givenColumnHeadings = fillRange("az_displaycolumnheadings" + region, columnHeadingsAsArray, Name.DEFAULT_DISPLAY_NAME, false);
         String sortable = hasOption(region, "sortable");
         if (sortable != null) {
             Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
@@ -502,7 +486,7 @@ public class AzquoBook {
                 givenHeadings.put("columns:" + region, givenColumnHeadings);
             }
         }
-        String[] givenRowHeadings = fillRange("az_displayrowheadings" + region, spreadsheetService.getRowHeadingsAsArray(cellArray), language, true);
+        String[] givenRowHeadings = fillRange("az_displayrowheadings" + region, spreadsheetService.getRowHeadingsAsArray(cellArray), Name.DEFAULT_DISPLAY_NAME, true);
         if (sortable != null && sortable.equalsIgnoreCase("all")) {
             Range displayRowHeadings = getRange("az_displayrowheadings" + region);
             if (displayRowHeadings != null) {
@@ -1409,60 +1393,21 @@ public class AzquoBook {
         return "";
     }
 
-    // todo - maybe zap this, is it unnecessarily using strings??
-    // used by admin, can zap when I move that to HTML
+    // Changing to return 2d string array, this is what we want to pass to the back end
 
-    private StringBuilder rangeToText(Range range, boolean withId) {
-        StringBuilder sb = new StringBuilder();
-        int idCol = -1;
-        int aRowNo = range.getFirstRow();
-        int lastRow = aRowNo + range.getRowCount();
-        if (withId) {
-            for (int colNo = 0; colNo < lastRow; colNo++) {
-                Cell cell = azquoCells.get(aRowNo, colNo);
-                if (cell != null && cell.getStringValue().equalsIgnoreCase("id")) {
-                    idCol = colNo;
-                    break;
-                }
-            }
-        }
-        boolean firstRow = true;
+    private List<List<String>> rangeToStringLists(Range range) {
+        List<List<String>> toReturn = new ArrayList<List<String>>();
         for (int rowNo = 0; rowNo < range.getRowCount(); rowNo++) {
+            List<String> row = new ArrayList<String>();
+            toReturn.add(row);
             if (range.getCellOrNull(rowNo, 0) != null) {
-                if (firstRow) {
-                    firstRow = false;
-                } else {
-                    sb.append("\n");
-                }
-                boolean firstCol = true;
-                if (idCol >= 0) {
-                    // as intellij pointed out, firstrow is always false
-/*                    if (firstRow) {
-                        sb.append("id");
-                    } else {*/
-                    Cell cell = azquoCells.get(aRowNo + rowNo, idCol);
-                    if (cell != null && cell.getStringValue().length() > 0) {
-                        sb.append(cell.getStringValue());
-                    } else {
-                        sb.append("0");
-                    }
-                    firstCol = false;
-                }
                 for (int colNo = 0; colNo < range.getColumnCount(); colNo++) {
-                    if (firstCol) {
-                        firstCol = false;
-                    } else {
-                        sb.append("\t");
-                    }
                     Cell cell = range.getCellOrNull(rowNo, colNo);
-                    if (cell != null) {
-                        String cellVal = cell.getStringValue();
-                        sb.append(cellVal);
-                    }
+                    row.add(cell != null ? cell.getStringValue().trim() : null);
                 }
             }
         }
-        return sb;
+        return toReturn;
     }
 
     private String subsequent(String nameText) {
@@ -1508,7 +1453,11 @@ public class AzquoBook {
                     String nextNameName = nextName.getAttribute("next");
                     if (nextNameName != null) {
                         nextName.setAttributeWillBePersisted("next", subsequent(nextNameName));
-                        newNames.put(rangeToText(name.getRange()), nextNameName);
+                        // Edd : not exactly sure what this funciton does but I think this hack on what I assume is a singe cell will solve the problem
+                        List<List<String>> rangeStrings = rangeToStringLists(name.getRange());
+                        if (!rangeStrings.isEmpty() && !rangeStrings.get(0).isEmpty()){
+                            newNames.put(rangeStrings.get(0).get(0), nextNameName);
+                        }
                     }
                 }
             }
