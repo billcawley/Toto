@@ -107,7 +107,7 @@ public class ManagePermissionsController {
                         } else {
                             toEdit.setUserId(Integer.parseInt(userId));
                             toEdit.setDatabaseId(Integer.parseInt(databaseId));
-                            toEdit.setStartDate(LocalDate.parse(endDate, formatter).atStartOfDay());
+                            toEdit.setStartDate(LocalDate.parse(startDate, formatter).atStartOfDay());
                             toEdit.setEndDate(LocalDate.parse(endDate, formatter).atStartOfDay());
                             toEdit.setReadList(readList);
                             toEdit.setWriteList(writeList);
@@ -121,7 +121,7 @@ public class ManagePermissionsController {
                     model.put("id", editId);
                     model.put("databaseId", databaseId);
                     model.put("userId", userId);
-                    model.put("startDate", endDate);
+                    model.put("startDate", startDate);
                     model.put("endDate", endDate);
                     model.put("readList", readList);
                     model.put("writeList", writeList);
