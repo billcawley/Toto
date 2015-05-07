@@ -16,6 +16,7 @@ public class OnlineReport extends StandardEntity {
     private int databaseId;
     private String database; // for sending parameters only
     private String reportName;
+    private String reportCategory;
     private String userStatus;
     private String filename;
     private String pathName; //internal use
@@ -27,6 +28,7 @@ public class OnlineReport extends StandardEntity {
             , @JsonProperty("databaseId") int databaseId
             , @JsonProperty("database") String database
             , @JsonProperty("reportName") String reportName
+            , @JsonProperty("reportCategory") String reportCategory
             , @JsonProperty("userStatus") String userStatus
             , @JsonProperty("filename") String filename
             , @JsonProperty("pathName") String pathName
@@ -36,6 +38,7 @@ public class OnlineReport extends StandardEntity {
         this.databaseId = databaseId;
         this.database = database;
         this.reportName = reportName;
+        this.reportCategory = reportCategory;
         this.userStatus = userStatus;
         this.filename = filename;
         this.pathName = pathName;
@@ -72,6 +75,12 @@ public class OnlineReport extends StandardEntity {
 
     public void setReportName(String reportName) {
         this.reportName = reportName;
+    }
+
+    public String getReportCategory() { return reportCategory;  }
+
+    public void setReportCategory(String reportCategory) {
+        this.reportCategory = reportCategory;
     }
 
     public String getUserStatus() {
@@ -114,6 +123,7 @@ public class OnlineReport extends StandardEntity {
                 ", businessId=" + businessId +
                 ", databaseId=" + databaseId +
                 ", reportName='" + reportName + '\'' +
+                ", reportCategory'" + reportCategory + '\'' +
                 ", userStatus='" + userStatus + '\'' +
                 ", filename='" + filename + '\'' +
                 ", explanation='" + explanation + '\'' +

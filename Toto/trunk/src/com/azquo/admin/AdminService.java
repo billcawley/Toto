@@ -274,7 +274,7 @@ public class AdminService {
                 }
             }
         } else {
-            OnlineReport notFound = new OnlineReport(0, 0, 0, "", "No reports found", "", "", "", "");
+            OnlineReport notFound = new OnlineReport(0, 0, 0, "", "", "No reports found", "", "", "", "");
             reportList.add(notFound);
         }
         return reportList;

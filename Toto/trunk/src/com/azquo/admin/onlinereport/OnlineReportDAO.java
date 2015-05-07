@@ -27,6 +27,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     // edd: hmm, what's going on with database?
     //public static final String DATABASE = "database";
     public static final String REPORTNAME = "report_name";
+    public static final String REPORTCATEGORY = "report_category";
     public static final String USERSTATUS = "user_status";
     public static final String FILENAME = "filename";
     public static final String EXPLANATION = "explanation";
@@ -38,6 +39,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         toReturn.put(BUSINESSID, onlineReport.getBusinessId());
         toReturn.put(DATABASEID, onlineReport.getDatabaseId());
         toReturn.put(REPORTNAME, onlineReport.getReportName());
+        toReturn.put(REPORTCATEGORY,onlineReport.getReportCategory());
         toReturn.put(USERSTATUS, onlineReport.getUserStatus());
         toReturn.put(FILENAME, onlineReport.getFilename());
         toReturn.put(EXPLANATION, onlineReport.getExplanation());
@@ -54,6 +56,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
                         , rs.getInt(DATABASEID)
                         , ""
                         , rs.getString(REPORTNAME)
+                        , rs.getString(REPORTCATEGORY)
                         , rs.getString(USERSTATUS)
                         , rs.getString(FILENAME)
                         , ""
@@ -92,7 +95,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
 
         namedParams.addValue(BUSINESSID, businessId);
         namedParams.addValue(USERSTATUS, "%" + userStatus + "%");
-        return findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " and " + statusSelect, namedParams, false);
+        return findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " and " + statusSelect + " order by " + REPORTCATEGORY + ", " + REPORTNAME, namedParams, false);
     }
 
     public List<OnlineReport> findForBusinessId(final int businessId) {
