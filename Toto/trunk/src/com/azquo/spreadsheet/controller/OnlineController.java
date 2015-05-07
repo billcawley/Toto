@@ -150,6 +150,8 @@ public class OnlineController {
                     if (loggedInConnection == null) {
                         model.addAttribute("content", "error:no connection id");
                         return "utf8page";
+                    } else {
+                        request.getSession().setAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
                     }
                 }
                 if (onlineReport != null) {
