@@ -45,6 +45,14 @@
 
         .reportname a{
             position:relative;
+            left:40px;
+            top:5px;
+            font-size:16px;
+            text-decoration:none;
+            color:#444444;
+        }
+        .reportcategory {
+            position:relative;
             left:0px;
             top:5px;
             font-size:20px;
@@ -54,9 +62,10 @@
 
         .reportexplanation {
             position:relative;
-            left:20px;
-            top:20px;
+            left:300px;
+            top:-10px;
             width:300px;
+            font-size:12px;
             font-color:#666666
         }
 
@@ -70,9 +79,11 @@
             <div class="welcome">$welcome</div>
         </div>
         <div class = "reportwrapper">
+
             #foreach($report in $reports)
                 <div class="report">
-                    <div class="reportname"><a href="$report.link"> $report.name</a></div>
+                      <div class="reportcategory">$report.category</div>
+                      <div class="reportname"><a href="$report.link"> $report.name</a></div>
                     <div class="reportexplanation">$report.explanation</div>
                     #if($report.image)
                          <div class="reportimage>$report.image</div>
