@@ -226,7 +226,7 @@ public class SpreadsheetService {
             }
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
             spreadsheetName = azquoBook.printTabs(tabs, spreadsheetName);
-            azquoBook.convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), spreadsheetName, worksheet);
+            message = azquoBook.convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), spreadsheetName, worksheet);
         } catch (Exception e) {
             e.printStackTrace();
             throw (e);
@@ -462,9 +462,17 @@ public class SpreadsheetService {
         if (loggedInConnection.getCurrentDatabase() != null) {
             context.put("database", loggedInConnection.getAzquoMemoryDB().getDatabase().getName());
         }
-        Set<Map<String, String>> reports = new HashSet<Map<String, String>>();
+        List<Map<String, String>> reports = new ArrayList<Map<String, String>>();
+        String reportCategory = "";
+
         for (OnlineReport onlineReport : onlineReports) {
             Map<String, String> vReport = new HashMap<String, String>();
+            if (!onlineReport.getReportCategory().equals(reportCategory)){
+                vReport.put("category", onlineReport.getReportCategory());
+            }else{
+                vReport.put("category","");
+            }
+            reportCategory = onlineReport.getReportCategory();
             vReport.put("name", onlineReport.getReportName());
             vReport.put("explanation", onlineReport.getExplanation());
             vReport.put("link", "/api/Online/?opcode=loadsheet&reportid=" + onlineReport.getId());
@@ -493,7 +501,7 @@ public class SpreadsheetService {
     // The amount of string pushing around here bugs me slightly, azquo book probably makes a big old chunk of HTML
     // todo, maybe use velocity in the spring way? http://wiki.apache.org/velocity/VelocityAndSpringStepByStep
 
-    private String convertToVelocity(VelocityContext context, String itemName, Set<Map<String, String>> items, String velocityTemplate) {
+    private String convertToVelocity(VelocityContext context, String itemName, List<Map<String, String>> items, String velocityTemplate) {
         VelocityEngine ve = new VelocityEngine();
         Properties properties = new Properties();
         Template t;
