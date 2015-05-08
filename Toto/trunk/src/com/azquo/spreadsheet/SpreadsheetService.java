@@ -1003,6 +1003,7 @@ seaports;children   container;children
         if (toFind == null || toFind.length() == 0) {
             return 0;
         }
+        toFind = toFind.replace(" ","");
         if (toFind.endsWith("-desc")) {
             toFind = toFind.replace("-desc", "");
             desc = true;
@@ -1255,6 +1256,7 @@ I think that this is an ideal candidate for multithreading to speed things up
                         String stringValue;
                         double doubleValue = 0;
                         Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
+                        Set<DataRegionHeading>rowAndColumnHeadingsForThisCell = null;
                         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
 
                         //check that we do have both row and column headings, oterhiwse blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
@@ -1270,6 +1272,7 @@ I think that this is an ideal candidate for multithreading to speed things up
                                     headingsForThisCell.add(heading);
                                 }
                             }
+                            rowAndColumnHeadingsForThisCell = new HashSet<DataRegionHeading>(headingsForThisCell);
                             if (headingsForThisCell.size() > hCount) {
                                 headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection));
                             } else {
@@ -1313,13 +1316,18 @@ I think that this is an ideal candidate for multithreading to speed things up
                                 List<Name> names = new ArrayList<Name>();
                                 List<String> attributes = new ArrayList<String>();
                                 listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
-                                String attributeResult = valueService.findValueForHeadings(headingsForThisCell, locked, names, attributes);
+                                String attributeResult = valueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked, names, attributes);
                                 if (NumberUtils.isNumber(attributeResult)) { // there should be a more efficient way I feel given that the result is typed internally
                                     doubleValue = Double.parseDouble(attributeResult);
                                     // ZK would sant this typed? Maybe just sort out later?
                                 }
-                                attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
-                                stringValue = attributeResult;
+                                if (attributeResult!=null) {
+                                    attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
+                                    stringValue = attributeResult;
+                                }else{
+                                    stringValue = "";
+                                }
+
                             }
                         }
                 /* something to note : in the old model there was a map of headings used for each cell. I could add headingsForThisCell to the cell which would be a unique set for each cell
