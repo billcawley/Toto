@@ -32,6 +32,11 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.InetAddress;
+import java.time.LocalDateTime;
+import java.time.Period;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -173,6 +178,7 @@ public class SpreadsheetService {
     }
 
     // What actually delivers the reports to the browser. Maybe change to an output writer? Save memory and increase speed.
+    // also there's html in here, view stuff, need to get rid of that
 
     public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message) throws Exception {
         String path = getHomeDir() + "/temp/";
@@ -990,8 +996,9 @@ seaports;children   container;children
         // ok going to try to use the new function
         List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(loggedInConnection, rowHeadings
                 , columnHeadings, contextNames, loggedInConnection.getLanguages());
+        int highlightAge = 0;
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
-                , filterCount, maxRows, maxCols, sortRow, sortCol);
+                , filterCount, maxRows, maxCols, sortRow, sortCol, highlightAge);
         return dataToShow;
         //return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows, maxCols);
     }
@@ -1032,9 +1039,10 @@ seaports;children   container;children
 
     // plan with refactoring is for this to do some of what was in the old get excel data function. Taking the full region and imposing useful user limits
     // note, one could derive column and row headings from the source data's headings but passing them is easier if they are to hand which the should be
+    // also deals with highlighting
 
     private List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
-            , int filterCount, int restrictRowCount, int restrictColCount, String sortRowString, String sortColString) throws Exception {
+            , int filterCount, int restrictRowCount, int restrictColCount, String sortRowString, String sortColString, int highlightDays) throws Exception {
         long track = System.currentTimeMillis();
         if (sourceData == null || sourceData.isEmpty()) {
             return sourceData;
@@ -1183,6 +1191,37 @@ seaports;children   container;children
                 }
                 blockRowCount = 0;
             }
+            // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
+            if (highlightDays > 0) {
+                for (AzquoCell azquoCell : newRow){
+                    long age = 0;
+                    ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
+                    if (valuesForCell.getValues() != null || !valuesForCell.getValues().isEmpty()) {
+    /* what did this mean??                    if (valuesForCell.getValues().size() == 1) {
+                            for (Value value : valuesForCell.getValues()) {
+                                if (value == null) {//cell has been changed
+                                    return 0;
+                                }
+                            }
+                        }*/
+                        for (Value value : valuesForCell.getValues()) {
+                            if (value.getText().length() > 0) {
+                                if (value.getProvenance() == null) {
+                                    break;
+                                }
+                                LocalDateTime provdate = LocalDateTime.ofInstant(value.getProvenance().getTimeStamp().toInstant(), ZoneId.systemDefault());
+                                long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.DAYS);
+                                if (cellAge < age) {
+                                    age = cellAge;
+                                }
+                            }
+                        }
+                    }
+                    if (highlightDays >= age){
+                        azquoCell.setHighlighted(true);
+                    }
+                }
+            }
         }
 
         //formatLockMap(loggedInConnection, region, lockArray);
@@ -1192,6 +1231,33 @@ seaports;children   container;children
         logger.info("time to execute : " + (System.currentTimeMillis() - track));
         return sortedCells;
     }
+/*
+
+    private void setHighlights(LoggedInConnection loggedInConnection, Map<Cell, Boolean> highlighted) {
+        //NOTE - This may change the formatting of model cells for conditional formats, which may make a mess!
+        for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
+            com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
+            if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
+                Range range = name.getRange();
+                String region = name.getText().substring(dataRegionPrefix.length());
+                // there was a if range is null return but that would have null pointered by now . . .
+                for (int rowNo = 0; rowNo < range.getRowCount(); rowNo++) {
+                    for (int colNo = 0; colNo < range.getColumnCount(); colNo++) {
+                        Cell cell = range.getCellOrNull(rowNo, colNo);
+                        if (cell != null && cell.getValue() != null) {
+
+                            if (highlightDays >= spreadsheetService.getAge(loggedInConnection, region, rowNo, colNo)) {
+                                cell.setStyle(highlightStyle(cell));
+                                highlighted.put(cell, true);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+*/
 
 
     /* I need to make more sense of getExcelDataForColumnsRowsAndContext, going to start here
@@ -1332,7 +1398,7 @@ I think that this is an ideal candidate for multithreading to speed things up
                         }
                 /* something to note : in the old model there was a map of headings used for each cell. I could add headingsForThisCell to the cell which would be a unique set for each cell
                  but instead I'll just add the headings and row and context, this should enable us to do what we need later (saving) and I think it would be less memory. 3 object references vs a set*/
-                        AzquoCell azquoCell = new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextNames, stringValue, doubleValue);
+                        AzquoCell azquoCell = new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextNames, stringValue, doubleValue, false);
                         returnRow.add(azquoCell);
                     }
                     targetArray.set(rowNo, returnRow);
@@ -1583,8 +1649,6 @@ I think that this is an ideal candidate for multithreading to speed things up
             return output;
         }
     }
-
-    // todo - make work after other code has been rearranged
 
     public void saveData(LoggedInConnection loggedInConnection, String region) throws Exception {
         int numberOfValuesModified = 0;

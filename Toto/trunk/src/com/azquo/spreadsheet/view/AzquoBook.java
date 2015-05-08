@@ -47,8 +47,6 @@ public class AzquoBook {
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
-    private static final StringUtils stringUtils = new StringUtils();
-
     static class RegionInfo {
         String region;
         int row;
@@ -320,32 +318,9 @@ public class AzquoBook {
         }
     }
 
-    private void setHighlights(LoggedInConnection loggedInConnection, Map<Cell, Boolean> highlighted) {
-        //NOTE - This may change the formatting of model cells for conditional formats, which may make a mess!
-        for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
-            com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
-            if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
-                Range range = name.getRange();
-                String region = name.getText().substring(dataRegionPrefix.length());
-                // there was a if range is null return but that would have null pointered by now . . .
-                for (int rowNo = 0; rowNo < range.getRowCount(); rowNo++) {
-                    for (int colNo = 0; colNo < range.getColumnCount(); colNo++) {
-                        Cell cell = range.getCellOrNull(rowNo, colNo);
-                        if (cell != null && cell.getValue() != null) {
-
-                            if (highlightDays >= spreadsheetService.getAge(loggedInConnection, region, rowNo, colNo)) {
-                                cell.setStyle(highlightStyle(cell));
-                                highlighted.put(cell, true);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     // this used to take an excel style paste string, changing to use the new AzquoCells . . .
-    private void fillRange(String regionName, List<List<AzquoCell>> cellArray, boolean overwrite) {
+    // hacky highlighted map for Azquobook rendering
+    private void fillRange(String regionName, List<List<AzquoCell>> cellArray, boolean overwrite, Map<Cell, Boolean> highlighted) {
         // for the headings, the lockmap is "locked" rather than the full array.
         Range range = getRange(regionName);
         if (range == null || cellArray == null || cellArray.isEmpty()) return;
@@ -360,6 +335,9 @@ public class AzquoBook {
                 String val = azquoCell.getStringValue();
                 if (val.equals("0.0")) val = "";
                 Cell currentCell = azquoCells.get(range.getFirstRow() + rowNo, range.getFirstColumn() + col);
+                if (highlighted != null){
+                    highlighted.put(currentCell, azquoCell.isHighlighted());
+                }
                 if (azquoCell.isLocked()) {
                     currentCell.getStyle().setLocked(true);
                 }
@@ -445,7 +423,7 @@ public class AzquoBook {
         return (colToLetters(range.getFirstColumn() + 1) + (range.getFirstRow() + 1) + ":" + colToLetters(range.getFirstColumn() + range.getColumnCount()) + (range.getFirstRow() + range.getRowCount()));
     }*/
 
-    private void fillRegion(LoggedInConnection loggedInConnection, String region) throws Exception {
+    private void fillRegion(LoggedInConnection loggedInConnection, String region,Map<Cell, Boolean> highlighted) throws Exception {
         logger.info("loading " + region);
         int filterCount = optionNumber(region, "hiderows");
         if (filterCount == 0)
@@ -474,7 +452,7 @@ public class AzquoBook {
         loggedInConnection.setSentCells(region, cellArray);
         // did this mean the language is in the context? Check with Bill . . .
         // think this language detection is sound
-        fillRange(dataRegionPrefix + region, cellArray, true);
+        fillRange(dataRegionPrefix + region, cellArray, true, highlighted);
         List<List<DataRegionHeading>> columnHeadingsAsArray = spreadsheetService.getColumnHeadingsAsArray(cellArray);
 
         // I'm keen to get rid of the given row and column headings but will leave for the mo to get this to compile
@@ -784,7 +762,7 @@ public class AzquoBook {
         velocityContext.put("regions", getRegions(loggedInConnection, dataRegionPrefix).toString());//this is for javascript routines
     }
 
-    public void loadData(LoggedInConnection loggedInConnection) throws Exception {
+    public void loadData(LoggedInConnection loggedInConnection, Map<Cell, Boolean> highlighted) throws Exception {
         errorMessage = "";
         calculateAll();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
@@ -793,7 +771,7 @@ public class AzquoBook {
                 String regionName = name.getText().substring(dataRegionPrefix.length()).toLowerCase();
                 long regStart = System.currentTimeMillis();
                 try {
-                    fillRegion(loggedInConnection, regionName);
+                    fillRegion(loggedInConnection, regionName,highlighted);
                 } catch (Exception e) {
                     errorMessage = e.getMessage();
                     System.out.println(errorMessage);
@@ -879,10 +857,7 @@ public class AzquoBook {
                 //missing the highlight would not be a problem
             }
         }
-        loadData(loggedInConnection);
-        if (highlightDays > 0) {
-            setHighlights(loggedInConnection, highlighted);
-        }
+        loadData(loggedInConnection, highlighted);
         //find the cells that will be used to make choices...
         calcMaxCol();
         setupColwidths();
@@ -1087,7 +1062,10 @@ public class AzquoBook {
 /*                        if (cell.getStyle().getRotationAngle() == 90) {
                             content = "<div class='r90'>" + content + "</div>";
                         }*/
-                        Boolean cellHighlighted = highlighted.get(cell);
+                        Boolean cellHighlighted = null;
+                        if (highlighted != null){
+                            cellHighlighted = highlighted.get(cell);
+                        }
                         if (cellHighlighted == null) cellHighlighted = false;
 
                         StringBuilder cellClass = createCellClass(rowNo, colNo, cell, cellHighlighted);
@@ -1287,13 +1265,13 @@ public class AzquoBook {
                 azquoCell.setDoubleValue(Double.parseDouble(value));
             }
             azquoCell.setStringValue(value);
+            if (highlightDays > 0) {
+                azquoCell.setHighlighted(true);
+            }
         }
         setCellValue(cellChanged, value);
         calculateAll();
         Map<Cell, Boolean> highlighted = new HashMap<Cell, Boolean>();
-        if (highlightDays > 0) {
-            setHighlights(loggedInConnection, highlighted);
-        }
         StringBuilder sb = new StringBuilder();
         sb.append("[");
         for (int rowNo = 0; rowNo < azquoCells.getMaxRow(); rowNo++) {
@@ -1476,7 +1454,7 @@ public class AzquoBook {
     }
     // executing parked for the mo due to saving not working
     public void executeSheet(LoggedInConnection loggedInConnection) throws Exception {
-        loadData(loggedInConnection);
+        loadData(loggedInConnection, null);
         saveData(loggedInConnection);
     }
 

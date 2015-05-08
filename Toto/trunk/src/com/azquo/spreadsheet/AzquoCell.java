@@ -11,7 +11,9 @@ import java.util.List;
  * <p/>
  * One point here is holding the headings against each cell but if not the headings then indexes would need to be saved
  * the reference will be 8 bytes to an object that exists anyway (in headings) vs 4 bytes for an int, I'm going to leave it for the mo
- * It was a set here, not sure whether to use it ro not
+ *
+ * Now we're moving to a client/server model I can't push this object through to the client,
+ *
  */
 public class AzquoCell {
     private final boolean locked;
@@ -22,8 +24,10 @@ public class AzquoCell {
     private String stringValue;
     private double doubleValue;
     private boolean changed;
+    private boolean highlighted;
 
-    public AzquoCell(boolean locked, ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings, List<Name> contexts, String stringValue, double doubleValue) {
+    public AzquoCell(boolean locked, ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName, List<DataRegionHeading> rowHeadings
+            , List<DataRegionHeading> columnHeadings, List<Name> contexts, String stringValue, double doubleValue, boolean highlighted) {
         this.locked = locked;
         this.listOfValuesOrNamesAndAttributeName = listOfValuesOrNamesAndAttributeName;
         this.rowHeadings = rowHeadings;
@@ -31,6 +35,7 @@ public class AzquoCell {
         this.contexts = contexts;
         this.stringValue = stringValue;
         this.doubleValue = doubleValue;
+        this.highlighted = highlighted;
     }
 
     public boolean isLocked() {
@@ -77,5 +82,13 @@ public class AzquoCell {
 
     public void setChanged(boolean changed) {
         this.changed = changed;
+    }
+
+    public boolean isHighlighted() {
+        return highlighted;
+    }
+
+    public void setHighlighted(boolean highlighted) {
+        this.highlighted = highlighted;
     }
 }
