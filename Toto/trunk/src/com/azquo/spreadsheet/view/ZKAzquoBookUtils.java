@@ -20,7 +20,7 @@ import java.util.*;
 
 /**
  * Created by cawley on 03/03/15.
- * TO manipulate the ZK book, practically speak a lot of what's in here might be functionally similar to what is in AzquoBook
+ * TO manipulate the ZK book, practically speaking a lot of what's in here might be functionally similar to what is in AzquoBook
  */
 public class ZKAzquoBookUtils {
 
@@ -149,12 +149,8 @@ public class ZKAzquoBookUtils {
 
             // not going to do this just yet
          if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
-            List<List<AzquoCell>> dataToShow = spreadsheetService.getDataRegion(loggedInConnection, regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
+            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInConnection, regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
                     regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
-
-
-            List<List<DataRegionHeading>> expandedColumnHeadings = spreadsheetService.getColumnHeadingsAsArray(dataToShow);
-            List<List<DataRegionHeading>> expandedRowHeadings = spreadsheetService.getRowHeadingsAsArray(dataToShow);
             // todo : how to indicate sortable rows/cols
             // now, put the headings into the sheet!
             // might be factored into fill range in a bit
@@ -173,8 +169,8 @@ public class ZKAzquoBookUtils {
                         maxCol = sheet.getLastColumn(i);
                     }
                 }
-                if ((displayRowHeadings.getRowCount() < expandedRowHeadings.size()) && displayRowHeadings.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
-                    rowsToAdd = expandedRowHeadings.size() - (displayRowHeadings.getRowCount());
+                if ((displayRowHeadings.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayRowHeadings.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
+                    rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayRowHeadings.getRowCount());
                     int insertRow = displayRowHeadings.getRow() + 2; // I think this is correct, middle row of 3?
                     Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
                     Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
@@ -199,9 +195,9 @@ public class ZKAzquoBookUtils {
                 }
                 // add columns
                 int maxRow = sheet.getLastRow();
-                if (displayColumnHeadings.getColumnCount() < expandedColumnHeadings.get(0).size() && displayColumnHeadings.getColumnCount() > 2) { // then we need to expand
+                if (displayColumnHeadings.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayColumnHeadings.getColumnCount() > 2) { // then we need to expand
 
-                    colsToAdd = expandedColumnHeadings.get(0).size() - (displayColumnHeadings.getColumnCount());
+                    colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayColumnHeadings.getColumnCount());
                     int insertCol = displayColumnHeadings.getColumn() + 2; // I think this is correct, just after the second column?
                     Range copySource = Ranges.range(sheet, 0, insertCol - 1, maxRow, insertCol - 1);
                     Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the 3rd col
@@ -215,31 +211,31 @@ public class ZKAzquoBookUtils {
                 }
                 // ok there should be the right space for the headings
                 int row = displayRowHeadings.getRow();
-                for (List<DataRegionHeading> rowHeading : expandedRowHeadings) {
+                for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
                     int col = displayRowHeadings.getColumn();
-                    for (DataRegionHeading heading : rowHeading) {
+                    for (String heading : rowHeading) {
                         if (heading != null) {
-                            sheet.getInternalSheet().getCell(row, col).setValue(heading.getAttribute() != null ? heading.getAttribute() : heading.getName().getDisplayNameForLanguages(loggedInConnection.getLanguages()));
+                            sheet.getInternalSheet().getCell(row, col).setValue(heading);
                         }
                         col++;
                     }
                     row++;
                 }
                 row = displayColumnHeadings.getRow();
-                for (List<DataRegionHeading> colHeading : expandedColumnHeadings) {
+                for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
                     int col = displayColumnHeadings.getColumn();
-                    for (DataRegionHeading heading : colHeading) {
+                    for (String heading : colHeading) {
                         if (heading != null) {
-                            sheet.getInternalSheet().getCell(row, col).setValue(heading.getAttribute() != null ? heading.getAttribute() : heading.getName().getDisplayNameForLanguages(loggedInConnection.getLanguages()));
+                            sheet.getInternalSheet().getCell(row, col).setValue(heading);
                         }
                         col++;
                     }
                     row++;
                 }
                 row = displayDataRegion.getRow();
-                for (List<AzquoCell> rowCellValues : dataToShow) {
+                for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
                     int col = displayDataRegion.getColumn();
-                    for (AzquoCell cellValue : rowCellValues) {
+                    for (CellForDisplay cellValue : rowCellValues) {
                         if (!cellValue.getStringValue().isEmpty()) { // then something to set
                             // the notable thing ehre is that ZK uses the object type to work out data type
                             if (NumberUtils.isNumber(cellValue.getStringValue())) {

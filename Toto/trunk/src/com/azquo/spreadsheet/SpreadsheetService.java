@@ -17,7 +17,8 @@ import com.azquo.memorydb.service.MutableBoolean;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.view.AzquoBook;
-import com.csvreader.CsvReader;
+import com.azquo.spreadsheet.view.CellForDisplay;
+import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.apache.velocity.Template;
@@ -33,10 +34,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.InetAddress;
 import java.time.LocalDateTime;
-import java.time.Period;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -961,16 +960,64 @@ seaports;children   container;children
         return sb.toString();
     }
 
-    // still a little funny about whether a logged in conneciton should be passed
+    // return headings as strings for display, I'm going to put blanks in here if null.
 
-    public List<List<AzquoCell>> getDataRegion(LoggedInConnection loggedInConnection, List<List<String>> rowHeadingsSource
+    private List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languages){
+        List<List<String>> toReturn = new ArrayList<List<String>>();
+        for (List<DataRegionHeading> row : source) {
+            List<String> returnRow = new ArrayList<String>();
+            toReturn.add(returnRow);
+            for (DataRegionHeading heading : row) {
+                String cellValue = null;
+                if (heading != null) {
+                    Name name = heading.getName();
+                    if (name != null) {
+                        for (String language : languages){
+                            if (name.getAttribute(language) != null) {
+                                cellValue = name.getAttribute(language);
+                                break;
+                            }
+                        }
+                        if (cellValue == null){
+                            cellValue = name.getDefaultDisplayName();
+                        }
+                    } else {
+                        cellValue = heading.getAttribute();
+                    }
+                }
+                returnRow.add(cellValue != null ? cellValue : "");
+            }
+        }
+        return toReturn;
+    }
+    // function that can be called by the front end to deliver the data and headings
+
+    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(LoggedInConnection loggedInConnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol) throws Exception {
+        List<List<AzquoCell>> data = getDataRegion(loggedInConnection,rowHeadingsSource,colHeadingsSource,contextSource,filterCount,maxRows,maxCols,sortRow,sortCol, loggedInConnection.getLanguages());
+        List<List<CellForDisplay>> displayData = new ArrayList<List<CellForDisplay>>();
+        for (List<AzquoCell> sourceRow : data){
+            List<CellForDisplay> displayDataRow = new ArrayList<CellForDisplay>();
+            displayData.add(displayDataRow);
+            for (AzquoCell sourceCell : sourceRow){
+                displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted()));
+            }
+        }
+        return new CellsAndHeadingsForDisplay(convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), loggedInConnection.getLanguages())
+                , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), loggedInConnection.getLanguages()), displayData);
+    }
+
+        // still a little funny about whether a logged in conneciton should be passed
+
+    private List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource
+            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, List<String> languages) throws Exception {
 
 
-        final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(loggedInConnection, rowHeadingsSource, loggedInConnection.getLanguages());
+        final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
         final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists);
-        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(loggedInConnection, colHeadingsSource, loggedInConnection.getLanguages());
+        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages);
         final List<List<DataRegionHeading>> columnHeadings = expandHeadings(transpose2DList(columnHeadingLists));
 
         if (columnHeadings.size() == 0 || rowHeadings.size() == 0) {
@@ -981,7 +1028,7 @@ seaports;children   container;children
             for (String contextItem : contextItems){
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
                 while (st.hasMoreTokens()) {
-                    final List<Name> thisContextNames = nameService.parseQuery(loggedInConnection, st.nextToken().trim());
+                    final List<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, st.nextToken().trim());
                     if (thisContextNames.size() > 1) {
                         throw new Exception("error: context names must be individual - use 'as' to put sets in context");
                     }
@@ -994,13 +1041,12 @@ seaports;children   container;children
         }
         // note, didn't se the context against the logged in connection, should I?
         // ok going to try to use the new function
-        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(loggedInConnection, rowHeadings
-                , columnHeadings, contextNames, loggedInConnection.getLanguages());
+        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings
+                , columnHeadings, contextNames, languages);
         int highlightAge = 0;
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
                 , filterCount, maxRows, maxCols, sortRow, sortCol, highlightAge);
         return dataToShow;
-        //return getExcelDataForColumnsRowsAndContext(loggedInConnection, contextNames, region, filterCount, maxRows, maxCols);
     }
 
     // for looking up a heading given a string. Seems used for looking up teh right col or row to sort on
@@ -1139,7 +1185,7 @@ seaports;children   container;children
         // ok we've got the sort info, here the old code set a fair amount of stuff in logged in connection, I need to work out where it's used.
         // the restrict row count was set, it's used in getrowheadingsasarray
         //loggedInConnection.setRestrictRowCount(region, restrictRowCount);
-        // used in ormatdataregion, formatdataregionprovenanceforoutput, getage(??), getrowheadingsasarray, savedata
+        // used in ormatdataregion, formatdataregionprovenanceforoutput,getrowheadingsasarray, savedata
         //loggedInConnection.setRowOrder(region, sortedRows);
         List<Integer> sortedCols = sortDoubleValues(restrictColCount, sortColumnTotals, sortColsRight);
         // I assume these two are the same as above
@@ -1231,34 +1277,6 @@ seaports;children   container;children
         logger.info("time to execute : " + (System.currentTimeMillis() - track));
         return sortedCells;
     }
-/*
-
-    private void setHighlights(LoggedInConnection loggedInConnection, Map<Cell, Boolean> highlighted) {
-        //NOTE - This may change the formatting of model cells for conditional formats, which may make a mess!
-        for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
-            com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
-            if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
-                Range range = name.getRange();
-                String region = name.getText().substring(dataRegionPrefix.length());
-                // there was a if range is null return but that would have null pointered by now . . .
-                for (int rowNo = 0; rowNo < range.getRowCount(); rowNo++) {
-                    for (int colNo = 0; colNo < range.getColumnCount(); colNo++) {
-                        Cell cell = range.getCellOrNull(rowNo, colNo);
-                        if (cell != null && cell.getValue() != null) {
-
-                            if (highlightDays >= spreadsheetService.getAge(loggedInConnection, region, rowNo, colNo)) {
-                                cell.setStyle(highlightStyle(cell));
-                                highlighted.put(cell, true);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-*/
-
 
     /* I need to make more sense of getExcelDataForColumnsRowsAndContext, going to start here
      this just gets the data, no sorting or anything like that
@@ -1463,7 +1481,7 @@ I think that this is an ideal candidate for multithreading to speed things up
     }
 
     // new logic, derive the headings from the data, no need to resort to resorting etc.
-    public List<List<DataRegionHeading>> getColumnHeadingsAsArray(List<List<AzquoCell>> cellArray) {
+    private List<List<DataRegionHeading>> getColumnHeadingsAsArray(List<List<AzquoCell>> cellArray) {
         List<List<DataRegionHeading>> toReturn = new ArrayList<List<DataRegionHeading>>();
         for (AzquoCell cell : cellArray.get(0)) {
             toReturn.add(cell.getColumnHeadings());
@@ -1472,7 +1490,7 @@ I think that this is an ideal candidate for multithreading to speed things up
     }
 
     // new logic, derive the headings from the data, no need to resort to resorting etc.
-    public List<List<DataRegionHeading>> getRowHeadingsAsArray(List<List<AzquoCell>> cellArray) {
+    private List<List<DataRegionHeading>> getRowHeadingsAsArray(List<List<AzquoCell>> cellArray) {
         List<List<DataRegionHeading>> toReturn = new ArrayList<List<DataRegionHeading>>();
         for (List<AzquoCell> cell : cellArray) {
             toReturn.add(cell.get(0).getRowHeadings());
@@ -1525,56 +1543,11 @@ I think that this is an ideal candidate for multithreading to speed things up
         return false;
     }
 
-    // todo : does this need to deal with name/attribute combos?
-    // for highlighting cells based on provenance time, seems quite the effort
-    public int getAge(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt) {
-        Calendar cal = Calendar.getInstance();
-        Date today = cal.getTime();
-
-        final List<List<AzquoCell>> sentCells = loggedInConnection.getSentCells(region);
-        int age = 10000;
-        if (sentCells == null) return age;
-        if (rowInt >= sentCells.size()) return age;
-        if (sentCells.get(rowInt) == null) return age;
-
-        final List<AzquoCell> rowValues = sentCells.get(rowInt);
-        if (colInt >= rowValues.size()) {// a blank column
-            return age;
-        }
-        final ListOfValuesOrNamesAndAttributeName valuesForCell = rowValues.get(colInt).getListOfValuesOrNamesAndAttributeName();
-        if (valuesForCell.getValues() == null || valuesForCell.getValues().size() == 0) {
-            return 0;
-        }
-        if (valuesForCell.getValues().size() == 1) {
-            for (Value value : valuesForCell.getValues()) {
-                if (value == null) {//cell has been changed
-                    return 0;
-                }
-            }
-        }
-        for (Value value : valuesForCell.getValues()) {
-            if (value.getText().length() > 0) {
-                if (value.getProvenance() == null) {
-                    return 0;
-                }
-                Date provdate = value.getProvenance().getTimeStamp();
-
-                final long dateSubtract = today.getTime() - provdate.getTime();
-                final long time = 1000 * 60 * 60 * 24;
-
-                final int cellAge = (int) (dateSubtract / time);
-                if (cellAge < age) {
-                    age = cellAge;
-                }
-            }
-        }
-        return age;
-    }
-
     // todo, when cell contents are from attributes??
     // this function seemed to be opverly complex before taking into account ordering and things. All we care about is matching to what was sent. What was sent is what should be in the sent cells
     public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt, String jsonFunction) {
-        final List<List<AzquoCell>> sentCells = loggedInConnection.getSentCells(region);
+        return "todo : provenance on a data cell";
+/*        final List<List<AzquoCell>> sentCells = loggedInConnection.getSentCells(region);
         if (sentCells != null) {
             if (sentCells.get(rowInt) != null) {
                 final List<AzquoCell> rowValues = sentCells.get(rowInt);
@@ -1593,7 +1566,7 @@ I think that this is an ideal candidate for multithreading to speed things up
             }
         } else {
             return ""; //"error: data has not been sent for that row/col/region";
-        }
+        }*/
     }
 
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
@@ -1650,14 +1623,16 @@ I think that this is an ideal candidate for multithreading to speed things up
         }
     }
 
+    // todo : make work again after code split
     public void saveData(LoggedInConnection loggedInConnection, String region) throws Exception {
+
+        /*
         int numberOfValuesModified = 0;
-        // reenabling here using azquocells which should now have a flag for change. This should simplfy the code below
         int rowCounter = 0;
         if (loggedInConnection.getSentCells(region) != null){
-            for (List<AzquoCell> row : loggedInConnection.getSentCells(region)){
+            for (List<CellForDisplay> row : loggedInConnection.getSentCells(region)){
                 int columnCounter = 0;
-                for (AzquoCell cell : row){
+                for (CellForDisplay cell : row){
                     if (!cell.isLocked() && cell.isChanged()){ // this should be allw e need to know!
                         numberOfValuesModified++;
                         // this save logic is the same as before but getting necessary info from the AzquoCell
@@ -1703,7 +1678,7 @@ I think that this is an ideal candidate for multithreading to speed things up
         }
         if (numberOfValuesModified > 0){
             loggedInConnection.persist();
-        }
+        }*/
     }
 
     // Four little utility functions added by Edd, required now headings are not names

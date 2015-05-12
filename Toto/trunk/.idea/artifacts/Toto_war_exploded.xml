@@ -6,6 +6,7 @@
       <element id="directory" name="WEB-INF">
         <element id="directory" name="classes">
           <element id="module-output" name="Toto" />
+          <element id="module-output" name="shared" />
         </element>
         <element id="directory" name="lib">
           <element id="library" level="project" name="apache-avalon:avalon-framework:4.1.5" />

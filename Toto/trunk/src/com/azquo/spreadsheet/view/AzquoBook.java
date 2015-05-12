@@ -320,7 +320,7 @@ public class AzquoBook {
 
     // this used to take an excel style paste string, changing to use the new AzquoCells . . .
     // hacky highlighted map for Azquobook rendering
-    private void fillRange(String regionName, List<List<AzquoCell>> cellArray, boolean overwrite, Map<Cell, Boolean> highlighted) {
+    private void fillRange(String regionName, List<List<CellForDisplay>> cellArray, boolean overwrite, Map<Cell, Boolean> highlighted) {
         // for the headings, the lockmap is "locked" rather than the full array.
         Range range = getRange(regionName);
         if (range == null || cellArray == null || cellArray.isEmpty()) return;
@@ -329,9 +329,9 @@ public class AzquoBook {
         range = getRange(regionName);
         createMergeMap();
         int rowNo = 0;
-        for (List<AzquoCell> row : cellArray) {
+        for (List<CellForDisplay> row : cellArray) {
             int col = 0;
-            for (AzquoCell azquoCell : row) {
+            for (CellForDisplay azquoCell : row) {
                 String val = azquoCell.getStringValue();
                 if (val.equals("0.0")) val = "";
                 Cell currentCell = azquoCells.get(range.getFirstRow() + rowNo, range.getFirstColumn() + col);
@@ -353,7 +353,7 @@ public class AzquoBook {
 
     // like above for headings, auto lock for example. Might be some bits to factor
     // ok I'm returning an Array of strings as some of the book code for soting needs it. It will be the bottom of columsn or the right of rows, as indicated by the boolean
-    private String[] fillRange(String regionName, List<List<DataRegionHeading>> headingArray, String language, boolean rowHeadings) {
+    private String[] fillRange(String regionName, List<List<String>> headingArray, boolean rowHeadings) {
         // for the headings, the lockmap is "locked"
         List<String> toReturn = new ArrayList<String>();
         Range range = getRange(regionName);
@@ -363,42 +363,19 @@ public class AzquoBook {
         range = getRange(regionName);
         createMergeMap();
         int rowNo = 0;
-        for (List<DataRegionHeading> row : headingArray) {
+        for (List<String> row : headingArray) {
             int col = 0;
-            for (DataRegionHeading heading : row) {
-                String cellValue = null;
-                Name name = null;
-                if (heading!=null){
-                    name = heading.getName();
-                }
-                if (name != null) {
-                    String nameInLanguage = name.getAttribute(language);
-                    if (nameInLanguage == null) {
-                        nameInLanguage = name.getDefaultDisplayName();
-                    }
-                    cellValue = nameInLanguage;
-                } else {
-                    if (heading==null){
-                        cellValue = "";
-                    }else {
-                        String attribute = heading.getAttribute();
-                        if (attribute != null) cellValue = attribute;
-                    }
-                }
+            for (String heading : row) {
                 Cell currentCell = azquoCells.get(range.getFirstRow() + rowNo, range.getFirstColumn() + col);
                 currentCell.getStyle().setLocked(true);
-                String existingCellVal = currentCell.getStringValue();
-                // don't overwrite (based on old boolean)
-                if (cellValue != null && existingCellVal == null || existingCellVal.length() == 0) {
-                    setCellValue(currentCell, cellValue);
-                }
+                setCellValue(currentCell, heading);
                 col++;
                 // hacky bits to return sortable bits
                 if (rowNo == headingArray.size() - 1 && !rowHeadings) { // last row and we're doing col headings
-                    toReturn.add(cellValue != null ? cellValue : "");
+                    toReturn.add(heading);
                 }
                 if (col == row.size() - 1 && rowHeadings) { // last col and we're doing row headings
-                    toReturn.add(cellValue != null ? cellValue : "");
+                    toReturn.add(heading);
                 }
             }
             rowNo++;
@@ -447,16 +424,12 @@ public class AzquoBook {
         if (context == null) {
             throw new Exception("no range az_Context" + region);
         }
-        List<List<AzquoCell>> cellArray = spreadsheetService.getDataRegion(loggedInConnection, rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
+        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInConnection, rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
                 rangeToStringLists(context), filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
-        loggedInConnection.setSentCells(region, cellArray);
-        // did this mean the language is in the context? Check with Bill . . .
+        loggedInConnection.setSentCells(region, cellsAndHeadingsForDisplay);
         // think this language detection is sound
-        fillRange(dataRegionPrefix + region, cellArray, true, highlighted);
-        List<List<DataRegionHeading>> columnHeadingsAsArray = spreadsheetService.getColumnHeadingsAsArray(cellArray);
-
-        // I'm keen to get rid of the given row and column headings but will leave for the mo to get this to compile
-        String[] givenColumnHeadings = fillRange("az_displaycolumnheadings" + region, columnHeadingsAsArray, Name.DEFAULT_DISPLAY_NAME, false);
+        fillRange(dataRegionPrefix + region, cellsAndHeadingsForDisplay.getData(), true, highlighted);
+        String[] givenColumnHeadings = fillRange("az_displaycolumnheadings" + region, cellsAndHeadingsForDisplay.getColumnHeadings(),false);
         String sortable = hasOption(region, "sortable");
         if (sortable != null) {
             Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
@@ -464,7 +437,7 @@ public class AzquoBook {
                 givenHeadings.put("columns:" + region, givenColumnHeadings);
             }
         }
-        String[] givenRowHeadings = fillRange("az_displayrowheadings" + region, spreadsheetService.getRowHeadingsAsArray(cellArray), Name.DEFAULT_DISPLAY_NAME, true);
+        String[] givenRowHeadings = fillRange("az_displayrowheadings" + region, cellsAndHeadingsForDisplay.getRowHeadings(),true);
         if (sortable != null && sortable.equalsIgnoreCase("all")) {
             Range displayRowHeadings = getRange("az_displayrowheadings" + region);
             if (displayRowHeadings != null) {
@@ -1196,7 +1169,7 @@ public class AzquoBook {
                         .append(jsonValue("left", dataRange != null ? dataRange.getFirstColumn() : 0))
                         .append(jsonValue("bottom", dataRange != null ? dataRange.getFirstRow() + dataRange.getRowCount() - 1 : 0))
                         .append(jsonValue("right", dataRange != null ? dataRange.getFirstColumn() + dataRange.getColumnCount() - 1 : 0))
-                        .append(jsonLockRange("locks", loggedInConnection.getSentCells(name.getText().substring(dataRegionPrefix.length()))))
+                        .append(jsonLockRange("locks", loggedInConnection.getSentCells(name.getText().substring(dataRegionPrefix.length())).getData()))
                         .append("}");
             }
         }
@@ -1205,12 +1178,12 @@ public class AzquoBook {
     }
     // skip the middle man I don't want to make a string array then convert to JSON, this should do the trick
 
-    private StringBuilder jsonLockRange(String name, List<List<AzquoCell>> azquoCells) {
+    private StringBuilder jsonLockRange(String name, List<List<CellForDisplay>> azquoCells) {
         StringBuilder sb = new StringBuilder();
         sb.append(",\"").append(name).append("\":[");
         if (azquoCells != null) {
             boolean firstRow = true;
-            for (List<AzquoCell> cells : azquoCells) {
+            for (List<CellForDisplay> cells : azquoCells) {
                 boolean firstCol = true;
                 if (firstRow) {
                     firstRow = false;
@@ -1219,7 +1192,7 @@ public class AzquoBook {
 
                 }
                 sb.append("[");
-                for (AzquoCell cell : cells) {
+                for (CellForDisplay cell : cells) {
                     if (firstCol) {
                         firstCol = false;
                     } else {
@@ -1260,13 +1233,13 @@ public class AzquoBook {
         // I need to find the region - I assume (!) azquobook knows which sheet it's on. I know this code is prone to null pointers, it will be replaced by ZKbook in not long
         RegionInfo regionInfo = getRegionInfo(row, col);
         if (loggedInConnection.getSentCells(regionInfo.region) != null) {
-            AzquoCell azquoCell = loggedInConnection.getSentCells(regionInfo.region).get(row - regionInfo.row).get(col - regionInfo.col);
+            CellForDisplay cellForDisplay = loggedInConnection.getSentCells(regionInfo.region).getData().get(row - regionInfo.row).get(col - regionInfo.col);
             if (NumberUtils.isNumber(value)) {
-                azquoCell.setDoubleValue(Double.parseDouble(value));
+                cellForDisplay.setDoubleValue(Double.parseDouble(value));
             }
-            azquoCell.setStringValue(value);
+            cellForDisplay.setStringValue(value);
             if (highlightDays > 0) {
-                azquoCell.setHighlighted(true);
+                cellForDisplay.setHighlighted(true);
             }
         }
         setCellValue(cellChanged, value);
@@ -1344,23 +1317,26 @@ public class AzquoBook {
 
     public String getProvenance(LoggedInConnection loggedInConnection, int row, int col, String jsonFunction) {
         RegionInfo regionInfo = getRegionInfo(row, col);
+        //todo make provenance on headings work again
         if (regionInfo == null) return "";
             if (regionInfo.region.startsWith("az_displayrowheadings")) {
                 String region = regionInfo.region.substring(21);
-                // can derive them from the sent data :)
-                List<List<DataRegionHeading>> rowHeadings = spreadsheetService.getRowHeadingsAsArray(loggedInConnection.getSentCells(region));
-                DataRegionHeading dataRegionHeading = rowHeadings.get(regionInfo.row).get(regionInfo.col);
-                if (dataRegionHeading != null && dataRegionHeading.getName() != null) {
-                    return spreadsheetService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
+                List<List<String>> rowHeadings = loggedInConnection.getSentCells(region).getRowHeadings();
+                String heading = rowHeadings.get(regionInfo.row).get(regionInfo.col);
+                if (heading != null) {
+                    //return spreadsheetService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
+                    return "todo make provenance on headings work again";
                 } else {
                     return "";
                 }
             } else if (regionInfo.region.startsWith("az_displaycolumnheadings")) {
                 String region = regionInfo.region.substring(24);
-                List<List<DataRegionHeading>> columnHeadings = spreadsheetService.getColumnHeadingsAsArray(loggedInConnection.getSentCells(region));
-                DataRegionHeading dataRegionHeading = columnHeadings.get(regionInfo.col).get(regionInfo.row);//note that the array is transposed
-                if (dataRegionHeading != null && dataRegionHeading.getName() != null) {
-                    return spreadsheetService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
+                List<List<String>> colHeadings = loggedInConnection.getSentCells(region).getColumnHeadings();
+                // this was transposed (col/row reveresed) I don't think that's right any more
+                String heading = colHeadings.get(regionInfo.row).get(regionInfo.col);
+                if (heading != null) {
+                    //return spreadsheetService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
+                    return "todo make provenance on headings work again";
                 } else {
                     return "";
                 }

@@ -7,6 +7,8 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.view.AzquoBook;
+import com.azquo.spreadsheet.view.CellForDisplay;
+import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import org.apache.log4j.Logger;
 
 import java.util.*;
@@ -18,13 +20,7 @@ import java.util.*;
  * Time: 19:25
  * To change this template use File | Settings | File Templates.
  * <p/>
- * A little more complex ins things like row headings. Used to just be a list but now it's maps (due to multiple regions on the excel sheet)
- * of lists of lists of names. Lists of lists due to mult level headings, e.g. London by container as two column headings above each other (the next one being london not by container)
- * Lockmaps and sent data maps are maps of the actual data sent to excel, this generally is read back by the csv reader
- * <p/>
- * Not thread safe really although it should be one per session. As in multiple tabs or fast refreshes could cause problems - that's something to look into.
- * <p/>
- * Since Excel is no longer the priority this class might be a bit different if rewritten - I'm going to be working on this, row and column heading for example may be removed.
+ * Originally created to manage a conneciton to Excel. Requirements have drastically changed and for the new Client/Server model it will not extend the database connection directly.
  */
 public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
@@ -54,8 +50,9 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private int reportId;
 
     private final Map<String, String> sortCol; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
-    private final Map<String, String> sortRow; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
-    private final Map<String, List<List<AzquoCell>>> sentCellsMaps; // As in a 2 d array (lists of lists) of the sent cells, should replace a number of older maps
+    private final Map<String, String> sortRow;
+    // I still need this for the locks
+    private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
     private List<Set<Name>> namesToSearch;
     private AzquoBook azquoBook;
     private List<String> languages;
@@ -72,7 +69,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         reportId = 0;
         sortCol = new HashMap<String, String>();
         sortRow = new HashMap<String, String>();
-        sentCellsMaps = new HashMap<String, List<List<AzquoCell>>>();
+        sentCellsMaps = new HashMap<String, CellsAndHeadingsForDisplay>();
         namesToSearch = null;
         azquoBook = null;
 
@@ -159,7 +156,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     }
 
 
-    public List<List<AzquoCell>> getSentCells(final String region) {
+    public CellsAndHeadingsForDisplay getSentCells(final String region) {
         if (region == null || region.isEmpty()) {
             return sentCellsMaps.get(defaultRegion);
         } else {
@@ -167,7 +164,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
-    public void setSentCells(final String region, final List<List<AzquoCell>> sentCells) {
+    public void setSentCells(final String region, final CellsAndHeadingsForDisplay sentCells) {
         if (region == null || region.isEmpty()) {
             this.sentCellsMaps.put(defaultRegion, sentCells);
         } else {
