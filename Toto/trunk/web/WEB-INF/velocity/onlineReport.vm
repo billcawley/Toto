@@ -448,17 +448,6 @@
             return false;
         }
 
-
-        function nameIdChosen(){
-            document.getElementById("editedName").value = nameChosenNo;
-            document.getElementById("opcode").value = "nameidchosen";
-            document.azquoform.submit();
-
-
-
-        }
-
-
         function findParent(item){
             var parent = item.parentNode;
             var count = 0;

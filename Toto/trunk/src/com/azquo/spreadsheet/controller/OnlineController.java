@@ -239,24 +239,6 @@ public class OnlineController {
                     result = spreadsheetService.changeValue(loggedInConnection, row, Integer.parseInt(colStr), changedValue);
                     result = jsonFunction + "({\"changedvalues\":" + result + "})";
                 }
-                if (opcode.equals("nameidchosen")) {
-                    try {
-                        List<Set<Name>> names = new ArrayList<Set<Name>>();
-                        //this routine should accept much more than a single name....
-                        try {
-                            Name name = nameService.findById(loggedInConnection, Integer.parseInt(choiceName));
-                            Set<Name> names1 = new HashSet<Name>();
-                            names1.add(name);
-                            names.add(0, names1);
-                            loggedInConnection.setNamesToSearch(names);
-                        } catch (Exception e) {
-                            //ignore - this is an internal parameter
-                        }
-                        opcode = "loadsheet";
-                    } catch (Exception ignored) {
-                    }
-                }
-
                 if (opcode.equals("provenance")) {
                     result = spreadsheetService.getProvenance(loggedInConnection, row, Integer.parseInt(colStr), jsonFunction);
                     model.addAttribute("content", result);

@@ -53,7 +53,7 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     private final Map<String, String> sortRow;
     // I still need this for the locks
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
-    private List<Set<Name>> namesToSearch;
+    // namestosearch was here, I zapped it
     private AzquoBook azquoBook;
     private List<String> languages;
     private Map<String, JsTreeNode> jsTreeIds;
@@ -70,7 +70,6 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         sortCol = new HashMap<String, String>();
         sortRow = new HashMap<String, String>();
         sentCellsMaps = new HashMap<String, CellsAndHeadingsForDisplay>();
-        namesToSearch = null;
         azquoBook = null;
 
         languages = new ArrayList<String>();
@@ -182,14 +181,6 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
             }
         }
         return provenance;
-    }
-
-    public List<Set<Name>> getNamesToSearch() {
-        return this.namesToSearch;
-    }
-
-    public void setNamesToSearch(List<Set<Name>> names) {
-        this.namesToSearch = names;
     }
 
     public AzquoBook getAzquoBook() {
