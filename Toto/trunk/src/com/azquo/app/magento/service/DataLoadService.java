@@ -274,11 +274,15 @@ public final class DataLoadService {
         List<String> productLanguages = new ArrayList<String>(languages);
         for (Map<String, String> entityRow : tableMap.get("catalog_product_entity")) {
             Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("sku"), allSKUs, true, languages);
-            allProducts.addChildWillBePersisted(magentoName);
-            if (!magentoName.findAllParents().contains(productCategories) && !magentoName.findAllParents().contains(uncategorisedProducts)) {
-                uncategorisedProducts.addChildWillBePersisted(magentoName);
+            if (magentoName != null){
+                allProducts.addChildWillBePersisted(magentoName);
+                if (!magentoName.findAllParents().contains(productCategories) && !magentoName.findAllParents().contains(uncategorisedProducts)) {
+                    uncategorisedProducts.addChildWillBePersisted(magentoName);
+                }
+                azquoProductsFound.put(entityRow.get("entity_id"), magentoName);
+            } else {
+                System.out.println("magentoName null on " + entityRow);
             }
-            azquoProductsFound.put(entityRow.get("entity_id"), magentoName);
         }
         tableMap.remove("catalog_product_entity");
         readProductAttributes("catalog_product_entity_varchar", tableMap, azquoProductsFound,attIds,productNameId);
