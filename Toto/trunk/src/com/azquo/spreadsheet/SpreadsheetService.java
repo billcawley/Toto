@@ -918,7 +918,7 @@ seaports;children   container;children
 
     // vanilla jackson might not be good enough but this is too much manual json writing I think
 
-    public String getJsonDataforOneName(LoggedInConnection loggedInConnection, final Name name, Map<String, LoggedInConnection.JsTreeNode> lookup) throws Exception {
+    public String getJsonDataforOneName(LoggedInConnection loggedInConnection, final Name name, Map<String, JSTreeService.JsTreeNode> lookup) throws Exception {
         final StringBuilder sb = new StringBuilder();
         Set<Name> names = new HashSet<Name>();
         names.add(name);
@@ -938,10 +938,10 @@ seaports;children   container;children
             }
 
             loggedInConnection.setLastJstreeId(++lastId);
-            LoggedInConnection.NameOrValue nameOrValue = new LoggedInConnection.NameOrValue();
+            JSTreeService.NameOrValue nameOrValue = new JSTreeService.NameOrValue();
             nameOrValue.values = values;
             nameOrValue.name = null;
-            LoggedInConnection.JsTreeNode newNode = new LoggedInConnection.JsTreeNode(nameOrValue, name);
+            JSTreeService.JsTreeNode newNode = new JSTreeService.JsTreeNode(nameOrValue, name);
             lookup.put(lastId + "", newNode);
             if (count > 100) {
                 sb.append("{\"id\":" + lastId + ",\"text\":\"" + (showValues.size() - 100) + " more....\"}");

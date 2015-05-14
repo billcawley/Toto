@@ -65,7 +65,6 @@ public class MagentoController {
             , @RequestParam(value = "logon", required = false, defaultValue = "") String logon
             , @RequestParam(value = "password", required = false, defaultValue = "") String password
             , @RequestParam(value = "data", required = false) MultipartFile data
-
     ) throws Exception {
         try {
 

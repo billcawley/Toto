@@ -1,10 +1,9 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.admin.database.Database;
 import com.azquo.admin.user.User;
-import com.azquo.memorydb.*;
-import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.core.Provenance;
+import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import org.apache.log4j.Logger;
@@ -12,49 +11,63 @@ import org.apache.log4j.Logger;
 import java.util.*;
 
 /**
- * Created with IntelliJ IDEA.AzquoMemoryDBContainer
- * User: cawley
- * Date: 31/10/13
- * Time: 19:25
- * To change this template use File | Settings | File Templates.
- * <p/>
- * Originally created to manage a conneciton to Excel. Requirements have drastically changed and for the new Client/Server model it will not extend the database connection directly.
+ * Created by cawley on 12/05/15.
+ *
+ * On the new client/server model the old LoggedInConnection will not do. We want an object representing a logged in user against the session
+ * which holds no database classes. It will have a fair bit of stuff that was in logged in conneciton but no DB classes
+ *
  */
-public final class LoggedInConnection extends AzquoMemoryDBConnection {
+public class LoggedInUser {
+
+    public static final class NameOrValue {
+        public Name name;
+        public Set<Value> values;
+    }
+
+    public static final class JsTreeNode {
+        public NameOrValue child;
+        public Name parent;
+
+        public JsTreeNode(NameOrValue child, Name parent) {
+            this.child = child;
+            this.parent = parent;
+        }
+    }
 
 
-    private static final Logger logger = Logger.getLogger(LoggedInConnection.class);
+    private static final Logger logger = Logger.getLogger(LoggedInUser.class);
 
     private Date loginTime;
     private Date lastAccessed;
     private long timeOut;
-    private String spreadsheetName;
     private int reportId;
-
+    // in here as AzquoBook batch processes these, hopefully can remove later
     private final Map<String, String> sortCol; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
     private final Map<String, String> sortRow;
     // I still need this for the locks
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
-    // namestosearch was here, I zapped it
+    private List<Set<Name>> namesToSearch;
+    // need to hold the current one unlke with ZK which holds onto the user after the spreadsheet is created
     private AzquoBook azquoBook;
     private List<String> languages;
+    private Map<String, JsTreeNode> jsTreeIds;
     int lastJstreeId;
 
     private static final String defaultRegion = "default-region";
 
-    protected LoggedInConnection(final AzquoMemoryDB azquoMemoryDB, final User user, final long timeOut, String spreadsheetName) {
-        super(azquoMemoryDB, user);
-        this.spreadsheetName = spreadsheetName;
+    protected LoggedInUser(final User user, final long timeOut, String spreadsheetName, Database database) {
         loginTime = new Date();
         lastAccessed = new Date();
         reportId = 0;
         sortCol = new HashMap<String, String>();
         sortRow = new HashMap<String, String>();
         sentCellsMaps = new HashMap<String, CellsAndHeadingsForDisplay>();
+        namesToSearch = null;
         azquoBook = null;
 
         languages = new ArrayList<String>();
         languages.add(Name.DEFAULT_DISPLAY_NAME);
+        jsTreeIds = new HashMap<String, JsTreeNode>();
         lastJstreeId = 0;
 
         if (timeOut > 0) {
@@ -151,16 +164,12 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         }
     }
 
-    // very basic, needs to be improved
+    public List<Set<Name>> getNamesToSearch() {
+        return this.namesToSearch;
+    }
 
-    public Provenance getProvenance(String where) {
-        if (provenance == null) {
-            try {
-                provenance = new Provenance(getAzquoMemoryDB(), user.getName(), new Date(), where, spreadsheetName, "");
-            } catch (Exception e) {
-            }
-        }
-        return provenance;
+    public void setNamesToSearch(List<Set<Name>> names) {
+        this.namesToSearch = names;
     }
 
     public AzquoBook getAzquoBook() {
@@ -180,6 +189,11 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
         this.languages = languages;
     }
 
+    public Map<String, JsTreeNode> getJsTreeIds() {
+        return jsTreeIds;
+    }
+
+
     public int getLastJstreeId() {
         return lastJstreeId;
     }
@@ -188,5 +202,5 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     public void setLastJstreeId(int lastJstreeId) {
         this.lastJstreeId = lastJstreeId;
     }
-}
 
+}

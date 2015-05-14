@@ -1,12 +1,9 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.spreadsheet.jsonrequestentities.NameJsonRequest;
-import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -16,13 +13,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.*;
-
 
 /**
  * Created by bill on 22/04/14.
  *
  * For inspecting databases
+ *
+ * modified by Edd to deal with new client/server model
  *
  */
 
@@ -30,6 +27,8 @@ import java.util.*;
 @RequestMapping("/Jstree")
 public class JstreeController {
 
+    @Autowired
+    private JSTreeService jsTreeService;
     @Autowired
     private NameService nameService;
     @Autowired
@@ -45,9 +44,6 @@ public class JstreeController {
     OnlineReportDAO onlineReportDAO;
 
     private static final Logger logger = Logger.getLogger(JstreeController.class);
-
-    private static final ObjectMapper jacksonMapper = new ObjectMapper();
-
 
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
@@ -70,7 +66,6 @@ public class JstreeController {
 
         LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
         try {
-            StringBuffer result = new StringBuffer();
             if (loggedInConnection == null) {
                 if (user.equals("demo@user.com")) {
                     user += request.getRemoteAddr();
@@ -85,88 +80,11 @@ public class JstreeController {
                 database = loggedInConnection.getCurrentDatabase().getName();
             }
 
-            Map<String, LoggedInConnection.JsTreeNode> lookup = loggedInConnection.getJsTreeIds();
-
-            if (json != null && json.length() > 0) {
-                NameJsonRequest nameJsonRequest;
-                try {
-                    nameJsonRequest = jacksonMapper.readValue(json, NameJsonRequest.class);
-                } catch (Exception e) {
-                    logger.error("name json parse problem", e);
-                    model.addAttribute("content", "error:badly formed json " + e.getMessage());
-                    return "utf8page";
-                }
-                LoggedInConnection.JsTreeNode currentNode = lookup.get(nameJsonRequest.id + "");
-                LoggedInConnection.NameOrValue lineChosen = currentNode.child;
-                if (lineChosen.name != null) {
-                    nameJsonRequest.id = lineChosen.name.getId();//convert from jstree id.
-                    result.append(nameService.processJsonRequest(loggedInConnection, nameJsonRequest, loggedInConnection.getLanguages()));
-
-                }
-            } else {
-                LoggedInConnection.JsTreeNode current = new LoggedInConnection.JsTreeNode(null, null);
-                current.child = new LoggedInConnection.NameOrValue();
-                current.child.values = null;
-                if (jsTreeId == null || jsTreeId.equals("#")) {
-                    if (topNode != null && !topNode.equals("0")) {
-                        current.child.name = nameService.findById(loggedInConnection, Integer.parseInt(topNode));
-                    }
-                    jsTreeId = "0";
-                } else {
-                    current = lookup.get(jsTreeId);
-                }
-                if (jsTreeId.equals("true")) {
-                    current = lookup.get(parent);
-                }
-                //if (current==null&& op.equals("rename_node")){
-                //a new node has just been created
-                //}
-                if (op.equals("new")) {
-                    if (parents == null) parents = "false";
-                    int rootId = 0;
-                    if (current.child.name != null) {
-                        rootId = current.child.name.getId();
-                    }
-                    result.append(spreadsheetService.showNameDetails(loggedInConnection, database, rootId, parents, itemsChosen));
-                    model.addAttribute("content", result);
-                    return "utf8page";
-
-                }
-                if (op.equals("children")) {
-                    if (itemsChosen != null && itemsChosen.startsWith(",")) {
-                        itemsChosen = itemsChosen.substring(1);
-                    }
-
-                    jsonFunction = null;
-                    result.append(nameService.getJsonChildren(loggedInConnection, jsTreeId, current.child.name, parents, lookup, true, itemsChosen));
-
-                }
-                if (current.child.name != null) {
-                    if (op.equals("move_node")) {
-                        lookup.get(parent).child.name.addChildWillBePersisted(current.child.name);
-                        result.append("true");
-                    }
-                    if (op.equals("create_node")) {
-                        Name newName = nameService.findOrCreateNameInParent(loggedInConnection, "newnewnew", current.child.name, true);
-                        newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, "New node");
-                        result.append("true");
-                    }
-
-                    if (op.equals("rename_node")) {
-                        current.child.name.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, position);
-                        result.append("true");
-                    }
-                    if (op.equals("details")) {
-                        result.append("true,\"namedetails\":").append(nameService.jsonNameDetails(current.child.name));
-                        //result = jsonFunction + "({\"namedetails\":" + result + "})";
-
-                    }
-                    if (result.length() == 0) {
-                        result.append("error:").append(op).append(" not understood");
-                    }
-                }
-            }
-            if (jsonFunction != null) {
+            // from here I need to move code that references db objects (JsTreeNode Does) out of the controller into the service
+            // the service may have some controller and view code but we just have to put up with that for the mo.
+            String result = jsTreeService.processRequest(loggedInConnection,json,jsTreeId,topNode,op,parent,parents,database,itemsChosen,position);
+            // seems to be the logic from before, if children/new then don't do the funciton. Not sure why . . .
+            if (!op.equals("children") && !op.equals("new")) {
                 model.addAttribute("content", jsonFunction + "({\"response\":" + result + "})");
             } else {
                 model.addAttribute("content", result);

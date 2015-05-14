@@ -1,5 +1,6 @@
 package com.azquo.memorydb.service;
 
+import com.azquo.spreadsheet.JSTreeService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.jsonrequestentities.NameJsonRequest;
 import com.azquo.memorydb.core.Name;
@@ -52,19 +53,20 @@ public final class NameService {
     //public static final String ALL = "all";
     public static final char NAMEMARKER = '!';
     public static final char ATTRIBUTEMARKER = '|';
-    public static final String PEERS = "peers";
-    public static final String COUNTBACK = "countback";
-    public static final String COMPAREWITH = "comparewith";
-    public static final String AS = "as";
     public static final String STRUCTURE = "structure";
     public static final String NAMELIST = "namelist";
     public static final String CREATE = "create";
+    public static final String PEERS = "peers";
     public static final String EDIT = "edit";
     public static final String NEW = "new";
     public static final String DELETE = "delete";
+    public static final String COUNTBACK = "countback";
+    public static final String COMPAREWITH = "comparewith";
+    public static final String AS = "as";
     public static final String WHERE = "where";
 
-    private Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = new Comparator<Name>() {
+    // hopefully thread safe??
+    public final Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = new Comparator<Name>() {
         @Override
         public int compare(Name n1, Name n2) {
             return n1.getDefaultDisplayName().toUpperCase().compareTo(n2.getDefaultDisplayName().toUpperCase()); // think that will give us a case insensitive sort!
@@ -512,7 +514,6 @@ public final class NameService {
         }
         while (added++ < count) {
             toReturn.add(null);
-
         }
         return toReturn;
     }
@@ -525,7 +526,7 @@ public final class NameService {
         return parseQuery(azquoMemoryDBConnection, setFormula, langs);
     }
 
-    // todo : sort exceptions?
+    // todo : sort exceptions? Move to another class?
 
     public final List<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
         /*
@@ -809,388 +810,6 @@ public final class NameService {
             Collections.sort(namesFound, defaultLanguageCaseInsensitiveNameComparator);
         }
         return namesFound;
-    }
-
-    // pretty much replaced the original set of functions to do basic name manipulation
-    // needs a logged in connection for the structure return
-
-    public String processJsonRequest(AzquoMemoryDBConnection azquoMemoryDBConnection, NameJsonRequest nameJsonRequest, List<String> attributeNames) throws Exception {
-        String toReturn = "";
-        // type; elements level 1; from a to b
-        if (nameJsonRequest.operation.equalsIgnoreCase(STRUCTURE)) {
-            return getStructureForNameSearch(azquoMemoryDBConnection, nameJsonRequest.name, -1, attributeNames);//-1 indicates to show the children
-        }
-        if (nameJsonRequest.operation.equalsIgnoreCase(NAMELIST)) {
-            try {
-                return getNamesFormattedForOutput(parseQuery(azquoMemoryDBConnection, nameJsonRequest.name, attributeNames));
-            } catch (Exception e) {
-                return "Error:" + e.getMessage();
-            }
-        }
-
-        if (nameJsonRequest.operation.equalsIgnoreCase(DELETE)) {
-            if (nameJsonRequest.name.equals("all"))
-                azquoMemoryDBConnection.getAzquoMemoryDB().zapUnusedNames();
-            else {
-                if (nameJsonRequest.id == 0) {
-                    return "error: id not passed for delete";
-                } else {
-                    Name name = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameJsonRequest.id);
-                    if (name == null) {
-                        return "error: name for id not found : " + nameJsonRequest.id;
-                    }
-                    if (name.getValues().size() > 0 && !nameJsonRequest.withData) {
-                        return "error: cannot delete name with data : " + nameJsonRequest.id;
-                    } else {
-                        name.delete();
-                    }
-                }
-            }
-        }
-
-        if (nameJsonRequest.operation.equalsIgnoreCase(EDIT) || nameJsonRequest.operation.equalsIgnoreCase(NEW)) {
-            if (nameJsonRequest.id == 0 && nameJsonRequest.operation.equalsIgnoreCase(EDIT)) {
-                return "error: id not passed for edit";
-            } else {
-                Name name;
-                if (nameJsonRequest.operation.equalsIgnoreCase(EDIT)) {
-                    name = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameJsonRequest.id);
-                } else {
-                    // new name . . .
-                    name = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance("imported"), true);
-                }
-                if (name == null) {
-                    return "error: name for id not found : " + nameJsonRequest.id;
-                }
-                Name newParent = null;
-                Name oldParent = null;
-                if (nameJsonRequest.newParent > 0) {
-                    newParent = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameJsonRequest.newParent);
-                    if (newParent == null) {
-                        return "error: new parent for id not found : " + nameJsonRequest.newParent;
-                    }
-                }
-                if (nameJsonRequest.oldParent > 0) {
-                    oldParent = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameJsonRequest.oldParent);
-                    if (oldParent == null) {
-                        return "error: old parent for id not found : " + nameJsonRequest.oldParent;
-                    }
-                }
-                if (newParent != null) {
-                    newParent.addChildWillBePersisted(name, nameJsonRequest.newPosition);
-                }
-                if (oldParent != null) {
-                    oldParent.removeFromChildrenWillBePersisted(name);
-                }
-                boolean foundPeers = false;
-                int position = 0;
-                // only clear and re set if attributes passed!
-                if (nameJsonRequest.attributes != null && !nameJsonRequest.attributes.isEmpty()) {
-                    name.clearAttributes(); // and just re set them below
-                    for (String key : nameJsonRequest.attributes.keySet()) {
-                        position++;
-                        if (!key.equalsIgnoreCase(PEERS)) {
-                            name.setAttributeWillBePersisted(key, nameJsonRequest.attributes.get(key));
-                        }
-                        if (key.equalsIgnoreCase(PEERS) || (position == nameJsonRequest.attributes.keySet().size() && !foundPeers)) { // the second means run this if we hit the end having not run it
-                            foundPeers = true;
-                            boolean editingPeers = false;
-                            LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>();
-                            if (key.equalsIgnoreCase(PEERS)) { // if it's not then we're in here because no peers were sent so leave the peer list blank
-                                StringTokenizer st = new StringTokenizer(nameJsonRequest.attributes.get(key), ",");
-                                while (st.hasMoreTokens()) {
-                                    String peerName = st.nextToken().trim();
-                                    Name peer = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, peerName, null);
-                                    if (peer == null) {
-                                        return "error: cannot find peer : " + peerName;
-                                    } else {
-                                        peers.put(peer, true);
-                                    }
-                                }
-                            }
-
-                            // ok need to to see if what was passed was different
-
-                            if (peers.keySet().size() != name.getPeers().keySet().size()) {
-                                editingPeers = true;
-                            } else { // same size, check the elements . . .
-                                for (Name peer : name.getPeers().keySet()) {
-                                    if (peers.get(peer) == null) { // mismatch, old peers has something the new one does not
-                                        editingPeers = true;
-                                    }
-                                }
-                            }
-
-                            if (editingPeers) {
-                                if (name.getParents().size() == 0) { // top level, we can edit
-                                    name.setPeersWillBePersisted(peers);
-                                } else {
-                                    if (name.getPeers().size() == 0) { // no peers on the aprent
-                                        return "error: cannot edit peers, this is not a top level name and there is no peer set for  this name or it's parents, name id " + nameJsonRequest.id;
-                                    }
-                                    if (name.getValues().size() > 0) {
-                                        return "error: cannot edit peers, this is not a top level name and there is data assigned to this name " + nameJsonRequest.id;
-                                    }
-                                    name.setPeersWillBePersisted(peers);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        azquoMemoryDBConnection.persist();
-        return toReturn;
-    }
-
-
-    // right now ONLY called for the column heading in uploads, set peers on existing names
-
-    // should use jackson??
-
-    private String getNamesFormattedForOutput(final Collection<Name> names) {
-        // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
-
-        StringBuilder sb = new StringBuilder();
-        boolean first = true;
-        sb.append("{\"names\":[");
-        for (Name n : names) {
-            if (!first) {
-                sb.append(", ");
-            }
-            sb.append("{\"name\":");
-            sb.append("\"").append(n.getDefaultDisplayName()).append("\"}");
-            first = false;
-        }
-        sb.append("]}");
-        return sb.toString();
-    }
-
-    private int getTotalValues(Name name) {
-        int values = name.getValues().size();
-        for (Name child : name.getChildren()) {
-            values += getTotalValues(child);
-        }
-        return values;
-    }
-
-    // use jackson?
-
-    public String getStructureForNameSearch(AzquoMemoryDBConnection azquoMemoryDBconnection, String nameSearch, int nameId, List<String> attributeNames) throws Exception {
-
-        boolean withChildren = false;
-        if (nameId == -1) withChildren = true;
-        Name name = findByName(azquoMemoryDBconnection, nameSearch, attributeNames);
-        if (name != null) {
-            return "{\"names\":[" + getChildStructureFormattedForOutput(name, withChildren) + "]}";
-        } else {
-            List<Name> names = new ArrayList<Name>();
-            if (nameId > 0) {
-                name = findById(azquoMemoryDBconnection, nameId);
-                //children is a set, so cannot be cast directly as a list.  WHY ISN'T CHILDREN A LIST?
-                names = new ArrayList<Name>();
-                for (Name child : name.getChildren()) {
-                    names.add(child);
-                }
-            } else {
-
-                if (nameSearch.length() > 0) {
-                    names = findContainingName(azquoMemoryDBconnection, nameSearch.replace("`", ""));
-                }
-                if (names.size() == 0) {
-                    names = findTopNames(azquoMemoryDBconnection);
-                    Collections.sort(names, defaultLanguageCaseInsensitiveNameComparator);
-                }
-            }
-            StringBuilder sb = new StringBuilder();
-            sb.append("{\"names\":[");
-            int count = 0;
-            for (Name outputName : names) {
-                String nameJson = getChildStructureFormattedForOutput(outputName, withChildren);
-                if (nameJson.length() > 0) {
-                    if (count > 0) sb.append(",");
-                    sb.append(nameJson);
-                    count++;
-                }
-            }
-            sb.append("]}");
-/*            if (azquoMemoryDBconnection.getAzquoBook()!=null){
-                azquoMemoryDBconnection.getAzquoBook().nameChosenJson = sb.toString();
-            }*/
-            return sb.toString();
-        }
-    }
-
-    // again should use jackson?
-
-    private String getChildStructureFormattedForOutput(final Name name, boolean showChildren) {
-        int totalValues = getTotalValues(name);
-        //if (totalValues > 0) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\"name\":");
-        sb.append("\"").append(name.getDefaultDisplayName().replace("\"", "''")).append("\"");//trapping quotes in name - should not be there
-        sb.append(", \"id\":\"").append(name.getId()).append("\"");
-
-        sb.append(", \"dataitems\":\"").append(totalValues).append("\"");
-        if (name.getValues().size() > 0) {
-            sb.append(", \"mydataitems\":\"").append(name.getValues().size()).append("\"");
-        }
-        //putputs the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
-        int count = 0;
-        if (name.getAttributes().size() > 0 || name.getPeers().size() > 0) {
-            sb.append(",\"attributes\":{");
-            if (name.getPeers().size() > 0) {
-                String peerList = "";
-                for (Name peer : name.getPeers().keySet()) {
-                    if (peerList.length() > 0) {
-                        peerList += ", ";
-                    }
-                    peerList += peer.getDefaultDisplayName();
-                    if (!name.getPeers().get(peer)) {
-                        peerList += "--";
-                    }
-                }
-                // here and a few lines below is a bit of manual JSON building. Not sure how much this is a good idea or not. Jackson?
-                sb.append("\"peers\":\"").append(peerList).append("\"");
-                count++;
-
-            }
-            for (String attName : name.getAttributes().keySet()) {
-                if (count > 0) sb.append(",");
-                try {
-                    sb.append("\"").append(attName).append("\":\"").append(URLEncoder.encode(name.getAttributes().get(attName).replace("\"", "''"), "UTF-8")).append("\"");//replacing quotes again
-                } catch (UnsupportedEncodingException e) {
-                    // this really should not happen!
-                    e.printStackTrace();
-                }
-                count++;
-            }
-            sb.append("}");
-        }
-        final Collection<Name> children = name.getChildren();
-        sb.append(", \"elements\":\"").append(children.size()).append("\"");
-        if (showChildren) {
-            if (!children.isEmpty()) {
-                sb.append(", \"children\":[");
-                count = 0;
-                for (Name child : children) {
-                    String childData = getChildStructureFormattedForOutput(child, false);
-                    if (childData.length() > 0) {
-                        if (count > 0) sb.append(",");
-                        sb.append(childData);
-                        count++;
-                    }
-                }
-                sb.append("]");
-            }
-        }
-        sb.append("}");
-        return sb.toString();
-    }
-
-    public String jsonNameDetails(Name name) {
-        return getChildStructureFormattedForOutput(name, false);
-
-    }
-
-    // todo : jackson!
-
-    public String getJsonChildren(LoggedInConnection loggedInConnection, String jsTreeId, Name name, String parents, Map<String, LoggedInConnection.JsTreeNode> lookup, boolean details, String searchTerm) throws Exception {
-        StringBuilder result = new StringBuilder();
-        result.append("[{\"id\":" + jsTreeId + ",\"state\":{\"opened\":true},\"text\":\"");
-        List<Name> children = new ArrayList<Name>();
-        if (jsTreeId.equals("0") && name == null) {
-            if (searchTerm == null) {
-                searchTerm = loggedInConnection.getAzquoBook().getRangeData("az_inputInspectChoice");
-            }
-            result.append("root");
-            if (searchTerm == null || searchTerm.length() == 0) {
-                children = findTopNames(loggedInConnection);
-            } else {
-                children = findContainingName(loggedInConnection, searchTerm, Name.DEFAULT_DISPLAY_NAME);
-            }
-
-        } else if (name != null) {
-            result.append(name.getDefaultDisplayName().replace("\"", "\\\""));
-            if (!parents.equals("true")) {
-                for (Name child : name.getChildren()) {
-                    children.add(child);
-                }
-            } else {
-                for (Name nameParent : name.getParents()) {
-                    children.add(nameParent);
-                }
-            }
-
-        }
-
-        result.append("\"");
-        int maxdebug = 500;
-        if (children.size() > 0 || (details && name != null && name.getAttributes() != null && name.getAttributes().size() > 1)) {
-            result.append(",\"children\":[");
-            int lastId = loggedInConnection.getLastJstreeId();
-            int count = 0;
-            for (Name child : children) {
-                if (maxdebug-- == 0) break;
-                if (count++ > 0) {
-                    result.append(",");
-                }
-                loggedInConnection.setLastJstreeId(++lastId);
-                LoggedInConnection.NameOrValue nameOrValue = new LoggedInConnection.NameOrValue();
-                nameOrValue.values = null;
-                nameOrValue.name = child;
-                LoggedInConnection.JsTreeNode newNode = new LoggedInConnection.JsTreeNode(nameOrValue, name);
-                lookup.put(lastId + "", newNode);
-                if (count > 100) {
-                    result.append("{\"id\":" + lastId + ",\"text\":\"" + (children.size() - 100) + " more....\"}");
-                    break;
-                }
-                result.append("{\"id\":" + lastId + ",\"text\":\"" + child.getDefaultDisplayName().replace("\"", "\\\"") + "\"");
-                if (child.getChildren().size() > 0 || child.getValues().size() > 0 || (details && child.getAttributes().size() > 1)) {
-                    result.append(",\"children\":true");
-                }
-                result.append("}");
-
-            }
-            if (details && name != null) {
-                for (String attName : name.getAttributes().keySet()) {
-                    if (!attName.equals(Name.DEFAULT_DISPLAY_NAME)) {
-                        if (count++ > 0) {
-                            result.append(",");
-                        }
-                        loggedInConnection.setLastJstreeId(++lastId);
-                        LoggedInConnection.NameOrValue nameOrValue = new LoggedInConnection.NameOrValue();
-                        nameOrValue.values = null;
-                        nameOrValue.name = name;
-                        LoggedInConnection.JsTreeNode newNode = new LoggedInConnection.JsTreeNode(nameOrValue, name);
-
-                        lookup.put(lastId + "", newNode);
-
-                        result.append("{\"id\":" + lastId + ",\"text\":\"" + attName + ":" + name.getAttributes().get(attName).replace("\"", "\\\"") + "\"}");
-                    }
-                }
-
-            }
-
-            result.append("]");
-        } else {
-            result.append(spreadsheetService.getJsonDataforOneName(loggedInConnection, name, lookup));
-        }
-        result.append(",\"type\":\"");
-        if (children.size() > 0) {
-            result.append("parent");
-
-        } else if (name != null && name.getValues().size() > 0) {
-            if (name.getValues().size() > 1) {
-                result.append("values");
-            } else {
-                result.append("value");
-            }
-        } else {
-            result.append("child");
-        }
-        result.append("\"}]");
-        return result.toString();
     }
 
     // return the intersection of the sets

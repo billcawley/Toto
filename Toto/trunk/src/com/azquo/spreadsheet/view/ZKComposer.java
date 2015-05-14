@@ -48,7 +48,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         // perhaps a bit long winded but it gets us the spreadsheet
         Session session = Sessions.getCurrent();
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
-        spreadsheetService = (SpreadsheetService) applicationContext.getBean("onlineService");
+        spreadsheetService = (SpreadsheetService) applicationContext.getBean("spreadsheetService");
         nameService = (NameService) applicationContext.getBean("nameService");
         valueService = (ValueService) applicationContext.getBean("valueService");
         userChoiceDAO = (UserChoiceDAO) applicationContext.getBean("userChoiceDao");

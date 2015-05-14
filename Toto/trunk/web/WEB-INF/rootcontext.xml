@@ -68,7 +68,8 @@
     <bean name="loginService" class="com.azquo.spreadsheet.LoginService"/>
     <bean name="importService" class="com.azquo.dataimport.ImportService"/>
     <bean name="adminService" class="com.azquo.admin.AdminService"/>
-    <bean name="onlineService" class="com.azquo.spreadsheet.SpreadsheetService"/>
+    <bean name="spreadsheetService" class="com.azquo.spreadsheet.SpreadsheetService"/>
+    <bean name="jsTreeService" class="com.azquo.spreadsheet.JSTreeService"/>
     <bean name="openDatabaseDao" class="com.azquo.admin.database.OpenDatabaseDAO"/>
     <bean name="onlineReportDao" class="com.azquo.admin.onlinereport.OnlineReportDAO"/>
 
