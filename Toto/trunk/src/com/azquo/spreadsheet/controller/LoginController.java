@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.spreadsheet.LoggedInConnection;
+import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,8 @@ public class LoginController {
     private SpreadsheetService spreadsheetService;
 
     public static final String LOGGED_IN_CONNECTION_SESSION = "LOGGED_IN_CONNECTION_SESSION";
+    // run in paralell with the old logged in conneciton for a bit
+    public static final String LOGGED_IN_USER_SESSION = "LOGGED_IN_USER_SESSION";
 
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
@@ -46,6 +49,7 @@ public class LoginController {
 
         if (connectionid != null && connectionid.length() > 0) { // nasty hack to support connection id from the plugin
             if (request.getServletContext().getAttribute(connectionid) != null) { // then pick up the temp logged in conneciton
+                // todo change to loggedinuser when supported
                 LoggedInConnection loggedInConnection = (LoggedInConnection)request.getServletContext().getAttribute(connectionid);
                 request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
                 request.getServletContext().removeAttribute(connectionid); // take it off the context
@@ -60,7 +64,8 @@ public class LoginController {
         } else {
             if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
                 model.put("userEmail", userEmail);
-                LoggedInConnection loggedInConnection = loginService.login(null, userEmail, password, 60, null, false);
+                LoggedInConnection loggedInConnection = loginService.login(null, userEmail, password, null, false);
+                LoggedInUser loggedInUser = loginService.loginLoggedInUser(null, userEmail, password, null, false);
                 if (loggedInConnection != null) {
                     request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
                     if (!loggedInConnection.getUser().isAdministrator()) {

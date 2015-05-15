@@ -196,7 +196,6 @@ public class ZKAzquoBookUtils {
                 // add columns
                 int maxRow = sheet.getLastRow();
                 if (displayColumnHeadings.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayColumnHeadings.getColumnCount() > 2) { // then we need to expand
-
                     colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayColumnHeadings.getColumnCount());
                     int insertCol = displayColumnHeadings.getColumn() + 2; // I think this is correct, just after the second column?
                     Range copySource = Ranges.range(sheet, 0, insertCol - 1, maxRow, insertCol - 1);
@@ -214,7 +213,7 @@ public class ZKAzquoBookUtils {
                 for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
                     int col = displayRowHeadings.getColumn();
                     for (String heading : rowHeading) {
-                        if (heading != null) {
+                        if (heading != null && (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
                             sheet.getInternalSheet().getCell(row, col).setValue(heading);
                         }
                         col++;
@@ -225,7 +224,7 @@ public class ZKAzquoBookUtils {
                 for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
                     int col = displayColumnHeadings.getColumn();
                     for (String heading : colHeading) {
-                        if (heading != null) {
+                        if (heading != null && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) {
                             sheet.getInternalSheet().getCell(row, col).setValue(heading);
                         }
                         col++;
@@ -327,36 +326,6 @@ public class ZKAzquoBookUtils {
             }
         }
         return null;
-    }
-
-    public List<List<List<DataRegionHeading>>> getHeadingsLists(CellRegion headings, Sheet sheet, LoggedInConnection loggedInConnection) {
-        List<List<List<DataRegionHeading>>> headingsLists = new ArrayList<List<List<DataRegionHeading>>>();
-        for (int rowIndex = headings.getRow(); rowIndex <= headings.getLastRow(); rowIndex++) {
-            List<List<DataRegionHeading>> row = new ArrayList<List<DataRegionHeading>>();
-            for (int colIndex = headings.getColumn(); colIndex <= headings.getLastColumn(); colIndex++) {
-                SCell cell = sheet.getInternalSheet().getCell(rowIndex, colIndex);
-                String cellString = cell.getStringValue();
-                if (cellString.length() == 0) {
-                    row.add(null);
-                } else {
-                    // was just a name expression, now we allow an attribute also. May be more in future.
-                    if (cellString.startsWith(".")) {
-                        // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
-                        row.add(Collections.singletonList(new DataRegionHeading(cellString, true))); // we say that an attribuite heading defaults to writeable, it will defer to the name
-                    } else {
-                        try {
-                            row.add(spreadsheetService.dataRegionHeadingsFromNames(nameService.parseQuery(loggedInConnection, cellString, loggedInConnection.getLanguages()), loggedInConnection));
-                        } catch (Exception e) {
-                            // todo, error handling??
-                            e.printStackTrace();
-                            row.add(null);
-                        }
-                    }
-                }
-            }
-            headingsLists.add(row);
-        }
-        return headingsLists;
     }
 
     public static final String VALIDATION_SHEET = "VALIDATION_SHEET";

@@ -25,9 +25,6 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
     private static final Logger logger = Logger.getLogger(LoggedInConnection.class);
 
-    private Date loginTime;
-    private Date lastAccessed;
-    private long timeOut;
     private String spreadsheetName;
     private int reportId;
 
@@ -42,35 +39,18 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
 
     private static final String defaultRegion = "default-region";
 
-    protected LoggedInConnection(final AzquoMemoryDB azquoMemoryDB, final User user, final long timeOut, String spreadsheetName) {
+    protected LoggedInConnection(final AzquoMemoryDB azquoMemoryDB, final User user, String spreadsheetName) {
         super(azquoMemoryDB, user);
         this.spreadsheetName = spreadsheetName;
-        loginTime = new Date();
-        lastAccessed = new Date();
         reportId = 0;
         sortCol = new HashMap<String, String>();
         sortRow = new HashMap<String, String>();
         sentCellsMaps = new HashMap<String, CellsAndHeadingsForDisplay>();
         azquoBook = null;
-
         languages = new ArrayList<String>();
         languages.add(Name.DEFAULT_DISPLAY_NAME);
         lastJstreeId = 0;
 
-        if (timeOut > 0) {
-            this.timeOut = timeOut;
-        } else {
-            this.timeOut = 1000 * 60 * 120;
-        }
-
-    }
-
-    public Date getLoginTime() {
-        return loginTime;
-    }
-
-    public Date getLastAccessed() {
-        return lastAccessed;
     }
 
     public int getReportId() {
@@ -80,15 +60,6 @@ public final class LoggedInConnection extends AzquoMemoryDBConnection {
     public void setReportId(int reportId) {
         this.reportId = reportId;
     }
-
-    public long getTimeOut() {
-        return timeOut;
-    }
-
-    public void setLastAccessed(final Date lastAccessed) {
-        this.lastAccessed = lastAccessed;
-    }
-
 
     public String getSortCol(final String region) {
         if (region == null || region.isEmpty()) {

@@ -19,71 +19,44 @@ import java.util.*;
  */
 public class LoggedInUser {
 
-    public static final class NameOrValue {
-        public Name name;
-        public Set<Value> values;
-    }
-
-    public static final class JsTreeNode {
-        public NameOrValue child;
-        public Name parent;
-
-        public JsTreeNode(NameOrValue child, Name parent) {
-            this.child = child;
-            this.parent = parent;
-        }
-    }
-
-
     private static final Logger logger = Logger.getLogger(LoggedInUser.class);
 
-    private Date loginTime;
-    private Date lastAccessed;
-    private long timeOut;
+    private final User user;
     private int reportId;
     // in here as AzquoBook batch processes these, hopefully can remove later
     private final Map<String, String> sortCol; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
     private final Map<String, String> sortRow;
-    // I still need this for the locks
+
+    // I still need this for the locks in azquobook
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
-    private List<Set<Name>> namesToSearch;
     // need to hold the current one unlke with ZK which holds onto the user after the spreadsheet is created
     private AzquoBook azquoBook;
     private List<String> languages;
-    private Map<String, JsTreeNode> jsTreeIds;
     int lastJstreeId;
+
+    private Database database;
+
+    private String readPermissions;
+    private String writePermissions;
 
     private static final String defaultRegion = "default-region";
 
-    protected LoggedInUser(final User user, final long timeOut, String spreadsheetName, Database database) {
-        loginTime = new Date();
-        lastAccessed = new Date();
+    protected LoggedInUser(final User user, Database database, String readPermissions, String writePermissions) {
+        this.user = user;
         reportId = 0;
         sortCol = new HashMap<String, String>();
         sortRow = new HashMap<String, String>();
         sentCellsMaps = new HashMap<String, CellsAndHeadingsForDisplay>();
-        namesToSearch = null;
         azquoBook = null;
 
         languages = new ArrayList<String>();
         languages.add(Name.DEFAULT_DISPLAY_NAME);
-        jsTreeIds = new HashMap<String, JsTreeNode>();
         lastJstreeId = 0;
+        this.database = database;
 
-        if (timeOut > 0) {
-            this.timeOut = timeOut;
-        } else {
-            this.timeOut = 1000 * 60 * 120;
-        }
+        this.readPermissions = readPermissions;
+        this.writePermissions = writePermissions;
 
-    }
-
-    public Date getLoginTime() {
-        return loginTime;
-    }
-
-    public Date getLastAccessed() {
-        return lastAccessed;
     }
 
     public int getReportId() {
@@ -93,15 +66,6 @@ public class LoggedInUser {
     public void setReportId(int reportId) {
         this.reportId = reportId;
     }
-
-    public long getTimeOut() {
-        return timeOut;
-    }
-
-    public void setLastAccessed(final Date lastAccessed) {
-        this.lastAccessed = lastAccessed;
-    }
-
 
     public String getSortCol(final String region) {
         if (region == null || region.isEmpty()) {
@@ -164,14 +128,6 @@ public class LoggedInUser {
         }
     }
 
-    public List<Set<Name>> getNamesToSearch() {
-        return this.namesToSearch;
-    }
-
-    public void setNamesToSearch(List<Set<Name>> names) {
-        this.namesToSearch = names;
-    }
-
     public AzquoBook getAzquoBook() {
         return this.azquoBook;
     }
@@ -189,18 +145,39 @@ public class LoggedInUser {
         this.languages = languages;
     }
 
-    public Map<String, JsTreeNode> getJsTreeIds() {
-        return jsTreeIds;
-    }
-
-
     public int getLastJstreeId() {
         return lastJstreeId;
     }
-
 
     public void setLastJstreeId(int lastJstreeId) {
         this.lastJstreeId = lastJstreeId;
     }
 
+    public User getUser() {
+        return user;
+    }
+
+    public Database getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(Database database) {
+        this.database = database;
+    }
+
+    public String getReadPermissions() {
+        return readPermissions;
+    }
+
+    public void setReadPermissions(String readPermissions) {
+        this.readPermissions = readPermissions;
+    }
+
+    public String getWritePermissions() {
+        return writePermissions;
+    }
+
+    public void setWritePermissions(String writePermissions) {
+        this.writePermissions = writePermissions;
+    }
 }

@@ -346,7 +346,7 @@ public class AdminService {
     }
 
     public void copyDatabase(LoggedInConnection loggedInConnection, String database, String nameList) throws Exception {
-        LoggedInConnection lic2 = loginService.login(database, loggedInConnection.getUser().getEmail(), "", 1, "", true);
+        LoggedInConnection lic2 = loginService.login(database, loggedInConnection.getUser().getEmail(), "", "", true);
         if (lic2 == null) {
             throw new Exception("cannot log in to " + database);
         }

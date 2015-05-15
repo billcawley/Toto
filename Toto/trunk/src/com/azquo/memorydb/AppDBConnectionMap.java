@@ -45,6 +45,20 @@ public class AppDBConnectionMap {
     }
 
     // was a simple get but we're going to lazy load
+    // todo - add open db tracking here?
+    /*
+
+            if (memoryDB != null && memoryDB.getDatabase() != null) {
+            databaseId = memoryDB.getDatabase().getId();
+            Integer openCount = openDBCount.get(databaseId);
+            if (openCount != null) {
+                openDBCount.put(databaseId, openCount + 1);
+            } else {
+                openDBCount.put(databaseId, 1);
+            }
+        }
+
+     */
     public AzquoMemoryDBConnection getConnection(String mysqlName) {
         mysqlName = mysqlName.toLowerCase();
         AzquoMemoryDBConnection azquoMemoryDBConnection = connectionMap.get(mysqlName);

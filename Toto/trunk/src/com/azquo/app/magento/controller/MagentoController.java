@@ -74,7 +74,7 @@ public class MagentoController {
             if (db == null) {
                 db = "temp";
             }
-            LoggedInConnection loggedInConnection = loginService.login(db, logon, password, 0, "", false);//will automatically switch the database to 'temp' if that's the only one
+            LoggedInConnection loggedInConnection = loginService.login(db, logon, password, "", false);//will automatically switch the database to 'temp' if that's the only one
             if (loggedInConnection == null) {
                 return "error: user " + logon + " with this password does not exist";
             }

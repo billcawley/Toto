@@ -144,7 +144,7 @@ public class OnlineController {
                     if (user.equals("demo@user.com")) {
                         user += request.getRemoteAddr();
                     }
-                    loggedInConnection = loginService.login(database, user, password, 0, workbookName, false);
+                    loggedInConnection = loginService.login(database, user, password, workbookName, false);
                     if (loggedInConnection == null) {
                         model.addAttribute("content", "error:no connection id");
                         return "utf8page";

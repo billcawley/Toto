@@ -59,18 +59,14 @@ public class JstreeController {
             , @RequestParam(value = "topnode", required = false) String topNode //only for use at root.
             , @RequestParam(value = "itemschosen", required = false) String itemsChosen
     ) throws Exception {
-
-
         String jsonFunction = "azquojsonfeed";
-
-
         LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
         try {
             if (loggedInConnection == null) {
                 if (user.equals("demo@user.com")) {
                     user += request.getRemoteAddr();
                 }
-                loggedInConnection = loginService.login(database, user, password, 0, "", false);
+                loggedInConnection = loginService.login(database, user, password, "", false);
                 if (loggedInConnection == null) {
                     model.addAttribute("content", "error:not logged in");
                     return "utf8page";
@@ -79,7 +75,6 @@ public class JstreeController {
             if ((database == null || database.length() == 0) && loggedInConnection.getCurrentDatabase() != null) {
                 database = loggedInConnection.getCurrentDatabase().getName();
             }
-
             // from here I need to move code that references db objects (JsTreeNode Does) out of the controller into the service
             // the service may have some controller and view code but we just have to put up with that for the mo.
             String result = jsTreeService.processRequest(loggedInConnection,json,jsTreeId,topNode,op,parent,parents,database,itemsChosen,position);

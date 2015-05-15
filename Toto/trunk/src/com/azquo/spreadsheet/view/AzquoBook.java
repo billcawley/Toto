@@ -367,10 +367,12 @@ public class AzquoBook {
             int col = 0;
             for (String heading : row) {
                 Cell currentCell = azquoCells.get(range.getFirstRow() + rowNo, range.getFirstColumn() + col);
-                currentCell.getStyle().setLocked(true);
-                setCellValue(currentCell, heading);
+                if (currentCell.getStringValue() == null || currentCell.getStringValue().isEmpty()){ // with headings don't overwrite existing data
+                    currentCell.getStyle().setLocked(true);
+                    setCellValue(currentCell, heading);
+                }
                 col++;
-                // hacky bits to return sortable bits
+                // hacky bits to return sortable bits, not sure how this interacts with non overwritten headgins if at all
                 if (rowNo == headingArray.size() - 1 && !rowHeadings) { // last row and we're doing col headings
                     toReturn.add(heading);
                 }
