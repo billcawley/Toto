@@ -53,7 +53,6 @@
         <property name="maxUploadSize" value="500000000"/>
     </bean>
     <bean name="azquoMailer" class="com.azquo.util.AzquoMailer"/>
-    <bean name="mySQLDatabaseManager" class="com.azquo.admin.MySQLDatabaseManager"/>
     <bean name="uploadRecordDao" class="com.azquo.admin.database.UploadRecordDAO"/>
     <bean name="businessDao" class="com.azquo.admin.business.BusinessDAO"/>
     <bean name="userDao" class="com.azquo.admin.user.UserDAO"/>

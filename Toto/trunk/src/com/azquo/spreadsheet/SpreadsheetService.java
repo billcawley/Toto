@@ -452,98 +452,6 @@ public class SpreadsheetService {
         return writer.toString();
     }
 
-    /* ok we're passed a list of lists
-    what is returned is a 2d array (also a list of lists) featuring every possible variation in order
-    so if the initial lists passed were
-    A,B
-    1,2,3,4
-    One, Two, Three
-
-    The returned list will be the size of each passed list multiplied together (on that case 2*4*3 so 24)
-    and each entry on that list will be the size of the number of passed lists, in this case 3
-    so
-
-    A, 1, ONE
-    A, 1, TWO
-    A, 1, THREE
-    A, 2, ONE
-    A, 2, TWO
-    A, 2, THREE
-    A, 3, ONE
-    A, 3, TWO
-    A, 3, THREE
-    A, 4, ONE
-    A, 4, TWO
-    A, 4, THREE
-    B, 1, ONE
-    B, 1, TWO
-    B, 1, THREE
-    B, 2, ONE
-    B, 2, TWO
-
-    etc.
-
-    Row/column reference below is based off the above example - in toReturn the index of the outside list is y and the the inside list x
-
-    */
-
-    public <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
-        List<List<T>> toReturn = null;
-        for (List<T> permutationDimension : listsToPermute) {
-            if (permutationDimension == null) {
-                permutationDimension = new ArrayList<T>();
-                permutationDimension.add(null);
-            }
-            if (toReturn == null) { // first one, just assign the single column
-                toReturn = new ArrayList<List<T>>();
-                for (T item : permutationDimension) {
-                    List<T> createdRow = new ArrayList<T>();
-                    createdRow.add(item);
-                    toReturn.add(createdRow);
-                }
-            } else {
-                // this is better as a different function as internally it created a new 2d array which we can then assign back to this one
-                toReturn = get2DArrayWithAddedPermutation(toReturn, permutationDimension);
-            }
-        }
-        return toReturn;
-    }
-
-    /* so say we already have
-    a,1
-    a,2
-    a,3
-    a,4
-    b,1
-    b,2
-    b,3
-    b,4
-
-    for example
-
-    and want to add the permutation ONE, TWO, THREE onto it.
-
-    The returned list of lists will be the size of the list of lists passed * the size of teh passed new dimension
-    and the nested lists in teh returned list will be one bigger, featuring the new dimension
-
-    if we looked at the above as a reference it would be 3 times as high and 1 column wider
-     */
-
-
-    public <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
-        List<List<T>> toReturn = new ArrayList<List<T>>();
-        for (List<T> existingRow : existing2DArray) {
-            for (T elementWeWantToAdd : permutationWeWantToAdd) { // for each new element
-                List<T> newRow = new ArrayList<T>(existingRow); // copy the existing row
-                newRow.add(elementWeWantToAdd);// add the extra element
-                toReturn.add(newRow);
-            }
-        }
-        return toReturn;
-    }
-
-
-
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception{
         return null;// todo - proxy on through
     }
@@ -571,67 +479,6 @@ public class SpreadsheetService {
         return sortedValues;
     }
 
-    // same thing for strings, I prefer stronger typing
-
-    public List<Integer> sortStringValues(int restrictCount, Map<Integer, String> sortTotals, final boolean sortRowsUp) {
-        final List<Integer> sortedValues = new ArrayList<Integer>();
-        if (restrictCount != 0) {
-            List<Map.Entry<Integer, String>> list = new ArrayList<Map.Entry<Integer, String>>(sortTotals.entrySet());
-            // sort list based on string now
-            Collections.sort(list, new Comparator<Map.Entry<Integer, String>>() {
-                public int compare(Map.Entry<Integer, String> o1, Map.Entry<Integer, String> o2) {
-                    return sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue());
-                }
-            });
-
-            for (Map.Entry<Integer, String> aList : list) {
-                sortedValues.add(aList.getKey());
-            }
-        } else {
-            for (int i = 0; i < sortTotals.size(); i++) {
-                sortedValues.add(i);
-            }
-        }
-        return sortedValues;
-    }
-
-    /* ok so transposing happens here
-    this is because the expand headings function is orientated for for headings and the column heading definitions are unsurprisingly set up for columns
-     what is notable here is that the headings are then stored this way in column headings, we need to say "give me the headings for column x"
-
-     NOTE : this means the column heading are not stored according to the orientation used in the above function
-
-      hence, to output them we have to transpose them again!
-
-    OK, having generified the function we should only need one function. The list could be anything, names, list of names, hashmaps whatever
-    generics ensure that the return type will match the sent type
-    now rather similar to the stacktrace example :)
-
-    Variable names assume first list is of rows and the second is each row. down then across.
-    So the size of the first list is the ysize (number of rows) and the size of the nested list the xsize (number of columns)
-    I'm going to model it that way round as when reading data from excel that's the default (we go line by line through each row, that's how the data is delivered), the rows is the outside list
-    of course could reverse all descriptions and teh function could still work
-
-    */
-
-    public <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
-        final List<List<T>> flipped = new ArrayList<List<T>>();
-        if (source2Dlist.size() == 0) {
-            return flipped;
-        }
-        final int oldXMax = source2Dlist.get(0).size(); // size of nested list, as described above (that is to say get the length of one row)
-        for (int newY = 0; newY < oldXMax; newY++) {
-            List<T> newRow = new ArrayList<T>(); // make a new row
-            for (List<T> oldRow : source2Dlist) { // and step down each of the old rows
-                newRow.add(oldRow.get(newY));//so as we're moving across the new row we're moving down the old rows on a fixed column
-                // the transposing is happening as a list which represents a row would typically be accessed by an x value but instead it's being accessed by an y value
-                // in this loop the row being read from changes but the cell in that row does not
-            }
-            flipped.add(newRow);
-        }
-        return flipped;
-    }
-
     // function that can be called by the front end to deliver the data and headings
     // todo - proxy on through
 
@@ -641,6 +488,10 @@ public class SpreadsheetService {
         return null;
     }
 
+    // todo, proxy through to jstree service on the server
+    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) {
+        return null;
+    }
 
     // used when comparing values. So ignore the currency symbol if the numbers are the same
     private String stripCurrency(String val) {
@@ -651,25 +502,6 @@ public class SpreadsheetService {
 
         }
         return val;
-    }
-
-    public boolean compareStringValues(final String val1, final String val2) {
-        //tries to work out if numbers expressed with different numbers of decimal places, maybe including percentage signs and currency symbols are the same.
-        if (val1.equals(val2)) return true;
-        String val3 = val1;
-        String val4 = val2;
-        if (val1.endsWith("%") && val2.endsWith("%")) {
-            val3 = val1.substring(0, val1.length() - 1);
-            val4 = val2.substring(0, val2.length() - 1);
-        }
-        val3 = stripCurrency(val3);
-        val4 = stripCurrency(val4);
-        if (NumberUtils.isNumber(val3) && NumberUtils.isNumber(val4)) {
-            Double n1 = Double.parseDouble(val3);
-            Double n2 = Double.parseDouble(val4);
-            if (n1 - n2 == 0) return true;
-        }
-        return false;
     }
 
     // todo, when cell contents are from attributes??

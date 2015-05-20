@@ -7,7 +7,7 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import com.azquo.spreadsheet.view.NameJsonRequest;
+import com.azquo.spreadsheet.jsonrequestentities.NameJsonRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -225,7 +225,7 @@ public class JSTreeService {
                                 StringTokenizer st = new StringTokenizer(nameJsonRequest.attributes.get(key), ",");
                                 while (st.hasMoreTokens()) {
                                     String peerName = st.nextToken().trim();
-                                    Name peer = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(Name.DEFAULT_DISPLAY_NAME, peerName, null);
+                                    Name peer = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(Constants.DEFAULT_DISPLAY_NAME, peerName, null);
                                     if (peer == null) {
                                         return "error: cannot find peer : " + peerName;
                                     } else {
@@ -429,7 +429,7 @@ public class JSTreeService {
             if (searchTerm == null || searchTerm.length() == 0) {
                 children = nameService.findTopNames(loggedInConnection);
             } else {
-                children = nameService.findContainingName(loggedInConnection, searchTerm, Name.DEFAULT_DISPLAY_NAME);
+                children = nameService.findContainingName(loggedInConnection, searchTerm, Constants.DEFAULT_DISPLAY_NAME);
             }
 
         } else if (name != null) {
@@ -479,7 +479,7 @@ public class JSTreeService {
             }
             if (details && name != null) {
                 for (String attName : name.getAttributes().keySet()) {
-                    if (!attName.equals(Name.DEFAULT_DISPLAY_NAME)) {
+                    if (!attName.equals(Constants.DEFAULT_DISPLAY_NAME)) {
                         if (count++ > 0) {
                             result.append(",");
                         }

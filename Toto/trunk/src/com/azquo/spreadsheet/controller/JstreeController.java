@@ -1,8 +1,6 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.memorydb.service.NameService;
-import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.*;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,17 +26,10 @@ import javax.servlet.http.HttpServletResponse;
 public class JstreeController {
 
     @Autowired
-    private JSTreeService jsTreeService;
-    @Autowired
-    private NameService nameService;
-    @Autowired
     private LoginService loginService;
 
     @Autowired
     SpreadsheetService spreadsheetService;
-
-    @Autowired
-    ValueService valueService;
 
     @Autowired
     OnlineReportDAO onlineReportDAO;
@@ -79,7 +70,7 @@ public class JstreeController {
             // from here I need to move code that references db objects (JsTreeNode Does) out of the controller into the service
             // the service may have some controller and view code but we just have to put up with that for the mo.
             String backupSearchTerm = loggedInUser.getAzquoBook().getRangeData("az_inputInspectChoice");// don't reallyunderstand, what's important is that this is now client side
-            String result = jsTreeService.processRequest(loggedInUser.getDataAccessToken(),json,jsTreeId,topNode,op,parent,parents,database, itemsChosen,position,backupSearchTerm);
+            String result = spreadsheetService.processJSTreeRequest(loggedInUser.getDataAccessToken(),json,jsTreeId,topNode,op,parent,parents,database, itemsChosen,position,backupSearchTerm);
             // seems to be the logic from before, if children/new then don't do the funciton. Not sure why . . .
             if (!op.equals("children") && !op.equals("new")) {
                 model.addAttribute("content", jsonFunction + "({\"response\":" + result + "})");
