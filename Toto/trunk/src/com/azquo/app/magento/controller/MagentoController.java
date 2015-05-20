@@ -135,7 +135,7 @@ public class MagentoController {
                     String tempConnectionId = System.currentTimeMillis() + "";
                     request.getServletContext().setAttribute(tempConnectionId, loggedInUser);
                     return tempConnectionId;
-                } else {
+                } else { 
                     return "error: no data posted";
                 }
                 //return onlineService.readExcel(loggedInConnection, onlineReport, null, "");

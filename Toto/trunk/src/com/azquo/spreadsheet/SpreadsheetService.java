@@ -10,9 +10,9 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
-import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
@@ -26,9 +26,6 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.InetAddress;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 // it seems that trying to configure the properties in spring is a problem
@@ -40,6 +37,9 @@ import java.util.*;
 public class SpreadsheetService {
 
     private static final Logger logger = Logger.getLogger(SpreadsheetService.class);
+
+    @Autowired
+    RMIClient rmiClient;
 
     @Autowired
     UserChoiceDAO userChoiceDAO;
@@ -453,7 +453,7 @@ public class SpreadsheetService {
     }
 
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception{
-        return null;// todo - proxy on through
+        return rmiClient.serverInterface.getDropDownListForQuery(databaseAccessToken,query,languages);
     }
 
     // todo make sense of the bloody restrictcount parameter
@@ -480,17 +480,15 @@ public class SpreadsheetService {
     }
 
     // function that can be called by the front end to deliver the data and headings
-    // todo - proxy on through
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol) throws Exception {
-        return null;
+        return rmiClient.serverInterface.getCellsAndHeadingsForDisplay(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource,filterCount,maxRows,maxCols,sortRow,sortCol);
     }
 
-    // todo, proxy through to jstree service on the server
-    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) {
-        return null;
+    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) throws Exception{
+        return rmiClient.serverInterface.processJSTreeRequest(dataAccessToken, json,jsTreeId,topNode,op,parent,parents,database,itemsChosen,position,backupSearchTerm);
     }
 
     // used when comparing values. So ignore the currency symbol if the numbers are the same

@@ -6,6 +6,14 @@
       <element id="directory" name="WEB-INF">
         <element id="directory" name="classes">
           <element id="module-output" name="DatabaseServer" />
+          <element id="module-output" name="shared" />
+        </element>
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="org.springframework:spring-jdbc:4.1.6.RELEASE" />
+          <element id="library" level="project" name="mysql:mysql-connector-java:5.1.26" />
+          <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.5.2" />
+          <element id="library" level="project" name="org.apache.directory.studio:org.apache.commons.lang:2.6" />
+          <element id="library" level="project" name="net.sourceforge.javacsv:javacsv:2.0" />
         </element>
       </element>
     </root>

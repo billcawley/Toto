@@ -112,7 +112,7 @@ public class DSAdminService {
         mySQLDatabaseManager.dropDatabase(mysqlName);
     }
 
-    private void createDatabase(final String mysqlName) throws Exception {
+    public void createDatabase(final String mysqlName) throws Exception {
         mySQLDatabaseManager.createNewDatabase(mysqlName);
         memoryDBManager.addNewToDBMap(mysqlName);
     }

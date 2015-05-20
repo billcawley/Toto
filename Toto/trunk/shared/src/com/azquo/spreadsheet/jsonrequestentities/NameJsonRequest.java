@@ -1,12 +1,14 @@
 package com.azquo.spreadsheet.jsonrequestentities;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
  * Created by cawley on 17/01/14
  * to be used by the name controller and spreadsheet, easy way to parse the sent json with a jackson mapper
+ *
  */
-public class NameJsonRequest extends StandardJsonRequest {
+public class NameJsonRequest extends StandardJsonRequest implements Serializable {
     public String name;
     public int id = 0;
     public int newParent = 0;

@@ -1,12 +1,14 @@
 package com.azquo.spreadsheet.view;
 
+import java.io.Serializable;
+
 /**
  * Created by cawley on 11/05/15.
  *
  * Ok in our new client server idea then there have to be classes to move the data about, this is one such class
  * and the first in the shared module
  */
-public class CellForDisplay {
+public class CellForDisplay implements Serializable {
     private boolean locked;
     private String stringValue;
     private double doubleValue;

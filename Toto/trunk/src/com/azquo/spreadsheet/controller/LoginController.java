@@ -45,8 +45,6 @@ public class LoginController {
 
     ) throws Exception {
 
-        rmiClient.testRMI();
-
         String callerId = request.getRemoteAddr();
         if (callerId != null && userEmail != null && userEmail.equals("demo@user.com")) {
             userEmail += callerId;

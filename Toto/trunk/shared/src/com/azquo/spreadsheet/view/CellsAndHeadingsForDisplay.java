@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.view;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -7,7 +8,7 @@ import java.util.List;
  *
  * I don't see much reason for this class to be mutable though the data cells can be changed
  */
-public class CellsAndHeadingsForDisplay {
+public class CellsAndHeadingsForDisplay implements Serializable {
 
     private final List<List<String>> columnHeadings;
     private final List<List<String>> rowHeadings;

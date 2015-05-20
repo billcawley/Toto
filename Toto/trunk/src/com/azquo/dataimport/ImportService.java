@@ -7,6 +7,7 @@ import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -35,17 +36,15 @@ public final class ImportService {
     public static final String dbPath = "/databases/";
 
     @Autowired
-    private UploadRecordDAO uploadRecordDAO;
-    @Autowired
     private OnlineReportDAO onlineReportDAO;
     @Autowired
     private AdminService adminService;
     @Autowired
-    private LoginService loginService;
-    @Autowired
     private SpreadsheetService spreadsheetService;
     @Autowired
     private UserChoiceDAO userChoiceDAO;
+    @Autowired
+    private RMIClient rmiClient;
 
     public void importTheFile(LoggedInUser loggedInUser, String fileName, String filePath) throws Exception {
         List<String> languages = new ArrayList<String>();
@@ -324,6 +323,6 @@ public final class ImportService {
     }
 
     private void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
-        // todo rmi call to make this work. Also moving the file?
+        rmiClient.serverInterface.readPreparedFile(databaseAccessToken,filePath,fileType,attributeNames);
     }
 }

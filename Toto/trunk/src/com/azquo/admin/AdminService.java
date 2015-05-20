@@ -7,6 +7,7 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,8 @@ public class AdminService {
     private UploadRecordDAO uploadRecordDAO;
     @Autowired
     private OnlineReportDAO onlineReportDAO;
+    @Autowired
+    private RMIClient rmiClient;
 
     // from the old excel sheet (I mean register in Excel, not a browser!) keeping for the mo as it may be useful in the new admin or for Azquo.com
 
@@ -146,16 +149,15 @@ public class AdminService {
 
     // will be for the database side
     public void emptyDatabase(String mysqlName) throws Exception {
-        //todo proxy
+        rmiClient.serverInterface.emptyDatabase(mysqlName);
     }
 
-
     public void dropDatabase(String mysqlName) throws Exception {
-        //todo proxy
+        rmiClient.serverInterface.dropDatabase(mysqlName);
     }
 
     private void createDatabase(final String mysqlName) throws Exception {
-        //todo proxy
+        rmiClient.serverInterface.createDatabase(mysqlName);
     }
 
     public void createUser(final String email
@@ -385,6 +387,5 @@ public class AdminService {
             databaseDAO.removeById(db);
             dropDatabase(mySQLName);
         }
-
     }
 }

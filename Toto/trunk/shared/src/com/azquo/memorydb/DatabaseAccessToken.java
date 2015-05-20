@@ -1,5 +1,6 @@
 package com.azquo.memorydb;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -8,7 +9,7 @@ import java.util.List;
  * Passed from client to database server after establishing credentials etc
  *
  */
-public class DatabaseAccessToken {
+public class DatabaseAccessToken implements Serializable {
 
     private final String databaseMySQLName;
     private final String readPermissions;
