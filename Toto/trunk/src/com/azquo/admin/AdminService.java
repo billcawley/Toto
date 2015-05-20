@@ -6,13 +6,14 @@ import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.*;
+import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.MemoryDBManager;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.spreadsheet.LoggedInConnection;
+import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
@@ -129,13 +130,13 @@ public class AdminService {
         return "error:  incorrect key";
     }*/
 
-    public String getSQLDatabaseName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String databaseName) {
+    public String getSQLDatabaseName(final LoggedInUser loggedInUser, final String databaseName) {
         //TODO  Check name below is unique.
-        return getBusinessPrefix(azquoMemoryDBConnection) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
+        return getBusinessPrefix(loggedInUser) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
     }
 
-    public String getBusinessPrefix(final AzquoMemoryDBConnection azquoMemoryDBConnection) {
-        Business b = businessDAO.findById(azquoMemoryDBConnection.getBusinessId());
+    public String getBusinessPrefix(final LoggedInUser loggedInUser) {
+        Business b = businessDAO.findById(loggedInUser.getUser().getBusinessId());
         return (b.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "");
     }
 
@@ -148,24 +149,31 @@ public class AdminService {
         mySQLDatabaseManager.dropDatabase(mysqlName);
     }
 
-    public void createDatabase(final String databaseName, final LoggedInConnection loggedInConnection) throws Exception {
-        if (loggedInConnection.getUser().isAdministrator()) {
-            Database existing = databaseDAO.findForName(loggedInConnection.getBusinessId(), databaseName);
+    // ok in new report/datavase server split creating a database needs distinct bits
+
+    public void createDatabase(final String databaseName, final LoggedInUser loggedInUser) throws Exception {
+        if (loggedInUser.getUser().isAdministrator()) {
+            Database existing = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), databaseName);
             if (existing != null) {
                 throw new Exception("That database already exists");
             }
-            final String mysqlName = getSQLDatabaseName(loggedInConnection, databaseName);
-            final Business b = businessDAO.findById(loggedInConnection.getBusinessId());
+            final String mysqlName = getSQLDatabaseName(loggedInUser, databaseName);
+            final Business b = businessDAO.findById(loggedInUser.getUser().getBusinessId());
             final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), b.getId(), databaseName, mysqlName, 0, 0);
-                mySQLDatabaseManager.createNewDatabase(mysqlName);
             databaseDAO.store(database);
-            memoryDBManager.addNewToDBMap(database);
-            if (loggedInConnection.getAzquoMemoryDB() == null) { // creating their first db I guess?
-                loggedInConnection.setAzquoMemoryDB(memoryDBManager.getAzquoMemoryDB(database));
-            }
+            // will be over to the DB side
+            createDatabase(database.getMySQLName());
+            loggedInUser.setDatabase(database);
         } else {
             throw new Exception("Only administrators can create databases");
         }
+    }
+
+    // will be for the database side
+
+    private void createDatabase(final String mysqlName) throws Exception {
+            mySQLDatabaseManager.createNewDatabase(mysqlName);
+            memoryDBManager.addNewToDBMap(mysqlName);
     }
 
     public void createUser(final String email
@@ -173,10 +181,10 @@ public class AdminService {
             , final LocalDateTime endDate
             , final String status
             , final String password
-            , final LoggedInConnection loggedInConnection) throws Exception {
-        if (loggedInConnection.getUser().isAdministrator()) {
+            , final LoggedInUser loggedInUser) throws Exception {
+        if (loggedInUser.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
-            final User user = new User(0, LocalDateTime.now(), endDate, loggedInConnection.getBusinessId(), email, userName, status, encrypt(password, salt), salt);
+            final User user = new User(0, LocalDateTime.now(), endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt);
             userDao.store(user);
         } else {
             throw new Exception("error: you do not have permission to create a user");
@@ -185,12 +193,12 @@ public class AdminService {
 
     // now not dependant on selected database
 
-    public void createUserPermission(final int userId, final int databaseId, final LocalDateTime startDate, final LocalDateTime endDate, final String readList, final String writeList, final LoggedInConnection loggedInConnection) throws Exception {
+    public void createUserPermission(final int userId, final int databaseId, final LocalDateTime startDate, final LocalDateTime endDate, final String readList, final String writeList, final LoggedInUser loggedInUser) throws Exception {
         User user = userDao.findById(userId);
         Database database = databaseDAO.findById(databaseId);
-        if (loggedInConnection.getUser().isAdministrator()
-                && user != null && user.getBusinessId() == loggedInConnection.getBusinessId()
-                && database != null && database.getBusinessId() == loggedInConnection.getBusinessId()) {
+        if (loggedInUser.getUser().isAdministrator()
+                && user != null && user.getBusinessId() == loggedInUser.getUser().getBusinessId()
+                && database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             final Permission permission = new Permission(0, startDate, endDate, userId, databaseId, readList, writeList);
             permissionDAO.store(permission);
         } else {
@@ -239,9 +247,9 @@ public class AdminService {
         return businessDAO.findById(id);
     }
 
-    public List<Database> getDatabaseListForBusiness(final LoggedInConnection loggedInConnection) {
-        if (loggedInConnection.getUser().isAdministrator()) {
-            return databaseDAO.findForBusinessId(loggedInConnection.getBusinessId());
+    public List<Database> getDatabaseListForBusiness(final LoggedInUser loggedInUser) {
+        if (loggedInUser.getUser().isAdministrator()) {
+            return databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         }
         return null;
     }
@@ -250,21 +258,21 @@ public class AdminService {
         return databaseDAO.findForBusinessId(business.getId());
     }
 
-    public List<User> getUserListForBusiness(final LoggedInConnection loggedInConnection) {
-        if (loggedInConnection.getUser().isAdministrator/**/()) {
-            return userDao.findForBusinessId(loggedInConnection.getBusinessId());
+    public List<User> getUserListForBusiness(final LoggedInUser loggedInUser) {
+        if (loggedInUser.getUser().isAdministrator()) {
+            return userDao.findForBusinessId(loggedInUser.getUser().getBusinessId());
         }
         return null;
     }
 
 
-    public List<OnlineReport> getReportList(final LoggedInConnection loggedInConnection) {
+    public List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
         List<OnlineReport> reportList;
-        if (loggedInConnection.getUser().isAdministrator()) {
-            reportList = onlineReportDAO.findForBusinessId(loggedInConnection.getBusinessId());
+        if (loggedInUser.getUser().isAdministrator()) {
+            reportList = onlineReportDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         } else {
             // there was a look here based on splitting te user status by , but it made no sense, this happens inside this function
-            reportList = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getBusinessId(), loggedInConnection.getUser().getStatus());
+            reportList = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getStatus());
         }
         if (reportList != null) {
             for (OnlineReport onlineReport : reportList) {
@@ -280,9 +288,9 @@ public class AdminService {
         return reportList;
     }
 
-    public List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInConnection loggedInConnection) {
-        if (loggedInConnection.getUser().isAdministrator()) {
-            List<UploadRecord> uploadRecords = uploadRecordDAO.findForBusinessId(loggedInConnection.getBusinessId());
+    public List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInUser loggedInUser) {
+        if (loggedInUser.getUser().isAdministrator()) {
+            List<UploadRecord> uploadRecords = uploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<UploadRecord.UploadRecordForDisplay>();
             for (UploadRecord uploadRecord : uploadRecords) {
                 String dbName = "";
@@ -300,17 +308,17 @@ public class AdminService {
         return null;
     }
 
-    public List<Permission> getPermissionList(final LoggedInConnection loggedInConnection) {
-        if (loggedInConnection.getUser().isAdministrator()) {
-            return permissionDAO.findByBusinessId(loggedInConnection.getBusinessId());
+    public List<Permission> getPermissionList(final LoggedInUser loggedInUser) {
+        if (loggedInUser.getUser().isAdministrator()) {
+            return permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId());
         }
         return null;
     }
 
-    public List<Permission.PermissionForDisplay> getDisplayPermissionList(final LoggedInConnection loggedInConnection) {
-        if (loggedInConnection.getUser().isAdministrator()) {
+    public List<Permission.PermissionForDisplay> getDisplayPermissionList(final LoggedInUser loggedInUser) {
+        if (loggedInUser.getUser().isAdministrator()) {
             List<Permission.PermissionForDisplay> permissions = new ArrayList<Permission.PermissionForDisplay>();
-            for (Permission permission : permissionDAO.findByBusinessId(loggedInConnection.getBusinessId())){
+            for (Permission permission : permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId())){
                 permissions.add(new Permission.PermissionForDisplay(permission, databaseDAO,userDao));
             }
             return permissions;
@@ -345,14 +353,17 @@ public class AdminService {
         return name2;
     }
 
-    public void copyDatabase(LoggedInConnection loggedInConnection, String database, String nameList) throws Exception {
-        LoggedInConnection lic2 = loginService.login(database, loggedInConnection.getUser().getEmail(), "", "", true);
-        if (lic2 == null) {
-            throw new Exception("cannot log in to " + database);
+    // will be purely DB side
+
+    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
+        AzquoMemoryDBConnection sourceConnection = loginService.getConnectionFromAccessToken(source);
+        AzquoMemoryDBConnection targetConnection = loginService.getConnectionFromAccessToken(target);
+        if (targetConnection == null) {
+            throw new Exception("cannot log in to " + target.getDatabaseMySQLName());
         }
-        lic2.setNewProvenance("transfer from", database);
+        targetConnection.setNewProvenance("transfer from", source.getDatabaseMySQLName());
         //can't use 'nameService.decodeString as this may have multiple values in each list
-        List<Set<Name>> namesToTransfer = nameService.decodeString(loggedInConnection, nameList, lic2.getLanguages());
+        List<Set<Name>> namesToTransfer = nameService.decodeString(sourceConnection, nameList, readLanguages);
         //find the data to transfer
         Map<Set<Name>, Set<Value>> showValues = valueService.getSearchValues(namesToTransfer);
 
@@ -363,6 +374,7 @@ public class AdminService {
                 namesFound.add(name);
             }
         }
+        // todo, check why we have a different language lists, can't we use the same?
         List<String> languages = new ArrayList<String>();
         languages.add(Name.DEFAULT_DISPLAY_NAME);
         //transfer each name and its parents.
@@ -373,7 +385,7 @@ public class AdminService {
             for (Name parent : name.findAllParents()) {
                 if (parent.getParents() == null) {//we need to start from the top
                     //copyname copies all allowed children, and avoids endless loops.
-                    copyName(lic2, parent, null, languages, allowed, dictionary);
+                    copyName(targetConnection, parent, null, languages, allowed, dictionary);
                 }
             }
 
@@ -384,25 +396,25 @@ public class AdminService {
                 names2.add(dictionary.get(name));
 
             }
-            valueService.storeValueWithProvenanceAndNames(lic2, valueService.addValues(showValues.get(nameValues)), names2);
+            valueService.storeValueWithProvenanceAndNames(targetConnection, valueService.addValues(showValues.get(nameValues)), names2);
         }
-        lic2.persist();
+        targetConnection.persist();
     }
 
     public void storeReport(OnlineReport report){
         onlineReportDAO.store(report);
     }
 
-    public void deleteUserById(int userId, LoggedInConnection loggedInConnection) {
+    public void deleteUserById(int userId, LoggedInUser loggedInUser) {
         User user = userDao.findById(userId);
-        if (user != null && loggedInConnection.getBusinessId() == user.getBusinessId()){
+        if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
             userDao.removeById(user);
         }
     }
 
-    public User getUserById(int userId, LoggedInConnection loggedInConnection) {
+    public User getUserById(int userId, LoggedInUser loggedInUser) {
         User user = userDao.findById(userId);
-        if (user != null && loggedInConnection.getBusinessId() == user.getBusinessId()){
+        if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
             return user;
         }
         return null;
@@ -412,19 +424,19 @@ public class AdminService {
         userDao.store(user);
     }
 
-    public void deletePermissionById(int permissionId, LoggedInConnection loggedInConnection) {
+    public void deletePermissionById(int permissionId, LoggedInUser loggedInUser) {
         Permission permission = permissionDAO.findById(permissionId);
         User user = userDao.findById(permission.getUserId());
-        if (permission != null && loggedInConnection.getBusinessId() == user.getBusinessId()){
+        if (permission != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
             permissionDAO.removeById(permission);
         }
     }
 
-    public Permission getPermissionById(int permissionId, LoggedInConnection loggedInConnection) {
+    public Permission getPermissionById(int permissionId, LoggedInUser loggedInUser) {
         Permission permission = permissionDAO.findById(permissionId);
         if (permission != null){
             User user = userDao.findById(permission.getUserId());
-            if (loggedInConnection.getBusinessId() == user.getBusinessId()){
+            if (loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
                 return permission;
             }
         }
@@ -435,18 +447,18 @@ public class AdminService {
         permissionDAO.store(permission);
     }
 
-    public Database getDatabaseById(int databaseId, LoggedInConnection loggedInConnection) {
+    public Database getDatabaseById(int databaseId, LoggedInUser loggedInUser) {
         Database database = databaseDAO.findById(databaseId);
-        if (database != null && loggedInConnection.getBusinessId() == database.getBusinessId()){
+        if (database != null && loggedInUser.getUser().getBusinessId() == database.getBusinessId()){
             return database;
         }
         return null;
     }
 
     // code adapted from spreadsheet service which it wilol be removed from
-    public void removeDatabaseById(LoggedInConnection loggedInConnection,  int databaseId) throws Exception {
+    public void removeDatabaseById(LoggedInUser loggedInUser,  int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
-        if (db != null && db.getBusinessId() == loggedInConnection.getBusinessId()) {
+        if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             List<OnlineReport> onlineReports = onlineReportDAO.findForDatabaseId(db.getId());
             for (OnlineReport onlineReport : onlineReports) {
                 userChoiceDAO.deleteForReportId(onlineReport.getId());

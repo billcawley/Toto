@@ -2,6 +2,7 @@ package com.azquo.spreadsheet;
 
 import com.azquo.admin.database.Database;
 import com.azquo.admin.user.User;
+import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.view.AzquoBook;
@@ -32,7 +33,6 @@ public class LoggedInUser {
     // need to hold the current one unlke with ZK which holds onto the user after the spreadsheet is created
     private AzquoBook azquoBook;
     private List<String> languages;
-    int lastJstreeId;
 
     private Database database;
 
@@ -51,7 +51,6 @@ public class LoggedInUser {
 
         languages = new ArrayList<String>();
         languages.add(Name.DEFAULT_DISPLAY_NAME);
-        lastJstreeId = 0;
         this.database = database;
 
         this.readPermissions = readPermissions;
@@ -145,14 +144,6 @@ public class LoggedInUser {
         this.languages = languages;
     }
 
-    public int getLastJstreeId() {
-        return lastJstreeId;
-    }
-
-    public void setLastJstreeId(int lastJstreeId) {
-        this.lastJstreeId = lastJstreeId;
-    }
-
     public User getUser() {
         return user;
     }
@@ -179,5 +170,9 @@ public class LoggedInUser {
 
     public void setWritePermissions(String writePermissions) {
         this.writePermissions = writePermissions;
+    }
+
+    public DatabaseAccessToken getDataAccessToken(){
+        return new DatabaseAccessToken(database.getMySQLName(), readPermissions,writePermissions,languages);
     }
 }

@@ -40,6 +40,8 @@ public class LoginService {
     @Autowired
     private LoginRecordDAO loginRecordDAO;
     @Autowired
+    private DatabaseDAO databaseDAO;
+    @Autowired
     private PermissionDAO permissionDao;
     @Autowired
     private DatabaseDAO databaseDao;
@@ -67,105 +69,6 @@ public class LoginService {
 
 
     private final HashMap<Integer, Integer> openDBCount = new HashMap<Integer, Integer>();
-
-
-    public LoggedInConnection login(final String databaseName, final String userEmail, final String password, String spreadsheetName, boolean loggedIn) throws Exception {
-
-/*            System.out.println("database name " + databaseName);
-            System.out.println("usermeail " + userEmail);
-            System.out.println("password " + password);*/
-
-        if (spreadsheetName == null) {
-            spreadsheetName = "unknown";
-        }
-
-        User user;
-
-        //for demo users, a new User id is made for each user.
-        if (userEmail.startsWith("demo@user.com")) {
-            user = userDao.findByEmail(userEmail);
-            if (user == null) {
-                user = userDao.findByEmail("demo@user.com");
-                if (user != null) {
-                    user.setEmail(userEmail);
-                    user.setId(0);
-                    userDao.store(user);
-                }
-            }
-        } else {
-            user = userDao.findByEmail(userEmail);
-        }
-        //boolean temporary = false;
-        if (user != null && (loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword()))) {
-            return login(databaseName, user, spreadsheetName);
-        }
-        return null;
-    }
-
-    private LoggedInConnection login(final String databaseName, final User user, String spreadsheetName) throws Exception {
-        final Map<String, Database> okDatabases = foundDatabases(user);
-        logger.info("ok databases size " + okDatabases.size());
-        AzquoMemoryDB memoryDB = null;
-        Database database;
-        if (okDatabases.size() == 1) {
-            logger.info("1 database, use that");
-            database = okDatabases.values().iterator().next();
-            memoryDB = memoryDBManager.getAzquoMemoryDB(database);
-            if (database.getName().equals("temp")) {
-                memoryDB.zapDatabase();//to be on the safe side and avoid any persistance
-            }
-        } else {
-            database = okDatabases.get(databaseName);
-            if (database != null) {
-                memoryDB = memoryDBManager.getAzquoMemoryDB(database);
-            }
-        }
-        // could be a null memory db . . .
-                /*
-                LoggedInConnection lic = existingConnection(user);
-                if (lic!=null){
-                    return lic;
-                }*/
-        LoggedInConnection lic = new LoggedInConnection(memoryDB, user,spreadsheetName);
-        int databaseId = 0;
-        if (memoryDB != null && memoryDB.getDatabase() != null) {
-            databaseId = memoryDB.getDatabase().getId();
-            Integer openCount = openDBCount.get(databaseId);
-            if (openCount != null) {
-                openDBCount.put(databaseId, openCount + 1);
-            } else {
-                openDBCount.put(databaseId, 1);
-            }
-        }
-        Permission permission = null;
-        if (database != null) {
-            permission = permissionDao.findByBusinessUserAndDatabase(lic.getUser(), database);
-        }
-        List<Set<Name>> names = new ArrayList<Set<Name>>();
-        if (permission != null) {
-//                    String error = nameService.decodeString(lic,permission.getReadList(), names);
-            names = nameService.decodeString(lic, permission.getReadList(), lic.getLanguages());
-            //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
-        }
-        lic.setReadPermissions(names);
-        names = new ArrayList<Set<Name>>();
-        if (permission != null) {
-//                    String error = nameService.decodeString(lic,permission.getWriteList(), names);
-            names = nameService.decodeString(lic, permission.getWriteList(), lic.getLanguages());
-            //TODO HANDLE ERROR.  should not be any unless names have been changed since storing
-        }
-        lic.setWritePermissions(names);
-        if (database != null && !database.getName().equals("temp")) {
-            loginRecordDAO.store(new LoginRecord(0, user.getId(), databaseId, new Date()));
-        }
-                /*if (!user.getEmail().contains("@demo.") && !user.getEmail().contains("@user.")){
-                    //azquoMailer.sendEMail(user.getEmail(),user.getName(),"Login to Azquo", "You have logged into Azquo.");
-                }*/
-        if (database != null && lic.getAzquoMemoryDB() != null) {
-            anonymise(lic);
-        }
-        return lic;
-    }
 
     // like the two above but for new object that does not reference the memory DB objects. Is the demo stuff still important??
     // very similar to top function, proxies through to a different one
@@ -251,8 +154,9 @@ public class LoginService {
     }
 
 
-    public void anonymise(LoggedInConnection loggedInConnection) {
-        List<Name> anonNames = nameService.findContainingName(loggedInConnection, "", Name.ANON);
+    public void anonymise(DatabaseAccessToken databaseAccessToken) throws Exception{
+        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+        List<Name> anonNames = nameService.findContainingName(azquoMemoryDBConnection, "", Name.ANON);
 
         for (Name set : anonNames) {
             String anonName = set.getAttribute(Name.ANON);
@@ -309,20 +213,35 @@ public class LoginService {
         }
     }*/
 
-    public void switchDatabase(LoggedInConnection loggedInConnection, Database newDb) throws Exception {
-        if (loggedInConnection.getAzquoMemoryDB() != null) {
-            Database oldDB = loggedInConnection.getAzquoMemoryDB().getDatabase();
+    public void switchDatabase(LoggedInUser loggedInUser, String newDBName) throws Exception {
+        Database db = null;
+        if (newDBName != null && newDBName.length() != 0) {
+            db = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), newDBName);
+            if (db == null) {
+                throw new Exception(newDBName + " - no such database");
+            }
+        }
+        switchDatabase(loggedInUser, db);
+    }
+
+    public void switchDatabase(LoggedInUser loggedInUser, Database db) throws Exception {
+        loggedInUser.setDatabase(db);
+
+        /* ok all this opencount etc stuff is going to have to go for the moment
+        if (azquoMemoryDBConnection.getAzquoMemoryDB() != null) {
+            Database oldDB = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase();
             if (newDb != null && newDb.getName().equals("temp")) {
             //don't switch to a temporary connection if you've been moved off it
                 return;
             }
             if (newDb != null && oldDB.getName().equals(newDb.getName())) return;
-            int databaseId = loggedInConnection.getAzquoMemoryDB().getDatabase().getId();
+            int databaseId = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase().getId();
             Integer openCount = openDBCount.get(databaseId);
             if (newDb == null)
                 openCount = 1;//if we're deleting the database, then close the memory, regardless of whether others have it open.
+            //todo - confirm where this is used! Seems dangerous . . .
             if (openCount != null && openCount == 1) {
-                memoryDBManager.removeDatabase(loggedInConnection.getAzquoMemoryDB().getDatabase());
+                memoryDBManager.removeDatabase(azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase());
                 openDBCount.remove(databaseId);
                 openDatabaseDAO.closeForDatabaseId(databaseId);
             } else if (openCount != null && openCount > 1) {
@@ -330,7 +249,7 @@ public class LoginService {
             }
         }
         if (newDb == null) {
-            loggedInConnection.setAzquoMemoryDB(null);
+            azquoMemoryDBConnection.setAzquoMemoryDB(null);
             return;
         }
         AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(newDb);
@@ -341,7 +260,23 @@ public class LoginService {
         } else {
             openDBCount.put(databaseId, 1);
         }
-        loggedInConnection.setAzquoMemoryDB(memoryDB);
+        azquoMemoryDBConnection.setAzquoMemoryDB(memoryDB);*/
+    }
+
+    // after some thining trim this down to the basics. Would have just been a DB name for that server but need permissions too.
+    // may cache in future to save DB/Permission lookups. Depends on how consolidated client/server calls can be made . . .
+
+    public AzquoMemoryDBConnection getConnectionFromAccessToken(DatabaseAccessToken databaseAccessToken) throws Exception{
+        // todo - address opendb count (do we care?) and exceptions
+        AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(databaseAccessToken.getDatabaseMySQLName());
+        AzquoMemoryDBConnection connection = new AzquoMemoryDBConnection(memoryDB);
+        if (databaseAccessToken.getWritePermissions() != null && !databaseAccessToken.getWritePermissions().isEmpty()) {
+            connection.setWritePermissions(nameService.decodeString(connection, databaseAccessToken.getWritePermissions(), databaseAccessToken.getLanguages()));
+        }
+        if (databaseAccessToken.getReadPermissions() != null && !databaseAccessToken.getReadPermissions().isEmpty()) {
+            connection.setWritePermissions(nameService.decodeString(connection, databaseAccessToken.getWritePermissions(), databaseAccessToken.getLanguages()));
+        }
+        return connection;
     }
 
 }

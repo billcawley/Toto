@@ -3,7 +3,6 @@ package com.azquo.spreadsheet.view;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.spreadsheet.controller.OnlineController;
-import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.*;
@@ -45,13 +44,13 @@ public class ZKAzquoBookUtils {
 
     public void populateBook(Book book) throws Exception {
         //book.getInternalBook().getAttribute(ZKAzquoBookProvider.BOOK_PATH);
-        LoggedInConnection loggedInConnection = (LoggedInConnection) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_CONNECTION);
+        LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
 
         Map<String, String> userChoices = new HashMap<String, String>();
         // get the user choices for the report. Can be drop down values, sorting/highlighting etc.
         // a notable point here is that the user choices don't distinguish between sheets
-        List<UserChoice> allChoices = userChoiceDAO.findForUserIdAndReportId(loggedInConnection.getUser().getId(), reportId);
+        List<UserChoice> allChoices = userChoiceDAO.findForUserIdAndReportId(loggedInUser.getUser().getId(), reportId);
         for (UserChoice uc : allChoices) {
             userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
         }
@@ -84,7 +83,7 @@ public class ZKAzquoBookUtils {
                                 optionsForRegion = null;
                             }
                         }
-                        fillRegion(sheet, region, userChoices, optionsForRegion, loggedInConnection);
+                        fillRegion(sheet, region, userChoices, optionsForRegion, loggedInUser);
                     }
                 }
                 // all data for that sheet should be populated
@@ -108,7 +107,7 @@ public class ZKAzquoBookUtils {
                 if (userChoice != null) {
                     range.setValue(userChoice.getChoiceValue());
                 }*/
-                addValidation(namesForSheet, sheet, loggedInConnection);
+                addValidation(namesForSheet, sheet, loggedInUser);
             }
     }
 
@@ -132,7 +131,7 @@ public class ZKAzquoBookUtils {
 
     // taking the function from old AzquoBook and rewriting
 
-    private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, String optionsForRegion, LoggedInConnection loggedInConnection) throws Exception {
+    private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, String optionsForRegion, LoggedInUser loggedInUser) throws Exception {
         int filterCount = asNumber(getOption(region, "hiderows", userChoices, optionsForRegion));
         if (filterCount == 0)
             filterCount = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
@@ -149,8 +148,8 @@ public class ZKAzquoBookUtils {
 
             // not going to do this just yet
          if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
-            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInConnection, regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
-                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, loggedInConnection.getSortRow(region), loggedInConnection.getSortCol(region));
+            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
+                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, loggedInUser.getSortRow(region), loggedInUser.getSortCol(region));
             // todo : how to indicate sortable rows/cols
             // now, put the headings into the sheet!
             // might be factored into fill range in a bit
@@ -330,7 +329,7 @@ public class ZKAzquoBookUtils {
 
     public static final String VALIDATION_SHEET = "VALIDATION_SHEET";
 
-    public void addValidation(List<SName> namesForSheet, Sheet sheet, LoggedInConnection loggedInConnection) {
+    public void addValidation(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
         if (sheet.getBook().getSheet(VALIDATION_SHEET) == null) {
             sheet.getBook().getInternalBook().createSheet(VALIDATION_SHEET);
         }
@@ -344,10 +343,11 @@ public class ZKAzquoBookUtils {
                     if (choice != null && chosen != null) {
                         // ok I assume choice is a single cell
                         try {
-                            List<Name> choiceNames = nameService.parseQuery(loggedInConnection, sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).getStringValue());// I think this will do it??
+                            // new code style
+                            List<String> choiceOptions = spreadsheetService.getDropDownListForQuery(loggedInUser.getDataAccessToken(), sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).getStringValue(), loggedInUser.getLanguages());
                             int row = 0;
-                            for (Name name1 : choiceNames) {
-                                validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded).setStringValue(name1.getDisplayNameForLanguages(loggedInConnection.getLanguages()));
+                            for (String choiceOption : choiceOptions) {
+                                validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded).setStringValue(choiceOption);
                                 row++;
                             }
                             Range validationValues = Ranges.range(validationSheet, 0, numberOfValidationsAdded, row, numberOfValidationsAdded);

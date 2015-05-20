@@ -6,6 +6,8 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.app.magento.service.DataLoadService;
+import com.azquo.dataimport.ImportService;
+import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.*;
 import com.azquo.util.AzquoMailer;
 //dataimport org.apache.log4j.Logger;
@@ -19,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.Date;
 
 /**
@@ -40,6 +43,9 @@ public class MagentoController {
 
     @Autowired
     SpreadsheetService spreadsheetService;
+
+    @Autowired
+    ImportService importService;
 
     @Autowired
     LoginService loginService;
@@ -74,59 +80,50 @@ public class MagentoController {
             if (db == null) {
                 db = "temp";
             }
-            LoggedInConnection loggedInConnection = loginService.login(db, logon, password, "", false);//will automatically switch the database to 'temp' if that's the only one
-            if (loggedInConnection == null) {
+            LoggedInUser loggedInUser = loginService.loginLoggedInUser(db, logon, password, "", false);//will automatically switch the database to 'temp' if that's the only one
+            if (loggedInUser == null) {
                 return "error: user " + logon + " with this password does not exist";
             }
             if (!db.equals("temp") && db.length() > 0) {
-                spreadsheetService.switchDatabase(loggedInConnection, db);
+                loginService.switchDatabase(loggedInUser, db);
                 //todo  consider what happens if there's an error here (check the result from the line above?)
             }
             if (op.equals("connect")) {
-                if (dataLoadService.findLastUpdate(loggedInConnection, request.getRemoteAddr()) != null) {
+                if (dataLoadService.findLastUpdate(loggedInUser.getDataAccessToken(), request.getRemoteAddr()) != null) {
                     // was connection id here, hacking ths back in to get the logged in conneciton
                     String tempConnectionId = System.currentTimeMillis() + "";
-                    request.getServletContext().setAttribute(tempConnectionId, loggedInConnection);
+                    request.getServletContext().setAttribute(tempConnectionId, loggedInUser);
                     return tempConnectionId;
                 } else {
-                    dataLoadService.findRequiredTables(loggedInConnection, request.getRemoteAddr());
+                    findRequiredTables(loggedInUser, request.getRemoteAddr());
                 }
             }
 
             // need to look at this carefully. I don't think the Logged InCOnnection is how I'd implement this if I started again. On the other hand
             if (op.equals("restart")) {
-                Database existingDb = loggedInConnection.getCurrentDatabase();
-                adminService.emptyDatabase(loggedInConnection.getCurrentDBName());
-                loginService.switchDatabase(loggedInConnection, null);
-                loginService.switchDatabase(loggedInConnection, existingDb);
-                return dataLoadService.findRequiredTables(loggedInConnection, request.getRemoteAddr());
+                Database existingDb = loggedInUser.getDatabase();
+                adminService.emptyDatabase(loggedInUser.getDatabase().getMySQLName());
+                //loginService.switchDatabase(loggedInUser, null); // something to do with booting it from memory, not sure if we care?
+                loginService.switchDatabase(loggedInUser, existingDb);
+                return findRequiredTables(loggedInUser, request.getRemoteAddr());
             }
 
             if (op.equals("lastupdate") || op.equals("requiredtables")) { // 'lastupdate' applies only to versions 1.1.0 and 1.1.1  (LazySusan and Lyco)
-
-                return dataLoadService.findRequiredTables(loggedInConnection, request.getRemoteAddr());
+                return findRequiredTables(loggedInUser, request.getRemoteAddr());
             }
             if (op.equals("updatedb")) {
-                dataLoadService.findRequiredTables(loggedInConnection, request.getRemoteAddr());//for curl commands only to load dates etc.
+                findRequiredTables(loggedInUser, request.getRemoteAddr());//for curl commands only to load dates etc.
 
-                if (loggedInConnection.getCurrentDatabase() != null) {
-                    System.out.println("Running a magento update, memory db : " + loggedInConnection.getLocalCurrentDBName() + " max id on that db " + loggedInConnection.getMaxIdOnCurrentDB());
+                if (loggedInUser.getDatabase() != null) {
+                    System.out.println("Running a magento update, memory db : " + loggedInUser.getDatabase().getName() + " don't currently have access to max id, need to add that back in");
                 }
 
                 if (data != null) {
-                    File moved = null;
                     long start = System.currentTimeMillis();
-                    if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1")) { // if it's from us don't save it :)
-                        moved = new File(spreadsheetService.getHomeDir() + "/temp/" + db + new Date());
-                        data.transferTo(moved);
-                    }
-                    if (moved != null) {
-                        FileInputStream fis = new FileInputStream(moved);
-                        dataLoadService.loadData(loggedInConnection, fis, request.getRemoteAddr());
-                        fis.close();
-                    } else {
-                        dataLoadService.loadData(loggedInConnection, data.getInputStream(),request.getRemoteAddr());
-                    }
+                    // now copying all files, will make it easier for the client/server split. No passing of input streams just the file name
+                    File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + db + new Date());
+                    data.transferTo(moved);
+                        dataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr());
                     long elapsed = System.currentTimeMillis() - start;
                     if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1")) { // if it's from us don't email us :)
                         String title = "Magento file upload " + logon + " from " + request.getRemoteAddr() + " elapsed time " + elapsed + " millisec";
@@ -136,7 +133,7 @@ public class MagentoController {
                     }
                     // was connection id here, hacking ths back in to get the logged in conneciton
                     String tempConnectionId = System.currentTimeMillis() + "";
-                    request.getServletContext().setAttribute(tempConnectionId, loggedInConnection);
+                    request.getServletContext().setAttribute(tempConnectionId, loggedInUser);
                     return tempConnectionId;
                 } else {
                     return "error: no data posted";
@@ -145,7 +142,7 @@ public class MagentoController {
             }
             if (op.equals("reports")) {
                 OnlineReport onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
-                return spreadsheetService.readExcel(loggedInConnection, onlineReport, null, "");
+                return spreadsheetService.readExcel(loggedInUser, onlineReport, null, "");
             }
             return "unknown op";
         } catch (Exception e) {
@@ -166,5 +163,14 @@ public class MagentoController {
 
     ) throws Exception {
         return handleRequest(request, db, op, logon, password, null);
+    }
+
+    private String findRequiredTables(LoggedInUser loggedInUser, String remoteAddress) throws Exception{
+        if (dataLoadService.magentoDBNeedsSettingUp(loggedInUser.getDataAccessToken())){
+            String magentoSetupFile = spreadsheetService.getHomeDir() + "/databases/Magen/setup/magentosetup.xlsx";
+            String fileName = "magentosetup.xlsx";
+            importService.importTheFile(loggedInUser, fileName, magentoSetupFile);
+        }
+        return dataLoadService.findRequiredTables(loggedInUser.getDataAccessToken(), remoteAddress);
     }
 }

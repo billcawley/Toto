@@ -1,6 +1,5 @@
 package com.azquo.memorydb.core;
 
-import com.azquo.admin.database.Database;
 import com.azquo.memorydb.dao.JsonRecordTransport;
 import com.azquo.memorydb.dao.StandardDAO;
 import com.github.holodnov.calculator.ObjectSizeCalculator;
@@ -42,8 +41,8 @@ public final class AzquoMemoryDB {
     // does this database need loading from mysql, a significant flag that affects rules for memory db instantiation for example
     private boolean needsLoading;
 
-    // reference to the mysql db
-    private Database database;//removed 'final' to allow temporary database to be loaded
+    // reference to the mysql db, not final so it can be nullable to stop persistence
+    private String mysqlName;
 
     // object ids. We handle this here, it's not done by MySQL
     private int maxIdAtLoad;
@@ -55,8 +54,8 @@ public final class AzquoMemoryDB {
 
     // Initialising maps concurrently here,
 
-    protected AzquoMemoryDB(Database database, StandardDAO standardDAO) throws Exception {
-        this.database = database;
+    protected AzquoMemoryDB(String mysqlName, StandardDAO standardDAO) throws Exception {
+        this.mysqlName = mysqlName;
         this.standardDAO = standardDAO;
         needsLoading = true;
         maxIdAtLoad = 0;
@@ -90,15 +89,12 @@ public final class AzquoMemoryDB {
 
     // convenience
     public String getMySQLName() {
-        return database.getMySQLName();
+        return mysqlName;
     }
 
-    public Database getDatabase() {
-        return database;
-    }
 
     public void zapDatabase() {
-        database = null;
+        mysqlName = null;
     }
 
     public boolean getNeedsLoading() {

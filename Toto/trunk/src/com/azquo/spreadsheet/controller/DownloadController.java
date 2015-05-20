@@ -2,7 +2,7 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
-import com.azquo.spreadsheet.LoggedInConnection;
+import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,12 +68,12 @@ public class DownloadController {
             out.flush();
             return;
         }
-        LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
-        if (loggedInConnection == null) {
+        LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        if (loggedInUser == null) {
             return;
         }
         OnlineReport onlineReport = null;
-        int reportId = loggedInConnection.getReportId();
+        int reportId = loggedInUser.getReportId();
         if (reportId != 0) {
             try {
                 onlineReport = onlineReportDAO.findById(reportId);
@@ -90,12 +90,12 @@ public class DownloadController {
             fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
         }
         if (pdf) {
-            spreadsheetService.saveBookasPDF(response, loggedInConnection, fileName);
+            spreadsheetService.saveBookasPDF(response, loggedInUser, fileName);
         } else {
             if (withMacros) {
-                spreadsheetService.saveBookActive(response, loggedInConnection, fileName);
+                spreadsheetService.saveBookActive(response, loggedInUser, fileName);
             } else {
-                spreadsheetService.saveBook(response, loggedInConnection, fileName);
+                spreadsheetService.saveBook(response, loggedInUser, fileName);
             }
         }
     }

@@ -7,9 +7,13 @@ import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.database.UploadRecord;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
+import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.csvreader.CsvReader;
@@ -57,6 +61,8 @@ public final class ImportService {
     private OnlineReportDAO onlineReportDAO;
     @Autowired
     private AdminService adminService;
+    @Autowired
+    private LoginService loginService;
     @Autowired
     private SpreadsheetService spreadsheetService;
     @Autowired
@@ -118,27 +124,28 @@ public final class ImportService {
         }
     }
 
-    public void importTheFile(final AzquoMemoryDBConnection azquoMemoryDBConnection, String fileName, InputStream uploadFile) throws Exception {
+    public void importTheFile(LoggedInUser loggedInUser, String fileName, String filePath) throws Exception {
         List<String> languages = new ArrayList<String>();
         languages.add(Name.DEFAULT_DISPLAY_NAME);
-        importTheFile(azquoMemoryDBConnection, fileName, uploadFile, "", true, languages);
+        importTheFile(loggedInUser, fileName, filePath, "", true, languages);
     }
 
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    public void importTheFile(final AzquoMemoryDBConnection azquoMemoryDBConnection, String fileName, InputStream uploadFile, String fileType, boolean skipBase64, List<String> attributeNames)
+    public void importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, String fileType, boolean skipBase64, List<String> attributeNames)
             throws Exception {
 
         //fileType is now always the first word of the spreadsheet/dataimport file name
-
-        azquoMemoryDBConnection.setNewProvenance("import", fileName);
-        if (azquoMemoryDBConnection.getAzquoMemoryDB() == null && !fileName.endsWith(".xls") && !fileName.endsWith(".xlsx")) {
+        InputStream uploadFile = new FileInputStream(filePath);
+        // todo : address provenance on an import
+        //azquoMemoryDBConnection.setNewProvenance("import", fileName);
+        if (loggedInUser.getDatabase() == null && !fileName.endsWith(".xls") && !fileName.endsWith(".xlsx")) {
             throw new Exception("error: no database set");
         }
         String tempFile = "";
         String lcName = fileName.toLowerCase();
         if (lcName.endsWith(".jpg") || lcName.endsWith(".png") || lcName.endsWith(".gif")) {
-            imageImport(azquoMemoryDBConnection, uploadFile, fileName);
+            imageImport(loggedInUser, uploadFile, fileName);
         }
         if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")) {
             if (skipBase64) {
@@ -159,14 +166,14 @@ public final class ImportService {
             }
         }
         if (fileName.contains(".xls")) {
-            readBook(azquoMemoryDBConnection, fileName, tempFile, attributeNames);
-
+            readBook(loggedInUser, fileName, tempFile, attributeNames);
         } else {
             if (tempFile.length() > 0) {
-                uploadFile = new FileInputStream(tempFile);
+                filePath = tempFile;
             }
-            readPreparedFile(azquoMemoryDBConnection, uploadFile, fileType, attributeNames);
+            readPreparedFile(loggedInUser.getDataAccessToken(), filePath, fileType, attributeNames);
         }
+        /* todo - sort this upload record later . . .
         int databaseId = 0;
         if (azquoMemoryDBConnection.getAzquoMemoryDB() != null) {
             azquoMemoryDBConnection.persist();
@@ -176,20 +183,20 @@ public final class ImportService {
             fileType = "spreadsheet";
         }
         UploadRecord uploadRecord = new UploadRecord(0, new Date(), azquoMemoryDBConnection.getBusinessId(), databaseId, azquoMemoryDBConnection.getUser().getId(), fileName, fileType, "");//;should record the error????
-        uploadRecordDAO.store(uploadRecord);
+        uploadRecordDAO.store(uploadRecord);*/
     }
 
-    public void readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, InputStream uploadFile, String fileType, List<String> attributeNames) throws Exception {
+    public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
         // todo : language here!
         if (fileType.toLowerCase().startsWith("sets")) {
-            setsImport(azquoMemoryDBConnection, uploadFile, attributeNames);
+            setsImport(loginService.getConnectionFromAccessToken(databaseAccessToken), new FileInputStream(filePath), attributeNames);
         } else {
-            valuesImport(azquoMemoryDBConnection, uploadFile, fileType, attributeNames);
+            valuesImport(loginService.getConnectionFromAccessToken(databaseAccessToken), new FileInputStream(filePath), fileType, attributeNames);
         }
     }
 
-    private void imageImport(AzquoMemoryDBConnection azquoMemoryDBConnection, InputStream inputStream, String fileName) throws Exception {
-        String targetFileName = "/home/azquo/databases/" + azquoMemoryDBConnection.getCurrentDBName() + "/images/" + fileName;
+    private void imageImport(LoggedInUser loggedInUser, InputStream inputStream, String fileName) throws Exception {
+        String targetFileName = "/home/azquo/databases/" + loggedInUser.getDatabase().getName() + "/images/" + fileName;
         File output = new File(targetFileName);
         output.getParentFile().mkdirs();
         if (!output.exists()) {
@@ -972,13 +979,13 @@ public final class ImportService {
         return tempName;
     }
 
-    private void uploadReport(AzquoMemoryDBConnection azquoMemoryDBConnection, AzquoBook azquoBook, String fileName, String reportName) throws Exception {
-        int businessId = azquoMemoryDBConnection.getBusinessId();
+    private void uploadReport(LoggedInUser loggedInUser, AzquoBook azquoBook, String fileName, String reportName) throws Exception {
+        int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = 0;
-        String pathName = adminService.getBusinessPrefix(azquoMemoryDBConnection);
-        if (azquoMemoryDBConnection.getAzquoMemoryDB() != null) {
-            databaseId = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase().getId();
-            pathName = azquoMemoryDBConnection.getCurrentDBName();
+        String pathName = adminService.getBusinessPrefix(loggedInUser);
+        if (loggedInUser.getDatabase() != null) {
+            databaseId = loggedInUser.getDatabase().getId();
+            pathName = loggedInUser.getDatabase().getName();
         }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         int reportId = 0;
@@ -996,28 +1003,27 @@ public final class ImportService {
         onlineReportDAO.store(or);
     }
 
-    private void readBook(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String fileName, final String tempName, List<String> attributeNames) throws Exception {
-        AzquoBook azquoBook = new AzquoBook(nameService, userChoiceDAO, spreadsheetService, this);
+    private void readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames) throws Exception {
+        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, spreadsheetService, this);
         azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = azquoBook.getReportName();
         if (reportName != null) {
-            uploadReport(azquoMemoryDBConnection, azquoBook, fileName, reportName);
+            uploadReport(loggedInUser, azquoBook, fileName, reportName);
             return;
         }
-        if (azquoMemoryDBConnection.getAzquoMemoryDB() == null) {
+        if (loggedInUser.getDatabase() == null) {
             throw new Exception("no database set");
         }
         int sheetNo = 0;
         while (sheetNo < azquoBook.getNumberOfSheets()) {
-            readSheet(azquoMemoryDBConnection, azquoBook, tempName, sheetNo, attributeNames);
+            readSheet(loggedInUser, azquoBook, tempName, sheetNo, attributeNames);
             sheetNo++;
         }
     }
 
-    private void readSheet(final AzquoMemoryDBConnection azquoMemoryDBConnection, AzquoBook azquoBook, final String tempFileName, final int sheetNo, List<String> attributeNames) throws Exception {
+    private void readSheet(LoggedInUser loggedInUser, AzquoBook azquoBook, final String tempFileName, final int sheetNo, List<String> attributeNames) throws Exception {
         String tempName = azquoBook.convertSheetToCSV(tempFileName, sheetNo);
-        InputStream uploadFile = new FileInputStream(tempName);
         String fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
-        readPreparedFile(azquoMemoryDBConnection, uploadFile, fileType, attributeNames);
+        readPreparedFile(loggedInUser.getDataAccessToken(), tempName, fileType, attributeNames);
     }
 }

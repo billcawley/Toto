@@ -4,7 +4,7 @@ import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.user.Permission;
 import com.azquo.admin.user.User;
-import com.azquo.spreadsheet.LoggedInConnection;
+import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -46,20 +46,20 @@ public class ManagePermissionsController {
     ) throws Exception
 
     {
-        LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
-        if (loggedInConnection == null || !loggedInConnection.getUser().isAdministrator()) {
+        LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
             if (deleteId != null && NumberUtils.isDigits(deleteId)){
-                adminService.deletePermissionById(Integer.parseInt(deleteId), loggedInConnection);
+                adminService.deletePermissionById(Integer.parseInt(deleteId), loggedInUser);
             }
 
 
             if (editId != null && NumberUtils.isDigits(editId)){
-                Permission toEdit = adminService.getPermissionById(Integer.parseInt(editId), loggedInConnection);
+                Permission toEdit = adminService.getPermissionById(Integer.parseInt(editId), loggedInUser);
                 // ok check to see if data was submitted
                 StringBuilder error = new StringBuilder();
                 if (submit != null){
@@ -84,7 +84,7 @@ public class ManagePermissionsController {
                     if (userId == null || !NumberUtils.isNumber(userId)){
                         error.append("User Id Required<br/>");
                     } else {
-                        User user = adminService.getUserById(Integer.parseInt(userId), loggedInConnection);
+                        User user = adminService.getUserById(Integer.parseInt(userId), loggedInUser);
                         if (user == null){
                             error.append("Applicable User Id Required<br/>");
                         }
@@ -92,7 +92,7 @@ public class ManagePermissionsController {
                     if (databaseId == null || !NumberUtils.isNumber(databaseId)){
                         error.append("Database Id Required<br/>");
                     } else {
-                        Database database = adminService.getDatabaseById(Integer.parseInt(databaseId), loggedInConnection);
+                        Database database = adminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
                         if (database == null){
                             error.append("Applicable Database Id Required<br/>");
                         }
@@ -103,7 +103,7 @@ public class ManagePermissionsController {
                         if (toEdit == null){
                             // Have to use  alocadate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
                             adminService.createUserPermission(Integer.parseInt(userId), Integer.parseInt(databaseId), LocalDate.parse(startDate, formatter).atStartOfDay()
-                                    ,LocalDate.parse(startDate, formatter).atStartOfDay(), readList, writeList, loggedInConnection);
+                                    ,LocalDate.parse(startDate, formatter).atStartOfDay(), readList, writeList, loggedInUser);
                         } else {
                             toEdit.setUserId(Integer.parseInt(userId));
                             toEdit.setDatabaseId(Integer.parseInt(databaseId));
@@ -113,7 +113,7 @@ public class ManagePermissionsController {
                             toEdit.setWriteList(writeList);
                             adminService.storePermission(toEdit);
                         }
-                        model.put("permissions", adminService.getDisplayPermissionList(loggedInConnection));
+                        model.put("permissions", adminService.getDisplayPermissionList(loggedInUser));
                         return "managepermissions";
                     } else {
                         model.put("error", error.toString());
@@ -138,13 +138,13 @@ public class ManagePermissionsController {
                         model.put("id", "0");
                     }
                 }
-                model.put("databases", adminService.getDatabaseListForBusiness(loggedInConnection));
-                model.put("users", adminService.getUserListForBusiness(loggedInConnection));
+                model.put("databases", adminService.getDatabaseListForBusiness(loggedInUser));
+                model.put("users", adminService.getUserListForBusiness(loggedInUser));
                 return "editpermission";
             }
 
 
-            model.put("permissions", adminService.getDisplayPermissionList(loggedInConnection));
+            model.put("permissions", adminService.getDisplayPermissionList(loggedInUser));
             return "managepermissions";
         }
     }

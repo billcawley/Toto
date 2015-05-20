@@ -42,26 +42,21 @@ public class AzquoMemoryDBConnection {
         writePermissions = new ArrayList<Set<Name>>();
     }
 
+    // new one for getting a connection based on the DatabaseAccessToken
+
+    public AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB) {
+        this.azquoMemoryDB = azquoMemoryDB;
+        this.user = null;
+        readPermissions = new ArrayList<Set<Name>>();
+        writePermissions = new ArrayList<Set<Name>>();
+    }
+
     public AzquoMemoryDB getAzquoMemoryDB() {
         return azquoMemoryDB;
     }
 
     public boolean hasAzquoMemoryDB() {
         return azquoMemoryDB != null;
-    }
-
-    public String getCurrentDBName() {
-        if (azquoMemoryDB != null && azquoMemoryDB.getDatabase() != null) {
-            return azquoMemoryDB.getDatabase().getMySQLName();
-        }
-        return null;
-    }
-
-    public Database getCurrentDatabase() {
-        if (azquoMemoryDB != null) {
-            return azquoMemoryDB.getDatabase();
-        }
-        return null;
     }
 
     public int getMaxIdOnCurrentDB() {
@@ -71,10 +66,6 @@ public class AzquoMemoryDBConnection {
     // for debugging
     public void memoryReport() {
         azquoMemoryDB.memoryReport();
-    }
-
-    public String getLocalCurrentDBName() {
-        return azquoMemoryDB.getDatabase().getName();
     }
 
     // todo, address this being public now I've refactored, a big issue??

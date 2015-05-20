@@ -2,6 +2,8 @@ package com.azquo.app.magento.service;
 
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
@@ -38,6 +40,9 @@ public final class DataLoadService {
     SpreadsheetService spreadsheetService;
 
     @Autowired
+    LoginService loginService;
+
+    @Autowired
     ImportService importService;
 
     private final static String LATEST_UPDATE = "Latest update";
@@ -72,7 +77,8 @@ public final class DataLoadService {
     //final Map<Integer, MagentoOrderLineItem> orderLineItems = new HashMap<Integer, MagentoOrderLineItem>();
     final Map<String, String> optionValueLookup = new HashMap<String, String>();*/
 
-    public String findLastUpdate(AzquoMemoryDBConnection azquoMemoryDBConnection, String remoteAddress) throws Exception {
+    public String findLastUpdate(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = loginService.getConnectionFromAccessToken(databaseAccessToken);
         Name orderName = nameService.findByName(azquoMemoryDBConnection, "order");
         if (orderName == null) {
             return null;
@@ -84,18 +90,17 @@ public final class DataLoadService {
         return lastUpdate;
     }
 
+    public boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws Exception{
+        AzquoMemoryDBConnection azquoMemoryDBConnection = loginService.getConnectionFromAccessToken(databaseAccessToken);
+        return nameService.findByName(azquoMemoryDBConnection, "all years") == null;
+    }
 
-    public String findRequiredTables(AzquoMemoryDBConnection azquoMemoryDBConnection, String remoteAddress) throws Exception {
+
+    public String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = loginService.getConnectionFromAccessToken(databaseAccessToken);
         String requiredTables = defaultData().replace("$starttime", "");
-        if (nameService.findByName(azquoMemoryDBConnection, "all years") == null) {
-            String magentoSetupFile = spreadsheetService.getHomeDir() + "/databases/Magen/setup/magentosetup.xlsx";
-            InputStream uploadFile = new FileInputStream(magentoSetupFile);
-            String fileName = "magentosetup.xlsx";
-            importService.importTheFile(azquoMemoryDBConnection, fileName, uploadFile);
-        }
-
         String date = "never";
-        String lastUpdate = findLastUpdate(azquoMemoryDBConnection, remoteAddress);
+        String lastUpdate = findLastUpdate(databaseAccessToken, remoteAddress);
         Name order = nameService.findByName(azquoMemoryDBConnection, "order");
         if (order != null) {
              if (lastUpdate != null) {
@@ -110,17 +115,11 @@ public final class DataLoadService {
         return requiredTables;
     }
 
-    public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, InputStream data, String remoteAddress) throws Exception {
-        loadData(azquoMemoryDBConnection, data != null ? new BufferedReader(new InputStreamReader(data, StandardCharsets.UTF_8)) : null, remoteAddress);
-    }
-
     // todo : since this is a single thread maybe use koloboke maps? I guess if it's going slowly. Also NIO options? We are on Java 8 now . . .
-
-    public void loadData(AzquoMemoryDBConnection azquoMemoryDBConnection, BufferedReader br, String remoteAddress) throws Exception {
+    public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = loginService.getConnectionFromAccessToken(databaseAccessToken);
         Map<String, List<Map<String, String>>> tableMap = new HashMap<String, List<Map<String, String>>>();
-        if (br == null) {
-            br = new BufferedReader(new FileReader("/home/bill/Sear/magento/testdata_dump.txt"));
-        }
+        BufferedReader br = new BufferedReader(new FileReader(filePath));
         long marker = System.currentTimeMillis();
         String line;
         List<Map<String, String>> currentTableDataMap = null;
@@ -630,7 +629,7 @@ public final class DataLoadService {
         long part8 = 0;
         int counter = 0;
         if (tableMap.get("sales_flat_order_item") == null) {
-            if (azquoMemoryDBConnection.getCurrentDatabase() != null) {
+            if (azquoMemoryDBConnection.getAzquoMemoryDB() != null) {
                 azquoMemoryDBConnection.persist();
             }
             return;
@@ -906,7 +905,7 @@ public final class DataLoadService {
         Name order = nameService.findByName(azquoMemoryDBConnection, "order", languages);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         order.setAttributeWillBePersisted(LATEST_UPDATE + " " + remoteAddress, sdf.format(new Date()));
-        if (azquoMemoryDBConnection.getCurrentDatabase() != null) {
+        if (azquoMemoryDBConnection.getAzquoMemoryDB() != null) {
             azquoMemoryDBConnection.persistInBackground();// aim to return to them quickly, this is whre we get into multi threading . . .
         }
 

@@ -32,19 +32,26 @@ public final class MemoryDBManager {
     }
 
     public synchronized AzquoMemoryDB getAzquoMemoryDB(Database database) throws Exception {
+        return getAzquoMemoryDB(database.getMySQLName());
+    }
+
+    // similar to above, todo : zap above if we can
+
+    public synchronized AzquoMemoryDB getAzquoMemoryDB(String mySqlName) throws Exception {
         AzquoMemoryDB loaded;
-        if (database.getName().equals("temp")) {
-            loaded = new AzquoMemoryDB(database, standardDAO);
+        if (mySqlName.equals("temp")) {
+            loaded = new AzquoMemoryDB(mySqlName, standardDAO);
             return loaded;
         }
-        loaded = memoryDatabaseMap.get(database.getMySQLName());
+        loaded = memoryDatabaseMap.get(mySqlName);
         if (loaded != null) {
             return loaded;
         }
-        loaded = new AzquoMemoryDB(database, standardDAO);
-        memoryDatabaseMap.put(database.getMySQLName(), loaded);
-        final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new GregorianCalendar(1900, 0, 0).getTime());// should start to get away from date
-        openDatabaseDAO.store(openDatabase);
+        loaded = new AzquoMemoryDB(mySqlName, standardDAO);
+        memoryDatabaseMap.put(mySqlName, loaded);
+        // todo, add back in client side
+/*        final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new GregorianCalendar(1900, 0, 0).getTime());// should start to get away from date
+        openDatabaseDAO.store(openDatabase);*/
         return loaded;
     }
 
@@ -65,12 +72,12 @@ public final class MemoryDBManager {
 
     }
 
-    public synchronized void addNewToDBMap(Database database) throws Exception {
-        if (memoryDatabaseMap.get(database.getMySQLName()) != null) {
+    public synchronized void addNewToDBMap(String mysqlName) throws Exception {
+        if (memoryDatabaseMap.get(mysqlName) != null) {
             throw new Exception("cannot create new memory database one attached to that mysql database already exists");
         }
-        AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(database, standardDAO);
-        memoryDatabaseMap.put(database.getMySQLName(), azquoMemoryDB);
+        AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(mysqlName, standardDAO);
+        memoryDatabaseMap.put(mysqlName, azquoMemoryDB);
     }
 
 }

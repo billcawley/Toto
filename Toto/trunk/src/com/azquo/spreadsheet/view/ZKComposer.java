@@ -89,7 +89,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         int col = event.getColumn();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
-        LoggedInConnection loggedInConnection = (LoggedInConnection) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_CONNECTION);
+        LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         for (SName name : book.getInternalBook().getNames()) {
             if (name.getRefersToSheetName().equals(event.getSheet().getSheetName())
@@ -98,7 +98,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     && name.getRefersToCellRegion().getColumn() == col) {
                 // ok it matches a name
                 if (name.getName().endsWith("Chosen")) {
-                    spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), reportId, name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
+                    spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), reportId, name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
                     reload = true;
                 }
             }
@@ -125,7 +125,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO);
         Book book = sheetSelectEvent.getSheet().getBook();
         zkAzquoBookUtils.addValidation(zkAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),
-                (LoggedInConnection) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_CONNECTION));
+                (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
     }
 
     // to deal with provenance

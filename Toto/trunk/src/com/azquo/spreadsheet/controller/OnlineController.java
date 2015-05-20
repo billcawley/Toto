@@ -25,6 +25,7 @@ import org.zkoss.zss.api.model.Book;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.InputStream;
+import java.util.Date;
 
 
 /**
@@ -64,7 +65,7 @@ public class OnlineController {
 
     public static final String BOOK = "BOOK";
     public static final String BOOK_PATH = "BOOK_PATH";
-    public static final String LOGGED_IN_CONNECTION = "LOGGED_IN_CONNECTION";
+    public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
     public static final String REPORT_ID = "REPORT_ID";
 
 
@@ -95,17 +96,17 @@ public class OnlineController {
                 long time = System.currentTimeMillis();
                 String bookPath = (String) request.getSession().getAttribute(BOOK_PATH);
                 final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                final LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LOGGED_IN_CONNECTION);
+                final LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LOGGED_IN_USER);
                 // the first two make sense. Little funny about teh second two but we need a reference to these
                 book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
-                book.getInternalBook().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
+                book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
-                book.getInternalBook().setAttribute(REPORT_ID, loggedInConnection.getReportId());
+                book.getInternalBook().setAttribute(REPORT_ID, loggedInUser.getReportId());
                 ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO);
                 bookUtils.populateBook(book);
                 request.setAttribute(BOOK, book);
-                if (loggedInConnection.getCurrentDBName() != null) {
-                    model.addAttribute("databaseChosen", loggedInConnection.getCurrentDBName());
+                if (loggedInUser.getDatabase() != null) {
+                    model.addAttribute("databaseChosen", loggedInUser.getDatabase().getName());
                 }
                 System.out.println("time to prepare the book : " + (System.currentTimeMillis() - time));
                 return "zstest";
@@ -135,32 +136,32 @@ public class OnlineController {
                 if (workbookName == null) {
                     workbookName = "unknown";
                 }
-                LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
+                LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
 
-                if (loggedInConnection == null) {
+                if (loggedInUser == null) {
                     if (user == null) {
                         return "utf8page";
                     }
                     if (user.equals("demo@user.com")) {
                         user += request.getRemoteAddr();
                     }
-                    loggedInConnection = loginService.login(database, user, password, workbookName, false);
-                    if (loggedInConnection == null) {
+                    loggedInUser = loginService.loginLoggedInUser(database, user, password, workbookName, false);
+                    if (loggedInUser == null) {
                         model.addAttribute("content", "error:no connection id");
                         return "utf8page";
                     } else {
-                        request.getSession().setAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
+                        request.getSession().setAttribute(LoginController.LOGGED_IN_USER_SESSION, loggedInUser);
                     }
                 }
                 if (onlineReport != null) {
                     if (onlineReport.getId() != 1) {
                         if (onlineReport.getDatabaseId() > 0) {
                             db = databaseDAO.findById(onlineReport.getDatabaseId());
-                            loginService.switchDatabase(loggedInConnection, db);
-                            onlineReport.setPathname(loggedInConnection.getCurrentDBName());
+                            loginService.switchDatabase(loggedInUser, db);
+                            onlineReport.setPathname(loggedInUser.getDatabase().getMySQLName());
                         } else {
-                            db = loggedInConnection.getCurrentDatabase();
-                            onlineReport.setPathname(adminService.getBusinessPrefix(loggedInConnection));
+                            db = loggedInUser.getDatabase();
+                            onlineReport.setPathname(adminService.getBusinessPrefix(loggedInUser));
 
                         }
                         if (db != null) {
@@ -169,10 +170,10 @@ public class OnlineController {
                         }
                     }
                 }
+                /* todo, sort provenance setting later
                 if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.hasAzquoMemoryDB()) {
                     loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(), "");
-
-                }
+                }*/
              /*
             THIS GIVES A NULL POINTER EXCEPTION - NOT SURE WHY I PUT IT IN!
             if (loggedInConnection.getProvenance()==null){
@@ -198,54 +199,56 @@ public class OnlineController {
              */
                 //String sortRegion = "";
                 if (opcode.equals("choosefromlist")){
-                    result =  spreadsheetService.getJsonList(loggedInConnection,choiceName,choiceValue, jsonFunction);
-
+                    result =  spreadsheetService.getJsonList(loggedInUser.getDataAccessToken(),choiceName, loggedInUser.getAzquoBook().getRangeData(choiceName + "choice"), choiceValue, jsonFunction);
                 }
                 if ((opcode.equals("setchosen")) && choiceName != null) {
                     if (choiceName.startsWith("region options:")) {
                         String region = choiceName.substring(15);
                         System.out.println("saving choices: " + choiceName + " " + choiceValue);
                         if (choiceValue.equals("clear")) {
-                            spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "clear overrides", "");
+                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "clear overrides", "");
                         } else {
-                            spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxrows" + region, request.getParameter("maxrows" + region));
-                            spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxcols" + region, request.getParameter("maxcols" + region));
-                            spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "hiderows" + region, request.getParameter("hiderows" + region));
-                            spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "sortable" + region, request.getParameter("sortable" + region));
+                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxrows" + region, request.getParameter("maxrows" + region));
+                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxcols" + region, request.getParameter("maxcols" + region));
+                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "hiderows" + region, request.getParameter("hiderows" + region));
+                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "sortable" + region, request.getParameter("sortable" + region));
                         }
                     } else {
-                        spreadsheetService.setUserChoice(loggedInConnection.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
+                        spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
                     }
                     opcode = "loadsheet";
                 }
                 if (opcode.equals("upload")) {
                     if (submit.length() > 0) {
                         if (database.length() > 0) {
-                            spreadsheetService.switchDatabase(loggedInConnection, database);
+                            loginService.switchDatabase(loggedInUser, database);
                         }
-                        InputStream uploadFile = uploadfile.getInputStream();
                         String fileName = uploadfile.getOriginalFilename();
-                        importService.importTheFile(loggedInConnection, fileName, uploadFile, "", true, loggedInConnection.getLanguages());
+                        File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
+                        uploadfile.transferTo(moved);
+
+                        importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
                         result = "File imported successfully";
 
                     } else {
-                        result = spreadsheetService.showUploadFile(loggedInConnection);
+                        result = spreadsheetService.showUploadFile(loggedInUser);
                     }
 
                 }
                 if (opcode.equals("valuesent")) {
-                    result = spreadsheetService.changeValue(loggedInConnection, row, Integer.parseInt(colStr), changedValue);
+                    result = spreadsheetService.changeValue(loggedInUser, row, Integer.parseInt(colStr), changedValue);
                     result = jsonFunction + "({\"changedvalues\":" + result + "})";
                 }
                 if (opcode.equals("provenance")) {
-                    result = spreadsheetService.getProvenance(loggedInConnection, row, Integer.parseInt(colStr), jsonFunction);
+                    result = spreadsheetService.getProvenance(loggedInUser, row, Integer.parseInt(colStr), jsonFunction);
                     model.addAttribute("content", result);
 
                     return "utf8javascript";
                 }
                 // will only work on admin
                 if (opcode.equals("savedata")) {
-                    spreadsheetService.saveData(loggedInConnection);
+                    AzquoBook azquoBook = loggedInUser.getAzquoBook();
+                    azquoBook.saveData(loggedInUser);
                     result = "data saved successfully";
                 }
                 //if (opcode.equals("children")){
@@ -266,25 +269,22 @@ public class OnlineController {
                 if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
                     if (onlineReport.getId() != 1) {
                         request.getSession().setAttribute(BOOK_PATH, spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
-                        if (spreadsheetName.length() > 0) {
-                            loggedInConnection.setNewProvenance("spreadsheet", spreadsheetName, "");
-                        }
-
+                        // was provenance setting here,
                     } else {
                         request.getSession().setAttribute(BOOK_PATH, onlineReport.getFilename());
-                        if (!loggedInConnection.getUser().isAdministrator()) {
+                        if (!loggedInUser.getUser().isAdministrator()) {
                             // I relaise making a velocity and passing it to jsp is a bit crap, I just want it to work
-                            model.put("content",spreadsheetService.showUserMenu(loggedInConnection) );// user menu being what magento users typically see when logging in, a velocity page
+                            model.put("content",spreadsheetService.showUserMenu(loggedInUser) );// user menu being what magento users typically see when logging in, a velocity page
                             return "utf8page";
                         } else {
                             return "redirect:/api/ManageReports";
                         }
 
                     }
-                    loggedInConnection.setReportId(onlineReport.getId());
+                    loggedInUser.setReportId(onlineReport.getId());
                     // jam 'em in the session for the moment, makes testing easier. As in see a report then try with &trynewsheet=true after
-                    request.getSession().setAttribute(LOGGED_IN_CONNECTION, loggedInConnection);
-                    result = spreadsheetService.readExcel(loggedInConnection, onlineReport, spreadsheetName, "Right-click mouse for provenance");
+                    request.getSession().setAttribute(LOGGED_IN_USER, loggedInUser);
+                    result = spreadsheetService.readExcel(loggedInUser, onlineReport, spreadsheetName, "Right-click mouse for provenance");
                 }
             /*
             BufferedReader br = new BufferedReader(new StringReader(result));

@@ -60,28 +60,34 @@ public class JstreeController {
             , @RequestParam(value = "itemschosen", required = false) String itemsChosen
     ) throws Exception {
         String jsonFunction = "azquojsonfeed";
-        LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
+        LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         try {
-            if (loggedInConnection == null) {
+            if (loggedInUser == null) {
                 if (user.equals("demo@user.com")) {
                     user += request.getRemoteAddr();
                 }
-                loggedInConnection = loginService.login(database, user, password, "", false);
-                if (loggedInConnection == null) {
+                loggedInUser = loginService.loginLoggedInUser(database, user, password, "", false);
+                if (loggedInUser == null) {
                     model.addAttribute("content", "error:not logged in");
                     return "utf8page";
                 }
             }
-            if ((database == null || database.length() == 0) && loggedInConnection.getCurrentDatabase() != null) {
-                database = loggedInConnection.getCurrentDatabase().getName();
+
+            if ((database == null || database.length() == 0) && loggedInUser.getDatabase() != null) {
+                database = loggedInUser.getDatabase().getName();
             }
             // from here I need to move code that references db objects (JsTreeNode Does) out of the controller into the service
             // the service may have some controller and view code but we just have to put up with that for the mo.
-            String result = jsTreeService.processRequest(loggedInConnection,json,jsTreeId,topNode,op,parent,parents,database,itemsChosen,position);
+            String backupSearchTerm = loggedInUser.getAzquoBook().getRangeData("az_inputInspectChoice");// don't reallyunderstand, what's important is that this is now client side
+            String result = jsTreeService.processRequest(loggedInUser.getDataAccessToken(),json,jsTreeId,topNode,op,parent,parents,database, itemsChosen,position,backupSearchTerm);
             // seems to be the logic from before, if children/new then don't do the funciton. Not sure why . . .
             if (!op.equals("children") && !op.equals("new")) {
                 model.addAttribute("content", jsonFunction + "({\"response\":" + result + "})");
             } else {
+                if (op.equals("new")){ // this is nasty and hacky, a bit of logic I needed to remove from the DB side, I'm returning the root id when new
+                    result = spreadsheetService.showNameDetails(loggedInUser,database,result,parents, itemsChosen);
+                }
+
                 model.addAttribute("content", result);
             }
             response.setHeader("Access-Control-Allow-Origin", "*");

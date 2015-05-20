@@ -2,7 +2,8 @@ package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.dataimport.ImportService;
-import com.azquo.spreadsheet.LoggedInConnection;
+import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.commons.lang.math.NumberUtils;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
 
 /**
  * Created by cawley on 24/04/15.
@@ -30,6 +32,8 @@ public class ManageDatabasesController {
     @Autowired
     private SpreadsheetService spreadsheetService;
     @Autowired
+    private LoginService loginService;
+    @Autowired
     private ImportService importService;
 
     private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
@@ -43,21 +47,22 @@ public class ManageDatabasesController {
     )
 
     {
-        LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
+        LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
 
-        if (loggedInConnection == null || !loggedInConnection.getUser().isAdministrator()) {
+        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
             StringBuilder error = new StringBuilder();
             try {
                 if (createDatabase != null && !createDatabase.isEmpty()) {
-                    adminService.createDatabase(createDatabase, loggedInConnection);
+                    adminService.createDatabase(createDatabase, loggedInUser);
                 }
                 if (deleteId != null && NumberUtils.isNumber(deleteId)) {
-                    adminService.removeDatabaseById(loggedInConnection, Integer.parseInt(deleteId));
+                    adminService.removeDatabaseById(loggedInUser, Integer.parseInt(deleteId));
                 }
                 if (backupTarget != null) {
-                    adminService.copyDatabase(loggedInConnection, backupTarget, summaryLevel);
+                    LoggedInUser loggedInUserTarget = loginService.loginLoggedInUser(backupTarget, loggedInUser.getUser().getEmail(), "", "", true); // targetted to destinationDB
+                    adminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getLanguages());// re languages I should just be followign what was there before . . .
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -66,8 +71,8 @@ public class ManageDatabasesController {
             if (error.length() > 0) {
                 model.put("error", error.toString());
             }
-            model.put("databases", adminService.getDatabaseListForBusiness(loggedInConnection));
-            model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInConnection));
+            model.put("databases", adminService.getDatabaseListForBusiness(loggedInUser));
+            model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             return "managedatabases";
         }
     }
@@ -78,22 +83,26 @@ public class ManageDatabasesController {
             , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
 
     ){
-        LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
-        if (loggedInConnection == null || !loggedInConnection.getUser().isAdministrator()) {
+        LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
             if (database != null && uploadFile != null) {
                 try{
-                        spreadsheetService.switchDatabase(loggedInConnection, database); // could be blank now
+                        loginService.switchDatabase(loggedInUser, database); // could be blank now
                     String fileName = uploadFile.getOriginalFilename();
-                    importService.importTheFile(loggedInConnection, fileName, uploadFile.getInputStream(), "", true, loggedInConnection.getLanguages());
+                    // always move uplaoded files now, they'll need to be transferred to the DB server after code split
+                    File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
+                    uploadFile.transferTo(moved);
+
+                    importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
                 } catch (Exception e){
                     model.put("error", e.getMessage());
                     e.printStackTrace();
                 }
             }
-            model.put("databases", adminService.getDatabaseListForBusiness(loggedInConnection));
-            model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInConnection));
+            model.put("databases", adminService.getDatabaseListForBusiness(loggedInUser));
+            model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             return "managedatabases";
         }
     }

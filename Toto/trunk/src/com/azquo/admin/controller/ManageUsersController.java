@@ -2,7 +2,7 @@ package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.user.User;
-import com.azquo.spreadsheet.LoggedInConnection;
+import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -42,20 +42,20 @@ public class ManageUsersController {
     ) throws Exception
 
     {
-        LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
-        if (loggedInConnection == null || !loggedInConnection.getUser().isAdministrator()) {
+        LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
             if (deleteId != null && NumberUtils.isDigits(deleteId)){
-                adminService.deleteUserById(Integer.parseInt(deleteId), loggedInConnection);
+                adminService.deleteUserById(Integer.parseInt(deleteId), loggedInUser);
             }
 
 
             if (editId != null && NumberUtils.isDigits(editId)){
-                User toEdit = adminService.getUserById(Integer.parseInt(editId), loggedInConnection);
+                User toEdit = adminService.getUserById(Integer.parseInt(editId), loggedInUser);
                 // ok check to see if data was submitted
                 StringBuilder error = new StringBuilder();
                 if (submit != null){
@@ -81,7 +81,7 @@ public class ManageUsersController {
                         // then store, it might be new
                         if (toEdit == null){
                             // Have to use  alocadate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
-                            adminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInConnection);
+                            adminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInUser);
                         } else {
                             toEdit.setEndDate(LocalDate.parse(endDate, formatter).atStartOfDay());
                             toEdit.setEmail(email);
@@ -94,7 +94,7 @@ public class ManageUsersController {
                             }
                             adminService.storeUser(toEdit);
                         }
-                        model.put("users", adminService.getUserListForBusiness(loggedInConnection));
+                        model.put("users", adminService.getUserListForBusiness(loggedInUser));
                         return "manageusers";
                     } else {
                         model.put("error", error.toString());
@@ -118,7 +118,7 @@ public class ManageUsersController {
                 return "edituser";
             }
 
-            model.put("users", adminService.getUserListForBusiness(loggedInConnection));
+            model.put("users", adminService.getUserListForBusiness(loggedInUser));
             return "manageusers";
         }
     }

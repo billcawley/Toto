@@ -10,6 +10,7 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
@@ -178,14 +179,15 @@ public class SpreadsheetService {
 
     // What actually delivers the reports to the browser. Maybe change to an output writer? Save memory and increase speed.
     // also there's html in here, view stuff, need to get rid of that
+    // the report/database server is going to force the view/model split
 
-    public String readExcel(LoggedInConnection loggedInConnection, OnlineReport onlineReport, String spreadsheetName, String message) throws Exception {
+    public String readExcel(LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName, String message) throws Exception {
         String path = getHomeDir() + "/temp/";
-        AzquoBook azquoBook = new AzquoBook(nameService, userChoiceDAO, this, importService);
+        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, this, importService);
         StringBuilder worksheet = new StringBuilder();
         StringBuilder tabs = new StringBuilder();
         StringBuilder head = new StringBuilder();
-        loggedInConnection.setAzquoBook(azquoBook);  // is this a heavy object to put against the session?
+        loggedInUser.setAzquoBook(azquoBook);  // is this a heavy object to put against the session?
         VelocityContext velocityContext = new VelocityContext();
         if (spreadsheetName == null) {
             spreadsheetName = "";
@@ -202,8 +204,8 @@ public class SpreadsheetService {
                 //note - the database specified in the report may not be the current database (as in applications such as Magento and reviews), but be 'temp'
                 String filepath = ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                 azquoBook.loadBook(getHomeDir() + filepath, useAsposeLicense());
-                // excecuting parked for the mo while saving is, will need to think about reenabling
-
+                // excecuting parked commented as the executeloop code makes no sense
+                /*
                 String executeSetName = azquoBook.getRangeValue("az_ExecuteSet");
                 List<SetNameChosen> nameLoop = new ArrayList<SetNameChosen>();
                 String executeSet = null;
@@ -215,7 +217,7 @@ public class SpreadsheetService {
                     for (String executeItem : executeItems) {
 
                         if (executeItem.length() > 0 && executeItem.toLowerCase().endsWith("choice")) {
-                            List<Name> nameList = nameService.parseQuery(loggedInConnection, executeItem);
+                            List<Name> nameList = nameService.parseQuery(loggedInUser, executeItem);
                             if (nameList != null) {
                                 SetNameChosen nextSetNameChosen = new SetNameChosen();
                                 nextSetNameChosen.setName = executeItem.toLowerCase().replace("choice", "chosen");
@@ -225,13 +227,13 @@ public class SpreadsheetService {
                             }
                         }
                     }
-                    executeLoop(loggedInConnection, onlineReport.getId(), nameLoop, 0);
+                    executeLoop(loggedInUser, onlineReport.getId(), nameLoop, 0);
                     return "";
-                }
+                }*/
             }
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
             spreadsheetName = azquoBook.printTabs(tabs, spreadsheetName);
-            message = azquoBook.convertSpreadsheetToHTML(loggedInConnection, onlineReport.getId(), spreadsheetName, worksheet);
+            message = azquoBook.convertSpreadsheetToHTML(loggedInUser, onlineReport.getId(), spreadsheetName, worksheet);
         } catch (Exception e) {
             e.printStackTrace();
             throw (e);
@@ -242,7 +244,7 @@ public class SpreadsheetService {
         head.append("</style>\n");
         //velocityContext.put("script",readFile("online.js").toString());
         //velocityContext.put("topmenu",createTopMenu(loggedInConnection).toString());
-        azquoBook.fillVelocityOptionInfo(loggedInConnection, velocityContext);
+        azquoBook.fillVelocityOptionInfo(loggedInUser, velocityContext);
         velocityContext.put("tabs", tabs.toString());
         velocityContext.put("topmessage", message);
         if (onlineReport.getId() == 1 && spreadsheetName.equalsIgnoreCase("reports")) {
@@ -273,18 +275,18 @@ public class SpreadsheetService {
         velocityContext.put("styles", head.toString());
         String ws = worksheet.toString();
         if (worksheet.indexOf("$azquodatabaselist") > 0) {
-            ws = ws.replace("$azquodatabaselist", createDatabaseSelect(loggedInConnection));
+            ws = ws.replace("$azquodatabaselist", createDatabaseSelect(loggedInUser));
         }
         if (ws.indexOf("$fileselect") > 0) {
             ws = ws.replace("$fileselect", "<input type=\"file\" name=\"uploadfile\">");
         }
         velocityContext.put("workbook", ws);
 
-        velocityContext.put("charts", azquoBook.drawCharts(loggedInConnection, path).toString());
+        velocityContext.put("charts", azquoBook.drawCharts(loggedInUser, path).toString());
         return convertToVelocity(velocityContext, null, null, "onlineReport.vm");
     }
 
-    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
+/*    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
         AzquoBook azquoBook = loggedInConnection.getAzquoBook();
         for (Name chosen : nameLoop.get(level).choiceList) {
             setUserChoice(loggedInConnection.getUser().getId(), reportId, nameLoop.get(level).setName, chosen.getDefaultDisplayName());
@@ -295,7 +297,7 @@ public class SpreadsheetService {
                 executeLoop(loggedInConnection, reportId, nameLoop, level + 1);
             }
         }
-    }
+    }*/
 
     // to put a referenced CSS inline for example
     // edd changing to read from web-inf
@@ -350,26 +352,26 @@ public class SpreadsheetService {
         }
     }
 
-    public void saveBook(HttpServletResponse response, LoggedInConnection loggedInConnection, String fileName) throws Exception {
-        loggedInConnection.getAzquoBook().saveBook(response, fileName);
+    public void saveBook(HttpServletResponse response, LoggedInUser loggedInUser, String fileName) throws Exception {
+        loggedInUser.getAzquoBook().saveBook(response, fileName);
     }
 
-    public void saveBookasPDF(HttpServletResponse response, LoggedInConnection loggedInConnection, String fileName) throws Exception {
-        loggedInConnection.getAzquoBook().saveBookAsPDF(response, fileName);
+    public void saveBookasPDF(HttpServletResponse response, LoggedInUser loggedInUser, String fileName) throws Exception {
+        loggedInUser.getAzquoBook().saveBookAsPDF(response, fileName);
     }
 
-    public void saveBookActive(HttpServletResponse response, LoggedInConnection loggedInConnection, String fileName) throws Exception {
-        loggedInConnection.getAzquoBook().saveBookActive(response, fileName, env.getProperty("azquo.home") + "/onlinereports/Admin/Azquoblank.xls");
+    public void saveBookActive(HttpServletResponse response, LoggedInUser loggedInUser, String fileName) throws Exception {
+        loggedInUser.getAzquoBook().saveBookActive(response, fileName, env.getProperty("azquo.home") + "/onlinereports/Admin/Azquoblank.xls");
     }
 
-    public String changeValue(LoggedInConnection loggedInConnection, int row, int col, String value) {
-        return loggedInConnection.getAzquoBook().changeValue(row, col, value, loggedInConnection);
+    public String changeValue(LoggedInUser loggedInUser, int row, int col, String value) {
+        return loggedInUser.getAzquoBook().changeValue(row, col, value, loggedInUser);
     }
 
-    public String getJsonList(LoggedInConnection loggedInConnection, String listName, String entered, String jsonFunction){
-        String listChoice = loggedInConnection.getAzquoBook().getRangeData(listName + "choice");
+    public String getJsonList(DatabaseAccessToken databaseAccessToken, String listName, String listChoice, String entered, String jsonFunction) throws  Exception{
+        AzquoMemoryDBConnection azquoMemoryDBConnection = loginService.getConnectionFromAccessToken(databaseAccessToken);
         try {
-            List<Name> possibles = nameService.parseQuery(loggedInConnection, listChoice + " select \"" + entered + "\"");
+            List<Name> possibles = nameService.parseQuery(azquoMemoryDBConnection, listChoice + " select \"" + entered + "\"");
             List<String>nameStrings = getIndividualNames(possibles);
             StringBuffer output = new StringBuffer();
             output.append(jsonFunction + "({\"selection\":\"" + listName + "\",\"choices\":[");
@@ -388,8 +390,8 @@ public class SpreadsheetService {
         }
     }
 
-    public String getProvenance(LoggedInConnection loggedInConnection, int row, int col, String jsonFunction) {
-        return loggedInConnection.getAzquoBook().getProvenance(loggedInConnection, row, col, jsonFunction);
+    public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) {
+        return loggedInUser.getAzquoBook().getProvenance(loggedInUser, row, col, jsonFunction);
     }
 
     // one can administrate by editing data pretty much as it appears in MySQL tables, hence the headings (column names) need to be escaped unless someone plays silly buggers
@@ -408,17 +410,12 @@ public class SpreadsheetService {
         return sb.toString();
     }
 
-    public void saveData(LoggedInConnection loggedInConnection) throws Exception {
-        AzquoBook azquoBook = loggedInConnection.getAzquoBook();
-        azquoBook.saveData(loggedInConnection);
-    }
-
-    private StringBuilder createDatabaseSelect(LoggedInConnection loggedInConnection) {
+    private StringBuilder createDatabaseSelect(LoggedInUser loggedInUser) {
         StringBuilder sb = new StringBuilder();
         String chosen = "";
-        Map<String, Database> foundDatabases = loginService.foundDatabases(loggedInConnection.getUser());
+        Map<String, Database> foundDatabases = loginService.foundDatabases(loggedInUser.getUser());
         if (foundDatabases.size() > 1) {
-            if (loggedInConnection.getAzquoMemoryDB() != null) chosen = loggedInConnection.getLocalCurrentDBName();
+            if (loggedInUser.getDatabase() != null) chosen = loggedInUser.getDatabase().getName();
             sb.append("<select class=\"databaseselect\" name=\"database\" id=\"databasechosen\" value=\"").append(chosen).append("\">\n");
             sb.append("<option value=\"\">No database chosen</option>");
             for (String dbName : foundDatabases.keySet()) {
@@ -439,33 +436,20 @@ public class SpreadsheetService {
         return sb;
     }
 
-    public void switchDatabase(LoggedInConnection loggedInConnection, String newDBName) throws Exception {
-        if (newDBName.length() == 0) {
-            loginService.switchDatabase(loggedInConnection, null);
-            return;
-        }
-        Database db = databaseDAO.findForName(loggedInConnection.getBusinessId(), newDBName);
-        if (db == null) {
-            throw new Exception(newDBName + " - no such database");
-        }
-        loginService.switchDatabase(loggedInConnection, db);
-
-    }
-
-    public String showUploadFile(LoggedInConnection loggedInConnection) {
+    public String showUploadFile(LoggedInUser loggedInUser) {
         VelocityContext context = new VelocityContext();
-        context.put("azquodatabaselist", createDatabaseSelect(loggedInConnection));
+        context.put("azquodatabaselist", createDatabaseSelect(loggedInUser));
         return convertToVelocity(context, "upload", null, "upload.vm");
     }
 
     // on logging into Magento reports for example
 
-    public String showUserMenu(LoggedInConnection loggedInConnection) {
-        List<OnlineReport> onlineReports = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInConnection.getBusinessId(), loggedInConnection.getUser().getStatus());
+    public String showUserMenu(LoggedInUser loggedInUser) {
+        List<OnlineReport> onlineReports = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getStatus());
         VelocityContext context = new VelocityContext();
         context.put("welcome", "Welcome to Azquo!");
-        if (loggedInConnection.getCurrentDatabase() != null) {
-            context.put("database", loggedInConnection.getAzquoMemoryDB().getDatabase().getName());
+        if (loggedInUser.getDatabase() != null) {
+            context.put("database", loggedInUser.getDatabase().getName());
         }
         List<Map<String, String>> reports = new ArrayList<Map<String, String>>();
         String reportCategory = "";
@@ -486,18 +470,18 @@ public class SpreadsheetService {
         return convertToVelocity(context, "reports", reports, "azquoReports.vm");
     }
 
-    public String showNameDetails(LoggedInConnection loggedInConnection, String database, int nameId, String parents, String searchNames) throws Exception {
+    public String showNameDetails(LoggedInUser loggedInUser, String database, String rootId, String parents, String searchNames) throws Exception {
         if (database != null && database.length() > 0) {
-            Database newDB = databaseDAO.findForName(loggedInConnection.getBusinessId(), database);
+            Database newDB = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
             if (newDB == null) {
                 return "no database chosen";
             }
-            loginService.switchDatabase(loggedInConnection, newDB);
+            loginService.switchDatabase(loggedInUser, newDB);
         }
         if (searchNames == null) searchNames = "";
         VelocityContext context = new VelocityContext();
         context.put("parents", parents);
-        context.put("rootid", nameId + "");
+        context.put("rootid", rootId);
         context.put("searchnames", searchNames);
         return convertToVelocity(context, null, null, "jstree.vm");
     }
@@ -812,6 +796,9 @@ seaports;children   container;children
             return output;
         }
 
+    public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception{
+        return getIndividualNames(nameService.parseQuery(loginService.getConnectionFromAccessToken(databaseAccessToken), query, languages));
+    }
 
     // todo make sense of the bloody restrictcount parameter
 
@@ -918,48 +905,6 @@ seaports;children   container;children
 
     // vanilla jackson might not be good enough but this is too much manual json writing I think
 
-    public String getJsonDataforOneName(LoggedInConnection loggedInConnection, final Name name, Map<String, JSTreeService.JsTreeNode> lookup) throws Exception {
-        final StringBuilder sb = new StringBuilder();
-        Set<Name> names = new HashSet<Name>();
-        names.add(name);
-        List<Set<Name>> searchNames = new ArrayList<Set<Name>>();
-        searchNames.add(names);
-        Map<Set<Name>, Set<Value>> showValues = valueService.getSearchValues(searchNames);
-        if (showValues == null) {
-            return "";
-        }
-        sb.append(", \"children\":[");
-        int lastId = loggedInConnection.getLastJstreeId();
-        int count = 0;
-        for (Set<Name> valNames : showValues.keySet()) {
-            Set<Value> values = showValues.get(valNames);
-            if (count++ > 0) {
-                sb.append(",");
-            }
-
-            loggedInConnection.setLastJstreeId(++lastId);
-            JSTreeService.NameOrValue nameOrValue = new JSTreeService.NameOrValue();
-            nameOrValue.values = values;
-            nameOrValue.name = null;
-            JSTreeService.JsTreeNode newNode = new JSTreeService.JsTreeNode(nameOrValue, name);
-            lookup.put(lastId + "", newNode);
-            if (count > 100) {
-                sb.append("{\"id\":" + lastId + ",\"text\":\"" + (showValues.size() - 100) + " more....\"}");
-                break;
-            }
-            sb.append("{\"id\":" + lastId + ",\"text\":\"" + valueService.addValues(values) + " ");
-            for (Name valName : valNames) {
-                if (valName.getId() != name.getId()) {
-                    sb.append(valName.getDefaultDisplayName().replace("\"", "\\\"") + " ");
-                }
-            }
-            sb.append("\"");
-            sb.append("}");
-        }
-        sb.append("]");
-        return sb.toString();
-    }
-
     // return headings as strings for display, I'm going to put blanks in here if null.
 
     private List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languages){
@@ -992,10 +937,11 @@ seaports;children   container;children
     }
     // function that can be called by the front end to deliver the data and headings
 
-    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(LoggedInConnection loggedInConnection, List<List<String>> rowHeadingsSource
+    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol) throws Exception {
-        List<List<AzquoCell>> data = getDataRegion(loggedInConnection,rowHeadingsSource,colHeadingsSource,contextSource,filterCount,maxRows,maxCols,sortRow,sortCol, loggedInConnection.getLanguages());
+        AzquoMemoryDBConnection azquoMemoryDBConnection = loginService.getConnectionFromAccessToken(databaseAccessToken);
+        List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection,rowHeadingsSource,colHeadingsSource,contextSource,filterCount,maxRows,maxCols,sortRow,sortCol, databaseAccessToken.getLanguages());
         List<List<CellForDisplay>> displayData = new ArrayList<List<CellForDisplay>>();
         for (List<AzquoCell> sourceRow : data){
             List<CellForDisplay> displayDataRow = new ArrayList<CellForDisplay>();
@@ -1004,8 +950,8 @@ seaports;children   container;children
                 displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted()));
             }
         }
-        return new CellsAndHeadingsForDisplay(convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), loggedInConnection.getLanguages())
-                , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), loggedInConnection.getLanguages()), displayData);
+        return new CellsAndHeadingsForDisplay(convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), databaseAccessToken.getLanguages())
+                , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData);
     }
 
         // still a little funny about whether a logged in conneciton should be passed
@@ -1545,7 +1491,7 @@ I think that this is an ideal candidate for multithreading to speed things up
 
     // todo, when cell contents are from attributes??
     // this function seemed to be opverly complex before taking into account ordering and things. All we care about is matching to what was sent. What was sent is what should be in the sent cells
-    public String formatDataRegionProvenanceForOutput(LoggedInConnection loggedInConnection, String region, int rowInt, int colInt, String jsonFunction) {
+    public String formatDataRegionProvenanceForOutput(LoggedInUser loggedInUser, String region, int rowInt, int colInt, String jsonFunction) {
         return "todo : provenance on a data cell";
 /*        final List<List<AzquoCell>> sentCells = loggedInConnection.getSentCells(region);
         if (sentCells != null) {
@@ -1624,10 +1570,8 @@ I think that this is an ideal candidate for multithreading to speed things up
     }
 
     // todo : make work again after code split
-    public void saveData(LoggedInConnection loggedInConnection, String region) throws Exception {
-
-        /*
-        int numberOfValuesModified = 0;
+    public void saveData(LoggedInUser loggedInUser, String region) throws Exception {
+/*        int numberOfValuesModified = 0;
         int rowCounter = 0;
         if (loggedInConnection.getSentCells(region) != null){
             for (List<CellForDisplay> row : loggedInConnection.getSentCells(region)){

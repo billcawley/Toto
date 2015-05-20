@@ -1,18 +1,13 @@
 package com.azquo.memorydb.service;
 
-import com.azquo.spreadsheet.JSTreeService;
 import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.spreadsheet.jsonrequestentities.NameJsonRequest;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.spreadsheet.LoggedInConnection;
 import com.azquo.spreadsheet.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.*;
 //dataimport java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;

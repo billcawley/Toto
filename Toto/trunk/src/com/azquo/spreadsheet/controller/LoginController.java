@@ -1,6 +1,5 @@
 package com.azquo.spreadsheet.controller;
 
-import com.azquo.spreadsheet.LoggedInConnection;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -31,7 +30,7 @@ public class LoginController {
     @Autowired
     private SpreadsheetService spreadsheetService;
 
-    public static final String LOGGED_IN_CONNECTION_SESSION = "LOGGED_IN_CONNECTION_SESSION";
+//    public static final String LOGGED_IN_CONNECTION_SESSION = "LOGGED_IN_CONNECTION_SESSION";
     // run in paralell with the old logged in conneciton for a bit
     public static final String LOGGED_IN_USER_SESSION = "LOGGED_IN_USER_SESSION";
 
@@ -49,13 +48,12 @@ public class LoginController {
 
         if (connectionid != null && connectionid.length() > 0) { // nasty hack to support connection id from the plugin
             if (request.getServletContext().getAttribute(connectionid) != null) { // then pick up the temp logged in conneciton
-                // todo change to loggedinuser when supported
-                LoggedInConnection loggedInConnection = (LoggedInConnection)request.getServletContext().getAttribute(connectionid);
-                request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
+                LoggedInUser loggedInUser = (LoggedInUser)request.getServletContext().getAttribute(connectionid);
+                request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                 request.getServletContext().removeAttribute(connectionid); // take it off the context
-                if (!loggedInConnection.getUser().isAdministrator()) {
+                if (!loggedInUser.getUser().isAdministrator()) {
                     // I relaise making a velocity and passing it to jsp is a bit crap, I just want it to work
-                    model.put("content",spreadsheetService.showUserMenu(loggedInConnection) );// user menu being what magento users typically see when logging in, a velocity page
+                    model.put("content",spreadsheetService.showUserMenu(loggedInUser));// user menu being what magento users typically see when logging in, a velocity page
                     return "utf8page";
                 } else {
                     return "redirect:/api/ManageReports";
@@ -64,13 +62,12 @@ public class LoginController {
         } else {
             if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
                 model.put("userEmail", userEmail);
-                LoggedInConnection loggedInConnection = loginService.login(null, userEmail, password, null, false);
                 LoggedInUser loggedInUser = loginService.loginLoggedInUser(null, userEmail, password, null, false);
-                if (loggedInConnection != null) {
-                    request.getSession().setAttribute(LOGGED_IN_CONNECTION_SESSION, loggedInConnection);
-                    if (!loggedInConnection.getUser().isAdministrator()) {
+                if (loggedInUser != null) {
+                    request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
+                    if (!loggedInUser.getUser().isAdministrator()) {
                         // I relaise making a velocity and passing it to jsp is a bit crap, I just want it to work
-                        model.put("content",spreadsheetService.showUserMenu(loggedInConnection) );// user menu being what magento users typically see when logging in, a velocity page
+                        model.put("content",spreadsheetService.showUserMenu(loggedInUser));// user menu being what magento users typically see when logging in, a velocity page
                         return "utf8page";
                     } else {
                         return "redirect:/api/ManageReports";

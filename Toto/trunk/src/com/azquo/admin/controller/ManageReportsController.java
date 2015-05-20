@@ -2,7 +2,7 @@ package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.onlinereport.OnlineReport;
-import com.azquo.spreadsheet.LoggedInConnection;
+import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,12 +32,12 @@ public class ManageReportsController {
     )
 
     {
-        LoggedInConnection loggedInConnection = (LoggedInConnection) request.getSession().getAttribute(LoginController.LOGGED_IN_CONNECTION_SESSION);
+        LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
 
-        if (loggedInConnection == null || !loggedInConnection.getUser().isAdministrator()) {
+        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
-            final List<OnlineReport> reports = adminService.getReportList(loggedInConnection);
+            final List<OnlineReport> reports = adminService.getReportList(loggedInUser);
             for (OnlineReport report : reports){
                 boolean store = false;
                 String explanation = request.getParameter("explanation" + report.getId());
