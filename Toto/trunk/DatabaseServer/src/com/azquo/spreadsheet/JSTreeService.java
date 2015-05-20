@@ -1,13 +1,13 @@
 package com.azquo.spreadsheet;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
-import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import com.azquo.spreadsheet.jsonrequestentities.NameJsonRequest;
+import com.azquo.spreadsheet.view.NameJsonRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -30,11 +30,9 @@ public class JSTreeService {
     @Autowired
     ValueService valueService;//used only in formating children for output
     @Autowired
-    SpreadsheetService spreadsheetService;//used only in formating children for output
+    DSSpreadsheetService dsSpreadsheetService;//used only in formating children for output
     @Autowired
     NameService nameService;
-    @Autowired
-    LoginService loginService;
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
@@ -63,7 +61,7 @@ public class JSTreeService {
     // This lookup was against the LIC but I can't use this on client/server. Could find a way to zap it fully if I understand the logic, putting the last id in there as well
     public String processRequest(DatabaseAccessToken databaseAccessToken, String json, String jsTreeId, String topNode, String op
             , String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) throws Exception{
-        AzquoMemoryDBConnection azquoMemoryDBConnection = loginService.getConnectionFromAccessToken(databaseAccessToken);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
 
         // trying for the tree id here, hope that will work
         Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(jsTreeId);
@@ -122,11 +120,11 @@ public class JSTreeService {
                 }
                 if (op.equals("create_node")) {
                     Name newName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "newnewnew", current.child.name, true);
-                    newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, "New node");
+                    newName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, "New node");
                     return "true";
                 }
                 if (op.equals("rename_node")) {
-                    current.child.name.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, position);
+                    current.child.name.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, position);
                     return "true";
                 }
                 if (op.equals("details")) {

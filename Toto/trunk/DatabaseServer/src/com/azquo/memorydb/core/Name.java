@@ -1,5 +1,6 @@
 package com.azquo.memorydb.core;
 
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.dao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,7 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class Name extends AzquoMemoryDBEntity {
 
-    public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
     public static final String CALCULATION = "CALCULATION";
     public static final String ANON = "ANON";
     public static final String LOCAL = "LOCAL";
@@ -120,7 +120,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // for convenience but be careful where it is used . . .
     public String getDefaultDisplayName() {
-        int index = nameAttributes.attributeKeys.indexOf(DEFAULT_DISPLAY_NAME);
+        int index = nameAttributes.attributeKeys.indexOf(Constants.DEFAULT_DISPLAY_NAME);
         if (index != -1) {
             return nameAttributes.attributeValues.get(index);
         }

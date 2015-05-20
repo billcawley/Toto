@@ -1,18 +1,10 @@
 package com.azquo.spreadsheet;
 
 import com.azquo.admin.AdminService;
-import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.admin.user.*;
-import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.memorydb.*;
-import com.azquo.memorydb.core.AzquoMemoryDB;
-import com.azquo.memorydb.core.MemoryDBManager;
-import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.service.NameService;
-import com.azquo.memorydb.service.ValueService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -34,8 +26,6 @@ public class LoginService {
     private static final Logger logger = Logger.getLogger(LoginService.class);
 
     @Autowired
-    private MemoryDBManager memoryDBManager;
-    @Autowired
     private UserDAO userDao;
     @Autowired
     private LoginRecordDAO loginRecordDAO;
@@ -48,16 +38,10 @@ public class LoginService {
     @Autowired
     private AdminService adminService;
     @Autowired
-    private NameService nameService;
-    @Autowired
     private OpenDatabaseDAO openDatabaseDAO;
-    @Autowired
-    private ValueService valueService;
     @Autowired
     private SpreadsheetService spreadsheetService;
 
-    @Autowired
-    private AppDBConnectionMap connectionMap;
     @Autowired
     private BusinessDAO businessDAO;
     @Autowired
@@ -154,36 +138,6 @@ public class LoginService {
     }
 
 
-    public void anonymise(DatabaseAccessToken databaseAccessToken) throws Exception{
-        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        List<Name> anonNames = nameService.findContainingName(azquoMemoryDBConnection, "", Name.ANON);
-
-        for (Name set : anonNames) {
-            String anonName = set.getAttribute(Name.ANON);
-            if (set.getPeers().size() > 0) {
-                Double low = 0.5;
-                Double high = 0.5;
-                try {
-                    String[] limits = anonName.split(" ");
-                    low = Double.parseDouble(limits[0]) / 100;
-                    high = Double.parseDouble(limits[1]) / 100;
-
-                } catch (Exception ignored) {
-                }
-                spreadsheetService.randomAdjust(set, low, high);
-            } else {
-                int count = 1;
-                for (Name name : set.getChildren()) {
-                    try {
-                        name.setTemporaryAttribute(Name.DEFAULT_DISPLAY_NAME, anonName.replace("[nn]", count + ""));
-                        count++;
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-        }
-    }
-
 
 /*
     public void zapConnectionsTimedOut() {
@@ -261,22 +215,6 @@ public class LoginService {
             openDBCount.put(databaseId, 1);
         }
         azquoMemoryDBConnection.setAzquoMemoryDB(memoryDB);*/
-    }
-
-    // after some thining trim this down to the basics. Would have just been a DB name for that server but need permissions too.
-    // may cache in future to save DB/Permission lookups. Depends on how consolidated client/server calls can be made . . .
-
-    public AzquoMemoryDBConnection getConnectionFromAccessToken(DatabaseAccessToken databaseAccessToken) throws Exception{
-        // todo - address opendb count (do we care?) and exceptions
-        AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(databaseAccessToken.getDatabaseMySQLName());
-        AzquoMemoryDBConnection connection = new AzquoMemoryDBConnection(memoryDB);
-        if (databaseAccessToken.getWritePermissions() != null && !databaseAccessToken.getWritePermissions().isEmpty()) {
-            connection.setWritePermissions(nameService.decodeString(connection, databaseAccessToken.getWritePermissions(), databaseAccessToken.getLanguages()));
-        }
-        if (databaseAccessToken.getReadPermissions() != null && !databaseAccessToken.getReadPermissions().isEmpty()) {
-            connection.setWritePermissions(nameService.decodeString(connection, databaseAccessToken.getWritePermissions(), databaseAccessToken.getLanguages()));
-        }
-        return connection;
     }
 
 }

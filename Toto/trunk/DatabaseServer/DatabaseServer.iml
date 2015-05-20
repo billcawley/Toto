@@ -12,6 +12,13 @@
         <sourceRoots />
       </configuration>
     </facet>
+    <facet type="Spring" name="Spring">
+      <configuration>
+        <fileset id="fileset" name="Spring Application Context" removed="false">
+          <file>file://$MODULE_DIR$/web/WEB-INF/rootcontext.xml</file>
+        </fileset>
+      </configuration>
+    </facet>
   </component>
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
@@ -23,6 +30,11 @@
     <orderEntry type="library" scope="PROVIDED" name="Tomcat 8.0.21" level="application_server_libraries" />
     <orderEntry type="library" name="org.springframework:spring-jdbc:4.1.6.RELEASE" level="project" />
     <orderEntry type="library" name="mysql:mysql-connector-java:5.1.26" level="project" />
+    <orderEntry type="library" name="log4j:log4j:1.2.17" level="project" />
+    <orderEntry type="library" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.5.2" level="project" />
+    <orderEntry type="module" module-name="shared" />
+    <orderEntry type="library" name="org.apache.directory.studio:org.apache.commons.lang:2.6" level="project" />
+    <orderEntry type="library" name="org.springframework:spring-webmvc:4.1.6.RELEASE" level="project" />
   </component>
   <component name="org.twodividedbyzero.idea.findbugs">
     <option name="_basePreferences">

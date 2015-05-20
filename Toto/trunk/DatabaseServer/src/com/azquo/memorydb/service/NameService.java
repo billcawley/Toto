@@ -1,6 +1,7 @@
 package com.azquo.memorydb.service;
 
-import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.memorydb.Constants;
+import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
@@ -30,7 +31,7 @@ public final class NameService {
     @Autowired
     ValueService valueService;//used only in formating children for output
     @Autowired
-    SpreadsheetService spreadsheetService;//used only in formating children for output
+    DSSpreadsheetService dsSpreadsheetService;//used only in formating children for output
 
     public StringUtils stringUtils = new StringUtils(); // just make it quickly like this for the mo
     //    private static final ObjectMapper jacksonMapper = new ObjectMapper();
@@ -103,7 +104,7 @@ public final class NameService {
 
     public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) {
         // go for the default for the moment
-        return findContainingName(azquoMemoryDBConnection, name, Name.DEFAULT_DISPLAY_NAME);
+        return findContainingName(azquoMemoryDBConnection, name, Constants.DEFAULT_DISPLAY_NAME);
     }
 
     // the parameter is called name as the get attribute function will look up and derive attributes it can't find from parent/combinations
@@ -128,7 +129,7 @@ public final class NameService {
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) throws Exception {
         // aha, not null passed here now, jam in a default display name I think
         List<String> attNames = new ArrayList<String>();
-        attNames.add(Name.DEFAULT_DISPLAY_NAME);
+        attNames.add(Constants.DEFAULT_DISPLAY_NAME);
         return findByName(azquoMemoryDBConnection, name, attNames);
     }
 
@@ -302,7 +303,7 @@ public final class NameService {
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an dataimport),and insert a structure into it*/
         if (attributeNames == null) {
             attributeNames = new ArrayList<String>();
-            attributeNames.add(Name.DEFAULT_DISPLAY_NAME);
+            attributeNames.add(Constants.DEFAULT_DISPLAY_NAME);
         }
 
         String storeName = name.replace(Name.QUOTE, ' ').trim();
@@ -347,10 +348,10 @@ public final class NameService {
             Provenance provenance = azquoMemoryDBConnection.getProvenance("imported");
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
             // was != which would probably have worked but safer with !.equals
-            if (!attributeNames.get(0).equals(Name.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
+            if (!attributeNames.get(0).equals(Constants.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
                 newName.setAttributeWillBePersisted(attributeNames.get(0), storeName);
             }
-            newName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME, storeName); // and set the default regardless
+            newName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, storeName); // and set the default regardless
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent6", marker);
             //if the parent already has peers, provisionally set the child peers to be the same.
             if (parent != null) {
@@ -517,7 +518,7 @@ public final class NameService {
     // add the default display name since no attributes were specified.
     public final List<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
         List<String> langs = new ArrayList<String>();
-        langs.add(Name.DEFAULT_DISPLAY_NAME);
+        langs.add(Constants.DEFAULT_DISPLAY_NAME);
         return parseQuery(azquoMemoryDBConnection, setFormula, langs);
     }
 

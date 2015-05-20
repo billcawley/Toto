@@ -7,8 +7,6 @@ import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.dataimport.ImportService;
-import com.azquo.memorydb.service.NameService;
-import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
@@ -39,10 +37,6 @@ import java.util.Date;
 @RequestMapping("/Online")
 public class OnlineController {
 
-    @Autowired
-    private NameService nameService;
-    @Autowired
-    private ValueService valueService;
     @Autowired
     private LoginService loginService;
     @Autowired
@@ -102,7 +96,7 @@ public class OnlineController {
                 book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(REPORT_ID, loggedInUser.getReportId());
-                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(valueService, spreadsheetService, nameService, userChoiceDAO);
+                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO);
                 bookUtils.populateBook(book);
                 request.setAttribute(BOOK, book);
                 if (loggedInUser.getDatabase() != null) {

@@ -3,8 +3,6 @@ package com.azquo.spreadsheet.view;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.spreadsheet.controller.OnlineController;
-import com.azquo.memorydb.service.NameService;
-import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.*;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.zss.api.CellOperationUtil;
@@ -27,15 +25,11 @@ public class ZKAzquoBookUtils {
     public static final String azOptions = "az_Options";
     public static final String OPTIONPREFIX = "!";
 
-    final ValueService valueService;
     final SpreadsheetService spreadsheetService;
-    final NameService nameService;
     final UserChoiceDAO userChoiceDAO;
 
-    public ZKAzquoBookUtils(ValueService valueService, SpreadsheetService spreadsheetService, NameService nameService, UserChoiceDAO userChoiceDAO) {
-        this.valueService = valueService;
+    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService,UserChoiceDAO userChoiceDAO) {
         this.spreadsheetService = spreadsheetService;
-        this.nameService = nameService;
         this.userChoiceDAO = userChoiceDAO;
     }
 

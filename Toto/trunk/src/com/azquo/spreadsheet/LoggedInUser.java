@@ -2,9 +2,8 @@ package com.azquo.spreadsheet;
 
 import com.azquo.admin.database.Database;
 import com.azquo.admin.user.User;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
-import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import org.apache.log4j.Logger;
@@ -50,7 +49,7 @@ public class LoggedInUser {
         azquoBook = null;
 
         languages = new ArrayList<String>();
-        languages.add(Name.DEFAULT_DISPLAY_NAME);
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
         this.database = database;
 
         this.readPermissions = readPermissions;

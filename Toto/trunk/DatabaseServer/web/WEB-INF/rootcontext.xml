@@ -9,8 +9,6 @@
        http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/context
        http://www.springframework.org/schema/context/spring-context.xsd
-       http://www.springframework.org/schema/security
-       http://www.springframework.org/schema/security/spring-security.xsd
        http://www.springframework.org/schema/task
        http://www.springframework.org/schema/task/spring-task-3.0.xsd"
         >
@@ -48,38 +46,15 @@
     <bean id="jdbcTemplate" class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
-    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
-        <!-- half a gig roughly, could happen for magento?-->
-        <property name="maxUploadSize" value="500000000"/>
-    </bean>
-    <bean name="azquoMailer" class="com.azquo.util.AzquoMailer"/>
-    <bean name="mySQLDatabaseManager" class="com.azquo.admin.MySQLDatabaseManager"/>
-    <bean name="uploadRecordDao" class="com.azquo.admin.database.UploadRecordDAO"/>
-    <bean name="businessDao" class="com.azquo.admin.business.BusinessDAO"/>
-    <bean name="userDao" class="com.azquo.admin.user.UserDAO"/>
-    <bean name="userChoiceDao" class="com.azquo.admin.user.UserChoiceDAO"/>
-    <bean name="databaseDao" class="com.azquo.admin.database.DatabaseDAO"/>
-    <bean name="loginRecordDao" class="com.azquo.admin.user.LoginRecordDAO"/>
-    <bean name="accessDao" class="com.azquo.admin.user.PermissionDAO"/>
     <bean name="nameService" class="com.azquo.memorydb.service.NameService"/>
     <bean name="valueService" class="com.azquo.memorydb.service.ValueService"/>
     <bean name="standardDao" class="com.azquo.memorydb.dao.StandardDAO"/>
     <bean name="provenanceService" class="com.azquo.memorydb.service.ProvenanceService"/>
-    <bean name="loginService" class="com.azquo.spreadsheet.LoginService"/>
     <bean name="importService" class="com.azquo.dataimport.ImportService"/>
-    <bean name="adminService" class="com.azquo.admin.AdminService"/>
-    <bean name="spreadsheetService" class="com.azquo.spreadsheet.SpreadsheetService"/>
+    <bean name="dsSpreadsheetService" class="com.azquo.spreadsheet.DSSpreadsheetService"/>
     <bean name="jsTreeService" class="com.azquo.spreadsheet.JSTreeService"/>
-    <bean name="openDatabaseDao" class="com.azquo.admin.database.OpenDatabaseDAO"/>
-    <bean name="onlineReportDao" class="com.azquo.admin.onlinereport.OnlineReportDAO"/>
 
     <bean name="magentoService" class="com.azquo.app.magento.service.DataLoadService"/>
-
-
-
-    <!--    <util:list id="appServices" value-type="com.azquo.spreadsheetheet.AppEntityService">
-            <ref bean="feedbackService"/>
-        </util:list> -->
     <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
     <bean name="memoryDBManager" class="com.azquo.memorydb.core.MemoryDBManager">
         <constructor-arg type="com.azquo.memorydb.dao.StandardDAO" ref="standardDao"/>
@@ -87,23 +62,5 @@
     <bean id="dbCron" class="com.azquo.memorydb.cron.DBCron"></bean>
 
     <bean name="rmiServer" class="com.azquo.rmi.RMIServer"/>
-    <bean name="rmiClient" class="com.azquo.rmi.RMIClient"/>
 
-<!--    <bean name="reviewsAuthenticationProvider" class="com.azquo.app.reviews.misc.ReviewsAuthenticationProvider"/>
-    <security:http auto-config="true" use-expressions="true" >
-        <security:csrf disabled="true"/>
-
-
-
-        <security:intercept-url pattern="/api/MerchantAdmin*"               access="hasRole('ROLE_USER')" requires-channel="http" />
-        <security:intercept-url pattern="/api/MerchantAdmin/*"               access="hasRole('ROLE_USER')" requires-channel="http" />
-        <security:intercept-url pattern="/api/SupplierResponse*"               access="hasRole('ROLE_USER')" requires-channel="http" />
-        <security:intercept-url pattern="/api/SupplierResponse/*"               access="hasRole('ROLE_USER')" requires-channel="http" />
-        <security:logout logout-url="/logout" logout-success-url="/logoutSuccess.html" />
-        <security:form-login login-page="/phase1/login.html" authentication-failure-url="/phase1/errorPage.html"  default-target-url="/phase1/test.html"/>
-
-    </security:http>
-    <security:authentication-manager>
-        <security:authentication-provider ref="reviewsAuthenticationProvider"/>
-    </security:authentication-manager>-->
 </beans>

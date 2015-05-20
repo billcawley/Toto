@@ -1,7 +1,5 @@
 package com.azquo.memorydb;
 
-import com.azquo.admin.database.Database;
-import com.azquo.admin.user.User;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
@@ -31,22 +29,12 @@ public class AzquoMemoryDBConnection {
 
     private List<Set<Name>> readPermissions;
 
-    protected final User user;
-
     private List<Set<Name>> writePermissions;
-
-    protected AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, User user) {
-        this.azquoMemoryDB = azquoMemoryDB;
-        this.user = user;
-        readPermissions = new ArrayList<Set<Name>>();
-        writePermissions = new ArrayList<Set<Name>>();
-    }
 
     // new one for getting a connection based on the DatabaseAccessToken
 
     public AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB) {
         this.azquoMemoryDB = azquoMemoryDB;
-        this.user = null;
         readPermissions = new ArrayList<Set<Name>>();
         writePermissions = new ArrayList<Set<Name>>();
     }
@@ -92,12 +80,12 @@ public class AzquoMemoryDBConnection {
     }
 
     public void setNewProvenance(String provenanceMethod, String provenanceName) {
-        setNewProvenance(provenanceMethod, provenanceName, "");
+        setNewProvenance(provenanceMethod, provenanceName, "","");
     }
 
-    public void setNewProvenance(String provenanceMethod, String provenanceName, String context) {
+    public void setNewProvenance(String provenanceMethod, String provenanceName, String context, String user) {
         try {
-            provenance = new Provenance(getAzquoMemoryDB(), user.getName(), new Date(), provenanceMethod, provenanceName, context);
+            provenance = new Provenance(getAzquoMemoryDB(), user, new Date(), provenanceMethod, provenanceName, context);
         } catch (Exception e) {
             logger.error("can't set a new provenance", e);
         }
@@ -117,14 +105,6 @@ public class AzquoMemoryDBConnection {
 
     public void setWritePermissions(List<Set<Name>> names) {
         this.writePermissions = names;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public int getBusinessId() {
-        return user.getBusinessId();
     }
 
     public void persist() {

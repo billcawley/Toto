@@ -1,13 +1,8 @@
 package com.azquo.memorydb.core;
 
-import com.azquo.admin.database.OpenDatabaseDAO;
-import com.azquo.admin.database.Database;
-import com.azquo.admin.database.OpenDatabase;
 import com.azquo.memorydb.dao.StandardDAO;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
 
 /**
@@ -15,9 +10,6 @@ import java.util.HashMap;
  * reads the entries in the database table and spins up the memory databases according to that
  */
 public final class MemoryDBManager {
-
-    @Autowired
-    OpenDatabaseDAO openDatabaseDAO;
 
 //    List<AppEntityService> appServices = null;
 
@@ -29,10 +21,6 @@ public final class MemoryDBManager {
         this.standardDAO = standardDAO;
         memoryDatabaseMap = new HashMap<String, AzquoMemoryDB>(); // by mysql name. Will be unique.
         loadMemoryDBMap();
-    }
-
-    public synchronized AzquoMemoryDB getAzquoMemoryDB(Database database) throws Exception {
-        return getAzquoMemoryDB(database.getMySQLName());
     }
 
     // similar to above, todo : zap above if we can
@@ -67,8 +55,8 @@ public final class MemoryDBManager {
     }
 
     // todo : what if references to the memory db held in memory still??
-    public synchronized void removeDatabase(Database db) {
-        memoryDatabaseMap.remove(db.getMySQLName());
+    public synchronized void removeDatabase(String mysqlName) {
+        memoryDatabaseMap.remove(mysqlName);
 
     }
 

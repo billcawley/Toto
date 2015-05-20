@@ -28,7 +28,7 @@ public final class ValueService {
     private NameService nameService;
 
     @Autowired
-    private SpreadsheetService spreadsheetService;
+    private DSSpreadsheetService dsSpreadsheetService;
 
     private StringUtils stringUtils = new StringUtils();
 
@@ -102,7 +102,7 @@ public final class ValueService {
             //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
             //marker = System.currentTimeMillis();
 
-            if (spreadsheetService.compareStringValues(existingValue.getText(), valueString)) {
+            if (dsSpreadsheetService.compareStringValues(existingValue.getText(), valueString)) {
                 toReturn += "  that value already exists, skipping";
                 alreadyInDatabase = true;
             } else {
@@ -419,11 +419,11 @@ public final class ValueService {
     // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function
 
     public String findValueForHeadings(final Set<DataRegionHeading> headings, final MutableBoolean locked, List<Name> namesForMap, List<String> attributesForMap) throws Exception {
-        Set<Name> names = spreadsheetService.namesFromDataRegionHeadings(headings);
+        Set<Name> names = dsSpreadsheetService.namesFromDataRegionHeadings(headings);
         if (names.size() != 1) {
             locked.isTrue = true;
         }
-        Set<String> attributes = spreadsheetService.attributesFromDataRegionHeadings(headings);
+        Set<String> attributes = dsSpreadsheetService.attributesFromDataRegionHeadings(headings);
         String stringResult = null;
         double numericResult = 0;
         // was on set intersection . . .
