@@ -16,10 +16,8 @@
           <element id="library" level="project" name="net.sourceforge.javacsv:javacsv:2.0" />
           <element id="library" level="project" name="org.apache.commons:commons-email:1.3.2" />
           <element id="library" level="project" name="org.apache.directory.studio:org.apache.commons.lang:2.6" />
-          <element id="library" level="project" name="org.apache.poi:poi-contrib:3.6" />
           <element id="library" level="project" name="org.apache.xmlgraphics:fop:1.1" />
           <element id="library" level="project" name="junit:junit:4.9" />
-          <element id="library" level="project" name="org.apache.poi:poi-ooxml:3.10-FINAL" />
           <element id="library" level="project" name="aspose-cells-8.1.1" />
           <element id="library" level="project" name="velocity-tools:velocity-tools-view:2.0-beta1" />
           <element id="library" level="project" name="zsjsp" />
