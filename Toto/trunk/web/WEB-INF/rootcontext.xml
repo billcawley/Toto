@@ -94,6 +94,10 @@
     </bean>
 
     <bean id="dbCron" class="com.azquo.memorydb.cron.DBCron"></bean>
+
+    <bean name="rmiServer" class="com.azquo.rmi.RMIServer"/>
+    <bean name="rmiClient" class="com.azquo.rmi.RMIClient"/>
+
 <!--    <bean name="reviewsAuthenticationProvider" class="com.azquo.app.reviews.misc.ReviewsAuthenticationProvider"/>
     <security:http auto-config="true" use-expressions="true" >
         <security:csrf disabled="true"/>

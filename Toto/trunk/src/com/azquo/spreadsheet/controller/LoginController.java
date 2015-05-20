@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -29,6 +30,8 @@ public class LoginController {
     private LoginService loginService;
     @Autowired
     private SpreadsheetService spreadsheetService;
+    @Autowired
+    private RMIClient rmiClient;
 
 //    public static final String LOGGED_IN_CONNECTION_SESSION = "LOGGED_IN_CONNECTION_SESSION";
     // run in paralell with the old logged in conneciton for a bit
@@ -41,6 +44,9 @@ public class LoginController {
             , @RequestParam(value = "connectionid", required = false) String connectionid
 
     ) throws Exception {
+
+        rmiClient.testRMI();
+
         String callerId = request.getRemoteAddr();
         if (callerId != null && userEmail != null && userEmail.equals("demo@user.com")) {
             userEmail += callerId;
