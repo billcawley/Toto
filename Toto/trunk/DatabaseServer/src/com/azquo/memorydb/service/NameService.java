@@ -155,8 +155,8 @@ public final class NameService {
         // we need to look from the top to distinguish high street in different towns
         while (parentName != null) {
             remainder = name.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length()));
-            if (possibleParents==null){
-                possibleParents= azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parentName.replace(Name.QUOTE, ' ').trim(),null);
+            if (possibleParents == null){
+                possibleParents = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parentName.replace(Name.QUOTE, ' ').trim(),null);
              }else{
                 Set<Name>nextParents = new HashSet<Name>();
                 for (Name parent:possibleParents) {

@@ -5,7 +5,6 @@ import com.azquo.memorydb.dao.StandardDAO;
 import com.github.holodnov.calculator.ObjectSizeCalculator;
 import org.apache.log4j.Logger;
 
-
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +31,7 @@ public final class AzquoMemoryDB {
 
     private final StandardDAO standardDAO;
 
-    private final Map<String, Map<String, List<Name>>> nameByAttributeMap; // a map of maps of sets of names. Fun!
+    private final Map<String, Map<String, List<Name>>> nameByAttributeMap; // a map of maps of lists of names. Fun! Moved back to lists to save memory, the lists are unlikely to be big
 
     // simple by id maps, if an object is in one of these three it's in the database
     private final Map<Integer, Name> nameByIdMap;
@@ -93,10 +92,10 @@ public final class AzquoMemoryDB {
         return mysqlName;
     }
 
-
-    public void zapDatabase() {
+    // not sure what to do with this, on its own it would stop persisting but not much else
+    /*public void zapDatabase() {
         mysqlName = null;
-    }
+    }*/
 
     public boolean getNeedsLoading() {
         return needsLoading;
@@ -104,8 +103,6 @@ public final class AzquoMemoryDB {
 
     // now passing app services
     final int mb = 1024 * 1024;
-    // Todo : possible optimiseation from this : http://www.4pmp.com/2010/02/scalable-mysql-avoid-offset-for-large-tables/
-
     private static final int PROVENANCE_MODE = 0;
     private static final int NAME_MODE = 1;
     private static final int VALUE_MODE = 2;
@@ -146,7 +143,8 @@ public final class AzquoMemoryDB {
     }
 
     synchronized private void loadData() {
-        int loadingThreads = 3; // this may need adjusting depending on server power
+        int loadingThreads = 4; // this may need adjusting depending on server power. Maybe detect as in the spreadsheet service
+        // todo - load memory track from a config file
         boolean memoryTrack = false;
         if (needsLoading) { // only allow it once!
             long track = System.currentTimeMillis();
@@ -180,7 +178,7 @@ public final class AzquoMemoryDB {
                 int namesLoaded = 0;
                 int valuesLoaded = 0;
 
-                final int step = 500000;
+                final int step = 500000; // one can speed Mysql using where id > from order by but our ids are shared across different tables. Not too bothered about persistence save/load speed at the mo
                 int from = 0;
 
                 ExecutorService executor = Executors.newFixedThreadPool(loadingThreads); // picking 10 based on an example I saw . . .
@@ -313,7 +311,7 @@ public final class AzquoMemoryDB {
     }
 
     //fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
-    // TODO - collection this up later? What hsould be returned?
+    // TODO address whether wrapping in a hash set here is the best plan. Memory of that object not such of an issue since it should be small and disposable
 
     private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
         Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
@@ -575,6 +573,8 @@ public final class AzquoMemoryDB {
         }
     }
 
+    // note : the jmap histogram may make this a little redundant.
+
     public void memoryReport() {
         try {
             /*System.out.println("sizing names");
@@ -658,7 +658,6 @@ public final class AzquoMemoryDB {
             }
             System.out.println("total values size : " + df.format(totalValuesSize));
             System.out.println("size per value : " + totalValuesSize / valueByIdMap.size());
-
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         }

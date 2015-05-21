@@ -19,6 +19,8 @@ import java.util.*;
 
 /**
  * Created by cawley on 20/05/15.
+ * <p/>
+ * Has a fair bit of the logic that was in the original import service.
  */
 public class DSImportService {
 
@@ -98,7 +100,6 @@ public class DSImportService {
     }
 
     public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
-        // todo : language here!
         if (fileType.toLowerCase().startsWith("sets")) {
             setsImport(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), new FileInputStream(filePath), attributeNames);
         } else {
@@ -118,24 +119,26 @@ public class DSImportService {
         if (readClause(IDENTIFIER, clause) != null) {
             heading.identifier = true;
         }
-        if (readClause(PARENTOF, clause) != null) {
-            heading.parentOf = readClause(PARENTOF, clause);
-            if (heading.parentOf == null) {
-                throw new Exception(clause + " not understood");
-            }
+        // Edd just tweaking things. Notably if fields like this were already null the logic is redundant, I'll assume they were not
+        String readClause = readClause(PARENTOF, clause);
+        if (readClause != null) {
+            heading.parentOf = readClause;
         }
-        if (readClause(CHILDOF, clause) != null) {
-            heading.childOfString = readClause(CHILDOF, clause);
+        readClause = readClause(CHILDOF, clause);
+        if (readClause != null) {
+            heading.childOfString = readClause;
         }
-        if (readClause(LANGUAGE, clause) != null) {
-            heading.attribute = readClause(LANGUAGE, clause);
+        readClause = readClause(LANGUAGE, clause);
+        if (readClause != null) {
+            heading.attribute = readClause;
             heading.identifier = true;
             if (heading.attribute.length() == 0) {
                 throw new Exception(clause + " not understood");
             }
         }
-        if (readClause(ATTRIBUTE, clause) != null) {
-            heading.attribute = readClause(ATTRIBUTE, clause).replace("`", "");
+        readClause = readClause(ATTRIBUTE, clause);
+        if (readClause != null) {
+            heading.attribute = readClause.replace("`", "");
             if (heading.attribute.length() == 0) {
                 throw new Exception(clause + " not understood");
             }
@@ -146,19 +149,20 @@ public class DSImportService {
         if (readClause(LOCAL, clause) != null) {
             heading.local = true;
         }
-
-        if (readClause(PLURAL, clause) != null) {
-            heading.plural = readClause(PLURAL, clause);
+        readClause = readClause(PLURAL, clause);
+        if (readClause != null) {
+            heading.plural = readClause;
             if (heading.plural.length() == 0) {
                 throw new Exception(clause + " not understood");
             }
         }
-        if (readClause(EQUALS, clause) != null) {
-            heading.equalsString = readClause(EQUALS, clause);
-
+        readClause = readClause(EQUALS, clause);
+        if (readClause != null) {
+            heading.equalsString = readClause;
         }
-        if (readClause(COMPOSITION, clause) != null) {
-            heading.composition = readClause(COMPOSITION, clause);
+        readClause = readClause(COMPOSITION, clause);
+        if (readClause != null) {
+            heading.composition = readClause;
             if (heading.composition.length() == 0) {
                 throw new Exception(clause + " not understood");
             }
@@ -168,7 +172,7 @@ public class DSImportService {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
             heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
             String peersString = readClause(PEERS, clause);
-            if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
+            if (peersString != null && peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
                 if (peersString.contains("}")) {
                     peersString = peersString.substring(1, peersString.indexOf("}"));
                     final StringTokenizer st = new StringTokenizer(peersString, ",");
@@ -585,14 +589,11 @@ public class DSImportService {
             }
         }
         */
-
-
     }
-
 
     private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
         ImportHeading childHeading = headings.get(heading.childHeading);
-        if (heading.lineValue.length() == 0){
+        if (heading.lineValue.length() == 0) {
             return;
         }
         if (heading.lineName != null && heading.childOf != null) {
@@ -606,12 +607,11 @@ public class DSImportService {
         heading.lineName.addChildWillBePersisted(childHeading.lineName);
     }
 
-
     public void handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
         ImportHeading identity = headings.get(heading.identityHeading);
         ImportHeading identityHeading = headings.get(heading.identityHeading);
         if (identityHeading.lineName == null) {
-            if (identityHeading.lineValue.length() == 0){
+            if (identityHeading.lineValue.length() == 0) {
                 return;
             }
             List<String> localAttributes = new ArrayList<String>();
@@ -661,7 +661,6 @@ public class DSImportService {
         return hasRequiredPeers;
     }
 
-
     private void getCompositeValues(List<ImportHeading> headings) {
         int adjusted = 2;
         //loops in case there are multiple levels of dependencies
@@ -703,29 +702,30 @@ public class DSImportService {
                 if (setName.length() > 0) {
                     interpretHeading(azquoMemoryDBConnection, setName, importHeading, attributeNames);
                     importHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, importHeading.heading, null, false, attributeNames);
-                    Name set = importHeading.name;
-                    nameService.clearChildren(set);
-                    while (st.hasMoreTokens()) {
-                        String element = st.nextToken();
-                        if (element.length() > 0) {
-                            int localPos = element.toLowerCase().indexOf(";local");
-                            if (localPos > 0 || importHeading.local) {
-                                if (localPos > 0) {
-                                    element = element.substring(0, localPos);
+                    if (importHeading.name != null) { // is this a concern? I'll throw an exception in case (based on IntelliJ warning)
+                        Name set = importHeading.name;
+                        nameService.clearChildren(set);
+                        while (st.hasMoreTokens()) {
+                            String element = st.nextToken();
+                            if (element.length() > 0) {
+                                int localPos = element.toLowerCase().indexOf(";local");
+                                if (localPos > 0 || importHeading.local) {
+                                    if (localPos > 0) {
+                                        element = element.substring(0, localPos);
+                                    }
+                                    nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, set, false, attributeNames);
+                                } else {
+                                    Name child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, null, false, attributeNames);
+                                    set.addChildWillBePersisted(child);
                                 }
-                                nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, set, false, attributeNames);
-                            } else {
-                                Name child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, null, false, attributeNames);
-                                set.addChildWillBePersisted(child);
                             }
                         }
+                    } else {
+                        throw new Exception("Import heading name was null : " + importHeading);
                     }
                 }
             }
         }
     }
-
-
-
 
 }

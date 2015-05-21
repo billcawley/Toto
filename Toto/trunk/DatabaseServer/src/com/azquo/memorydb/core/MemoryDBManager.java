@@ -1,7 +1,6 @@
 package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.dao.StandardDAO;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 
@@ -11,8 +10,6 @@ import java.util.HashMap;
  */
 public final class MemoryDBManager {
 
-//    List<AppEntityService> appServices = null;
-
     private final HashMap<String, AzquoMemoryDB> memoryDatabaseMap;
 
     private StandardDAO standardDAO;
@@ -20,10 +17,7 @@ public final class MemoryDBManager {
     public MemoryDBManager(StandardDAO standardDAO) throws Exception {
         this.standardDAO = standardDAO;
         memoryDatabaseMap = new HashMap<String, AzquoMemoryDB>(); // by mysql name. Will be unique.
-        loadMemoryDBMap();
     }
-
-    // similar to above, todo : zap above if we can
 
     public synchronized AzquoMemoryDB getAzquoMemoryDB(String mySqlName) throws Exception {
         AzquoMemoryDB loaded;
@@ -37,28 +31,28 @@ public final class MemoryDBManager {
         }
         loaded = new AzquoMemoryDB(mySqlName, standardDAO);
         memoryDatabaseMap.put(mySqlName, loaded);
-        // todo, add back in client side
+        // todo, add back in client side?
 /*        final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new GregorianCalendar(1900, 0, 0).getTime());// should start to get away from date
         openDatabaseDAO.store(openDatabase);*/
         return loaded;
     }
 
-    public synchronized void loadMemoryDBMap() throws Exception {
-        memoryDatabaseMap.clear();
         /* 01/04/2014  no preloading of databases
+    public synchronized void loadMemoryDBMap() throws Exception {
         List<Database> databases = databaseDAO.findAll();
         for (Database database : databases) {
             AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(database, standardDAO);
             memoryDatabaseMap.put(database.getMySQLName(), azquoMemoryDB);
         }
-        */
     }
+        */
 
-    // todo : what if references to the memory db held in memory still??
+    // todo : what if references to the memory db held in memory still? Perhaps in a connection.
+    /* commented for the moment as the code which called this in switch database isn't being used.
     public synchronized void removeDatabase(String mysqlName) {
         memoryDatabaseMap.remove(mysqlName);
 
-    }
+    }*/
 
     public synchronized void addNewToDBMap(String mysqlName) throws Exception {
         if (memoryDatabaseMap.get(mysqlName) != null) {

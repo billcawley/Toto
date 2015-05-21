@@ -18,10 +18,12 @@ import java.util.*;
 
 /**
  * Created by cawley on 20/05/15.
+ * <p/>
+ * The new home of Magento loading logic. Much of this was in DataLoadService.
  */
 public class DSDataLoadService {
 
-    private static final String[] productAtts = {"url_path","meta_description","country_of_manufacture", "meta_title","price","weight", "ship_height","ship_width", "ship_depth", "cost"};
+    private static final String[] productAtts = {"url_path", "meta_description", "country_of_manufacture", "meta_title", "price", "weight", "ship_height", "ship_width", "ship_depth", "cost"};
 
     public static void logMemUseage() {
         Runtime runtime = Runtime.getRuntime();
@@ -61,15 +63,10 @@ public class DSDataLoadService {
             tax = 0.0;
             origPrice = 0.0;
             qty = 0.0;
-
         }
     }
 
     DecimalFormat df = new DecimalFormat("#.00");
-/*    final Map<Integer, Name> products = new HashMap<Integer, Name>();
-    final Map<Integer, Name> categories = new HashMap<Integer, Name>();
-    //final Map<Integer, MagentoOrderLineItem> orderLineItems = new HashMap<Integer, MagentoOrderLineItem>();
-    final Map<String, String> optionValueLookup = new HashMap<String, String>();*/
 
     public String findLastUpdate(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
@@ -77,14 +74,14 @@ public class DSDataLoadService {
         if (orderName == null) {
             return null;
         }
-        String lastUpdate =  orderName.getAttribute(LATEST_UPDATE + " " + remoteAddress);
-        if (lastUpdate==null){
+        String lastUpdate = orderName.getAttribute(LATEST_UPDATE + " " + remoteAddress);
+        if (lastUpdate == null) {
             lastUpdate = orderName.getAttribute(LATEST_UPDATE);
         }
         return lastUpdate;
     }
 
-    public boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws Exception{
+    public boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         return nameService.findByName(azquoMemoryDBConnection, "all years") == null;
     }
@@ -109,7 +106,7 @@ public class DSDataLoadService {
         return requiredTables;
     }
 
-    // todo : since this is a single thread maybe use koloboke maps? I guess if it's going slowly. Also NIO options? We are on Java 8 now . . .
+    // might be a case for koloboke if speed becomes a concern
     public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Map<String, List<Map<String, String>>> tableMap = new HashMap<String, List<Map<String, String>>>();
@@ -160,7 +157,7 @@ public class DSDataLoadService {
         System.out.println();
         System.out.println("initial load of magento data done");
         System.out.println("Trying to make some product objects");
-        // todo - address string literals here - not a good idea I don't think.
+        // Not sure about the string literals here. On the other hadn they're not referenced anywhere else in the Java, these are database references.
         Name topProduct = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "product", null, false);
         Name productAttributesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product Attributes", topProduct, false);
         Name productCategories = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product categories", topProduct, false);
@@ -217,9 +214,9 @@ public class DSDataLoadService {
                 if (attCode.equals("name")) {
                     productNameId = attId;
                 }
-                for (String att:productAtts){
-                    if (attCode.equals(att)){
-                        attIds.put(att,attId);
+                for (String att : productAtts) {
+                    if (attCode.equals(att)) {
+                        attIds.put(att, attId);
                     }
                 }
 
@@ -231,7 +228,7 @@ public class DSDataLoadService {
         Map<String, Name> azquoCustomersFound = new HashMap<String, Name>();
         List<String> defaultLanguage = new ArrayList<String>();
         defaultLanguage.add(Constants.DEFAULT_DISPLAY_NAME);
-        Map<String,String> categoryNames = new HashMap<String, String>();
+        Map<String, String> categoryNames = new HashMap<String, String>();
         //name the categories
         for (Map<String, String> attributeRow : tableMap.get("catalog_category_entity_varchar")) { // should (!) have us looking in teh right place
             //only picking the name from all the category attributes
@@ -247,9 +244,9 @@ public class DSDataLoadService {
             while (pathBits.hasMoreTokens()) {
                 String catNo = pathBits.nextToken();
                 String catName = categoryNames.get(catNo);
-                if (catName != null){
+                if (catName != null) {
                     path = "`" + catName + "`," + path;
-                }else{
+                } else {
                     System.out.println("we have a category with no name!");
                     path = "`" + catNo + "`," + path;
                 }
@@ -267,7 +264,7 @@ public class DSDataLoadService {
         List<String> productLanguages = new ArrayList<String>(languages);
         for (Map<String, String> entityRow : tableMap.get("catalog_product_entity")) {
             Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("sku"), allSKUs, true, languages);
-            if (magentoName != null){
+            if (magentoName != null) {
                 allProducts.addChildWillBePersisted(magentoName);
                 if (!magentoName.findAllParents().contains(productCategories) && !magentoName.findAllParents().contains(uncategorisedProducts)) {
                     uncategorisedProducts.addChildWillBePersisted(magentoName);
@@ -278,8 +275,8 @@ public class DSDataLoadService {
             }
         }
         tableMap.remove("catalog_product_entity");
-        readProductAttributes("catalog_product_entity_varchar", tableMap, azquoProductsFound,attIds,productNameId);
-        readProductAttributes("catalog_product_entity_decimal", tableMap, azquoProductsFound,attIds,productNameId);
+        readProductAttributes("catalog_product_entity_varchar", tableMap, azquoProductsFound, attIds, productNameId);
+        readProductAttributes("catalog_product_entity_decimal", tableMap, azquoProductsFound, attIds, productNameId);
         //create a product structure
         for (Map<String, String> relationRow : tableMap.get("catalog_product_super_link")) {
             Name child = azquoProductsFound.get(relationRow.get("product_id"));
@@ -375,10 +372,10 @@ public class DSDataLoadService {
                 bundlePrices = "";
                 currentParent = parentId;
                 bundleName = azquoProductsFound.get(parentId);
-                if (bundleName==null){
+                if (bundleName == null) {
                     //this should not happen!
                     bundleName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + parentId, allSKUs, true, languages);
-                    azquoProductsFound.put(parentId,bundleName);
+                    azquoProductsFound.put(parentId, bundleName);
                     allProducts.addChildWillBePersisted(bundleName);
 
 
@@ -387,7 +384,7 @@ public class DSDataLoadService {
             }
             String childId = attVals.get("product_id");
             Name childName = azquoProductsFound.get(childId);
-            if (childName == null){
+            if (childName == null) {
                 //this should not happen!
                 childName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + childId, allSKUs, true, languages);
                 azquoProductsFound.put(childId, childName);
@@ -453,7 +450,7 @@ public class DSDataLoadService {
         Name shippingName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Shipping", entities, false);
         Name qtyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Quantity", entities, false);
         Name weightName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Weight", entities, false);
-        Name canceledName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Canceled quantity", entities, false);
+        Name canceledName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Canceled quantity", entities, false);
         Name taxName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Tax", entities, false);
         Name ordersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "order", null, false);
         Name allOrdersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All orders", ordersName, false);
@@ -567,7 +564,7 @@ public class DSDataLoadService {
             Map<String, Name> addressMap = new HashMap<String, Name>();
             for (Map<String, String> addressRec : tableMap.get("customer_address_entity")) {
                 Name customer = azquoCustomersFound.get(addressRec.get("parent_id"));
-                if (customer==null){
+                if (customer == null) {
                     customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Customer " + addressRec.get("parent_id"), allCustomersName, true, languages);
                     azquoCustomersFound.put(addressRec.get("parent_id"), customer);
                 }
@@ -597,17 +594,10 @@ public class DSDataLoadService {
         }
 
 
-
-
         Map<String, Name> azquoOrdersFound = new HashMap<String, Name>();
 
         System.out.println("about to go into sales flat order item " + (System.currentTimeMillis() - marker));
         marker = System.currentTimeMillis();
-        long part0a = 0;
-        long part0b = 0;
-        long part0c = 0;
-        long part0d = 0;
-        long partoe = 0;
         long part1 = 0;
         long part2 = 0;
         long part3 = 0;
@@ -634,15 +624,12 @@ public class DSDataLoadService {
         for (Map<String, String> salesRow : tableMap.get("sales_flat_order_item")) {
             String parentItemId = salesRow.get("parent_item_id");
             String itemId = salesRow.get("item_id");
-            long thisCycleMarker = System.currentTimeMillis();
             if (bundleLine.length() > 0 && (!parentItemId.equals(configLine)) && !parentItemId.equals(bundleLine)) {
                 calcBundle(azquoMemoryDBConnection, bundleTotal, bundleItems, priceName, taxName);
                 bundleItems = new ArrayList<SaleItem>();
                 bundleLine = "";
 
             }
-            part0a += (thisCycleMarker - System.currentTimeMillis());
-            thisCycleMarker = System.currentTimeMillis();
             String productId = salesRow.get("product_id");
             Name productName = azquoProductsFound.get(productId);
             if (productName == null) {
@@ -652,8 +639,7 @@ public class DSDataLoadService {
                 azquoProductsFound.put(productId, productName);
                 //productName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME,salesRow.get("product_type"));
             }
-            part0b += (thisCycleMarker - System.currentTimeMillis());
-            thisCycleMarker = System.currentTimeMillis();
+            long thisCycleMarker = System.currentTimeMillis();
             if (configLine == null) {
                 price = 0.0;
                 qty = 0.0;
@@ -676,8 +662,6 @@ public class DSDataLoadService {
                 } catch (Exception e) {
                     //ignore the line
                 }
-                part0c += (thisCycleMarker - System.currentTimeMillis());
-                thisCycleMarker = System.currentTimeMillis();
                 String productType = salesRow.get("product_type");
                 if (productType.equals("configurable") || productType.equals("bundle")) {
                     if (productType.equals("bundle")) {
@@ -689,7 +673,6 @@ public class DSDataLoadService {
                         configLine = itemId;
                     }
                 }
-                part0d += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
             } else {
 //                productId = salesRow.get("product_id");
@@ -774,7 +757,7 @@ public class DSDataLoadService {
                 namesForValue.add(orderItemName);
                 namesForValue.add(weightName);
                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, weight + "", namesForValue);
-                if (qtyCanceled > 0){
+                if (qtyCanceled > 0) {
                     namesForValue = new HashSet<Name>();
                     namesForValue.add(orderItemName);
                     namesForValue.add(canceledName);
@@ -902,8 +885,8 @@ public class DSDataLoadService {
     }
 
 
-    private void readProductAttributes(String tableName,  Map<String, List<Map<String, String>>> tableMap, Map<String,Name>azquoProductsFound, Map<String,String>attIds, String productNameId)throws Exception{
-        for (Map<String,String>attributeRow:tableMap.get(tableName)) {
+    private void readProductAttributes(String tableName, Map<String, List<Map<String, String>>> tableMap, Map<String, Name> azquoProductsFound, Map<String, String> attIds, String productNameId) throws Exception {
+        for (Map<String, String> attributeRow : tableMap.get(tableName)) {
             if (attributeRow.get("store_id").equals("0")) {
                 String attId = attributeRow.get("attribute_id");
                 String attVal = attributeRow.get("value");
