@@ -109,7 +109,7 @@ public final class ImportService {
     }
 
     private void imageImport(LoggedInUser loggedInUser, InputStream inputStream, String fileName) throws Exception {
-        String targetFileName = "/home/azquo/databases/" + loggedInUser.getDatabase().getName() + "/images/" + fileName;
+        String targetFileName = spreadsheetService.getHomeDir() + "/databases/" + loggedInUser.getDatabase().getName() + "/images/" + fileName;
         File output = new File(targetFileName);
         output.getParentFile().mkdirs();
         if (!output.exists()) {

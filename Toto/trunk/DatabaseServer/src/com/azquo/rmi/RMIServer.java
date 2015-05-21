@@ -37,7 +37,7 @@ public class RMIServer {
 
     @PreDestroy
     private void stopRMI(){
-        System.out.print("=====================================destroying rmi server object??");
+        System.out.println("=====================================destroying rmi server object");
         if (registry != null){
             try {
                 registry.unbind(RMIInterface.serviceName);
