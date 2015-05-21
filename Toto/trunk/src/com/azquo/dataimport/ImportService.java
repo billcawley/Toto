@@ -294,7 +294,7 @@ public final class ImportService {
         FileOutputStream out = new FileOutputStream(fullPath);
         azquoBook.saveBook(fullPath);
         out.close();
-        or = new OnlineReport(reportId, businessId, databaseId, "", "", reportName, "", fileName, "", "");
+        or = new OnlineReport(reportId, businessId, databaseId, "", reportName,"","", fileName, "", "");
         onlineReportDAO.store(or);
     }
 

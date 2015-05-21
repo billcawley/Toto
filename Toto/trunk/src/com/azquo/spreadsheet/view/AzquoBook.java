@@ -17,6 +17,7 @@ import org.apache.velocity.VelocityContext;
 import javax.servlet.http.HttpServletResponse;
 import java.awt.*;
 import java.io.*;
+import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
@@ -398,7 +399,7 @@ public class AzquoBook {
         return (colToLetters(range.getFirstColumn() + 1) + (range.getFirstRow() + 1) + ":" + colToLetters(range.getFirstColumn() + range.getColumnCount()) + (range.getFirstRow() + range.getRowCount()));
     }*/
 
-    private void fillRegion(LoggedInUser loggedInUser, String region,Map<Cell, Boolean> highlighted) throws Exception {
+    private void fillRegion(LoggedInUser loggedInUser, String region,Map<Cell, Boolean> highlighted) throws RemoteException, Exception {
         logger.info("loading " + region);
         int filterCount = optionNumber(region, "hiderows");
         if (filterCount == 0)
@@ -743,7 +744,16 @@ public class AzquoBook {
                 long regStart = System.currentTimeMillis();
                 try {
                     fillRegion(loggedInUser, regionName,highlighted);
-                } catch (Exception e) {
+                } catch (RemoteException re) {
+                    Throwable t = re.detail.getCause();
+                    if (t != null){
+                        errorMessage = t.getLocalizedMessage();
+                        t.printStackTrace();
+                    } else {
+                        errorMessage = re.getMessage();
+                        re.printStackTrace();
+                    }
+                }catch (Exception e) {
                     errorMessage = e.getMessage();
                     e.printStackTrace();
                 }
@@ -1167,7 +1177,7 @@ public class AzquoBook {
                         .append(jsonValue("left", dataRange != null ? dataRange.getFirstColumn() : 0))
                         .append(jsonValue("bottom", dataRange != null ? dataRange.getFirstRow() + dataRange.getRowCount() - 1 : 0))
                         .append(jsonValue("right", dataRange != null ? dataRange.getFirstColumn() + dataRange.getColumnCount() - 1 : 0))
-                        .append(jsonLockRange("locks", loggedInUser.getSentCells(name.getText().substring(dataRegionPrefix.length())).getData()))
+                        .append(loggedInUser.getSentCells(name.getText().substring(dataRegionPrefix.length())) != null ? jsonLockRange("locks", loggedInUser.getSentCells(name.getText().substring(dataRegionPrefix.length())).getData()) : "")
                         .append("}");
             }
         }
