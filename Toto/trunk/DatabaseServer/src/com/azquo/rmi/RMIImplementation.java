@@ -21,24 +21,20 @@ import java.util.List;
  */
 public class RMIImplementation implements RMIInterface {
 
-    @Autowired
-    private DSSpreadsheetService dsSpreadsheetService;
-    @Autowired
-    private DSAdminService dsAdminService;
-    @Autowired
-    private DSDataLoadService dsDataLoadService;
-    @Autowired
-    private DSImportService dsImportService;
-
-    @Autowired
-    private JSTreeService jsTreeService;
+    private final DSSpreadsheetService dsSpreadsheetService;
+    private final DSAdminService dsAdminService;
+    private final DSDataLoadService dsDataLoadService;
+    private final DSImportService dsImportService;
+    private final JSTreeService jsTreeService;
 
 
-    @Override
-    public String testRMI() {
-        return "here is the test!";
+    public RMIImplementation(DSSpreadsheetService dsSpreadsheetService, DSAdminService dsAdminService, DSDataLoadService dsDataLoadService, DSImportService dsImportService, JSTreeService jsTreeService) {
+        this.dsSpreadsheetService = dsSpreadsheetService;
+        this.dsAdminService = dsAdminService;
+        this.dsDataLoadService = dsDataLoadService;
+        this.dsImportService = dsImportService;
+        this.jsTreeService = jsTreeService;
     }
-
 
     //Admin stuf
     @Override

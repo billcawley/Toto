@@ -13,8 +13,6 @@ import java.util.List;
 public interface RMIInterface extends Remote {
     public final String serviceName = "AzquoRMI";
 
-    public String testRMI() throws RemoteException;
-
     public void emptyDatabase(String mysqlName) throws RemoteException;
 
     public void dropDatabase(String mysqlName) throws RemoteException;

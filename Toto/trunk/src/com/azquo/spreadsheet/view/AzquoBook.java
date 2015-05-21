@@ -745,7 +745,7 @@ public class AzquoBook {
                     fillRegion(loggedInUser, regionName,highlighted);
                 } catch (Exception e) {
                     errorMessage = e.getMessage();
-                    System.out.println(errorMessage);
+                    e.printStackTrace();
                 }
                 System.out.println("fillregion took " + (System.currentTimeMillis() - regStart) + " millisecs");
                 regStart = System.currentTimeMillis();

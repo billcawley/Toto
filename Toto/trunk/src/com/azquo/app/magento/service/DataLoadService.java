@@ -25,19 +25,19 @@ public final class DataLoadService {
     final Map<String, String> optionValueLookup = new HashMap<String, String>();*/
 
     public String findLastUpdate(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
-        return rmiClient.serverInterface.findLastUpdate(databaseAccessToken, remoteAddress);
+        return rmiClient.getServerInterface().findLastUpdate(databaseAccessToken, remoteAddress);
     }
 
     public boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws Exception{
-        return rmiClient.serverInterface.magentoDBNeedsSettingUp(databaseAccessToken);
+        return rmiClient.getServerInterface().magentoDBNeedsSettingUp(databaseAccessToken);
     }
 
 
     public String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
-        return rmiClient.serverInterface.findRequiredTables(databaseAccessToken, remoteAddress);
+        return rmiClient.getServerInterface().findRequiredTables(databaseAccessToken, remoteAddress);
     }
 
     public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws Exception {
-        rmiClient.serverInterface.loadData(databaseAccessToken, filePath, remoteAddress);
+        rmiClient.getServerInterface().loadData(databaseAccessToken, filePath, remoteAddress);
     }
 }

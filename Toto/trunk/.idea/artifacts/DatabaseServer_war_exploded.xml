@@ -14,6 +14,8 @@
           <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.5.2" />
           <element id="library" level="project" name="org.apache.directory.studio:org.apache.commons.lang:2.6" />
           <element id="library" level="project" name="net.sourceforge.javacsv:javacsv:2.0" />
+          <element id="library" level="project" name="org.springframework:spring-webmvc:4.1.6.RELEASE" />
+          <element id="library" level="project" name="log4j:log4j:1.2.17" />
         </element>
       </element>
     </root>

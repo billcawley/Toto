@@ -453,7 +453,7 @@ public class SpreadsheetService {
     }
 
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception{
-        return rmiClient.serverInterface.getDropDownListForQuery(databaseAccessToken,query,languages);
+        return rmiClient.getServerInterface().getDropDownListForQuery(databaseAccessToken, query, languages);
     }
 
     // todo make sense of the bloody restrictcount parameter
@@ -484,11 +484,11 @@ public class SpreadsheetService {
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol) throws Exception {
-        return rmiClient.serverInterface.getCellsAndHeadingsForDisplay(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource,filterCount,maxRows,maxCols,sortRow,sortCol);
+        return rmiClient.getServerInterface().getCellsAndHeadingsForDisplay(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortCol);
     }
 
     public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) throws Exception{
-        return rmiClient.serverInterface.processJSTreeRequest(dataAccessToken, json,jsTreeId,topNode,op,parent,parents,database,itemsChosen,position,backupSearchTerm);
+        return rmiClient.getServerInterface().processJSTreeRequest(dataAccessToken, json,jsTreeId,topNode,op,parent,parents,database,itemsChosen,position,backupSearchTerm);
     }
 
     // used when comparing values. So ignore the currency symbol if the numbers are the same

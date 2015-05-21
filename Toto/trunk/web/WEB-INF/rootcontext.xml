@@ -60,15 +60,10 @@
     <bean name="databaseDao" class="com.azquo.admin.database.DatabaseDAO"/>
     <bean name="loginRecordDao" class="com.azquo.admin.user.LoginRecordDAO"/>
     <bean name="accessDao" class="com.azquo.admin.user.PermissionDAO"/>
-    <bean name="nameService" class="com.azquo.memorydb.service.NameService"/>
-    <bean name="valueService" class="com.azquo.memorydb.service.ValueService"/>
-    <bean name="standardDao" class="com.azquo.memorydb.dao.StandardDAO"/>
-    <bean name="provenanceService" class="com.azquo.memorydb.service.ProvenanceService"/>
     <bean name="loginService" class="com.azquo.spreadsheet.LoginService"/>
     <bean name="importService" class="com.azquo.dataimport.ImportService"/>
     <bean name="adminService" class="com.azquo.admin.AdminService"/>
     <bean name="spreadsheetService" class="com.azquo.spreadsheet.SpreadsheetService"/>
-    <bean name="jsTreeService" class="com.azquo.spreadsheet.JSTreeService"/>
     <bean name="openDatabaseDao" class="com.azquo.admin.database.OpenDatabaseDAO"/>
     <bean name="onlineReportDao" class="com.azquo.admin.onlinereport.OnlineReportDAO"/>
 
@@ -79,13 +74,6 @@
     <!--    <util:list id="appServices" value-type="com.azquo.spreadsheetheet.AppEntityService">
             <ref bean="feedbackService"/>
         </util:list> -->
-    <!-- instantiate the memory db manager when our connection to MySQL is up :) -->
-    <bean name="memoryDBManager" class="com.azquo.memorydb.core.MemoryDBManager">
-        <constructor-arg type="com.azquo.memorydb.dao.StandardDAO" ref="standardDao"/>
-    </bean>
-    <bean id="dbCron" class="com.azquo.memorydb.cron.DBCron"></bean>
-
-    <bean name="rmiServer" class="com.azquo.rmi.RMIServer"/>
     <bean name="rmiClient" class="com.azquo.rmi.RMIClient"/>
 
 <!--    <bean name="reviewsAuthenticationProvider" class="com.azquo.app.reviews.misc.ReviewsAuthenticationProvider"/>

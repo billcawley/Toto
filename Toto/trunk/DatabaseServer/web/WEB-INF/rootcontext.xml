@@ -62,6 +62,12 @@
     </bean>
     <bean id="dbCron" class="com.azquo.memorydb.cron.DBCron"></bean>
 
-    <bean name="rmiServer" class="com.azquo.rmi.RMIServer"/>
+    <bean name="rmiServer" class="com.azquo.rmi.RMIServer">
+        <constructor-arg index="0" ref="dsSpreadsheetService"/>
+        <constructor-arg index="1" ref="dsAdminService"/>
+        <constructor-arg index="2" ref="magentoService"/>
+        <constructor-arg index="3" ref="dsImportService"/>
+        <constructor-arg index="4" ref="jsTreeService"/>
+    </bean>
 
 </beans>

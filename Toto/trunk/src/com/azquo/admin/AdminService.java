@@ -149,15 +149,15 @@ public class AdminService {
 
     // will be for the database side
     public void emptyDatabase(String mysqlName) throws Exception {
-        rmiClient.serverInterface.emptyDatabase(mysqlName);
+        rmiClient.getServerInterface().emptyDatabase(mysqlName);
     }
 
     public void dropDatabase(String mysqlName) throws Exception {
-        rmiClient.serverInterface.dropDatabase(mysqlName);
+        rmiClient.getServerInterface().dropDatabase(mysqlName);
     }
 
     private void createDatabase(final String mysqlName) throws Exception {
-        rmiClient.serverInterface.createDatabase(mysqlName);
+        rmiClient.getServerInterface().createDatabase(mysqlName);
     }
 
     public void createUser(final String email
