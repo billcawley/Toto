@@ -1,0 +1,6 @@
+<zk>
+    <library-property>
+    <name>org.zkoss.zssex.rt.Runtime.directory</name>
+    <value>/usr/share/zklicense/</value>
+</library-property>
+</zk>

@@ -128,6 +128,14 @@ public class SpreadsheetService {
     public final int threadsToTry;
 
     public SpreadsheetService() {
+
+        String current = null;
+        try {
+            current = new File( "." ).getCanonicalPath();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Current dir:"+current);
         String thost = "";
         try {
             thost = InetAddress.getLocalHost().getHostName();
