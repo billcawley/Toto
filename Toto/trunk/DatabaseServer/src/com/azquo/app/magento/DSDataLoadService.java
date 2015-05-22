@@ -25,9 +25,9 @@ public class DSDataLoadService {
 
     private static final String[] productAtts = {"url_path", "meta_description", "country_of_manufacture", "meta_title", "price", "weight", "ship_height", "ship_width", "ship_depth", "cost"};
 
-    public static void logMemUseage() {
-        Runtime runtime = Runtime.getRuntime();
-        int mb = 1024 * 1024;
+    private static void logMemUseage() {
+        final Runtime runtime = Runtime.getRuntime();
+        final int mb = 1024 * 1024;
         System.out.println("##### Heap utilization statistics [MB] #####");
         System.out.println("Used Memory:" + (runtime.totalMemory() - runtime.freeMemory()) / mb);
         System.out.println("Free Memory:" + runtime.freeMemory() / mb);
@@ -66,11 +66,11 @@ public class DSDataLoadService {
         }
     }
 
-    DecimalFormat df = new DecimalFormat("#.00");
+    private static final DecimalFormat df = new DecimalFormat("#.00");
 
-    public String findLastUpdate(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        Name orderName = nameService.findByName(azquoMemoryDBConnection, "order");
+    public String findLastUpdate(final DatabaseAccessToken databaseAccessToken, final String remoteAddress) throws Exception {
+        final AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        final Name orderName = nameService.findByName(azquoMemoryDBConnection, "order");
         if (orderName == null) {
             return null;
         }
@@ -81,18 +81,18 @@ public class DSDataLoadService {
         return lastUpdate;
     }
 
-    public boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+    public boolean magentoDBNeedsSettingUp(final DatabaseAccessToken databaseAccessToken) throws Exception {
+        final AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         return nameService.findByName(azquoMemoryDBConnection, "all years") == null;
     }
 
 
-    public String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+    public String findRequiredTables(final DatabaseAccessToken databaseAccessToken, final String remoteAddress) throws Exception {
+        final AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         String requiredTables = defaultData().replace("$starttime", "");
         String date = "never";
-        String lastUpdate = findLastUpdate(databaseAccessToken, remoteAddress);
-        Name order = nameService.findByName(azquoMemoryDBConnection, "order");
+        final String lastUpdate = findLastUpdate(databaseAccessToken, remoteAddress);
+        final Name order = nameService.findByName(azquoMemoryDBConnection, "order");
         if (order != null) {
             if (lastUpdate != null) {
                 date = lastUpdate;

@@ -76,6 +76,9 @@ public class JstreeController {
                 model.addAttribute("content", jsonFunction + "({\"response\":" + result + "})");
             } else {
                 if (op.equals("new")){ // this is nasty and hacky, a bit of logic I needed to remove from the DB side, I'm returning the root id when new
+                    if (parents == null){
+                        parents = "false";
+                    }
                     result = spreadsheetService.showNameDetails(loggedInUser,database,result,parents, itemsChosen);
                 }
 

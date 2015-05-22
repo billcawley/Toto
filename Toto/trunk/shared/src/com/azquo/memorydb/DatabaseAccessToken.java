@@ -39,4 +39,14 @@ public class DatabaseAccessToken implements Serializable {
     public List<String> getLanguages() {
         return languages;
     }
+
+    @Override
+    public String toString() {
+        return "DatabaseAccessToken{" +
+                "databaseMySQLName='" + databaseMySQLName + '\'' +
+                ", readPermissions='" + readPermissions + '\'' +
+                ", writePermissions='" + writePermissions + '\'' +
+                ", languages=" + languages +
+                '}';
+    }
 }

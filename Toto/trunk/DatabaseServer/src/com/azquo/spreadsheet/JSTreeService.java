@@ -51,6 +51,7 @@ public class JSTreeService {
         }
     }
 
+    // todo - stop these being looked up by a dataaccesstoken to string, for the moment it's the nearest I can get to the old logged in connection, need to understand the logic
 
     Map<String, Map<String, JSTreeService.JsTreeNode>> lookupMap = new ConcurrentHashMap<String, Map<String, JSTreeService.JsTreeNode>>();
     Map<String, Integer> lastJSTreeIdMap = new ConcurrentHashMap<String, Integer>();
@@ -64,10 +65,10 @@ public class JSTreeService {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
 
         // trying for the tree id here, hope that will work
-        Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(jsTreeId);
+        Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(databaseAccessToken.toString()); // todo, sort this hack later
         if (lookup == null){
             lookup = new HashMap<String, JSTreeService.JsTreeNode>();
-            lookupMap.put(jsTreeId, lookup);
+            lookupMap.put(databaseAccessToken.toString(), lookup);
         }
         if (json != null && json.length() > 0) {
             NameJsonRequest nameJsonRequest;
@@ -111,7 +112,7 @@ public class JSTreeService {
                 if (itemsChosen == null){
                     itemsChosen = backupSearchTerm;
                 }
-                return getJsonChildren(azquoMemoryDBConnection, jsTreeId, current.child.name, parents, lookup, true, itemsChosen);
+                return getJsonChildren(azquoMemoryDBConnection, databaseAccessToken.toString(), jsTreeId, current.child.name, parents, lookup, true, itemsChosen);
             }
             if (current.child.name != null) {
                 if (op.equals("move_node")) {
@@ -420,7 +421,7 @@ public class JSTreeService {
 
     // todo : jackson!
 
-    private String getJsonChildren(AzquoMemoryDBConnection loggedInConnection, String jsTreeId, Name name, String parents, Map<String, JSTreeService.JsTreeNode> lookup, boolean details, String searchTerm) throws Exception {
+    private String getJsonChildren(AzquoMemoryDBConnection loggedInConnection,String tokenString, String jsTreeId, Name name, String parents, Map<String, JSTreeService.JsTreeNode> lookup, boolean details, String searchTerm) throws Exception {
         StringBuilder result = new StringBuilder();
         result.append("[{\"id\":" + jsTreeId + ",\"state\":{\"opened\":true},\"text\":\"");
         List<Name> children = new ArrayList<Name>();
@@ -451,8 +452,8 @@ public class JSTreeService {
         if (children.size() > 0 || (details && name != null && name.getAttributes() != null && name.getAttributes().size() > 1)) {
             result.append(",\"children\":[");
             int lastId = 0;
-            if (lastJSTreeIdMap.get(jsTreeId) != null){
-                lastId = lastJSTreeIdMap.get(jsTreeId);
+            if (lastJSTreeIdMap.get(tokenString) != null){
+                lastId = lastJSTreeIdMap.get(tokenString);
             }
             int count = 0;
             for (Name child : children) {
@@ -460,7 +461,7 @@ public class JSTreeService {
                 if (count++ > 0) {
                     result.append(",");
                 }
-                lastJSTreeIdMap.put(jsTreeId, ++lastId);
+                lastJSTreeIdMap.put(tokenString, ++lastId);
                 JSTreeService.NameOrValue nameOrValue = new JSTreeService.NameOrValue();
                 nameOrValue.values = null;
                 nameOrValue.name = child;
@@ -483,7 +484,7 @@ public class JSTreeService {
                         if (count++ > 0) {
                             result.append(",");
                         }
-                        lastJSTreeIdMap.put(jsTreeId, ++lastId);
+                        lastJSTreeIdMap.put(tokenString, ++lastId);
                         JSTreeService.NameOrValue nameOrValue = new JSTreeService.NameOrValue();
                         nameOrValue.values = null;
                         nameOrValue.name = name;
@@ -499,7 +500,7 @@ public class JSTreeService {
 
             result.append("]");
         } else {
-            result.append(getJsonDataforOneName(name, jsTreeId));
+            result.append(getJsonDataforOneName(tokenString, name, jsTreeId));
         }
         result.append(",\"type\":\"");
         if (children.size() > 0) {
@@ -518,7 +519,7 @@ public class JSTreeService {
         return result.toString();
     }
 
-    public String getJsonDataforOneName(final Name name, String jsTreeId) throws Exception {
+    public String getJsonDataforOneName(final String tokenString, final Name name, String jsTreeId) throws Exception {
         final StringBuilder sb = new StringBuilder();
         Set<Name> names = new HashSet<Name>();
         names.add(name);
@@ -530,8 +531,8 @@ public class JSTreeService {
         }
         sb.append(", \"children\":[");
         int lastId = 0;
-        if (lastJSTreeIdMap.get(jsTreeId) != null){
-            lastId = lastJSTreeIdMap.put(jsTreeId, ++lastId);
+        if (lastJSTreeIdMap.get(tokenString) != null){
+            lastId = lastJSTreeIdMap.put(tokenString, ++lastId);
         }
         int count = 0;
         for (Set<Name> valNames : showValues.keySet()) {
@@ -539,7 +540,7 @@ public class JSTreeService {
             if (count++ > 0) {
                 sb.append(",");
             }
-            lastJSTreeIdMap.put(jsTreeId, ++lastId);
+            lastJSTreeIdMap.put(tokenString, ++lastId);
             JSTreeService.NameOrValue nameOrValue = new JSTreeService.NameOrValue();
             nameOrValue.values = values;
             nameOrValue.name = null;

@@ -128,7 +128,7 @@ public final class Name extends AzquoMemoryDBEntity {
         return null;
     }
 
-    // for convenience but be careful where it is used . . .
+    /* what was this for? Commenting
     public String getDisplayNameForLanguages(List<String> languages) {
         for (String language : languages) {
             String toReturn = getAttribute(language, false, new HashSet<Name>());
@@ -137,7 +137,7 @@ public final class Name extends AzquoMemoryDBEntity {
             }
         }
         return getDefaultDisplayName();
-    }
+    }*/
     // provenance immutable. If it were not then would need to clone
 
     public Provenance getProvenance() {
@@ -165,13 +165,14 @@ public final class Name extends AzquoMemoryDBEntity {
     @Override
     public String toString() {
         return "Name{" +
-                "id='" + getId() + '\'' +
-                "attributes='" + nameAttributes.attributeKeys + '\'' +
-                "attribute values='" + nameAttributes.attributeValues + '\'' +
+                "id=" + getId() +
+                ", provenance=" + provenance +
+                ", additive=" + additive +
+                ", nameAttributes=" + nameAttributes +
                 '}';
     }
 
-    // we assume sets are built on concurrent hash map and lists are not modifiable
+// we assume sets are built on concurrent hash map and lists are not modifiable
     // even if based on concurrent hash map we don't want anything external modifying it, make the set unmodifiable
 
     public Collection<Value> getValues() {
