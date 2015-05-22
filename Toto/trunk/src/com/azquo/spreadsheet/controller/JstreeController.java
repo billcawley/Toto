@@ -66,6 +66,8 @@ public class JstreeController {
 
             if ((database == null || database.length() == 0) && loggedInUser.getDatabase() != null) {
                 database = loggedInUser.getDatabase().getName();
+            } else {
+                loginService.switchDatabase(loggedInUser, database);
             }
             // from here I need to move code that references db objects (JsTreeNode Does) out of the controller into the service
             // the service may have some controller and view code but we just have to put up with that for the mo.
