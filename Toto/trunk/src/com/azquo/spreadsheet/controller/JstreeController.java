@@ -71,7 +71,8 @@ public class JstreeController {
             }
             // from here I need to move code that references db objects (JsTreeNode Does) out of the controller into the service
             // the service may have some controller and view code but we just have to put up with that for the mo.
-            String backupSearchTerm = null;
+
+            String backupSearchTerm = "";
             if (loggedInUser.getAzquoBook() != null){
                 backupSearchTerm =loggedInUser.getAzquoBook().getRangeData("az_inputInspectChoice");// don't reallyunderstand, what's important is that this is now client side
             }
