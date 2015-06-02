@@ -41,6 +41,7 @@ public class ManageDatabasesController {
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "createDatabase", required = false) String createDatabase
+            , @RequestParam(value = "emptyId", required = false) String emptyId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "backupTarget", required = false) String backupTarget
             , @RequestParam(value = "summaryLevel", required = false) String summaryLevel
@@ -56,6 +57,9 @@ public class ManageDatabasesController {
             try {
                 if (createDatabase != null && !createDatabase.isEmpty()) {
                     adminService.createDatabase(createDatabase, loggedInUser);
+                }
+                if (emptyId != null && NumberUtils.isNumber(emptyId)) {
+                    adminService.emptyDatabaseById(loggedInUser, Integer.parseInt(emptyId));
                 }
                 if (deleteId != null && NumberUtils.isNumber(deleteId)) {
                     adminService.removeDatabaseById(loggedInUser, Integer.parseInt(deleteId));
