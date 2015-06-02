@@ -545,7 +545,7 @@ public class JSTreeService {
             nameOrValue.values = values;
             nameOrValue.name = null;
             JSTreeService.JsTreeNode newNode = new JSTreeService.JsTreeNode(nameOrValue, name);
-            final Map<String, JsTreeNode> stringJsTreeNodeMap = lookupMap.get(jsTreeId);
+            final Map<String, JsTreeNode> stringJsTreeNodeMap = lookupMap.get(tokenString);
             stringJsTreeNodeMap.put(lastId + "", newNode);// asking for a null pointer perhaps, geuss lets see what happens
             if (count > 100) {
                 sb.append("{\"id\":" + lastId + ",\"text\":\"" + (showValues.size() - 100) + " more....\"}");
