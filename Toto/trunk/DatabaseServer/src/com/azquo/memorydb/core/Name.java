@@ -396,9 +396,12 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public void addChildWillBePersisted(Name child, int position) throws Exception {
         checkDatabaseMatches(child);
-        if (child.equals(this) || findAllParents().contains(child)) {
+        if (child.equals(this)) return;//don't put child into itself
+        /*removing this check - it takes far too long - maybe should make it optional
+        if (findAllParents().contains(child)) {
             throw new Exception("error cannot assign child due to circular reference, " + child + " cannot be added to " + this);
         }
+        */
         // NOTE!! for the set version we're now just using a set backed by a concurrent hash map NOT liked hashset, for large child sets ordering will be ignored!
         // while childrenasaset is thread safe I think I'm going to need to synchronize the lot to make make state more consistent
         synchronized (this) {
@@ -442,10 +445,13 @@ public final class Name extends AzquoMemoryDBEntity {
         synchronized (this) {
             if (getChildren().contains(name)) { // then something to remove
                 name.removeFromParents(this);
+                /*THIS CONDITION NO LONGER APPLIES
+
                 //don't allow names that have previously had parents to fall out of topparent set
                 if (name.getParents().size() == 0) {
                     this.findATopParent().addChildWillBePersisted(name);//revert to top parent (Note that, if 'this' is top parent, then it will be re-instated!
                 }
+                */
 
                 if (childrenAsSet != null) {
                     childrenAsSet.remove(name);
