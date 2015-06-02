@@ -1564,13 +1564,17 @@ public class AzquoBook {
 
     public String convertSheetToCSV(final String tempFileName, final int sheetNo) throws Exception {
         Worksheet sheet = wb.getWorksheets().get(sheetNo);
+        boolean transpose = false;
         String fileType = sheet.getName();
+        if (fileType.toLowerCase().contains("transpose")){
+            transpose= true;
+        }
         File temp = File.createTempFile(tempFileName.substring(0, tempFileName.length() - 4), "." + fileType);
         String tempName = temp.getPath();
         temp.deleteOnExit();
         //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
         CsvWriter csvW = new CsvWriter(new FileWriter(tempName), '\t');
-        convertRangeToCSV(sheet, csvW, null, null);
+        convertRangeToCSV(sheet, csvW, null, null, transpose);
         csvW.close();
         return tempName;
     }
@@ -1581,8 +1585,8 @@ public class AzquoBook {
         String tempName = temp.getPath();
         temp.deleteOnExit();
         CsvWriter csvW = new CsvWriter(new FileWriter(tempName), '\t');
-        convertRangeToCSV(azquoSheet, csvW, getRange("az_columnheadings" + region), null);
-        convertRangeToCSV(azquoSheet, csvW, getRange("az_dataRegion" + region), newNames);
+        convertRangeToCSV(azquoSheet, csvW, getRange("az_columnheadings" + region), null, false);
+        convertRangeToCSV(azquoSheet, csvW, getRange("az_dataRegion" + region), newNames, false);
         csvW.close();
         InputStream uploadFile = new FileInputStream(tempName);
         fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
@@ -1595,7 +1599,25 @@ public class AzquoBook {
         }
     }
 
-    public void convertRangeToCSV(final Worksheet sheet, final CsvWriter csvW, Range range, Map<String, String> newNames) throws Exception {
+    private void writeCell(Cells cells, int r, int c, CsvWriter csvW, Map<String,String> newNames) throws Exception{
+        Cell cell = cells.get(r, c);
+        //if (colCount++ > 0) bw.write('\t');
+        if (cell != null && cell.getType() != CellValueType.IS_NULL) {
+            String cellFormat = convertDates(cell.getStringValue());
+            if (newNames != null && newNames.get(cellFormat) != null) {
+                csvW.write(newNames.get(cellFormat));
+            } else {
+                csvW.write(cellFormat);
+            }
+        } else {
+            csvW.write("");
+        }
+
+    }
+
+
+
+    public void convertRangeToCSV(final Worksheet sheet, final CsvWriter csvW, Range range, Map<String, String> newNames, boolean transpose) throws Exception {
         Row row;
         Cell cell;
         Cells cells = sheet.getCells();
@@ -1610,26 +1632,26 @@ public class AzquoBook {
             rows = startRow + range.getRowCount() - 1;
             maxCol = startCol + range.getColumnCount() - 1;
         }
-        for (int r = startRow; r <= rows; r++) {
-            row = cells.getRows().get(r);
-            if (row != null) {
-                //System.out.println("Excel row " + r);
-                //int colCount = 0;
-                for (int c = startCol; c <= maxCol; c++) {
-                    cell = cells.get(r, c);
-                    //if (colCount++ > 0) bw.write('\t');
-                    if (cell != null && cell.getType() != CellValueType.IS_NULL) {
-                        String cellFormat = convertDates(cell.getStringValue());
-                        if (newNames != null && newNames.get(cellFormat) != null) {
-                            csvW.write(newNames.get(cellFormat));
-                        } else {
-                            csvW.write(cellFormat);
-                        }
-                    } else {
-                        csvW.write("");
+
+        if (!transpose) {
+            for (int r = startRow; r <= rows; r++) {
+                row = cells.getRows().get(r);
+                if (row != null) {
+                    //System.out.println("Excel row " + r);
+                    //int colCount = 0;
+                    for (int c = startCol; c <= maxCol; c++) {
+                        writeCell(cells,r,c,csvW,newNames);
                     }
+                    csvW.endRecord();
+                }
+            }
+        }else {
+            for (int c = startCol; c <= maxCol; c++) {
+                for (int r = startRow; r <= rows; r++) {
+                    writeCell(cells, r, c, csvW, newNames);
                 }
                 csvW.endRecord();
+
             }
         }
     }
