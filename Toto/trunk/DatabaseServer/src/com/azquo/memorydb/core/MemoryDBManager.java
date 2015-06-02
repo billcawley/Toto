@@ -54,6 +54,12 @@ public final class MemoryDBManager {
 
     }*/
 
+    public synchronized  void removeDBfromMap(String mysqlName) throws Exception {
+        if (memoryDatabaseMap.get(mysqlName) != null){
+            memoryDatabaseMap.remove(mysqlName);
+        }
+    }
+
     public synchronized void addNewToDBMap(String mysqlName) throws Exception {
         if (memoryDatabaseMap.get(mysqlName) != null) {
             throw new Exception("cannot create new memory database one attached to that mysql database already exists");
