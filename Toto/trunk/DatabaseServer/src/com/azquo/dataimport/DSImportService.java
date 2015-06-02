@@ -63,7 +63,7 @@ public class DSImportService {
         String childOfString;
         int identityHeading;
         int childHeading;
-        Name childOf;
+        Set<Name> childOf;
         String attribute;
         Set<Integer> peerHeadings;
         String plural;
@@ -122,11 +122,11 @@ public class DSImportService {
         // Edd just tweaking things. Notably if fields like this were already null the logic is redundant, I'll assume they were not
         String readClause = readClause(PARENTOF, clause);
         if (readClause != null) {
-            heading.parentOf = readClause;
+            heading.parentOf = readClause.replace(Name.QUOTE + "","");
         }
         readClause = readClause(CHILDOF, clause);
         if (readClause != null) {
-            heading.childOfString = readClause;
+            heading.childOfString = readClause.replace(Name.QUOTE + "","");
         }
         readClause = readClause(LANGUAGE, clause);
         if (readClause != null) {
@@ -208,7 +208,7 @@ public class DSImportService {
 
     private void interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, ImportHeading heading, List<String> attributeNames) throws Exception {
         StringTokenizer clauses = new StringTokenizer(headingString, ";");
-        heading.heading = clauses.nextToken();
+        heading.heading = clauses.nextToken().replace(Name.QUOTE + "","");
         heading.name = nameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames);//at this stage, look for a name, but don't create it unless necessary
         while (clauses.hasMoreTokens()) {
             interpretClause(azquoMemoryDBConnection, heading, clauses.nextToken().trim());
@@ -308,6 +308,21 @@ public class DSImportService {
         return found;
     }
 
+    public Name includeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<NameParent, Name> namesFound, String name, Set<Name> parents, boolean local, List<String> attributeNames) throws Exception {
+
+        Name child = null;
+        if (parents == null) {
+            child = includeInSet(azquoMemoryDBConnection, namesFound, name, null, local, attributeNames);
+        } else {
+            for (Name parent : parents) {
+                child = includeInSet(azquoMemoryDBConnection, namesFound, name, parent, local, attributeNames);
+
+            }
+        }
+        return child;
+    }
+
+
     public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, String fileType, List<String> attributeNames) throws Exception {
         // little local cache just to speed things up
         final HashMap<NameParent, Name> namesFound = new HashMap<NameParent, Name>();
@@ -341,7 +356,7 @@ public class DSImportService {
             }
             getCompositeValues(headings);
             valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
-            if (valuecount - lastReported > 5000) {
+            if (valuecount - lastReported >= 5000) {
                 System.out.println("imported value count " + valuecount);
                 lastReported = valuecount;
             }
@@ -357,6 +372,7 @@ public class DSImportService {
         //if the file is of type (e.g.) 'sales' and there is a name 'dataimport sales', thisis uses as an interpreter.  It need not interpret every column heading, but
         // any attribute of the same name as a column heading will be used.
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
+        String lastHeading = "";
         for (String header : headers) {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 ImportHeading heading = new ImportHeading();
@@ -381,6 +397,15 @@ public class DSImportService {
 
                 }
                 heading.column = col;
+                if (head.startsWith(";")) {
+                    head = lastHeading + head;
+                } else {
+                    if (head.contains(";")){
+                        lastHeading = head.substring(0, head.indexOf(";"));
+                    }else{
+                        lastHeading = head;
+                    }
+                }
                 interpretHeading(azquoMemoryDBConnection, head, heading, attributeNames);
                 headings.add(heading);
             } else {
@@ -408,7 +433,10 @@ public class DSImportService {
                 handleParent(azquoMemoryDBConnection, namesFound, importHeading, headings, attributeNames);
             }
         }
+        int toolong = 20;
+        long time = System.currentTimeMillis();
         for (ImportHeading heading : headings) {
+
             if (heading.contextItem) {
                 contextNames.add(heading.name);
                 if (heading.name.getPeers().size() > 0) {
@@ -497,20 +525,30 @@ public class DSImportService {
                     handleAttribute(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
                 }
                 if (heading.parentOf != null && !heading.local) {
-                    handleParent(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
+                      handleParent(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
                 }
 
                 if (heading.childOf != null) {
                     if (heading.lineName != null) {
-                        heading.childOf.addChildWillBePersisted(heading.lineName);
+                        for (Name parent:heading.childOf){
+                            parent.addChildWillBePersisted(heading.lineName);
+                        }
                     } else {
                         String childNameString = heading.lineValue;
                         if (childNameString.length() > 0) {
-                            heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childNameString, heading.childOf, heading.local, attributeNames);
+                            for (Name parent:heading.childOf){
+                                heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childNameString, parent, heading.local, attributeNames);
+                            }
                         }
                     }
                 }
+
             }
+            long now = System.currentTimeMillis();
+            if (now - time > toolong){
+                int j=1;
+            }
+            time = System.currentTimeMillis();
         }
         return valueCount;
     }
@@ -542,8 +580,7 @@ public class DSImportService {
                         importHeading.peerHeadings.add(peerHeading);
                     }
                 }
-                if (importHeading.attribute != null && !importHeading.attribute.equals(Constants.DEFAULT_DISPLAY_NAME)) {
-                    //first remove the parent
+                if (importHeading.attribute != null){ // && !importHeading.attribute.equals(Constants.DEFAULT_DISPLAY_NAME)) {
                     if (importHeading.equalsString != null) {
                         importHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, importHeading.equalsString, null, false);//global name
                     } else {
@@ -566,7 +603,11 @@ public class DSImportService {
                     }
                 }
                 if (importHeading.childOfString != null) {
-                    importHeading.childOf = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, importHeading.childOfString, null, false);
+                    importHeading.childOf = new HashSet<Name>();
+                    String[] parents = importHeading.childOfString.split(",");//TODO this does not take into account names with commas inside.......
+                    for (String parent:parents){
+                        importHeading.childOf.add(nameService.findOrCreateNameInParent(azquoMemoryDBConnection, parent, null, false));
+                    }
                 }
                 if (importHeading.parentOf != null) {
                     importHeading.childHeading = findHeading(importHeading.parentOf, headings);
@@ -592,17 +633,29 @@ public class DSImportService {
     }
 
     private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
+
+        List<String> languages = new ArrayList<String>();
+        if (heading.attribute != null){
+            languages.add(heading.attribute);
+        }else{
+            languages.addAll(attributeNames);
+        }
+
         ImportHeading childHeading = headings.get(heading.childHeading);
         if (heading.lineValue.length() == 0) {
             return;
         }
-        if (heading.lineName != null && heading.childOf != null) {
-            heading.childOf.addChildWillBePersisted(heading.lineName);
+        if (heading.lineName != null){
+            if (heading.childOf != null) {
+                for (Name parent:heading.childOf){
+                    parent.addChildWillBePersisted(heading.lineName);
+                }
+            }
         } else {
-            heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, attributeNames);
-        }
+            heading.lineName = includeInParents(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, languages);
+         }
         if (childHeading.lineName == null) {
-            childHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childHeading.lineValue, heading.lineName, heading.local, attributeNames);
+            childHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childHeading.lineValue, heading.lineName, heading.local, languages);
         }
         heading.lineName.addChildWillBePersisted(childHeading.lineName);
     }
@@ -616,9 +669,7 @@ public class DSImportService {
             }
             List<String> localAttributes = new ArrayList<String>();
             localAttributes.add(identity.attribute);
-            localAttributes.addAll(attributeNames);
-
-            identityHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, identityHeading.lineValue, identityHeading.name, false, localAttributes);
+            identityHeading.lineName = includeInParents(azquoMemoryDBConnection, namesFound, identityHeading.lineValue, identityHeading.childOf, false, localAttributes);
         }
         String attribute = heading.attribute;
         if (attribute == null) {
