@@ -105,11 +105,13 @@ public class DSAdminService {
 
     public void emptyDatabase(String mysqlName) throws Exception {
         mySQLDatabaseManager.emptyDatabase(mysqlName);
+        memoryDBManager.removeDBfromMap(mysqlName);
     }
 
 
     public void dropDatabase(String mysqlName) throws Exception {
         mySQLDatabaseManager.dropDatabase(mysqlName);
+        memoryDBManager.removeDBfromMap(mysqlName);
     }
 
     public void createDatabase(final String mysqlName) throws Exception {
