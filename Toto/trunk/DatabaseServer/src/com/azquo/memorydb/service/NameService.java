@@ -190,11 +190,6 @@ public final class NameService {
     }
 
     public void clearChildren(Name name) throws Exception {
-        if (name.getParents().size() == 0) {
-            //can't clear from topparent
-            return;
-        }
-        // after changes to name it's safe to iterate over name.getChildren
         for (Name child : name.getChildren()) {
             name.removeFromChildrenWillBePersisted(child);
         }
