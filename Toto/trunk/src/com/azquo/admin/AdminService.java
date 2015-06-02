@@ -388,4 +388,16 @@ public class AdminService {
             dropDatabase(mySQLName);
         }
     }
+
+    public void emptyDatabaseById(LoggedInUser loggedInUser,  int databaseId) throws Exception {
+        Database db = databaseDAO.findById(databaseId);
+        if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+            String mySQLName = db.getMySQLName();
+            emptyDatabase(mySQLName);
+        }
+    }
+
+
+
+
 }
