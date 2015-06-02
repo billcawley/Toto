@@ -55,6 +55,7 @@
       <td>${database.nameCount}</td>
       <td>${database.valueCount}</td>
         <td><a href="#" onclick="window.open('/api/Jstree?op=new&database=${database.urlEncodedName}', '_blank', 'toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600')">Inspect</a></td>
+        <td><a href="/api/ManageDatabases?emptyId=${database.id}" onclick="return confirm('Are you sure?')">Empty</a></td>
         <td><a href="/api/ManageDatabases?deleteId=${database.id}" onclick="return confirm('Are you sure?')">Delete</a></td>
     </tr>
   </c:forEach>
