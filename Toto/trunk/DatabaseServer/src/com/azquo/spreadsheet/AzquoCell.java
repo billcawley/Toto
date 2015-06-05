@@ -21,18 +21,23 @@ public class AzquoCell {
     private final List<DataRegionHeading> rowHeadings;
     private final List<DataRegionHeading> columnHeadings;
     private final List<Name> contexts;
+    // where this cell was before sorting, can be passed on through to the front end, makes finding a specifric cell later easier
+    private final int unsortedRow;
+    private final int unsortedCol;
     private String stringValue;
     private double doubleValue;
     private boolean changed;
     private boolean highlighted;
 
     public AzquoCell(boolean locked, ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName, List<DataRegionHeading> rowHeadings
-            , List<DataRegionHeading> columnHeadings, List<Name> contexts, String stringValue, double doubleValue, boolean highlighted) {
+            , List<DataRegionHeading> columnHeadings, List<Name> contexts, int unsortedRow, int unsortedCol, String stringValue, double doubleValue, boolean highlighted) {
         this.locked = locked;
         this.listOfValuesOrNamesAndAttributeName = listOfValuesOrNamesAndAttributeName;
         this.rowHeadings = rowHeadings;
         this.columnHeadings = columnHeadings;
         this.contexts = contexts;
+        this.unsortedRow = unsortedRow;
+        this.unsortedCol = unsortedCol;
         this.stringValue = stringValue;
         this.doubleValue = doubleValue;
         this.highlighted = highlighted;
@@ -90,5 +95,13 @@ public class AzquoCell {
 
     public void setHighlighted(boolean highlighted) {
         this.highlighted = highlighted;
+    }
+
+    public int getUnsortedRow() {
+        return unsortedRow;
+    }
+
+    public int getUnsortedCol() {
+        return unsortedCol;
     }
 }

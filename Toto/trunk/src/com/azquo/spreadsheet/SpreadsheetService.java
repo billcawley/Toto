@@ -12,6 +12,7 @@ import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.view.AzquoBook;
+import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import org.apache.log4j.Logger;
 import org.apache.velocity.Template;
@@ -29,8 +30,7 @@ import java.net.InetAddress;
 import java.util.*;
 
 // it seems that trying to configure the properties in spring is a problem
-// todo : see if upgrading spring to 4.2 makes this easier?
-// todo : try to address proper use of protected and private given how I've shifter lots of classes around. This could apply to all sorts in the system.
+// this works but I'm a bit fed up of something that should be simple, go to a simple classpath read??
 @Configuration
 @PropertySource({"classpath:azquo.properties"})
 
@@ -346,7 +346,7 @@ public class SpreadsheetService {
         return null;
     }
 
-    public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) {
+    public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) throws Exception {
         return loggedInUser.getAzquoBook().getProvenance(loggedInUser, row, col, jsonFunction);
     }
 
@@ -510,33 +510,19 @@ public class SpreadsheetService {
         return val;
     }
 
-    // todo, when cell contents are from attributes??
-    // this function seemed to be opverly complex before taking into account ordering and things. All we care about is matching to what was sent. What was sent is what should be in the sent cells
-    public String formatDataRegionProvenanceForOutput(LoggedInUser loggedInUser, String region, int rowInt, int colInt, String jsonFunction) {
-        return "todo : provenance on a data cell";
-/*        final List<List<AzquoCell>> sentCells = loggedInConnection.getSentCells(region);
-        if (sentCells != null) {
-            if (sentCells.get(rowInt) != null) {
-                final List<AzquoCell> rowValues = sentCells.get(rowInt);
-                if (rowValues.get(colInt) != null) {
-                    final ListOfValuesOrNamesAndAttributeName valuesForCell = rowValues.get(colInt).getListOfValuesOrNamesAndAttributeName();
-                    //Set<Name> specialForProvenance = new HashSet<Name>();
-                    if (valuesForCell.getValues() != null) {
-                        return formatCellProvenanceForOutput(loggedInConnection, valuesForCell.getValues(), jsonFunction);
-                    }
-                    return "";
-                } else {
-                    return ""; //return "error: col out of range : " + colInt;
-                }
-            } else {
-                return ""; //"error: row out of range : " + rowInt;
-            }
-        } else {
-            return ""; //"error: data has not been sent for that row/col/region";
-        }*/
+    // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
+    public String formatDataRegionProvenanceForOutput(LoggedInUser loggedInUser, String region, int rowInt, int colInt, String jsonFunction) throws Exception {
+        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
+        if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
+            final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
+            return rmiClient.getServerInterface().formatDataRegionProvenanceForOutput(loggedInUser.getDataAccessToken(),cellsAndHeadingsForDisplay.getRowHeadingsSource()
+                    ,cellsAndHeadingsForDisplay.getColHeadingsSource(),cellsAndHeadingsForDisplay.getContextSource()
+                    ,cellForDisplay.getUnsortedRow(),cellForDisplay.getUnsortedCol(),jsonFunction);
+        }
+        return ""; // maybe "not found"?
     }
 
-    // todo, make work again at some point
+    // todo, make work again at some point - note this simpler function is used when dealing with headings
 /*
     public String formatProvenanceForOutput(Provenance provenance, String jsonFunction) {
         String output;

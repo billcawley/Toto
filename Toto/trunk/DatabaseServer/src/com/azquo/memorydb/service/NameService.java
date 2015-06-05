@@ -791,7 +791,6 @@ public final class NameService {
             List<Name> selectedNames = new ArrayList<Name>();
             for (Name sname:namesFound){
                 if (sname.getDefaultDisplayName().toLowerCase().contains(toFind)){
-
                     selectedNames.add(sname);
                 }
             }

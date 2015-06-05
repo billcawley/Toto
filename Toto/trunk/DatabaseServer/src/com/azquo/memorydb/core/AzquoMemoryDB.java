@@ -4,7 +4,6 @@ import com.azquo.memorydb.dao.JsonRecordTransport;
 import com.azquo.memorydb.dao.StandardDAO;
 import com.github.holodnov.calculator.ObjectSizeCalculator;
 import org.apache.log4j.Logger;
-
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,8 +21,10 @@ import java.util.concurrent.TimeUnit;
  * <p/>
  * TODO - this whole intern business, not sure if it matters so much on the get, it's the set I care about
  */
+
 public final class AzquoMemoryDB {
 
+    Properties azquoProperties = new Properties();
 
     private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
 
@@ -55,6 +56,7 @@ public final class AzquoMemoryDB {
     // Initialising maps concurrently here,
 
     protected AzquoMemoryDB(String mysqlName, StandardDAO standardDAO) throws Exception {
+        azquoProperties.load(getClass().getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring
         this.mysqlName = mysqlName;
         this.standardDAO = standardDAO;
         needsLoading = true;
@@ -101,7 +103,6 @@ public final class AzquoMemoryDB {
         return needsLoading;
     }
 
-    // now passing app services
     final int mb = 1024 * 1024;
     private static final int PROVENANCE_MODE = 0;
     private static final int NAME_MODE = 1;
@@ -144,8 +145,7 @@ public final class AzquoMemoryDB {
 
     synchronized private void loadData() {
         int loadingThreads = 4; // this may need adjusting depending on server power. Maybe detect as in the spreadsheet service
-        // todo - load memory track from a config file
-        boolean memoryTrack = false;
+        boolean memoryTrack = "true".equals(azquoProperties.getProperty("memorytrack"));
         if (needsLoading) { // only allow it once!
             long track = System.currentTimeMillis();
             System.out.println("loading data for " + getMySQLName());
@@ -181,14 +181,13 @@ public final class AzquoMemoryDB {
                 final int step = 500000; // one can speed Mysql using where id > from order by but our ids are shared across different tables. Not too bothered about persistence save/load speed at the mo
                 int from = 0;
 
-                ExecutorService executor = Executors.newFixedThreadPool(loadingThreads); // picking 10 based on an example I saw . . .
+                ExecutorService executor = Executors.newFixedThreadPool(loadingThreads);
                 List<JsonRecordTransport> provenance = standardDAO.findFromTable(this, StandardDAO.PersistedTable.provenance.name(), from, step);
                 while (!provenance.isEmpty()) {
                     executor.execute(new SQLLoadRunner(PROVENANCE_MODE, provenance, this));
                     provenaceLoaded += provenance.size();
                     from += step;
                     provenance = standardDAO.findFromTable(this, StandardDAO.PersistedTable.provenance.name(), from, step);
-
                 }
                 from = 0;
                 List<JsonRecordTransport> names = standardDAO.findFromTable(this, StandardDAO.PersistedTable.name.name(), from, step);

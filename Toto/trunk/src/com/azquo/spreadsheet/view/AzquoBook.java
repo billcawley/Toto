@@ -412,7 +412,6 @@ public class AzquoBook {
         if (rowHeadings == null) {
             throw new Exception("no range az_rowHeadings" + region);
         }
-        // todo, get rid of the column and row heading lists, do this inside the service function, preparing for the server split.
         //don't bother to display yet - maybe need to filter out or sort
         Range columnHeadings = getRange("az_columnheadings" + region);
         if (columnHeadings == null) {
@@ -1323,7 +1322,7 @@ public class AzquoBook {
         return null;
     }
 
-    public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) {
+    public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) throws Exception {
         RegionInfo regionInfo = getRegionInfo(row, col);
         //todo make provenance on headings work again
         if (regionInfo == null) return "";

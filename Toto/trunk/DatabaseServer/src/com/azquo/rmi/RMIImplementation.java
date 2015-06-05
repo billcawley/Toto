@@ -42,7 +42,7 @@ public class RMIImplementation implements RMIInterface {
         try {
             dsAdminService.emptyDatabase(mysqlName);
         } catch (Exception e) {
-            throw new RemoteException("Databse Server Exception", e);// I think this is reasonable for the mo?
+            throw new RemoteException("Database Server Exception", e);// I think this is reasonable for the mo?
         }
     }
 
@@ -51,7 +51,7 @@ public class RMIImplementation implements RMIInterface {
         try {
             dsAdminService.dropDatabase(mysqlName);
         } catch (Exception e) {
-            throw new RemoteException("Databse Server Exception", e);
+            throw new RemoteException("Database Server Exception", e);
         }
     }
 
@@ -60,7 +60,7 @@ public class RMIImplementation implements RMIInterface {
         try {
             dsAdminService.createDatabase(mysqlName);
         } catch (Exception e) {
-            throw new RemoteException("Databse Server Exception", e);
+            throw new RemoteException("Database Server Exception", e);
         }
     }
 
@@ -71,7 +71,7 @@ public class RMIImplementation implements RMIInterface {
         try {
             return dsDataLoadService.findLastUpdate(databaseAccessToken, remoteAddress);
         } catch (Exception e) {
-            throw new RemoteException("Databse Server Exception", e);
+            throw new RemoteException("Database Server Exception", e);
         }
     }
 
@@ -80,7 +80,7 @@ public class RMIImplementation implements RMIInterface {
         try {
             return dsDataLoadService.magentoDBNeedsSettingUp(databaseAccessToken);
         } catch (Exception e) {
-            throw new RemoteException("Databse Server Exception", e);
+            throw new RemoteException("Database Server Exception", e);
         }
     }
 
@@ -89,7 +89,7 @@ public class RMIImplementation implements RMIInterface {
         try {
             return dsDataLoadService.findRequiredTables(databaseAccessToken, remoteAddress);
         } catch (Exception e) {
-            throw new RemoteException("Databse Server Exception", e);
+            throw new RemoteException("Database Server Exception", e);
         }
     }
 
@@ -98,7 +98,7 @@ public class RMIImplementation implements RMIInterface {
         try {
             dsDataLoadService.loadData(databaseAccessToken, filePath, remoteAddress);
         } catch (Exception e) {
-            throw new RemoteException("Databse Server Exception", e);
+            throw new RemoteException("Database Server Exception", e);
         }
     }
     // import
@@ -107,7 +107,7 @@ public class RMIImplementation implements RMIInterface {
         try {
             dsImportService.readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames);
         } catch (Exception e) {
-            throw new RemoteException("Databse Server Exception", e);
+            throw new RemoteException("Database Server Exception", e);
         }
     }
     // spreadsheet service
@@ -116,7 +116,7 @@ public class RMIImplementation implements RMIInterface {
         try {
             return dsSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource,filterCount,maxRows,maxCols,sortRow,sortCol);
         } catch (Exception e) {
-            throw new RemoteException("Databse Server Exception", e);
+            throw new RemoteException("Database Server Exception", e);
         }
     }
 
@@ -125,16 +125,25 @@ public class RMIImplementation implements RMIInterface {
         try {
             return jsTreeService.processRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, database, itemsChosen, position, backupSearchTerm);
         } catch (Exception e) {
-            throw new RemoteException("Databse Server Exception", e);
+            throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
         try {
-            return dsSpreadsheetService.getDropDownListForQuery(databaseAccessToken,query,languages);
+            return dsSpreadsheetService.getDropDownListForQuery(databaseAccessToken, query, languages);
         } catch (Exception e) {
-            throw new RemoteException("Databse Server Exception", e);
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+ 
+    @Override
+    public String formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, String jsonFunction) throws RemoteException {
+        try {
+            return dsSpreadsheetService.formatDataRegionProvenanceForOutput(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource,unsortedRow,unsortedCol,jsonFunction);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
         }
     }
 }

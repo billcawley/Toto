@@ -19,7 +19,6 @@
         -->
     <context:annotation-config/>
     <task:annotation-driven/>
-<!--    <context:property-placeholder location="/WEB-INF/azquo.properties"/> -->
 
     <!-- NOTE : this is not a pooled connection! Not a problem for Azquo's purposes generally but one would want one for more intense MySQL hammering
      something like

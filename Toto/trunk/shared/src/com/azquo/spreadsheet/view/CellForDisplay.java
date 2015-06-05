@@ -15,13 +15,18 @@ public class CellForDisplay implements Serializable {
     private boolean highlighted;
     // it's just convenient to put this here
     private boolean changed;
+    // for looking stuff up later (can do a fast lookup based on the unsorted position)
+    private final int unsortedRow;
+    private final int unsortedCol;
 
-    public CellForDisplay(boolean locked, String stringValue, double doubleValue, boolean highlighted) {
+    public CellForDisplay(boolean locked, String stringValue, double doubleValue, boolean highlighted, int unsortedRow, int unsortedCol) {
         this.locked = locked;
         this.stringValue = stringValue;
         this.doubleValue = doubleValue;
         this.highlighted = highlighted;
         changed = false;
+        this.unsortedRow = unsortedRow;
+        this.unsortedCol = unsortedCol;
     }
 
     public boolean isLocked() {
@@ -62,14 +67,24 @@ public class CellForDisplay implements Serializable {
         return changed;
     }
 
+    public int getUnsortedRow() {
+        return unsortedRow;
+    }
+
+    public int getUnsortedCol() {
+        return unsortedCol;
+    }
+
     @Override
     public String toString() {
-        return "AzquoCellForDisplay{" +
+        return "CellForDisplay{" +
                 "locked=" + locked +
                 ", stringValue='" + stringValue + '\'' +
                 ", doubleValue=" + doubleValue +
                 ", highlighted=" + highlighted +
+                ", changed=" + changed +
+                ", unsortedRow=" + unsortedRow +
+                ", unsortedCol=" + unsortedCol +
                 '}';
     }
-
 }
