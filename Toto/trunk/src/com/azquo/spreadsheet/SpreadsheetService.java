@@ -154,7 +154,8 @@ public class SpreadsheetService {
     // also there's html in here, view stuff, need to get rid of that
     // the report/database server is going to force the view/model split
 
-    public String readExcel(LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName, String message) throws Exception {
+    public String readExcel(LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName) throws Exception {
+        String message;
         String path = getHomeDir() + "/temp/";
         AzquoBook azquoBook = new AzquoBook(userChoiceDAO, this, importService);
         StringBuilder worksheet = new StringBuilder();
@@ -342,8 +343,7 @@ public class SpreadsheetService {
     }
 
     public String getJsonList(DatabaseAccessToken databaseAccessToken, String listName, String listChoice, String entered, String jsonFunction) throws  Exception{
-        // todo - proxy via RMI
-        return null;
+        return rmiClient.getServerInterface().getJsonList(databaseAccessToken,listName,listChoice,entered,jsonFunction);
     }
 
     public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) throws Exception {
@@ -464,29 +464,6 @@ public class SpreadsheetService {
         return rmiClient.getServerInterface().getDropDownListForQuery(databaseAccessToken, query, languages);
     }
 
-    // todo make sense of the bloody restrictcount parameter
-
-    public List<Integer> sortDoubleValues(int restrictCount, Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
-        final List<Integer> sortedValues = new ArrayList<Integer>();
-        if (restrictCount != 0) {
-            List<Map.Entry<Integer, Double>> list = new ArrayList<Map.Entry<Integer, Double>>(sortTotals.entrySet());
-            // sort list based on
-            Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {
-                public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
-                    return sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue());
-                }
-            });
-            for (Map.Entry<Integer, Double> aList : list) {
-                sortedValues.add(aList.getKey());
-            }
-        } else {
-            for (int i = 0; i < sortTotals.size(); i++) {
-                sortedValues.add(i);
-            }
-        }
-        return sortedValues;
-    }
-
     // function that can be called by the front end to deliver the data and headings
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
@@ -497,17 +474,6 @@ public class SpreadsheetService {
 
     public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) throws Exception{
         return rmiClient.getServerInterface().processJSTreeRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, database, itemsChosen, position, backupSearchTerm);
-    }
-
-    // used when comparing values. So ignore the currency symbol if the numbers are the same
-    private String stripCurrency(String val) {
-        //TODO we need to be able to detect other currencies
-
-        if (val.length() > 1 && "$£".contains(val.substring(0, 1))) {
-            return val.substring(1);
-
-        }
-        return val;
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)

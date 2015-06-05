@@ -1,7 +1,6 @@
 package com.azquo.spreadsheet;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.service.MutableBoolean;
@@ -46,12 +45,6 @@ public class DSSpreadsheetService {
     // best way to do this? A bean?
     public final StringUtils stringUtils;
 
-    static class SetNameChosen {
-        String setName;
-        List<Name> choiceList;
-        Name chosen;
-    }
-
     static class UniqueName {
         Name name;
         String string;
@@ -90,7 +83,7 @@ public class DSSpreadsheetService {
         return connection;
     }
 
-    public void anonymise(DatabaseAccessToken databaseAccessToken) throws Exception {
+/*    public void anonymise(DatabaseAccessToken databaseAccessToken) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         List<Name> anonNames = nameService.findContainingName(azquoMemoryDBConnection, "", Name.ANON);
 
@@ -118,7 +111,7 @@ public class DSSpreadsheetService {
                 }
             }
         }
-    }
+    }*/
 
 
     public String getJsonList(DatabaseAccessToken databaseAccessToken, String listName, String listChoice, String entered, String jsonFunction) throws Exception {
@@ -126,18 +119,15 @@ public class DSSpreadsheetService {
         try {
             List<Name> possibles = nameService.parseQuery(azquoMemoryDBConnection, listChoice + " select \"" + entered + "\"");
             List<String> nameStrings = getIndividualNames(possibles);
-            StringBuffer output = new StringBuffer();
+            StringBuilder output = new StringBuilder();
             output.append(jsonFunction + "({\"selection\":\"" + listName + "\",\"choices\":[");
             int count = 0;
             for (String nameString : nameStrings) {
                 if (count++ > 0) output.append(",");
                 output.append("\"" + nameString.replace("\"", "\\\"") + "\"");
             }
-
-
             output.append("]})");
             return output.toString();
-
         } catch (Exception e) {
             return "";
         }
@@ -505,7 +495,7 @@ seaports;children   container;children
     }
 
     // I guess headings when showing a jumble of values?
-
+/*
     public LinkedHashSet<Name> getHeadings(Map<Set<Name>, Set<Value>> showValues) {
         LinkedHashSet<Name> headings = new LinkedHashSet<Name>();
         // this may not be optimal, can sort later . . .
@@ -521,7 +511,7 @@ seaports;children   container;children
             }
         }
         return headings;
-    }
+    }*/
 
     // vanilla jackson might not be good enough but this is too much manual json writing I think
 
@@ -1126,7 +1116,7 @@ I think that this is an ideal candidate for multithreading to speed things up
         return toReturn;
     }
 
-    // for anonymiseing data
+    /* for anonymiseing data
     public void randomAdjust(Name name, double low, double high) {
         for (Value value : name.getValues()) {
             try {
@@ -1139,7 +1129,7 @@ I think that this is an ideal candidate for multithreading to speed things up
             }
         }
 
-    }
+    }*/
 
     // used when comparing values. So ignore the currency symbol if the numbers are the same
     private String stripCurrency(String val) {
@@ -1214,7 +1204,6 @@ I think that this is an ideal candidate for multithreading to speed things up
     public String formatCellProvenanceForOutput(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, String jsonFunction) {
         StringBuilder output = new StringBuilder();
         output.append(jsonFunction + "({\"provenance\":[{");
-        int count = 0;
         if (values.size() > 1 || (values.size() > 0 && values.get(0) != null)) {
             valueService.sortValues(values);
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings

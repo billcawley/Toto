@@ -159,7 +159,16 @@ public class RMIImplementation implements RMIInterface {
     @Override
     public String formatColumnHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> columnHeadingsSource, int row, int unsortedCol, String jsonFunction) throws RemoteException {
         try {
-            return dsSpreadsheetService.formatRowHeadingProvenanceForOutput(databaseAccessToken,columnHeadingsSource,row,unsortedCol,jsonFunction);
+            return dsSpreadsheetService.formatColumnHeadingProvenanceForOutput(databaseAccessToken,columnHeadingsSource,row,unsortedCol,jsonFunction);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public String getJsonList(DatabaseAccessToken databaseAccessToken, String listName, String listChoice, String entered, String jsonFunction) throws RemoteException {
+        try {
+            return dsSpreadsheetService.getJsonList(databaseAccessToken,listName,listChoice,entered,jsonFunction);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

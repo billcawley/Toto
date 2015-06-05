@@ -142,7 +142,7 @@ public class MagentoController {
             }
             if (op.equals("reports")) {
                 OnlineReport onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
-                return spreadsheetService.readExcel(loggedInUser, onlineReport, null, "");
+                return spreadsheetService.readExcel(loggedInUser, onlineReport, null);
             }
             return "unknown op";
         } catch (Exception e) {

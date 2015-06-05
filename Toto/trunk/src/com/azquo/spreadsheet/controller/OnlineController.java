@@ -278,7 +278,7 @@ public class OnlineController {
                     loggedInUser.setReportId(onlineReport.getId());
                     // jam 'em in the session for the moment, makes testing easier. As in see a report then try with &trynewsheet=true after
                     request.getSession().setAttribute(LOGGED_IN_USER, loggedInUser);
-                    result = spreadsheetService.readExcel(loggedInUser, onlineReport, spreadsheetName, "Right-click mouse for provenance");
+                    result = spreadsheetService.readExcel(loggedInUser, onlineReport, spreadsheetName); // was a message passed , "Right-click mouse for provenance" but not used I don't think
                 }
             /*
             BufferedReader br = new BufferedReader(new StringReader(result));
