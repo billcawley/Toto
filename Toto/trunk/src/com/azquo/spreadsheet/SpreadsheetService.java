@@ -491,12 +491,12 @@ public class SpreadsheetService {
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol) throws Exception {
-        return rmiClient.getServerInterface().getCellsAndHeadingsForDisplay(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortCol);
+            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, int highlightDays) throws Exception {
+        return rmiClient.getServerInterface().getCellsAndHeadingsForDisplay(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortCol, highlightDays);
     }
 
     public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) throws Exception{
-        return rmiClient.getServerInterface().processJSTreeRequest(dataAccessToken, json,jsTreeId,topNode,op,parent,parents,database,itemsChosen,position,backupSearchTerm);
+        return rmiClient.getServerInterface().processJSTreeRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, database, itemsChosen, position, backupSearchTerm);
     }
 
     // used when comparing values. So ignore the currency symbol if the numbers are the same
@@ -515,29 +515,32 @@ public class SpreadsheetService {
         final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
         if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
-            return rmiClient.getServerInterface().formatDataRegionProvenanceForOutput(loggedInUser.getDataAccessToken(),cellsAndHeadingsForDisplay.getRowHeadingsSource()
-                    ,cellsAndHeadingsForDisplay.getColHeadingsSource(),cellsAndHeadingsForDisplay.getContextSource()
-                    ,cellForDisplay.getUnsortedRow(),cellForDisplay.getUnsortedCol(),jsonFunction);
+            return rmiClient.getServerInterface().formatDataRegionProvenanceForOutput(loggedInUser.getDataAccessToken(), cellsAndHeadingsForDisplay.getRowHeadingsSource()
+                    , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
+                    , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(), jsonFunction);
         }
         return ""; // maybe "not found"?
     }
 
-    // todo, make work again at some point - note this simpler function is used when dealing with headings
-/*
-    public String formatProvenanceForOutput(Provenance provenance, String jsonFunction) {
-        String output;
-        if (provenance == null) {
-            output = "{provenance:[{\"who\":\"no provenance\"}]}";
-        } else {
-            //String user = provenance.getUser();
-            output = "{\"provenance\":[{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"value\":\"\",\"context\":\"" + provenance.getContext().replace("\n", ",") + "\"}]}";
+    public String formatRowHeadingProvenanceForOutput(LoggedInUser loggedInUser, String region, int rowInt, int colInt, String jsonFunction) throws Exception {
+        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
+        if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null && cellsAndHeadingsForDisplay.getData().get(rowInt).get(0) != null) {
+            final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(0); // ok to be clear what's going on : I'm grabbing one cell from that row to get the unsorted row index
+            return rmiClient.getServerInterface().formatRowHeadingProvenanceForOutput(loggedInUser.getDataAccessToken(), cellsAndHeadingsForDisplay.getRowHeadingsSource()
+                    , cellForDisplay.getUnsortedRow(), colInt, jsonFunction);
         }
-        if (jsonFunction != null && jsonFunction.length() > 0) {
-            return jsonFunction + "(" + output + ")";
-        } else {
-            return output;
+        return ""; // maybe "not found"?
+    }
+
+    public String formatColumnHeadingProvenanceForOutput(LoggedInUser loggedInUser, String region, int rowInt, int colInt, String jsonFunction) throws Exception {
+        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
+        if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(0) != null && cellsAndHeadingsForDisplay.getData().get(0).get(colInt) != null) {
+            final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(0).get(colInt); // ok to be clear what's going on : I'm grabbing one cell from that column to cet the unsorted column index
+            return rmiClient.getServerInterface().formatColumnHeadingProvenanceForOutput(loggedInUser.getDataAccessToken(),cellsAndHeadingsForDisplay.getColHeadingsSource()
+                    ,rowInt,cellForDisplay.getUnsortedCol(),jsonFunction);
         }
-    }*/
+        return ""; // maybe "not found"?
+    }
 
     // todo : make work again after code split
     public void saveData(LoggedInUser loggedInUser, String region) throws Exception {

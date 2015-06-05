@@ -143,7 +143,7 @@ public class ZKAzquoBookUtils {
             // not going to do this just yet
          if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
-                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, loggedInUser.getSortRow(region), loggedInUser.getSortCol(region));
+                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, loggedInUser.getSortRow(region), loggedInUser.getSortCol(region), 0); // todo - highlighting
             // todo : how to indicate sortable rows/cols
             // now, put the headings into the sheet!
             // might be factored into fill range in a bit

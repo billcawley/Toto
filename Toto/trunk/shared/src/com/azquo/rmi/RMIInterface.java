@@ -31,7 +31,7 @@ public interface RMIInterface extends Remote {
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol) throws RemoteException;
+            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, int highlightDays) throws RemoteException;
 
     public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) throws RemoteException;
 
@@ -39,4 +39,9 @@ public interface RMIInterface extends Remote {
 
     public String formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, String jsonFunction) throws RemoteException;
+
+    public String formatRowHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, int unsortedRow, int col, String jsonFunction) throws RemoteException;
+
+    public String formatColumnHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> columnHeadingsSource, int row, int unsortedCol, String jsonFunction)  throws RemoteException;
+
 }

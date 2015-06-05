@@ -559,9 +559,9 @@ seaports;children   container;children
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol) throws Exception {
+            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, int highlightDays) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortCol, databaseAccessToken.getLanguages());
+        List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortCol, databaseAccessToken.getLanguages(), highlightDays);
         List<List<CellForDisplay>> displayData = new ArrayList<List<CellForDisplay>>();
         for (List<AzquoCell> sourceRow : data) {
             List<CellForDisplay> displayDataRow = new ArrayList<CellForDisplay>();
@@ -576,7 +576,7 @@ seaports;children   container;children
 
     private List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, List<String> languages) throws Exception {
+            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, List<String> languages, int highlightDays) throws Exception {
         final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
         final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists);
         final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages);
@@ -604,9 +604,8 @@ seaports;children   container;children
         // ok going to try to use the new function
         List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings
                 , columnHeadings, contextNames, languages);
-        int highlightAge = 0;
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
-                , filterCount, maxRows, maxCols, sortRow, sortCol, highlightAge);
+                , filterCount, maxRows, maxCols, sortRow, sortCol, highlightDays);
         return dataToShow;
     }
 
@@ -643,6 +642,29 @@ seaports;children   container;children
         // that is to say : the outside list's size is the number of columns or headings. So, do we have the row and col?
         if (unsortedRow < rowHeadings.size() && unsortedCol < columnHeadings.size()) {
             return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextNames, unsortedRow, unsortedCol, totalSetSize, languages);
+        }
+        return null; // couldn't find it . . .
+    }
+
+    // to find a heading server side for provenance
+
+    private DataRegionHeading getRowDataRegionHeading(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
+            , int unsortedRow, int col, List<String> languages) throws Exception {
+        final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
+        final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists);
+        if (rowHeadings.size() > unsortedRow && rowHeadings.get(unsortedRow).size() > col){
+            return rowHeadings.get(unsortedRow).get(col);
+        }
+        return null; // couldn't find it . . .
+    }
+
+    private DataRegionHeading getColumnDataRegionHeading(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> colHeadingsSource
+            , int row, int unsortedCol, List<String> languages) throws Exception {
+        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages);
+        final List<List<DataRegionHeading>> columnHeadings = transpose2DList(expandHeadings(transpose2DList(columnHeadingLists))); // note the double transpose! Expand is for row orientation but we want it transposed back so it's like it is when viewing
+        // we shold be looking at few on the outside list and more on the inner lists
+        if (columnHeadings.size() > row && columnHeadings.get(row).size() > unsortedCol){
+            return columnHeadings.get(row).get(unsortedCol);
         }
         return null; // couldn't find it . . .
     }
@@ -1163,6 +1185,26 @@ I think that this is an ideal candidate for multithreading to speed things up
             }
         }
         return ""; //"error: data has not been sent for that row/col/region";
+    }
+
+    public String formatRowHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, int unsortedRow, int col, String jsonFunction) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+        DataRegionHeading dataRegionHeading = getRowDataRegionHeading(azquoMemoryDBConnection, rowHeadingsSource, unsortedRow, col, databaseAccessToken.getLanguages());
+        if (dataRegionHeading.getName() != null){
+            return formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
+        } else {
+            return dataRegionHeading.getAttribute();
+        }
+    }
+
+    public String formatColumnHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> columnHeadingsSource, int row, int unsortedCol, String jsonFunction) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+        DataRegionHeading dataRegionHeading = getColumnDataRegionHeading(azquoMemoryDBConnection, columnHeadingsSource, row, unsortedCol, databaseAccessToken.getLanguages());
+        if (dataRegionHeading.getName() != null){
+            return formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
+        } else {
+            return dataRegionHeading.getAttribute();
+        }
     }
 
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context

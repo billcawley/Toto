@@ -399,7 +399,7 @@ public class AzquoBook {
         return (colToLetters(range.getFirstColumn() + 1) + (range.getFirstRow() + 1) + ":" + colToLetters(range.getFirstColumn() + range.getColumnCount()) + (range.getFirstRow() + range.getRowCount()));
     }*/
 
-    private void fillRegion(LoggedInUser loggedInUser, String region,Map<Cell, Boolean> highlighted) throws RemoteException, Exception {
+    private void fillRegion(LoggedInUser loggedInUser, String region,Map<Cell, Boolean> highlighted) throws Exception {
         logger.info("loading " + region);
         int filterCount = optionNumber(region, "hiderows");
         if (filterCount == 0)
@@ -423,7 +423,7 @@ public class AzquoBook {
             throw new Exception("no range az_Context" + region);
         }
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
-                rangeToStringLists(context), filterCount, maxRows, maxCols, loggedInUser.getSortRow(region), loggedInUser.getSortCol(region));
+                rangeToStringLists(context), filterCount, maxRows, maxCols, loggedInUser.getSortRow(region), loggedInUser.getSortCol(region), highlightDays);
         loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
         // think this language detection is sound
         fillRange(dataRegionPrefix + region, cellsAndHeadingsForDisplay.getData(), true, highlighted);
@@ -1331,8 +1331,7 @@ public class AzquoBook {
                 List<List<String>> rowHeadings = loggedInUser.getSentCells(region).getRowHeadings();
                 String heading = rowHeadings.get(regionInfo.row).get(regionInfo.col);
                 if (heading != null) {
-                    //return spreadsheetService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
-                    return "todo make provenance on headings work again";
+                    return spreadsheetService.formatRowHeadingProvenanceForOutput(loggedInUser, region, regionInfo.row, regionInfo.col, jsonFunction);
                 } else {
                     return "";
                 }
@@ -1342,8 +1341,7 @@ public class AzquoBook {
                 // this was transposed (col/row reveresed) I don't think that's right any more
                 String heading = colHeadings.get(regionInfo.row).get(regionInfo.col);
                 if (heading != null) {
-                    //return spreadsheetService.formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
-                    return "todo make provenance on headings work again";
+                    return spreadsheetService.formatColumnHeadingProvenanceForOutput(loggedInUser, region, regionInfo.row, regionInfo.col, jsonFunction);
                 } else {
                     return "";
                 }
