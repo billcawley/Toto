@@ -14,6 +14,7 @@ import java.util.Map;
 
 /**
  * Created by bill on 22/04/14.
+ *
  */
 public final class UserChoiceDAO extends StandardDAO<UserChoice> {
 

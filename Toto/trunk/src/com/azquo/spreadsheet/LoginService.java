@@ -37,20 +37,6 @@ public class LoginService {
     private DatabaseDAO databaseDao;
     @Autowired
     private AdminService adminService;
-    @Autowired
-    private OpenDatabaseDAO openDatabaseDAO;
-    @Autowired
-    private SpreadsheetService spreadsheetService;
-
-    @Autowired
-    private BusinessDAO businessDAO;
-    @Autowired
-    private OnlineReportDAO onlineReportDAO;
-    @Autowired
-    private UserChoiceDAO userChoiceDAO;
-    @Autowired
-    private UploadRecordDAO uploadRecordDAO;
-
 
     private final HashMap<Integer, Integer> openDBCount = new HashMap<Integer, Integer>();
 
@@ -136,8 +122,6 @@ public class LoginService {
         }
         return okDatabases;
     }
-
-
 
 /*
     public void zapConnectionsTimedOut() {

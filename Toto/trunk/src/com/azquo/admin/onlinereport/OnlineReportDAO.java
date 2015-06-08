@@ -12,6 +12,7 @@ import java.util.Map;
 
 /**
  * Created by bill on 15/04/14.
+ *
  */
 public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     // the default table name for this data.

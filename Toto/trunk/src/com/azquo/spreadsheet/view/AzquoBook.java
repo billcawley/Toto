@@ -33,7 +33,6 @@ public class AzquoBook {
 
 
     private static final Logger logger = Logger.getLogger(AzquoBook.class);
-    private ImportService importService;
     private SpreadsheetService spreadsheetService;
     private UserChoiceDAO userChoiceDAO;
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
@@ -150,7 +149,6 @@ public class AzquoBook {
     public AzquoBook(UserChoiceDAO userChoiceDAO, SpreadsheetService spreadsheetService, ImportService importService) throws Exception {
         this.userChoiceDAO = userChoiceDAO;
         this.spreadsheetService = spreadsheetService;
-        this.importService = importService;
         jacksonMapper.registerModule(new JSR310Module());
     }
 

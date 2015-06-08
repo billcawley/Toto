@@ -2,14 +2,12 @@ package com.azquo.dataimport;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.database.UploadRecordDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.view.AzquoBook;
 import org.apache.commons.io.FileUtils;
@@ -118,10 +116,7 @@ public final class ImportService {
         FileUtils.copyInputStreamToFile(inputStream, output);
     }
 
-
-
     // File pre processing functions. SHould maybe be hived off into utils?
-
 
     private String unzip(String fileName, String suffix) {
         String outputFile = fileName.substring(0, fileName.length() - 4);

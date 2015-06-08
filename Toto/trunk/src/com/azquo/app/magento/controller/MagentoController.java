@@ -7,7 +7,6 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.app.magento.service.DataLoadService;
 import com.azquo.dataimport.ImportService;
-import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.*;
 import com.azquo.util.AzquoMailer;
 //dataimport org.apache.log4j.Logger;
@@ -20,8 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.util.Date;
 
 /**
