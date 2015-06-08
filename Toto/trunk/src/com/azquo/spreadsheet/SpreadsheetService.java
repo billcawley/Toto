@@ -510,58 +510,10 @@ public class SpreadsheetService {
 
     // todo : make work again after code split
     public void saveData(LoggedInUser loggedInUser, String region) throws Exception {
-/*        int numberOfValuesModified = 0;
-        int rowCounter = 0;
-        if (loggedInConnection.getSentCells(region) != null){
-            for (List<CellForDisplay> row : loggedInConnection.getSentCells(region)){
-                int columnCounter = 0;
-                for (CellForDisplay cell : row){
-                    if (!cell.isLocked() && cell.isChanged()){ // this should be allw e need to know!
-                        numberOfValuesModified++;
-                        // this save logic is the same as before but getting necessary info from the AzquoCell
-                        logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
-                        //logger.info(orig + "|" + edited + "|"); // we no longet know the original value unless we jam it in AzquoCell
-
-                        final ListOfValuesOrNamesAndAttributeName valuesForCell = cell.getListOfValuesOrNamesAndAttributeName();
-                        final Set<DataRegionHeading> headingsForCell = new HashSet<DataRegionHeading>();
-                        headingsForCell.addAll(cell.getColumnHeadings());
-                        headingsForCell.addAll(cell.getRowHeadings());
-                        // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
-                        // right, switch here to deal with attribute based cell values
-
-                        if (valuesForCell.getValues() != null) {
-                            if (valuesForCell.getValues().size() == 1) {
-                                final Value theValue = valuesForCell.getValues().get(0);
-                                logger.info("trying to overwrite");
-                                if (cell.getStringValue().length() > 0) {
-                                    //sometimes non-existant original values are stored as '0'
-                                    valueService.overWriteExistingValue(loggedInConnection, theValue, cell.getStringValue());
-                                    numberOfValuesModified++;
-                                } else {
-                                    valueService.deleteValue(theValue);
-                                }
-                            } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue().length() > 0) {
-                                logger.info("storing new value here . . .");
-                                // this call to make the hash set seems rather unefficient
-                                valueService.storeValueWithProvenanceAndNames(loggedInConnection, cell.getStringValue(), namesFromDataRegionHeadings(headingsForCell));
-                                numberOfValuesModified++;
-                            }
-                        } else {
-                            if (valuesForCell.getNames().size() == 1 && valuesForCell.getAttributeNames().size() == 1) { // allows a simple store
-                                Name toChange = valuesForCell.getNames().get(0);
-                                String attribute = valuesForCell.getAttributeNames().get(0);
-                                logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
-                                toChange.setAttributeWillBePersisted(attribute, cell.getStringValue());
-                            }
-                        }
-
-                    }
-                }
-            }
+        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
+        if (cellsAndHeadingsForDisplay != null){
+            rmiClient.getServerInterface().saveData(loggedInUser.getDataAccessToken(), cellsAndHeadingsForDisplay);
         }
-        if (numberOfValuesModified > 0){
-            loggedInConnection.persist();
-        }*/
-    }
+   }
 
 }

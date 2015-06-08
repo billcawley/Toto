@@ -173,4 +173,13 @@ public class RMIImplementation implements RMIInterface {
             throw new RemoteException("Database Server Exception", e);
         }
     }
+
+    @Override
+    public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws RemoteException {
+        try {
+            dsSpreadsheetService.saveData(databaseAccessToken,cellsAndHeadingsForDisplay);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
 }
