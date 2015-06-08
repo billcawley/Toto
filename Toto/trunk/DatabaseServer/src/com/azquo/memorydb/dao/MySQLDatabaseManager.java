@@ -23,17 +23,17 @@ public class MySQLDatabaseManager {
         jdbcTemplate.update("create database `" + databaseName + "`;", new HashMap<String, Object>()); // check for "database exists" in message?
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`name` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
-                "  `json` mediumtext NOT NULL,\n" +
+                "  `json` longtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ;", new HashMap<String, Object>());
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`value` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
-                "  `json` mediumtext NOT NULL,\n" +
+                "  `json` longtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ", new HashMap<String, Object>());
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`provenance` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
-                "  `json` mediumtext NOT NULL,\n" +
+                "  `json` longtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1  ;", new HashMap<String, Object>());
     }
