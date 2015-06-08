@@ -113,7 +113,7 @@ WHERE id IN (1,2,3)
                 count++;
             }
             updateSql.append(")");
-            System.out.println(updateSql.toString());
+            //System.out.println(updateSql.toString());
             jdbcTemplate.update(updateSql.toString(), namedParams);
             System.out.println("bulk updated " + records.size() + " into " + tableName + " in " + (System.currentTimeMillis() - track));
         }
@@ -136,7 +136,7 @@ WHERE id IN (1,2,3)
                 count++;
             }
             updateSql.append(")");
-            System.out.println(updateSql.toString());
+            //System.out.println(updateSql.toString());
             jdbcTemplate.update(updateSql.toString(), namedParams);
             System.out.println("bulk deleted " + records.size() + " from " + tableName + " in " + (System.currentTimeMillis() - track));
         }
