@@ -130,7 +130,7 @@ public final class ValueService {
 
     public boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, final String newValueString) throws Exception {
         Value newValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), newValueString, null);
-        newValue.setNamesWillBePersisted(existingValue.getNames());
+        newValue.setNamesWillBePersisted(new HashSet<Name>(existingValue.getNames())); // a bit crappy but I'm trying to make it a list internally but interfaced by sets
         deleteValue(existingValue);
         return true;
     }

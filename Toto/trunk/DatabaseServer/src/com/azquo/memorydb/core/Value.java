@@ -16,6 +16,7 @@ import java.util.*;
  * Delete solution is to unlink names and jam the old links in delete_info.
  * Can worry about how to restore later.
  * Notable that the names list object here is what defines the relationship between values and names, value sets against each name is just a lookup
+ * I'm using a list internally to save memory, I hope the switching on setting won't be a big processing overhead
  */
 public final class Value extends AzquoMemoryDBEntity {
 
@@ -26,7 +27,8 @@ public final class Value extends AzquoMemoryDBEntity {
     private String text;//no longer final.   May be adjusted during imports (if duplicate lines are found will sum...)
     private String deletedInfo;
 
-    private Set<Name> names;
+    // changing to list to save memory
+    private List<Name> names;
 
     // to be used by the code when creating a new value
     // add the names after
@@ -36,7 +38,7 @@ public final class Value extends AzquoMemoryDBEntity {
         this.provenance = provenance;
         this.text = text;
         this.deletedInfo = deletedInfo;
-        names = Collections.unmodifiableSet(new HashSet<Name>());
+        names = Collections.unmodifiableList(new ArrayList<Name>());
         // added 10/12/2014, wasn't there before, why??? I suppose it just worked. Inconsistent though!
         getAzquoMemoryDB().addValueToDb(this);
     }
@@ -50,17 +52,18 @@ public final class Value extends AzquoMemoryDBEntity {
             this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
             this.text = transport.text;
             this.deletedInfo = transport.deletedInfo;
-            names = new HashSet<Name>();
+            names = new ArrayList<Name>(); // init so the set names bit below won't crash
+            Set<Name> newNames = new HashSet<Name>();
             //System.out.println("name ids" + transport.nameIds);
             for (Integer nameId : transport.nameIds) {
                 Name name = getAzquoMemoryDB().getNameById(nameId);
                 if (name != null) {
-                    names.add(name);
+                    newNames.add(name);
                 } else {
                     logger.info("Value referenced a name id that did not exist : " + nameId + " skipping");
                 }
             }
-            setNamesWillBePersisted(names);
+            setNamesWillBePersisted(newNames); //again I know this looks a bit odd, part of the hack for lists internally
             getAzquoMemoryDB().addValueToDb(this);
         } catch (Exception e) {
             e.printStackTrace();
@@ -100,17 +103,19 @@ public final class Value extends AzquoMemoryDBEntity {
                 '}';
     }
 
-    public Set<Name> getNames() {
+    public Collection<Name> getNames() {
         return names;
     }
+    // switch to list internally, hope overhead won't be too much, want the memory saving
 
     public void setNames(final Set<Name> names) {
         //this function is used only for temporary 'values' while creating provenance information on sets of values.
-        this.names = Collections.unmodifiableSet(names);
+        this.names = Collections.unmodifiableList(new ArrayList<Name>(names));
     }
 
     // make sure to adjust the values lists on the name objects :)
     // synchronised but I'm not sure if this is good enough? Certainly better then nothing
+    // change to a list internally
 
     public synchronized void setNamesWillBePersisted(final Set<Name> names) throws Exception {
         checkDatabaseForSet(names);
@@ -118,7 +123,7 @@ public final class Value extends AzquoMemoryDBEntity {
         for (Name oldName : this.names) {
             oldName.removeFromValues(this);
         }
-        this.names = Collections.unmodifiableSet(names);
+        this.names = Collections.unmodifiableList(new ArrayList<Name>(names));
         // set this against names on the new list
         for (Name newName : this.names) {
             newName.addToValues(this);

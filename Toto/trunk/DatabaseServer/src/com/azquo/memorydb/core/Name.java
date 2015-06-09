@@ -393,6 +393,7 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // with position, will just add if none passed note : this sees position as starting at 1!
+    // note : modified to do nothing if the name is in the set. No changing of position.
 
     public void addChildWillBePersisted(Name child, int position) throws Exception {
         checkDatabaseMatches(child);
@@ -405,10 +406,12 @@ public final class Name extends AzquoMemoryDBEntity {
         // NOTE!! for the set version we're now just using a set backed by a concurrent hash map NOT liked hashset, for large child sets ordering will be ignored!
         // while childrenasaset is thread safe I think I'm going to need to synchronize the lot to make make state more consistent
         synchronized (this) {
+            boolean changed = false; // only do the after stuff if something changed
             if (childrenAsSet != null) {
-                childrenAsSet.add(child);
+                changed = childrenAsSet.add(child);
             } else {
                 if (!children.contains(child)) {
+                    changed = true;
                     // like parents, hope the logic is sound
                     if (children.size() >= ARRAYLISTTHRESHOLD) { // we need to convert. copy the array to a new hashset then set it
                         childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<Name, Boolean>());
@@ -426,14 +429,16 @@ public final class Name extends AzquoMemoryDBEntity {
                     }
                 }
             }
-            findAllChildrenCache = null;
-            child.addToParents(this);//synchronized internally with this also so will not deadlock
-            setNeedsPersisting();
-            //and check that there are not indirect connections which should be deleted (e.g. if London exists in UK and Europe, and we are now
-            //specifying that UK is in Europe, we must remove the direct link from London to Europe
-            for (Name descendant : child.findAllChildren(false)) {
-                if (getChildren().contains(descendant)) {
-                    removeFromChildrenWillBePersisted(descendant);
+            if (changed){ // new logic, only do these things if something was changed
+                findAllChildrenCache = null;
+                child.addToParents(this);//synchronized internally with this also so will not deadlock
+                setNeedsPersisting();
+                //and check that there are not indirect connections which should be deleted (e.g. if London exists in UK and Europe, and we are now
+                //specifying that UK is in Europe, we must remove the direct link from London to Europe
+                for (Name descendant : child.findAllChildren(false)) {
+                    if (getChildren().contains(descendant)) {
+                        removeFromChildrenWillBePersisted(descendant);
+                    }
                 }
             }
         }
@@ -818,7 +823,7 @@ public final class Name extends AzquoMemoryDBEntity {
         // then the actions on other objects
         // remove from values - this will change when value is changed to make more safe
         for (Value v : values) {
-            Set<Name> namesForValue = v.getNames();
+            Set<Name> namesForValue = new HashSet<Name>(v.getNames());
             namesForValue.remove(this);
             v.setNamesWillBePersisted(namesForValue);
         }

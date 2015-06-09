@@ -368,9 +368,9 @@ public class DSImportService {
             //ImportHeading contextPeersItem = null;
             //if (csvReader.get(0).length() == 0) break;//break if the first line element is blank
             for (ImportHeading heading : headings) {
-                trackers.put(heading.name.getDefaultDisplayName(), 0L);
+//                trackers.put(heading.name.getDefaultDisplayName(), 0L);
                 heading.lineValue = csvReader.get(heading.column).intern();
-                if (heading.attribute !=null && heading.attribute.equalsIgnoreCase(dateLang)){
+                if (heading.attribute != null && heading.attribute.equalsIgnoreCase(dateLang)){
                     //interpret the date and change to standard form
                     //todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
                     if (heading.lineValue.length() > 10){
@@ -464,14 +464,14 @@ public class DSImportService {
         */
 
         for (ImportHeading importHeading : headings) {
-            long track = System.currentTimeMillis();
+            //long track = System.currentTimeMillis();
             if (importHeading.local && importHeading.parentOf != null) {
                 handleParent(azquoMemoryDBConnection, namesFound, importHeading, headings, attributeNames);
             }
-            trackers.put(importHeading.name.getDefaultDisplayName(), (System.currentTimeMillis() - track) + trackers.get(importHeading.name));
+            //trackers.put(importHeading.name.getDefaultDisplayName(), (System.currentTimeMillis() - track) + trackers.get(importHeading.name));
         }
         for (ImportHeading heading : headings) {
-            long track = System.currentTimeMillis();
+            //long track = System.currentTimeMillis();
             if (heading.contextItem) {
                 contextNames.add(heading.name);
                 if (heading.name.getPeers().size() > 0) {
@@ -575,7 +575,7 @@ public class DSImportService {
                     }
                 }
             }
-            trackers.put(heading.name.getDefaultDisplayName(), (System.currentTimeMillis() - track) + trackers.get(heading.name));
+            //trackers.put(heading.name.getDefaultDisplayName(), (System.currentTimeMillis() - track) + trackers.get(heading.name));
         }
         return valueCount;
     }
