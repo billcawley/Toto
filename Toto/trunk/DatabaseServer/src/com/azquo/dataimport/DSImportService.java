@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by cawley on 20/05/15.
@@ -325,8 +326,10 @@ public class DSImportService {
         return child;
     }
 
+    Map<String, Long> trackers = new ConcurrentHashMap<String, Long>();
 
     public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, String fileType, List<String> attributeNames) throws Exception {
+        trackers = new ConcurrentHashMap<String, Long>();
         // little local cache just to speed things up
         final HashMap<NameParent, Name> namesFound = new HashMap<NameParent, Name>();
         if (fileType.indexOf(" ") > 0) {
@@ -338,9 +341,9 @@ public class DSImportService {
         csvReader.setUseTextQualifier(true);
          String[]headers= null;
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
-        if (importInterpreter!=null){
+        if (importInterpreter != null ){
             String importHeaders = importInterpreter.getAttribute(headingsString);
-            if (importHeaders!=null){
+            if (importHeaders != null){
                 headers = importHeaders.split("¬");
             }
         }
@@ -360,18 +363,17 @@ public class DSImportService {
         int lastReported = 0;
         // having read the headers go through each record
         int lineNo = 0;
-        long trigger = 1000000;
-        Long time = System.nanoTime();
         while (csvReader.readRecord()) {
             lineNo++;
             //ImportHeading contextPeersItem = null;
             //if (csvReader.get(0).length() == 0) break;//break if the first line element is blank
             for (ImportHeading heading : headings) {
-                heading.lineValue = csvReader.get(heading.column);
+                trackers.put(heading.name.getDefaultDisplayName(), 0L);
+                heading.lineValue = csvReader.get(heading.column).intern();
                 if (heading.attribute !=null && heading.attribute.equalsIgnoreCase(dateLang)){
                     //interpret the date and change to standard form
                     //todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-                    if (heading.lineValue.length()> 10){
+                    if (heading.lineValue.length() > 10){
                         heading.lineValue = heading.lineValue.substring(0,10);
                     }
                 }
@@ -380,11 +382,6 @@ public class DSImportService {
             if (headings.get(0).lineValue.length() > 0) {//skip any line that has a blank in the first column
                 getCompositeValues(headings);
                 valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
-                Long now = System.nanoTime();
-                if (now - time > trigger){
-                     System.out.println("line no " + lineNo + " time = " + (now - time));
-                 }
-                time = now;
                 if (lineNo % 5000 == 0){
                     System.out.println("imported line count " + lineNo);
                 }
@@ -396,6 +393,10 @@ public class DSImportService {
 
         }
         System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
+        System.out.println("---------- namesfound size " + namesFound.size());
+        for (String trackName : trackers.keySet()){
+            System.out.println("---------- " + trackName + " \t\t" + trackers.get(trackName));
+        }
         azquoMemoryDBConnection.persist();
     }
 
@@ -463,14 +464,14 @@ public class DSImportService {
         */
 
         for (ImportHeading importHeading : headings) {
+            long track = System.currentTimeMillis();
             if (importHeading.local && importHeading.parentOf != null) {
                 handleParent(azquoMemoryDBConnection, namesFound, importHeading, headings, attributeNames);
             }
+            trackers.put(importHeading.name.getDefaultDisplayName(), (System.currentTimeMillis() - track) + trackers.get(importHeading.name));
         }
-        int toolong = 20;
-        long time = System.currentTimeMillis();
         for (ImportHeading heading : headings) {
-
+            long track = System.currentTimeMillis();
             if (heading.contextItem) {
                 contextNames.add(heading.name);
                 if (heading.name.getPeers().size() > 0) {
@@ -514,8 +515,6 @@ public class DSImportService {
                                 foundAll = false;
                                 break;
                             }
-
-
                         }
                         if (foundAll) {
                             // now we have the set of names for that name with peers get the value from that headingNo it's a header for
@@ -561,10 +560,9 @@ public class DSImportService {
                 if (heading.parentOf != null && !heading.local) {
                       handleParent(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
                 }
-
                 if (heading.childOf != null) {
                     if (heading.lineName != null) {
-                        for (Name parent:heading.childOf){
+                        for (Name parent : heading.childOf){
                             parent.addChildWillBePersisted(heading.lineName);
                         }
                     } else {
@@ -576,13 +574,8 @@ public class DSImportService {
                         }
                     }
                 }
-
             }
-            long now = System.currentTimeMillis();
-            if (now - time > toolong){
-                int j=1;
-            }
-            time = System.currentTimeMillis();
+            trackers.put(heading.name.getDefaultDisplayName(), (System.currentTimeMillis() - track) + trackers.get(heading.name));
         }
         return valueCount;
     }
