@@ -56,6 +56,15 @@ public final class ImportService {
             throws Exception {
 
         //fileType is now always the first word of the spreadsheet/dataimport file name
+        if (fileType.length()==0){
+            int slashpos = filePath.lastIndexOf("/");
+            if (slashpos > 0){
+                int dotPos = filePath.indexOf(".", slashpos);
+                if (dotPos > 0){
+                    fileType = filePath.substring(slashpos + 1, dotPos);
+                }
+            }
+        }
         InputStream uploadFile = new FileInputStream(filePath);
         // todo : address provenance on an import
         //azquoMemoryDBConnection.setNewProvenance("import", fileName);
@@ -260,6 +269,7 @@ public final class ImportService {
                     }
                 }
             }
+            //write it
             //write it
             fos.close();
             System.out.println("Decode 64 Done");
