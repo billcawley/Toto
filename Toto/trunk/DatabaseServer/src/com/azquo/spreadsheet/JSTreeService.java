@@ -354,7 +354,7 @@ public class JSTreeService {
         //if (totalValues > 0) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"name\":");
-        sb.append("\"").append(name.getDefaultDisplayName().replace("\"", "''")).append("\"");//trapping quotes in name - should not be there
+        sb.append("\"").append(jsonReady(name.getDefaultDisplayName())).append("\"");//trapping quotes in name - should not be there
         sb.append(", \"id\":\"").append(name.getId()).append("\"");
 
         sb.append(", \"dataitems\":\"").append(totalValues).append("\"");
@@ -383,12 +383,7 @@ public class JSTreeService {
             }
             for (String attName : name.getAttributes().keySet()) {
                 if (count > 0) sb.append(",");
-                try {
-                    sb.append("\"").append(attName).append("\":\"").append(URLEncoder.encode(name.getAttributes().get(attName).replace("\"", "''"), "UTF-8")).append("\"");//replacing quotes again
-                } catch (UnsupportedEncodingException e) {
-                    // this really should not happen!
-                    e.printStackTrace();
-                }
+                sb.append("\"").append(attName).append("\":\"").append(jsonReady(name.getAttributes().get(attName))).append("\"");//replacing quotes again
                 count++;
             }
             sb.append("}");
@@ -434,7 +429,7 @@ public class JSTreeService {
             }
 
         } else if (name != null) {
-            result.append(name.getDefaultDisplayName().replace("\"", "\\\""));
+            result.append(jsonReady(name.getDefaultDisplayName()));
             if (!parents.equals("true")) {
                 for (Name child : name.getChildren()) {
                     children.add(child);
@@ -471,7 +466,7 @@ public class JSTreeService {
                     result.append("{\"id\":" + lastId + ",\"text\":\"" + (children.size() - 100) + " more....\"}");
                     break;
                 }
-                result.append("{\"id\":" + lastId + ",\"text\":\"" + child.getDefaultDisplayName().replace("\"", "\\\"") + "\"");
+                result.append("{\"id\":" + lastId + ",\"text\":\"" + jsonReady(child.getDefaultDisplayName()) + "\"");
                 if (child.getChildren().size() > 0 || child.getValues().size() > 0 || (details && child.getAttributes().size() > 1)) {
                     result.append(",\"children\":true");
                 }
@@ -492,7 +487,7 @@ public class JSTreeService {
 
                         lookup.put(lastId + "", newNode);
 
-                        result.append("{\"id\":" + lastId + ",\"text\":\"" + attName + ":" + name.getAttributes().get(attName).replace("\"", "\\\"") + "\"}");
+                        result.append("{\"id\":" + lastId + ",\"text\":\"" + attName + ":" + jsonReady(name.getAttributes().get(attName)) + "\"}");
                     }
                 }
 
@@ -554,7 +549,7 @@ public class JSTreeService {
             sb.append("{\"id\":" + lastId + ",\"text\":\"" + valueService.addValues(values) + " ");
             for (Name valName : valNames) {
                 if (valName.getId() != name.getId()) {
-                    sb.append(valName.getDefaultDisplayName().replace("\"", "\\\"") + " ");
+                    sb.append(jsonReady(valName.getDefaultDisplayName()) + " ");
                 }
             }
             sb.append("\"");
@@ -562,6 +557,10 @@ public class JSTreeService {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    private String jsonReady(String text){
+        return text.replace("\\","\\\\").replace("\"","\\\"");
     }
 
 
