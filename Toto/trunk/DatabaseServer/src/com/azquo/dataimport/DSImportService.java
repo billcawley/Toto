@@ -53,6 +53,8 @@ public class DSImportService {
     public static final String LOCAL = "local";
     public static final String EQUALS = "equals";
     public static final String COMPOSITION = "composition";
+    public static final String headingsString = "headings";
+    public static final String dateLang = "date";
 
 
     static class ImportHeading {
@@ -100,6 +102,7 @@ public class DSImportService {
     }
 
     public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
+        System.out.println("reading file " + filePath);
         if (fileType.toLowerCase().startsWith("sets")) {
             setsImport(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), new FileInputStream(filePath), attributeNames);
         } else {
@@ -333,8 +336,19 @@ public class DSImportService {
         long track = System.currentTimeMillis();
         final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
         csvReader.setUseTextQualifier(true);
-        csvReader.readHeaders();
-        final String[] headers = csvReader.getHeaders();
+         String[]headers= null;
+        Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
+        if (importInterpreter!=null){
+            String importHeaders = importInterpreter.getAttribute(headingsString);
+            if (importHeaders!=null){
+                headers = importHeaders.split("¬");
+            }
+        }
+
+        if (headers==null){
+            csvReader.readHeaders();
+            headers = csvReader.getHeaders();
+        }
         // what we're doing here is going through the headers, First thing to do is to set up the peers if defined for a header
         // then we find or create each header as a name in the database. If the name has peers it's added to the nameimportheading map, a way to find the header for that name with peers
         // namesWithPeersHeaderMap is a map of the names which have peers, colums headed by such names will have the value in them, hence why we need to hold the header so we cna get the value
@@ -346,19 +360,38 @@ public class DSImportService {
         int lastReported = 0;
         // having read the headers go through each record
         int lineNo = 0;
+        long trigger = 1000000;
+        Long time = System.nanoTime();
         while (csvReader.readRecord()) {
             lineNo++;
             //ImportHeading contextPeersItem = null;
-            if (csvReader.get(0).length() == 0) break;//break if the first line element is blank
+            //if (csvReader.get(0).length() == 0) break;//break if the first line element is blank
             for (ImportHeading heading : headings) {
                 heading.lineValue = csvReader.get(heading.column);
+                if (heading.attribute !=null && heading.attribute.equalsIgnoreCase(dateLang)){
+                    //interpret the date and change to standard form
+                    //todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
+                    if (heading.lineValue.length()> 10){
+                        heading.lineValue = heading.lineValue.substring(0,10);
+                    }
+                }
                 heading.lineName = null;
             }
-            getCompositeValues(headings);
-            valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
-            if (valuecount - lastReported >= 5000) {
-                System.out.println("imported value count " + valuecount);
-                lastReported = valuecount;
+            if (headings.get(0).lineValue.length() > 0) {//skip any line that has a blank in the first column
+                getCompositeValues(headings);
+                valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
+                Long now = System.nanoTime();
+                if (now - time > trigger){
+                     System.out.println("line no " + lineNo + " time = " + (now - time));
+                 }
+                time = now;
+                if (lineNo % 5000 == 0){
+                    System.out.println("imported line count " + lineNo);
+                }
+                if (valuecount - lastReported >= 5000) {
+                    System.out.println("imported value count " + valuecount);
+                    lastReported = valuecount;
+                }
             }
 
         }
@@ -428,6 +461,7 @@ public class DSImportService {
             }
         }
         */
+
         for (ImportHeading importHeading : headings) {
             if (importHeading.local && importHeading.parentOf != null) {
                 handleParent(azquoMemoryDBConnection, namesFound, importHeading, headings, attributeNames);
@@ -521,7 +555,7 @@ public class DSImportService {
                         valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue);
                     }
                 }
-                if (heading.identityHeading >= 0) {
+                if (heading.identityHeading >= 0 && heading.attribute!=null && !heading.attribute.equalsIgnoreCase(dateLang)) {
                     handleAttribute(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
                 }
                 if (heading.parentOf != null && !heading.local) {
@@ -635,7 +669,7 @@ public class DSImportService {
     private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
 
         List<String> languages = new ArrayList<String>();
-        if (heading.attribute != null){
+        if (heading.attribute != null && !heading.attribute.equalsIgnoreCase(dateLang)){
             languages.add(heading.attribute);
         }else{
             languages.addAll(attributeNames);
@@ -661,6 +695,7 @@ public class DSImportService {
     }
 
     public void handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
+
         ImportHeading identity = headings.get(heading.identityHeading);
         ImportHeading identityHeading = headings.get(heading.identityHeading);
         if (identityHeading.lineName == null) {
@@ -675,8 +710,8 @@ public class DSImportService {
         if (attribute == null) {
             attribute = Constants.DEFAULT_DISPLAY_NAME;
         }
-        identityHeading.lineName.setAttributeWillBePersisted(attribute, heading.lineValue);
-    }
+       identityHeading.lineName.setAttributeWillBePersisted(attribute, heading.lineValue);
+   }
 
     private boolean findPeers(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, Set<Name> namesForValue, List<String> attributeNames) throws Exception {
         //ImportHeading headingWithPeers = heading;
