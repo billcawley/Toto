@@ -10,6 +10,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -22,6 +26,9 @@ import java.util.*;
  * Note : for building SQL I'm veering away from StringBuilder as IntelliJ complains about it and string concatenation etc is heavily optimised by the compiler
  * <p/>
  * This used to be an abstract class with classes for each entity extending it. Now after full json it's just used for moving the very standard json records about.
+ *
+ * Multi threading is beginning to be added for loads and saves - for loading it's taken care of externally but for saving it seems fine that it's in here. Can concurrently throw
+ * updates/inserts/deletes at MySQL. Currently only inserts.
  */
 public class StandardDAO {
 
@@ -51,26 +58,40 @@ public class StandardDAO {
         }
     }
 
-    private void bulkInsert(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
-        if (!records.isEmpty()) {
-            long track = System.currentTimeMillis();
-            final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-            final StringBuilder insertSql = new StringBuilder();
 
-            insertSql.append("INSERT INTO `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` (" + ID + "," + JSON + ") VALUES ");
+    private class BulkInserter implements Runnable {
+        private final AzquoMemoryDB azquoMemoryDB;
+        private final String tableName;
+        private final List<JsonRecordTransport> records;
 
-            int count = 1;
+        public BulkInserter(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) {
+            this.azquoMemoryDB = azquoMemoryDB;
+            this.tableName = tableName;
+            this.records = records;
+        }
 
-            for (JsonRecordTransport record : records) {
-                insertSql.append("(:" + ID + count + ",:" + JSON + count + "), ");
-                namedParams.addValue(JSON + count, record.json);
-                namedParams.addValue(ID + count, record.id);
-                count++;
-            }
-            insertSql.delete(insertSql.length() - 2, insertSql.length());
-            //System.out.println(insertSql.toString());
-            jdbcTemplate.update(insertSql.toString(), namedParams);
-            System.out.println("bulk inserted " + records.size() + " into " + tableName + " in " + (System.currentTimeMillis() - track));
+        @Override
+        public void run() {
+                if (!records.isEmpty()) {
+                    long track = System.currentTimeMillis();
+                    final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+                    final StringBuilder insertSql = new StringBuilder();
+
+                    insertSql.append("INSERT INTO `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` (" + ID + "," + JSON + ") VALUES ");
+
+                    int count = 1;
+
+                    for (JsonRecordTransport record : records) {
+                        insertSql.append("(:" + ID + count + ",:" + JSON + count + "), ");
+                        namedParams.addValue(JSON + count, record.json);
+                        namedParams.addValue(ID + count, record.id);
+                        count++;
+                    }
+                    insertSql.delete(insertSql.length() - 2, insertSql.length());
+                    //System.out.println(insertSql.toString());
+                    jdbcTemplate.update(insertSql.toString(), namedParams);
+                    System.out.println("bulk inserted " + records.size() + " into " + tableName + " in " + (System.currentTimeMillis() - track));
+                }
         }
     }
 
@@ -142,7 +163,9 @@ WHERE id IN (1,2,3)
         }
     }
 
-    public void persistJsonRecords(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
+    public void persistJsonRecords(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws Exception {
+        // currently only the inserter is multithreaded, adding the others shoudl not be difficult
+        ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDB.getThreadsToTry());
         List<JsonRecordTransport> toDelete = new ArrayList<JsonRecordTransport>();
         List<JsonRecordTransport> toInsert = new ArrayList<JsonRecordTransport>();
         List<JsonRecordTransport> toUpdate = new ArrayList<JsonRecordTransport>();
@@ -157,7 +180,7 @@ WHERE id IN (1,2,3)
             if (record.state == JsonRecordTransport.State.INSERT) {
                 toInsert.add(record);
                 if (toInsert.size() == UPDATELIMIT) {
-                    bulkInsert(azquoMemoryDB, tableName, toInsert);
+                    executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert));
                     toInsert = new ArrayList<JsonRecordTransport>();
                 }
             }
@@ -170,8 +193,12 @@ WHERE id IN (1,2,3)
             }
         }
         bulkDelete(azquoMemoryDB, tableName, toDelete);
-        bulkInsert(azquoMemoryDB, tableName, toInsert);
+        executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert));
         bulkUpdate(azquoMemoryDB, tableName, toUpdate);
+        executor.shutdown();
+        if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+            throw new Exception("Database " + azquoMemoryDB.getMySQLName() + " took longer than an hour to persist");
+        }
     }
 
     public final List<JsonRecordTransport> findFromTable(final AzquoMemoryDB azquoMemoryDB, final String tableName) throws DataAccessException {
@@ -182,5 +209,16 @@ WHERE id IN (1,2,3)
     public final List<JsonRecordTransport> findFromTable(final AzquoMemoryDB azquoMemoryDB, final String tableName, int from, int limit) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` LIMIT " + from + "," + limit;
         return jdbcTemplate.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
+    }
+
+    public final List<JsonRecordTransport> findFromTableMinMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName, int minId, int maxId) throws DataAccessException {
+        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
+        return jdbcTemplate.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
+    }
+
+    public final int findMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName) throws DataAccessException {
+        final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`";
+        Integer toReturn = jdbcTemplate.queryForObject (SQL_SELECT_ALL, new HashMap<String, Object>(), Integer.class);
+        return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }
 }

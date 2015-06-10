@@ -1071,6 +1071,8 @@ I think that this is an ideal candidate for multithreading to speed things up
         ExecutorService executor = Executors.newFixedThreadPool(threads); // picking 10 based on an example I saw . . .
         StringBuffer errorTrack = new StringBuffer();// deliberately threadsafe, need to keep an eye on the report building . . .
         // tried multithreaded, going for big chunks
+        // old style, and now I think about it it may have be double rendering on small numbers of rows?
+        /*
         int chunk = totalRows / threads;
         int startRow = 0;
         int endRow = startRow + chunk - 1; // - 1 as endrow is inclusive
@@ -1081,6 +1083,11 @@ I think that this is an ideal candidate for multithreading to speed things up
             executor.execute(new RowFiller(startRow, endRow, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, totalSetSize, errorTrack));
             startRow += chunk;
             endRow += chunk;
+        }
+        */
+        // different style, just chuck every row in the queue
+        for (int i = 0; i < totalRows; i++) {
+            executor.execute(new RowFiller(i, i, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, totalSetSize, errorTrack));
         }
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());

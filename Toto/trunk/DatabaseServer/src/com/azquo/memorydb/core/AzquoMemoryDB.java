@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -46,17 +47,29 @@ public final class AzquoMemoryDB {
     private String mysqlName;
 
     // object ids. We handle this here, it's not done by MySQL
-    private int maxIdAtLoad;
+    private volatile int maxIdAtLoad; // volatile as it may be hit by multiple threads
+    // should this also be volatile??
     private int nextId;
 
     // when objects are modified they are added to these sets held in a map. AzquoMemoryDBEntity has all functions require to persist.
 
     private final Map<String, Set<AzquoMemoryDBEntity>> entitiesToPersist;
 
+    private final int threadsToTry;
+
+    public int getThreadsToTry(){
+        return threadsToTry;
+    }
+
     // Initialising maps concurrently here,
 
     protected AzquoMemoryDB(String mysqlName, StandardDAO standardDAO) throws Exception {
         azquoProperties.load(getClass().getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring
+        // same as spreadsheet
+        int availableProcessors = Runtime.getRuntime().availableProcessors();
+        threadsToTry = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
+        System.out.println("memory db init threads : " + threadsToTry);
+
         this.mysqlName = mysqlName;
         this.standardDAO = standardDAO;
         needsLoading = true;
@@ -108,20 +121,38 @@ public final class AzquoMemoryDB {
     private static final int NAME_MODE = 1;
     private static final int VALUE_MODE = 2;
 
-    private class SQLLoadRunner implements Runnable {
+    private class SQLBatchLoader implements Runnable {
+        private final StandardDAO standardDAO;
         private final int mode;
-        private final List<JsonRecordTransport> dataToLoad;
+        private final int minId;
+        private final int maxId;
         private final AzquoMemoryDB memDB;
+        private final AtomicInteger loadTracker;
 
-        private SQLLoadRunner(int mode, List<JsonRecordTransport> dataToLoad, AzquoMemoryDB memDB) {
+        public SQLBatchLoader(StandardDAO standardDAO, int mode, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
+            this.standardDAO = standardDAO;
             this.mode = mode;
-            this.dataToLoad = dataToLoad;
+            this.minId = minId;
+            this.maxId = maxId;
             this.memDB = memDB;
+            this.loadTracker = loadTracker;
         }
 
         @Override
         public void run() {
             try {
+                // may rearrange this later, could perhaps be more elegant
+                String tableName = "";
+                if (mode == PROVENANCE_MODE) {
+                    tableName = StandardDAO.PersistedTable.provenance.name();
+                }
+                if (mode == NAME_MODE) {
+                    tableName = StandardDAO.PersistedTable.name.name();
+                }
+                if (mode == VALUE_MODE) {
+                    tableName = StandardDAO.PersistedTable.value.name();
+                }
+                List<JsonRecordTransport> dataToLoad = standardDAO.findFromTableMinMaxId(memDB, tableName, minId, maxId);
                 for (JsonRecordTransport dataRecord : dataToLoad) {
                     if (dataRecord.id > maxIdAtLoad) {
                         maxIdAtLoad = dataRecord.id;
@@ -136,7 +167,7 @@ public final class AzquoMemoryDB {
                         new Value(memDB, dataRecord.id, dataRecord.json);
                     }
                 }
-
+                System.out.println(tableName + " loaded " + loadTracker.addAndGet(dataToLoad.size()));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -144,7 +175,6 @@ public final class AzquoMemoryDB {
     }
 
     synchronized private void loadData() {
-        int loadingThreads = 4; // this may need adjusting depending on server power. Maybe detect as in the spreadsheet service
         boolean memoryTrack = "true".equals(azquoProperties.getProperty("memorytrack"));
         if (needsLoading) { // only allow it once!
             long track = System.currentTimeMillis();
@@ -174,43 +204,49 @@ public final class AzquoMemoryDB {
                 //I'm going to load in chunks, should scale more.
                 */
 
-                int provenaceLoaded = 0;
-                int namesLoaded = 0;
-                int valuesLoaded = 0;
+                AtomicInteger provenaceLoaded = new AtomicInteger();
+                AtomicInteger namesLoaded = new AtomicInteger();
+                AtomicInteger valuesLoaded = new AtomicInteger();
 
-                final int step = 500000; // one can speed Mysql using where id > from order by but our ids are shared across different tables. Not too bothered about persistence save/load speed at the mo
+                final int step = 500000; // not so much step now as id range given how we're now querying mysql
+
+                // do all provenance, then all names then all values, values expet names to be correct.
+
+                ExecutorService executor = Executors.newFixedThreadPool(threadsToTry);
                 int from = 0;
-
-                ExecutorService executor = Executors.newFixedThreadPool(loadingThreads);
-                List<JsonRecordTransport> provenance = standardDAO.findFromTable(this, StandardDAO.PersistedTable.provenance.name(), from, step);
-                while (!provenance.isEmpty()) {
-                    executor.execute(new SQLLoadRunner(PROVENANCE_MODE, provenance, this));
-                    provenaceLoaded += provenance.size();
+                int maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.provenance.name());
+                while (from < maxIdForTable) {
+                    executor.execute(new SQLBatchLoader(standardDAO,PROVENANCE_MODE, from,from + step,this,provenaceLoaded));
                     from += step;
-                    provenance = standardDAO.findFromTable(this, StandardDAO.PersistedTable.provenance.name(), from, step);
                 }
-                from = 0;
-                List<JsonRecordTransport> names = standardDAO.findFromTable(this, StandardDAO.PersistedTable.name.name(), from, step);
-                while (!names.isEmpty()) {
-                    executor.execute(new SQLLoadRunner(NAME_MODE, names, this));
-                    namesLoaded += names.size();
-                    from += step;
-                    names = standardDAO.findFromTable(this, StandardDAO.PersistedTable.name.name(), from, step);
+                executor.shutdown();
+                if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+                    throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
+                executor = Executors.newFixedThreadPool(threadsToTry);
                 from = 0;
-                List<JsonRecordTransport> values = standardDAO.findFromTable(this, StandardDAO.PersistedTable.value.name(), from, step);
-                while (!values.isEmpty()) {
-                    executor.execute(new SQLLoadRunner(VALUE_MODE, values, this));
-                    valuesLoaded += values.size();
+                maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.name.name());
+                while (from < maxIdForTable) {
+                    executor.execute(new SQLBatchLoader(standardDAO,NAME_MODE, from,from + step,this,namesLoaded));
                     from += step;
-                    values = standardDAO.findFromTable(this, StandardDAO.PersistedTable.value.name(), from, step);
+                }
+                executor.shutdown();
+                if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+                    throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
+                }
+                executor = Executors.newFixedThreadPool(threadsToTry);
+                from = 0;
+                maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.value.name());
+                while (from < maxIdForTable) {
+                    executor.execute(new SQLBatchLoader(standardDAO,VALUE_MODE, from,from + step,this,valuesLoaded));
+                    from += step;
                 }
                 executor.shutdown();
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
                 // wait untill all are loaded before linking
-                System.out.println(provenaceLoaded + valuesLoaded + namesLoaded + " unlinked entities loaded,  " + (System.currentTimeMillis() - track) + "ms");
+                System.out.println(provenaceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded,  " + (System.currentTimeMillis() - track) + "ms");
                 if (memoryTrack) {
                     System.out.println("Used Memory after list load:"
                             + (runtime.totalMemory() - runtime.freeMemory()) / mb);
@@ -223,20 +259,6 @@ public final class AzquoMemoryDB {
 
 
                 System.out.println("names init, " + (System.currentTimeMillis() - track) + "ms");
-                // forget appentities for the moment,we may never use them anyway
-/*
-                if (appServices != null) { // dunno why it wasn't there before
-                    for (AppEntityService appEntityService : appServices) {
-                        final List<JsonRecordTransport> appEntities = standardDAO.findFromTable(this, appEntityService.getTableName());
-                        for (JsonRecordTransport appEntityRecord : appEntities) {
-                            if (appEntityRecord.id > maxIdAtLoad) {
-                                maxIdAtLoad = appEntityRecord.id;
-                            }
-                            appEntityService.loadEntityFromJson(this, appEntityRecord.id, appEntityRecord.json);
-                        }
-                    }
-                }*/
-
                 System.out.println("loaded data for " + getMySQLName());
 
             } catch (Exception e) {
@@ -276,6 +298,7 @@ public final class AzquoMemoryDB {
                 List<JsonRecordTransport> recordsToStore = new ArrayList<JsonRecordTransport>();
                 // todo : write nlocking the db probably should start here
                 for (AzquoMemoryDBEntity entity : new ArrayList<AzquoMemoryDBEntity>(entities)) { // we're taking a copy of the set before running through it.
+                    // in looking at multi threading I don't know if this bit is so important, it should be fast, it's more the sql
                     JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
                     if (entity.getNeedsDeleting()) {
                         state = JsonRecordTransport.State.DELETE;
@@ -287,7 +310,12 @@ public final class AzquoMemoryDB {
                     entity.setAsPersisted(); // is this dangerous here???
                 }
                 // and end here
-                standardDAO.persistJsonRecords(this, tableToStoreIn, recordsToStore);
+                try {
+                    standardDAO.persistJsonRecords(this, tableToStoreIn, recordsToStore);
+                } catch (Exception e) {
+                    // currently I'll just stack trace this, not sure of what would be the best strategy
+                    e.printStackTrace();
+                }
             }
         }
     }
