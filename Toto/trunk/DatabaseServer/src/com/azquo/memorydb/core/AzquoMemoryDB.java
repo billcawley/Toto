@@ -2,9 +2,8 @@ package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.dao.JsonRecordTransport;
 import com.azquo.memorydb.dao.StandardDAO;
-import com.github.holodnov.calculator.ObjectSizeCalculator;
 import org.apache.log4j.Logger;
-import java.text.DecimalFormat;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -20,11 +19,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * created after it became apparent that Mysql in the way I'd arranged the objects didn't have a hope in hell of
  * delivering data fast enough. Leverage collections to implement Azquo spec.
  * <p/>
- * TODO - this whole intern business, not sure if it matters so much on the get, it's the set I care about
+ * I'm using intern when adding strings to objects, it should be used wherever that string is going to hang around.
  */
 
 public final class AzquoMemoryDB {
 
+    // have given up trying this though spring for the moment
     Properties azquoProperties = new Properties();
 
     private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
@@ -40,7 +40,7 @@ public final class AzquoMemoryDB {
     private final Map<Integer, Value> valueByIdMap;
     private final Map<Integer, Provenance> provenanceByIdMap;
 
-    // does this database need loading from mysql, a significant flag that affects rules for memory db instantiation for example
+    // does this database need loading from mysql, a significant flag that affects rules for memory db entity instantiation for example
     private boolean needsLoading;
 
     // reference to the mysql db, not final so it can be nullable to stop persistence
@@ -52,29 +52,35 @@ public final class AzquoMemoryDB {
     private int nextId;
 
     // when objects are modified they are added to these sets held in a map. AzquoMemoryDBEntity has all functions require to persist.
-
     private final Map<String, Set<AzquoMemoryDBEntity>> entitiesToPersist;
-
-    private final int threadsToTry;
-
-    public int getThreadsToTry(){
-        return threadsToTry;
+    // how many threads when loading from and saving to MySQL
+    private final int loadingThreads;
+    // how many threads when creating a report
+    private final int rowFillerThreads;
+    // available to StandardDAO
+    public int getLoadingThreads(){
+        return loadingThreads;
     }
 
-    // Initialising maps concurrently here,
+    public int getRowFillerThreads() {
+        return rowFillerThreads;
+    }
 
+    // Initialising as concurrent hashmaps here, needs careful thought as to whether heavy concurrent access is actually a good idea, what could go wrong
     protected AzquoMemoryDB(String mysqlName, StandardDAO standardDAO) throws Exception {
         azquoProperties.load(getClass().getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring
-        // same as spreadsheet
+        // now where the default multi threading number is defined. Different number based on the task? Can decide later.
         int availableProcessors = Runtime.getRuntime().availableProcessors();
-        threadsToTry = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
-        System.out.println("memory db init threads : " + threadsToTry);
-
+        loadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2); // possibly lower, /3 maybe??
+        rowFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report geenration
+        System.out.println("memory db transport threads : " + loadingThreads);
+        System.out.println("row filler threads : " + rowFillerThreads);
         this.mysqlName = mysqlName;
         this.standardDAO = standardDAO;
         needsLoading = true;
         maxIdAtLoad = 0;
         nameByAttributeMap = new ConcurrentHashMap<String, Map<String, List<Name>>>();
+        // commented koloboke should we wish to try that. Not thread safe though.
 /*        nameByIdMap = HashIntObjMaps.newMutableMap();
         valueByIdMap = HashIntObjMaps.newMutableMap();
         provenanceByIdMap = HashIntObjMaps.newMutableMap();*/
@@ -88,13 +94,6 @@ public final class AzquoMemoryDB {
                 entitiesToPersist.put(persistedTable.name(), Collections.newSetFromMap(new HashMap<AzquoMemoryDBEntity, Boolean>()));
             }
         }
-/*        if (appServices != null) {
-            for (AppEntityService appEntityService : appServices) {
-                // seems a good a place as any to create the MySQL table if it doesn't exist
-                appEntityService.checkCreateMySQLTable(this);
-                entitiesToPersist.put(appEntityService.getTableName(), Collections.newSetFromMap(new HashMap<AzquoMemoryDBEntity, Boolean>()));
-            }
-        }*/
         if (standardDAO != null) {
             loadData();
         }
@@ -120,6 +119,8 @@ public final class AzquoMemoryDB {
     private static final int PROVENANCE_MODE = 0;
     private static final int NAME_MODE = 1;
     private static final int VALUE_MODE = 2;
+
+    // task for multi threaded loading of a database
 
     private class SQLBatchLoader implements Runnable {
         private final StandardDAO standardDAO;
@@ -201,18 +202,19 @@ public final class AzquoMemoryDB {
                 these 3 commands will automatically load the data into the memory DB set as persisted
                 Load order is important as value and name use provenance and value uses names. Names uses itself hence all names need initialisation finished after the id map is sorted
 
-                //I'm going to load in chunks, should scale more.
-                */
+                This is why when multi threading we wait util a type of entity is fully loaded before mmoving onto the next
 
+                Atomic integers to pass through to the multi threaded code to track numbers
+
+                */
                 AtomicInteger provenaceLoaded = new AtomicInteger();
                 AtomicInteger namesLoaded = new AtomicInteger();
                 AtomicInteger valuesLoaded = new AtomicInteger();
 
                 final int step = 500000; // not so much step now as id range given how we're now querying mysql
 
-                // do all provenance, then all names then all values, values expet names to be correct.
-
-                ExecutorService executor = Executors.newFixedThreadPool(threadsToTry);
+                // create thread pool, rack up the loading rtasks and wait for it to finish. Repeat for name and values.
+                ExecutorService executor = Executors.newFixedThreadPool(loadingThreads);
                 int from = 0;
                 int maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.provenance.name());
                 while (from < maxIdForTable) {
@@ -223,7 +225,7 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
-                executor = Executors.newFixedThreadPool(threadsToTry);
+                executor = Executors.newFixedThreadPool(loadingThreads);
                 from = 0;
                 maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.name.name());
                 while (from < maxIdForTable) {
@@ -234,7 +236,7 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
-                executor = Executors.newFixedThreadPool(threadsToTry);
+                executor = Executors.newFixedThreadPool(loadingThreads);
                 from = 0;
                 maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.value.name());
                 while (from < maxIdForTable) {
@@ -251,16 +253,14 @@ public final class AzquoMemoryDB {
                     System.out.println("Used Memory after list load:"
                             + (runtime.totalMemory() - runtime.freeMemory()) / mb);
                 }
+                // note : after multi threading the loading this init names (linking) now takes longer, need to consider thread safety if planning on multi threading this.
                 initNames();
                 if (memoryTrack) {
                     System.out.println("Used Memory after init names :"
                             + (runtime.totalMemory() - runtime.freeMemory()) / mb);
                 }
-
-
                 System.out.println("names init, " + (System.currentTimeMillis() - track) + "ms");
                 System.out.println("loaded data for " + getMySQLName());
-
             } catch (Exception e) {
                 logger.error("could not load data for " + getMySQLName() + "!", e);
             }
@@ -272,10 +272,8 @@ public final class AzquoMemoryDB {
                 System.out.println("gc time : " + (System.currentTimeMillis() - marker));
                 long newUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
                 System.out.println("Guess at DB size " + (newUsed - usedMB));
-                System.out.println("Used Memory:"
-                        + newUsed);
-                System.out.println("Free Memory:"
-                        + runtime.freeMemory() / mb);
+                System.out.println("Used Memory:" + newUsed);
+                System.out.println("Free Memory:" + runtime.freeMemory() / mb);
                 System.out.println("Total Memory:" + runtime.totalMemory() / mb);
                 System.out.println("Max Memory:" + runtime.maxMemory() / mb);
             }
@@ -291,7 +289,7 @@ public final class AzquoMemoryDB {
         // just a simple DB write lock should to it
         // for the moment just make it work.
         // map of sets to persist means that should we add another object type then this code should not need to change
-        for (String tableToStoreIn : entitiesToPersist.keySet()) { // run through 'em was an enum of set table names, not it could be anything depending on app tables. See no harm in theh generic nature
+        for (String tableToStoreIn : entitiesToPersist.keySet()) { // could go back to an enum of persist table names? Only implemented like this due to the old app tables
             Set<AzquoMemoryDBEntity> entities = entitiesToPersist.get(tableToStoreIn);
             if (!entitiesToPersist.isEmpty()) {
                 System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
@@ -462,7 +460,6 @@ public final class AzquoMemoryDB {
                 name.delete();
             }
         }
-
         for (Name name : nameByIdMap.values()) {
             if (name.getParents().size() == 0 && name.getChildren().size() == 0 && name.getValues().size() == 0) {
                 name.delete();
@@ -484,7 +481,7 @@ public final class AzquoMemoryDB {
         return provenanceByIdMap.get(id);
     }
 
-    // syncronized back on for fast maps
+    // would need to be synchronized if not on a concurrent map
 
     protected void addNameToDb(final Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
@@ -601,47 +598,11 @@ public final class AzquoMemoryDB {
     }
 
     // note : the jmap histogram may make this a little redundant.
+    // leaving here commented for the moment
 
+/*
     public void memoryReport() {
         try {
-            /*System.out.println("sizing names");
-            int count = 0;
-            for (Name n : nameByIdMap.values()) {
-                n.size = (int) ObjectSizeCalculator.sizeOfForAzquo(n, new ArrayList<StringBuilder>());
-                count++;
-                if (count%5000 == 0){
-                    System.out.println(count);
-                }
-            }
-            count = 0;
-            for (Value v : valueByIdMap.values()) {
-                v.size = (int) ObjectSizeCalculator.sizeOfForAzquo(v, new ArrayList<StringBuilder>());
-                count++;
-                if (count%5000 == 0){
-                    System.out.println(count);
-                }
-            }
-            ArrayList<Name> allNames = new ArrayList<Name>(nameByIdMap.values());
-            ArrayList<Value> allValues = new ArrayList<Value>(valueByIdMap.values());
-            System.out.println("sorting names/values");
-            Collections.sort(allNames, new Comparator<Name>() {
-                public int compare(Name o1, Name o2) {
-                    return -Integer.compare(o1.size, o2.size);
-                }
-            });
-            Collections.sort(allValues, new Comparator<Value>() {
-                public int compare(Value o1, Value o2) {
-                    return -Integer.compare(o1.size, o2.size);
-                }
-            });
-            for (int i = 0; i < allNames.size() && i < 500; i++) {
-                Name name = allNames.get(i);
-                System.out.println(name.size + " " + name.getDefaultDisplayName() + " children " + name.getChildren().size() + " parents " + name.getParents().size() + " values " + name.getValues().size() + " peers " + name.getPeers().size());
-            }
-            for (int i = 0; i < allValues.size() && i < 100; i++) {
-                Value value = allValues.get(i);
-                System.out.println(value.size + " " + value.getText() + " names " + value.getNames().size());
-            }*/
             // simple by id maps, if an object is in one of these three it's in the database
             System.out.println("size of nameByIdMap : " + ObjectSizeCalculator.sizeOfForAzquo(nameByIdMap, null));
             System.out.println("size of nameByAttributeMap : " + ObjectSizeCalculator.sizeOfForAzquo(nameByAttributeMap, null));
@@ -656,13 +617,13 @@ public final class AzquoMemoryDB {
                 //System.out.println("trying for " + name);
                 long nameSize = ObjectSizeCalculator.sizeOfForAzquo(name, null);
                 totalNameSize += nameSize;
-                /*if (count%10000 == 0){
-                    System.out.println("Example name size : " + name.getDefaultDisplayName() + ", " + df.format(nameSize));
-                    List<StringBuilder> report = new ArrayList<StringBuilder>();
-                    ObjectSizeCalculator.sizeOfForAzquo(name, report);
-                    for (StringBuilder sb : report){
-                        System.out.println(sb);
-                    }*/
+                //if (count%10000 == 0){
+                  //  System.out.println("Example name size : " + name.getDefaultDisplayName() + ", " + df.format(nameSize));
+                  //  List<StringBuilder> report = new ArrayList<StringBuilder>();
+                  //  ObjectSizeCalculator.sizeOfForAzquo(name, report);
+                  //  for (StringBuilder sb : report){
+                  //      System.out.println(sb);
+                  //  }
 
             }
             System.out.println("total names size : " + df.format(totalNameSize));
@@ -674,19 +635,19 @@ public final class AzquoMemoryDB {
             for (Value value : values) {
                 long valueSize = ObjectSizeCalculator.sizeOfForAzquo(value, null);
                 totalValuesSize += valueSize;
-/*                if (count%10000 == 0){
-                    System.out.println("Example value size : " + value + ", " + df.format(valueSize));
-                    List<StringBuilder> report = new ArrayList<StringBuilder>();
-                    ObjectSizeCalculator.sizeOfForAzquo(value, report);
-                    for (StringBuilder sb : report){
-                        System.out.println(sb);
-                    }
-                }*/
+//                if (count%10000 == 0){
+ //                   System.out.println("Example value size : " + value + ", " + df.format(valueSize));
+   //                 List<StringBuilder> report = new ArrayList<StringBuilder>();
+     //               ObjectSizeCalculator.sizeOfForAzquo(value, report);
+       //             for (StringBuilder sb : report){
+         //               System.out.println(sb);
+           //         }
+             //   }
             }
             System.out.println("total values size : " + df.format(totalValuesSize));
             System.out.println("size per value : " + totalValuesSize / valueByIdMap.size());
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         }
-    }
+    }*/
 }

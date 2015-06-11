@@ -13,7 +13,6 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -165,7 +164,7 @@ WHERE id IN (1,2,3)
 
     public void persistJsonRecords(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws Exception {
         // currently only the inserter is multithreaded, adding the others shoudl not be difficult
-        ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDB.getThreadsToTry());
+        ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDB.getLoadingThreads());
         List<JsonRecordTransport> toDelete = new ArrayList<JsonRecordTransport>();
         List<JsonRecordTransport> toInsert = new ArrayList<JsonRecordTransport>();
         List<JsonRecordTransport> toUpdate = new ArrayList<JsonRecordTransport>();

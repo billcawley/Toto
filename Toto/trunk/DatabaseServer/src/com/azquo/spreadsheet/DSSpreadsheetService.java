@@ -50,9 +50,6 @@ public class DSSpreadsheetService {
         String string;
     }
 
-    public final int availableProcessors;
-    public final int threadsToTry;
-
     public DSSpreadsheetService() {
         String thost = "";
         try {
@@ -61,10 +58,7 @@ public class DSSpreadsheetService {
             e.printStackTrace(); // may as well in case it goes wrong
         }
         System.out.println("host : " + thost);
-        availableProcessors = Runtime.getRuntime().availableProcessors();
-        System.out.println("Available processors : " + availableProcessors);
         stringUtils = new StringUtils();
-        threadsToTry = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
     }
 
     // after some thining trim this down to the basics. Would have just been a DB name for that server but need permissions too.
@@ -120,11 +114,11 @@ public class DSSpreadsheetService {
             List<Name> possibles = nameService.parseQuery(azquoMemoryDBConnection, listChoice + " select \"" + entered + "\"");
             List<String> nameStrings = getIndividualNames(possibles);
             StringBuilder output = new StringBuilder();
-            output.append(jsonFunction + "({\"selection\":\"" + listName + "\",\"choices\":[");
+            output.append(jsonFunction).append("({\"selection\":\"").append(listName).append("\",\"choices\":[");
             int count = 0;
             for (String nameString : nameStrings) {
                 if (count++ > 0) output.append(",");
-                output.append("\"" + nameString.replace("\"", "\\\"") + "\"");
+                output.append("\"").append(nameString.replace("\"", "\\\"")).append("\"");
             }
             output.append("]})");
             return output.toString();
@@ -150,7 +144,7 @@ seaports;children   container;children
 
      */
 
-    public List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames) throws Exception {
+    private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames) throws Exception {
         List<List<List<DataRegionHeading>>> nameLists = new ArrayList<List<List<DataRegionHeading>>>();
         for (List<String> sourceRow : headingRegion) { // we're stepping through the cells that describe headings
             // ok here's the thing, before it was just names here, now it could be other things, attribute names formulae etc.
@@ -208,7 +202,7 @@ seaports;children   container;children
 
     */
 
-    public <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
+    private <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
         List<List<T>> toReturn = null;
         for (List<T> permutationDimension : listsToPermute) {
             if (permutationDimension == null) {
@@ -251,7 +245,7 @@ seaports;children   container;children
      */
 
 
-    public <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
+    private <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
         List<List<T>> toReturn = new ArrayList<List<T>>();
         for (List<T> existingRow : existing2DArray) {
             for (T elementWeWantToAdd : permutationWeWantToAdd) { // for each new element
@@ -286,7 +280,7 @@ seaports;children   container;children
      */
 
 
-    public List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists) {
+    private List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists) {
         List<List<DataRegionHeading>> output = new ArrayList<List<DataRegionHeading>>();
         final int noOfHeadingDefinitionRows = headingLists.size();
         if (noOfHeadingDefinitionRows == 0) {
@@ -382,7 +376,7 @@ seaports;children   container;children
         return output;
     }
 
-    public List<String> getIndividualNames(List<Name> sortedNames) {
+    private List<String> getIndividualNames(List<Name> sortedNames) {
         //this routine to output a list of names without duplicates by including parent names on duplicates
         List<String> output = new ArrayList<String>();
         String lastName = null;
@@ -412,7 +406,7 @@ seaports;children   container;children
 
     // todo make sense of the bloody restrictcount parameter
 
-    public List<Integer> sortDoubleValues(int restrictCount, Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
+    private List<Integer> sortDoubleValues(int restrictCount, Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
         final List<Integer> sortedValues = new ArrayList<Integer>();
         if (restrictCount != 0) {
             List<Map.Entry<Integer, Double>> list = new ArrayList<Map.Entry<Integer, Double>>(sortTotals.entrySet());
@@ -435,7 +429,7 @@ seaports;children   container;children
 
     // same thing for strings, I prefer stronger typing
 
-    public List<Integer> sortStringValues(int restrictCount, Map<Integer, String> sortTotals, final boolean sortRowsUp) {
+    private List<Integer> sortStringValues(int restrictCount, Map<Integer, String> sortTotals, final boolean sortRowsUp) {
         final List<Integer> sortedValues = new ArrayList<Integer>();
         if (restrictCount != 0) {
             List<Map.Entry<Integer, String>> list = new ArrayList<Map.Entry<Integer, String>>(sortTotals.entrySet());
@@ -476,7 +470,7 @@ seaports;children   container;children
 
     */
 
-    public <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
+    private <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
         final List<List<T>> flipped = new ArrayList<List<T>>();
         if (source2Dlist.size() == 0) {
             return flipped;
@@ -517,7 +511,7 @@ seaports;children   container;children
 
     // return headings as strings for display, I'm going to put blanks in here if null.
 
-    private List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languages) {
+    public List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languages) {
         List<List<String>> toReturn = new ArrayList<List<String>>();
         for (List<DataRegionHeading> row : source) {
             List<String> returnRow = new ArrayList<String>();
@@ -1063,28 +1057,14 @@ I think that this is an ideal candidate for multithreading to speed things up
         if (totalRows * totalCols > maxRegionSize) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }
-        int threads = threadsToTry;
+        int threads = connection.getAzquoMemoryDB().getRowFillerThreads();
         if (!tryMultiThreaded) {
             threads = 1;
         }
         System.out.println("populating using " + threads + " threas(s)");
         ExecutorService executor = Executors.newFixedThreadPool(threads); // picking 10 based on an example I saw . . .
         StringBuffer errorTrack = new StringBuffer();// deliberately threadsafe, need to keep an eye on the report building . . .
-        // tried multithreaded, going for big chunks
-        // old style, and now I think about it it may have be double rendering on small numbers of rows?
-        /*
-        int chunk = totalRows / threads;
-        int startRow = 0;
-        int endRow = startRow + chunk - 1; // - 1 as endrow is inclusive
-        for (int i = 1; i <= threads; i++) {
-            if (endRow >= totalRows || i == threads) { // the last one
-                endRow = totalRows - 1;
-            }
-            executor.execute(new RowFiller(startRow, endRow, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, totalSetSize, errorTrack));
-            startRow += chunk;
-            endRow += chunk;
-        }
-        */
+        // tried multithreaded, abandoning big chunks
         // different style, just chuck every row in the queue
         for (int i = 0; i < totalRows; i++) {
             executor.execute(new RowFiller(i, i, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, totalSetSize, errorTrack));

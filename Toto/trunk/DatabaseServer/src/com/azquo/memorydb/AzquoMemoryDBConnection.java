@@ -51,11 +51,6 @@ public class AzquoMemoryDBConnection {
         return azquoMemoryDB.getCurrentMaximumId();
     }
 
-    // for debugging
-    public void memoryReport() {
-        azquoMemoryDB.memoryReport();
-    }
-
     // todo, address this being public now I've refactored, a big issue??
 
     public void setAzquoMemoryDB(final AzquoMemoryDB azquoMemoryDB) {
@@ -121,5 +116,4 @@ public class AzquoMemoryDBConnection {
             azquoMemoryDB.saveDataToMySQL();
         }
     }
-
 }

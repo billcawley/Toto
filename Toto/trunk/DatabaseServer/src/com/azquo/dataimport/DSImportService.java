@@ -28,7 +28,6 @@ public class DSImportService {
     private static class NameParent {
         String name;
         Name parent;
-
         public NameParent(String name, Name parent) {
             this.name = name;
             this.parent = parent;
@@ -43,7 +42,6 @@ public class DSImportService {
     @Autowired
     private DSSpreadsheetService dsSpreadsheetService;
 
-
     public static final String IDENTIFIER = "key";
     public static final String CHILDOF = "child of ";
     public static final String PARENTOF = "parent of ";
@@ -56,7 +54,6 @@ public class DSImportService {
     public static final String COMPOSITION = "composition";
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
-
 
     static class ImportHeading {
         int column;
@@ -170,7 +167,6 @@ public class DSImportService {
             if (heading.composition.length() == 0) {
                 throw new Exception(clause + " not understood");
             }
-
         }
         if (readClause(PEERS, clause) != null) {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
@@ -258,7 +254,6 @@ public class DSImportService {
             //checking the name itself, then the name as part of a comma separated string
             if (heading.heading != null && (heading.heading.toLowerCase().contains("," + peerName.toLowerCase()))) {
                 heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);//may need to create it
-
                 return headingNo;
             }
         }
@@ -320,7 +315,6 @@ public class DSImportService {
         } else {
             for (Name parent : parents) {
                 child = includeInSet(azquoMemoryDBConnection, namesFound, name, parent, local, attributeNames);
-
             }
         }
         return child;
@@ -347,7 +341,6 @@ public class DSImportService {
                 headers = importHeaders.split("¬");
             }
         }
-
         if (headers==null){
             csvReader.readHeaders();
             headers = csvReader.getHeaders();
@@ -390,7 +383,6 @@ public class DSImportService {
                     lastReported = valuecount;
                 }
             }
-
         }
         System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
         System.out.println("---------- namesfound size " + namesFound.size());
@@ -427,8 +419,6 @@ public class DSImportService {
                     headings.add(contextHeading);
                     head = head.substring(0, dividerPos);
                     dividerPos = head.lastIndexOf(headingDivider);
-
-
                 }
                 heading.column = col;
                 if (head.startsWith(";")) {
@@ -526,9 +516,7 @@ public class DSImportService {
                             valueCount++;
                             // finally store our value and names for it
                             valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue);
-
                         }
-
                     }
                 }
                 if (heading.peerHeadings.size() > 0) {
@@ -555,7 +543,8 @@ public class DSImportService {
                     }
                 }
                 if (heading.identityHeading >= 0 && heading.attribute!=null && !heading.attribute.equalsIgnoreCase(dateLang)) {
-                    handleAttribute(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
+                    // funnily enough no longer using attributes
+                    handleAttribute(azquoMemoryDBConnection, namesFound, heading, headings);
                 }
                 if (heading.parentOf != null && !heading.local) {
                       handleParent(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
@@ -595,7 +584,6 @@ public class DSImportService {
                                 if (peerHeading == -1) {
                                     throw new Exception("error: cannot find peer " + peer.getDefaultDisplayName() + " for " + importHeading.name.getDefaultDisplayName());
                                 }
-
                             }
                         }
                         if (peerHeading >= 0) {
@@ -626,7 +614,6 @@ public class DSImportService {
                                 break;
                             }
                         }
-
                     }
                 }
                 if (importHeading.childOfString != null) {
@@ -660,14 +647,12 @@ public class DSImportService {
     }
 
     private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
-
         List<String> languages = new ArrayList<String>();
         if (heading.attribute != null && !heading.attribute.equalsIgnoreCase(dateLang)){
             languages.add(heading.attribute);
-        }else{
+        } else {
             languages.addAll(attributeNames);
         }
-
         ImportHeading childHeading = headings.get(heading.childHeading);
         if (heading.lineValue.length() == 0) {
             return;
@@ -687,8 +672,7 @@ public class DSImportService {
         heading.lineName.addChildWillBePersisted(childHeading.lineName);
     }
 
-    public void handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
-
+    public void handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings) throws Exception {
         ImportHeading identity = headings.get(heading.identityHeading);
         ImportHeading identityHeading = headings.get(heading.identityHeading);
         if (identityHeading.lineName == null) {
@@ -768,7 +752,6 @@ public class DSImportService {
         }
     }
 
-
     public void setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames) throws Exception {
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
         String line;
@@ -806,5 +789,4 @@ public class DSImportService {
             }
         }
     }
-
 }
