@@ -12,6 +12,9 @@ import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.api.model.Validation;
 import org.zkoss.zss.model.*;
+import org.zkoss.zss.model.impl.CellStyleImpl;
+import org.zkoss.zss.model.impl.ColorImpl;
+import org.zkoss.zss.model.impl.FontImpl;
 
 import java.util.*;
 
@@ -48,6 +51,12 @@ public class ZKAzquoBookUtils {
         for (UserChoice uc : allChoices) {
             userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
         }
+
+        int highlightDays = 0;
+        if (userChoices.get("highlight") != null){ // really need to look into these string literals
+            highlightDays = Integer.parseInt(userChoices.get("highlight"));
+        }
+
             for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
                 Sheet sheet = book.getSheetAt(sheetNumber);
                 // see if we can impose the user choices on the sheet
@@ -77,7 +86,7 @@ public class ZKAzquoBookUtils {
                                 optionsForRegion = null;
                             }
                         }
-                        fillRegion(sheet, region, userChoices, optionsForRegion, loggedInUser);
+                        fillRegion(sheet, region, userChoices, optionsForRegion, loggedInUser, highlightDays);
                     }
                 }
                 // all data for that sheet should be populated
@@ -125,7 +134,7 @@ public class ZKAzquoBookUtils {
 
     // taking the function from old AzquoBook and rewriting
 
-    private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, String optionsForRegion, LoggedInUser loggedInUser) throws Exception {
+    private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, String optionsForRegion, LoggedInUser loggedInUser, int highlightDays) throws Exception {
         int filterCount = asNumber(getOption(region, "hiderows", userChoices, optionsForRegion));
         if (filterCount == 0)
             filterCount = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
@@ -143,7 +152,7 @@ public class ZKAzquoBookUtils {
             // not going to do this just yet
          if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
-                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, loggedInUser.getSortRow(region), loggedInUser.getSortCol(region), 0); // todo - highlighting
+                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, loggedInUser.getSortRow(region), loggedInUser.getSortCol(region), highlightDays);
             // todo : how to indicate sortable rows/cols
             // now, put the headings into the sheet!
             // might be factored into fill range in a bit
@@ -225,15 +234,25 @@ public class ZKAzquoBookUtils {
                     row++;
                 }
                 row = displayDataRegion.getRow();
+
+                SCellStyle redStyle = null;
                 for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
                     int col = displayDataRegion.getColumn();
                     for (CellForDisplay cellValue : rowCellValues) {
                         if (!cellValue.getStringValue().isEmpty()) { // then something to set
                             // the notable thing ehre is that ZK uses the object type to work out data type
+                            SCell cell = sheet.getInternalSheet().getCell(row, col);
                             if (NumberUtils.isNumber(cellValue.getStringValue())) {
-                                sheet.getInternalSheet().getCell(row, col).setValue(cellValue.getDoubleValue());// think that works . . .
+                                cell.setValue(cellValue.getDoubleValue());// think that works . . .
                             } else {
-                                sheet.getInternalSheet().getCell(row, col).setValue(cellValue.getStringValue());// think that works . . .
+                                cell.setValue(cellValue.getStringValue());// think that works . . .
+                            }
+                            // see if this works for highlighting
+                            if (cellValue.isHighlighted()){
+                                CellOperationUtil.applyFontColor(Ranges.range(sheet, row,col), "#FF0000");
+                                //System.out.println(row + ", " + col + "red!");
+                            } else {
+                                //System.out.println(row + ", " + col + "not red!");
                             }
                         }
                         col++;

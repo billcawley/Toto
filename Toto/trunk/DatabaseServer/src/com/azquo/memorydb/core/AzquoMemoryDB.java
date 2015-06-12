@@ -97,6 +97,7 @@ public final class AzquoMemoryDB {
         if (standardDAO != null) {
             loadData();
         }
+
         needsLoading = false;
         nextId = maxIdAtLoad + 1;
     }

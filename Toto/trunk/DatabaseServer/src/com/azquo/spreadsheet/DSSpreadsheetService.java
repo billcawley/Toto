@@ -844,7 +844,7 @@ seaports;children   container;children
             // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
             if (highlightDays > 0) {
                 for (AzquoCell azquoCell : newRow) {
-                    long age = 0;
+                    long age = 10000; // about 30 years old as default
                     ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
                     if (valuesForCell.getValues() != null || !valuesForCell.getValues().isEmpty()) {
     /* what did this mean??                    if (valuesForCell.getValues().size() == 1) {
