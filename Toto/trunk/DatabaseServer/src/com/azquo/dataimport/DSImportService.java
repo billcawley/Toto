@@ -15,6 +15,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,15 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * Has a fair bit of the logic that was in the original import service.
  */
 public class DSImportService {
-
-    private static class NameParent {
-        String name;
-        Name parent;
-        public NameParent(String name, Name parent) {
-            this.name = name;
-            this.parent = parent;
-        }
-    }
 
     private static final String headingDivider = "|";
     @Autowired
@@ -54,6 +46,8 @@ public class DSImportService {
     public static final String COMPOSITION = "composition";
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
 
     static class ImportHeading {
         int column;
@@ -98,6 +92,17 @@ public class DSImportService {
             lineName = null;
         }
     }
+
+    public boolean isADate(String maybeDate){
+        try {
+            Date date = sdf.parse(maybeDate);
+            return true;
+
+        }catch(Exception e){
+            return false;
+        }
+    }
+
 
     public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
         System.out.println("reading file " + filePath);
@@ -295,9 +300,12 @@ public class DSImportService {
             return "";
         }
     */
-    public Name includeInSet(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<NameParent, Name> namesFound, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
+    public Name includeInSet(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
         //namesFound is a quick lookup to avoid going to findOrCreateNameInParent
-        NameParent np = new NameParent(name, parent);
+        String np = name + ",";
+        if (parent != null){
+            np += parent.getId();
+        }
         Name found = namesFound.get(np);
         if (found != null) {
             return found;
@@ -307,7 +315,7 @@ public class DSImportService {
         return found;
     }
 
-    public Name includeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<NameParent, Name> namesFound, String name, Set<Name> parents, boolean local, List<String> attributeNames) throws Exception {
+    public Name includeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, String name, Set<Name> parents, boolean local, List<String> attributeNames) throws Exception {
 
         Name child = null;
         if (parents == null) {
@@ -325,7 +333,7 @@ public class DSImportService {
     public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, String fileType, List<String> attributeNames) throws Exception {
         trackers = new ConcurrentHashMap<String, Long>();
         // little local cache just to speed things up
-        final HashMap<NameParent, Name> namesFound = new HashMap<NameParent, Name>();
+        final HashMap<String, Name> namesFound = new HashMap<String, Name>();
         if (fileType.indexOf(" ") > 0) {
             //filetype should be first word only
             fileType = fileType.substring(0, fileType.indexOf(" "));
@@ -356,6 +364,9 @@ public class DSImportService {
         int lastReported = 0;
         // having read the headers go through each record
         int lineNo = 0;
+        long trigger = 2000000;
+        Long time = System.nanoTime();
+
         while (csvReader.readRecord()) {
             lineNo++;
             //ImportHeading contextPeersItem = null;
@@ -366,15 +377,20 @@ public class DSImportService {
                 if (heading.attribute != null && heading.attribute.equalsIgnoreCase(dateLang)){
                     //interpret the date and change to standard form
                     //todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-                    if (heading.lineValue.length() > 10){
-                        heading.lineValue = heading.lineValue.substring(0,10);
-                    }
+                       if (heading.lineValue.length() > 10 && isADate(heading.lineValue))  {
+                            heading.lineValue = heading.lineValue.substring(0, 10);
+                      }
                 }
                 heading.lineName = null;
             }
             if (headings.get(0).lineValue.length() > 0) {//skip any line that has a blank in the first column
                 getCompositeValues(headings);
                 valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
+                Long now = System.nanoTime();
+                if (now - time > trigger){
+                     System.out.println("line no " + lineNo + " time = " + (now - time));
+                 }
+                time = now;
                 if (lineNo % 5000 == 0){
                     System.out.println("imported line count " + lineNo);
                 }
@@ -440,7 +456,7 @@ public class DSImportService {
     }
 
 
-    private int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings, HashMap<NameParent, Name> namesFound, List<String> attributeNames) throws Exception {
+    private int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings, HashMap<String, Name> namesFound, List<String> attributeNames) throws Exception {
         List<Name> contextNames = new ArrayList<Name>();
         String value;
         int valueCount = 0;
@@ -454,12 +470,12 @@ public class DSImportService {
         */
 
         for (ImportHeading importHeading : headings) {
-            //long track = System.currentTimeMillis();
             if (importHeading.local && importHeading.parentOf != null) {
                 handleParent(azquoMemoryDBConnection, namesFound, importHeading, headings, attributeNames);
             }
-            //trackers.put(importHeading.name.getDefaultDisplayName(), (System.currentTimeMillis() - track) + trackers.get(importHeading.name));
         }
+        long toolong = 200000;
+        long time = System.nanoTime();
         for (ImportHeading heading : headings) {
             //long track = System.currentTimeMillis();
             if (heading.contextItem) {
@@ -542,7 +558,7 @@ public class DSImportService {
                         valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue);
                     }
                 }
-                if (heading.identityHeading >= 0 && heading.attribute!=null && !heading.attribute.equalsIgnoreCase(dateLang)) {
+                if (heading.identityHeading >= 0 && heading.attribute!=null && (!heading.attribute.equalsIgnoreCase(dateLang) || !isADate(heading.lineValue)) ) {
                     // funnily enough no longer using attributes
                     handleAttribute(azquoMemoryDBConnection, namesFound, heading, headings);
                 }
@@ -564,7 +580,11 @@ public class DSImportService {
                     }
                 }
             }
-            //trackers.put(heading.name.getDefaultDisplayName(), (System.currentTimeMillis() - track) + trackers.get(heading.name));
+            long now = System.nanoTime();
+            if (now - time > toolong){
+                System.out.println(heading.heading + " took " + (now - time));
+        }
+            time = System.nanoTime();
         }
         return valueCount;
     }
@@ -646,7 +666,7 @@ public class DSImportService {
         */
     }
 
-    private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
+    private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
         List<String> languages = new ArrayList<String>();
         if (heading.attribute != null && !heading.attribute.equalsIgnoreCase(dateLang)){
             languages.add(heading.attribute);
@@ -672,7 +692,7 @@ public class DSImportService {
         heading.lineName.addChildWillBePersisted(childHeading.lineName);
     }
 
-    public void handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings) throws Exception {
+    public void handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportHeading heading, List<ImportHeading> headings) throws Exception {
         ImportHeading identity = headings.get(heading.identityHeading);
         ImportHeading identityHeading = headings.get(heading.identityHeading);
         if (identityHeading.lineName == null) {
@@ -690,7 +710,7 @@ public class DSImportService {
        identityHeading.lineName.setAttributeWillBePersisted(attribute, heading.lineValue);
    }
 
-    private boolean findPeers(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<NameParent, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, Set<Name> namesForValue, List<String> attributeNames) throws Exception {
+    private boolean findPeers(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, Set<Name> namesForValue, List<String> attributeNames) throws Exception {
         //ImportHeading headingWithPeers = heading;
         boolean hasRequiredPeers = true;
         namesForValue.add(heading.name); // the one at the top of this headingNo, the name with peers.
