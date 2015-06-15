@@ -9,7 +9,6 @@ import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.LoginService;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
@@ -266,7 +265,7 @@ public class AdminService {
                 }
             }
         } else {
-            OnlineReport notFound = new OnlineReport(0, 0, 0, "", "", "No reports found", "", "", "", "");
+            OnlineReport notFound = new OnlineReport(0, 0, 0, "", "", "No reports found", "", "", "", "", OnlineReport.AZQUO_BOOK); // default to old for the moment
             reportList.add(notFound);
         }
         return reportList;

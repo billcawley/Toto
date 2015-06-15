@@ -254,7 +254,6 @@
                         (currently $hdays days)
                     </a>
                 </li>
-                <li><a href="#" onclick="tryNewSheet()">Show new version</a></li>
             </ul>
         </div>
         <a class="savedata" href="#" onclick="saveData()" id="saveData" style="display:none;">Save data</a>

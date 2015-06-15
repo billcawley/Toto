@@ -21,6 +21,10 @@ public class OnlineReport extends StandardEntity {
     private String filename;
     private String pathName; //internal use
     private String explanation;
+    private int renderer;
+
+    public static final int AZQUO_BOOK = 0;
+    public static final int ZK_AZQUO_BOOK = 1;
 
     @JsonCreator
     public OnlineReport(@JsonProperty("id") int id
@@ -32,7 +36,8 @@ public class OnlineReport extends StandardEntity {
             , @JsonProperty("userStatus") String userStatus
             , @JsonProperty("filename") String filename
             , @JsonProperty("pathName") String pathName
-            , @JsonProperty("explanation") String explanation) {
+            , @JsonProperty("explanation") String explanation
+            , @JsonProperty("renderer") int renderer) {
         this.id = id;
         this.businessId = businessId;
         this.databaseId = databaseId;
@@ -43,6 +48,7 @@ public class OnlineReport extends StandardEntity {
         this.filename = filename;
         this.pathName = pathName;
         this.explanation = explanation;
+        this.renderer = renderer;
     }
 
     public int getBusinessId() {
@@ -116,17 +122,27 @@ public class OnlineReport extends StandardEntity {
         this.explanation = explanation;
     }
 
+    public int getRenderer() {
+        return renderer;
+    }
+
+    public void setRenderer(int renderer) {
+        this.renderer = renderer;
+    }
+
     @Override
     public String toString() {
-        return "Report{" +
-                "id=" + id +
-                ", businessId=" + businessId +
+        return "OnlineReport{" +
+                "businessId=" + businessId +
                 ", databaseId=" + databaseId +
+                ", database='" + database + '\'' +
                 ", reportName='" + reportName + '\'' +
-                ", reportCategory'" + reportCategory + '\'' +
+                ", reportCategory='" + reportCategory + '\'' +
                 ", userStatus='" + userStatus + '\'' +
                 ", filename='" + filename + '\'' +
+                ", pathName='" + pathName + '\'' +
                 ", explanation='" + explanation + '\'' +
+                ", renderer=" + renderer +
                 '}';
     }
 }

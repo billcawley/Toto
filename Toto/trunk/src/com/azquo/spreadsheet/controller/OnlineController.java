@@ -81,37 +81,13 @@ public class OnlineController {
 
     ) {
         try {
-            // test code, the useful objects will have been set up below
-            if (request.getParameter("trynewsheet") != null && request.getParameter("trynewsheet").length() > 0) {
-                // ok new plan, make the book with all it needs here and set against the request for the provider to return
-                long time = System.currentTimeMillis();
-                String bookPath = (String) request.getSession().getAttribute(BOOK_PATH);
-                final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                final LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LOGGED_IN_USER);
-                // the first two make sense. Little funny about teh second two but we need a reference to these
-                book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
-                book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
-                // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
-                book.getInternalBook().setAttribute(REPORT_ID, loggedInUser.getReportId());
-                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO);
-                bookUtils.populateBook(book);
-                request.setAttribute(BOOK, book);
-                if (loggedInUser.getDatabase() != null) {
-                    model.addAttribute("databaseChosen", loggedInUser.getDatabase().getName());
-                }
-                System.out.println("time to prepare the book : " + (System.currentTimeMillis() - time));
-                return "zstest";
-            }
-
             String callerId = request.getRemoteAddr();
             if (callerId != null && user != null && user.equals("demo@user.com")) {
                 user += callerId;
             }
-
             if (reportToLoad != null && reportToLoad.length() > 0) {
                 reportId = reportToLoad;
             }
-
             //long startTime = System.currentTimeMillis();
             String workbookName = null;
             Database db;
@@ -258,11 +234,31 @@ public class OnlineController {
                 }
 
                 if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
-                    if (onlineReport.getId() != 1) {
-                        request.getSession().setAttribute(BOOK_PATH, spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename());
+                    // logic here is going to change to support the different renderers
+                    if (onlineReport.getId() != 1) {// todo, make this makem a bit more sense, get rid of report id 1 being a special case
+                        if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK){
+                            long time = System.currentTimeMillis();
+                            String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
+                            final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                            // the first two make sense. Little funny about the second two but we need a reference to these
+                            book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
+                            book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
+                            // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
+                            book.getInternalBook().setAttribute(REPORT_ID, loggedInUser.getReportId());
+                            ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO);
+                            bookUtils.populateBook(book);
+                            request.setAttribute(BOOK, book);
+                            if (loggedInUser.getDatabase() != null) {
+                                model.addAttribute("databaseChosen", loggedInUser.getDatabase().getName());
+                            }
+                            System.out.println("time to prepare the book : " + (System.currentTimeMillis() - time));
+                            return "zstest";
+                        }
+                        // default to old one
+                        loggedInUser.setReportId(onlineReport.getId());
+                        result = spreadsheetService.readExcel(loggedInUser, onlineReport, spreadsheetName); // was a message passed , "Right-click mouse for provenance" but not used I don't think
                         // was provenance setting here,
-                    } else {
-                        request.getSession().setAttribute(BOOK_PATH, onlineReport.getFilename());
+                    } else { // no custom renderers for the user menu,
                         if (!loggedInUser.getUser().isAdministrator()) {
                             // I relaise making a velocity and passing it to jsp is a bit crap, I just want it to work
                             model.put("content",spreadsheetService.showUserMenu(loggedInUser) );// user menu being what magento users typically see when logging in, a velocity page
@@ -270,12 +266,7 @@ public class OnlineController {
                         } else {
                             return "redirect:/api/ManageReports";
                         }
-
                     }
-                    loggedInUser.setReportId(onlineReport.getId());
-                    // jam 'em in the session for the moment, makes testing easier. As in see a report then try with &trynewsheet=true after
-                    request.getSession().setAttribute(LOGGED_IN_USER, loggedInUser);
-                    result = spreadsheetService.readExcel(loggedInUser, onlineReport, spreadsheetName); // was a message passed , "Right-click mouse for provenance" but not used I don't think
                 }
             /*
             BufferedReader br = new BufferedReader(new StringReader(result));

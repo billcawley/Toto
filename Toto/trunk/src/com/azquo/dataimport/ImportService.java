@@ -279,6 +279,8 @@ public final class ImportService {
         return tempName;
     }
 
+    // todo - directory location should be the database code!
+
     private void uploadReport(LoggedInUser loggedInUser, AzquoBook azquoBook, String fileName, String reportName) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = 0;
@@ -299,7 +301,7 @@ public final class ImportService {
         FileOutputStream out = new FileOutputStream(fullPath);
         azquoBook.saveBook(fullPath);
         out.close();
-        or = new OnlineReport(reportId, businessId, databaseId, "", reportName,"","", fileName, "", "");
+        or = new OnlineReport(reportId, businessId, databaseId, "", reportName,"","", fileName, "", "", OnlineReport.AZQUO_BOOK); // default to old for the moment
         onlineReportDAO.store(or);
     }
 
