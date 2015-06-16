@@ -4,6 +4,7 @@ import com.azquo.admin.AdminService;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
+import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.zk.ui.Component;
@@ -14,7 +15,9 @@ import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
 import org.zkoss.zk.ui.util.Clients;
+import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Importers;
+import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
@@ -75,8 +78,6 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
-        Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
-        //Clients.evalJavaScript("alert('hello');");
         boolean reload = false;
         String chosen = (String) event.getEditingValue();
         int row = event.getRow();
@@ -95,8 +96,28 @@ public class ZKComposer extends SelectorComposer<Component> {
                     spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), reportId, name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
                     reload = true;
                 }
+                if (name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
+                    String region = name.getName().substring("az_DataRegion".length());
+                    if (loggedInUser.getSentCells(region) != null) {
+                        CellForDisplay cellForDisplay = loggedInUser.getSentCells(region).getData().get(row - name.getRefersToCellRegion().getRow()).get(col - name.getRefersToCellRegion().getColumn());
+                        Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
+                        if (NumberUtils.isNumber(chosen)) {
+                            cellForDisplay.setDoubleValue(Double.parseDouble(chosen));
+                        }
+                        cellForDisplay.setStringValue(chosen);
+                        int highlightDays = 0;
+                        if (book.getInternalBook().getAttribute("highlightDays") != null){ // maybe factor the string literals??
+                            highlightDays = (Integer)book.getInternalBook().getAttribute("highlightDays");
+                        }
+                        if (highlightDays > 0) {
+                            cellForDisplay.setHighlighted(true);
+                            CellOperationUtil.applyFontColor(Ranges.range(event.getSheet(), row, col), "#FF0000");
+                        }
+                    }
+                }
             }
         }
+        // could maybe be moved up to where the boolean is set.
         if (reload) {
             try {
                 // new book from same source
@@ -130,11 +151,6 @@ public class ZKComposer extends SelectorComposer<Component> {
             // now we need to check if it's in a data region
             editPopup.open(cellMouseEvent.getClientx(), cellMouseEvent.getClienty());
         }
-    }
-
-    // to deal with provenance
-    public void doSaveBook$myzss(Event event) {
-        System.out.println("any luck??");
     }
 
 }

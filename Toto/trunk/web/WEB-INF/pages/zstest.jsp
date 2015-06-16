@@ -256,7 +256,6 @@
                 </li>
             </ul>
         </div>
-        <a class="savedata" href="#" onclick="saveData()" id="saveData" style="display:none;">Save data</a>
         <div id="highlightoptions" class="highlightoptions">
             <p>Highlight data changed recently</p>
             <div class="highlightoption"><a href="#" onclick="highlight(0)">None</a></div>
@@ -270,11 +269,13 @@
 
 
 
+        <!--        <a class="savedata" href="#" onclick="postAjax('Save')" id="saveData" style="display:none;">Save data</a> -->
 
-<!---
+<!--
         <button id="xlsButton">XLS</button>
         <button id="pdfButton">PDF</button>
-        <button id="inspectButton" onclick="inspectDatabase()">Inspect</button> --->
+        <button id="inspectButton" onclick="inspectDatabase()">Inspect</button> -->
+        <button id="saveData" onclick="postAjax('Save')" style="display:none;">Save Data</button>
     </div>
 </div>
 <div>

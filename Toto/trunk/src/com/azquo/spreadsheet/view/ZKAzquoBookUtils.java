@@ -12,9 +12,6 @@ import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.api.model.Validation;
 import org.zkoss.zss.model.*;
-import org.zkoss.zss.model.impl.CellStyleImpl;
-import org.zkoss.zss.model.impl.ColorImpl;
-import org.zkoss.zss.model.impl.FontImpl;
 
 import java.util.*;
 
@@ -55,6 +52,7 @@ public class ZKAzquoBookUtils {
         int highlightDays = 0;
         if (userChoices.get("highlight") != null){ // really need to look into these string literals
             highlightDays = Integer.parseInt(userChoices.get("highlight"));
+            book.getInternalBook().setAttribute("highlightDays", highlightDays); // useful for later, highlighting edited fields
         }
 
             for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
@@ -153,6 +151,7 @@ public class ZKAzquoBookUtils {
          if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
                     regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, loggedInUser.getSortRow(region), loggedInUser.getSortCol(region), highlightDays);
+             loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
             // todo : how to indicate sortable rows/cols
             // now, put the headings into the sheet!
             // might be factored into fill range in a bit

@@ -1,5 +1,9 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.view.AzquoBook;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.zkoss.json.JSONObject;
@@ -9,6 +13,7 @@ import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.jsp.JsonUpdateBridge;
+import org.zkoss.zss.model.SName;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zul.Filedownload;
 
@@ -26,8 +31,11 @@ import java.io.Writer;
 @RequestMapping("/ZKSpreadsheetCommand")
 public class ZKSpreadsheetCommandController {
 
+    @Autowired
+    private SpreadsheetService spreadsheetService;
+
     @RequestMapping
-    public void handleRequest(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+    public void handleRequest(final HttpServletRequest req, HttpServletResponse resp) throws Exception {
         req.setCharacterEncoding("UTF-8");
         resp.setCharacterEncoding("UTF-8");
         resp.setContentType("application/json");
@@ -68,11 +76,8 @@ public class ZKSpreadsheetCommandController {
                         Filedownload.save(new AMedia(book.getBookName() + ".xlsx", null, null, file, true));
                     }
                     if ("PDF".equals(action)) {
-
                         Exporter exporter = Exporters.getExporter("pdf");
-
                         Book book = ss.getBook();
-
                         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
                         FileOutputStream fos = null;
                         try {
@@ -84,7 +89,17 @@ public class ZKSpreadsheetCommandController {
                             }
                         }
                         Filedownload.save(new AMedia(book.getBookName() + ".pdf", "pdf", "application/pdf", file, true));
-
+                    }
+                    if ("Save".equals(action)) {
+                        LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+                        // todo - provenance?
+                        final Book book = ss.getBook();
+                        for (SName name : book.getInternalBook().getNames()) {
+                            if (name.getName().toLowerCase().startsWith(AzquoBook.azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
+                                String region = name.getName().substring(AzquoBook.azDataRegion.length());
+                                    spreadsheetService.saveData(loggedInUser, region.toLowerCase());
+                            }
+                        }
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
