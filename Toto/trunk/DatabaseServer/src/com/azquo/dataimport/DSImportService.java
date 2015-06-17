@@ -383,7 +383,7 @@ public class DSImportService {
                 }
                 heading.lineName = null;
             }
-            if (headings.get(0).lineValue.length() > 0) {//skip any line that has a blank in the first column
+            if (headings.get(0).lineValue.length() > 0 || headings.get(0).column==-1) {//skip any line that has a blank in the first column unless we're not interested in that column
                 getCompositeValues(headings);
                 valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
                 Long now = System.nanoTime();
@@ -533,7 +533,9 @@ public class DSImportService {
                             // finally store our value and names for it
                             valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue);
                         }
+
                     }
+                    contextNames.remove(heading.name);
                 }
                 if (heading.peerHeadings.size() > 0) {
                     //ImportHeading headingWithPeers = heading;
@@ -665,14 +667,18 @@ public class DSImportService {
         }
         */
     }
-
-    private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
+    private List<String> setLocalLanguage(ImportHeading heading, List<String> defaultLanguages){
         List<String> languages = new ArrayList<String>();
         if (heading.attribute != null && !heading.attribute.equalsIgnoreCase(dateLang)){
             languages.add(heading.attribute);
         } else {
-            languages.addAll(attributeNames);
+            languages.addAll(defaultLanguages);
         }
+        return languages;
+
+    }
+
+    private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
         ImportHeading childHeading = headings.get(heading.childHeading);
         if (heading.lineValue.length() == 0) {
             return;
@@ -684,10 +690,10 @@ public class DSImportService {
                 }
             }
         } else {
-            heading.lineName = includeInParents(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, languages);
+            heading.lineName = includeInParents(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, setLocalLanguage(heading, attributeNames));
          }
         if (childHeading.lineName == null) {
-            childHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childHeading.lineValue, heading.lineName, heading.local, languages);
+            childHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childHeading.lineValue, heading.lineName, heading.local, setLocalLanguage(childHeading, attributeNames));
         }
         heading.lineName.addChildWillBePersisted(childHeading.lineName);
     }
