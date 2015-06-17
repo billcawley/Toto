@@ -236,6 +236,7 @@ public class OnlineController {
                 if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
                     // logic here is going to change to support the different renderers
                     if (onlineReport.getId() != 1) {// todo, make this makem a bit more sense, get rid of report id 1 being a special case
+                        loggedInUser.setReportId(onlineReport.getId());// that was below, whoops!
                         if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK){
                             long time = System.currentTimeMillis();
                             String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
@@ -255,7 +256,6 @@ public class OnlineController {
                             return "zstest";
                         }
                         // default to old one
-                        loggedInUser.setReportId(onlineReport.getId());
                         result = spreadsheetService.readExcel(loggedInUser, onlineReport, spreadsheetName); // was a message passed , "Right-click mouse for provenance" but not used I don't think
                         // was provenance setting here,
                     } else { // no custom renderers for the user menu,

@@ -717,6 +717,7 @@ seaports;children   container;children
         }
         if (restrictRowCount > totalRows) restrictRowCount = totalRows;
         if (restrictColCount > totalCols) restrictColCount = totalCols;
+        // todo - stop using negatives from this function to indicate order!!
         Integer sortCol = findPosition(columnHeadings, sortColString);
         Integer sortRow = findPosition(rowHeadings, sortRowString);
         boolean sortRowsUp = false;

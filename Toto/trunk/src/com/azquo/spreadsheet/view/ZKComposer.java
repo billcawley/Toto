@@ -29,6 +29,7 @@ import org.zkoss.zul.Menuitem;
 import org.zkoss.zul.Menupopup;
 
 import java.io.File;
+import java.util.List;
 
 /**
  * Created by cawley on 02/03/15
@@ -86,13 +87,13 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-        for (SName name : book.getInternalBook().getNames()) {
+        for (SName name : book.getInternalBook().getNames()) { // seems best to loop through names checking which matches I think
             if (name.getRefersToSheetName().equals(event.getSheet().getSheetName())
                     && name.getRefersToCellRegion() != null
-                    && name.getRefersToCellRegion().getRow() == row
-                    && name.getRefersToCellRegion().getColumn() == col) {
+                    && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
+                    && col >= name.getRefersToCellRegion().getColumn() && col <= name.getRefersToCellRegion().getLastColumn()) {
                 // ok it matches a name
-                if (name.getName().endsWith("Chosen")) {
+                if (name.getName().endsWith("Chosen")) {// would have been a one cell name
                     spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), reportId, name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
                     reload = true;
                 }
@@ -115,6 +116,34 @@ public class ZKComposer extends SelectorComposer<Component> {
                         }
                     }
                 }
+                // todo, add row heading later if required
+                if (name.getName().startsWith("az_DisplayColumnHeadings")) { // ok going to try for a sorting detect
+                    String region = name.getName().substring("az_DisplayColumnHeadings".length());
+                    // ok here's the thing, the value on the spreadsheet (heading) is no good, it could be just for display, I want what the database would call the heading
+                    // so I'd better get the headings.
+                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region); // maybe jam this object agains the book? Otherwise multiple books could cause problems
+                    if (cellsAndHeadingsForDisplay != null){
+                        final List<List<String>> columnHeadings = cellsAndHeadingsForDisplay.getColumnHeadings();
+                        int localRow = event.getRow() - name.getRefersToCellRegion().getRow();
+                        int localCol = event.getColumn() - name.getRefersToCellRegion().getColumn();
+                        if (cellsAndHeadingsForDisplay.getColumnHeadings().get(localRow) != null){
+                            String originalHeading = cellsAndHeadingsForDisplay.getColumnHeadings().get(localRow).get(localCol);
+                            if (originalHeading != null) {
+                                //← → ↑ ↓ ↔ ↕
+                                if (chosen.endsWith("↑")){
+                                    spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), reportId, "sort " + region + " by column", originalHeading);
+                                    reload = true;
+                                    break;
+                                }
+                                if (chosen.endsWith("↓")){
+                                    spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), reportId, "sort " + region + " by column", originalHeading + "-desc");
+                                    reload = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                break; // break teh loop as soon as we hit the relevant name
             }
         }
         // could maybe be moved up to where the boolean is set.

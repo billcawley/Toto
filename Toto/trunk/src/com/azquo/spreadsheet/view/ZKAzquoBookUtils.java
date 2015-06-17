@@ -49,6 +49,8 @@ public class ZKAzquoBookUtils {
             userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
         }
 
+
+
         int highlightDays = 0;
         if (userChoices.get("highlight") != null){ // really need to look into these string literals
             highlightDays = Integer.parseInt(userChoices.get("highlight"));
@@ -84,6 +86,7 @@ public class ZKAzquoBookUtils {
                                 optionsForRegion = null;
                             }
                         }
+                        // init the sort
                         fillRegion(sheet, region, userChoices, optionsForRegion, loggedInUser, highlightDays);
                     }
                 }
@@ -102,12 +105,6 @@ public class ZKAzquoBookUtils {
                     // I think we do want to merge horizontally (the boolean flag)
                     CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), true);
                 }
-                // now sort out dropdowns
-                // todo, sort out saved choiced on the dropdowns - is this done above??
-                /*                     UserChoice userChoice = userChoiceDAO.findForUserIdReportIdAndChoice(loggedInConnection.getUser().getId(), reportId, choiceName);
-                if (userChoice != null) {
-                    range.setValue(userChoice.getChoiceValue());
-                }*/
                 addValidation(namesForSheet, sheet, loggedInUser);
             }
     }
@@ -145,12 +142,17 @@ public class ZKAzquoBookUtils {
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
 
-            // ok going to try to use the new funciton
 
-            // not going to do this just yet
          if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
+
+                     /* no, don't use this, I have it in the options!
+             String sortRow = loggedInUser.getSortRow(region);
+             String sortCol = loggedInUser.getSortCol(region);
+             */
+             String sortRow = userChoices.get("sort " + region + " by row"); // I keep saying this, we have GOT to get rid of these bloody string literals!
+             String sortCol = userChoices.get("sort " + region + " by column"); // I keep saying this, we have GOT to get rid of these bloody string literals!
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
-                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, loggedInUser.getSortRow(region), loggedInUser.getSortCol(region), highlightDays);
+                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, sortRow, sortCol, highlightDays);
              loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
             // todo : how to indicate sortable rows/cols
             // now, put the headings into the sheet!
@@ -163,6 +165,8 @@ public class ZKAzquoBookUtils {
             int colsToAdd;
 
             if (displayColumnHeadings != null && displayRowHeadings != null && displayDataRegion != null) {
+                String sortable = getOption(region, "sortable", userChoices, optionsForRegion);
+
                 // add rows
                 int maxCol = 0;
                 for (int i = 0; i <= sheet.getLastRow(); i++) {
@@ -176,23 +180,11 @@ public class ZKAzquoBookUtils {
                     Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
                     Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
                     CellOperationUtil.insertRow(insertRange);
-                    // will this paste the lot?
                     CellOperationUtil.paste(copySource, insertRange);
                     int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
                     if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
                         insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
                     }
-/*                    for (int i = 0; i < rowsToAdd; i++) {
-                        int rowToCopy = displayRowHeadings.getRow() + 1; // I think this is correct, middle row of 3?
-                        Range copySource = Ranges.range(sheet, rowToCopy, 0, rowToCopy, maxCol);
-                        Range insertRange = Ranges.range(sheet, rowToCopy + 1, 0, rowToCopy + 5, maxCol); // insert at the 3rd row
-                        CellOperationUtil.insertRow(insertRange); // get formatting from above
-                        if (sheet.getInternalSheet().getRow(rowToCopy).getHeight() != sheet.getInternalSheet().getRow(rowToCopy + 1).getHeight()) { // height may not match on insert/paste, if not set it
-                            sheet.getInternalSheet().getRow(rowToCopy + 1).setHeight(sheet.getInternalSheet().getRow(rowToCopy).getHeight());
-                        }
-                        // ok now copy contents, this should (ha!) copy the row that was just shifted down to the one just created
-                        CellOperationUtil.paste(copySource, insertRange);
-                    }*/
                 }
                 // add columns
                 int maxRow = sheet.getLastRow();
@@ -222,19 +214,55 @@ public class ZKAzquoBookUtils {
                     row++;
                 }
                 row = displayColumnHeadings.getRow();
+
+                //← → ↑ ↓ ↔ ↕// ah I can just paste it here, thanks IntelliJ :)
                 for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
+                    boolean columnSort = false;
+                    if (row - displayColumnHeadings.getRow() == cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1 && sortable != null){ // meaning last row of headings and sortable
+                        columnSort = true;
+                    }
                     int col = displayColumnHeadings.getColumn();
                     for (String heading : colHeading) {
-                        if (heading != null && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) {
+                        if (columnSort){
+                            String sortArrow = " ↕";
+                            if (sortCol.startsWith(heading)){
+                                if (sortCol.endsWith("desc")){ // again with the string literals :(
+                                    sortArrow = " ↓";
+                                } else {
+                                    sortArrow = " ↑";
+                                }
+                            }
+                            if (heading != null && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()){
+                                sheet.getInternalSheet().getCell(row, col).setValue(heading + sortArrow);
+                            }
+                            if (!sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty() && columnSort) {
+                                sheet.getInternalSheet().getCell(row, col).setValue(sheet.getInternalSheet().getCell(row, col).getValue() + sortArrow);
+                            }
+                            String value = sheet.getInternalSheet().getCell(row, col).getStringValue();
+                            value = value.substring(0, value.length() - 2);
+                            Range chosenRange = Ranges.range(sheet, row, col, row, col);
+                            // todo, investigate how commas would fit in in a heading name
+                            chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true,
+                                    value + " ↕," + value + " ↑," + value + " ↓", null,
+                                    true, "Select Sorting", "",
+                                    true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
+
+                        } else if (heading != null && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) { // vanilla, overwrite if not
                             sheet.getInternalSheet().getCell(row, col).setValue(heading);
                         }
+
                         col++;
                     }
                     row++;
                 }
+
+                // todo, add row headings if required
+
+/*                if (sortable != null && sortable.equalsIgnoreCase("all")) { // criteria from azquobook to make row heading sortable
+                }*/
+
                 row = displayDataRegion.getRow();
 
-                SCellStyle redStyle = null;
                 for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
                     int col = displayDataRegion.getColumn();
                     for (CellForDisplay cellValue : rowCellValues) {
@@ -320,20 +348,23 @@ public class ZKAzquoBookUtils {
         }
         if (optionsForRegion != null) {
             int foundPos = optionsForRegion.toLowerCase().indexOf(optionName.toLowerCase());
-            if (foundPos != -1 && optionsForRegion.length() > foundPos + optionName.length()) {
-                optionsForRegion = optionsForRegion.substring(foundPos + optionName.length());//allow for a space or '=' at the end of the option name
-                char operator = optionsForRegion.charAt(0);
-                if (operator == '>') {//interpret the '>' symbol as '-' to create an integer
-                    optionsForRegion = "-" + optionsForRegion.substring(1);
-                } else {
-                    //ignore '=' or a space
-                    optionsForRegion = optionsForRegion.substring(1);
+            if (foundPos != -1){
+                if (optionsForRegion.length() > foundPos + optionName.length()) {
+                    optionsForRegion = optionsForRegion.substring(foundPos + optionName.length());//allow for a space or '=' at the end of the option name
+                    char operator = optionsForRegion.charAt(0);
+                    if (operator == '>') {//interpret the '>' symbol as '-' to create an integer
+                        optionsForRegion = "-" + optionsForRegion.substring(1);
+                    } else {
+                        //ignore '=' or a space
+                        optionsForRegion = optionsForRegion.substring(1);
+                    }
+                    foundPos = optionsForRegion.indexOf(",");
+                    if (foundPos > 0) {
+                        optionsForRegion = optionsForRegion.substring(0, foundPos);
+                    }
+                    return optionsForRegion.trim();
                 }
-                foundPos = optionsForRegion.indexOf(",");
-                if (foundPos > 0) {
-                    optionsForRegion = optionsForRegion.substring(0, foundPos);
-                }
-                return optionsForRegion.trim();
+                return ""; // the option was there but blank
             }
         }
         return null;
