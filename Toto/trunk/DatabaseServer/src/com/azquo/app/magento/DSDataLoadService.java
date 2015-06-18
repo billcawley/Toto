@@ -174,6 +174,15 @@ public class DSDataLoadService {
         String addressEntityId = null;
         String firstNameId = null;
         String lastNameId = null;
+        String store = "";
+
+
+        for (Map<String, String> storeRecord : tableMap.get("core_store_group")) {
+            if (storeRecord.get("group_id").equals("1")) {
+                store = storeRecord.get("name");
+            }
+        }
+
 
         for (Map<String, String> entityTypeRecord : tableMap.get("eav_entity_type")) {
             if (entityTypeRecord.get("entity_type_code") != null) {
@@ -464,6 +473,14 @@ public class DSDataLoadService {
         languages.clear();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
 
+        Name thisStoreName = null;
+        if (store.length() > 0){
+            Name storeName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "store", null, false, languages);
+            Name allStoresName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All stores", storeName, false, languages);
+            thisStoreName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,store,allStoresName, true, languages);
+        }
+
+
         Name customersName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "customer", null, false, languages);
         Name allCustomersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All customers", customersName, false, languages);
 
@@ -688,6 +705,9 @@ public class DSDataLoadService {
                 //store the values.   Qty and price have attributes order, product.  order is in all orders, and in the relevant date
                 String orderNo = "Order " + salesRow.get("order_id");
                 Name orderName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderNo, allOrdersName, true, languages);
+                if (thisStoreName !=null){
+                    thisStoreName.addChildWillBePersisted(orderName);
+                }
                 part3 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 azquoOrdersFound.put(orderNo, orderName);
@@ -1009,6 +1029,7 @@ public class DSDataLoadService {
     private String defaultData() {
         //version number followed by required data.  $starttime to be replaced by latest update
         return "1.0\n" +
+                "'*','core_store_group','','group_id'\n" +
                 "'*','catalog_category_entity','','entity_id'\n" +
                 "'*','catalog_category_product','', 'product_id'\n" +
                 "'*','catalog_product_entity','','entity_id'\n" +
