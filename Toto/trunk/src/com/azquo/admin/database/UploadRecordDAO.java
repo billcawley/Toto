@@ -74,7 +74,7 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
     public List<UploadRecord> findForBusinessId(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
+        return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " order by `date` desc", namedParams, false, 0, 10);
     }
 
     public void removeForDatabaseId(int databaseId) {
