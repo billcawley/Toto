@@ -314,10 +314,10 @@ public final class NameService {
             }
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
             // find an existing name with no parents. (note that if there are multiple such names, then the return will be null)
-            // if we cant' find the name in parent then it's acceptable to find one with no parents
+            // if we can't find the name in parent  then it's acceptable to find one with no parents or children todo - think about this!
             if (existing == null) {
                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
-                if (existing != null && existing.getParents().size() > 0) {
+                if (existing != null && (existing.getParents().size() > 0  || existing.getChildren().size() > 0)) {
                     existing = null;
                 }
             }
