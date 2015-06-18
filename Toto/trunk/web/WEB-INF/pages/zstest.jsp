@@ -241,7 +241,7 @@
 
 <div id="wrapper">
     <div class="banner" id="banner">
-        <a href="/api/Online"><img src="/images/azquo-logo2.png" alt="Azquo logo"/></a>
+        <a href="/api/Online?opcode=loadsheet&reportid=1"><img src="/images/azquo-logo2.png" alt="Azquo logo"/></a>
         <a class="menubutton" href="#" onclick="openTopMenu();"><img src="/images/menu.png"></a>
         <div id="topmenubox" class="topmenubox">
             <ul  class="topmenu">
@@ -279,6 +279,11 @@
     </div>
 </div>
 <div>
+
+    <menupopup id="myContext">
+    <menuitem id="display" label="Display Information" />
+    <menuitem id="open" label="Open Dialog" />
+</menupopup>
     <zssjsp:spreadsheet id="myzss"
                         bookProvider="com.azquo.spreadsheet.view.ZKAzquoBookProvider"
                         apply="com.azquo.spreadsheet.view.ZKComposer"

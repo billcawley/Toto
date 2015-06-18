@@ -287,7 +287,7 @@ public final class ImportService {
         String pathName = adminService.getBusinessPrefix(loggedInUser);
         if (loggedInUser.getDatabase() != null) {
             databaseId = loggedInUser.getDatabase().getId();
-            pathName = loggedInUser.getDatabase().getName();
+            pathName = loggedInUser.getDatabase().getMySQLName();
         }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         int reportId = 0;

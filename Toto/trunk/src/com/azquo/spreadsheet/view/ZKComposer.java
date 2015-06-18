@@ -11,6 +11,7 @@ import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Session;
 import org.zkoss.zk.ui.Sessions;
 import org.zkoss.zk.ui.event.Event;
+import org.zkoss.zk.ui.impl.PageImpl;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
@@ -25,6 +26,7 @@ import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zss.ui.event.CellMouseEvent;
 import org.zkoss.zss.ui.event.SheetSelectEvent;
 import org.zkoss.zss.ui.event.StopEditingEvent;
+import org.zkoss.zssex.ui.widget.Ghost;
 import org.zkoss.zul.Menuitem;
 import org.zkoss.zul.Menupopup;
 
@@ -53,16 +55,35 @@ public class ZKComposer extends SelectorComposer<Component> {
         adminService = (AdminService) applicationContext.getBean("adminService");
         editPopup.setId("editPopup");
         Menuitem item1 = new Menuitem("Provenance");
-        item1.setId("viewInfo1");
+        item1.setId("provenance");
+        Menuitem item2 = new Menuitem("Region Spec");
+        item2.setId("regionSpec");
+//        Menuitem item3 = new Menuitem("Region Options");
+//        item3.setId("regionOptions");
         // this seems unreliable. Rather annoying
 
-        editPopup.appendChild(item1);
+//        editPopup.appendChild(item1);
+//        editPopup.appendChild(item2);
+//        editPopup.appendChild(item3);
+//        System.out.println(myzss.getPopup());
+//        myzss.setPopup(editPopup);
+//        System.out.println(myzss.getPopup());
+//        editPopup.setPage(myzss.getPage());
+//        editPopup.setParent(myzss);
         // by trial and error this gave us an element we could show. Not sure baout best practice etc. here
         // can't seem to find the context menu to edit. No matter, have one or the other.
         if (myzss.getFirstChild() != null) {
             myzss.getFirstChild().appendChild(editPopup);
+        } else {
+            Ghost g = new Ghost();
+            g.setAttribute("zsschildren", "");
+            myzss.appendChild(g);
+            g.appendChild(editPopup);
         }
 
+//        myzss.appendChild(editPopup);
+        //myzss.getParent().appendChild(editPopup);
+//        myzss.appendChild();
 /*        final Button button = new Button("XLS");
         button.addEventListener("onClick",
                 new EventListener() {
@@ -72,7 +93,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 });
 
         myzss.getFirstChild().appendChild(button);*/
-
+//        myzss.getPage().getFirstRoot().appendChild(editPopup);
         System.out.println("init myzss : " + myzss);
 
     }
@@ -174,11 +195,11 @@ public class ZKComposer extends SelectorComposer<Component> {
     // to deal with provenance
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
-        if (!myzss.isShowContextMenu()) { // then show ours :)
+//        if (!myzss.isShowContextMenu()) { // then show ours :)
             SCell cell = cellMouseEvent.getSheet().getInternalSheet().getCell(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
             // now we need to check if it's in a data region
-            editPopup.open(cellMouseEvent.getClientx(), cellMouseEvent.getClienty());
-        }
+            editPopup.open(cellMouseEvent.getClientx() - 150, cellMouseEvent.getClienty());
+//        }
     }
 
 }
