@@ -357,7 +357,7 @@ public final class AzquoMemoryDB {
         Iterator<Name> iterator = possibles.iterator();
         while (iterator.hasNext()) {
             Name possible = iterator.next();
-            if (!possible.hasInParentTree(parent)) {
+            if (!parent.getChildren().contains(possible)) {
                 iterator.remove();
             }
         }
