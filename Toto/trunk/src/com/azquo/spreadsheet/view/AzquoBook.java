@@ -400,6 +400,7 @@ public class AzquoBook {
     private void fillRegion(LoggedInUser loggedInUser, String region,Map<Cell, Boolean> highlighted) throws Exception {
         logger.info("loading " + region);
         int filterCount = optionNumber(region, "hiderows");
+        if (filterCount == 0) filterCount = optionNumber(region,"hiderowvalues");
         if (filterCount == 0)
             filterCount = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second. Edd : what does this mean??
         int maxRows = optionNumber(region, "maxrows");
