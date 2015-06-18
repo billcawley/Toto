@@ -131,6 +131,7 @@ public class ZKAzquoBookUtils {
 
     private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, String optionsForRegion, LoggedInUser loggedInUser, int highlightDays) throws Exception {
         int filterCount = asNumber(getOption(region, "hiderows", userChoices, optionsForRegion));
+        if (filterCount==0) filterCount = asNumber(getOption(region, "hiderowvalues", userChoices, optionsForRegion));
         if (filterCount == 0)
             filterCount = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
         int maxRows = asNumber(getOption(region, "maxrows", userChoices, optionsForRegion));
