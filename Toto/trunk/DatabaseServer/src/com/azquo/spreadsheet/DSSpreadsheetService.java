@@ -824,9 +824,14 @@ seaports;children   container;children
                 boolean rowsBlank = true;
                 for (int j = 0; j < filterCount; j++) {
                     List<AzquoCell> rowToCheck = sortedCells.get((sortedCells.size() - 1) - j); // size - 1 for the last index
-                    for (AzquoCell cellToCheck : rowToCheck) {
+                    for (AzquoCell cellToCheck : rowToCheck)          {
+
+                          /*
                         if ((cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames().isEmpty())
                                 || (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty())) {// there were values or names for the call
+                            */
+                        //CHECKING VALUES ONLY
+                        if (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {// there were values or names for the call
                             rowsBlank = false;
                             break;
                         }
