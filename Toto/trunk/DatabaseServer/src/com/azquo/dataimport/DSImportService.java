@@ -507,12 +507,14 @@ public class DSImportService {
                                     break;
                                 }
                                 ImportHeading peerHeading = headings.get(colFound);
+                                /*   UNNECESSARY CODE REMOVED BY WFC
                                 if (peerHeading.lineName != null) {
                                     peer.addChildWillBePersisted(peerHeading.lineName);
                                 } else {
                                     String peerValue = peerHeading.lineValue;
                                     peerHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, peerValue, peer, heading.local, attributeNames);
                                 }
+                                */
                                 possiblePeer = peerHeading.lineName;
                             }
                             if (nameService.inParentSet(possiblePeer, peer.getChildren()) != null) {
@@ -618,14 +620,11 @@ public class DSImportService {
                     }
                 }
                 if (importHeading.attribute != null){ // && !importHeading.attribute.equals(Constants.DEFAULT_DISPLAY_NAME)) {
+                    String headingName = importHeading.heading;
                     if (importHeading.equalsString != null) {
-                        importHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, importHeading.equalsString, null, false);//global name
-                    } else {
-                        importHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, importHeading.heading, null, false);
+                        headingName = importHeading.equalsString;
                     }
-                    // not sure why this line below is in the code.  If it is to remove the commas then 'findHeading' caters for this.  Removed to cater for 'equals'
-                    //importHeading.heading = importHeading.name.getDefaultDisplayName();
-                    importHeading.identityHeading = findHeading(importHeading.name.getDefaultDisplayName(), headings);
+                    importHeading.identityHeading = findHeading(headingName, headings);
                     if (importHeading.identityHeading >= 0) {
                         headings.get(importHeading.identityHeading).identifier = true;//actively set the identifier as setting the attribute below might confuse the issue
                         for (ImportHeading heading2 : headings) {
