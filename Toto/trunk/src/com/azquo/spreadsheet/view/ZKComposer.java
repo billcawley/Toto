@@ -123,7 +123,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                     // so I'd better get the headings.
                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region); // maybe jam this object agains the book? Otherwise multiple books could cause problems
                     if (cellsAndHeadingsForDisplay != null){
-                        final List<List<String>> columnHeadings = cellsAndHeadingsForDisplay.getColumnHeadings();
                         int localRow = event.getRow() - name.getRefersToCellRegion().getRow();
                         int localCol = event.getColumn() - name.getRefersToCellRegion().getColumn();
                         if (cellsAndHeadingsForDisplay.getColumnHeadings().get(localRow) != null){
