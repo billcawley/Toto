@@ -398,12 +398,12 @@ public final class ValueService {
                         // so get the name and add it to the other names
                         Name name = nameService.getNameFromListAndMarker(term, formulaNames);
                         Set<Name> seekSet = new HashSet<Name>(calcnames);
-                        if (name.getPeers().size() == 0 || name.getPeers().size() == calcnames.size()) {
+                        //if (name.getPeers().size() == 0 || name.getPeers().size() == calcnames.size()) {
                             seekSet.add(name);
-                        } else {
-                            seekSet = nameService.trimNames(name, seekSet);
-                            seekSet.add(name);
-                        }
+                        //} else {
+                        //    seekSet = nameService.trimNames(name, seekSet);
+                        //    seekSet.add(name);
+                        //}
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
                         values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound, totalSetSize, attributeNames);
