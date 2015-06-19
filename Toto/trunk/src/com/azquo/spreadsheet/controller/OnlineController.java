@@ -212,6 +212,11 @@ public class OnlineController {
 
                     return "utf8javascript";
                 }
+                if (opcode.equals("provenance")) {
+                    result = spreadsheetService.getProvenance(loggedInUser, row, Integer.parseInt(colStr), jsonFunction);
+                    model.addAttribute("content", result);
+                    return "utf8";
+                }
                 // will only work on admin
                 if (opcode.equals("savedata")) {
                     AzquoBook azquoBook = loggedInUser.getAzquoBook();

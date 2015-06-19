@@ -621,11 +621,13 @@ public final class ValueService {
     // pring a bunch of values in json. It seems to find the name which represents the most values and displays
     // them under them then the name that best represents the rest etc etc until all values have been displayed
 
+    // ok this was creating values purely for this function, no good! I need something to act as a placeholder
+
     private StringBuffer printBatch(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values) {
         StringBuffer sb = new StringBuffer();
         //int debugCount = 0;
         boolean headingNeeded = false;
-        boolean firstName = true;
+        boolean firstValue = true; // was cal;led firstname, makes no sense!
         for (Value value : values) {
             if (value.getNames().size() > 1) {
                 headingNeeded = true;
@@ -633,17 +635,17 @@ public final class ValueService {
             }
             String nameFound = null;
             for (Name name : value.getNames()) {
-                nameFound = name.getDefaultDisplayName();
+                nameFound = name.getDefaultDisplayName(); // so it's always going to be the last name??
             }
-            if (firstName) {
-                firstName = false;
+            if (firstValue) {
+                firstValue = false;
             } else {
                 sb.append(",");
             }
             sb.append("{");
             //debugCount = value.getNames().size();
-            sb.append(jsonValue("value", value.getText(), false));
-            sb.append(jsonValue("name", nameFound, true));
+            sb.append(jsonValue("name", nameFound, false));
+            sb.append(jsonValue("value", value.getText(), true));
             sb.append("}");
 
         }
