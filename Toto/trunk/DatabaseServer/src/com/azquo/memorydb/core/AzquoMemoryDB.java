@@ -425,9 +425,18 @@ public final class AzquoMemoryDB {
     // get names containing an attribute using wildcards, start end both
 
     private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
+        final Set<Name> names = new HashSet<Name>();
+        if (attributeName.length() == 0){
+            for (String attName:nameByAttributeMap.keySet()){
+                names.addAll(getNamesByAttributeValueWildcards(attName,attributeValueSearch,startsWith, endsWith));
+                if (names.size() > 0){
+                    return names;
+                }
+            }
+            return names;
+        }
         final String uctAttributeName = attributeName.toUpperCase().trim();
         final String lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
-        final Set<Name> names = new HashSet<Name>();
         if (nameByAttributeMap.get(uctAttributeName) == null) {
             return names;
         }
