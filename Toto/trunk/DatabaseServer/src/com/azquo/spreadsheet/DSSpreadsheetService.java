@@ -543,10 +543,13 @@ seaports;children   container;children
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, int highlightDays) throws Exception {
+            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, int highlightDays, int eddMaxRows) throws Exception { // edd max rows is very simple, just chop the rows, todo -= work out the toher max params which are odd!
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortCol, databaseAccessToken.getLanguages(), highlightDays);
         List<List<CellForDisplay>> displayData = new ArrayList<List<CellForDisplay>>();
+        if (eddMaxRows != 0 && data.size() > eddMaxRows){
+            data = data.subList(0, eddMaxRows);
+        }
         for (List<AzquoCell> sourceRow : data) {
             List<CellForDisplay> displayDataRow = new ArrayList<CellForDisplay>();
             displayData.add(displayDataRow);

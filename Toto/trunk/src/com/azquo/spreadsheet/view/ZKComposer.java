@@ -216,7 +216,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
         // roght now a right click gets provenance ready, dunno if I need to do this
         SName name = getNamedRegionForRowAndColonSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
-        if (name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
+        if (name != null && name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
             provenanceLabel.setValue("");
             String region = name.getName().substring("az_DataRegion".length());
             Book book = myzss.getBook();

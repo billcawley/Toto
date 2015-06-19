@@ -129,6 +129,8 @@ public class ZKAzquoBookUtils {
 
     // taking the function from old AzquoBook and rewriting
 
+    int rowLimit = 500; // don't bother loading more than this into ZK for the moment
+
     private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, String optionsForRegion, LoggedInUser loggedInUser, int highlightDays) throws Exception {
         int filterCount = asNumber(getOption(region, "hiderows", userChoices, optionsForRegion));
         if (filterCount==0) filterCount = asNumber(getOption(region, "hiderowvalues", userChoices, optionsForRegion));
@@ -159,7 +161,7 @@ public class ZKAzquoBookUtils {
                  sortCol = "";
              }
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
-                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, sortRow, sortCol, highlightDays);
+                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, sortRow, sortCol, highlightDays, rowLimit);
              loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
             // todo : how to indicate sortable rows/cols
             // now, put the headings into the sheet!
@@ -269,11 +271,12 @@ public class ZKAzquoBookUtils {
                 }*/
 
                 row = displayDataRegion.getRow();
-
+                List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
                 for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
                     int col = displayDataRegion.getColumn();
+                    int localCol = 0;
                     for (CellForDisplay cellValue : rowCellValues) {
-                        if (!cellValue.getStringValue().isEmpty()) { // then something to set
+                        if (!cellValue.getStringValue().isEmpty() && !bottomColHeadings.get(localCol).equals(".")) { // then something to set. Note : if col heading ON THE DB SIDE is . then don't populate
                             // the notable thing ehre is that ZK uses the object type to work out data type
                             SCell cell = sheet.getInternalSheet().getCell(row, col);
                             if (NumberUtils.isNumber(cellValue.getStringValue())) {
@@ -290,6 +293,7 @@ public class ZKAzquoBookUtils {
                             }
                         }
                         col++;
+                        localCol++;
                     }
                     row++;
                 }
