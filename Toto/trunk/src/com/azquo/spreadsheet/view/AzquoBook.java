@@ -976,7 +976,9 @@ public class AzquoBook {
                     //content = "<select class = \"" + selectClass + "\" onchange=\"selectChosen('" + choiceName + "')\" id=\"" + ChosenMap.get(cell) + "\" class=\"" + cellClass + "\" >" + cr;
                     content += "<option value = ''></option>";
                     for (String constant : constants) {
-                        content += addOption(constant, origContent);
+                        if (constant!=null){
+                            content += addOption(constant, origContent);
+                        }
                     }
                     // now using a prepared shoicelist from above, hope it won't break anything
                     for (String nameString : choiceList) {
