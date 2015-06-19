@@ -495,7 +495,11 @@ public class JSTreeService {
 
             result.append("]");
         } else {
-            result.append(getJsonDataforOneName(tokenString, name, jsTreeId));
+            if (name!=null){
+                result.append(getJsonDataforOneName(tokenString, name, jsTreeId));
+            }else{
+                return "[{\"id\":0,\"state\":{\"opened\":true},\"text\":\"none found\"}]";
+            }
         }
         result.append(",\"type\":\"");
         if (children.size() > 0) {
