@@ -105,12 +105,15 @@ public final class NameService {
     public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) {
         // go for the default for the moment
         return findContainingName(azquoMemoryDBConnection, name, Constants.DEFAULT_DISPLAY_NAME);
-    }
+     }
 
     // the parameter is called name as the get attribute function will look up and derive attributes it can't find from parent/combinations
 
     public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, String attribute) {
         ArrayList<Name> namesList = new ArrayList<Name>(azquoMemoryDBConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name));
+        if (namesList.size() == 0){
+            namesList = findContainingName(azquoMemoryDBConnection,name,"");//try all the attributes
+        }
         Collections.sort(namesList, defaultLanguageCaseInsensitiveNameComparator);
         return namesList;
     }
