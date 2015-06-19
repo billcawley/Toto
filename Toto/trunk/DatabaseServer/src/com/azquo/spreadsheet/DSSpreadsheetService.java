@@ -948,8 +948,9 @@ I think that this is an ideal candidate for multithreading to speed things up
                     int colNo = 0;
                     for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                         // values I need to build the CellUI
-                        colNo++;
                         returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextNames, rowNo, colNo, totalSetSize, languages));
+                        // for some reason this was before, it buggered up the ability to find the right column!
+                        colNo++;
                     }
                     targetArray.set(rowNo, returnRow);
                 }

@@ -152,6 +152,12 @@ public class ZKAzquoBookUtils {
              */
              String sortRow = userChoices.get("sort " + region + " by row"); // I keep saying this, we have GOT to get rid of these bloody string literals!
              String sortCol = userChoices.get("sort " + region + " by column"); // I keep saying this, we have GOT to get rid of these bloody string literals!
+             if (sortRow == null){
+                 sortRow = "";
+             }
+             if (sortCol == null){
+                 sortCol = "";
+             }
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
                     regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, sortRow, sortCol, highlightDays);
              loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
