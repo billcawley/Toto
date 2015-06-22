@@ -404,6 +404,7 @@ public class SpreadsheetService {
     }
 
     public void showNameDetails(ModelMap model, LoggedInUser loggedInUser, String database, String rootId, String parents, String searchNames) throws Exception {
+        model.addAttribute("message","");
         if (database != null && database.length() > 0) {
             Database newDB = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
             if (newDB == null) {

@@ -76,7 +76,9 @@ public class JstreeController {
             if (loggedInUser.getAzquoBook() != null){
                 backupSearchTerm =loggedInUser.getAzquoBook().getRangeData("az_inputInspectChoice");// don't reallyunderstand, what's important is that this is now client side
             }
+            // todo - clean up the logic here
             String result = spreadsheetService.processJSTreeRequest(loggedInUser.getDataAccessToken(),json,jsTreeId,topNode,op,parent,parents,database, itemsChosen,position,backupSearchTerm);
+            model.addAttribute("content", result);
             // seems to be the logic from before, if children/new then don't do the funciton. Not sure why . . .
             if (!op.equals("children") && !op.equals("new")) {
                 model.addAttribute("content", jsonFunction + "({\"response\":" + result + "})");
@@ -86,8 +88,8 @@ public class JstreeController {
                         parents = "false";
                     }
                     spreadsheetService.showNameDetails(model, loggedInUser,database,result,parents, itemsChosen);
+                    return "jstree";
                 }
-                return "jstree";
             }
             response.setHeader("Access-Control-Allow-Origin", "*");
             response.setHeader("Content-type", "application/json");
