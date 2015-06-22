@@ -155,11 +155,20 @@ seaports;children   container;children
                     row.add(null);
                 } else {
                     // was just a name expression, now we allow an attribute also. May be more in future.
-                    if (sourceCell.startsWith(".")) {
+                    if (sourceCell.startsWith(".")) { //
                         // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
                         row.add(Collections.singletonList(new DataRegionHeading(sourceCell, true))); // we say that an attribuite heading defaults to writeable, it will defer to the name
                     } else {
-                        row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames), azquoMemoryDBConnection));
+                        DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;// that's sum practically speaking
+                        // now allow functions
+                        // I feel there should be a loop here
+                        for (DataRegionHeading.BASIC_RESOLVE_FUNCTION basic_resolve_function : DataRegionHeading.BASIC_RESOLVE_FUNCTION.values()){
+                            if (sourceCell.startsWith(basic_resolve_function.name())){
+                                function = basic_resolve_function;
+                                sourceCell = sourceCell.substring(sourceCell.indexOf("(") + 1, sourceCell.trim().length() - 1);// +1 - 1 to get rid of the brackets
+                            }
+                        }
+                        row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames), azquoMemoryDBConnection,function));
                     }
                 }
             }
@@ -989,7 +998,7 @@ I think that this is an ideal candidate for multithreading to speed things up
             }
             rowAndColumnHeadingsForThisCell = new HashSet<DataRegionHeading>(headingsForThisCell);
             if (headingsForThisCell.size() > hCount) {
-                headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection));
+                headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection, null));
             } else {
                 headingsForThisCell.clear();
             }
@@ -1013,7 +1022,14 @@ I think that this is an ideal candidate for multithreading to speed things up
             if (!headingsHaveAttributes) { // we go the value route (the standard/old one), need the headings as names,
                 // TODO - peer additive check. If using peers and not additive, don't include children
                 List<Value> values = new ArrayList<Value>();
-                doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, languages); // true = pay attention to names additive flag
+                // now , get the function from the headings
+                DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;
+                for (DataRegionHeading heading : headingsForThisCell){
+                    if (heading.getFunction() != null){
+                        function = heading.getFunction();
+                    }
+                }
+                doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, languages, function); // true = pay attention to names additive flag
                 //if there's only one value, treat it as text (it may be text, or may include £,$,%)
                 if (values.size() == 1 && !locked.isTrue) {
 
@@ -1309,11 +1325,11 @@ I think that this is an ideal candidate for multithreading to speed things up
 
     // Four little utility functions added by Edd, required now headings are not names
 
-    public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection) {
+    public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<DataRegionHeading>();
         for (Name name : names) {
             // will the new write permissions cause an overhead?
-            dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions())));
+            dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function));
         }
         return dataRegionHeadings;
     }

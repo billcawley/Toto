@@ -320,7 +320,8 @@ public final class ValueService {
     int numberOfTimesCalled = 0;
 
     // the function that populates each cell.
-    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MutableBoolean locked, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, List<String> attributeNames) throws Exception {
+    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MutableBoolean locked
+            , final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, List<String> attributeNames, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) throws Exception {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<Name>();
         String calcString = null;
@@ -366,7 +367,7 @@ public final class ValueService {
                     break;
                 }
             }
-            return findSumForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, totalSetSize);
+            return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, totalSetSize, function);
         } else {
             // this is where the work done by the shunting yard algorithm is used
             // ok I think I know why an array was used, to easily reference the entry before
@@ -406,7 +407,7 @@ public final class ValueService {
                         //}
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
-                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound, totalSetSize, attributeNames);
+                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound, totalSetSize, attributeNames, function);
                     }
                 }
             }
@@ -466,18 +467,36 @@ public final class ValueService {
 
     // on a standard non-calc cell this will give the result
 
-    public double findSumForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize) {
-        //System.out.println("findSumForNamesIncludeChildren");
+    public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) {
+        //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
 
         List<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive, totalSetSize);
+
+        double max = 0;
+        double min = 0;
+
         part1NanoCallTime += (System.nanoTime() - start);
         long point = System.nanoTime();
         double sumValue = 0;
+        boolean first = true;
         for (Value value : values) {
             if (value.getText() != null && value.getText().length() > 0) {
                 try {
-                    sumValue += Double.parseDouble(value.getText());
+                    double doubleValue = Double.parseDouble(value.getText());
+                    if (first){
+                        max = doubleValue;
+                        min = doubleValue;
+                    } else {
+                        if (doubleValue < min){
+                            min = doubleValue;
+                        }
+                        if (doubleValue > max){
+                            max = doubleValue;
+                        }
+                    }
+                    sumValue += doubleValue;
+                    first = false;
                 } catch (Exception ignored) {
                 }
             }
@@ -489,12 +508,27 @@ public final class ValueService {
         part2NanoCallTime += (System.nanoTime() - point);
         totalNanoCallTime += (System.nanoTime() - start);
         numberOfTimesCalled++;
-        return sumValue;
+        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.COUNT){
+            return values.size();
+        }
+        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.AVERAGE){
+            if (values.size() == 0){
+                return 0; // avoid dividing by zero
+            }
+            return sumValue / values.size();
+        }
+        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.MAX){
+            return max;
+        }
+        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.MIN){
+            return min;
+        }
+        return sumValue; // default to sum, no function
     }
 
     public void printSumStats() {
         if (numberOfTimesCalled > 0) {
-            logger.info("calls to  findSumForNamesIncludeChildren : " + numberOfTimesCalled);
+            logger.info("calls to  resolveValuesForNamesIncludeChildren : " + numberOfTimesCalled);
             logger.info("part 1 average nano : " + (part1NanoCallTime / numberOfTimesCalled));
             logger.info("part 2 average nano : " + (part2NanoCallTime / numberOfTimesCalled));
             logger.info("total average nano : " + (totalNanoCallTime / numberOfTimesCalled));

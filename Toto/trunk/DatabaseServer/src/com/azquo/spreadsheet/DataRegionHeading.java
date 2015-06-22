@@ -16,20 +16,26 @@ import com.azquo.memorydb.core.Name;
  */
 public class DataRegionHeading {
 
+    public enum BASIC_RESOLVE_FUNCTION {COUNT, AVERAGE, MAX, MIN};
+
     private final Name name;
     private final String attribute;
     private final boolean writeAllowed;
+    private final BASIC_RESOLVE_FUNCTION function;
 
-    public DataRegionHeading(Name name, boolean writeAllowed) {
+    public DataRegionHeading(Name name, boolean writeAllowed, BASIC_RESOLVE_FUNCTION function) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
+        this.function = function;
     }
 
+    // no functions with attributes for the moment
     public DataRegionHeading(String attribute, boolean writeAllowed) {
         this.name = null;
         this.attribute = attribute;
         this.writeAllowed = writeAllowed;
+        this.function = null;
     }
 
     public Name getName() {
@@ -42,5 +48,9 @@ public class DataRegionHeading {
 
     public boolean isWriteAllowed() {
         return writeAllowed;
+    }
+
+    public BASIC_RESOLVE_FUNCTION getFunction() {
+        return function;
     }
 }
