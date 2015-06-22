@@ -29,6 +29,7 @@
           <element id="library" level="project" name="org.springframework.security:spring-security-web:4.0.0.RELEASE" />
           <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.5.2" />
           <element id="library" level="project" name="javax.servlet:com.springsource.javax.servlet.jsp.jstl:1.2.0" />
+          <element id="library" level="project" name="org.apache.servicemix.bundles:org.apache.servicemix.bundles.spring-context-support:4.1.6.RELEASE_1" />
         </element>
       </element>
     </root>

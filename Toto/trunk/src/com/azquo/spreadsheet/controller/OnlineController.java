@@ -198,9 +198,9 @@ public class OnlineController {
                         result = "File imported successfully";
 
                     } else {
-                        result = spreadsheetService.showUploadFile(loggedInUser);
+                        model.addAttribute("azquodatabaselist", spreadsheetService.createDatabaseSelect(loggedInUser));
+                        return "upload";
                     }
-
                 }
                 if (opcode.equals("valuesent")) {
                     result = spreadsheetService.changeValue(loggedInUser, row, Integer.parseInt(colStr), changedValue);
@@ -260,14 +260,14 @@ public class OnlineController {
                             System.out.println("time to prepare the book : " + (System.currentTimeMillis() - time));
                             return "zstest";
                         }
-                        // default to old one
-                        result = spreadsheetService.readExcel(loggedInUser, onlineReport, spreadsheetName); // was a message passed , "Right-click mouse for provenance" but not used I don't think
+                        // default to old one. THis does a fair bit of work adding info for velocity so I passed the model through. Perhaps not best practice.
+                        spreadsheetService.readExcel(model, loggedInUser, onlineReport, spreadsheetName);
+                        return "onlineReport";
                         // was provenance setting here,
-                    } else { // no custom renderers for the user menu,
+                    } else {
                         if (!loggedInUser.getUser().isAdministrator()) {
-                            // I relaise making a velocity and passing it to jsp is a bit crap, I just want it to work
-                            model.put("content",spreadsheetService.showUserMenu(loggedInUser) );// user menu being what magento users typically see when logging in, a velocity page
-                            return "utf8page";
+                            spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
+                            return "azquoReports";
                         } else {
                             return "redirect:/api/ManageReports";
                         }

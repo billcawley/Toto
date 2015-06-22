@@ -22,6 +22,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
+import org.springframework.ui.Model;
+import org.springframework.ui.ModelMap;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
@@ -154,7 +156,7 @@ public class SpreadsheetService {
     // also there's html in here, view stuff, need to get rid of that
     // the report/database server is going to force the view/model split
 
-    public String readExcel(LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName) throws Exception {
+    public void readExcel(ModelMap model, LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName) throws Exception {
         String message;
         String path = getHomeDir() + "/temp/";
         AzquoBook azquoBook = new AzquoBook(userChoiceDAO, this, importService);
@@ -162,14 +164,13 @@ public class SpreadsheetService {
         StringBuilder tabs = new StringBuilder();
         StringBuilder head = new StringBuilder();
         loggedInUser.setAzquoBook(azquoBook);  // is this a heavy object to put against the session?
-        VelocityContext velocityContext = new VelocityContext();
         if (spreadsheetName == null) {
             spreadsheetName = "";
         }
         if (onlineReport.getId() == 1 && spreadsheetName.equals("Upload")) {
-            velocityContext.put("enctype", " enctype=\"multipart/form-data\" ");
+            model.addAttribute("enctype", " enctype=\"multipart/form-data\" ");
         } else {
-            velocityContext.put("enctype", "");
+            model.addAttribute("enctype", "");
         }
         try {
             if (onlineReport.getId() < 2) {// we don't look in the DB directory
@@ -218,25 +219,26 @@ public class SpreadsheetService {
         head.append("</style>\n");
         //velocityContext.put("script",readFile("online.js").toString());
         //velocityContext.put("topmenu",createTopMenu(loggedInConnection).toString());
-        azquoBook.fillVelocityOptionInfo(loggedInUser, velocityContext);
-        velocityContext.put("tabs", tabs.toString());
-        velocityContext.put("topmessage", message);
+        azquoBook.fillVelocityOptionInfo(loggedInUser, model);
+        
+        model.addAttribute("tabs", tabs.toString());
+        model.addAttribute("topmessage", message);
         if (onlineReport.getId() == 1 && spreadsheetName.equalsIgnoreCase("reports")) {
             spreadsheetName = "";
         }
-        velocityContext.put("spreadsheetname", spreadsheetName);
-        velocityContext.put("topcell", azquoBook.getTopCell() + "");
-        velocityContext.put("leftcell", azquoBook.getLeftCell() + "");
-        velocityContext.put("maxheight", azquoBook.getMaxHeight() + "px");
-        velocityContext.put("maxwidth", azquoBook.getMaxWidth() + "px");
-        velocityContext.put("maxrow", azquoBook.getMaxRow() + "");
-        velocityContext.put("maxcol", azquoBook.getMaxCol() + "");
-        velocityContext.put("reportid", onlineReport.getId() + "");
+        model.addAttribute("spreadsheetname", spreadsheetName);
+        model.addAttribute("topcell", azquoBook.getTopCell() + "");
+        model.addAttribute("leftcell", azquoBook.getLeftCell() + "");
+        model.addAttribute("maxheight", azquoBook.getMaxHeight() + "px");
+        model.addAttribute("maxwidth", azquoBook.getMaxWidth() + "px");
+        model.addAttribute("maxrow", azquoBook.getMaxRow() + "");
+        model.addAttribute("maxcol", azquoBook.getMaxCol() + "");
+        model.addAttribute("reportid", onlineReport.getId() + "");
         if (azquoBook.dataRegionPrefix.equals(AzquoBook.azDataRegion)) {
 
-            velocityContext.put("menuitems", "[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"},{\"position\":3,\"name\":\"Highlight changes\",\"enabled\":true,\"link\":\"showHighlight()\"}]");
+            model.addAttribute("menuitems", "[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"},{\"position\":3,\"name\":\"Highlight changes\",\"enabled\":true,\"link\":\"showHighlight()\"}]");
         } else {
-            velocityContext.put("menuitems", "[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"}," +
+            model.addAttribute("menuitems", "[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"}," +
                     "{\"position\":2,\"name\":\"Edit\",\"enabled\":true,\"link\":\"edit()\"}," +
                     "{\"position\":3,\"name\":\"Cut\",\"enabled\":true,\"link\":\"cut()\"}," +
                     "{\"position\":4,\"name\":\"Copy\",\"enabled\":true,\"link\":\"copy()\"}," +
@@ -246,7 +248,7 @@ public class SpreadsheetService {
                     "{\"position\":8,\"name\":\"Delete\",\"enabled\":true,\"link\":\"deleteName()\"}]");
         }
 
-        velocityContext.put("styles", head.toString());
+        model.addAttribute("styles", head.toString());
         String ws = worksheet.toString();
         if (worksheet.indexOf("$azquodatabaselist") > 0) {
             ws = ws.replace("$azquodatabaselist", createDatabaseSelect(loggedInUser));
@@ -254,10 +256,8 @@ public class SpreadsheetService {
         if (ws.indexOf("$fileselect") > 0) {
             ws = ws.replace("$fileselect", "<input type=\"file\" name=\"uploadfile\">");
         }
-        velocityContext.put("workbook", ws);
-
-        velocityContext.put("charts", azquoBook.drawCharts(loggedInUser, path).toString());
-        return convertToVelocity(velocityContext, null, null, "onlineReport.vm");
+        model.addAttribute("workbook", ws);
+        model.addAttribute("charts", azquoBook.drawCharts(loggedInUser, path).toString());
     }
 
 /*    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
@@ -343,14 +343,14 @@ public class SpreadsheetService {
     }
 
     public String getJsonList(DatabaseAccessToken databaseAccessToken, String listName, String listChoice, String entered, String jsonFunction) throws  Exception{
-        return rmiClient.getServerInterface().getJsonList(databaseAccessToken,listName,listChoice,entered,jsonFunction);
+        return rmiClient.getServerInterface().getJsonList(databaseAccessToken, listName, listChoice, entered, jsonFunction);
     }
 
     public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) throws Exception {
         return loggedInUser.getAzquoBook().getProvenance(loggedInUser, row, col, jsonFunction);
     }
 
-    private StringBuilder createDatabaseSelect(LoggedInUser loggedInUser) {
+    public StringBuilder createDatabaseSelect(LoggedInUser loggedInUser) {
         StringBuilder sb = new StringBuilder();
         String chosen = "";
         Map<String, Database> foundDatabases = loginService.foundDatabases(loggedInUser.getUser());
@@ -376,20 +376,13 @@ public class SpreadsheetService {
         return sb;
     }
 
-    public String showUploadFile(LoggedInUser loggedInUser) {
-        VelocityContext context = new VelocityContext();
-        context.put("azquodatabaselist", createDatabaseSelect(loggedInUser));
-        return convertToVelocity(context, "upload", null, "upload.vm");
-    }
-
     // on logging into Magento reports for example
 
-    public String showUserMenu(LoggedInUser loggedInUser) {
+    public void showUserMenu(ModelMap model, LoggedInUser loggedInUser) {
         List<OnlineReport> onlineReports = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getStatus());
-        VelocityContext context = new VelocityContext();
-        context.put("welcome", "Welcome to Azquo!");
+        model.addAttribute("welcome", "Welcome to Azquo!");
         if (loggedInUser.getDatabase() != null) {
-            context.put("database", loggedInUser.getDatabase().getName());
+            model.addAttribute("database", loggedInUser.getDatabase().getName());
         }
         List<Map<String, String>> reports = new ArrayList<Map<String, String>>();
         String reportCategory = "";
@@ -407,57 +400,21 @@ public class SpreadsheetService {
             vReport.put("link", "/api/Online/?opcode=loadsheet&reportid=" + onlineReport.getId());
             reports.add(vReport);
         }
-        return convertToVelocity(context, "reports", reports, "azquoReports.vm");
+        model.addAttribute("reports", reports);
     }
 
-    public String showNameDetails(LoggedInUser loggedInUser, String database, String rootId, String parents, String searchNames) throws Exception {
+    public void showNameDetails(ModelMap model, LoggedInUser loggedInUser, String database, String rootId, String parents, String searchNames) throws Exception {
         if (database != null && database.length() > 0) {
             Database newDB = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
             if (newDB == null) {
-                return "no database chosen";
+                model.addAttribute("message","no database chosen");
             }
             loginService.switchDatabase(loggedInUser, newDB);
         }
         if (searchNames == null) searchNames = "";
-        VelocityContext context = new VelocityContext();
-        context.put("parents", parents);
-        context.put("rootid", rootId);
-        context.put("searchnames", searchNames);
-        return convertToVelocity(context, null, null, "jstree.vm");
-    }
-
-    // do we need to be creating a new velocity engine every time? Not sure if necessary.
-    // The amount of string pushing around here bugs me slightly, azquo book probably makes a big old chunk of HTML
-    // todo, maybe use velocity in the spring way? http://wiki.apache.org/velocity/VelocityAndSpringStepByStep
-
-    private String convertToVelocity(VelocityContext context, String itemName, List<Map<String, String>> items, String velocityTemplate) {
-        VelocityEngine ve = new VelocityEngine();
-        Properties properties = new Properties();
-        Template t;
-        if (velocityTemplate == null) {
-            velocityTemplate = "email.vm";
-        }
-        if ((velocityTemplate.startsWith("http://") || velocityTemplate.startsWith("https://")) && velocityTemplate.indexOf("/", 8) != -1) {
-            properties.put("resource.loader", "url");
-            properties.put("url.resource.loader.class", "org.apache.velocity.runtime.resource.loader.URLResourceLoader");
-            properties.put("url.resource.loader.root", velocityTemplate.substring(0, velocityTemplate.lastIndexOf("/") + 1));
-            ve.init(properties);
-            t = ve.getTemplate(velocityTemplate.substring(velocityTemplate.lastIndexOf("/") + 1));
-        } else {
-            properties.setProperty("resource.loader", "webapp");
-            properties.setProperty("webapp.resource.loader.class", "org.apache.velocity.tools.view.WebappResourceLoader");
-            properties.setProperty("webapp.resource.loader.path", "/WEB-INF/velocity/");
-            ve.setApplicationAttribute("javax.servlet.ServletContext", servletContext);
-            ve.init(properties);
-            t = ve.getTemplate(velocityTemplate);
-        }
-        /*  create a context and add data */
-        context.put(itemName, items);
-         /* now render the template into a StringWriter */
-        StringWriter writer = new StringWriter();
-        t.merge(context, writer);
-        /* show the World */
-        return writer.toString();
+        model.addAttribute("parents", parents);
+        model.addAttribute("rootid", rootId);
+        model.addAttribute("searchnames", searchNames);
     }
 
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception{

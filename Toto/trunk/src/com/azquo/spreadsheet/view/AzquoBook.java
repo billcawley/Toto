@@ -13,6 +13,8 @@ import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.apache.velocity.VelocityContext;
+import org.springframework.ui.Model;
+import org.springframework.ui.ModelMap;
 
 import javax.servlet.http.HttpServletResponse;
 import java.awt.*;
@@ -707,7 +709,7 @@ public class AzquoBook {
         return sb.toString();
     }
 
-    public void fillVelocityOptionInfo(LoggedInUser loggedInUser, VelocityContext velocityContext) {
+    public void fillVelocityOptionInfo(LoggedInUser loggedInUser, ModelMap model) {
         List<VRegion> vRegions = new ArrayList<VRegion>();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
@@ -727,9 +729,9 @@ public class AzquoBook {
                 vRegions.add(vRegion);
             }
         }
-        velocityContext.put("hdays", highlightDays + "");
-        velocityContext.put("menuregions", vRegions);
-        velocityContext.put("regions", getRegions(loggedInUser, dataRegionPrefix).toString());//this is for javascript routines
+        model.addAttribute("hdays", highlightDays + "");
+        model.addAttribute("menuregions", vRegions);
+        model.addAttribute("regions", getRegions(loggedInUser, dataRegionPrefix).toString());//this is for javascript routines
     }
 
     public void loadData(LoggedInUser loggedInUser, Map<Cell, Boolean> highlighted) throws Exception {

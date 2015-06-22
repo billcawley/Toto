@@ -85,10 +85,9 @@ public class JstreeController {
                     if (parents == null){
                         parents = "false";
                     }
-                    result = spreadsheetService.showNameDetails(loggedInUser,database,result,parents, itemsChosen);
+                    spreadsheetService.showNameDetails(model, loggedInUser,database,result,parents, itemsChosen);
                 }
-
-                model.addAttribute("content", result);
+                return "jstree";
             }
             response.setHeader("Access-Control-Allow-Origin", "*");
             response.setHeader("Content-type", "application/json");

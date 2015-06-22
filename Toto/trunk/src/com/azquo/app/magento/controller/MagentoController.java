@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.util.Date;
 
@@ -62,7 +63,7 @@ public class MagentoController {
 
     @RequestMapping(headers = "content-type=multipart/*")
     @ResponseBody
-    public String handleRequest(HttpServletRequest request
+    public String handleRequest(HttpServletRequest request,HttpServletResponse response
             , @RequestParam(value = "db", required = false, defaultValue = "") String db
             , @RequestParam(value = "op", required = false, defaultValue = "") String op
             , @RequestParam(value = "logon", required = false, defaultValue = "") String logon
@@ -138,8 +139,7 @@ public class MagentoController {
                 //return onlineService.readExcel(loggedInConnection, onlineReport, null, "");
             }
             if (op.equals("reports")) {
-                OnlineReport onlineReport = onlineReportDAO.findById(1);//TODO  Sort out where the maintenance sheet should be referenced
-                return spreadsheetService.readExcel(loggedInUser, onlineReport, null);
+                response.sendRedirect("/api/Online?opcode=loadsheet&reporttoload=1"); // I think that will do it
             }
             return "unknown op";
         } catch (Exception e) {
@@ -152,14 +152,14 @@ public class MagentoController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(HttpServletRequest request
+    public String handleRequest(HttpServletRequest request,HttpServletResponse response
             , @RequestParam(value = "db", required = false, defaultValue = "") String db
             , @RequestParam(value = "op", required = false, defaultValue = "") String op
             , @RequestParam(value = "logon", required = false, defaultValue = "") String logon
             , @RequestParam(value = "password", required = false, defaultValue = "") String password
 
     ) throws Exception {
-        return handleRequest(request, db, op, logon, password, null);
+        return handleRequest(request, response, db, op, logon, password, null);
     }
 
     private String findRequiredTables(LoggedInUser loggedInUser, String remoteAddress) throws Exception{
