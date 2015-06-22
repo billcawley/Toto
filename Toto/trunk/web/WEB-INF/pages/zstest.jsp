@@ -239,7 +239,7 @@
 
 </script>
 
-<div id="wrapper">
+<div id="wrapper" style="height: 100px;">
     <div class="banner" id="banner">
         <a href="/api/Online?opcode=loadsheet&reportid=1"><img src="/images/azquo-logo2.png" alt="Azquo logo"/></a>
         <a class="menubutton" href="#" onclick="openTopMenu();"><img src="/images/menu.png"></a>
@@ -278,16 +278,11 @@
         <button id="saveData" onclick="postAjax('Save')" style="display:none;">Save Data</button>
     </div>
 </div>
-<div>
-
-    <menupopup id="myContext">
-    <menuitem id="display" label="Display Information" />
-    <menuitem id="open" label="Open Dialog" />
-</menupopup>
+<div style="height: calc(100% - 100px);">
     <zssjsp:spreadsheet id="myzss"
                         bookProvider="com.azquo.spreadsheet.view.ZKAzquoBookProvider"
                         apply="com.azquo.spreadsheet.view.ZKComposer"
-                        width="100%" height="900px"
+                        width="100%" height="100%"
                         maxrows="200" maxcolumns="80"
                         showSheetbar="true" showToolbar="true" showFormulabar="true" showContextMenu="true"/>
     <!--    zssjsp:spreadsheet id="myzss"
