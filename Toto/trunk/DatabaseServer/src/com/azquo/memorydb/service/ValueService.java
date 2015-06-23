@@ -55,7 +55,7 @@ public final class ValueService {
 
     Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<AzquoMemoryDBConnection, Map<String, Long>>();
 
-    private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd) {
+ /*   private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd) {
         long current = 0;
         if (timeTrack.get(azquoMemoryDBConnection) != null) {
             if (timeTrack.get(azquoMemoryDBConnection).get(trackName) != null) {
@@ -65,12 +65,11 @@ public final class ValueService {
             timeTrack.put(azquoMemoryDBConnection, new HashMap<String, Long>());
         }
         timeTrack.get(azquoMemoryDBConnection).put(trackName, current + toAdd);
-    }
+    }*/
 
     public Map<String, Long> getTimeTrackMapForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection) {
         return timeTrack.get(azquoMemoryDBConnection);
     }
-
 
     // this is passed a string for the value, not sure if that is the best practice, need to think on it.
 
@@ -696,23 +695,22 @@ public final class ValueService {
                     if (value.getNames().contains(heading)) {
                         extract.add(value);
                         //creating a new 'value' with one less name for recursion
-                        Value slimValue = null;
                         try {
-                            slimValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), null, value.getText(), null);
+                            // todo : get rid of this!
+                            Value slimValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), null, value.getText(), null);
+                            Set<Name> slimNames = new HashSet<Name>();
+                            for (Name name : value.getNames()) {
+                                slimNames.add(name);
+                            }
+                            slimNames.remove(heading);
+                            slimValue.setNames(slimNames);
+                            slimExtract.add(slimValue);
                         } catch (Exception e) {
-                            //no reason for exceptions, so ignore.
+                            // exception from value constructor, should not happen
+                            e.printStackTrace();
                         }
-                        Set<Name> slimNames = new HashSet<Name>();
-                        for (Name name : value.getNames()) {
-                            slimNames.add(name);
-                        }
-                        slimNames.remove(heading);
-                        slimValue.setNames(slimNames);
-                        slimExtract.add(slimValue);
                         //debugCount = slimValue.getNames().size();
                     }
-
-
                 }
                 values.removeAll(extract);
                 if (firstHeading) {
@@ -736,7 +734,6 @@ public final class ValueService {
         String result = "\"" + val1 + "\":\"" + val2.replace("\"", "\\\"") + "\"";
         if (!comma) {
             return result;
-
         }
         return "," + result;
     }

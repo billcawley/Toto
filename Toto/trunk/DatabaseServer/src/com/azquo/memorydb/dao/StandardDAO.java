@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
  * Most data tables in the database have common features such as an id and a simple place that they're stored which means we can,
  * factor things off here
  * <p/>
- * Note : for building SQL I'm veering away from StringBuilder as IntelliJ complains about it and string concatenation etc is heavily optimised by the compiler
+ * Note : warnings about appending form intellij but zapping them would undermine readability, leaving for the moment.
  * <p/>
  * This used to be an abstract class with classes for each entity extending it. Now after full json it's just used for moving the very standard json records about.
  *
@@ -33,9 +33,6 @@ public class StandardDAO {
 
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
-
-    // 10 million select limit for the moment, this class is used for bulk loading and saving.
-    public static final int SELECTLIMIT = 10000000;
 
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
@@ -74,10 +71,7 @@ public class StandardDAO {
                 if (!records.isEmpty()) {
                     long track = System.currentTimeMillis();
                     final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-                    final StringBuilder insertSql = new StringBuilder();
-
-                    insertSql.append("INSERT INTO `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` (" + ID + "," + JSON + ") VALUES ");
-
+                    final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` (" + ID + "," + JSON + ") VALUES ");
                     int count = 1;
 
                     for (JsonRecordTransport record : records) {
@@ -110,9 +104,7 @@ WHERE id IN (1,2,3)
         if (!records.isEmpty()) {
             long track = System.currentTimeMillis();
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-            final StringBuilder updateSql = new StringBuilder();
-
-            updateSql.append("update `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` SET " + JSON + " = CASE " + ID);
+            final StringBuilder updateSql = new StringBuilder("update `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` SET " + JSON + " = CASE " + ID);
 
             int count = 1;
 
@@ -143,9 +135,8 @@ WHERE id IN (1,2,3)
         if (!records.isEmpty()) {
             long track = System.currentTimeMillis();
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-            final StringBuilder updateSql = new StringBuilder();
+            final StringBuilder updateSql = new StringBuilder("delete from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` where " + ID + " in (");
 
-            updateSql.append("delete from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` where " + ID + " in (");
             int count = 1;
             for (JsonRecordTransport record : records) {
                 if (count == 1) {
@@ -198,16 +189,6 @@ WHERE id IN (1,2,3)
         if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
             throw new Exception("Database " + azquoMemoryDB.getMySQLName() + " took longer than an hour to persist");
         }
-    }
-
-    public final List<JsonRecordTransport> findFromTable(final AzquoMemoryDB azquoMemoryDB, final String tableName) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` LIMIT 0," + SELECTLIMIT;
-        return jdbcTemplate.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
-    }
-
-    public final List<JsonRecordTransport> findFromTable(final AzquoMemoryDB azquoMemoryDB, final String tableName, int from, int limit) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` LIMIT " + from + "," + limit;
-        return jdbcTemplate.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
     }
 
     public final List<JsonRecordTransport> findFromTableMinMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName, int minId, int maxId) throws DataAccessException {

@@ -82,6 +82,7 @@ public final class Value extends AzquoMemoryDBEntity {
         this.text = text;
     }
 
+    // notable that this is never used, do we care about undelete functionality?
     public String getDeletedInfo() {
         return deletedInfo;
     }

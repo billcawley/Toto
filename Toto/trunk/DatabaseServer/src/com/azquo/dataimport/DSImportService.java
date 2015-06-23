@@ -93,11 +93,11 @@ public class DSImportService {
         }
     }
 
+    // todo - probably a slightly nicer API call for this
     public boolean isADate(String maybeDate){
         try {
-            Date date = sdf.parse(maybeDate);
+            sdf.parse(maybeDate);
             return true;
-
         }catch(Exception e){
             return false;
         }

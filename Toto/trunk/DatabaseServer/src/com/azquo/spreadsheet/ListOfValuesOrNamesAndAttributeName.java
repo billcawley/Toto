@@ -7,6 +7,7 @@ import java.util.List;
 
 /**
  * Created by cawley on 16/04/15.
+ *
  */
 public class ListOfValuesOrNamesAndAttributeName {
     // for the map of values for a region. Used to be just a list of values for each cell but now given attributes it could be a lit of names and and attributes - typically will be just one attribute and name

@@ -16,7 +16,7 @@ import com.azquo.memorydb.core.Name;
  */
 public class DataRegionHeading {
 
-    public enum BASIC_RESOLVE_FUNCTION {COUNT, AVERAGE, MAX, MIN};
+    public enum BASIC_RESOLVE_FUNCTION {COUNT, AVERAGE, MAX, MIN}
 
     private final Name name;
     private final String attribute;

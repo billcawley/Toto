@@ -158,6 +158,7 @@ public class DSDataLoadService {
         System.out.println("initial load of magento data done");
         System.out.println("Trying to make some product objects");
         // Not sure about the string literals here. On the other hadn they're not referenced anywhere else in the Java, these are database references.
+        // in Azquo the import defines the schema, do we assume that someone writing Magento reports would look here or just inspect? Is it necessary to control such things?
         Name topProduct = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "product", null, false);
         Name productAttributesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product Attributes", topProduct, false);
         Name productCategories = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product categories", topProduct, false);
@@ -176,13 +177,11 @@ public class DSDataLoadService {
         String lastNameId = null;
         String store = "";
 
-
         for (Map<String, String> storeRecord : tableMap.get("core_store_group")) {
             if (storeRecord.get("group_id").equals("1")) {
                 store = storeRecord.get("name");
             }
         }
-
 
         for (Map<String, String> entityTypeRecord : tableMap.get("eav_entity_type")) {
             if (entityTypeRecord.get("entity_type_code") != null) {
@@ -208,7 +207,6 @@ public class DSDataLoadService {
         String countryNameId = null;
         String postcodeNameId = null;
 
-
         for (Map<String, String> attribute : tableMap.get("eav_attribute")) {
             String attCode = attribute.get("attribute_code");
             String entTypeId = attribute.get("entity_type_id");
@@ -217,7 +215,6 @@ public class DSDataLoadService {
                 if (entTypeId.equals(categoryEntityId)) {
                     categoryNameId = attId;
                 }
-
             }
             if (entTypeId.equals(productEntityId)) {
                 if (attCode.equals("name")) {
@@ -228,7 +225,6 @@ public class DSDataLoadService {
                         attIds.put(att, attId);
                     }
                 }
-
             }
         }
         //now start the real work - categories first
@@ -785,9 +781,8 @@ public class DSDataLoadService {
                 }
                 part8 += (thisCycleMarker - System.currentTimeMillis());
                 //thisCycleMarker = System.currentTimeMillis();
-
-
             }
+
             counter++;
             if (counter == 100000) {
                 System.out.println("100000 lines sales flat order item " + (System.currentTimeMillis() - marker));
@@ -807,15 +802,11 @@ public class DSDataLoadService {
                 System.out.println("part 8 " + part8);
                 marker = System.currentTimeMillis();
                 counter = 0;
-
                 System.out.println("name spreadsheet time track" + nameService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
                 System.out.println("value spreadsheet time track" + valueService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
-
                 logMemUseage();
             }
-
         }
-
 
         if (bundleLine.length() > 0) {
             calcBundle(azquoMemoryDBConnection, bundleTotal, bundleItems, priceName, taxName);
@@ -838,7 +829,6 @@ public class DSDataLoadService {
                         allCountriesName.addChildWillBePersisted(notLoggedIn);
                     }
                     customerName = notLoggedIn;
-
                 } else {
                     customerName = azquoCustomersFound.get(customer);
                     if (customerName == null) {
@@ -870,10 +860,7 @@ public class DSDataLoadService {
                 if (counter % 1000 == 0) {
                     System.out.print(".");
                 }
-
             }
-
-
         }
         System.out.println("");
         System.out.println("shipments");
@@ -887,8 +874,6 @@ public class DSDataLoadService {
                 if (orderName != null && shippingDate != null && packages != null) {
                     shippingDate = shippingDate.substring(0, 10);
                     orderName.setAttributeWillBePersisted("Shipping date", shippingDate);
-
-
                 }
             }
         }
@@ -901,9 +886,7 @@ public class DSDataLoadService {
         if (azquoMemoryDBConnection.getAzquoMemoryDB() != null) {
             azquoMemoryDBConnection.persistInBackground();// aim to return to them quickly, this is whre we get into multi threading . . .
         }
-
     }
-
 
     private void readProductAttributes(String tableName, Map<String, List<Map<String, String>>> tableMap, Map<String, Name> azquoProductsFound, Map<String, String> attIds, String productNameId) throws Exception {
         for (Map<String, String> attributeRow : tableMap.get(tableName)) {
@@ -925,11 +908,9 @@ public class DSDataLoadService {
                         }
                     }
                 }
-
             }
         }
         tableMap.remove(tableName);
-
     }
 
     private void calcBundle(AzquoMemoryDBConnection azquoMemoryDBConnection, SaleItem bundleTotal, List<SaleItem> bundleItems, Name priceName, Name taxName) throws Exception {
@@ -993,7 +974,6 @@ public class DSDataLoadService {
         }
         Double unallocatedPriceRemaining = priceRemaining;
 
-
         for (SaleItem saleItem : bundleItems) {
             if (saleItem.price == 0.0) {
                 if (--unknownCount == 0) {
@@ -1021,10 +1001,7 @@ public class DSDataLoadService {
             valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, df.format(saleItem.tax), namesForValue);
 
         }
-
-
     }
-
 
     private String defaultData() {
         //version number followed by required data.  $starttime to be replaced by latest update

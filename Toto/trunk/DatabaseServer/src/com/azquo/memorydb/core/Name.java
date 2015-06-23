@@ -35,7 +35,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class Name extends AzquoMemoryDBEntity {
 
     public static final String CALCULATION = "CALCULATION";
-    public static final String ANON = "ANON";
     public static final String LOCAL = "LOCAL";
 
     public static final char QUOTE = '`';
@@ -535,7 +534,7 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
-    // Not entirely clear on usage here, basic thread safety should be ok I think
+/*    // Not entirely clear on usage here, basic thread safety should be ok I think
 
     public synchronized void setTemporaryAttribute(String attributeName, String attributeValue) throws Exception {
         attributeName = attributeName.toUpperCase();
@@ -558,7 +557,7 @@ public final class Name extends AzquoMemoryDBEntity {
 //        attributes.put(attributeName, attributeValue);
         getAzquoMemoryDB().addNameToAttributeNameMap(this); // will overwrite but that's fine
 
-    }
+    }*/
 
     // todo - addname to attribute map . . . not efficient?
     // I think plain old synchronized here is safe enough if not that fast
@@ -674,14 +673,14 @@ public final class Name extends AzquoMemoryDBEntity {
         return null;
     }
 
-    public boolean hasInParentTree(final Name testParent) {
+/*    public boolean hasInParentTree(final Name testParent) {
         for (Name parent : getParents()) {
             if (testParent == parent || parent.hasInParentTree(testParent)) {
                 return true;
             }
         }
         return false;
-    }
+    }*/
 
 /*  peers needs to be as values children etc, reassigned as a new LinkedHashMap in a synchronized block. Deal with the other objects out side of this block to avoid deadlocks
             of course the state of this object and its external ones will not be atomic

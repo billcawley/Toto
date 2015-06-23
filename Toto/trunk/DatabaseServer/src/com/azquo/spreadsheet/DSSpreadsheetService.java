@@ -67,14 +67,8 @@ public class DSSpreadsheetService {
     public AzquoMemoryDBConnection getConnectionFromAccessToken(DatabaseAccessToken databaseAccessToken) throws Exception {
         // todo - address opendb count (do we care?) and exceptions
         AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(databaseAccessToken.getDatabaseMySQLName());
-        AzquoMemoryDBConnection connection = new AzquoMemoryDBConnection(memoryDB);
-        if (databaseAccessToken.getWritePermissions() != null && !databaseAccessToken.getWritePermissions().isEmpty()) {
-            connection.setWritePermissions(nameService.decodeString(connection, databaseAccessToken.getWritePermissions(), databaseAccessToken.getLanguages()));
-        }
-        if (databaseAccessToken.getReadPermissions() != null && !databaseAccessToken.getReadPermissions().isEmpty()) {
-            connection.setWritePermissions(nameService.decodeString(connection, databaseAccessToken.getWritePermissions(), databaseAccessToken.getLanguages()));
-        }
-        return connection;
+        // we can't do the lookup for permissions out here as it requires the connection, hence pass things through
+        return new AzquoMemoryDBConnection(memoryDB,databaseAccessToken, nameService, databaseAccessToken.getLanguages());
     }
 
 /*    public void anonymise(DatabaseAccessToken databaseAccessToken) throws Exception {
@@ -1028,6 +1022,9 @@ I think that this is an ideal candidate for multithreading to speed things up
                     if (heading.getFunction() != null){
                         function = heading.getFunction();
                     }
+                }
+                if (function != null){
+                    locked.isTrue = true;
                 }
                 doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, languages, function); // true = pay attention to names additive flag
                 //if there's only one value, treat it as text (it may be text, or may include £,$,%)

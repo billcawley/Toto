@@ -20,10 +20,10 @@ public final class Provenance extends AzquoMemoryDBEntity {
     private static final Logger logger = Logger.getLogger(Provenance.class);
 
     private final String user;
-    private Date timeStamp;
-    String method;
-    String name;
-    private String context;
+    private final Date timeStamp;
+    private final String method;
+    private final String name;
+    private final String context;
 
 
     // won't have this call the other constructor, does not factor in the same way now
@@ -66,32 +66,16 @@ public final class Provenance extends AzquoMemoryDBEntity {
         return timeStamp;
     }
 
-    public void setTimeStamp() {
-        this.timeStamp = new Date();
-    }
-
     public String getMethod() {
         return method;
-    }
-
-    public void setMethod(String method) {
-        this.method = method;
     }
 
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getContext() {
         return context;
-    }
-
-    public void setContext(String context) {
-        this.context = context;
     }
 
     @Override

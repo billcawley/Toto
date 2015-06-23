@@ -3,12 +3,10 @@ package com.azquo.memorydb;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
+import com.azquo.memorydb.service.NameService;
 import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by cawley on 21/10/14.
@@ -25,36 +23,30 @@ public class AzquoMemoryDBConnection {
 
     private static final Logger logger = Logger.getLogger(AzquoMemoryDBConnection.class);
 
-    private AzquoMemoryDB azquoMemoryDB;
+    private final AzquoMemoryDB azquoMemoryDB;
 
-    private List<Set<Name>> readPermissions;
+    private final List<Set<Name>> readPermissions;
 
-    private List<Set<Name>> writePermissions;
+    private final List<Set<Name>> writePermissions;
 
-    // new one for getting a connection based on the DatabaseAccessToken
+    // A bit involved but it makes this object immutable, think that's worth it - note
 
-    public AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB) {
+    public AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, DatabaseAccessToken databaseAccessToken, NameService nameService, List<String> languages)  throws Exception {
         this.azquoMemoryDB = azquoMemoryDB;
-        readPermissions = new ArrayList<Set<Name>>();
-        writePermissions = new ArrayList<Set<Name>>();
+        if (databaseAccessToken.getWritePermissions() != null && !databaseAccessToken.getWritePermissions().isEmpty()) {
+            writePermissions = nameService.decodeString(this, databaseAccessToken.getWritePermissions(), languages);
+        } else {
+            writePermissions = new ArrayList<Set<Name>>();
+        }
+        if (databaseAccessToken.getReadPermissions() != null && !databaseAccessToken.getReadPermissions().isEmpty()) {
+            readPermissions = nameService.decodeString(this, databaseAccessToken.getReadPermissions(), languages);
+        } else {
+            readPermissions = new ArrayList<Set<Name>>();
+        }
     }
 
     public AzquoMemoryDB getAzquoMemoryDB() {
         return azquoMemoryDB;
-    }
-
-    public boolean hasAzquoMemoryDB() {
-        return azquoMemoryDB != null;
-    }
-
-    public int getMaxIdOnCurrentDB() {
-        return azquoMemoryDB.getCurrentMaximumId();
-    }
-
-    // todo, address this being public now I've refactored, a big issue??
-
-    public void setAzquoMemoryDB(final AzquoMemoryDB azquoMemoryDB) {
-        this.azquoMemoryDB = azquoMemoryDB;
     }
 
     protected Provenance provenance = null;
@@ -86,20 +78,13 @@ public class AzquoMemoryDBConnection {
         }
     }
 
+    // todo : the sets could still be modified
     public List<Set<Name>> getReadPermissions() {
-        return this.readPermissions;
-    }
-
-    public void setReadPermissions(List<Set<Name>> names) {
-        this.readPermissions = names;
+        return Collections.unmodifiableList(this.readPermissions);
     }
 
     public List<Set<Name>> getWritePermissions() {
-        return this.writePermissions;
-    }
-
-    public void setWritePermissions(List<Set<Name>> names) {
-        this.writePermissions = names;
+        return Collections.unmodifiableList(this.writePermissions);
     }
 
     public void persist() {
