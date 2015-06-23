@@ -1079,7 +1079,7 @@ I think that this is an ideal candidate for multithreading to speed things up
         }
         Map<Name, Integer> totalSetSize = new ConcurrentHashMap<Name, Integer>();// a cache to speed up cell calculation. Short hand of set sizes, we assume they won't change while creating this data.
         System.out.println("data region size = " + totalRows + " * " + totalCols);
-        int maxRegionSize = 500000;
+        int maxRegionSize = 1000000;
         if (totalRows * totalCols > maxRegionSize) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }
