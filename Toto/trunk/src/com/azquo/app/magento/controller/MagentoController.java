@@ -163,6 +163,9 @@ public class MagentoController {
     }
 
     private String findRequiredTables(LoggedInUser loggedInUser, String remoteAddress) throws Exception{
+        if (loggedInUser.getDatabase() == null){
+            return "error: no database selected";
+        }
         if (dataLoadService.magentoDBNeedsSettingUp(loggedInUser.getDataAccessToken())){
             String magentoSetupFile = spreadsheetService.getHomeDir() + "/databases/Magen/setup/magentosetup.xlsx";
             String fileName = "magentosetup.xlsx";
