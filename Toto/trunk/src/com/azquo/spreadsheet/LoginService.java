@@ -77,7 +77,7 @@ public class LoginService {
     private LoggedInUser loginLoggedInUser(final String databaseName, final User user) throws Exception {
         // ok user should be ok :)
         final Map<String, Database> okDatabases = foundDatabases(user);
-        logger.info("ok databases size " + okDatabases.size());
+        logger.info("ok databases size " + okDatabases.size() + " user " + user.getEmail());
         Database database;
         if (okDatabases.size() == 1) {
             logger.info("1 database, use that");

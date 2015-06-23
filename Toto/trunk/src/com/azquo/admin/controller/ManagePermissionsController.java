@@ -103,7 +103,7 @@ public class ManagePermissionsController {
                         if (toEdit == null){
                             // Have to use  alocadate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
                             adminService.createUserPermission(Integer.parseInt(userId), Integer.parseInt(databaseId), LocalDate.parse(startDate, formatter).atStartOfDay()
-                                    ,LocalDate.parse(startDate, formatter).atStartOfDay(), readList, writeList, loggedInUser);
+                                    ,LocalDate.parse(endDate, formatter).atStartOfDay(), readList, writeList, loggedInUser);
                         } else {
                             toEdit.setUserId(Integer.parseInt(userId));
                             toEdit.setDatabaseId(Integer.parseInt(databaseId));
