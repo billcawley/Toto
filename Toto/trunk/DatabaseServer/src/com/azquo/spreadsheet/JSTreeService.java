@@ -417,13 +417,21 @@ public class JSTreeService {
     private String getJsonChildren(AzquoMemoryDBConnection loggedInConnection,String tokenString, String jsTreeId, Name name, String parents, Map<String, JSTreeService.JsTreeNode> lookup, boolean details, String searchTerm) throws Exception {
         StringBuilder result = new StringBuilder();
         result.append("[{\"id\":" + jsTreeId + ",\"state\":{\"opened\":true},\"text\":\"");
+
         List<Name> children = new ArrayList<Name>();
         if (jsTreeId.equals("0") && name == null) {
             result.append("root");
             if (searchTerm == null || searchTerm.length() == 0) {
                 children = nameService.findTopNames(loggedInConnection);
             } else {
-                children = nameService.findContainingName(loggedInConnection, searchTerm, Constants.DEFAULT_DISPLAY_NAME);
+                try {
+                    children = nameService.parseQuery(loggedInConnection, searchTerm);
+                }catch(Exception e){
+                    //carry on
+                }
+                if (children==null || children.size() == 0){
+                    children = nameService.findContainingName(loggedInConnection, searchTerm, Constants.DEFAULT_DISPLAY_NAME);
+                }
             }
 
         } else if (name != null) {
