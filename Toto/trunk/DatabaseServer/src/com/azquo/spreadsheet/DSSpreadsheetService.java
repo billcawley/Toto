@@ -984,6 +984,7 @@ I think that this is an ideal candidate for multithreading to speed things up
             }
         }
         int hCount = headingsForThisCell.size();
+        boolean checked = true;
         if (hCount > 0) {
             for (DataRegionHeading heading : columnHeadings) {
                 if (heading != null) {
@@ -995,11 +996,11 @@ I think that this is an ideal candidate for multithreading to speed things up
                 headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection, null));
             } else {
                 headingsForThisCell.clear();
+                checked = false;
             }
         }
         MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
-        boolean checked = true;
-        for (DataRegionHeading heading : headingsForThisCell) {
+         for (DataRegionHeading heading : headingsForThisCell) {
             if (heading.getName() == null && heading.getAttribute() == null) {
                 checked = false;
             }
