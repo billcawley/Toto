@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
  * todo : can the string parsing and json generation be moved out of here?
  */
 public final class NameService {
+    public final String MEMBEROF = "->";
 
     @Autowired
     ValueService valueService;//used only in formating children for output
@@ -59,6 +60,7 @@ public final class NameService {
     public static final String COUNTBACK = "countback";
     public static final String COMPAREWITH = "comparewith";
     public static final String AS = "as";
+    public static final char ASSYMBOL = '@';
     public static final String WHERE = "where";
 
     // hopefully thread safe??
@@ -111,7 +113,7 @@ public final class NameService {
 
     public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, String attribute) {
         ArrayList<Name> namesList = new ArrayList<Name>(azquoMemoryDBConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name));
-        if (namesList.size() == 0){
+        if (namesList.size() == 0 && attribute.length() > 0){
             namesList = findContainingName(azquoMemoryDBConnection,name,"");//try all the attributes
         }
         Collections.sort(namesList, defaultLanguageCaseInsensitiveNameComparator);
@@ -157,7 +159,11 @@ public final class NameService {
         // the point of all of this is to be able to ask for a name with the nearest parent but we can't just try and get it from the string directly e.g. get me WHsmiths on High street
         // we need to look from the top to distinguish high street in different towns
         while (parentName != null) {
-            remainder = name.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length()));
+            if (remainder.contains(MEMBEROF)){
+                remainder = remainder.substring(name.indexOf(MEMBEROF) + 2);
+            }else{
+                remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length()));
+            }
             if (possibleParents == null){
                 possibleParents = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parentName.replace(Name.QUOTE, ' ').trim(),null);
              }else{
@@ -183,7 +189,7 @@ public final class NameService {
 
         }else {
             for (Name parent : possibleParents) {
-                Name found = getNameByAttribute(azquoMemoryDBConnection, remainder, parent, attributeNames);
+                Name found = getNameByAttribute(azquoMemoryDBConnection, remainder.replace(Name.QUOTE,' ').trim(), parent, attributeNames);
                 if (found != null) {
                     return found;
                 }
@@ -240,7 +246,11 @@ public final class NameService {
         */
         Name parent = topParent;
         while (parentName != null) {
-            remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length() - 1));
+            if (remainder.contains(MEMBEROF)){
+                remainder = remainder.substring(remainder.indexOf(MEMBEROF) + 2);
+            }else{
+                remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length() - 1));
+            }
             //if two commas in succession occur, ignore the blank parent
             if (parentName.length() > 0) {
                 parent = findOrCreateNameInParent(azquoMemoryDBConnection, parentName, parent, local, attributeNames);
@@ -539,8 +549,9 @@ public final class NameService {
 
         setFormula = stringUtils.parseStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
+        setFormula = setFormula.replace(AS,ASSYMBOL + "");
         setFormula = stringUtils.shuntingYardAlgorithm(setFormula);
-        Pattern p = Pattern.compile("[\\+\\-\\*/" + NAMEMARKER + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
+        Pattern p = Pattern.compile("[\\+\\-\\*/" + NAMEMARKER + NameService.ASSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
         logger.debug("Set formula after SYA " + setFormula);
         logger.debug("Set formula after SYA " + setFormula);
@@ -593,6 +604,14 @@ public final class NameService {
             } else if (op == '+') {
                 nameStack.get(stackCount - 1).addAll(nameStack.get(stackCount));
                 nameStack.remove(stackCount);
+            } else if (op== ASSYMBOL){
+
+                Name totalName = nameStack.get(stackCount).get(0);
+                totalName.setChildrenWillBePersisted(nameStack.get(stackCount-1));
+                nameStack.remove(stackCount);
+                nameStack.get(stackCount-1).clear();
+                nameStack.get(stackCount-1).add(totalName);
+
             }
             pos = nextTerm;
         }
@@ -729,7 +748,7 @@ public final class NameService {
         String countString = stringUtils.getInstruction(setTerm, COUNT);
         final String countbackString = stringUtils.getInstruction(setTerm, COUNTBACK);
         final String compareWithString = stringUtils.getInstruction(setTerm, COMPAREWITH);
-        String totalledAsString = stringUtils.getInstruction(setTerm, AS);
+        //String totalledAsString = stringUtils.getInstruction(setTerm, AS);
         String selectString = stringUtils.getInstruction(setTerm, SELECT);
         // removed totalled as
 
@@ -768,13 +787,6 @@ public final class NameService {
             }
         }
         namesFound.addAll(names);
-        if (totalledAsString != null) {
-            // now will only work on existing names
-            Name totalName = getNameFromListAndMarker(totalledAsString, referencedNames);
-            totalName.setChildrenWillBePersisted(namesFound);
-            namesFound.clear();
-            namesFound.add(totalName);
-        }
         if (whereString != null) {
             filter(namesFound, whereString, strings, attributeStrings);
         }
