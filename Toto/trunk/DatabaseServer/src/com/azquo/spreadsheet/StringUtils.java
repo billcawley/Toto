@@ -18,6 +18,7 @@ public class StringUtils {
 
     // when passed a name tries to find the last in the list e.g. london, ontario, canada gets canada
     public String findParentFromList(final String name) {
+        if (name.contains("->")) return name.substring(0, name.indexOf("->"));
         // ok preprocess to remove commas in quotes, easiest way.
         String nameWithoutCommasInQuotes = replaceCommasInQuotes(name);
         if (!nameWithoutCommasInQuotes.contains(",")) return null;
@@ -290,7 +291,7 @@ I should be ok for stringtokenizer at this point
                 Exit.
 */
 
-        Pattern p = Pattern.compile("[\\+\\-/\\*\\(\\)&]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[" + NameService.ASSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
