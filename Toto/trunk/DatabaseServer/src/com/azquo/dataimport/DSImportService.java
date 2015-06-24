@@ -10,10 +10,7 @@ import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.csvreader.CsvReader;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -47,8 +44,11 @@ public class DSImportService {
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+    SimpleDateFormat ukdf2 = new SimpleDateFormat("dd/MM/yy");
+    SimpleDateFormat ukdf4 = new SimpleDateFormat("dd/MM/yyyy");
+    SimpleDateFormat ukdf3 = new SimpleDateFormat("dd MMM yyyy");
 
-
+;
     static class ImportHeading {
         int column;
         String heading;
@@ -93,14 +93,23 @@ public class DSImportService {
         }
     }
 
-    // todo - probably a slightly nicer API call for this
-    public boolean isADate(String maybeDate){
-        try {
-            sdf.parse(maybeDate);
-            return true;
+    private Date tryDate (String maybeDate, SimpleDateFormat df){
+        try{
+            return df.parse(maybeDate);
         }catch(Exception e){
-            return false;
+            return null;
         }
+    }
+
+    // todo - probably a slightly nicer API call for this
+    public Date isADate(String maybeDate){
+         Date date = tryDate(maybeDate.substring(0,10), sdf);
+         if (date!=null) return date;
+         date = tryDate(maybeDate.substring(0,10), ukdf4);
+        if (date!=null) return date;
+        date = tryDate(maybeDate.substring(0,11), ukdf3);
+        if (date!=null) return date;
+        return tryDate(maybeDate.substring(0,8), ukdf2);
     }
 
 
@@ -109,7 +118,7 @@ public class DSImportService {
         if (fileType.toLowerCase().startsWith("sets")) {
             setsImport(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), new FileInputStream(filePath), attributeNames);
         } else {
-            valuesImport(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), new FileInputStream(filePath), fileType, attributeNames);
+            valuesImport(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), filePath, fileType, attributeNames);
         }
     }
 
@@ -330,19 +339,21 @@ public class DSImportService {
 
     Map<String, Long> trackers = new ConcurrentHashMap<String, Long>();
 
-    public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, String fileType, List<String> attributeNames) throws Exception {
+    public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
         trackers = new ConcurrentHashMap<String, Long>();
         // little local cache just to speed things up
+        InputStream uploadFile = new FileInputStream(filePath);
         final HashMap<String, Name> namesFound = new HashMap<String, Name>();
         if (fileType.indexOf(" ") > 0) {
             //filetype should be first word only
             fileType = fileType.substring(0, fileType.indexOf(" "));
         }
+        if (fileType.contains("_")) fileType = fileType.substring(0,fileType.indexOf("_"));
         long track = System.currentTimeMillis();
-        final CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
+        CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
         csvReader.setUseTextQualifier(true);
          String[]headers= null;
-        Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
+          Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         if (importInterpreter != null ){
             String importHeaders = importInterpreter.getAttribute(headingsString);
             if (importHeaders != null){
@@ -352,6 +363,16 @@ public class DSImportService {
         if (headers==null){
             csvReader.readHeaders();
             headers = csvReader.getHeaders();
+            if (headers.length < 2) {
+                //start again...
+                csvReader.close();
+                uploadFile = new FileInputStream(filePath);
+                csvReader = new CsvReader(uploadFile, ',', Charset.forName("UTF-8"));
+                csvReader.readHeaders();
+                headers = csvReader.getHeaders();
+            }
+
+
         }
         // what we're doing here is going through the headers, First thing to do is to set up the peers if defined for a header
         // then we find or create each header as a name in the database. If the name has peers it's added to the nameimportheading map, a way to find the header for that name with peers
@@ -377,10 +398,11 @@ public class DSImportService {
                 if (heading.attribute != null && heading.attribute.equalsIgnoreCase(dateLang)){
                     //interpret the date and change to standard form
                     //todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-                       if (heading.lineValue.length() > 10 && isADate(heading.lineValue))  {
-                            heading.lineValue = heading.lineValue.substring(0, 10);
-                      }
-                }
+                       Date date = isADate(heading.lineValue);
+                       if (date != null){
+                           heading.lineValue = sdf.format(date);
+                       }
+                   }
                 heading.lineName = null;
             }
             if (headings.get(0).lineValue.length() > 0 || headings.get(0).column==-1) {//skip any line that has a blank in the first column unless we're not interested in that column
@@ -562,7 +584,7 @@ public class DSImportService {
                         valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue);
                     }
                 }
-                if (heading.identityHeading >= 0 && heading.attribute!=null && (!heading.attribute.equalsIgnoreCase(dateLang) || !isADate(heading.lineValue)) ) {
+                if (heading.identityHeading >= 0 && heading.attribute!=null && (!heading.attribute.equalsIgnoreCase(dateLang) || (isADate(heading.lineValue) !=null))) {
                     // funnily enough no longer using attributes
                     handleAttribute(azquoMemoryDBConnection, namesFound, heading, headings);
                 }
