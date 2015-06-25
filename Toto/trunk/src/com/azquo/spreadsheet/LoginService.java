@@ -1,14 +1,11 @@
 package com.azquo.spreadsheet;
 
 import com.azquo.admin.AdminService;
-import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.admin.user.*;
-import com.azquo.admin.onlinereport.OnlineReportDAO;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -38,20 +35,15 @@ public class LoginService {
     @Autowired
     private AdminService adminService;
 
-    private final HashMap<Integer, Integer> openDBCount = new HashMap<Integer, Integer>();
-
     // like the two above but for new object that does not reference the memory DB objects. Is the demo stuff still important??
     // very similar to top function, proxies through to a different one
 
-    public LoggedInUser loginLoggedInUser(final String databaseName, final String userEmail, final String password, String spreadsheetName, boolean loggedIn) throws Exception {
+    public LoggedInUser loginLoggedInUser(final String databaseName, final String userEmail, final String password, boolean loggedIn) throws Exception {
 
 /*            System.out.println("database name " + databaseName);
             System.out.println("usermeail " + userEmail);
             System.out.println("password " + password);*/
 
-        if (spreadsheetName == null) {
-            spreadsheetName = "unknown";
-        }
         User user;
         //for demo users, a new User id is made for each user.
         if (userEmail.startsWith("demo@user.com")) {
@@ -114,7 +106,7 @@ public class LoginService {
             for (Permission permission : userAcceses) {
                 if (permission.getEndDate().isAfter(LocalDateTime.now())) {
                     Database database = databaseDao.findById(permission.getDatabaseId());
-                    if (database.getEndDate().isAfter(LocalDateTime.now())) {
+                    if (database != null && database.getEndDate().isAfter(LocalDateTime.now())) {
                         okDatabases.put(database.getName(), database);
                     }
                 }
@@ -122,34 +114,6 @@ public class LoginService {
         }
         return okDatabases;
     }
-
-/*
-    public void zapConnectionsTimedOut() {
-        for (Iterator<Map.Entry<String, LoggedInConnection>> it = connections.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<String, LoggedInConnection> entry = it.next();
-            LoggedInConnection lic = entry.getValue();
-            if ((System.currentTimeMillis() - lic.getLastAccessed().getTime()) > lic.getTimeOut()) {
-                // connection timed out
-                if (lic.getAzquoMemoryDB() != null) {
-                     int databaseId = 0;
-                    if (lic.getAzquoMemoryDB().getDatabase() !=null) {
-                        databaseId = lic.getAzquoMemoryDB().getDatabase().getId();
-                      }
-                    it.remove();
-                    if (databaseId > 0) {
-                        Integer openCount = openDBCount.get(databaseId);
-                        if (openCount == 1) {
-                            memoryDBManager.removeDatabase(lic.getAzquoMemoryDB().getDatabase());
-                            openDBCount.remove(databaseId);
-                            openDatabaseDAO.closeForDatabaseId(databaseId);
-                        } else {
-                            openDBCount.put(databaseId, openCount - 1);
-                        }
-                    }
-                }
-            }
-        }
-    }*/
 
     public void switchDatabase(LoggedInUser loggedInUser, String newDBName) throws Exception {
         Database db = null;
@@ -162,43 +126,10 @@ public class LoginService {
         switchDatabase(loggedInUser, db);
     }
 
+    // we used to record open counts, this will need to be dealt with server side
+
     public void switchDatabase(LoggedInUser loggedInUser, Database db) throws Exception {
         loggedInUser.setDatabase(db);
-
-        /* ok all this opencount etc stuff is going to have to go for the moment
-        if (azquoMemoryDBConnection.getAzquoMemoryDB() != null) {
-            Database oldDB = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase();
-            if (newDb != null && newDb.getName().equals("temp")) {
-            //don't switch to a temporary connection if you've been moved off it
-                return;
-            }
-            if (newDb != null && oldDB.getName().equals(newDb.getName())) return;
-            int databaseId = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase().getId();
-            Integer openCount = openDBCount.get(databaseId);
-            if (newDb == null)
-                openCount = 1;//if we're deleting the database, then close the memory, regardless of whether others have it open.
-            //todo - confirm where this is used! Seems dangerous . . .
-            if (openCount != null && openCount == 1) {
-                memoryDBManager.removeDatabase(azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase());
-                openDBCount.remove(databaseId);
-                openDatabaseDAO.closeForDatabaseId(databaseId);
-            } else if (openCount != null && openCount > 1) {
-                openDBCount.put(databaseId, openCount - 1);
-            }
-        }
-        if (newDb == null) {
-            azquoMemoryDBConnection.setAzquoMemoryDB(null);
-            return;
-        }
-        AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(newDb);
-        int databaseId = memoryDB.getDatabase().getId();
-        Integer openCount = openDBCount.get(databaseId);
-        if (openCount != null) {
-            openDBCount.put(databaseId, openCount + 1);
-        } else {
-            openDBCount.put(databaseId, 1);
-        }
-        azquoMemoryDBConnection.setAzquoMemoryDB(memoryDB);*/
     }
 
 }

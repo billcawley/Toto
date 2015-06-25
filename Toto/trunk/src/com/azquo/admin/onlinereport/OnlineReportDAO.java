@@ -120,19 +120,6 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         namedParams.addValue(DATABASEID, databaseId);
         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
     }
-
-    public final void update(int id, Map<String, Object> parameters) {
-        String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        for (Map.Entry<String, Object> columnNameValue : parameters.entrySet()) {
-            updateSql += "`" + columnNameValue.getKey() + "` = :" + columnNameValue.getKey() + ", ";
-            namedParams.addValue(columnNameValue.getKey(), columnNameValue.getValue());
-        }
-        updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
-        updateSql += " where " + ID + " = :" + ID;
-        namedParams.addValue(ID, id);
-        jdbcTemplate.update(updateSql, namedParams);
-    }
 }
 
 

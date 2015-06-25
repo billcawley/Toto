@@ -54,18 +54,11 @@ public class JstreeController {
     ) throws Exception {
         String jsonFunction = "azquojsonfeed";
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        if (loggedInUser == null) {
+            model.addAttribute("content", "error:not logged in");
+            return "utf8page";
+        }
         try {
-            if (loggedInUser == null) {
-                if (user.equals("demo@user.com")) {
-                    user += request.getRemoteAddr();
-                }
-                loggedInUser = loginService.loginLoggedInUser(database, user, password, "", false);
-                if (loggedInUser == null) {
-                    model.addAttribute("content", "error:not logged in");
-                    return "utf8page";
-                }
-            }
-
             if ((database == null || database.length() == 0) && loggedInUser.getDatabase() != null) {
                 database = loggedInUser.getDatabase().getName();
             } else {

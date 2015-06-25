@@ -15,14 +15,10 @@ import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import org.apache.log4j.Logger;
-import org.apache.velocity.Template;
-import org.apache.velocity.VelocityContext;
-import org.apache.velocity.app.VelocityEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
-import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
 
 import javax.servlet.ServletContext;
@@ -336,10 +332,6 @@ public class SpreadsheetService {
 
     public void saveBookActive(HttpServletResponse response, LoggedInUser loggedInUser, String fileName) throws Exception {
         loggedInUser.getAzquoBook().saveBookActive(response, fileName, env.getProperty("azquo.home") + "/onlinereports/Admin/Azquoblank.xls");
-    }
-
-    public String changeValue(LoggedInUser loggedInUser, int row, int col, String value) {
-        return loggedInUser.getAzquoBook().changeValue(row, col, value, loggedInUser);
     }
 
     public String getJsonList(DatabaseAccessToken databaseAccessToken, String listName, String listChoice, String entered, String jsonFunction) throws  Exception{

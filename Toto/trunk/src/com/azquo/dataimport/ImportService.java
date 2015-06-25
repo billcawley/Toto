@@ -329,7 +329,7 @@ public final class ImportService {
         readPreparedFile(loggedInUser.getDataAccessToken(), tempName, fileType, attributeNames);
     }
 
-    private void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
+    public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
         rmiClient.getServerInterface().readPreparedFile(databaseAccessToken,filePath,fileType,attributeNames);
     }
 }

@@ -77,7 +77,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
         final Button button = new Button("Download Full Audit");
         button.addEventListener("onClick",
-                new EventListener() {
+                new EventListener<Event>() {
                     public void onEvent(Event event) throws Exception {
                         Filedownload.save(fullProvenance, "text/csv", "provenance.csv");
                     }

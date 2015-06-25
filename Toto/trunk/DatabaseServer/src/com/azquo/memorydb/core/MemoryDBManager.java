@@ -47,12 +47,7 @@ public final class MemoryDBManager {
     }
         */
 
-    // todo : what if references to the memory db held in memory still? Perhaps in a connection.
-    /* commented for the moment as the code which called this in switch database isn't being used.
-    public synchronized void removeDatabase(String mysqlName) {
-        memoryDatabaseMap.remove(mysqlName);
-
-    }*/
+    // worth being aware that if the db is still referenced somewhere then the garbage collector won't chuck it (which is what we want)
 
     public synchronized  void removeDBfromMap(String mysqlName) throws Exception {
         if (memoryDatabaseMap.get(mysqlName) != null){

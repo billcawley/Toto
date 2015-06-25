@@ -106,7 +106,6 @@ public class LoggedInUser {
 
     public void clearSortRows() {
         this.sortRow.clear();
-
     }
 
 
@@ -114,7 +113,7 @@ public class LoggedInUser {
         if (region == null || region.isEmpty()) {
             return sentCellsMaps.get(defaultRegion);
         } else {
-            return sentCellsMaps.get(region.toLowerCase());
+            return sentCellsMaps.get(region);
         }
     }
 

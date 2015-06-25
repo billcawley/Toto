@@ -302,6 +302,8 @@ public final class NameService {
 
     private static final boolean profile = false;
 
+    // todo - permissions here or at a higher level?
+
     public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name parent, boolean local, List<String> attributeNames) throws Exception {
 
         long marker = System.currentTimeMillis();

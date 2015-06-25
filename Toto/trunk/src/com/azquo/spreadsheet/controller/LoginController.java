@@ -38,14 +38,11 @@ public class LoginController {
             , @RequestParam(value = "user", required = false) String userEmail
             , @RequestParam(value = "password", required = false) String password
             , @RequestParam(value = "connectionid", required = false) String connectionid // only for the magento plugin
-
     ) throws Exception {
-
         String callerId = request.getRemoteAddr();
         if (callerId != null && userEmail != null && userEmail.equals("demo@user.com")) {
             userEmail += callerId;
         }
-
         if (connectionid != null && connectionid.length() > 0) { // nasty hack to support connection id from the plugin
             if (request.getServletContext().getAttribute(connectionid) != null) { // then pick up the temp logged in conneciton
                 LoggedInUser loggedInUser = (LoggedInUser)request.getServletContext().getAttribute(connectionid);
@@ -62,7 +59,7 @@ public class LoginController {
         } else {
             if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
                 model.put("userEmail", userEmail);
-                LoggedInUser loggedInUser = loginService.loginLoggedInUser(null, userEmail, password, null, false);
+                LoggedInUser loggedInUser = loginService.loginLoggedInUser(null, userEmail, password, false);
                 if (loggedInUser != null) {
                     request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                     if (!loggedInUser.getUser().isAdministrator()) {

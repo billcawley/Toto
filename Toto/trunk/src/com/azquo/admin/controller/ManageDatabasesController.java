@@ -65,7 +65,7 @@ public class ManageDatabasesController {
                     adminService.removeDatabaseById(loggedInUser, Integer.parseInt(deleteId));
                 }
                 if (backupTarget != null) {
-                    LoggedInUser loggedInUserTarget = loginService.loginLoggedInUser(backupTarget, loggedInUser.getUser().getEmail(), "", "", true); // targetted to destinationDB
+                    LoggedInUser loggedInUserTarget = loginService.loginLoggedInUser(backupTarget, loggedInUser.getUser().getEmail(), "", true); // targetted to destinationDB
                     adminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getLanguages());// re languages I should just be followign what was there before . . .
                 }
             } catch (Exception e) {

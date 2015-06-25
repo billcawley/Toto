@@ -71,7 +71,6 @@ public class OnlineController {
             , @RequestParam(value = "jsonfunction", required = false, defaultValue = "azquojsonfeed") String jsonFunction
             , @RequestParam(value = "row", required = false, defaultValue = "") String rowStr
             , @RequestParam(value = "col", required = false, defaultValue = "") String colStr
-            , @RequestParam(value = "value", required = false) String changedValue
             , @RequestParam(value = "opcode", required = false, defaultValue = "") String opcode
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
@@ -82,43 +81,35 @@ public class OnlineController {
     ) {
         try {
             String callerId = request.getRemoteAddr();
-            if (callerId != null && user != null && user.equals("demo@user.com")) {
+            if (callerId != null && user != null && user.equals("demo@user.com")) { // for reports linked directly from the website
                 user += callerId;
             }
             if (reportToLoad != null && reportToLoad.length() > 0) {
                 reportId = reportToLoad;
             }
             //long startTime = System.currentTimeMillis();
-            String workbookName = null;
             Database db;
             try {
-                OnlineReport onlineReport = null;
-                if (reportId != null && reportId.length() > 0) {
-                    //report id is assumed to be integer - sent from the website
-                    onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
-                    if (onlineReport != null) {
-                        workbookName = onlineReport.getReportName();
-                    }
-                }
-                if (workbookName == null) {
-                    workbookName = "unknown";
-                }
                 LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-
                 if (loggedInUser == null) {
                     if (user == null) {
-                        return "utf8page";
+                        return "utf8page";// note - this means a blank if no session or credentials. Should maybe redirect to login page?
                     }
                     if (user.equals("demo@user.com")) {
                         user += request.getRemoteAddr();
                     }
-                    loggedInUser = loginService.loginLoggedInUser(database, user, password, workbookName, false);
+                    loggedInUser = loginService.loginLoggedInUser(database, user, password, false);
                     if (loggedInUser == null) {
                         model.addAttribute("content", "error:no connection id");
                         return "utf8page";
                     } else {
                         request.getSession().setAttribute(LoginController.LOGGED_IN_USER_SESSION, loggedInUser);
                     }
+                }
+                OnlineReport onlineReport = null;
+                if (reportId != null && reportId.length() > 0) {
+                    //report id is assumed to be integer - sent from the website
+                    onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
                 }
                 if (onlineReport != null) {
                     if (onlineReport.getId() != 1) {
@@ -129,7 +120,6 @@ public class OnlineController {
                         } else {
                             db = loggedInUser.getDatabase();
                             onlineReport.setPathname(adminService.getBusinessPrefix(loggedInUser));
-
                         }
                         if (db != null) {
                             onlineReport.setDatabase(db.getName());
@@ -148,9 +138,11 @@ public class OnlineController {
                 } catch (Exception e) {
                     //rowStr can be blank or '0'
                 }
+                // azquobook dropdowns
                 if (opcode.equals("choosefromlist")){
                     result =  spreadsheetService.getJsonList(loggedInUser.getDataAccessToken(),choiceName, loggedInUser.getAzquoBook().getRangeData(choiceName + "choice"), choiceValue, jsonFunction);
                 }
+                // highlighting etc. From the top right menu and the azquobook context menu, can be zapped later
                 if ((opcode.equals("setchosen")) && choiceName != null) {
                     if (choiceName.startsWith("region options:")) {
                         String region = choiceName.substring(15);
@@ -185,31 +177,14 @@ public class OnlineController {
                         return "upload";
                     }
                 }
-                if (opcode.equals("valuesent")) {
-                    result = spreadsheetService.changeValue(loggedInUser, row, Integer.parseInt(colStr), changedValue);
-                    result = jsonFunction + "({\"changedvalues\":" + result + "})";
-                }
                 if (opcode.equals("provenance")) {
                     result = spreadsheetService.getProvenance(loggedInUser, row, Integer.parseInt(colStr), jsonFunction);
                     model.addAttribute("content", result);
-
                     return "utf8javascript";
-                }
-                if (opcode.equals("provenance")) {
-                    result = spreadsheetService.getProvenance(loggedInUser, row, Integer.parseInt(colStr), jsonFunction);
-                    model.addAttribute("content", result);
-                    return "utf8";
-                }
-                // will only work on admin
-                if (opcode.equals("savedata")) {
-                    AzquoBook azquoBook = loggedInUser.getAzquoBook();
-                    azquoBook.saveData(loggedInUser);
-                    result = "data saved successfully";
                 }
                 if (opcode.equals("chart")) {
                     result = jsonFunction + "({\"chart\":\"" + chart + "\"})";
                 }
-
                 if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
                     // logic here is going to change to support the different renderers
                     if (onlineReport.getId() != 1) {// todo, make this makem a bit more sense, get rid of report id 1 being a special case
@@ -269,13 +244,12 @@ public class OnlineController {
             , @RequestParam(value = "jsonfunction", required = false, defaultValue = "azquojsonfeed") String jsonFunction
             , @RequestParam(value = "row", required = false, defaultValue = "") String rowStr
             , @RequestParam(value = "col", required = false, defaultValue = "") String colStr
-            , @RequestParam(value = "value", required = false) String changedValue
             , @RequestParam(value = "opcode", required = false, defaultValue = "") String opcode
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
     ) {
-        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, chart, jsonFunction, rowStr, colStr, changedValue, opcode, spreadsheetName, database, reportToLoad, submit, null);
+        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, chart, jsonFunction, rowStr, colStr, opcode, spreadsheetName, database, reportToLoad, submit, null);
     }
 }
