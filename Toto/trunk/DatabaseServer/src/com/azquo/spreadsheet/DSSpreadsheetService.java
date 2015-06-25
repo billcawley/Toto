@@ -961,8 +961,10 @@ I think that this is an ideal candidate for multithreading to speed things up
                     targetArray.set(rowNo, returnRow);
                 }
             } catch (Exception e) {
-                errorTrack.append(e.getMessage()).append("\n");
-                errorTrack.append(e.getStackTrace()[0]);
+                errorTrack.append("RowFiller : " + e.getMessage()).append("\n");
+                for (StackTraceElement ste : e.getStackTrace()){
+                    errorTrack.append("RowFiller : " + ste + "\n");
+                }
             }
         }
     }

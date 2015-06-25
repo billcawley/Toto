@@ -14,6 +14,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 
+/*
+
+Edd note : this class will probably be redundant after zapping AzquoBook.
+
+ */
+
 @Controller
 @RequestMapping("/Download")
 public class DownloadController {
@@ -35,6 +41,7 @@ public class DownloadController {
             , @RequestParam(value = "image", required = false) String image
     ) throws Exception {
         // deliver a preprepared image. Are these names unique? Could images move between spreadsheets unintentionally?
+        // Edd note - use nio?
         if (image != null && image.length() > 0) {
             InputStream input = new BufferedInputStream((new FileInputStream(spreadsheetService.getHomeDir() + "/temp/" + image)));
             response.setContentType("image/png"); // Set up mime type
@@ -43,8 +50,6 @@ public class DownloadController {
             int length = 0;
             try {
                 try {
-                    //Use buffering? No. Buffering avoids costly access to disk or network;
-                    //buffering to an in-memory stream makes no sense.
                     int bytesRead = 0;
                     while (bytesRead != -1) {
                         //aInput.read() returns -1, 0, or more :
@@ -56,7 +61,6 @@ public class DownloadController {
                     }
                 } finally {
                     input.close();
-                    //result.close(); this is a no-operation for ByteArrayOutputStream
                 }
                 response.setHeader("Content-Disposition", "inline; filename=\"" + image + "\"");
                 response.setHeader("Content-Length", String.valueOf(length));

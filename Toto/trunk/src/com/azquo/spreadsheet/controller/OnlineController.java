@@ -141,16 +141,6 @@ public class OnlineController {
                 if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.hasAzquoMemoryDB()) {
                     loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(), "");
                 }*/
-             /*
-            THIS GIVES A NULL POINTER EXCEPTION - NOT SURE WHY I PUT IT IN!
-            if (loggedInConnection.getProvenance()==null){
-                //will not have been set for online reports
-                loggedInConnection.getProvenance().setMethod("Azquosheet");
-                if (workbookName.length() > 0){
-                    loggedInConnection.getProvenance().setName(workbookName);
-                }
-            }
-            */
                 String result = "error: no action taken";
                 int row = 0;
                 try {
@@ -158,13 +148,6 @@ public class OnlineController {
                 } catch (Exception e) {
                     //rowStr can be blank or '0'
                 }
-            /* expand the row and column headings.
-            the result is jammed into result but may not be needed - getrowheadings is still important as it sets up the bits in the logged in connection
-
-            ok, one could send the row and column headings at the same time as the data but looking at the export demo it's asking for rows headings then column headings then the context
-
-             */
-                //String sortRegion = "";
                 if (opcode.equals("choosefromlist")){
                     result =  spreadsheetService.getJsonList(loggedInUser.getDataAccessToken(),choiceName, loggedInUser.getAzquoBook().getRangeData(choiceName + "choice"), choiceValue, jsonFunction);
                 }
@@ -223,18 +206,7 @@ public class OnlineController {
                     azquoBook.saveData(loggedInUser);
                     result = "data saved successfully";
                 }
-                //if (opcode.equals("children")){
-
-                //result = nameService.getStructureForNameSearch(loggedInConnection,"", Integer.parseInt(nameId), loggedInConnection.getLanguages());
-                // result = jsonFunction + "(" + result + ")";
-                // }
                 if (opcode.equals("chart")) {
-                /*if (chartParams.length() > 6){ //params start with 'chart '
-                    chartParams = chartParams.substring(6);
-                }else{
-                    chartParams="";
-                }*/
-                    //chart =  onlineService.getChart(loggedInConnection, chartParams);
                     result = jsonFunction + "({\"chart\":\"" + chart + "\"})";
                 }
 
@@ -273,13 +245,6 @@ public class OnlineController {
                         }
                     }
                 }
-            /*
-            BufferedReader br = new BufferedReader(new StringReader(result));
-           / String line;
-            logger.error("----- sent result");
-            while ((line = br.readLine()) != null) {
-                logger.info(line);
-            }*/
                 model.addAttribute("content", result);
             } catch (Exception e) {
                 logger.error("online controller error", e);

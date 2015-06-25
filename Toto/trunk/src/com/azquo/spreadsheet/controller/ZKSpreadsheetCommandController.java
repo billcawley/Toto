@@ -36,6 +36,7 @@ public class ZKSpreadsheetCommandController {
 
     @RequestMapping
     public void handleRequest(final HttpServletRequest req, HttpServletResponse resp) throws Exception {
+        // really necessary? Maybe check
         req.setCharacterEncoding("UTF-8");
         resp.setCharacterEncoding("UTF-8");
         resp.setContentType("application/json");

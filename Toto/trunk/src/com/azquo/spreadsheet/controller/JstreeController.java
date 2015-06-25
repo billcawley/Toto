@@ -19,6 +19,8 @@ import javax.servlet.http.HttpServletResponse;
  *
  * modified by Edd to deal with new client/server model
  *
+ * How to get jackson in here for rendering the JSON?
+ *
  */
 
 @Controller

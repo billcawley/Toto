@@ -1,6 +1,5 @@
 package com.azquo.app.magento;
 
-import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -37,9 +36,6 @@ public class DSDataLoadService {
 
     @Autowired
     DSSpreadsheetService dsSpreadsheetService;
-
-    @Autowired
-    DSImportService dsImportService;
 
     private final static String LATEST_UPDATE = "Latest update";
     private final static String REQUIRED_TABLES = "required tables";
@@ -979,11 +975,9 @@ public class DSDataLoadService {
                 if (--unknownCount == 0) {
                     saleItem.price = priceRemaining;
                     saleItem.tax = taxRemaining;
-
                 } else {
                     saleItem.price = saleItem.origPrice * unallocatedPriceRemaining / totalOrigPrice * saleItem.qty;
                     saleItem.tax = saleItem.price * bundleTotal.tax / bundleTotal.price;
-
                 }
                 priceRemaining -= saleItem.price;
                 taxRemaining -= saleItem.tax;

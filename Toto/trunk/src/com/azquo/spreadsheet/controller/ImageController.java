@@ -15,6 +15,9 @@ import java.io.OutputStream;
  * Created by bill on 15/10/14
  * <p/>
  * Seems to be for delivering non-chart images.
+ *
+ * Edd: shouldn't this just be done by spring resources?
+ *
  */
 
 

@@ -4,8 +4,8 @@ import java.io.*;
 
 /**
  * Created by cawley on 21/01/14.
- * Bit like ftpaccount tools in Feefo
- * OK, as it stands Bill found a way to upload from Excel, hence we may not need this code but leave it here for the moment
+ *
+ * currently unused but no harm in it being here
  */
 public class CommandLineCalls {
 
@@ -21,7 +21,6 @@ public class CommandLineCalls {
             throws Exception {
         return runCommand(command, null, systemCopy, input);
     }
-
 
     public boolean runCommand(String command, String[] commandArray, boolean systemCopy, String input)
             throws Exception {
@@ -70,32 +69,4 @@ public class CommandLineCalls {
         }
         return exitVal == 0;
     }
-
-    public boolean addFTPAccount(String accountName, String password)
-            throws Exception {
-        if (accountName != null && accountName.length() > 5
-                && password != null && password.length() > 5 && password.length() <= 25) {
-            // I don't think we need to sudo? Tomcat running as root.
-            //return runCommand("/usr/local/bin/add-ftp-user.sh " + getAccountNameForFTP(accountName) + " " + password, true);
-            return runCommand("add-ftp-user.sh " + getAccountNameForFTP(accountName) + " " + password, true);
-        }
-        return false;
-    }
-
-    public String getAccountNameForFTP(String accountName) {
-        String toReturn = accountName.replace('.', '-').replace('/', '-').trim();
-        if (toReturn.length() > 25) {
-            return toReturn.substring(0, 25);
-        } else {
-            return toReturn;
-        }
-    }
-
-    public boolean removeFTPAccount(String accountName)
-            throws Exception {
-        //return runCommand("/usr/local/bin/remove-ftp-user.sh " + accountName, false);
-        return runCommand("remove-ftp-user.sh " + accountName, false);
-    }
-
-
 }
