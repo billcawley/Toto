@@ -43,6 +43,7 @@
     <td>Value Count</td>
       <td></td>
       <td></td>
+      <td></td>
   </tr>
   <c:forEach items="${databases}" var="database">
     <tr>
@@ -57,6 +58,12 @@
         <td><a href="#" onclick="window.open('/api/Jstree?op=new&database=${database.urlEncodedName}', '_blank', 'toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600')">Inspect</a></td>
         <td><a href="/api/ManageDatabases?emptyId=${database.id}" onclick="return confirm('Are you sure?')">Empty</a></td>
         <td><a href="/api/ManageDatabases?deleteId=${database.id}" onclick="return confirm('Are you sure?')">Delete</a></td>
+        <td>
+            <c:if test="${database.loaded}">
+                <a href="/api/ManageDatabases?unloadId=${database.id}">Unload</a>
+                    </c:if>
+
+        </td>
     </tr>
   </c:forEach>
 </table>

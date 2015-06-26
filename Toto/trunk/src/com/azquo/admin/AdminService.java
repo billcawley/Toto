@@ -396,7 +396,19 @@ public class AdminService {
         }
     }
 
+    public void unloadDatabase(LoggedInUser loggedInUser,  int databaseId) throws Exception {
+        Database db = databaseDAO.findById(databaseId);
+        if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+            rmiClient.getServerInterface().unloadDatabase(db.getMySQLName());
+        }
+    }
 
-
+    // a little inconsistent but it will be called using a database object, no point looking up again
+    public boolean isDatabaseLoaded(LoggedInUser loggedInUser,  Database database) throws Exception {
+        if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+            return rmiClient.getServerInterface().isDatabaseLoaded(database.getMySQLName());
+        }
+        return false;
+    }
 
 }

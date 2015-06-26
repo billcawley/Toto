@@ -1,6 +1,7 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.database.Database;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -17,6 +18,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by cawley on 24/04/15.
@@ -38,11 +42,54 @@ public class ManageDatabasesController {
 
     private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
 
+    public class DisplayDataBase {
+        private final boolean loaded;
+        private final Database database;
+
+        public DisplayDataBase(boolean loaded, Database database) {
+            this.loaded = loaded;
+            this.database = database;
+        }
+
+        public boolean getLoaded() {
+            return loaded;
+        }
+
+        public int getId(){
+            return database.getId();
+        }
+        public LocalDateTime getStartDate(){
+            return database.getStartDate();
+        }
+        public LocalDateTime getEndDate(){
+            return database.getEndDate();
+        }
+        public int getBusinessId(){
+            return database.getBusinessId();
+        }
+        public String getName(){
+            return database.getName();
+        }
+        public String getMySQLName(){
+            return database.getMySQLName();
+        }
+        public int getNameCount(){
+            return database.getNameCount();
+        }
+        public int getValueCount(){
+            return database.getValueCount();
+        }
+        public String getUrlEncodedName(){
+            return database.getUrlEncodedName();
+        }
+    }
+
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "createDatabase", required = false) String createDatabase
             , @RequestParam(value = "emptyId", required = false) String emptyId
             , @RequestParam(value = "deleteId", required = false) String deleteId
+            , @RequestParam(value = "unloadId", required = false) String unloadId
             , @RequestParam(value = "backupTarget", required = false) String backupTarget
             , @RequestParam(value = "summaryLevel", required = false) String summaryLevel
     )
@@ -64,6 +111,9 @@ public class ManageDatabasesController {
                 if (deleteId != null && NumberUtils.isNumber(deleteId)) {
                     adminService.removeDatabaseById(loggedInUser, Integer.parseInt(deleteId));
                 }
+                if (unloadId != null && NumberUtils.isNumber(unloadId)) {
+                    adminService.unloadDatabase(loggedInUser, Integer.parseInt(unloadId));
+                }
                 if (backupTarget != null) {
                     LoggedInUser loggedInUserTarget = loginService.loginLoggedInUser(backupTarget, loggedInUser.getUser().getEmail(), "", true); // targetted to destinationDB
                     adminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getLanguages());// re languages I should just be followign what was there before . . .
@@ -75,7 +125,17 @@ public class ManageDatabasesController {
             if (error.length() > 0) {
                 model.put("error", error.toString());
             }
-            model.put("databases", adminService.getDatabaseListForBusiness(loggedInUser));
+            List<Database> databaseList = adminService.getDatabaseListForBusiness(loggedInUser);
+            List<DisplayDataBase> displayDataBases = new ArrayList<DisplayDataBase>();
+            try {
+                for (Database database : databaseList){
+                        displayDataBases.add(new DisplayDataBase(adminService.isDatabaseLoaded(loggedInUser, database), database));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                error.append(e.getMessage());
+            }
+            model.put("databases", displayDataBases);
             model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             return "managedatabases";
         }
