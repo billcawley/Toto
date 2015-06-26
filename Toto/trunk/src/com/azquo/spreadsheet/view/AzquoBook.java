@@ -34,7 +34,6 @@ public class AzquoBook {
 
     private static final Logger logger = Logger.getLogger(AzquoBook.class);
     private SpreadsheetService spreadsheetService;
-    private ImportService importService;
     private UserChoiceDAO userChoiceDAO;
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
     private SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
@@ -140,11 +139,10 @@ public class AzquoBook {
         }
     };
 
-    public AzquoBook(UserChoiceDAO userChoiceDAO, SpreadsheetService spreadsheetService, ImportService importService) throws Exception {
+    public AzquoBook(UserChoiceDAO userChoiceDAO, SpreadsheetService spreadsheetService) throws Exception {
         this.userChoiceDAO = userChoiceDAO;
         this.spreadsheetService = spreadsheetService;
         jacksonMapper.registerModule(new JSR310Module());
-        this.importService = importService;
     }
 
 
@@ -1242,6 +1240,7 @@ public class AzquoBook {
     }
 
     // leaving in for the mo, may be used for batch processing later . . .
+    // need to workout how to detect cell changes from formulae as opposed to manual change.
 
     public void saveData(LoggedInUser loggedInUser) throws Exception {
         Map<String, String> newNames = new HashMap<String, String>();// if there are ranges starting 'az_next' then substitute these names for the latest number
@@ -1249,11 +1248,7 @@ public class AzquoBook {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
                 String region = name.getText().substring(dataRegionPrefix.length());
-                if (getRange("az_rowheadings" + region) == null) {
-                    importRangeFromScreen(loggedInUser, region, newNames);
-                } else {
                     spreadsheetService.saveData(loggedInUser, region.toLowerCase());
-                }
             }
         }
     }
@@ -1388,26 +1383,6 @@ public class AzquoBook {
         convertRangeToCSV(sheet, csvW, null, null, transpose);
         csvW.close();
         return tempName;
-    }
-
-    // edd has re-enabled for batch processing but not entirely sold on this . . .
-
-    private void importRangeFromScreen(LoggedInUser loggedInUser, String region, Map<String, String> newNames) throws Exception {
-        String fileType = azquoSheet.getName();
-        File temp = File.createTempFile("fromscreen", "." + fileType);
-        String tempName = temp.getPath();
-        temp.deleteOnExit();
-        CsvWriter csvW = new CsvWriter(new FileWriter(tempName), '\t');
-        convertRangeToCSV(azquoSheet, csvW, getRange("az_columnheadings" + region), null, false);
-        convertRangeToCSV(azquoSheet, csvW, getRange("az_dataRegion" + region), newNames, false);
-        csvW.close();
-        fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
-        importService.readPreparedFile(loggedInUser.getDataAccessToken(), tempName, fileType, loggedInUser.getLanguages());
-        String saveFileName = spreadsheetService.getHomeDir() + "/databases/" + loggedInUser.getDatabase().getName() + "/uploads/" + azquoSheet.getName() + " " + df.format(new Date()) + ".xlsx";
-        File file = new File(saveFileName);
-        if (file.getParentFile().mkdirs()) { // intellij said I should pay attention to the result of mkdirs, I did this
-            wb.save(saveFileName, SaveFormat.XLSX);
-        }
     }
 
     private void writeCell(Cells cells, int r, int c, CsvWriter csvW, Map<String,String> newNames) throws Exception{

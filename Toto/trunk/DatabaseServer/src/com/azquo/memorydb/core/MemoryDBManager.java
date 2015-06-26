@@ -37,16 +37,6 @@ public final class MemoryDBManager {
         return loaded;
     }
 
-        /* 01/04/2014  no preloading of databases
-    public synchronized void loadMemoryDBMap() throws Exception {
-        List<Database> databases = databaseDAO.findAll();
-        for (Database database : databases) {
-            AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(database, standardDAO);
-            memoryDatabaseMap.put(database.getMySQLName(), azquoMemoryDB);
-        }
-    }
-        */
-
     // worth being aware that if the db is still referenced somewhere then the garbage collector won't chuck it (which is what we want)
 
     public synchronized  void removeDBfromMap(String mysqlName) throws Exception {
@@ -61,6 +51,10 @@ public final class MemoryDBManager {
         }
         AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(mysqlName, standardDAO);
         memoryDatabaseMap.put(mysqlName, azquoMemoryDB);
+    }
+
+    public boolean isDBLoaded(String mysqlName) throws Exception {
+        return memoryDatabaseMap.get(mysqlName) != null;
     }
 
 }

@@ -306,7 +306,7 @@ public final class ImportService {
     }
 
     private void readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames) throws Exception {
-        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, spreadsheetService, this);
+        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, spreadsheetService);
         azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = azquoBook.getReportName();
         if (reportName != null) {

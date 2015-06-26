@@ -47,5 +47,9 @@ public interface RMIInterface extends Remote {
 
     String getJsonList(DatabaseAccessToken databaseAccessToken, String listName, String listChoice, String entered, String jsonFunction) throws RemoteException;
 
+    boolean isDatabaseLoaded(String mysqlName) throws RemoteException;
+
+    void unloadDatabase(String mysqlName) throws RemoteException;
+
     void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws RemoteException;
 }

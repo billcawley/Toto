@@ -2,6 +2,7 @@ package com.azquo.rmi;
 
 import com.azquo.app.magento.DSDataLoadService;
 import com.azquo.dataimport.DSImportService;
+import com.azquo.memorydb.core.MemoryDBManager;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
@@ -24,9 +25,10 @@ public class RMIServer {
 
     private RMIImplementation rmiImplementation;
     private Registry registry;
-    public RMIServer(DSSpreadsheetService dsSpreadsheetService, DSAdminService dsAdminService, DSDataLoadService dsDataLoadService, DSImportService dsImportService, JSTreeService jsTreeService) {
+    public RMIServer(DSSpreadsheetService dsSpreadsheetService, DSAdminService dsAdminService, DSDataLoadService dsDataLoadService
+            , DSImportService dsImportService, JSTreeService jsTreeService, MemoryDBManager memoryDBManager) {
         try {
-            rmiImplementation = new RMIImplementation(dsSpreadsheetService, dsAdminService, dsDataLoadService, dsImportService, jsTreeService);
+            rmiImplementation = new RMIImplementation(dsSpreadsheetService, dsAdminService, dsDataLoadService, dsImportService, jsTreeService, memoryDBManager);
             RMIInterface stub = (RMIInterface) UnicastRemoteObject.exportObject(rmiImplementation, 0); // makes constructor not thread safe, dunno if we care
             registry = LocateRegistry.createRegistry(12345); // I'm not fording a registry port, do we care?
             registry.rebind(RMIInterface.serviceName, stub);

@@ -67,6 +67,7 @@
         <constructor-arg index="2" ref="magentoService"/>
         <constructor-arg index="3" ref="dsImportService"/>
         <constructor-arg index="4" ref="jsTreeService"/>
+        <constructor-arg index="5" ref="memoryDBManager"/>
     </bean>
 
 </beans>

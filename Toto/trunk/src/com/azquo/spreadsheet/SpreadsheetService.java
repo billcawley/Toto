@@ -49,9 +49,6 @@ public class SpreadsheetService {
     AdminService adminService;
 
     @Autowired
-    ImportService importService;
-
-    @Autowired
     DatabaseDAO databaseDAO;
 
     @Autowired
@@ -155,7 +152,7 @@ public class SpreadsheetService {
     public void readExcel(ModelMap model, LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName) throws Exception {
         String message;
         String path = getHomeDir() + "/temp/";
-        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, this, importService);
+        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, this);
         StringBuilder worksheet = new StringBuilder();
         StringBuilder tabs = new StringBuilder();
         StringBuilder head = new StringBuilder();

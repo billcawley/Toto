@@ -3,6 +3,7 @@ package com.azquo.rmi;
 import com.azquo.app.magento.DSDataLoadService;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.memorydb.core.MemoryDBManager;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
@@ -22,14 +23,17 @@ public class RMIImplementation implements RMIInterface {
     private final DSDataLoadService dsDataLoadService;
     private final DSImportService dsImportService;
     private final JSTreeService jsTreeService;
+    private final MemoryDBManager memoryDBManager;
 
 
-    public RMIImplementation(DSSpreadsheetService dsSpreadsheetService, DSAdminService dsAdminService, DSDataLoadService dsDataLoadService, DSImportService dsImportService, JSTreeService jsTreeService) {
+    public RMIImplementation(DSSpreadsheetService dsSpreadsheetService, DSAdminService dsAdminService, DSDataLoadService dsDataLoadService
+            , DSImportService dsImportService, JSTreeService jsTreeService, MemoryDBManager memoryDBManager) {
         this.dsSpreadsheetService = dsSpreadsheetService;
         this.dsAdminService = dsAdminService;
         this.dsDataLoadService = dsDataLoadService;
         this.dsImportService = dsImportService;
         this.jsTreeService = jsTreeService;
+        this.memoryDBManager = memoryDBManager;
     }
 
     //Admin stuf
@@ -174,6 +178,24 @@ public class RMIImplementation implements RMIInterface {
     public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws RemoteException {
         try {
             dsSpreadsheetService.saveData(databaseAccessToken,cellsAndHeadingsForDisplay);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public void unloadDatabase(String mysqlName) throws RemoteException {
+        try {
+            memoryDBManager.removeDBfromMap(mysqlName);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public boolean isDatabaseLoaded(String mysqlName) throws RemoteException {
+        try {
+            return memoryDBManager.isDBLoaded(mysqlName);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
