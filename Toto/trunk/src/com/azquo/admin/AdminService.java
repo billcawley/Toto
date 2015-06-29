@@ -14,6 +14,7 @@ import sun.misc.BASE64Encoder;
 
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 
 /**
@@ -265,7 +266,7 @@ public class AdminService {
                 }
             }
         } else {
-            OnlineReport notFound = new OnlineReport(0, 0, 0, "", "", "No reports found", "", "", "", "", OnlineReport.AZQUO_BOOK); // default to old for the moment
+            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, 0, "", "", "No reports found", "", "", "", "", OnlineReport.AZQUO_BOOK, true); // default to old for the moment
             reportList.add(notFound);
         }
         return reportList;
