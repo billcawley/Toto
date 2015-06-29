@@ -356,10 +356,8 @@ public class JSTreeService {
         sb.append(", \"id\":\"").append(name.getId()).append("\"");
 
         sb.append(", \"dataitems\":\"").append(totalValues).append("\"");
-        if (name.getValues().size() > 0) {
-            sb.append(", \"mydataitems\":\"").append(name.getValues().size()).append("\"");
-        }
-        //putputs the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
+        sb.append(", \"mydataitems\":\"").append(name.getValues().size()).append("\"");
+         //putputs the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
         int count = 0;
         if (name.getAttributes().size() > 0 || name.getPeers().size() > 0) {
             sb.append(",\"attributes\":{");
@@ -504,7 +502,7 @@ public class JSTreeService {
             if (name!=null){
                 result.append(getJsonDataforOneName(tokenString, name, jsTreeId));
             }else{
-                return "[{\"id\":0,\"state\":{\"opened\":true},\"text\":\"none found\"}]";
+                return "[{\"id\":0,\"state\":{\"opened\":true},\"text\":\"" + searchTerm + " not found\"}]";
             }
         }
         result.append(",\"type\":\"");
