@@ -135,6 +135,14 @@ public class ManageDatabasesController {
                 e.printStackTrace();
                 error.append(e.getMessage());
             }
+
+            if (error.length() > 0) {
+                String exceptionError = error.toString();
+                //trim off the javaspeak
+                if (exceptionError.contains("error:"))
+                    exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
+                model.put("error", exceptionError);
+            }
             model.put("databases", displayDataBases);
             model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             return "managedatabases";
@@ -161,7 +169,11 @@ public class ManageDatabasesController {
 
                     importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
                 } catch (Exception e){
-                    model.put("error", e.getMessage());
+                    String exceptionError = e.getMessage();
+                    //trim off the javaspeak
+                    if (exceptionError.contains("error:"))
+                        exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
+                    model.put("error", exceptionError);
                     e.printStackTrace();
                 }
             }
