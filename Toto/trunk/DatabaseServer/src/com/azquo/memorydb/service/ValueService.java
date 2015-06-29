@@ -448,9 +448,9 @@ public final class ValueService {
                     }
                     // basic sum across the names/attributes (not going into children)
                     // comma separated for non numeric. If mixed it will default to the string
-                    if (NumberUtils.isNumber(attValue)) {
+                    try{
                         numericResult += Double.parseDouble(attValue);
-                    } else {
+                    } catch(Exception e){
                         if (stringResult == null) {
                             stringResult = attValue;
                         } else {
