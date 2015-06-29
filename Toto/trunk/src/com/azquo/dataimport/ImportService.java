@@ -14,6 +14,7 @@ import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.zip.ZipInputStream;
 
@@ -290,10 +291,15 @@ public final class ImportService {
             pathName = loggedInUser.getDatabase().getMySQLName();
         }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
-        int reportId = 0;
-        if (or != null) {
-            reportId = or.getId();
+        if (or==null){
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName,"","", fileName, "", "", OnlineReport.AZQUO_BOOK,  true); // default to old for the moment
+        }else{
+            or.setActive(false);
+            onlineReportDAO.store(or);
         }
+        or.setDateCreated(LocalDateTime.now());
+        or.setId(0);
+        or.setActive(true);
         String fullPath = spreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
@@ -301,7 +307,6 @@ public final class ImportService {
         FileOutputStream out = new FileOutputStream(fullPath);
         azquoBook.saveBook(fullPath);
         out.close();
-        or = new OnlineReport(reportId, businessId, databaseId, "", reportName,"","", fileName, "", "", OnlineReport.AZQUO_BOOK); // default to old for the moment
         onlineReportDAO.store(or);
     }
 
