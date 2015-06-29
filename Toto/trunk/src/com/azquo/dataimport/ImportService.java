@@ -1,6 +1,8 @@
 package com.azquo.dataimport;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.database.UploadRecord;
+import com.azquo.admin.database.UploadRecordDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -44,17 +46,35 @@ public final class ImportService {
     private UserChoiceDAO userChoiceDAO;
     @Autowired
     private RMIClient rmiClient;
+    @Autowired
+    private UploadRecordDAO uploadRecordDAO;
 
     public void importTheFile(LoggedInUser loggedInUser, String fileName, String filePath) throws Exception {
         List<String> languages = new ArrayList<String>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         importTheFile(loggedInUser, fileName, filePath, "", true, languages);
     }
+    public void importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, String fileType, boolean skipBase64, List<String> attributeNames) throws Exception{
+       String error = "";
+        try{
+           importTheFile1(loggedInUser, fileName, filePath, fileType, skipBase64, attributeNames);
+       }catch(Exception e){
+           error = e.getMessage();
+           if (error.contains("error:")) error = error.substring(error.indexOf("error:"));
+       }
+        UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, "", error);//;should record the error????
+        uploadRecordDAO.store(uploadRecord);
+        if (error.length() > 0){
+            throw new Exception(error);
+        }
 
+    }
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    public void importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, String fileType, boolean skipBase64, List<String> attributeNames)
+    public void importTheFile1(LoggedInUser loggedInUser, String fileName, String filePath, String fileType, boolean skipBase64, List<String> attributeNames)
             throws Exception {
+
+
 
         //fileType is now always the first word of the spreadsheet/dataimport file name
         if (fileType.length()==0){
@@ -103,17 +123,6 @@ public final class ImportService {
             }
             readPreparedFile(loggedInUser.getDataAccessToken(), filePath, fileType, attributeNames);
         }
-        /* todo - sort this upload record later . . .
-        int databaseId = 0;
-        if (azquoMemoryDBConnection.getAzquoMemoryDB() != null) {
-            azquoMemoryDBConnection.persist();
-            databaseId = azquoMemoryDBConnection.getAzquoMemoryDB().getDatabase().getId();
-        }
-        if (fileType == null) {
-            fileType = "spreadsheet";
-        }
-        UploadRecord uploadRecord = new UploadRecord(0, new Date(), azquoMemoryDBConnection.getBusinessId(), databaseId, azquoMemoryDBConnection.getUser().getId(), fileName, fileType, "");//;should record the error????
-        uploadRecordDAO.store(uploadRecord);*/
     }
 
     private void imageImport(LoggedInUser loggedInUser, InputStream inputStream, String fileName) throws Exception {
