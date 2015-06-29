@@ -584,7 +584,7 @@ public class DSImportService {
                         valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue);
                     }
                 }
-                if (heading.identityHeading >= 0 && heading.attribute!=null && (!heading.attribute.equalsIgnoreCase(dateLang) || (isADate(heading.lineValue) !=null))) {
+                if (heading.identityHeading >= 0 && heading.attribute!=null && (!heading.attribute.equalsIgnoreCase(dateLang) || (isADate(heading.lineValue) ==null))) {
                     // funnily enough no longer using attributes
                     handleAttribute(azquoMemoryDBConnection, namesFound, heading, headings);
                 }
