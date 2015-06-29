@@ -34,9 +34,9 @@
 
     <fo:page-sequence master-reference="psmA">
         <fo:flow flow-name="xsl-region-body">
-            <fo:block-container height="1cm" width="18cm" top="0.8cm" left="1cm" position="absolute">
+            <fo:block-container height="1cm" width="18cm" top="0.55cm" left="0.5cm" position="absolute">
                 <fo:block>
-                    Azquo Ltd.
+                    <fo:external-graphic src="url('/home/cawley/Downloads/azquo-logo2.png')"  content-width="4cm"/>
                 </fo:block>
             </fo:block-container>
 
@@ -53,30 +53,33 @@
 
             <fo:block-container height="4cm" width="7cm" top="2.5cm" left="2.5cm" position="absolute">
                 <fo:block text-align="start" line-height="15pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="10pt">
-                    Culmington House
+                    Unit 5, Palmers House
                 </fo:block>
                 <fo:block text-align="start" line-height="15pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="10pt">
-                    Culmington
+                    7 Corve Street
+                </fo:block>
+                <fo:block text-align="start" line-height="15pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="10pt">
+                    Ludlow
                 </fo:block>
                 <fo:block text-align="start" line-height="15pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="10pt">
                     Shropshire
                 </fo:block>
                 <fo:block text-align="start" line-height="15pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="10pt">
-                    SY8 2DB
+                    SY8 1DB
                 </fo:block>
             </fo:block-container>
 
 
 
-            <fo:block-container height="4cm" width="7cm" top="2.5cm" left="6cm" position="absolute">
+            <fo:block-container height="4cm" width="7cm" top="2.5cm" left="7cm" position="absolute">
                  <fo:block text-align="start" line-height="15pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="10pt">
-                    VAT Reg# GB 153 3057 34
+                    VAT : GB 153 3057 34
                 </fo:block>
                 <fo:block text-align="start" line-height="15pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="10pt">
 
                 </fo:block>
                 <fo:block text-align="start" line-height="15pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="10pt">
-                    t: 01584 861 534
+                    Tel : 01584 876 412
                 </fo:block>
             </fo:block-container>
 
@@ -87,7 +90,7 @@
                     To:
                 </fo:block>
             </fo:block-container>
-            <fo:block-container height="4cm" width="7cm" top="5.4cm" left="2.0cm" position="absolute">
+            <fo:block-container height="4cm" width="7cm" top="5.4cm" left="2.5cm" position="absolute">
                 <fo:block text-align="start" line-height="13pt" font-family="Helvetica, Arial, sans" font-weight="bold" font-size="10pt">
                     ADDRESS1
                 </fo:block>
@@ -109,7 +112,7 @@
             </fo:block-container>
             <fo:block-container height="0.6cm" width="3.5cm" top="2.5cm" left="12.0cm" position="absolute">
                 <fo:block text-align="start" line-height="16pt" font-family="Helvetica, Arial, sans" font-weight="bold" font-size="12pt">
-                    Invoice Number:
+                    Invoice Number
                 </fo:block>
             </fo:block-container>
             <fo:block-container height="0.6cm" width="3cm" top="2.5cm" left="16.0cm" position="absolute">
@@ -143,7 +146,7 @@
 
             <fo:block-container height="0.6cm" width="3.5cm" top="4.9cm" left="12cm" position="absolute">
                 <fo:block text-align="start" line-height="16pt" font-family="Helvetica, Arial, sans" font-weight="bold" font-size="12pt">
-                    Payment terms
+                    Payment Terms
                 </fo:block>
             </fo:block-container>
             <fo:block-container height="0.6cm" width="3cm" top="4.9cm" left="16cm" position="absolute">
@@ -180,7 +183,7 @@
 
             <fo:block-container height="1.8cm" width="0.3cm" top="8.5cm" left="0cm" position="absolute">
                 <fo:block background-color="black" line-height="26pt" font-family="Helvetica, Arial, sans" font-weight="normal" font-size="10pt" color="white">
-                    #
+
                 </fo:block>
             </fo:block-container>
             <fo:block-container height="1.8cm" width="6.5cm" top="8.5cm" left="0.4cm" position="absolute">
@@ -465,13 +468,13 @@
 
             <fo:block-container height="4cm" width="7cm" top="23cm" left="6cm" position="absolute">
                 <fo:block text-align="start" line-height="15pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="8pt">
-                    VAT Reg# GB153 3057 34
+                    VAT : GB153 3057 34
                 </fo:block>
                 <fo:block text-align="start" line-height="15pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="8pt">
                     Registered in England and Wales
                 </fo:block>
                 <fo:block text-align="start" line-height="15pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="8pt">
-                    Registration #: 08331516
+                    Registration : 08331516
                 </fo:block>
             </fo:block-container>
 
@@ -483,13 +486,13 @@
 
             <fo:block-container height="4cm" width="8cm" top="26cm" left="4cm" position="absolute">
                 <fo:block text-align="start" line-height="12pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="8pt">
-                    Bank name: HSBC
+                    Bank name : HSBC
                 </fo:block>
                 <fo:block text-align="start" line-height="12pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="8pt">
-                    Bank Address:
+                    Bank Address : 30 The Square, Petersfield GU32 3HQ
                 </fo:block>
                 <fo:block text-align="start" line-height="12pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="8pt">
-                    Bank Account: 40-36-16 91535692
+                    Bank Account : 40-36-16 91535692
                 </fo:block>
                 <fo:block text-align="start" line-height="12pt" font-family="Helvetica, Arial, sans" font-weight="200" font-size="8pt">
 
@@ -507,7 +510,7 @@
 
             <fo:block-container border-color="black" border-style="solid" border="0.3mm" height="3.5cm" width="6.94cm" top="24cm" left="12.03cm" position="absolute">
                 <fo:block text-align="left" line-height="12pt" font-family="Helvetica, Arial, sans" font-weight="normal" font-size="8pt" start-indent="1.2mm">
-                    Company Name:
+                    Company Name :
                 </fo:block>
                 <fo:block text-align="left" line-height="12pt" font-family="Helvetica, Arial, sans" font-weight="normal" font-size="8pt" start-indent="1.2mm">
                     ADDRESS1
@@ -523,7 +526,7 @@
                     <fo:table-body font-family="Helvetica, Arial, sans" line-height="12pt" font-weight="200" font-size="8pt">
                         <fo:table-row line-height="12pt">
                             <fo:table-cell padding="2pt">
-                                <fo:block text-align="start" linefeed-treatment="preserve">Customer #:</fo:block>
+                                <fo:block text-align="start" linefeed-treatment="preserve">Customer</fo:block>
                             </fo:table-cell>
                             <fo:table-cell padding="2pt">
                                 <fo:block text-align="start" linefeed-treatment="preserve">INVOICESAGEREF</fo:block>
@@ -531,7 +534,7 @@
                         </fo:table-row>
                         <fo:table-row line-height="12pt">
                             <fo:table-cell padding="2pt">
-                                <fo:block text-align="start" linefeed-treatment="preserve">Invoice #:</fo:block>
+                                <fo:block text-align="start" linefeed-treatment="preserve">Invoice </fo:block>
                             </fo:table-cell>
                             <fo:table-cell padding="2pt">
                                 <fo:block text-align="start" linefeed-treatment="preserve">INVOICENUMBER</fo:block>
@@ -539,7 +542,7 @@
                         </fo:table-row>
                         <fo:table-row line-height="12pt">
                             <fo:table-cell padding="2pt">
-                                <fo:block text-align="start" linefeed-treatment="preserve">Date Due:</fo:block>
+                                <fo:block text-align="start" linefeed-treatment="preserve">Date Due</fo:block>
                             </fo:table-cell>
                             <fo:table-cell padding="2pt">
                                 <fo:block text-align="start" linefeed-treatment="preserve">DATEDUE</fo:block>
@@ -547,10 +550,10 @@
                         </fo:table-row>
                         <fo:table-row line-height="12pt">
                             <fo:table-cell padding="2pt">
-                                <fo:block text-align="start" font-weight="bold" linefeed-treatment="preserve">Balance due:</fo:block>
+                                <fo:block text-align="start" font-weight="bold" linefeed-treatment="preserve">Balance due</fo:block>
                             </fo:table-cell>
                             <fo:table-cell padding="2pt">
-                                <fo:block text-align="start" font-weight="bold" linefeed-treatment="preserve">INVOICETOTAL</fo:block>
+                                <fo:block text-align="start" font-weight="bold" linefeed-treatment="preserve">£INVOICETOTAL</fo:block>
                             </fo:table-cell>
                         </fo:table-row>
                     </fo:table-body>

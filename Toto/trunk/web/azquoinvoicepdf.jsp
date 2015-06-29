@@ -66,8 +66,8 @@
     try {
 
 
-        FileInputStream fstream = new FileInputStream("/home/cawley/IdeaProjects/Toto/web/azquoinvoice.fop");
-        //FileInputStream fstream = new FileInputStream("/usr/share/apache-tomcat-7.0.42/webapps/ROOT/azquoinvoice.fop");
+        FileInputStream fstream = new FileInputStream("/home/cawley/ideaprojects/Toto/web/azquoinvoice.fop");
+        //FileInputStream fstream = new FileInputStream("/usr/share/apache-tomcat-8.0.21/webapps/ROOT/azquoinvoice.fop");
         DataInputStream in = new DataInputStream(fstream);
         BufferedReader br = new BufferedReader(new InputStreamReader(in));
         while ((inputLine = br.readLine()) != null) {

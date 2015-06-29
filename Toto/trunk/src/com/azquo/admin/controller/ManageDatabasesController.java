@@ -165,7 +165,16 @@ public class ManageDatabasesController {
                     e.printStackTrace();
                 }
             }
-            model.put("databases", adminService.getDatabaseListForBusiness(loggedInUser));
+            List<Database> databaseList = adminService.getDatabaseListForBusiness(loggedInUser);
+            List<DisplayDataBase> displayDataBases = new ArrayList<DisplayDataBase>();
+            try {
+                for (Database database1 : databaseList){
+                    displayDataBases.add(new DisplayDataBase(adminService.isDatabaseLoaded(loggedInUser, database1), database1));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            model.put("databases", displayDataBases);
             model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             return "managedatabases";
         }
