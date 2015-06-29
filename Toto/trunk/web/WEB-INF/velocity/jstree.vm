@@ -66,6 +66,11 @@
             right:-15px;
             top:-15px;
         }
+
+        .datacount {;
+            padding:20px:
+         }
+
     </style>
 
 
@@ -87,6 +92,7 @@
         </div>
         <p>Attributes:</p>
         <div id="htmlatts"></div>
+        <div class="datacount"> Direct data count <span id="mydatacount"></span> Total Data Count <span id="totaldatacount"></span></div>
         <div class="namedetailssubmit"><p><a href="#" onclick="submitNameDetails()">Submit</a></p></div>
     </div>
 
@@ -235,6 +241,8 @@
             document.getElementById("htmlatts").innerHTML = "";
             //currently ignoring the 'dataelements' 'elements'  'mydataelements'  values
             var keys = Object.keys(nameDetails.attributes);
+            document.getElementById("mydatacount").innerHTML = nameDetails.mydataitems;
+            document.getElementById("totaldatacount").innerHTML = nameDetails.dataitems;
             for (var i=0;i < keys.length;i++){
                 var attname = keys[i];
                 var attvalue =  decodeURIComponent((nameDetails.attributes[attname]+'').replace(/\+/g, '%20'));
