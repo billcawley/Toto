@@ -1048,10 +1048,13 @@ I think that this is an ideal candidate for multithreading to speed things up
                 List<String> attributes = new ArrayList<String>();
                 listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
                 String attributeResult = valueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked, names, attributes);
-                if (NumberUtils.isNumber(attributeResult)) { // there should be a more efficient way I feel given that the result is typed internally
-                    doubleValue = Double.parseDouble(attributeResult);
+                     try{
+                        doubleValue = Double.parseDouble(attributeResult);
+                    }catch(Exception e){
+                        //ignore
+                    }
+
                     // ZK would sant this typed? Maybe just sort out later?
-                }
                 if (attributeResult != null) {
                     attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
                     stringValue = attributeResult;
