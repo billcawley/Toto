@@ -1000,7 +1000,9 @@ public class DSDataLoadService {
     private String defaultData() {
         //version number followed by required data.  $starttime to be replaced by latest update
         return "1.0\n" +
+                "'*','core_store','','store_id'\n" +
                 "'*','core_store_group','','group_id'\n" +
+                "'*','eav_entity_store','','entity_store_id'\n" +
                 "'*','catalog_category_entity','','entity_id'\n" +
                 "'*','catalog_category_product','', 'product_id'\n" +
                 "'*','catalog_product_entity','','entity_id'\n" +
