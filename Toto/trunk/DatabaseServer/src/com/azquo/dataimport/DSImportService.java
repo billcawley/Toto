@@ -407,7 +407,11 @@ public class DSImportService {
             }
             if (headings.get(0).lineValue.length() > 0 || headings.get(0).column==-1) {//skip any line that has a blank in the first column unless we're not interested in that column
                 getCompositeValues(headings);
-                valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
+                try {
+                    valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
+                }catch(Exception e){
+                    throw new Exception("error: line " + lineNo + " " + e.getMessage());
+                }
                 Long now = System.nanoTime();
                 if (now - time > trigger){
                      System.out.println("line no " + lineNo + " time = " + (now - time));
@@ -713,6 +717,9 @@ public class DSImportService {
         } else {
             heading.lineName = includeInParents(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, setLocalLanguage(heading, attributeNames));
          }
+        if (childHeading.lineValue.length()==0){
+            throw new Exception("blank value for parent of " + heading.lineValue);
+        }
         if (childHeading.lineName == null) {
             childHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childHeading.lineValue, heading.lineName, heading.local, setLocalLanguage(childHeading, attributeNames));
         }
