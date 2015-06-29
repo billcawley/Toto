@@ -1000,9 +1000,7 @@ public class DSDataLoadService {
     private String defaultData() {
         //version number followed by required data.  $starttime to be replaced by latest update
         return "1.0\n" +
-                "'*','core_store','','store_id'\n" +
                 "'*','core_store_group','','group_id'\n" +
-                "'*','eav_entity_store','','entity_store_id'\n" +
                 "'*','catalog_category_entity','','entity_id'\n" +
                 "'*','catalog_category_product','', 'product_id'\n" +
                 "'*','catalog_product_entity','','entity_id'\n" +
@@ -1014,7 +1012,7 @@ public class DSDataLoadService {
                 "'*','eav_attribute_option_value','','value_id'\n" +
                 "'*','eav_entity_type','','entity_type_id'\n" +
                 "'item_id,order_id,parent_item_id,created_at,product_id,weight,product_type,qty_ordered,qty_canceled,base_discount_invoiced, base_tax_amount, base_row_invoiced, base_row_total','sales_flat_order_item', '$starttime','item_id'\n" +
-                "'entity_id, customer_id, base_currency_code, increment_id, shipping_amount','sales_flat_order',  '$starttime', 'entity_id'\n" +
+                "'entity_id, store_id, customer_id, base_currency_code, increment_id, shipping_amount','sales_flat_order',  '$starttime', 'entity_id'\n" +
                 "'entity_id, email, group_id','customer_entity',  '$starttime', 'entity_id'\n" +
                 "'*','customer_group','', 'customer_group_id'\n" +
                 "'entity_id, parent_id','customer_address_entity', '$starttime', 'entity_id'\n" +
