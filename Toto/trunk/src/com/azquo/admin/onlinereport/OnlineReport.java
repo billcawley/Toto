@@ -4,6 +4,8 @@ import com.azquo.admin.StandardEntity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.time.LocalDateTime;
+
 /**
  * Created by bill on 15/04/14.
  *
@@ -12,6 +14,7 @@ public class OnlineReport extends StandardEntity {
 
 //    public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
 
+    private LocalDateTime dateCreated;
     private int businessId;
     private int databaseId;
     private String database; // for sending parameters only
@@ -22,12 +25,14 @@ public class OnlineReport extends StandardEntity {
     private String pathName; //internal use
     private String explanation;
     private int renderer;
+    private boolean active;
 
     public static final int AZQUO_BOOK = 0;
     public static final int ZK_AZQUO_BOOK = 1;
 
     @JsonCreator
     public OnlineReport(@JsonProperty("id") int id
+            , @JsonProperty("businessId") LocalDateTime dateCreated
             , @JsonProperty("businessId") int businessId
             , @JsonProperty("databaseId") int databaseId
             , @JsonProperty("database") String database
@@ -37,8 +42,10 @@ public class OnlineReport extends StandardEntity {
             , @JsonProperty("filename") String filename
             , @JsonProperty("pathName") String pathName
             , @JsonProperty("explanation") String explanation
-            , @JsonProperty("renderer") int renderer) {
+            , @JsonProperty("renderer") int renderer
+            , @JsonProperty("active") boolean active) {
         this.id = id;
+        this.dateCreated = dateCreated;
         this.businessId = businessId;
         this.databaseId = databaseId;
         this.database = database;
@@ -49,6 +56,7 @@ public class OnlineReport extends StandardEntity {
         this.pathName = pathName;
         this.explanation = explanation;
         this.renderer = renderer;
+        this.active = active;
     }
 
     public int getBusinessId() {
@@ -58,6 +66,16 @@ public class OnlineReport extends StandardEntity {
     public void setBusinessId(int businessId) {
         this.businessId = businessId;
     }
+
+
+    public LocalDateTime getDateCreated() {
+        return dateCreated;
+    }
+
+    public void setDateCreated(LocalDateTime dateCreated) {
+        this.dateCreated = dateCreated;
+    }
+
 
     public int getDatabaseId() {
         return databaseId;
@@ -130,9 +148,18 @@ public class OnlineReport extends StandardEntity {
         this.renderer = renderer;
     }
 
+    public boolean getActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
     @Override
     public String toString() {
         return "OnlineReport{" +
+                "dateCreated=" + dateCreated +
                 "businessId=" + businessId +
                 ", databaseId=" + databaseId +
                 ", database='" + database + '\'' +
@@ -143,6 +170,7 @@ public class OnlineReport extends StandardEntity {
                 ", pathName='" + pathName + '\'' +
                 ", explanation='" + explanation + '\'' +
                 ", renderer=" + renderer +
+                ", active=" + active +
                 '}';
     }
 }
