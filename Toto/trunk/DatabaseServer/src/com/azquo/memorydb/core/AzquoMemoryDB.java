@@ -357,7 +357,7 @@ public final class AzquoMemoryDB {
         Iterator<Name> iterator = possibles.iterator();
         while (iterator.hasNext()) {
             Name possible = iterator.next();
-            if (!parent.getChildren().contains(possible)) {
+            if (!possible.findAllParents().contains(parent)) {//logic changed b y WFC 30/06/15 to allow sets import to search within a general set (e.g. 'date') rather than need an immediate parent (e.g. 'All dates')
                 iterator.remove();
             }
         }
