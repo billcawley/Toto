@@ -116,10 +116,11 @@ public class DSImportService {
     public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
         System.out.println("reading file " + filePath);
         if (fileType.toLowerCase().startsWith("sets")) {
-            setsImport(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), new FileInputStream(filePath), attributeNames);
+            setsImport(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), new FileInputStream(filePath), attributeNames, fileType);
         } else {
             valuesImport(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), filePath, fileType, attributeNames);
         }
+        dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken).persist();
     }
 
 
@@ -431,8 +432,7 @@ public class DSImportService {
         for (String trackName : trackers.keySet()){
             System.out.println("---------- " + trackName + " \t\t" + trackers.get(trackName));
         }
-        azquoMemoryDBConnection.persist();
-    }
+     }
 
 
     private void readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<ImportHeading> headings, String fileType, List<String> attributeNames) throws Exception {
@@ -806,41 +806,64 @@ public class DSImportService {
         }
     }
 
-    public void setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames) throws Exception {
+    public void setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames, String fileName) throws Exception {
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
+        String sheetSetName= "";
+        Name sheetSet = null;
+        if (fileName.charAt(4) == '-'){
+            sheetSetName = fileName.substring(5);
+            sheetSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,sheetSetName, null, false, attributeNames);
+        };
         String line;
         while ((line = br.readLine()) != null) {
             StringTokenizer st = new StringTokenizer(line, "\t");
             //clear the set before re-instating
             ImportHeading importHeading = new ImportHeading();
             if (st.hasMoreTokens()) {
+                List<Name> children = new ArrayList<Name>();
                 String setName = st.nextToken().replace("\"", "");//sometimes the last line of imported spreadsheets has come up as ""
                 if (setName.length() > 0) {
                     interpretHeading(azquoMemoryDBConnection, setName, importHeading, attributeNames);
-                    importHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, importHeading.heading, null, false, attributeNames);
+                    if (importHeading.heading.equalsIgnoreCase(sheetSetName)){
+                        importHeading.name = sheetSet;
+                    }else{
+                        importHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, importHeading.heading, sheetSet, true, attributeNames);
+                    }
                     if (importHeading.name != null) { // is this a concern? I'll throw an exception in case (based on IntelliJ warning)
                         Name set = importHeading.name;
-                        nameService.clearChildren(set);
-                        while (st.hasMoreTokens()) {
+
+                        while (st.
+                                hasMoreTokens()) {
                             String element = st.nextToken();
+                            Name child = null;
                             if (element.length() > 0) {
                                 int localPos = element.toLowerCase().indexOf(";local");
                                 if (localPos > 0 || importHeading.local) {
                                     if (localPos > 0) {
                                         element = element.substring(0, localPos);
                                     }
-                                    nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, set, false, attributeNames);
+                                    child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, set, false, attributeNames);
                                 } else {
-                                    Name child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, null, false, attributeNames);
-                                    set.addChildWillBePersisted(child);
+                                     child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, sheetSet, true, attributeNames);
+                                     //new names will have been added to sheet set unnecessarily, so:
                                 }
+                                children.add(child);
                             }
                         }
+                        nameService.clearChildren(set);
+                        for (Name child:children){
+                            if (sheetSet != null) sheetSet.removeFromChildrenWillBePersisted(child);
+                            set.addChildWillBePersisted(child);
+                        }
+
                     } else {
                         throw new Exception("Import heading name was null : " + importHeading);
                     }
+
                 }
             }
         }
     }
+
+
 }
