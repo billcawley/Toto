@@ -171,13 +171,40 @@ public class DSDataLoadService {
         String addressEntityId = null;
         String firstNameId = null;
         String lastNameId = null;
-        String store = "";
 
-        for (Map<String, String> storeRecord : tableMap.get("core_store_group")) {
-            if (storeRecord.get("group_id").equals("1")) {
-                store = storeRecord.get("name");
+        List<String> languages = new ArrayList<String>();
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        Name storeName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "store", null, false, languages);
+        Name allStoresName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All stores", storeName, false, languages);
+        Map<String, Name> storeGroupMap = new HashMap<String, Name>();
+
+        for (Map<String, String> storeGroupRec : tableMap.get("core_store_group")) {
+            String groupId = storeGroupRec.get("group_id");
+            String name = storeGroupRec.get("name");
+            if (!groupId.equals("0")) {
+                Name storeGroup = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, allStoresName, true, languages);
+                storeGroupMap.put(groupId, storeGroup);
             }
+
         }
+        tableMap.remove("core_store_group");
+        Map<String, Name> storeMap = new HashMap<String, Name>();
+
+        for (Map<String, String> storeRec : tableMap.get("core_store")) {
+            String storeId = storeRec.get("store_id");
+            String groupId = storeRec.get("group_id");
+            String name = storeRec.get("name");
+            if (!storeId.equals("0")) {
+                Name store = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, storeGroupMap.get(groupId), true, languages);
+                storeMap.put(storeId, store);
+            }
+
+        }
+        tableMap.remove("core_store");
+
+
+
+
 
         for (Map<String, String> entityTypeRecord : tableMap.get("eav_entity_type")) {
             if (entityTypeRecord.get("entity_type_code") != null) {
@@ -259,7 +286,7 @@ public class DSDataLoadService {
             allCategories.addChildWillBePersisted(categoryName);
         }
         tableMap.remove("catalog_category_entity");
-        List<String> languages = new ArrayList<String>();
+        languages = new ArrayList<String>();
 
         languages.add("SKU");
         List<String> productLanguages = new ArrayList<String>(languages);
@@ -465,13 +492,6 @@ public class DSDataLoadService {
         languages.clear();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
 
-        Name thisStoreName = null;
-        if (store.length() > 0){
-            Name storeName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "store", null, false, languages);
-            Name allStoresName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All stores", storeName, false, languages);
-            thisStoreName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,store,allStoresName, true, languages);
-        }
-
 
         Name customersName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "customer", null, false, languages);
         Name allCustomersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All customers", customersName, false, languages);
@@ -603,6 +623,7 @@ public class DSDataLoadService {
         }
 
 
+
         Map<String, Name> azquoOrdersFound = new HashMap<String, Name>();
 
         System.out.println("about to go into sales flat order item " + (System.currentTimeMillis() - marker));
@@ -697,9 +718,6 @@ public class DSDataLoadService {
                 //store the values.   Qty and price have attributes order, product.  order is in all orders, and in the relevant date
                 String orderNo = "Order " + salesRow.get("order_id");
                 Name orderName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderNo, allOrdersName, true, languages);
-                if (thisStoreName !=null){
-                    thisStoreName.addChildWillBePersisted(orderName);
-                }
                 part3 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 azquoOrdersFound.put(orderNo, orderName);
@@ -813,6 +831,8 @@ public class DSDataLoadService {
         for (Map<String, String> orderRow : tableMap.get("sales_flat_order")) {
             //only importing the IDs at present
             Name orderName = azquoOrdersFound.get("Order " + orderRow.get("entity_id"));
+            Name store = storeMap.get(orderRow.get("store_id"));
+            store.addChildWillBePersisted(orderName);
             if (orderName != null) {
                 String customer = orderRow.get("customer_id");
                 String magentoCustomer;
@@ -1001,6 +1021,7 @@ public class DSDataLoadService {
         //version number followed by required data.  $starttime to be replaced by latest update
         return "1.0\n" +
                 "'*','core_store_group','','group_id'\n" +
+                "'*','core_store','','store_id'\n" +
                 "'*','catalog_category_entity','','entity_id'\n" +
                 "'*','catalog_category_product','', 'product_id'\n" +
                 "'*','catalog_product_entity','','entity_id'\n" +
