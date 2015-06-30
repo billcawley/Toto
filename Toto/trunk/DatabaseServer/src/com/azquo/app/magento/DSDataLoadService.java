@@ -832,8 +832,8 @@ public class DSDataLoadService {
             //only importing the IDs at present
             Name orderName = azquoOrdersFound.get("Order " + orderRow.get("entity_id"));
             Name store = storeMap.get(orderRow.get("store_id"));
+            store.addChildWillBePersisted(orderName);
             if (orderName != null) {
-                store.addChildWillBePersisted(orderName);
                 String customer = orderRow.get("customer_id");
                 String magentoCustomer;
                 Name customerName;
