@@ -831,10 +831,12 @@ public class DSDataLoadService {
         for (Map<String, String> orderRow : tableMap.get("sales_flat_order")) {
             //only importing the IDs at present
             Name orderName = azquoOrdersFound.get("Order " + orderRow.get("entity_id"));
-            Name store = storeMap.get(orderRow.get("store_id"));
-            store.addChildWillBePersisted(orderName);
-            if (orderName != null) {
-                String customer = orderRow.get("customer_id");
+             if (orderName != null) {
+                 Name store = storeMap.get(orderRow.get("store_id"));
+                 if (store != null){
+                     store.addChildWillBePersisted(orderName);
+                 }
+                 String customer = orderRow.get("customer_id");
                 String magentoCustomer;
                 Name customerName;
                 if (customer == null || customer.length() == 0) {
@@ -879,6 +881,19 @@ public class DSDataLoadService {
             }
         }
         System.out.println("");
+        if (tableMap.get("sales_flat_order_address") != null) {
+            for (Map<String, String> orderRow : tableMap.get("sales_flat_order_address")) {
+                //only importing the IDs at present
+                if (orderRow.get("address_type").equals("shipping")) {
+                    Name orderName = azquoOrdersFound.get("Order " + orderRow.get("parent_id"));
+
+                    if (orderName != null) {
+                        orderName.setAttributeWillBePersisted("DELIVERY COUNTRY", orderRow.get("country_id"));
+                    }
+                }
+            }
+        }
+
         System.out.println("shipments");
 
         if (tableMap.get("sales_flat_shipment") != null) {
@@ -1034,6 +1049,7 @@ public class DSDataLoadService {
                 "'*','eav_entity_type','','entity_type_id'\n" +
                 "'item_id,order_id,parent_item_id,created_at,product_id,weight,product_type,qty_ordered,qty_canceled,base_discount_invoiced, base_tax_amount, base_row_invoiced, base_row_total','sales_flat_order_item', '$starttime','item_id'\n" +
                 "'entity_id, store_id, customer_id, base_currency_code, increment_id, shipping_amount','sales_flat_order',  '$starttime', 'entity_id'\n" +
+                "'entity_id, parent_id, address_type, country_id','sales_flat_order_address',  '', 'entity_id'\n" +
                 "'entity_id, email, group_id','customer_entity',  '$starttime', 'entity_id'\n" +
                 "'*','customer_group','', 'customer_group_id'\n" +
                 "'entity_id, parent_id','customer_address_entity', '$starttime', 'entity_id'\n" +
