@@ -1229,10 +1229,12 @@ public class AzquoBook {
         for (int rowNo = 0; rowNo < range.getRowCount(); rowNo++) {
             List<String> row = new ArrayList<String>();
             toReturn.add(row);
-            if (range.getCellOrNull(rowNo, 0) != null) {
-                for (int colNo = 0; colNo < range.getColumnCount(); colNo++) {
-                    Cell cell = range.getCellOrNull(rowNo, colNo);
-                    row.add(cell != null ? cell.getStringValue().trim() : null);
+            for (int colNo = 0; colNo < range.getColumnCount(); colNo++) {
+                if (range.getCellOrNull(rowNo, colNo) != null) {
+                      Cell cell = range.getCellOrNull(rowNo, colNo);
+                      row.add(cell != null ? cell.getStringValue().trim() : null);
+                }else{
+                    row.add("");
                 }
             }
         }
