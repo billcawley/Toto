@@ -294,12 +294,14 @@ seaports;children   container;children
         // ok here's the logic, what's passed is a 2d array of lists, as created from createHeadingArraysFromSpreadsheetRegion
         // we would just run through the rows running a 2d permutation on each row BUT there's a rule that if there's
         // a row below blank except the right most one then add that right most one to the one above
+        boolean starting = true;
         for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) {
             List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
-            // ok we have one of the heading definition rows
-            while (headingDefinitionRowIndex < noOfHeadingDefinitionRows - 1 // we're not on the last row
+            if (lastHeadingDefinitionCellIndex> 0 && !headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex)))  starting = false;// Don't permute until you have something to permute!
+            while (!starting && headingDefinitionRowIndex < noOfHeadingDefinitionRows - 1 // we're not on the last row
                     && headingLists.get(headingDefinitionRowIndex + 1).size() > 1 // the next row is not a single cell (will all rows be the same length?)
-                    && headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex + 1))) { // and the last cell is the only not null one
+                    && headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex + 1)) // and the last cell is the only not null one
+                    ) {
                 headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
                 headingDefinitionRowIndex++;
             }
