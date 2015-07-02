@@ -68,7 +68,7 @@ public class DSSpreadsheetService {
         // todo - address opendb count (do we care?) and exceptions
         AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(databaseAccessToken.getDatabaseMySQLName());
         // we can't do the lookup for permissions out here as it requires the connection, hence pass things through
-        return new AzquoMemoryDBConnection(memoryDB,databaseAccessToken, nameService, databaseAccessToken.getLanguages());
+        return new AzquoMemoryDBConnection(memoryDB, databaseAccessToken, nameService, databaseAccessToken.getLanguages());
     }
 
 /*    public void anonymise(DatabaseAccessToken databaseAccessToken) throws Exception {
@@ -156,13 +156,13 @@ seaports;children   container;children
                         DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;// that's sum practically speaking
                         // now allow functions
                         // I feel there should be a loop here
-                        for (DataRegionHeading.BASIC_RESOLVE_FUNCTION basic_resolve_function : DataRegionHeading.BASIC_RESOLVE_FUNCTION.values()){
-                            if (sourceCell.startsWith(basic_resolve_function.name())){
+                        for (DataRegionHeading.BASIC_RESOLVE_FUNCTION basic_resolve_function : DataRegionHeading.BASIC_RESOLVE_FUNCTION.values()) {
+                            if (sourceCell.startsWith(basic_resolve_function.name())) {
                                 function = basic_resolve_function;
                                 sourceCell = sourceCell.substring(sourceCell.indexOf("(") + 1, sourceCell.trim().length() - 1);// +1 - 1 to get rid of the brackets
                             }
                         }
-                        row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames), azquoMemoryDBConnection,function));
+                        row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames), azquoMemoryDBConnection, function));
                     }
                 }
             }
@@ -409,49 +409,35 @@ seaports;children   container;children
         return getIndividualNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages));
     }
 
-    // todo make sense of the bloody restrictcount parameter
-
-    private List<Integer> sortDoubleValues(int restrictCount, Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
+    private List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
         final List<Integer> sortedValues = new ArrayList<Integer>();
-        if (restrictCount != 0) {
-            List<Map.Entry<Integer, Double>> list = new ArrayList<Map.Entry<Integer, Double>>(sortTotals.entrySet());
-            // sort list based on
-            Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {
-                public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
-                    return sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue());
-                }
-            });
-            for (Map.Entry<Integer, Double> aList : list) {
-                sortedValues.add(aList.getKey());
+        List<Map.Entry<Integer, Double>> list = new ArrayList<Map.Entry<Integer, Double>>(sortTotals.entrySet());
+        // sort list based on
+        Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {
+            public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
+                return sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue());
             }
-        } else {
-            for (int i = 0; i < sortTotals.size(); i++) {
-                sortedValues.add(i);
-            }
+        });
+        for (Map.Entry<Integer, Double> aList : list) {
+            sortedValues.add(aList.getKey());
         }
         return sortedValues;
     }
 
     // same thing for strings, I prefer stronger typing
 
-    private List<Integer> sortStringValues(int restrictCount, Map<Integer, String> sortTotals, final boolean sortRowsUp) {
+    private List<Integer> sortStringValues(Map<Integer, String> sortTotals, final boolean sortRowsUp) {
         final List<Integer> sortedValues = new ArrayList<Integer>();
-        if (restrictCount != 0) {
-            List<Map.Entry<Integer, String>> list = new ArrayList<Map.Entry<Integer, String>>(sortTotals.entrySet());
-            // sort list based on string now
-            Collections.sort(list, new Comparator<Map.Entry<Integer, String>>() {
-                public int compare(Map.Entry<Integer, String> o1, Map.Entry<Integer, String> o2) {
-                    return sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue());
-                }
-            });
+        List<Map.Entry<Integer, String>> list = new ArrayList<Map.Entry<Integer, String>>(sortTotals.entrySet());
+        // sort list based on string now
+        Collections.sort(list, new Comparator<Map.Entry<Integer, String>>() {
+            public int compare(Map.Entry<Integer, String> o1, Map.Entry<Integer, String> o2) {
+                return sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue());
+            }
+        });
 
-            for (Map.Entry<Integer, String> aList : list) {
-                sortedValues.add(aList.getKey());
-            }
-        } else {
-            for (int i = 0; i < sortTotals.size(); i++) {
-                sortedValues.add(i);
-            }
+        for (Map.Entry<Integer, String> aList : list) {
+            sortedValues.add(aList.getKey());
         }
         return sortedValues;
     }
@@ -547,14 +533,15 @@ seaports;children   container;children
     // function that can be called by the front end to deliver the data and headings
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, int highlightDays, int eddMaxRows) throws Exception { // edd max rows is very simple, just chop the rows, todo -= work out the toher max params which are odd!
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int filterCount, int maxRows, int maxCols
+            , String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, int highlightDays) throws Exception { // edd max rows is very simple, just chop the rows, todo -= work out the toher max params which are odd!
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortCol, databaseAccessToken.getLanguages(), highlightDays);
+        List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, databaseAccessToken.getLanguages(), highlightDays);
         List<List<CellForDisplay>> displayData = new ArrayList<List<CellForDisplay>>();
-        if (eddMaxRows != 0 && data.size() > eddMaxRows){
+        // todo - what's a reasonable "standard" limit for return?
+/*        if (eddMaxRows != 0 && data.size() > eddMaxRows){
             data = data.subList(0, eddMaxRows);
-        }
+        }*/
         for (List<AzquoCell> sourceRow : data) {
             List<CellForDisplay> displayDataRow = new ArrayList<CellForDisplay>();
             displayData.add(displayDataRow);
@@ -568,7 +555,7 @@ seaports;children   container;children
 
     private List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, List<String> languages, int highlightDays) throws Exception {
+            , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, List<String> languages, int highlightDays) throws Exception {
         final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
         final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists);
         final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages);
@@ -597,7 +584,7 @@ seaports;children   container;children
         List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings
                 , columnHeadings, contextNames, languages);
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
-                , filterCount, maxRows, maxCols, sortRow, sortCol, highlightDays);
+                , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays);
         return dataToShow;
     }
 
@@ -661,19 +648,13 @@ seaports;children   container;children
         return null; // couldn't find it . . .
     }
 
-    // for looking up a heading given a string. Seems used for looking up teh right col or row to sort on
+    // for looking up a heading given a string. Used to find the col/row index to sort on
 
     private int findPosition(List<List<DataRegionHeading>> headings, String toFind) {
-        boolean desc = false;
         if (toFind == null || toFind.length() == 0) {
-            return 0;
+            return -1;
         }
-        toFind = toFind.replace(" ", "");
-        if (toFind.endsWith("-desc")) {
-            toFind = toFind.replace("-desc", "");
-            desc = true;
-        }
-        int count = 1;
+        int count = 0;
         for (List<DataRegionHeading> heading : headings) {
             DataRegionHeading dataRegionHeading = heading.get(heading.size() - 1);
             if (dataRegionHeading != null) {
@@ -684,156 +665,136 @@ seaports;children   container;children
                     toCompare = dataRegionHeading.getAttribute();
                 }
                 if (toCompare.equals(toFind)) {
-                    if (desc) {
-                        return -count;
-                    }
                     return count;
                 }
             }
             count++;
         }
-        return 0;
+        return -1;
     }
 
     // plan with refactoring is for this to do some of what was in the old get excel data function. Taking the full region and imposing useful user limits
     // note, one could derive column and row headings from the source data's headings but passing them is easier if they are to hand which the should be
     // also deals with highlighting
+    // todo : I'm not entirely happy with the way max rows and cols causes total sorting, I think maybe that should be configured another way
 
     private List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
-            , int filterCount, int restrictRowCount, int restrictColCount, String sortRowString, String sortColString, int highlightDays) throws Exception {
+            , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays) throws Exception {
         long track = System.currentTimeMillis();
         if (sourceData == null || sourceData.isEmpty()) {
             return sourceData;
         }
+
+        // todo : can we tell from params whether we need to sort/filter at all? Want to chuck it back if necessary . . .
+
         int totalRows = sourceData.size();
         int totalCols = sourceData.get(0).size();
-        if (restrictRowCount < 0) {
-            //decide whether to sort the rows
-            if (totalRows + restrictRowCount < 0) {
-                restrictRowCount = 0;
-            } else {
-                restrictRowCount = -restrictRowCount;
-            }
-        }
-        if (restrictColCount < 0) {
-            //decide whether to sort the Cols
-            if (totalCols + restrictColCount < 0) {
-                restrictColCount = 0;
-            } else {
-                restrictColCount = -restrictColCount;
-            }
-        }
-        if (restrictRowCount > totalRows) restrictRowCount = totalRows;
-        if (restrictColCount > totalCols) restrictColCount = totalCols;
-        // todo - stop using negatives from this function to indicate order!!
-        Integer sortCol = findPosition(columnHeadings, sortColString);
-        Integer sortRow = findPosition(rowHeadings, sortRowString);
-        boolean sortRowsUp = false;
-        boolean sortColsRight = false;
-        if (sortCol == null) {
-            sortCol = 0;
+
+        // sorting on totals overrides an explicitly selected ordering. Hmmmmm.
+        boolean sortOnColTotals = false;
+        boolean sortOnRowTotals = false;
+
+        if (Math.abs(maxRows) < totalRows) {
+            sortOnRowTotals = true;
+            sortRowAsc = maxRows < 0;
         } else {
-            if (sortCol > 0) {
-                sortRowsUp = true;
-            } else {
-                sortCol = -sortCol;
-            }
+            maxRows = 0; // zero it as it's a moot point
         }
-        if (sortRow == null) {
-            sortRow = 0;
+        if (Math.abs(maxCols) < totalCols) {
+            sortOnColTotals = true;
+            sortColAsc = maxCols < 0;
         } else {
-            if (sortRow > 0) {
-                sortColsRight = true;
-            } else {
-                sortRow = -sortRow;
-            }
+            maxCols = 0;
         }
-        if (sortCol > 0 && restrictRowCount == 0) {
-            restrictRowCount = totalRows;//this is a signal to sort the rows
+        maxRows = Math.abs(maxRows);
+        maxCols = Math.abs(maxCols);
+        Integer sortOnColIndex = findPosition(columnHeadings, sortColString);
+        Integer sortOnRowIndex = findPosition(rowHeadings, sortRowString);
+        if (sortOnColIndex == -1 && sortOnRowIndex == -1 && !sortOnColTotals && !sortOnRowTotals) { // then there's no sorting to do!
+            return sourceData;
         }
-        if (sortRow > 0 && restrictColCount == 0) {
-            restrictColCount = totalCols;//this is a signal to sort the cols
-        }
+        // was a null check on sortRow and sortCol but it can't be null, it will be negative if none found
         final Map<Integer, Double> sortRowTotals = new HashMap<Integer, Double>();
         final Map<Integer, String> sortRowStrings = new HashMap<Integer, String>();
         final Map<Integer, Double> sortColumnTotals = new HashMap<Integer, Double>();
-        int rowNo = 0;
         for (int colNo = 0; colNo < totalCols; colNo++) {
             sortColumnTotals.put(colNo, 0.00);
-//            sortColumnStrings.put(colNo,"");
         }
         boolean rowNumbers = true;
+        int rowNo = 0;
         for (List<AzquoCell> rowCells : sourceData) {
-            double sortRowTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total.
+            double sortRowTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total. This row total or value is used when sorting by a column.
             int colNo = 0;
             sortRowStrings.put(rowNo, "");
             for (AzquoCell cell : rowCells) {
                 // ok these bits are for sorting. Could put a check on whether a number was actually the result but not so bothered
-                if (sortCol == colNo + 1) {
+                // info for an up/down string sort
+                if (sortOnColIndex == colNo) {// the point here is that sorting on a single column can be non numeric so we support that by jamming the string value in here
                     sortRowStrings.put(rowNo, cell.getStringValue());
                     if (cell.getStringValue().length() > 0 && !NumberUtils.isNumber(cell.getStringValue())) {
                         rowNumbers = false;
                     }
                 }
-                if (restrictRowCount > 0 && (sortCol == 0 || sortCol == colNo + 1)) {
+                // info for an up/down number sort, possibly on total values of each row
+                if (sortOnRowTotals || sortOnColIndex == colNo) { // while running through the cells either add the lot for rowtotals or just the column we care about
                     sortRowTotal += cell.getDoubleValue();
                 }
-                if (restrictColCount > 0 && (sortRow == 0 || sortRow == rowNo + 1)) {
+                // info for a left/rigt number sort possibly on column totals (left/right string sort not supported)
+                if (sortOnColTotals || sortOnRowIndex == rowNo) {
                     sortColumnTotals.put(colNo, sortColumnTotals.get(colNo) + cell.getDoubleValue());
                 }
                 colNo++;
             }
             sortRowTotals.put(rowNo++, sortRowTotal);
-
         }
 
-        //sort and trim rows and cols
-        List<Integer> sortedRows;
-        if (rowNumbers) {
-            sortedRows = sortDoubleValues(restrictRowCount, sortRowTotals, sortRowsUp);
-        } else {
-            sortedRows = sortStringValues(restrictRowCount, sortRowStrings, sortRowsUp);
+        //right, the question is do we need to sort, these functions used to decide internally, I won't have that now
+        List<Integer> sortedRows = null;
+        if (sortOnColIndex != -1 || sortOnRowTotals) { // then we need to sort the rows
+            if (rowNumbers) {
+                sortedRows = sortDoubleValues(sortRowTotals, sortRowAsc);
+            } else {
+                sortedRows = sortStringValues(sortRowStrings, sortRowAsc);
+            }
         }
 
-        // ok we've got the sort info, here the old code set a fair amount of stuff in logged in connection, I need to work out where it's used.
-        // the restrict row count was set, it's used in getrowheadingsasarray
-        //loggedInConnection.setRestrictRowCount(region, restrictRowCount);
-        // used in ormatdataregion, formatdataregionprovenanceforoutput,getrowheadingsasarray, savedata
-        //loggedInConnection.setRowOrder(region, sortedRows);
-        List<Integer> sortedCols = sortDoubleValues(restrictColCount, sortColumnTotals, sortColsRight);
-        // I assume these two are the same as above
-        //loggedInConnection.setColOrder(region, sortedCols);
-        //loggedInConnection.setRestrictColCount(region, restrictColCount);
+        List<Integer> sortedCols = null;
+        if (sortOnRowIndex != -1 || sortOnColTotals) { // then we need to sort the cols
+            sortedCols = sortDoubleValues(sortColumnTotals, sortColAsc);
+        }
 
         // OK pasting and changing what was in format data region, it's only called by this
 
         int blockRowCount = 0;
-        if (restrictRowCount == 0 || restrictRowCount > sortedRows.size()) {
-            restrictRowCount = sortedRows.size();
-        }
-        if (restrictColCount == 0 || restrictColCount > sortedCols.size()) {
-            restrictColCount = sortedCols.size();
-        }
         List<List<AzquoCell>> sortedCells = new ArrayList<List<AzquoCell>>();
-        for (rowNo = 0; rowNo < restrictRowCount; rowNo++) {
-            List<AzquoCell> rowCells = sourceData.get(sortedRows.get(rowNo));
+        // zero passed or set above means don't limit
+        if (maxRows == 0){
+            maxRows = totalRows;
+        }
+        if (maxCols == 0){
+            maxCols = totalCols;
+        }
+        for (rowNo = 0; rowNo < maxRows; rowNo++) {
+            List<AzquoCell> rowCells = sourceData.get(sortedRows != null ? sortedRows.get(rowNo) : rowNo); // if a sort happened use the row number according to it
 
             List<AzquoCell> newRow = new ArrayList<AzquoCell>();
             sortedCells.add(newRow);
             // this may often be a straight copy (if no col sorting) but not too bothered about the possible speed increase
-            for (int colNo = 0; colNo < restrictColCount; colNo++) {
-                newRow.add(rowCells.get(sortedCols.get(colNo)));
+            for (int colNo = 0; colNo < maxCols; colNo++) {
+                newRow.add(rowCells.get(sortedCols != null ? sortedCols.get(colNo) : colNo)); // use the sort if it was done
             }
 
-            // ok here's a thing . . . I think this code that used to cchop didn't take into account row sorting. Should be pretty easy to just do here I think
+            /* ok here's a thing . . . I think this code that used to chop didn't take into account row sorting. Should be pretty easy to just do here I think
+            to be clear what this is doing is checking for chunks of blank rows and remoiving them from the results - worth noting that this doesn't compensate for the max,
+            one could end up with less than the max when there was more data available as the max was loaded then chopped. On the other hand typical max ordering would mean that
+            by this point it would all be blank rows anyway */
             if (++blockRowCount == filterCount) {
                 // we need the equivalent check of blank rows, checking the cell's list of names or values should do this
-                // go back from the beginning
+                // go back from the end
                 boolean rowsBlank = true;
                 for (int j = 0; j < filterCount; j++) {
                     List<AzquoCell> rowToCheck = sortedCells.get((sortedCells.size() - 1) - j); // size - 1 for the last index
-                    for (AzquoCell cellToCheck : rowToCheck)          {
-
+                    for (AzquoCell cellToCheck : rowToCheck) {
                           /*
                         if ((cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames().isEmpty())
                                 || (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty())) {// there were values or names for the call
@@ -861,19 +822,13 @@ seaports;children   container;children
                     long age = 10000; // about 30 years old as default
                     ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
                     if (valuesForCell.getValues() != null || !valuesForCell.getValues().isEmpty()) {
-    /* what did this mean??                    if (valuesForCell.getValues().size() == 1) {
-                            for (Value value : valuesForCell.getValues()) {
-                                if (value == null) {//cell has been changed
-                                    return 0;
-                                }
-                            }
-                        }*/
                         for (Value value : valuesForCell.getValues()) {
                             if (value.getText().length() > 0) {
                                 if (value.getProvenance() == null) {
                                     break;
                                 }
                                 LocalDateTime provdate = LocalDateTime.ofInstant(value.getProvenance().getTimeStamp().toInstant(), ZoneId.systemDefault());
+                                // ah, decent Date APIs! Although the line above seems a bit verbose
                                 long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.DAYS);
                                 if (cellAge < age) {
                                     age = cellAge;
@@ -964,7 +919,7 @@ I think that this is an ideal candidate for multithreading to speed things up
                 }
             } catch (Exception e) {
                 errorTrack.append("RowFiller : " + e.getMessage()).append("\n");
-                for (StackTraceElement ste : e.getStackTrace()){
+                for (StackTraceElement ste : e.getStackTrace()) {
                     errorTrack.append("RowFiller : " + ste + "\n");
                 }
             }
@@ -1004,7 +959,7 @@ I think that this is an ideal candidate for multithreading to speed things up
             }
         }
         MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
-         for (DataRegionHeading heading : headingsForThisCell) {
+        for (DataRegionHeading heading : headingsForThisCell) {
             if (heading.getName() == null && heading.getAttribute() == null) {
                 checked = false;
             }
@@ -1023,12 +978,12 @@ I think that this is an ideal candidate for multithreading to speed things up
                 List<Value> values = new ArrayList<Value>();
                 // now , get the function from the headings
                 DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;
-                for (DataRegionHeading heading : headingsForThisCell){
-                    if (heading.getFunction() != null){
+                for (DataRegionHeading heading : headingsForThisCell) {
+                    if (heading.getFunction() != null) {
                         function = heading.getFunction();
                     }
                 }
-                if (function != null){
+                if (function != null) {
                     locked.isTrue = true;
                 }
                 doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, languages, function); // true = pay attention to names additive flag
@@ -1050,13 +1005,13 @@ I think that this is an ideal candidate for multithreading to speed things up
                 List<String> attributes = new ArrayList<String>();
                 listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
                 String attributeResult = valueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked, names, attributes);
-                     try{
-                        doubleValue = Double.parseDouble(attributeResult);
-                    }catch(Exception e){
-                        //ignore
-                    }
+                try {
+                    doubleValue = Double.parseDouble(attributeResult);
+                } catch (Exception e) {
+                    //ignore
+                }
 
-                    // ZK would sant this typed? Maybe just sort out later?
+                // ZK would sant this typed? Maybe just sort out later?
                 if (attributeResult != null) {
                     attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
                     stringValue = attributeResult;
@@ -1129,7 +1084,9 @@ I think that this is an ideal candidate for multithreading to speed things up
     private List<List<DataRegionHeading>> getRowHeadingsAsArray(List<List<AzquoCell>> cellArray) {
         List<List<DataRegionHeading>> toReturn = new ArrayList<List<DataRegionHeading>>();
         for (List<AzquoCell> cell : cellArray) {
-            toReturn.add(cell.get(0).getRowHeadings());
+            if (!cell.isEmpty()){
+                toReturn.add(cell.get(0).getRowHeadings());
+            }
         }
         return toReturn;
     }

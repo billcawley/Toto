@@ -13,15 +13,13 @@ import java.util.Date;
 public class UserChoice extends StandardEntity {
 
     final int userId;
-    final int reportId;
     final String choiceName;
     String choiceValue;
     Date time;
 
-    public UserChoice(int id, int userId, int reportId, String choiceName, String choiceValue, Date time) {
+    public UserChoice(int id, int userId, String choiceName, String choiceValue, Date time) {
         this.id = id;
         this.userId = userId;
-        this.reportId = reportId;
         this.choiceName = choiceName;
         this.choiceValue = choiceValue;
         this.time = time;
@@ -31,7 +29,6 @@ public class UserChoice extends StandardEntity {
     public String toString() {
         return "UserChoice{" +
                 "userId=" + userId +
-                ", reportId=" + reportId +
                 ", choiceName=" + choiceName +
                 ", choiceValue=" + choiceValue +
                 ", time=" + time +
@@ -40,10 +37,6 @@ public class UserChoice extends StandardEntity {
 
     public int getUserId() {
         return userId;
-    }
-
-    public int getReportId() {
-        return reportId;
     }
 
     public String getChoiceName() {

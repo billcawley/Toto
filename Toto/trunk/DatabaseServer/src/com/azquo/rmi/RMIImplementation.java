@@ -112,9 +112,11 @@ public class RMIImplementation implements RMIInterface {
     }
     // spreadsheet service
     @Override
-    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, int highlightDays, int eddMaxRows) throws RemoteException {
+    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int filterCount, int maxRows, int maxCols, String sortRow,
+                                                                    boolean sortRowAsc, String sortCol, boolean sortColumnAsc, int highlightDays) throws RemoteException {
         try {
-            return dsSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource,filterCount,maxRows,maxCols,sortRow,sortCol, highlightDays, eddMaxRows);
+            return dsSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource,filterCount,maxRows,maxCols,sortRow, sortRowAsc,sortCol, sortColumnAsc, highlightDays);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

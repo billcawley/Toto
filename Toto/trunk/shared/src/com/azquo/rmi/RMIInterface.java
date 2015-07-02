@@ -32,7 +32,7 @@ public interface RMIInterface extends Remote {
 
     CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, int highlightDays, int eddMaxRows) throws RemoteException;
+            , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColumnAsc, int highlightDays) throws RemoteException;
 
     String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) throws RemoteException;
 

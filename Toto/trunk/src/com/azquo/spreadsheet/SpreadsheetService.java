@@ -43,6 +43,9 @@ public class SpreadsheetService {
     UserChoiceDAO userChoiceDAO;
 
     @Autowired
+    UserRegionOptionsDAO userRegionOptionsDAO;
+
+    @Autowired
     LoginService loginService;
 
     @Autowired
@@ -152,7 +155,7 @@ public class SpreadsheetService {
     public void readExcel(ModelMap model, LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName) throws Exception {
         String message;
         String path = getHomeDir() + "/temp/";
-        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, this);
+        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, this);
         StringBuilder worksheet = new StringBuilder();
         StringBuilder tabs = new StringBuilder();
         StringBuilder head = new StringBuilder();
@@ -212,7 +215,7 @@ public class SpreadsheetService {
         head.append("</style>\n");
         //velocityContext.put("script",readFile("online.js").toString());
         //velocityContext.put("topmenu",createTopMenu(loggedInConnection).toString());
-        azquoBook.fillVelocityOptionInfo(loggedInUser, model);
+        azquoBook.fillVelocityOptionInfo(loggedInUser, model,onlineReport.getId());
         
         model.addAttribute("tabs", tabs.toString());
         model.addAttribute("topmessage", message);
@@ -295,15 +298,11 @@ public class SpreadsheetService {
         return sb;
     }
 
-    public void setUserChoice(int userId, int reportId, String choiceName, String choiceValue) {
-        if (choiceName.equalsIgnoreCase(AzquoBook.OPTIONPREFIX + "clear overrides")) {
-            userChoiceDAO.deleteOverridesForUserAndReportId(userId, reportId);
-            return;
-        }
-        UserChoice userChoice = userChoiceDAO.findForUserIdReportIdAndChoice(userId, reportId, choiceName);
+    public void setUserChoice(int userId, String choiceName, String choiceValue) {
+        UserChoice userChoice = userChoiceDAO.findForUserIdAndChoice(userId, choiceName);
         if (choiceValue != null && choiceValue.length() > 0) {
             if (userChoice == null) {
-                userChoice = new UserChoice(0, userId, reportId, choiceName, choiceValue, new Date());
+                userChoice = new UserChoice(0, userId, choiceName, choiceValue, new Date());
                 userChoiceDAO.store(userChoice);
             } else {
                 if (!choiceValue.equals(userChoice.getChoiceValue())) {
@@ -314,7 +313,7 @@ public class SpreadsheetService {
             }
         } else {
             if (userChoice != null) {
-                userChoiceDAO.deleteForReportId(userChoice.getId());
+                userChoiceDAO.removeById(userChoice);
             }
         }
     }
@@ -415,8 +414,10 @@ public class SpreadsheetService {
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int filterCount, int maxRows, int maxCols, String sortRow, String sortCol, int highlightDays, int eddMaxRows) throws Exception {
-        return rmiClient.getServerInterface().getCellsAndHeadingsForDisplay(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortCol, highlightDays, eddMaxRows);
+            , UserRegionOptions userRegionOptions) throws Exception {
+        return rmiClient.getServerInterface().getCellsAndHeadingsForDisplay(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource,
+                userRegionOptions.getHideRows(), userRegionOptions.getRowLimit(), userRegionOptions.getColumnLimit(), userRegionOptions.getSortRow()
+                , userRegionOptions.getSortRowAsc(), userRegionOptions.getSortColumn(), userRegionOptions.getSortColumnAsc(), userRegionOptions.getHighlightDays());
     }
 
     public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) throws Exception{

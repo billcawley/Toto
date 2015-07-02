@@ -1,8 +1,6 @@
 package com.azquo.admin.user;
 
-
 import com.azquo.admin.StandardDAO;
-import com.azquo.spreadsheet.view.AzquoBook;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -15,19 +13,19 @@ import java.util.Map;
 /**
  * Created by bill on 22/04/14.
  *
+ * Modified by edd to remove report specifity, this was per reporty and included standard options such as sorting etc. Now it does not and options are shared across reports.
  */
 public final class UserChoiceDAO extends StandardDAO<UserChoice> {
 
     // the default table name for this data.
     @Override
     public String getTableName() {
-        return "user_choices";
+        return "user_choice";
     }
 
     // column names except ID which is in the superclass
 
     public static final String USERID = "user_id";
-    public static final String REPORTID = "report_id";
     public static final String CHOICENAME = "choice_name";
     public static final String CHOICEVALUE = "choice_value";
     public static final String TIME = "time";
@@ -37,7 +35,6 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
         final Map<String, Object> toReturn = new HashMap<String, Object>();
         toReturn.put(ID, ucr.getId());
         toReturn.put(USERID, ucr.getUserId());
-        toReturn.put(REPORTID, ucr.getReportId());
         toReturn.put(CHOICENAME, ucr.getChoiceName());
         toReturn.put(CHOICEVALUE, ucr.getChoiceValue());
         toReturn.put(TIME, ucr.getTime());
@@ -51,7 +48,6 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
             try {
                 return new UserChoice(rs.getInt(ID)
                         , rs.getInt(USERID)
-                        , rs.getInt(REPORTID)
                         , rs.getString(CHOICENAME)
                         , rs.getString(CHOICEVALUE)
                         , rs.getDate(TIME));
@@ -67,39 +63,18 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
         return new UserChoiceRowMapper();
     }
 
-    public UserChoice findForUserIdReportIdAndChoice(final int userId, final int reportId, final String choiceName) {
+    public UserChoice findForUserIdAndChoice(final int userId, final String choiceName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
-        namedParams.addValue(REPORTID, reportId);
         namedParams.addValue(CHOICENAME, choiceName);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + REPORTID + "` = :" + REPORTID + " AND `" + CHOICENAME + "` = :" + CHOICENAME, namedParams);
+        return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + CHOICENAME + "` = :" + CHOICENAME, namedParams);
     }
-
-/*    public UserChoice findForUserIdAndChoice(final int userId, final String choiceName) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(USERID, userId);
-        namedParams.addValue(CHOICENAME, choiceName);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " and `" + CHOICENAME + "` = :" + CHOICENAME, namedParams);
-    }*/
 
     public List<UserChoice> findForUserIdAndReportId(final int userId, final int reportId) {
         //only used by the convert to Azquo_master;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
-        namedParams.addValue(REPORTID, reportId);
-        return findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + REPORTID + "` = :" + REPORTID, namedParams, false);
+        return findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID, namedParams, false);
     }
 
-    public void deleteForReportId(final int reportId) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(REPORTID, reportId);
-        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + REPORTID + " = :" + REPORTID, namedParams);
-    }
-
-    public void deleteOverridesForUserAndReportId(final int userId, final int reportId) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(REPORTID, reportId);
-        namedParams.addValue(USERID, userId);
-        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + REPORTID + " = :" + REPORTID + " AND " + USERID + " = :" + USERID + " AND " + CHOICENAME + " LIKE '" + AzquoBook.OPTIONPREFIX + "%'", namedParams);
-    }
 }

@@ -5,7 +5,8 @@ import com.aspose.cells.Color;
 import com.aspose.cells.Font;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
-import com.azquo.dataimport.ImportService;
+import com.azquo.admin.user.UserRegionOptions;
+import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.spreadsheet.*;
 import com.csvreader.CsvWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,6 +14,7 @@ import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.ui.ModelMap;
+import org.zkoss.zss.model.CellRegion;
 
 import javax.servlet.http.HttpServletResponse;
 import java.awt.*;
@@ -35,11 +37,12 @@ public class AzquoBook {
     private static final Logger logger = Logger.getLogger(AzquoBook.class);
     private SpreadsheetService spreadsheetService;
     private UserChoiceDAO userChoiceDAO;
+    private UserRegionOptionsDAO userRegionOptionsDAO;
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
     private SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
 
     public static final String azDataRegion = "az_dataregion";
-    public static final String OPTIONPREFIX = "!";
+//    public static final String OPTIONPREFIX = "!";
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
@@ -66,7 +69,6 @@ public class AzquoBook {
     Map<Range, String> chosenMap = null;
     Map<Range, String> choiceMap = null;
     Map<Cell, CellArea> mergedCells = null;
-    Map<String, String> sheetOptions = new HashMap<String, String>();
     //HSSFPalette Colors = null;
 
     private static final Map<Short, String> ALIGN = new HashMap<Short, String>() {
@@ -139,7 +141,8 @@ public class AzquoBook {
         }
     };
 
-    public AzquoBook(UserChoiceDAO userChoiceDAO, SpreadsheetService spreadsheetService) throws Exception {
+    public AzquoBook(UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, SpreadsheetService spreadsheetService) throws Exception {
+        this.userRegionOptionsDAO = userRegionOptionsDAO;
         this.userChoiceDAO = userChoiceDAO;
         this.spreadsheetService = spreadsheetService;
         jacksonMapper.registerModule(new JSR310Module());
@@ -371,16 +374,8 @@ public class AzquoBook {
         return toReturn.toArray(new String[toReturn.size()]);
     }
 
-    private void fillRegion(LoggedInUser loggedInUser, String region,Map<Cell, Boolean> highlighted) throws Exception {
+    private void fillRegion(LoggedInUser loggedInUser, String region,Map<Cell, Boolean> highlighted, UserRegionOptions userRegionOptions) throws Exception {
         logger.info("loading " + region);
-        int filterCount = optionNumber(region, "hiderows");
-        if (filterCount == 0) filterCount = optionNumber(region,"hiderowvalues");
-        if (filterCount == 0)
-            filterCount = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second. Edd : what does this mean??
-        int maxRows = optionNumber(region, "maxrows");
-        //if (maxRows == 0) loggedInConnection.clearSortCols();//clear it.  not sure why this is done - pushes the sort from the load into the spreadsheet if there is no restriction on si
-        int maxCols = optionNumber(region, "maxcols");
-
         Range rowHeadings = getRange("az_rowheadings" + region);
         if (rowHeadings == null) {
             throw new Exception("no range az_rowHeadings" + region);
@@ -396,43 +391,34 @@ public class AzquoBook {
             throw new Exception("no range az_Context" + region);
         }
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
-                rangeToStringLists(context), filterCount, maxRows, maxCols, loggedInUser.getSortRow(region), loggedInUser.getSortCol(region), highlightDays, 0);
+                rangeToStringLists(context), userRegionOptions);
         loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
         // think this language detection is sound
         fillRange(dataRegionPrefix + region, cellsAndHeadingsForDisplay.getData(), true, highlighted);
         String[] givenColumnHeadings = fillRange("az_displaycolumnheadings" + region, cellsAndHeadingsForDisplay.getColumnHeadings(),false);
-        String sortable = hasOption(region, "sortable");
-        if (sortable != null) {
+        // this nis a bit hacky but I'm not so bothered as azquobook should be on the way out
+        if (userRegionOptions.getSortable()) {
             Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
             if (displayColumnHeadings != null) {
                 givenHeadings.put("columns:" + region, givenColumnHeadings);
             }
         }
-        String[] givenRowHeadings = fillRange("az_displayrowheadings" + region, cellsAndHeadingsForDisplay.getRowHeadings(),true);
+        /*String[] givenRowHeadings = */fillRange("az_displayrowheadings" + region, cellsAndHeadingsForDisplay.getRowHeadings(), true);
+        /* leave col sorting for the mo
         if (sortable != null && sortable.equalsIgnoreCase("all")) {
             Range displayRowHeadings = getRange("az_displayrowheadings" + region);
             if (displayRowHeadings != null) {
                 givenHeadings.put("rows:" + region, givenRowHeadings);
             }
-        }
+        }*/
+    }
 
-        //then percentage, sort, trimrowheadings, trimcolumnheadings, setchartdata
-        String chartName = hasOption(region, "chart");
-        if (chartName != null) {
-            for (int chartNo = 0; chartNo < azquoSheet.getCharts().getCount(); chartNo++) {
-                Chart chart = azquoSheet.getCharts().get(chartNo);
-                if (chart.getName().equalsIgnoreCase(chartName)) {
-                    boolean isVertical = chart.getNSeries().get(0).isVerticalValues();
-                    Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
-                    Range displayRowHeadings = getRange("az_displayrowheadings" + region);
-                    chart.getNSeries().clear();
-                    chart.getNSeries().addR1C1("R[" + (displayColumnHeadings.getFirstRow()) + "]C["
-                            + (displayRowHeadings.getFirstColumn()) + "]:R["
-                            + (displayRowHeadings.getFirstRow() + displayRowHeadings.getRowCount() - 1) + "]C["
-                            + (displayColumnHeadings.getFirstColumn() + displayColumnHeadings.getColumnCount() - 1) + "]", isVertical);
-                }
-            }
+    public String getSheetDefinedOptionsStringForRegion(String region){
+        Range optionrange = getRange("az_options" + region);
+        if (optionrange == null || optionrange.getCellOrNull(0, 0) == null){
+            return null;
         }
+        return optionrange.getCellOrNull(0, 0).getStringValue();
     }
 
 
@@ -445,55 +431,6 @@ public class AzquoBook {
             highlightStyles.put(origStyle, highlight);
         }
         return highlight;
-    }
-
-    public int optionNumber(String region, String optionName) {
-        String option = sheetOptions.get(OPTIONPREFIX + optionName + region);
-        if (option == null) {
-            option = hasOption(region, optionName);
-
-        }
-        if (option == null) return 0;
-        int optionValue = 0;
-        try {
-            optionValue = Integer.parseInt(option);
-        } catch (Exception ignored) {
-        }
-        return optionValue;
-    }
-
-    public String hasOption(String region, String optionName) {
-        String options = sheetOptions.get(OPTIONPREFIX + optionName + region);
-        if (options != null) {
-            if (options.length() == 0) {
-                return null;
-            }
-            return options;
-        }
-        Range optionrange = getRange("az_options" + region);
-        if (optionrange == null || optionrange.getCellOrNull(0, 0) == null)
-            return null;
-        options = optionrange.getCellOrNull(0, 0).getStringValue();
-        int foundPos = options.toLowerCase().indexOf(optionName.toLowerCase());
-        if (foundPos < 0) {
-            return null;
-        }
-        if (options.length() > foundPos + optionName.length()) {
-            options = options.substring(foundPos + optionName.length());
-            char operator = options.charAt(0);
-            if (operator == '>') {//interpret the '>' symbol as '-' to create an integer
-                options = "-" + options.substring(1);
-            } else {
-                //ignore '=' or a space
-                options = options.substring(1);
-            }
-            foundPos = options.indexOf(",");
-            if (foundPos > 0) {
-                options = options.substring(0, foundPos);
-            }
-            return options;
-        }
-        return "";
     }
 
     private List<String> interpretList(String list) {
@@ -674,19 +611,20 @@ public class AzquoBook {
         return sb.toString();
     }
 
-    public void fillVelocityOptionInfo(LoggedInUser loggedInUser, ModelMap model) {
+    public void fillVelocityOptionInfo(LoggedInUser loggedInUser, ModelMap model, int reportId) {
         List<VRegion> vRegions = new ArrayList<VRegion>();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
                 VRegion vRegion = new VRegion();
                 String region = name.getText().substring(dataRegionPrefix.length()).toLowerCase();
+                UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 vRegion.name = region;
-                vRegion.maxrows = optionNumber(region, "maxrows") + "";
-                vRegion.maxcols = optionNumber(region, "maxcols") + "";
-                vRegion.hiderows = optionNumber(region, "hiderows") + "";
+                vRegion.maxrows = userRegionOptions != null ? userRegionOptions.getRowLimit() + "" : "0";
+                vRegion.maxcols = userRegionOptions != null ? userRegionOptions.getColumnLimit() + "" : "0";
+                vRegion.hiderows = userRegionOptions != null ? userRegionOptions.getHideRows() + "" : "0";
                 String sortable = "";
-                if (hasOption(region, "sortable") != null) sortable = "checked";
+                if (userRegionOptions != null && userRegionOptions.getSortable()) sortable = "checked";
                 vRegion.sortable = sortable;
                 vRegion.rowdata = getHTMLTableData("az_RowHeadings" + region);
                 vRegion.coldata = getHTMLTableData("az_ColumnHeadings" + region);
@@ -699,7 +637,7 @@ public class AzquoBook {
         model.addAttribute("regions", getRegions(loggedInUser, dataRegionPrefix).toString());//this is for javascript routines
     }
 
-    public void loadData(LoggedInUser loggedInUser, Map<Cell, Boolean> highlighted) throws Exception {
+    public void loadData(LoggedInUser loggedInUser, Map<Cell, Boolean> highlighted, int reportId) throws Exception {
         errorMessage = "";
         calculateAll();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
@@ -708,7 +646,11 @@ public class AzquoBook {
                 String regionName = name.getText().substring(dataRegionPrefix.length()).toLowerCase();
                 long regStart = System.currentTimeMillis();
                 try {
-                    fillRegion(loggedInUser, regionName,highlighted);
+                    UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, regionName);
+                    if (userRegionOptions == null){
+                        userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, regionName, getSheetDefinedOptionsStringForRegion(regionName));
+                    }
+                    fillRegion(loggedInUser, regionName,highlighted, userRegionOptions);
                 } catch (RemoteException re) {
                     Throwable t = re.detail.getCause();
                     if (t != null){
@@ -738,7 +680,7 @@ public class AzquoBook {
         return sb.toString();
     }
 
-    private void setChoices(LoggedInUser loggedInUser, int reportId) {
+    private void setChoices(LoggedInUser loggedInUser) {
         createChosenMap();
         createChoiceMap();//to check when choice cells may be changed
         for (Range range : chosenMap.keySet()) {
@@ -746,7 +688,7 @@ public class AzquoBook {
                 String choiceName = chosenMap.get(range);
                 Range choice = getRange(choiceName + "choice");
                 if (choice != null) {
-                    UserChoice userChoice = userChoiceDAO.findForUserIdReportIdAndChoice(loggedInUser.getUser().getId(), reportId, choiceName);
+                    UserChoice userChoice = userChoiceDAO.findForUserIdAndChoice(loggedInUser.getUser().getId(), choiceName);
                     if (userChoice != null) {
                         range.setValue(userChoice.getChoiceValue());
                     }
@@ -754,56 +696,14 @@ public class AzquoBook {
             }
         }
         calculateAll();
-        List<UserChoice> allChoices = userChoiceDAO.findForUserIdAndReportId(loggedInUser.getUser().getId(), reportId);
-        for (UserChoice uc : allChoices) {
-            String choiceName = uc.getChoiceName();
-            if (choiceName.startsWith(OPTIONPREFIX)) {
-                sheetOptions.put(choiceName, uc.getChoiceValue());
-            }
-        }
-    }
-
-    private void setSortCols(LoggedInUser loggedInUser, int reportId) {
-        for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
-            com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
-            if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
-                String region = name.getText().substring(dataRegionPrefix.length());
-                UserChoice userSortCol = userChoiceDAO.findForUserIdReportIdAndChoice(loggedInUser.getUser().getId(), reportId, "sort " + region + " by row");
-                if (userSortCol != null) {
-                    try {
-                        String choiceVal = userSortCol.getChoiceValue();
-                        sortChoices.put("rows:" + region, choiceVal);
-                        loggedInUser.setSortRow(region, choiceVal);
-                    } catch (Exception ignored) {
-                        //set by the system, so should not have an exception
-                    }
-                }
-                UserChoice userSortRow = userChoiceDAO.findForUserIdReportIdAndChoice(loggedInUser.getUser().getId(), reportId, "sort " + region + " by column");
-                if (userSortRow != null) {
-                    try {
-                        sortChoices.put("columns:" + region, userSortRow.getChoiceValue());
-                        loggedInUser.setSortCol(region, userSortRow.getChoiceValue());
-                    } catch (Exception ignored) {
-                        //set by the system, so should not have an exception
-                    }
-                }
-            }
-        }
+        // was sheet options here, will be dealt with later by USERRegionoption
     }
 
     public void prepareSheet(LoggedInUser loggedInUser, int reportId, Map<Cell, Boolean> highlighted) throws Exception {
         calcMaxCol();
-        setChoices(loggedInUser, reportId);
-        setSortCols(loggedInUser, reportId);
-        UserChoice highlight = userChoiceDAO.findForUserIdReportIdAndChoice(loggedInUser.getUser().getId(), reportId, "highlight");
-        if (highlight != null) {
-            try {
-                highlightDays = Integer.parseInt(highlight.getChoiceValue());
-            } catch (Exception ignored) {
-                //missing the highlight would not be a problem
-            }
-        }
-        loadData(loggedInUser, highlighted);
+        // todo, deal with new choices and options, highlightdays
+        setChoices(loggedInUser);
+        loadData(loggedInUser, highlighted, reportId);
         //find the cells that will be used to make choices...
         calcMaxCol();
         setupColwidths();
@@ -1323,7 +1223,6 @@ public class AzquoBook {
 
     public String convertSpreadsheetToHTML(LoggedInUser loggedInUser, int reportId, String spreadsheetName, StringBuilder output) throws Exception {
         setSheet(0);
-        loggedInUser.clearSortCols();
         if (spreadsheetName != null) {
             for (int i = 0; i < wb.getWorksheets().getCount(); i++) {
                 Worksheet sheet = wb.getWorksheets().get(i);

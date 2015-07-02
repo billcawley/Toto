@@ -2,6 +2,8 @@ package com.azquo.spreadsheet.view;
 
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
+import com.azquo.admin.user.UserRegionOptions;
+import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.apache.commons.lang.math.NumberUtils;
@@ -23,14 +25,15 @@ public class ZKAzquoBookUtils {
 
     public static final String azDataRegion = "az_DataRegion";
     public static final String azOptions = "az_Options";
-    public static final String OPTIONPREFIX = "!";
 
     final SpreadsheetService spreadsheetService;
     final UserChoiceDAO userChoiceDAO;
+    final UserRegionOptionsDAO userRegionOptionsDAO;
 
-    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService,UserChoiceDAO userChoiceDAO) {
+    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService,UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO) {
         this.spreadsheetService = spreadsheetService;
         this.userChoiceDAO = userChoiceDAO;
+        this.userRegionOptionsDAO = userRegionOptionsDAO;
     }
 
 
@@ -47,14 +50,6 @@ public class ZKAzquoBookUtils {
         List<UserChoice> allChoices = userChoiceDAO.findForUserIdAndReportId(loggedInUser.getUser().getId(), reportId);
         for (UserChoice uc : allChoices) {
             userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
-        }
-
-
-
-        int highlightDays = 0;
-        if (userChoices.get("highlight") != null){ // really need to look into these string literals
-            highlightDays = Integer.parseInt(userChoices.get("highlight"));
-            book.getInternalBook().setAttribute("highlightDays", highlightDays); // useful for later, highlighting edited fields
         }
 
             for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
@@ -78,16 +73,17 @@ public class ZKAzquoBookUtils {
                     // Old one was case insensitive - not so happy about this. Will allow it on the prefix
                     if (name.getName().startsWith(azDataRegion)) { // then we have a data region to deal with here
                         String region = name.getName().substring(azDataRegion.length()); // might well be an empty string
-                        String optionsForRegion = null;
-                        CellRegion optionsRegion = getCellRegionForSheetAndName(sheet, azOptions + region);
-                        if (optionsRegion != null) {
-                            optionsForRegion = sheet.getInternalSheet().getCell(optionsRegion.getRow(), optionsRegion.getColumn()).getStringValue();
-                            if (optionsForRegion.isEmpty()) {
-                                optionsForRegion = null;
+                        UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+                        if (userRegionOptions == null){ // then get one from the sheet if we can
+                            String source = null;
+                            CellRegion optionsRegion = getCellRegionForSheetAndName(sheet, azOptions + region);
+                            if (optionsRegion != null) {
+                                source = sheet.getInternalSheet().getCell(optionsRegion.getRow(), optionsRegion.getColumn()).getStringValue();
                             }
+                            userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId,region,source);
                         }
                         // init the sort
-                        fillRegion(sheet, region, userChoices, optionsForRegion, loggedInUser, highlightDays);
+                        fillRegion(sheet, region, userChoices, userRegionOptions, loggedInUser);
                     }
                 }
                 // all data for that sheet should be populated
@@ -127,43 +123,16 @@ public class ZKAzquoBookUtils {
 
 
 
-    // taking the function from old AzquoBook and rewriting
-
-    int rowLimit = 500; // don't bother loading more than this into ZK for the moment
-
-    private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, String optionsForRegion, LoggedInUser loggedInUser, int highlightDays) throws Exception {
-        int filterCount = asNumber(getOption(region, "hiderows", userChoices, optionsForRegion));
-        if (filterCount==0) filterCount = asNumber(getOption(region, "hiderowvalues", userChoices, optionsForRegion));
-        if (filterCount == 0)
-            filterCount = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
-        int maxRows = asNumber(getOption(region, "maxrows", userChoices, optionsForRegion));
-        //if (maxRows == 0) loggedInConnection.clearSortCols();//clear it.  not sure why this is done - pushes the sort from the load into the spreadsheet if there is no restriction on si
-        int maxCols = asNumber(getOption(region, "maxcols", userChoices, optionsForRegion));
-
-
+    private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) throws Exception {
         CellRegion columnHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_ColumnHeadings" + region);
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
 
 
          if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
-
-                     /* no, don't use this, I have it in the options!
-             String sortRow = loggedInUser.getSortRow(region);
-             String sortCol = loggedInUser.getSortCol(region);
-             */
-             String sortRow = userChoices.get("sort " + region + " by row"); // I keep saying this, we have GOT to get rid of these bloody string literals!
-             String sortCol = userChoices.get("sort " + region + " by column"); // I keep saying this, we have GOT to get rid of these bloody string literals!
-             if (sortRow == null){
-                 sortRow = "";
-             }
-             if (sortCol == null){
-                 sortCol = "";
-             }
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
-                    regionToStringLists(contextDescription, sheet), filterCount, maxRows, maxCols, sortRow, sortCol, highlightDays, rowLimit);
+                    regionToStringLists(contextDescription, sheet), userRegionOptions);
              loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
-            // todo : how to indicate sortable rows/cols
             // now, put the headings into the sheet!
             // might be factored into fill range in a bit
             CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayColumnHeadings" + region);
@@ -174,8 +143,6 @@ public class ZKAzquoBookUtils {
             int colsToAdd;
 
             if (displayColumnHeadings != null && displayRowHeadings != null && displayDataRegion != null) {
-                String sortable = getOption(region, "sortable", userChoices, optionsForRegion);
-
                 // add rows
                 int maxCol = 0;
                 for (int i = 0; i <= sheet.getLastRow(); i++) {
@@ -227,19 +194,15 @@ public class ZKAzquoBookUtils {
                 //← → ↑ ↓ ↔ ↕// ah I can just paste it here, thanks IntelliJ :)
                 for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
                     boolean columnSort = false;
-                    if (row - displayColumnHeadings.getRow() == cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1 && sortable != null){ // meaning last row of headings and sortable
+                    if (row - displayColumnHeadings.getRow() == cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1 && userRegionOptions.getSortable()){ // meaning last row of headings and sortable
                         columnSort = true;
                     }
                     int col = displayColumnHeadings.getColumn();
                     for (String heading : colHeading) {
                         if (columnSort){
                             String sortArrow = " ↕";
-                            if (sortCol.startsWith(heading)){
-                                if (sortCol.endsWith("desc")){ // again with the string literals :(
-                                    sortArrow = " ↓";
-                                } else {
-                                    sortArrow = " ↑";
-                                }
+                            if (heading.equals(userRegionOptions.getSortColumn())){
+                                sortArrow = userRegionOptions.getSortColumnAsc() ? " ↑" : " ↓";
                             }
                             if (heading != null && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()){
                                 sheet.getInternalSheet().getCell(row, col).setValue(heading + sortArrow);
@@ -331,52 +294,16 @@ public class ZKAzquoBookUtils {
         return names;
     }
 
-    // this works out case insensitive based on the API
+    // this works out case insensitive based on the API, I've made this static for convenience? Is is a problem? Maybe the code calling it should be in here
+    // todo - reslove static question!
 
-    public CellRegion getCellRegionForSheetAndName(Sheet sheet, String name) {
+    public static CellRegion getCellRegionForSheetAndName(Sheet sheet, String name) {
         SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
         if (toReturn == null) {// often may fail with explicit sheet name
             toReturn = sheet.getBook().getInternalBook().getNameByName(name);
         }
         if (toReturn != null && toReturn.getRefersToSheetName().equals(sheet.getSheetName())) {
             return toReturn.getRefersToCellRegion();
-        }
-        return null;
-    }
-
-    public int asNumber(String string) {
-        try {
-            return string != null ? Integer.parseInt(string) : 0;
-        } catch (Exception ignored) {
-        }
-        return 0;
-    }
-
-    public String getOption(String region, String optionName, Map<String, String> userChoices, String optionsForRegion) {
-        String option = userChoices.get(OPTIONPREFIX + optionName + region); // first try from user choices, if not go for the sheet option
-        if (option != null && option.length() > 0) {
-            return option;
-        }
-        if (optionsForRegion != null) {
-            int foundPos = optionsForRegion.toLowerCase().indexOf(optionName.toLowerCase());
-            if (foundPos != -1){
-                if (optionsForRegion.length() > foundPos + optionName.length()) {
-                    optionsForRegion = optionsForRegion.substring(foundPos + optionName.length());//allow for a space or '=' at the end of the option name
-                    char operator = optionsForRegion.charAt(0);
-                    if (operator == '>') {//interpret the '>' symbol as '-' to create an integer
-                        optionsForRegion = "-" + optionsForRegion.substring(1);
-                    } else {
-                        //ignore '=' or a space
-                        optionsForRegion = optionsForRegion.substring(1);
-                    }
-                    foundPos = optionsForRegion.indexOf(",");
-                    if (foundPos > 0) {
-                        optionsForRegion = optionsForRegion.substring(0, foundPos);
-                    }
-                    return optionsForRegion.trim();
-                }
-                return ""; // the option was there but blank
-            }
         }
         return null;
     }

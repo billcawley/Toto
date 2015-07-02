@@ -2,6 +2,8 @@ package com.azquo.spreadsheet.view;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.user.UserChoiceDAO;
+import com.azquo.admin.user.UserRegionOptions;
+import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -22,6 +24,7 @@ import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SName;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zss.ui.event.CellMouseEvent;
@@ -47,6 +50,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     Label instructionsLabel = new Label();
     SpreadsheetService spreadsheetService;
     UserChoiceDAO userChoiceDAO;
+    UserRegionOptionsDAO userRegionOptionsDAO;
     AdminService adminService;
 
     String fullProvenance = "";
@@ -57,8 +61,10 @@ public class ZKComposer extends SelectorComposer<Component> {
         // perhaps a bit long winded but it gets us the spreadsheet
         Session session = Sessions.getCurrent();
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
+        // todo - check ZK to see if there's a better way to do this
         spreadsheetService = (SpreadsheetService) applicationContext.getBean("spreadsheetService");
         userChoiceDAO = (UserChoiceDAO) applicationContext.getBean("userChoiceDao");
+        userRegionOptionsDAO = (UserRegionOptionsDAO) applicationContext.getBean("userRegionOptions");
         adminService = (AdminService) applicationContext.getBean("adminService");
         editPopup.setId("editPopup");
         Menuitem item1 = new Menuitem("Audit");
@@ -136,7 +142,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (name != null) { // as it stands regions should not overlap, we find a name that means we know what to (try) to do
             // ok it matches a name
             if (name.getName().endsWith("Chosen")) {// would have been a one cell name
-                spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), reportId, name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
+                spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
                 reload = true;
             }
             if (name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
@@ -161,9 +167,18 @@ public class ZKComposer extends SelectorComposer<Component> {
             // todo, add row heading later if required
             if (name.getName().startsWith("az_DisplayColumnHeadings")) { // ok going to try for a sorting detect
                 String region = name.getName().substring("az_DisplayColumnHeadings".length());
+                UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+                if (userRegionOptions == null){
+                    CellRegion optionsRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), ZKAzquoBookUtils.azOptions + region);
+                    String source = null;
+                    if (optionsRegion != null) {
+                        source = event.getSheet().getInternalSheet().getCell(optionsRegion.getRow(), optionsRegion.getColumn()).getStringValue();
+                    }
+                    userRegionOptions = new UserRegionOptions(0,loggedInUser.getUser().getId(), reportId, region, source);
+                }
                 // ok here's the thing, the value on the spreadsheet (heading) is no good, it could be just for display, I want what the database would call the heading
                 // so I'd better get the headings.
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region); // maybe jam this object agains the book? Otherwise multiple books could cause problems
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region); // maybe jam this object against the book? Otherwise multiple books could cause problems
                 if (cellsAndHeadingsForDisplay != null) {
                     int localRow = event.getRow() - name.getRefersToCellRegion().getRow();
                     int localCol = event.getColumn() - name.getRefersToCellRegion().getColumn();
@@ -172,11 +187,16 @@ public class ZKComposer extends SelectorComposer<Component> {
                         if (originalHeading != null) {
                             //← → ↑ ↓ ↔ ↕
                             if (chosen.endsWith("↑")) {
-                                spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), reportId, "sort " + region + " by column", originalHeading);
+                                userRegionOptions.setSortColumn(originalHeading);
+                                userRegionOptions.setSortColumnAsc(true);
+                                userRegionOptionsDAO.store(userRegionOptions);
                                 reload = true;
                             }
                             if (chosen.endsWith("↓")) {
-                                spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), reportId, "sort " + region + " by column", originalHeading + "-desc");
+                                userRegionOptions.setSortColumn(originalHeading);
+                                userRegionOptions.setSortColumnAsc(false);
+                                userRegionOptionsDAO.store(userRegionOptions);
+                                reload = true;
                             }
                         }
                     }
@@ -191,7 +211,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
-                ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO);
+                ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
                 zkAzquoBookUtils.populateBook(newBook); // reload the data
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
             } catch (Exception e) {
@@ -203,7 +223,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onSheetSelect = #myzss")
     public void onSheetSelect(SheetSelectEvent sheetSelectEvent) {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
-        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO);
+        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
         Book book = sheetSelectEvent.getSheet().getBook();
         zkAzquoBookUtils.addValidation(zkAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),
                 (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));

@@ -6,6 +6,8 @@ import com.azquo.admin.database.UploadRecordDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.user.UserRegionOptions;
+import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
@@ -44,6 +46,8 @@ public final class ImportService {
     private SpreadsheetService spreadsheetService;
     @Autowired
     private UserChoiceDAO userChoiceDAO;
+    @Autowired
+    private UserRegionOptionsDAO userRegionOptionsDAO;
     @Autowired
     private RMIClient rmiClient;
     @Autowired
@@ -320,7 +324,7 @@ public final class ImportService {
     }
 
     private void readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames) throws Exception {
-        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, spreadsheetService);
+        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService);
         azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = azquoBook.getReportName();
         if (reportName != null) {

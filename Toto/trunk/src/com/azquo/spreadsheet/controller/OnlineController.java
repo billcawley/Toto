@@ -6,6 +6,8 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.user.UserRegionOptions;
+import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.view.AzquoBook;
@@ -34,6 +36,8 @@ import java.io.File;
 @RequestMapping("/Online")
 public class OnlineController {
 
+    // todo get rid of dao objects in controllers
+
     @Autowired
     private LoginService loginService;
     @Autowired
@@ -42,6 +46,8 @@ public class OnlineController {
     private DatabaseDAO databaseDAO;
     @Autowired
     private UserChoiceDAO userChoiceDAO;
+    @Autowired
+    private UserRegionOptionsDAO userRegionOptionsDAO;
     @Autowired
     private SpreadsheetService spreadsheetService;
     @Autowired
@@ -148,15 +154,25 @@ public class OnlineController {
                         String region = choiceName.substring(15);
                         System.out.println("saving choices: " + choiceName + " " + choiceValue);
                         if (choiceValue.equals("clear")) {
-                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "clear overrides", "");
+                            // todo, zap values from the new options record
+                            UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), onlineReport.getId(), region);
+                            userRegionOptionsDAO.removeById(userRegionOptions);
                         } else {
-                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxrows" + region, request.getParameter("maxrows" + region));
-                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "maxcols" + region, request.getParameter("maxcols" + region));
-                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "hiderows" + region, request.getParameter("hiderows" + region));
-                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), AzquoBook.OPTIONPREFIX + "sortable" + region, request.getParameter("sortable" + region));
+                            // todo, put in the new record
+                            UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), onlineReport.getId(), region);
+                            if (userRegionOptions == null){
+                                userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), onlineReport.getId(), region, loggedInUser.getAzquoBook().getSheetDefinedOptionsStringForRegion(region));
+                            }
+                            // set under the new method and store
+
+                            userRegionOptions.setRowLimit(Integer.parseInt(request.getParameter("maxrows" + region)));
+                            userRegionOptions.setColumnLimit(Integer.parseInt(request.getParameter("maxcols" + region)));
+                            userRegionOptions.setHideRows(Integer.parseInt(request.getParameter("hiderows" + region)));
+                            userRegionOptions.setSortable(request.getParameter("sortable" + region) != null && request.getParameter("sortable" + region).length() > 0);
                         }
                     } else {
-                        spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), onlineReport.getId(), choiceName, choiceValue);
+                        // then we assume vanilla
+                        spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, choiceValue);
                     }
                     opcode = "loadsheet";
                 }
@@ -198,7 +214,7 @@ public class OnlineController {
                             book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                             // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                             book.getInternalBook().setAttribute(REPORT_ID, loggedInUser.getReportId());
-                            ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO);
+                            ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO,userRegionOptionsDAO);
                             bookUtils.populateBook(book);
                             request.setAttribute(BOOK, book);
                             if (loggedInUser.getDatabase() != null) {

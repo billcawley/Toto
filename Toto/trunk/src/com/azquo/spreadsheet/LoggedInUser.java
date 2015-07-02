@@ -23,9 +23,6 @@ public class LoggedInUser {
 
     private final User user;
     private int reportId;
-    // in here as AzquoBook batch processes these, hopefully can remove later
-    private final Map<String, String> sortCol; //when a region is to be sorted on a particular column.  Column numbers start with 1, and are negative for descending
-    private final Map<String, String> sortRow;
 
     // I still need this for the locks in azquobook
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
@@ -43,8 +40,6 @@ public class LoggedInUser {
     protected LoggedInUser(final User user, Database database, String readPermissions, String writePermissions) {
         this.user = user;
         reportId = 0;
-        sortCol = new HashMap<String, String>();
-        sortRow = new HashMap<String, String>();
         sentCellsMaps = new HashMap<String, CellsAndHeadingsForDisplay>();
         azquoBook = null;
 
@@ -64,50 +59,6 @@ public class LoggedInUser {
     public void setReportId(int reportId) {
         this.reportId = reportId;
     }
-
-    public String getSortCol(final String region) {
-        if (region == null || region.isEmpty()) {
-            return sortCol.get(defaultRegion);
-        } else {
-            return sortCol.get(region);
-        }
-    }
-
-    public void setSortCol(final String region, final String sortCol) {
-        if (region == null || region.isEmpty()) {
-            this.sortCol.put(defaultRegion, sortCol);
-        } else {
-            this.sortCol.put(region, sortCol);
-        }
-
-    }
-
-    public void clearSortCols() {
-        this.sortCol.clear();
-
-    }
-
-    public String getSortRow(final String region) {
-        if (region == null || region.isEmpty()) {
-            return sortRow.get(defaultRegion);
-        } else {
-            return sortRow.get(region);
-        }
-    }
-
-    public void setSortRow(final String region, final String sortRow) {
-        if (region == null || region.isEmpty()) {
-            this.sortRow.put(defaultRegion, sortRow);
-        } else {
-            this.sortRow.put(region, sortRow);
-        }
-
-    }
-
-    public void clearSortRows() {
-        this.sortRow.clear();
-    }
-
 
     public CellsAndHeadingsForDisplay getSentCells(final String region) {
         if (region == null || region.isEmpty()) {

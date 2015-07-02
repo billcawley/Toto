@@ -103,10 +103,8 @@ Uploads
             </c:forEach>
             </select>
             </td>
-
             <td><input type="submit" name="Upload" value="Upload"/></td></form>
     </tr>
-    </table>
-
+</table>
 </body>
 </html>

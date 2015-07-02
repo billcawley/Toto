@@ -374,10 +374,7 @@ public class AdminService {
     public void removeDatabaseById(LoggedInUser loggedInUser,  int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            List<OnlineReport> onlineReports = onlineReportDAO.findForDatabaseId(db.getId());
-            for (OnlineReport onlineReport : onlineReports) {
-                userChoiceDAO.deleteForReportId(onlineReport.getId());
-            }
+            // note, used to delete choices for the reports for this DB, won't do this now as
             loginRecordDAO.removeForDatabaseId(db.getId());
             onlineReportDAO.removeForDatabaseId(db.getId());
             openDatabaseDAO.removeForDatabaseId(db.getId());
