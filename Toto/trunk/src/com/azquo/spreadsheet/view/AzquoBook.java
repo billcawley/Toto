@@ -14,7 +14,6 @@ import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.ui.ModelMap;
-import org.zkoss.zss.model.CellRegion;
 
 import javax.servlet.http.HttpServletResponse;
 import java.awt.*;
@@ -52,7 +51,7 @@ public class AzquoBook {
         int col;
     }
 
-    private Map<String, String> sortChoices = new HashMap<String, String>();
+//    private Map<String, String> sortChoices = new HashMap<String, String>();
     private Workbook wb = null;
     private Worksheet azquoSheet = null;
     private Cells azquoCells;
@@ -113,12 +112,9 @@ public class AzquoBook {
     int maxCol = 0;
     int maxHeight = 0;
 
-
     private Formatter sOut;
     Map<Range, String> sortableHeadings = new HashMap<Range, String>();
     Map<String, String[]> givenHeadings = new HashMap<String, String[]>();
-
-    private int highlightDays = 0;
 
     private static final Map<String, String> SHORTSTYLES = new HashMap<String, String>() {
         {
@@ -454,7 +450,6 @@ public class AzquoBook {
             }
         }
         return items;
-
     }
 
     private String addOption(String item, String selected) {
@@ -630,9 +625,9 @@ public class AzquoBook {
                 vRegion.coldata = getHTMLTableData("az_ColumnHeadings" + region);
                 vRegion.contextdata = getHTMLTableData("az_Context" + region);
                 vRegions.add(vRegion);
+                model.addAttribute("hdays", userRegionOptions != null ? userRegionOptions.getHighlightDays() + "" : "0");
             }
         }
-        model.addAttribute("hdays", highlightDays + "");
         model.addAttribute("menuregions", vRegions);
         model.addAttribute("regions", getRegions(loggedInUser, dataRegionPrefix).toString());//this is for javascript routines
     }
@@ -863,7 +858,7 @@ public class AzquoBook {
         }
     }
 
-    public StringBuffer convertToHTML(LoggedInUser loggedInUser, Map<Cell, Boolean> highlighted) {
+    public StringBuffer convertToHTML(LoggedInUser loggedInUser, Map<Cell, Boolean> highlighted, int reportId) {
         StringBuffer output = new StringBuffer();
         createSortableHeadings();
         createChosenMap();//the chosen cells may have moved
@@ -916,30 +911,31 @@ public class AzquoBook {
                         if (headingsRange != null && content.length() > 0) {
                             String headingsRegion = sortableHeadings.get(headingsRange);
                             String[] givenStrings = givenHeadings.get(headingsRegion);
+                            UserRegionOptions userRegionOptions = // bit hacky but should work
+                                    userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, headingsRegion.substring(headingsRegion.indexOf(":") + 1));
                             if (headingsRegion.startsWith("columns:")) {
                                 origContent = givenStrings[colNo - headingsRange.getFirstColumn()];
-                                String sortChoice = sortChoices.get(headingsRegion);
                                 headingsRegion = headingsRegion.substring(8);
-                                if (!origContent.equals(sortChoice)) {//sort is currently up
+                                // logic culd perhaps be rearranged but I'm hoping to zap this class shortly.
+                                if (userRegionOptions.getSortColumn().equals(origContent) && userRegionOptions.getSortColumnAsc()) {//sort is currently up
                                     content += "<div class='sortup'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','" + origContent + "');\"><img src='/images/sortup.png'></a></div>";
                                 } else {
                                     content += "<div class='sortup'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','');\"><img src='/images/sort0.png'></a></div>";
                                 }
-                                if (!(origContent + "-desc").equals(sortChoice)) {//sort down
+                                if (userRegionOptions.getSortColumn().equals(origContent) && !userRegionOptions.getSortColumnAsc()) {//sort down
                                     content += "<div class='sortdown'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','" + origContent + "-desc');\"><img src='/images/sortdown.png'></a></div>";
                                 } else {
                                     content += "<div class='sortdown'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','');\"><img src='/images/sort0.png'></a></div>";
                                 }
                             } else {
                                 origContent = givenStrings[colNo - headingsRange.getFirstColumn()];
-                                String sortChoice = sortChoices.get(headingsRegion);
                                 headingsRegion = headingsRegion.substring(5);
-                                if (!origContent.equals(sortChoice)) {//sort is currently left
+                                if (userRegionOptions.getSortRow().equals(origContent) && userRegionOptions.getSortRowAsc()) {//sort is currently left?
                                     content += "<div class='sortleft'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','" + origContent + "');\"><img src='/images/sortleft.png'></a></div>";
                                 } else {
                                     content += "<div class='sortleft'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','');\"><img src='/images/sort.png'></a></div>";
                                 }
-                                if (!(origContent + "-desc").equals(sortChoice)) {
+                                if (userRegionOptions.getSortRow().equals(origContent) && !userRegionOptions.getSortRowAsc()) {//sort is currently right?
                                     content += "<div class='sortright'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','" + origContent + "-desc');\"><img src='/images/sortright.png'></a></div>";
                                 } else {
                                     content += "<div class='sortright'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','');\"><img src='/images/sort.png'></a></div>";
@@ -1234,7 +1230,7 @@ public class AzquoBook {
         Map<Cell, Boolean> highlighted = new HashMap<Cell, Boolean>();
         prepareSheet(loggedInUser, reportId, highlighted);
         //TODO IGNORE ERROR CURRENTLY - SEND BACK IN MESSAGE
-        output.append(convertToHTML(loggedInUser, highlighted));
+        output.append(convertToHTML(loggedInUser, highlighted, reportId));
         return errorMessage;
     }
 

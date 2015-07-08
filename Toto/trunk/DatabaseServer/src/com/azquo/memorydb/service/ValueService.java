@@ -660,7 +660,7 @@ public final class ValueService {
         StringBuffer sb = new StringBuffer();
         //int debugCount = 0;
         boolean headingNeeded = false;
-        boolean firstValue = true; // was cal;led firstname, makes no sense!
+        boolean firstValue = true; // was called firstname, makes no sense!
         for (Value value : values) {
             if (value.getNames().size() > 1) {
                 headingNeeded = true;

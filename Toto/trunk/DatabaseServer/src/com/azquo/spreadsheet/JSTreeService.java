@@ -8,6 +8,7 @@ import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.jsonrequestentities.NameJsonRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -16,12 +17,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by cawley on 13/05/15.
- *
+ * <p/>
  * All JSTree code that deals with DB objects to go in here. It will initially have some "View" code i.e. JSON creation
- * This needs to be moved out in time. Ideally Jackson in the controller.
- *
+ * This needs to be moved out in time. Initially I'll use jackson here but in time I can take those jackson objects and send them over RMI for rendering on the front end.
+ * <p/>
  * Initial set of functions from NameService along with code moved from the controller
- *
  */
 public class JSTreeService {
 
@@ -56,26 +56,27 @@ public class JSTreeService {
 
     // from the controller, as I say in many comments need to move some of the code back to the controller but for the moment it's forced DB side
     // ok annoyingly the lookup needs to be persisted across calls, so I'll need a map in here of the lookups.
-    // THis is a pretty crude way of sorting the problem, todo : make this better given the client server split.
     // This lookup was against the LIC but I can't use this on client/server. Could find a way to zap it fully if I understand the logic, putting the last id in there as well
+    // string literals in here . . .
+    // jstree id really should be a number but it seems to be true on new? FOr the mo leave as string here
     public String processRequest(DatabaseAccessToken databaseAccessToken, String json, String jsTreeId, String topNode, String op
-            , String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) throws Exception{
+            , String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
 
         // trying for the tree id here, hope that will work
-        Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(databaseAccessToken.toString()); // todo, sort this hack later
-        if (lookup == null){
+        Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(databaseAccessToken.toString()); // todo, sort this hack later, it's called in
+        if (lookup == null) {
             lookup = new HashMap<String, JSTreeService.JsTreeNode>();
             lookupMap.put(databaseAccessToken.toString(), lookup);
         }
         if (json != null && json.length() > 0) {
             NameJsonRequest nameJsonRequest;
-                nameJsonRequest = jacksonMapper.readValue(json, NameJsonRequest.class);
+            nameJsonRequest = jacksonMapper.readValue(json, NameJsonRequest.class);
             JSTreeService.JsTreeNode currentNode = lookup.get(nameJsonRequest.id + "");
             JSTreeService.NameOrValue lineChosen = currentNode.child;
             if (lineChosen.name != null) {
                 nameJsonRequest.id = lineChosen.name.getId();//convert from jstree id.
-                return processJsonRequest(azquoMemoryDBConnection, nameJsonRequest, databaseAccessToken.getLanguages());
+                return processJsonRequest(azquoMemoryDBConnection, nameJsonRequest);
             }
         } else {
             JSTreeService.JsTreeNode current = new JSTreeService.JsTreeNode(null, null);
@@ -92,11 +93,7 @@ public class JSTreeService {
             if (jsTreeId.equals("true")) {
                 current = lookup.get(parent);
             }
-            //if (current==null&& op.equals("rename_node")){
-            //a new node has just been created
-            //}
             if (op.equals("new")) {
-                if (parents == null) parents = "false";
                 int rootId = 0;
                 if (current.child.name != null) {
                     rootId = current.child.name.getId();
@@ -107,10 +104,10 @@ public class JSTreeService {
                 if (itemsChosen != null && itemsChosen.startsWith(",")) {
                     itemsChosen = itemsChosen.substring(1);
                 }
-                if (itemsChosen == null){
+                if (itemsChosen == null) {
                     itemsChosen = backupSearchTerm;
                 }
-                return getJsonChildren(azquoMemoryDBConnection, databaseAccessToken.toString(), jsTreeId, current.child.name, parents, lookup, true, itemsChosen);
+                return getJsonChildren(azquoMemoryDBConnection, databaseAccessToken.toString(), Integer.parseInt(jsTreeId), current.child.name, parents, lookup, itemsChosen);
             }
             if (current.child.name != null) {
                 if (op.equals("move_node")) {
@@ -127,7 +124,7 @@ public class JSTreeService {
                     return "true";
                 }
                 if (op.equals("details")) {
-                    return "true,\"namedetails\":" + jsonNameDetails(current.child.name);
+                    return "true,\"namedetails\":" + getChildStructureFormattedForOutput(current.child.name);
                 }
                 throw new Exception(op + " not understood");
             }
@@ -138,19 +135,8 @@ public class JSTreeService {
     // pretty much replaced the original set of functions to do basic name manipulation
     // needs a logged in connection for the structure return
 
-    public String processJsonRequest(AzquoMemoryDBConnection azquoMemoryDBConnection, NameJsonRequest nameJsonRequest, List<String> attributeNames) throws Exception {
+    public String processJsonRequest(AzquoMemoryDBConnection azquoMemoryDBConnection, NameJsonRequest nameJsonRequest) throws Exception {
         String toReturn = "";
-        // type; elements level 1; from a to b
-        if (nameJsonRequest.operation.equalsIgnoreCase(NameService.STRUCTURE)) {
-            return getStructureForNameSearch(azquoMemoryDBConnection, nameJsonRequest.name, -1, attributeNames);//-1 indicates to show the children
-        }
-        if (nameJsonRequest.operation.equalsIgnoreCase(NameService.NAMELIST)) {
-            try {
-                return getNamesFormattedForOutput(nameService.parseQuery(azquoMemoryDBConnection, nameJsonRequest.name, attributeNames));
-            } catch (Exception e) {
-                return "Error:" + e.getMessage();
-            }
-        }
 
         if (nameJsonRequest.operation.equalsIgnoreCase(NameService.DELETE)) {
             if (nameJsonRequest.name.equals("all"))
@@ -267,29 +253,6 @@ public class JSTreeService {
         return toReturn;
     }
 
-
-    // right now ONLY called for the column heading in uploads, set peers on existing names
-
-    // should use jackson??
-
-    private String getNamesFormattedForOutput(final Collection<Name> names) {
-        // these next 10 lines or so could be considered the view . . . is it really necessary to abstract that? Worth bearing in mind.
-
-        StringBuilder sb = new StringBuilder();
-        boolean first = true;
-        sb.append("{\"names\":[");
-        for (Name n : names) {
-            if (!first) {
-                sb.append(", ");
-            }
-            sb.append("{\"name\":");
-            sb.append("\"").append(n.getDefaultDisplayName()).append("\"}");
-            first = false;
-        }
-        sb.append("]}");
-        return sb.toString();
-    }
-
     private int getTotalValues(Name name) {
         int values = name.getValues().size();
         for (Name child : name.getChildren()) {
@@ -298,143 +261,94 @@ public class JSTreeService {
         return values;
     }
 
-    // use jackson?
+    class JsonChildStructure{
+        // public for jackson to see them
+        public final String name;
+        public final int id;
+        public final int dataitems;
+        public final int mydataitems;
+        public final Map<String, Object> attributes; // peers are jammed in here as a list, perhaps not so good, todo - move peers outside?
+        public final int elements;
 
-    public String getStructureForNameSearch(AzquoMemoryDBConnection azquoMemoryDBconnection, String nameSearch, int nameId, List<String> attributeNames) throws Exception {
-
-        boolean withChildren = false;
-        if (nameId == -1) withChildren = true;
-        Name name = nameService.findByName(azquoMemoryDBconnection, nameSearch, attributeNames);
-        if (name != null) {
-            return "{\"names\":[" + getChildStructureFormattedForOutput(name, withChildren) + "]}";
-        } else {
-            List<Name> names = new ArrayList<Name>();
-            if (nameId > 0) {
-                name = nameService.findById(azquoMemoryDBconnection, nameId);
-                //children is a set, so cannot be cast directly as a list.  WHY ISN'T CHILDREN A LIST?
-                names = new ArrayList<Name>();
-                for (Name child : name.getChildren()) {
-                    names.add(child);
-                }
-            } else {
-
-                if (nameSearch.length() > 0) {
-                    names = nameService.findContainingName(azquoMemoryDBconnection, nameSearch.replace("`", ""));
-                }
-                if (names.size() == 0) {
-                    names = nameService.findTopNames(azquoMemoryDBconnection);
-                    Collections.sort(names, nameService.defaultLanguageCaseInsensitiveNameComparator);
-                }
-            }
-            StringBuilder sb = new StringBuilder();
-            sb.append("{\"names\":[");
-            int count = 0;
-            for (Name outputName : names) {
-                String nameJson = getChildStructureFormattedForOutput(outputName, withChildren);
-                if (nameJson.length() > 0) {
-                    if (count > 0) sb.append(",");
-                    sb.append(nameJson);
-                    count++;
-                }
-            }
-            sb.append("]}");
-/*            if (azquoMemoryDBconnection.getAzquoBook()!=null){
-                azquoMemoryDBconnection.getAzquoBook().nameChosenJson = sb.toString();
-            }*/
-            return sb.toString();
+        public JsonChildStructure(String name, int id, int dataitems, int mydataitems, Map<String, Object> attributes, int elements) {
+            this.name = name;
+            this.id = id;
+            this.dataitems = dataitems;
+            this.mydataitems = mydataitems;
+            this.attributes = attributes;
+            this.elements = elements;
         }
     }
 
-    // again should use jackson?
-
-    private String getChildStructureFormattedForOutput(final Name name, boolean showChildren) {
-        int totalValues = getTotalValues(name);
-        //if (totalValues > 0) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\"name\":");
-        sb.append("\"").append(jsonReady(name.getDefaultDisplayName())).append("\"");//trapping quotes in name - should not be there
-        sb.append(", \"id\":\"").append(name.getId()).append("\"");
-
-        sb.append(", \"dataitems\":\"").append(totalValues).append("\"");
-        sb.append(", \"mydataitems\":\"").append(name.getValues().size()).append("\"");
-         //putputs the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
-        int count = 0;
-        if (name.getAttributes().size() > 0 || name.getPeers().size() > 0) {
-            sb.append(",\"attributes\":{");
-            if (name.getPeers().size() > 0) {
-                String peerList = "";
-                for (Name peer : name.getPeers().keySet()) {
-                    if (peerList.length() > 0) {
-                        peerList += ", ";
-                    }
-                    peerList += peer.getDefaultDisplayName();
-                    if (!name.getPeers().get(peer)) {
-                        peerList += "--";
-                    }
-                }
-                // here and a few lines below is a bit of manual JSON building. Not sure how much this is a good idea or not. Jackson?
-                sb.append("\"peers\":\"").append(peerList).append("\"");
-                count++;
-
+    // was about 40 lines before jackson though the class abopve is of course important
+    private String getChildStructureFormattedForOutput(final Name name) throws JsonProcessingException {
+        //puts the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
+        Map<String, Object> attributesForJackson = new HashMap<String, Object>();
+        List<String> peers = new ArrayList<String>();
+        if (name.getPeers().size() > 0) {
+            for (Name peer : name.getPeers().keySet()) {
+                peers.add(peer.getDefaultDisplayName() + (name.getPeers().get(peer) ? "" : "--")); // add the -- if not additive
             }
-            for (String attName : name.getAttributes().keySet()) {
-                if (count > 0) sb.append(",");
-                sb.append("\"").append(attName).append("\":\"").append(jsonReady(name.getAttributes().get(attName))).append("\"");//replacing quotes again
-                count++;
-            }
-            sb.append("}");
+            attributesForJackson.put("peers", peers);
         }
-        final Collection<Name> children = name.getChildren();
-        sb.append(", \"elements\":\"").append(children.size()).append("\"");
-        if (showChildren) {
-            if (!children.isEmpty()) {
-                sb.append(", \"children\":[");
-                count = 0;
-                for (Name child : children) {
-                    String childData = getChildStructureFormattedForOutput(child, false);
-                    if (childData.length() > 0) {
-                        if (count > 0) sb.append(",");
-                        sb.append(childData);
-                        count++;
-                    }
-                }
-                sb.append("]");
-            }
-        }
-        sb.append("}");
-        return sb.toString();
+        attributesForJackson.putAll(name.getAttributes());
+        JsonChildStructure childStructureForJackson = new JsonChildStructure(name.getDefaultDisplayName()
+                , name.getId(), getTotalValues(name), name.getValues().size(), attributesForJackson, name.getChildren().size());
+        return jacksonMapper.writeValueAsString(childStructureForJackson);
     }
 
-    public String jsonNameDetails(Name name) {
-        return getChildStructureFormattedForOutput(name, false);
 
+    static class JsonChildren {
+        // could use a map I suppose but why not define the structure properly
+        static class Triple {
+            public final int id;
+            public final String text;
+            public final boolean children;
+
+            public Triple(int id, String text, boolean children) {
+                this.id = id;
+                this.text = text;
+                this.children = children;
+            }
+        }
+        // public for jackson to see them
+        public final int id;
+        public final Map<String, Boolean> state;
+        public final String text;
+        public final List<Triple> children;
+        public final String type;
+
+        public JsonChildren(int id, Map<String, Boolean> state, String text, List<Triple> children, String type) {
+            this.id = id;
+            this.state = state;
+            this.text = text;
+            this.children = children;
+            this.type = type;
+        }
     }
-
     // todo : jackson!
-
-    private String getJsonChildren(AzquoMemoryDBConnection loggedInConnection,String tokenString, String jsTreeId, Name name, String parents, Map<String, JSTreeService.JsTreeNode> lookup, boolean details, String searchTerm) throws Exception {
-        StringBuilder result = new StringBuilder();
-        result.append("[{\"id\":" + jsTreeId + ",\"state\":{\"opened\":true},\"text\":\"");
-
+    // zapped details parameter which is always true
+    private String getJsonChildren(AzquoMemoryDBConnection loggedInConnection, String tokenString, int jsTreeId, Name name, boolean parents, Map<String, JSTreeService.JsTreeNode> lookup, String searchTerm) throws Exception {
+        Map<String,Boolean> state = new HashMap<String, Boolean>();
+        state.put("opened", true);
+        String text = "";
         List<Name> children = new ArrayList<Name>();
-        if (jsTreeId.equals("0") && name == null) {
-            result.append("root");
+        if (jsTreeId == 0 && name == null) {
+            text = "root";
             if (searchTerm == null || searchTerm.length() == 0) {
                 children = nameService.findTopNames(loggedInConnection);
             } else {
                 try {
                     children = nameService.parseQuery(loggedInConnection, searchTerm);
-                }catch(Exception e){
-                    //carry on
+                } catch (Exception e) {//carry on
                 }
-                if (children==null || children.size() == 0){
+                if (children == null || children.size() == 0) {
                     children = nameService.findContainingName(loggedInConnection, searchTerm, Constants.DEFAULT_DISPLAY_NAME);
                 }
             }
-
         } else if (name != null) {
-            result.append(jsonReady(name.getDefaultDisplayName()));
-            if (!parents.equals("true")) {
+            text = name.getDefaultDisplayName();
+            if (!parents) {
                 for (Name child : name.getChildren()) {
                     children.add(child);
                 }
@@ -443,133 +357,57 @@ public class JSTreeService {
                     children.add(nameParent);
                 }
             }
-
         }
-
-        result.append("\"");
-        int maxdebug = 500;
-        if (children.size() > 0 || (details && name != null && name.getAttributes() != null && name.getAttributes().size() > 1)) {
-            result.append(",\"children\":[");
+        List<JsonChildren.Triple> childTriples = new ArrayList<JsonChildren.Triple>();
+        if (children.size() > 0 || (name != null && name.getAttributes().size() > 1)) {
             int lastId = 0;
-            if (lastJSTreeIdMap.get(tokenString) != null){
+            if (lastJSTreeIdMap.get(tokenString) != null) {
                 lastId = lastJSTreeIdMap.get(tokenString);
             }
             int count = 0;
             for (Name child : children) {
-                if (maxdebug-- == 0) break;
-                if (count++ > 0) {
-                    result.append(",");
-                }
                 lastJSTreeIdMap.put(tokenString, ++lastId);
                 JSTreeService.NameOrValue nameOrValue = new JSTreeService.NameOrValue();
                 nameOrValue.values = null;
                 nameOrValue.name = child;
                 JSTreeService.JsTreeNode newNode = new JSTreeService.JsTreeNode(nameOrValue, name);
                 lookup.put(lastId + "", newNode);
+                boolean childrenBoolean = child.getChildren().size() > 0 || child.getValues().size() > 0 || child.getAttributes().size() > 1;
                 if (count > 100) {
-                    result.append("{\"id\":" + lastId + ",\"text\":\"" + (children.size() - 100) + " more....\"}");
+                    childTriples.add(new JsonChildren.Triple(lastId, (children.size() - 100) + " more....", childrenBoolean));
                     break;
                 }
-                result.append("{\"id\":" + lastId + ",\"text\":\"" + jsonReady(child.getDefaultDisplayName()) + "\"");
-                if (child.getChildren().size() > 0 || child.getValues().size() > 0 || (details && child.getAttributes().size() > 1)) {
-                    result.append(",\"children\":true");
-                }
-                result.append("}");
-
+                childTriples.add(new JsonChildren.Triple(lastId, child.getDefaultDisplayName(), childrenBoolean));
+                count++;
             }
-            if (details && name != null) {
+            if (name != null) {
                 for (String attName : name.getAttributes().keySet()) {
                     if (!attName.equals(Constants.DEFAULT_DISPLAY_NAME)) {
-                        if (count++ > 0) {
-                            result.append(",");
-                        }
                         lastJSTreeIdMap.put(tokenString, ++lastId);
                         JSTreeService.NameOrValue nameOrValue = new JSTreeService.NameOrValue();
                         nameOrValue.values = null;
                         nameOrValue.name = name;
                         JSTreeService.JsTreeNode newNode = new JSTreeService.JsTreeNode(nameOrValue, name);
-
                         lookup.put(lastId + "", newNode);
-
-                        result.append("{\"id\":" + lastId + ",\"text\":\"" + attName + ":" + jsonReady(name.getAttributes().get(attName)) + "\"}");
+                        childTriples.add(new JsonChildren.Triple(lastId, attName + ":" + name.getAttributes().get(attName), false));
                     }
                 }
-
             }
-
-            result.append("]");
         } else {
-            if (name!=null){
-                result.append(getJsonDataforOneName(tokenString, name, jsTreeId));
-            }else{
-                return "[{\"id\":0,\"state\":{\"opened\":true},\"text\":\"" + searchTerm + " not found\"}]";
-            }
+            return jacksonMapper.writeValueAsString(new JsonChildren(0, state, searchTerm, new ArrayList<JsonChildren.Triple>(), ""));
         }
-        result.append(",\"type\":\"");
+        String type;
         if (children.size() > 0) {
-            result.append("parent");
-
+            type = "parent";
         } else if (name != null && name.getValues().size() > 0) {
             if (name.getValues().size() > 1) {
-                result.append("values");
+                type = "values";
             } else {
-                result.append("value");
+                type = "value";
             }
         } else {
-            result.append("child");
+            type = "child";
         }
-        result.append("\"}]");
-        return result.toString();
+        return jacksonMapper.writeValueAsString(new JsonChildren(jsTreeId, state, text, childTriples, type));
     }
-
-    public String getJsonDataforOneName(final String tokenString, final Name name, String jsTreeId) throws Exception {
-        final StringBuilder sb = new StringBuilder();
-        Set<Name> names = new HashSet<Name>();
-        names.add(name);
-        List<Set<Name>> searchNames = new ArrayList<Set<Name>>();
-        searchNames.add(names);
-        Map<Set<Name>, Set<Value>> showValues = valueService.getSearchValues(searchNames);
-        if (showValues == null) {
-            return "";
-        }
-        sb.append(", \"children\":[");
-        int lastId = 0;
-        if (lastJSTreeIdMap.get(tokenString) != null){
-            lastId = lastJSTreeIdMap.put(tokenString, ++lastId);
-        }
-        int count = 0;
-        for (Set<Name> valNames : showValues.keySet()) {
-            Set<Value> values = showValues.get(valNames);
-            if (count++ > 0) {
-                sb.append(",");
-            }
-            lastJSTreeIdMap.put(tokenString, ++lastId);
-            JSTreeService.NameOrValue nameOrValue = new JSTreeService.NameOrValue();
-            nameOrValue.values = values;
-            nameOrValue.name = null;
-            JSTreeService.JsTreeNode newNode = new JSTreeService.JsTreeNode(nameOrValue, name);
-            final Map<String, JsTreeNode> stringJsTreeNodeMap = lookupMap.get(tokenString);
-            stringJsTreeNodeMap.put(lastId + "", newNode);// asking for a null pointer perhaps, geuss lets see what happens
-            if (count > 100) {
-                sb.append("{\"id\":" + lastId + ",\"text\":\"" + (showValues.size() - 100) + " more....\"}");
-                break;
-            }
-            sb.append("{\"id\":" + lastId + ",\"text\":\"" + valueService.addValues(values) + " ");
-            for (Name valName : valNames) {
-                if (valName.getId() != name.getId()) {
-                    sb.append(jsonReady(valName.getDefaultDisplayName()) + " ");
-                }
-            }
-            sb.append("\"");
-            sb.append("}");
-        }
-        sb.append("]");
-        return sb.toString();
-    }
-
-    private String jsonReady(String text){
-        return text.replace("\\","\\\\").replace("\"","\\\"");
-    }
-
-
 }

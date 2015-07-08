@@ -10,7 +10,6 @@ import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.*;
-import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,7 +72,6 @@ public class OnlineController {
             , @RequestParam(value = "editedname", required = false) String choiceName
             , @RequestParam(value = "editedvalue", required = false) String choiceValue
             , @RequestParam(value = "reportid", required = false) String reportId
-            , @RequestParam(value = "chart", required = false) String chart
             , @RequestParam(value = "jsonfunction", required = false, defaultValue = "azquojsonfeed") String jsonFunction
             , @RequestParam(value = "row", required = false, defaultValue = "") String rowStr
             , @RequestParam(value = "col", required = false, defaultValue = "") String colStr
@@ -198,9 +196,6 @@ public class OnlineController {
                     model.addAttribute("content", result);
                     return "utf8javascript";
                 }
-                if (opcode.equals("chart")) {
-                    result = jsonFunction + "({\"chart\":\"" + chart + "\"})";
-                }
                 if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
                     // logic here is going to change to support the different renderers
                     if (onlineReport.getId() != 1) {// todo, make this makem a bit more sense, get rid of report id 1 being a special case
@@ -256,7 +251,6 @@ public class OnlineController {
             , @RequestParam(value = "editedname", required = false) String choiceName
             , @RequestParam(value = "editedvalue", required = false) String choiceValue
             , @RequestParam(value = "reportid", required = false) String reportId
-            , @RequestParam(value = "chart", required = false) String chart
             , @RequestParam(value = "jsonfunction", required = false, defaultValue = "azquojsonfeed") String jsonFunction
             , @RequestParam(value = "row", required = false, defaultValue = "") String rowStr
             , @RequestParam(value = "col", required = false, defaultValue = "") String colStr
@@ -266,6 +260,6 @@ public class OnlineController {
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
     ) {
-        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, chart, jsonFunction, rowStr, colStr, opcode, spreadsheetName, database, reportToLoad, submit, null);
+        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, jsonFunction, rowStr, colStr, opcode, spreadsheetName, database, reportToLoad, submit, null);
     }
 }

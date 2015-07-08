@@ -420,8 +420,8 @@ public class SpreadsheetService {
                 , userRegionOptions.getSortRowAsc(), userRegionOptions.getSortColumn(), userRegionOptions.getSortColumnAsc(), userRegionOptions.getHighlightDays());
     }
 
-    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) throws Exception{
-        return rmiClient.getServerInterface().processJSTreeRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, database, itemsChosen, position, backupSearchTerm);
+    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm) throws Exception{
+        return rmiClient.getServerInterface().processJSTreeRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, itemsChosen, position, backupSearchTerm);
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)

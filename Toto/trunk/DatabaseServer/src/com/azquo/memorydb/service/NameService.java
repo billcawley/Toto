@@ -50,8 +50,6 @@ public final class NameService {
     //public static final String ALL = "all";
     public static final char NAMEMARKER = '!';
     public static final char ATTRIBUTEMARKER = '|';
-    public static final String STRUCTURE = "structure";
-    public static final String NAMELIST = "namelist";
     public static final String CREATE = "create";
     public static final String PEERS = "peers";
     public static final String EDIT = "edit";

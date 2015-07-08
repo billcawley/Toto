@@ -250,8 +250,8 @@ I should be ok for stringtokenizer at this point
                 || term.equalsIgnoreCase(NameService.SORTED) || term.equalsIgnoreCase(NameService.CHILDREN)
                 || term.equalsIgnoreCase(NameService.PEERS) || term.equalsIgnoreCase(NameService.PARENTS)
                 || term.equalsIgnoreCase(NameService.COUNTBACK) || term.equalsIgnoreCase(NameService.COMPAREWITH)
-                || term.equalsIgnoreCase(NameService.AS) || term.equalsIgnoreCase(NameService.STRUCTURE)
-                || term.equalsIgnoreCase(NameService.NAMELIST) || term.equalsIgnoreCase(NameService.CREATE)
+                || term.equalsIgnoreCase(NameService.AS)
+                || term.equalsIgnoreCase(NameService.CREATE)
                 || term.equalsIgnoreCase(NameService.EDIT) || term.equalsIgnoreCase(NameService.NEW)
                 || term.equalsIgnoreCase(NameService.SELECT)
                 || term.equalsIgnoreCase(NameService.DELETE) || term.equalsIgnoreCase(NameService.WHERE);

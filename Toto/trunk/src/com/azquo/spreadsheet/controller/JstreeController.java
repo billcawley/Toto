@@ -42,8 +42,6 @@ public class JstreeController {
     public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "op", required = false) String op
             , @RequestParam(value = "id", required = false) String jsTreeId
-            , @RequestParam(value = "user", required = false) String user
-            , @RequestParam(value = "password", required = false) String password
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "position", required = false) String position
             , @RequestParam(value = "parent", required = false) String parent
@@ -72,7 +70,8 @@ public class JstreeController {
                 backupSearchTerm =loggedInUser.getAzquoBook().getRangeData("az_inputInspectChoice");// don't reallyunderstand, what's important is that this is now client side
             }
             // todo - clean up the logic here
-            String result = spreadsheetService.processJSTreeRequest(loggedInUser.getDataAccessToken(),json,jsTreeId,topNode,op,parent,parents,database, itemsChosen,position,backupSearchTerm);
+            String result = spreadsheetService.processJSTreeRequest(loggedInUser.getDataAccessToken(),json,jsTreeId,topNode
+                    ,op,parent,parents != null && parents.equals("true"),itemsChosen,position,backupSearchTerm);
             model.addAttribute("content", result);
             // seems to be the logic from before, if children/new then don't do the funciton. Not sure why . . .
             if (!op.equals("children") && !op.equals("new")) {

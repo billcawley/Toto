@@ -123,9 +123,9 @@ public class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, String parents, String database, String itemsChosen, String position, String backupSearchTerm) throws RemoteException {
+    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm) throws RemoteException {
         try {
-            return jsTreeService.processRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, database, itemsChosen, position, backupSearchTerm);
+            return jsTreeService.processRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, itemsChosen, position, backupSearchTerm);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
