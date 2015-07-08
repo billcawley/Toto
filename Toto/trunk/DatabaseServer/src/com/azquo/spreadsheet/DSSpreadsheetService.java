@@ -498,8 +498,6 @@ seaports;children   container;children
         return headings;
     }*/
 
-    // vanilla jackson might not be good enough but this is too much manual json writing I think
-
     // return headings as strings for display, I'm going to put blanks in here if null.
 
     public List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languages) {
@@ -693,18 +691,21 @@ seaports;children   container;children
         // sorting on totals overrides an explicitly selected ordering. Hmmmmm.
         boolean sortOnColTotals = false;
         boolean sortOnRowTotals = false;
-
-        if (Math.abs(maxRows) < totalRows) {
-            sortOnRowTotals = true;
-            sortRowAsc = maxRows < 0;
-        } else {
-            maxRows = 0; // zero it as it's a moot point
+        if (maxRows != 0){
+            if (Math.abs(maxRows) < totalRows) {
+                sortOnRowTotals = true;
+                sortRowAsc = maxRows < 0;
+            } else {
+                maxRows = 0; // zero it as it's a moot point
+            }
         }
-        if (Math.abs(maxCols) < totalCols) {
-            sortOnColTotals = true;
-            sortColAsc = maxCols < 0;
-        } else {
-            maxCols = 0;
+        if (maxCols != 0){
+            if (Math.abs(maxCols) < totalCols) {
+                sortOnColTotals = true;
+                sortColAsc = maxCols < 0;
+            } else {
+                maxCols = 0;
+            }
         }
         maxRows = Math.abs(maxRows);
         maxCols = Math.abs(maxCols);
