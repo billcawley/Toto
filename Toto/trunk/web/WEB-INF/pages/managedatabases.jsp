@@ -9,8 +9,6 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <html>
 <head>
-    <link rel='stylesheet' id='bootstrap-css'  href='/wp-content/themes/stylish-v1.2.2/styles/bootstrap/css/bootstrap.css?ver=3.9.5' type='text/css' media='all' />
-    <link rel='stylesheet' id='bootstrap-responsive-css'  href='https://www.azquo.com/wp-content/themes/stylish-v1.2.2/styles/bootstrap/css/bootstrap-responsive.css?ver=3.9.5' type='text/css' media='all' />
     <title>Manage Databases</title>
 </head>
 <body>
@@ -19,14 +17,14 @@
 <br/>${error}
 <table>
   <tr>
-  <form action="/api/ManageDatabases" method="post"><td>New Database</td><td><input name="createDatabase"/></td><td><input type="submit" name="Create Database" value="Create Database"/></td></form>
+  <form action="/api/ManageDatabases" method="post"><td>New Database</td><td><input name="createDatabase"/></td><td><input name="databaseType"/></td><td><input type="submit" name="Create Database" value="Create Database"/></td></form>
   </tr>
   <form action="/api/ManageDatabases" method="post">
     <tr>
-    <td>Target Database</td><td><input name="backupTarget"/></td><td><input type="submit" name="Backup Database" value="Backup Database"/></td>
+    <td>Target Database</td><td><input name="backupTarget"/></td><td></td><td><input type="submit" name="Backup Database" value="Backup Database"/></td>
       </tr>
     <tr>
-    <td>Summary Level</td><td><input name="summaryLevel"/></td><td></td>
+    <td>Summary Level</td><td><input name="summaryLevel"/></td><td></td><td></td>
     </tr>
   </form>
 </table>
@@ -39,6 +37,7 @@
 <!--    <td>${database.businessId}</td> -->
     <td>Name</td>
     <td>MySQLName</td>
+      <td>Database type</td>
     <td>Name Count</td>
     <td>Value Count</td>
       <td></td>
@@ -53,7 +52,8 @@
       <!-- <td>${database.businessId}</td> -->
       <td>${database.name}</td>
       <td>${database.mySQLName}</td>
-      <td>${database.nameCount}</td>
+        <td>${database.databaseType}</td>
+        <td>${database.nameCount}</td>
       <td>${database.valueCount}</td>
         <td><a href="#" onclick="window.open('/api/Jstree?op=new&database=${database.urlEncodedName}', '_blank', 'toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600')">Inspect</a></td>
         <td><a href="/api/ManageDatabases?emptyId=${database.id}" onclick="return confirm('Are you sure?')">Empty</a></td>

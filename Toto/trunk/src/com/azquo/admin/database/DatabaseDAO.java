@@ -31,6 +31,7 @@ public final class DatabaseDAO extends StandardDAO<Database> {
     public static final String BUSINESSID = "business_id";
     public static final String NAME = "name";
     public static final String MYSQLNAME = "mysql_name";
+    public static final String DATABASETYPE = "database_type";
     public static final String NAMECOUNT = "name_count";
     public static final String VALUECOUNT = "value_count";
 
@@ -43,6 +44,7 @@ public final class DatabaseDAO extends StandardDAO<Database> {
         toReturn.put(BUSINESSID, database.getBusinessId());
         toReturn.put(NAME, database.getName());
         toReturn.put(MYSQLNAME, database.getMySQLName());
+        toReturn.put(DATABASETYPE, database.getDatabaseType());
         toReturn.put(NAMECOUNT, database.getNameCount());
         toReturn.put(VALUECOUNT, database.getValueCount());
         return toReturn;
@@ -59,6 +61,7 @@ public final class DatabaseDAO extends StandardDAO<Database> {
                         , rs.getInt(BUSINESSID)
                         , rs.getString(NAME)
                         , rs.getString(MYSQLNAME)
+                        , rs.getString(DATABASETYPE)
                         , rs.getInt(NAMECOUNT)
                         , rs.getInt(VALUECOUNT));
             } catch (Exception e) {

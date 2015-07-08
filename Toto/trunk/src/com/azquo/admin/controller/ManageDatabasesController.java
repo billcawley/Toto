@@ -73,6 +73,7 @@ public class ManageDatabasesController {
         public String getMySQLName(){
             return database.getMySQLName();
         }
+        public String getDatabaseType() { return database.getDatabaseType(); }
         public int getNameCount(){
             return database.getNameCount();
         }
@@ -87,6 +88,7 @@ public class ManageDatabasesController {
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "createDatabase", required = false) String createDatabase
+            , @RequestParam(value = "databaseType", required = false) String databaseType
             , @RequestParam(value = "emptyId", required = false) String emptyId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "unloadId", required = false) String unloadId
@@ -103,7 +105,7 @@ public class ManageDatabasesController {
             StringBuilder error = new StringBuilder();
             try {
                 if (createDatabase != null && !createDatabase.isEmpty()) {
-                    adminService.createDatabase(createDatabase, loggedInUser);
+                    adminService.createDatabase(createDatabase, databaseType, loggedInUser);
                 }
                 if (emptyId != null && NumberUtils.isNumber(emptyId)) {
                     adminService.emptyDatabaseById(loggedInUser, Integer.parseInt(emptyId));

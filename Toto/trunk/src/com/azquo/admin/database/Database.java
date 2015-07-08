@@ -18,6 +18,7 @@ public final class Database extends StandardEntity {
     int businessId;
     String name;
     String mySQLName;
+    String databaseType;
     int nameCount;
     int valueCount;
 
@@ -26,6 +27,7 @@ public final class Database extends StandardEntity {
             , int businessId
             , String name
             , String mySQLName
+            , String databaseType
             , int nameCount
             , int valueCount) {
         this.id = id;
@@ -34,6 +36,7 @@ public final class Database extends StandardEntity {
         this.businessId = businessId;
         this.name = name;
         this.mySQLName = mySQLName;
+        this.databaseType = databaseType;
         this.nameCount = nameCount;
         this.valueCount = valueCount;
     }
@@ -89,6 +92,18 @@ public final class Database extends StandardEntity {
         this.mySQLName = mySQLName;
     }
 
+    public String getDatabaseType() {
+        return databaseType;
+    }
+
+    public void setDatabaseType(String databaseType) {
+        this.databaseType = databaseType;
+    }
+
+
+
+
+
     public int getNameCount() {
         return nameCount;
     }
@@ -114,6 +129,7 @@ public final class Database extends StandardEntity {
                 ", businessId=" + businessId +
                 ", name='" + name + '\'' +
                 ", mySQLName='" + mySQLName + '\'' +
+                ", databaseType='" + databaseType + '\'' +
                 ", nameCount=" + nameCount +
                 ", valueCount=" + valueCount +
                 '}';

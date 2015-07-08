@@ -129,7 +129,7 @@ public class AdminService {
 
     // ok in new report/datavase server split creating a database needs distinct bits
 
-    public void createDatabase(final String databaseName, final LoggedInUser loggedInUser) throws Exception {
+    public void createDatabase(final String databaseName, final String databaseType, final LoggedInUser loggedInUser) throws Exception {
         if (loggedInUser.getUser().isAdministrator()) {
             Database existing = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), databaseName);
             if (existing != null) {
@@ -137,7 +137,7 @@ public class AdminService {
             }
             final String mysqlName = getSQLDatabaseName(loggedInUser, databaseName);
             final Business b = businessDAO.findById(loggedInUser.getUser().getBusinessId());
-            final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), b.getId(), databaseName, mysqlName, 0, 0);
+            final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), b.getId(), databaseName, mysqlName, databaseType, 0, 0);
             databaseDAO.store(database);
             // will be over to the DB side
             createDatabase(database.getMySQLName());
