@@ -459,7 +459,6 @@ public class SpreadsheetService {
         return ""; // maybe "not found"?
     }
 
-    // todo : make work again after code split
     public void saveData(LoggedInUser loggedInUser, String region) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
         if (cellsAndHeadingsForDisplay != null){

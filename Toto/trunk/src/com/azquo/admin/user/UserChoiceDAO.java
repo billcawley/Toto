@@ -70,7 +70,7 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
         return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + CHOICENAME + "` = :" + CHOICENAME, namedParams);
     }
 
-    public List<UserChoice> findForUserIdAndReportId(final int userId, final int reportId) {
+    public List<UserChoice> findForUserId(final int userId) {
         //only used by the convert to Azquo_master;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);

@@ -47,7 +47,7 @@ public class ZKAzquoBookUtils {
         Map<String, String> userChoices = new HashMap<String, String>();
         // get the user choices for the report. Can be drop down values, sorting/highlighting etc.
         // a notable point here is that the user choices don't distinguish between sheets
-        List<UserChoice> allChoices = userChoiceDAO.findForUserIdAndReportId(loggedInUser.getUser().getId(), reportId);
+        List<UserChoice> allChoices = userChoiceDAO.findForUserId(loggedInUser.getUser().getId());
         for (UserChoice uc : allChoices) {
             userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
         }
@@ -83,7 +83,7 @@ public class ZKAzquoBookUtils {
                             userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId,region,source);
                         }
                         // init the sort
-                        fillRegion(sheet, region, userChoices, userRegionOptions, loggedInUser);
+                        fillRegion(sheet, region, userRegionOptions, loggedInUser);
                     }
                 }
                 // all data for that sheet should be populated
@@ -123,7 +123,7 @@ public class ZKAzquoBookUtils {
 
 
 
-    private void fillRegion(Sheet sheet, String region, Map<String, String> userChoices, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) throws Exception {
+    private void fillRegion(Sheet sheet, String region, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) throws Exception {
         CellRegion columnHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_ColumnHeadings" + region);
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
@@ -204,31 +204,30 @@ public class ZKAzquoBookUtils {
                             if (heading.equals(userRegionOptions.getSortColumn())){
                                 sortArrow = userRegionOptions.getSortColumnAsc() ? " ↑" : " ↓";
                             }
-                            if (heading != null && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()){
+                            if (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()){
                                 sheet.getInternalSheet().getCell(row, col).setValue(heading + sortArrow);
-                            }
-                            if (!sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty() && columnSort) {
+                            } else {
                                 sheet.getInternalSheet().getCell(row, col).setValue(sheet.getInternalSheet().getCell(row, col).getValue() + sortArrow);
                             }
                             String value = sheet.getInternalSheet().getCell(row, col).getStringValue();
                             value = value.substring(0, value.length() - 2);
                             Range chosenRange = Ranges.range(sheet, row, col, row, col);
                             // todo, investigate how commas would fit in in a heading name
+                            // think I'll just zap em for the mo.
+                            value = value.replace(",","");
                             chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true,
                                     value + " ↕," + value + " ↑," + value + " ↓", null,
                                     true, "Select Sorting", "",
                                     true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
-
                         } else if (heading != null && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) { // vanilla, overwrite if not
                             sheet.getInternalSheet().getCell(row, col).setValue(heading);
                         }
-
                         col++;
                     }
                     row++;
                 }
 
-                // todo, add row headings if required
+                // for the moment don't allow user coolum sorting (row heading sorting). SHouldn't be too difficult to add
 
 /*                if (sortable != null && sortable.equalsIgnoreCase("all")) { // criteria from azquobook to make row heading sortable
                 }*/
@@ -250,9 +249,6 @@ public class ZKAzquoBookUtils {
                             // see if this works for highlighting
                             if (cellValue.isHighlighted()){
                                 CellOperationUtil.applyFontColor(Ranges.range(sheet, row,col), "#FF0000");
-                                //System.out.println(row + ", " + col + "red!");
-                            } else {
-                                //System.out.println(row + ", " + col + "not red!");
                             }
                         }
                         col++;
@@ -338,7 +334,7 @@ public class ZKAzquoBookUtils {
                             //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
                             chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
                                     true, "title", "msg",
-                                    true, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+                                    false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
 /*                                    book.getInternalBook().addEventListener(
                                             new ModelEventListener() {
                                                 @Override
@@ -353,7 +349,7 @@ public class ZKAzquoBookUtils {
                             Range chosenRange = Ranges.range(sheet, chosen.getRow(), chosen.getColumn(), chosen.getLastRow(), chosen.getLastColumn());
                             chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "{\"" + e.getMessage() + "\"}", null,
                                     true, "title", "msg",
-                                    true, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+                                    false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
 
                         }
                         numberOfValidationsAdded++;

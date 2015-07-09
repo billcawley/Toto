@@ -19,6 +19,9 @@ import java.util.*;
  * Created by cawley on 20/05/15.
  * <p/>
  * The new home of Magento loading logic. Much of this was in DataLoadService.
+ *
+ * Really the logic in here is defined by the data as dumped from Magento.
+ *
  */
 public class DSDataLoadService {
 
@@ -63,6 +66,8 @@ public class DSDataLoadService {
     }
 
     private static final DecimalFormat df = new DecimalFormat("#.00");
+
+    // A simple marker in the Azquo DB saying when the last upload happened, set at the end of loadData.
 
     public String findLastUpdate(final DatabaseAccessToken databaseAccessToken, final String remoteAddress) throws Exception {
         final AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);

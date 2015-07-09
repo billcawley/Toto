@@ -125,7 +125,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
 
     public List<OnlineReport> findForDatabaseId(final int databaseId, String databaseType) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        if (databaseType.length() == 0){
+        if (databaseType == null || databaseType.length() == 0){
             databaseType = "none";
         }
         namedParams.addValue(DATABASEID, databaseId);

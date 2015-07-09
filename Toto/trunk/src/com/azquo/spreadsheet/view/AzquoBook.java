@@ -51,7 +51,7 @@ public class AzquoBook {
         int col;
     }
 
-//    private Map<String, String> sortChoices = new HashMap<String, String>();
+    //    private Map<String, String> sortChoices = new HashMap<String, String>();
     private Workbook wb = null;
     private Worksheet azquoSheet = null;
     private Cells azquoCells;
@@ -321,11 +321,11 @@ public class AzquoBook {
                 String val = azquoCell.getStringValue();
                 if (val.equals("0.0")) val = "";
                 Cell currentCell = azquoCells.get(range.getFirstRow() + rowNo, range.getFirstColumn() + col);
-                if (highlighted != null){
+                if (highlighted != null) {
                     highlighted.put(currentCell, azquoCell.isHighlighted());
                 }
                 // force all azquobook to locked now
-                    currentCell.getStyle().setLocked(true);
+                currentCell.getStyle().setLocked(true);
                 String existingCellVal = currentCell.getStringValue();
                 if (overwrite || existingCellVal == null || existingCellVal.length() == 0) {
                     setCellValue(currentCell, val);
@@ -352,7 +352,7 @@ public class AzquoBook {
             int col = 0;
             for (String heading : row) {
                 Cell currentCell = azquoCells.get(range.getFirstRow() + rowNo, range.getFirstColumn() + col);
-                if (currentCell.getStringValue() == null || currentCell.getStringValue().isEmpty()){ // with headings don't overwrite existing data
+                if (currentCell.getStringValue() == null || currentCell.getStringValue().isEmpty()) { // with headings don't overwrite existing data
                     currentCell.getStyle().setLocked(true);
                     setCellValue(currentCell, heading);
                 }
@@ -370,7 +370,7 @@ public class AzquoBook {
         return toReturn.toArray(new String[toReturn.size()]);
     }
 
-    private void fillRegion(LoggedInUser loggedInUser, String region,Map<Cell, Boolean> highlighted, UserRegionOptions userRegionOptions) throws Exception {
+    private void fillRegion(LoggedInUser loggedInUser, String region, Map<Cell, Boolean> highlighted, UserRegionOptions userRegionOptions) throws Exception {
         logger.info("loading " + region);
         Range rowHeadings = getRange("az_rowheadings" + region);
         if (rowHeadings == null) {
@@ -391,7 +391,7 @@ public class AzquoBook {
         loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
         // think this language detection is sound
         fillRange(dataRegionPrefix + region, cellsAndHeadingsForDisplay.getData(), true, highlighted);
-        String[] givenColumnHeadings = fillRange("az_displaycolumnheadings" + region, cellsAndHeadingsForDisplay.getColumnHeadings(),false);
+        String[] givenColumnHeadings = fillRange("az_displaycolumnheadings" + region, cellsAndHeadingsForDisplay.getColumnHeadings(), false);
         // this nis a bit hacky but I'm not so bothered as azquobook should be on the way out
         if (userRegionOptions.getSortable()) {
             Range displayColumnHeadings = getRange("az_displaycolumnheadings" + region);
@@ -399,7 +399,8 @@ public class AzquoBook {
                 givenHeadings.put("columns:" + region, givenColumnHeadings);
             }
         }
-        /*String[] givenRowHeadings = */fillRange("az_displayrowheadings" + region, cellsAndHeadingsForDisplay.getRowHeadings(), true);
+        /*String[] givenRowHeadings = */
+        fillRange("az_displayrowheadings" + region, cellsAndHeadingsForDisplay.getRowHeadings(), true);
         /* leave col sorting for the mo
         if (sortable != null && sortable.equalsIgnoreCase("all")) {
             Range displayRowHeadings = getRange("az_displayrowheadings" + region);
@@ -409,9 +410,9 @@ public class AzquoBook {
         }*/
     }
 
-    public String getSheetDefinedOptionsStringForRegion(String region){
+    public String getSheetDefinedOptionsStringForRegion(String region) {
         Range optionrange = getRange("az_options" + region);
-        if (optionrange == null || optionrange.getCellOrNull(0, 0) == null){
+        if (optionrange == null || optionrange.getCellOrNull(0, 0) == null) {
             return null;
         }
         return optionrange.getCellOrNull(0, 0).getStringValue();
@@ -642,20 +643,20 @@ public class AzquoBook {
                 long regStart = System.currentTimeMillis();
                 try {
                     UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, regionName);
-                    if (userRegionOptions == null){
+                    if (userRegionOptions == null) {
                         userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, regionName, getSheetDefinedOptionsStringForRegion(regionName));
                     }
-                    fillRegion(loggedInUser, regionName,highlighted, userRegionOptions);
+                    fillRegion(loggedInUser, regionName, highlighted, userRegionOptions);
                 } catch (RemoteException re) {
                     Throwable t = re.detail.getCause();
-                    if (t != null){
+                    if (t != null) {
                         errorMessage = t.getLocalizedMessage();
                         t.printStackTrace();
                     } else {
                         errorMessage = re.getMessage();
                         re.printStackTrace();
                     }
-                }catch (Exception e) {
+                } catch (Exception e) {
                     errorMessage = e.getMessage();
                     e.printStackTrace();
                 }
@@ -696,7 +697,6 @@ public class AzquoBook {
 
     public void prepareSheet(LoggedInUser loggedInUser, int reportId, Map<Cell, Boolean> highlighted) throws Exception {
         calcMaxCol();
-        // todo, deal with new choices and options, highlightdays
         setChoices(loggedInUser);
         loadData(loggedInUser, highlighted, reportId);
         //find the cells that will be used to make choices...
@@ -826,7 +826,7 @@ public class AzquoBook {
                     //content = "<select class = \"" + selectClass + "\" onchange=\"selectChosen('" + choiceName + "')\" id=\"" + ChosenMap.get(cell) + "\" class=\"" + cellClass + "\" >" + cr;
                     content += "<option value = ''></option>";
                     for (String constant : constants) {
-                        if (constant!=null){
+                        if (constant != null) {
                             content += addOption(constant, origContent);
                         }
                     }
@@ -836,10 +836,10 @@ public class AzquoBook {
                     }
                     content += "</select>";
                 } else {
-                    if (choiceList.size() > 1499){
+                    if (choiceList.size() > 1499) {
                         content = "<input class = '" + selectClass + "' type='text' oninput='`chooseFromList(\"" + choiceName + "\")' id='select" + choiceName + "' class='" + cellClass + "' value='" + origContent + "' />" + cr;
-                    }else {
-                    content = "";
+                    } else {
+                        content = "";
                     }
                     cell.setValue("");
 
@@ -889,7 +889,7 @@ public class AzquoBook {
                             content = "<div class='r90'>" + content + "</div>";
                         }*/
                         Boolean cellHighlighted = null;
-                        if (highlighted != null){
+                        if (highlighted != null) {
                             cellHighlighted = highlighted.get(cell);
                         }
                         if (cellHighlighted == null) cellHighlighted = false;
@@ -1090,31 +1090,30 @@ public class AzquoBook {
 
     public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) throws Exception {
         RegionInfo regionInfo = getRegionInfo(row, col);
-        //todo make provenance on headings work again
         if (regionInfo == null) return "";
-            if (regionInfo.region.startsWith("az_displayrowheadings")) {
-                String region = regionInfo.region.substring(21);
-                List<List<String>> rowHeadings = loggedInUser.getSentCells(region).getRowHeadings();
-                String heading = rowHeadings.get(regionInfo.row).get(regionInfo.col);
-                if (heading != null) {
-                    return spreadsheetService.formatRowHeadingProvenanceForOutput(loggedInUser, region, regionInfo.row, regionInfo.col, jsonFunction);
-                } else {
-                    return "";
-                }
-            } else if (regionInfo.region.startsWith("az_displaycolumnheadings")) {
-                String region = regionInfo.region.substring(24);
-                List<List<String>> colHeadings = loggedInUser.getSentCells(region).getColumnHeadings();
-                // this was transposed (col/row reveresed) I don't think that's right any more
-                String heading = colHeadings.get(regionInfo.row).get(regionInfo.col);
-                if (heading != null) {
-                    return spreadsheetService.formatColumnHeadingProvenanceForOutput(loggedInUser, region, regionInfo.row, regionInfo.col, jsonFunction);
-                } else {
-                    return "";
-                }
-            } else if (regionInfo.region.startsWith(dataRegionPrefix)) {
-                String region = regionInfo.region.substring(dataRegionPrefix.length());
-                return spreadsheetService.formatDataRegionProvenanceForOutput(loggedInUser, region, regionInfo.row, regionInfo.col, jsonFunction);
+        if (regionInfo.region.startsWith("az_displayrowheadings")) {
+            String region = regionInfo.region.substring(21);
+            List<List<String>> rowHeadings = loggedInUser.getSentCells(region).getRowHeadings();
+            String heading = rowHeadings.get(regionInfo.row).get(regionInfo.col);
+            if (heading != null) {
+                return spreadsheetService.formatRowHeadingProvenanceForOutput(loggedInUser, region, regionInfo.row, regionInfo.col, jsonFunction);
+            } else {
+                return "";
             }
+        } else if (regionInfo.region.startsWith("az_displaycolumnheadings")) {
+            String region = regionInfo.region.substring(24);
+            List<List<String>> colHeadings = loggedInUser.getSentCells(region).getColumnHeadings();
+            // this was transposed (col/row reveresed) I don't think that's right any more
+            String heading = colHeadings.get(regionInfo.row).get(regionInfo.col);
+            if (heading != null) {
+                return spreadsheetService.formatColumnHeadingProvenanceForOutput(loggedInUser, region, regionInfo.row, regionInfo.col, jsonFunction);
+            } else {
+                return "";
+            }
+        } else if (regionInfo.region.startsWith(dataRegionPrefix)) {
+            String region = regionInfo.region.substring(dataRegionPrefix.length());
+            return spreadsheetService.formatDataRegionProvenanceForOutput(loggedInUser, region, regionInfo.row, regionInfo.col, jsonFunction);
+        }
         return "";
     }
 
@@ -1127,9 +1126,9 @@ public class AzquoBook {
             toReturn.add(row);
             for (int colNo = 0; colNo < range.getColumnCount(); colNo++) {
                 if (range.getCellOrNull(rowNo, colNo) != null) {
-                      Cell cell = range.getCellOrNull(rowNo, colNo);
-                      row.add(cell != null ? cell.getStringValue().trim() : null);
-                }else{
+                    Cell cell = range.getCellOrNull(rowNo, colNo);
+                    row.add(cell != null ? cell.getStringValue().trim() : null);
+                } else {
                     row.add("");
                 }
             }
@@ -1146,7 +1145,7 @@ public class AzquoBook {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
                 String region = name.getText().substring(dataRegionPrefix.length());
-                    spreadsheetService.saveData(loggedInUser, region.toLowerCase());
+                spreadsheetService.saveData(loggedInUser, region.toLowerCase());
             }
         }
     }
@@ -1269,8 +1268,8 @@ public class AzquoBook {
         Worksheet sheet = wb.getWorksheets().get(sheetNo);
         boolean transpose = false;
         String fileType = sheet.getName();
-        if (fileType.toLowerCase().contains("transpose")){
-            transpose= true;
+        if (fileType.toLowerCase().contains("transpose")) {
+            transpose = true;
         }
         File temp = File.createTempFile(tempFileName.substring(0, tempFileName.length() - 4), "." + fileType);
         String tempName = temp.getPath();
@@ -1282,7 +1281,7 @@ public class AzquoBook {
         return tempName;
     }
 
-    private void writeCell(Cells cells, int r, int c, CsvWriter csvW, Map<String,String> newNames) throws Exception{
+    private void writeCell(Cells cells, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
         Cell cell = cells.get(r, c);
         //if (colCount++ > 0) bw.write('\t');
         if (cell != null && cell.getType() != CellValueType.IS_NULL) {
@@ -1297,7 +1296,6 @@ public class AzquoBook {
         }
 
     }
-
 
 
     public void convertRangeToCSV(final Worksheet sheet, final CsvWriter csvW, Range range, Map<String, String> newNames, boolean transpose) throws Exception {
@@ -1322,12 +1320,12 @@ public class AzquoBook {
                     //System.out.println("Excel row " + r);
                     //int colCount = 0;
                     for (int c = startCol; c <= maxCol; c++) {
-                        writeCell(cells,r,c,csvW,newNames);
+                        writeCell(cells, r, c, csvW, newNames);
                     }
                     csvW.endRecord();
                 }
             }
-        }else {
+        } else {
             for (int c = startCol; c <= maxCol; c++) {
                 for (int r = startRow; r <= rows; r++) {
                     writeCell(cells, r, c, csvW, newNames);

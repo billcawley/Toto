@@ -64,7 +64,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         // todo - check ZK to see if there's a better way to do this
         spreadsheetService = (SpreadsheetService) applicationContext.getBean("spreadsheetService");
         userChoiceDAO = (UserChoiceDAO) applicationContext.getBean("userChoiceDao");
-        userRegionOptionsDAO = (UserRegionOptionsDAO) applicationContext.getBean("userRegionOptions");
+        userRegionOptionsDAO = (UserRegionOptionsDAO) applicationContext.getBean("userRegionOptionsDao");
         adminService = (AdminService) applicationContext.getBean("adminService");
         editPopup.setId("editPopup");
         Menuitem item1 = new Menuitem("Audit");

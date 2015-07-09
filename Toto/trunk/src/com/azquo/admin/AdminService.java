@@ -255,10 +255,9 @@ public class AdminService {
 
     public List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
         List<OnlineReport> reportList = new ArrayList<OnlineReport>();
-        List<OnlineReport> reports = null;
         List<Database> databases = databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         for (Database database:databases) {
-            reports = onlineReportDAO.findForDatabaseId(database.getId(), database.getDatabaseType());
+            List<OnlineReport> reports = onlineReportDAO.findForDatabaseId(database.getId(), database.getDatabaseType());
             for (OnlineReport report:reports){
                 report.setDatabase(database.getName());
             }
