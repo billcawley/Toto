@@ -4,7 +4,7 @@ import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.service.NameService;
-import org.apache.log4j.Logger;
+//import org.apache.log4j.Logger;
 
 import java.util.*;
 
@@ -21,7 +21,7 @@ import java.util.*;
  */
 public class AzquoMemoryDBConnection {
 
-    private static final Logger logger = Logger.getLogger(AzquoMemoryDBConnection.class);
+    //private static final Logger logger = Logger.getLogger(AzquoMemoryDBConnection.class);
 
     private final AzquoMemoryDB azquoMemoryDB;
 
@@ -66,7 +66,9 @@ public class AzquoMemoryDBConnection {
         return provenance;
     }
 
-    public void setNewProvenance(String provenanceMethod, String provenanceName) {
+    // tellingly never used.
+
+/*    public void setNewProvenance(String provenanceMethod, String provenanceName) {
         setNewProvenance(provenanceMethod, provenanceName, "","");
     }
 
@@ -77,7 +79,7 @@ public class AzquoMemoryDBConnection {
             logger.error("can't set a new provenance", e);
         }
     }
-
+*/
     // todo : the sets could still be modified
     public List<Set<Name>> getReadPermissions() {
         return Collections.unmodifiableList(this.readPermissions);

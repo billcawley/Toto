@@ -75,7 +75,7 @@ public class StandardDAO {
                     int count = 1;
 
                     for (JsonRecordTransport record : records) {
-                        insertSql.append("(:" + ID + count + ",:" + JSON + count + "), ");
+                        insertSql.append("(:" + ID).append(count).append(",:").append(JSON).append(count).append("), ");
                         namedParams.addValue(JSON + count, record.json);
                         namedParams.addValue(ID + count, record.id);
                         count++;
@@ -109,7 +109,7 @@ WHERE id IN (1,2,3)
             int count = 1;
 
             for (JsonRecordTransport record : records) {
-                updateSql.append(" when :" + ID + count + " then :" + JSON + count + " ");
+                updateSql.append(" when :" + ID).append(count).append(" then :").append(JSON).append(count).append(" ");
                 namedParams.addValue(ID + count, record.id);
                 namedParams.addValue(JSON + count, record.json);
                 count++;
@@ -120,7 +120,7 @@ WHERE id IN (1,2,3)
                 if (count == 1) {
                     updateSql.append(record.id);
                 } else {
-                    updateSql.append("," + record.id);
+                    updateSql.append(",").append(record.id);
                 }
                 count++;
             }
@@ -142,7 +142,7 @@ WHERE id IN (1,2,3)
                 if (count == 1) {
                     updateSql.append(record.id);
                 } else {
-                    updateSql.append("," + record.id);
+                    updateSql.append(",").append(record.id);
                 }
                 count++;
             }

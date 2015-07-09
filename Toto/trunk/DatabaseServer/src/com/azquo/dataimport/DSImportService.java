@@ -48,7 +48,6 @@ public class DSImportService {
     SimpleDateFormat ukdf4 = new SimpleDateFormat("dd/MM/yyyy");
     SimpleDateFormat ukdf3 = new SimpleDateFormat("dd MMM yyyy");
 
-;
     static class ImportHeading {
         int column;
         String heading;
@@ -813,7 +812,7 @@ public class DSImportService {
         if (fileName.charAt(4) == '-'){
             sheetSetName = fileName.substring(5);
             sheetSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,sheetSetName, null, false, attributeNames);
-        };
+        }
         String line;
         while ((line = br.readLine()) != null) {
             StringTokenizer st = new StringTokenizer(line, "\t");
@@ -832,10 +831,9 @@ public class DSImportService {
                     if (importHeading.name != null) { // is this a concern? I'll throw an exception in case (based on IntelliJ warning)
                         Name set = importHeading.name;
 
-                        while (st.
-                                hasMoreTokens()) {
+                        while (st.hasMoreTokens()) {
                             String element = st.nextToken();
-                            Name child = null;
+                            Name child;
                             if (element.length() > 0) {
                                 int localPos = element.toLowerCase().indexOf(";local");
                                 if (localPos > 0 || importHeading.local) {
@@ -859,11 +857,8 @@ public class DSImportService {
                     } else {
                         throw new Exception("Import heading name was null : " + importHeading);
                     }
-
                 }
             }
         }
     }
-
-
 }

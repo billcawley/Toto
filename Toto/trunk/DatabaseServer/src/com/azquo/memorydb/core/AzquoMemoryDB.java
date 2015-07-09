@@ -328,9 +328,9 @@ public final class AzquoMemoryDB {
 
     // for debug purposes, is there a harm in being public??
 
-    public int getCurrentMaximumId() {
+    /*public int getCurrentMaximumId() {
         return nextId;
-    }
+    }*/
 
     public Name getNameById(final int id) {
         return nameByIdMap.get(id);

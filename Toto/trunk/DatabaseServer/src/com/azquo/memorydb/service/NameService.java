@@ -65,6 +65,19 @@ public final class NameService {
     public final Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = new Comparator<Name>() {
         @Override
         public int compare(Name n1, Name n2) {
+            // null checks to keep intellij happy, probably not a bad thing
+            boolean n1Null = n1 == null || n1.getDefaultDisplayName() == null;
+            boolean n2Null = n2 == null || n2.getDefaultDisplayName() == null;
+            if (n1Null && n2Null){
+                return 0;
+            }
+            // is that the right way round? Not sure
+            if (n1Null){
+                return -1;
+            }
+            if (n2Null){
+                return 1;
+            }
             return n1.getDefaultDisplayName().toUpperCase().compareTo(n2.getDefaultDisplayName().toUpperCase()); // think that will give us a case insensitive sort!
         }
     };
@@ -102,10 +115,10 @@ public final class NameService {
         return referencedNames;
     }
 
-    public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) {
+/*    public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) {
         // go for the default for the moment
         return findContainingName(azquoMemoryDBConnection, name, Constants.DEFAULT_DISPLAY_NAME);
-     }
+     }*/
 
     // the parameter is called name as the get attribute function will look up and derive attributes it can't find from parent/combinations
 
@@ -805,7 +818,8 @@ public final class NameService {
             String toFind = strings.get(Integer.parseInt(selectString.substring(1, 3))).toLowerCase();
             List<Name> selectedNames = new ArrayList<Name>();
             for (Name sname:namesFound){
-                if (sname.getDefaultDisplayName().toLowerCase().contains(toFind)){
+                if (sname != null && sname.getDefaultDisplayName() != null // is this checking to make intellij happy that important, maybe I want an NPE?
+                        && sname.getDefaultDisplayName().toLowerCase().contains(toFind)){
                     selectedNames.add(sname);
                 }
             }
@@ -817,8 +831,9 @@ public final class NameService {
         return namesFound;
     }
 
+    // unused, commenting for the mo
     // return the intersection of the sets
-
+/*
     public Set<Name> setIntersection(Set<Name> sets, boolean payAttentionToAdditive) {
         // ok going to make this very simple for the moment
         // find the smallest of the sets
@@ -858,7 +873,7 @@ public final class NameService {
     but only up to the number of peers? Well leave for the mo.
 
     was in value service, not sure why
-    */
+
 
 
     Set<Name> trimNames(Name name, Set<Name> nameSet) {
@@ -876,5 +891,5 @@ public final class NameService {
             }
         }
         return applicableNames;
-    }
+    }*/
 }

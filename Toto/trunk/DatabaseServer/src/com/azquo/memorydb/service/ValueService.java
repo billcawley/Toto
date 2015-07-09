@@ -257,7 +257,7 @@ public final class ValueService {
 
         return values;
     }
-
+/* unused commenting
     // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
     public Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names, boolean payAttentionToAdditive) {
         long start = System.nanoTime();
@@ -303,7 +303,7 @@ public final class ValueService {
 
         return values;
     }
-
+*/
     public void printFindForNamesIncludeChildrenStats() {
         if (numberOfTimesCalled1 > 0) {
             logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
@@ -543,6 +543,8 @@ public final class ValueService {
         return toReturn;
     }
 
+    /* again unused commenting
+
     // edd not completely clear about these three functions, todo
 
     private Name sumName(Name name, List<Set<Name>> searchNames) {
@@ -554,6 +556,7 @@ public final class ValueService {
         }
         return name;
     }
+
 
     public Map<Set<Name>, Set<Value>> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
         if (searchNames == null) return null;
@@ -609,7 +612,7 @@ public final class ValueService {
         }
         return stringVal;
     }
-
+*/
     // find the most used name by a set of values, used by printBatch to derive headings
 
     private Name getMostUsedName(Set<Value> values, Name topParent) {
@@ -651,10 +654,11 @@ public final class ValueService {
         });
     }
 
-    // pring a bunch of values in json. It seems to find the name which represents the most values and displays
-    // them under them then the name that best represents the rest etc etc until all values have been displayed
-
-    // ok this was creating values purely for this function, no good! I need something to act as a placeholder
+    /* print a bunch of values in json. It seems to find the name which represents the most values and displays
+    them under them then the name that best represents the rest etc etc until all values have been displayed
+    there is some dodgy stuff in here in terms of manual json creation and new Value(), right now ZKBook uses the result of this function
+    but as AzquoBook is pahed out will need to sort it.
+      */
 
     private StringBuffer printBatch(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values) {
         StringBuffer sb = new StringBuffer();
@@ -720,7 +724,7 @@ public final class ValueService {
                 }
                 sb.append("{");
                 sb.append(jsonValue("heading", heading.getDefaultDisplayName(), false));
-                sb.append(",\"items\":[" + printBatch(azquoMemoryDBConnection, slimExtract).toString() + "]");
+                sb.append(",\"items\":[").append(printBatch(azquoMemoryDBConnection, slimExtract).toString()).append("]");
                 sb.append("}");
             }
         }

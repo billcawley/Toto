@@ -1,21 +1,23 @@
 package com.azquo.memorydb.service;
 
-import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
-import com.azquo.memorydb.DatabaseAccessToken;
+//import com.azquo.memorydb.AzquoMemoryDBConnection;
+//import com.azquo.memorydb.Constants;
+//import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.MemoryDBManager;
-import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.core.Value;
+//import com.azquo.memorydb.core.Name;
+//import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.dao.MySQLDatabaseManager;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.*;
+//import java.util.*;
 
 /**
  * Created by cawley on 20/05/15.
  *
  * New admin stuff, we're no longer doing it via the rendered excel files. Basic functions called from the controllers
+ *
+ * It seems the copy stuff was unused?? Commenting for the moment
  *
  */
 public class DSAdminService {
@@ -32,7 +34,7 @@ public class DSAdminService {
     MemoryDBManager memoryDBManager;
 
 
-    private Name copyName(AzquoMemoryDBConnection toDB, Name name, Name parent, List<String> languages, Collection<Name> allowed, Map<Name, Name> dictionary) throws Exception {
+/*    private Name copyName(AzquoMemoryDBConnection toDB, Name name, Name parent, List<String> languages, Collection<Name> allowed, Map<Name, Name> dictionary) throws Exception {
         Name name2 = dictionary.get(name);
         if (name2 != null) {
             return name2;
@@ -56,11 +58,11 @@ public class DSAdminService {
             }
         }
         return name2;
-    }
+    }*/
 
     // will be purely DB side
 
-    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
+/*    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
         AzquoMemoryDBConnection sourceConnection = dsSpreadsheetService.getConnectionFromAccessToken(source);
         AzquoMemoryDBConnection targetConnection = dsSpreadsheetService.getConnectionFromAccessToken(target);
         if (targetConnection == null) {
@@ -104,7 +106,7 @@ public class DSAdminService {
             valueService.storeValueWithProvenanceAndNames(targetConnection, valueService.addValues(showValues.get(nameValues)), names2);
         }
         targetConnection.persist();
-    }
+    }*/
 
     public void emptyDatabase(String mysqlName) throws Exception {
         mySQLDatabaseManager.emptyDatabase(mysqlName);
@@ -121,6 +123,4 @@ public class DSAdminService {
         mySQLDatabaseManager.createNewDatabase(mysqlName);
         memoryDBManager.addNewToDBMap(mysqlName);
     }
-
-
 }

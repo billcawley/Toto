@@ -127,7 +127,7 @@ I'll add better tracking of where an error is later
             while (lastEnd < statement.length() - 2 && statement.substring(lastEnd,lastEnd + 2).equals(",`")) {
                 int nextQuote = statement.indexOf("`", lastEnd + 2);
                 if (nextQuote > 0) {
-                    matcher.find();//skip the next field
+                    matcher.find();//skip the next field todo - workout the objection from intellij, can I just put this above in the conditional?
                     lastEnd = nextQuote + 1;
                 }
             }

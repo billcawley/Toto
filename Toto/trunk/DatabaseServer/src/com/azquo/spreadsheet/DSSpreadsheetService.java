@@ -332,7 +332,8 @@ seaports;children   container;children
                 //check that there are no duplicates with the same immediate parent
                 boolean duplicate = false;
                 for (Name sibling : parent.getChildren()) {
-                    if (sibling != name && sibling.getDefaultDisplayName().equals(name.getDefaultDisplayName())) {
+                    if (sibling != name && sibling.getDefaultDisplayName() != null
+                            && sibling.getDefaultDisplayName().equals(name.getDefaultDisplayName())) {
                         duplicate = true;
                         break;
                     }
@@ -388,7 +389,7 @@ seaports;children   container;children
         List<UniqueName> pending = new ArrayList<UniqueName>();
         for (Name name : sortedNames) {
             if (lastName != null) {
-                if (!name.getDefaultDisplayName().equals(lastName)) {
+                if (name.getDefaultDisplayName() != null && !name.getDefaultDisplayName().equals(lastName)) {
                     output.addAll(findUniqueNames(pending));
                     pending = new ArrayList<UniqueName>();
                     if (output.size() > 1500) break;
@@ -657,7 +658,7 @@ seaports;children   container;children
             DataRegionHeading dataRegionHeading = heading.get(heading.size() - 1);
             if (dataRegionHeading != null) {
                 String toCompare;
-                if (dataRegionHeading.getName() != null) {
+                if (dataRegionHeading.getName() != null && dataRegionHeading.getName().getDefaultDisplayName() != null) {
                     toCompare = dataRegionHeading.getName().getDefaultDisplayName().replace(" ", "");
                 } else {
                     toCompare = dataRegionHeading.getAttribute();
@@ -919,9 +920,9 @@ I think that this is an ideal candidate for multithreading to speed things up
                     targetArray.set(rowNo, returnRow);
                 }
             } catch (Exception e) {
-                errorTrack.append("RowFiller : " + e.getMessage()).append("\n");
+                errorTrack.append("RowFiller : ").append(e.getMessage()).append("\n");
                 for (StackTraceElement ste : e.getStackTrace()) {
-                    errorTrack.append("RowFiller : " + ste + "\n");
+                    errorTrack.append("RowFiller : ").append(ste).append("\n");
                 }
             }
         }
@@ -1156,30 +1157,36 @@ I think that this is an ideal candidate for multithreading to speed things up
     public String formatRowHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, int unsortedRow, int col, String jsonFunction) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         DataRegionHeading dataRegionHeading = getRowDataRegionHeading(azquoMemoryDBConnection, rowHeadingsSource, unsortedRow, col, databaseAccessToken.getLanguages());
-        if (dataRegionHeading.getName() != null) {
-            return formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
-        } else {
-            return dataRegionHeading.getAttribute();
+        if (dataRegionHeading != null){
+            if (dataRegionHeading.getName() != null) {
+                return formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
+            } else {
+                return dataRegionHeading.getAttribute();
+            }
         }
+        return "";
     }
 
     public String formatColumnHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> columnHeadingsSource, int row, int unsortedCol, String jsonFunction) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         DataRegionHeading dataRegionHeading = getColumnDataRegionHeading(azquoMemoryDBConnection, columnHeadingsSource, row, unsortedCol, databaseAccessToken.getLanguages());
-        if (dataRegionHeading.getName() != null) {
-            return formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
-        } else {
-            return dataRegionHeading.getAttribute();
+        if (dataRegionHeading != null) {
+            if (dataRegionHeading.getName() != null) {
+                return formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
+            } else {
+                return dataRegionHeading.getAttribute();
+            }
         }
+        return "";
     }
 
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
     // not exactly sure why
-    // this might make it a bit more difficult to jackson but we should aim to do it really
+    // this might make it a bit more difficult to jackson but we should aim to do it when azquobook is moved
 
     public String formatCellProvenanceForOutput(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, String jsonFunction) {
         StringBuilder output = new StringBuilder();
-        output.append(jsonFunction + "({\"provenance\":[{");
+        output.append(jsonFunction).append("({\"provenance\":[{");
         if (values.size() > 1 || (values.size() > 0 && values.get(0) != null)) {
             valueService.sortValues(values);
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
@@ -1245,37 +1252,38 @@ I think that this is an ideal candidate for multithreading to speed things up
                             , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                             , cell.getUnsortedRow(), cell.getUnsortedCol(), totalSetSize, databaseAccessToken.getLanguages());
 
+                    if (azquoCell != null){
+                        final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
+                        final Set<DataRegionHeading> headingsForCell = new HashSet<DataRegionHeading>();
+                        headingsForCell.addAll(azquoCell.getColumnHeadings());
+                        headingsForCell.addAll(azquoCell.getRowHeadings());
+                        // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
+                        // right, switch here to deal with attribute based cell values
 
-                    final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-                    final Set<DataRegionHeading> headingsForCell = new HashSet<DataRegionHeading>();
-                    headingsForCell.addAll(azquoCell.getColumnHeadings());
-                    headingsForCell.addAll(azquoCell.getRowHeadings());
-                    // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
-                    // right, switch here to deal with attribute based cell values
-
-                    if (valuesForCell.getValues() != null) {
-                        if (valuesForCell.getValues().size() == 1) {
-                            final Value theValue = valuesForCell.getValues().get(0);
-                            logger.info("trying to overwrite");
-                            if (cell.getStringValue().length() > 0) {
-                                //sometimes non-existant original values are stored as '0'
-                                valueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getStringValue());
+                        if (valuesForCell.getValues() != null) {
+                            if (valuesForCell.getValues().size() == 1) {
+                                final Value theValue = valuesForCell.getValues().get(0);
+                                logger.info("trying to overwrite");
+                                if (cell.getStringValue().length() > 0) {
+                                    //sometimes non-existant original values are stored as '0'
+                                    valueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getStringValue());
+                                    numberOfValuesModified++;
+                                } else {
+                                    valueService.deleteValue(theValue);
+                                }
+                            } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue().length() > 0) {
+                                logger.info("storing new value here . . .");
+                                // this call to make the hash set seems rather unefficient
+                                valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), namesFromDataRegionHeadings(headingsForCell));
                                 numberOfValuesModified++;
-                            } else {
-                                valueService.deleteValue(theValue);
                             }
-                        } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue().length() > 0) {
-                            logger.info("storing new value here . . .");
-                            // this call to make the hash set seems rather unefficient
-                            valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), namesFromDataRegionHeadings(headingsForCell));
-                            numberOfValuesModified++;
-                        }
-                    } else {
-                        if (valuesForCell.getNames().size() == 1 && valuesForCell.getAttributeNames().size() == 1) { // allows a simple store
-                            Name toChange = valuesForCell.getNames().get(0);
-                            String attribute = valuesForCell.getAttributeNames().get(0);
-                            logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
-                            toChange.setAttributeWillBePersisted(attribute, cell.getStringValue());
+                        } else {
+                            if (valuesForCell.getNames().size() == 1 && valuesForCell.getAttributeNames().size() == 1) { // allows a simple store
+                                Name toChange = valuesForCell.getNames().get(0);
+                                String attribute = valuesForCell.getAttributeNames().get(0);
+                                logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
+                                toChange.setAttributeWillBePersisted(attribute, cell.getStringValue());
+                            }
                         }
                     }
                 }

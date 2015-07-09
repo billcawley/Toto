@@ -83,9 +83,9 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     // notable that this is never used, do we care about undelete functionality?
-    public String getDeletedInfo() {
+/*    public String getDeletedInfo() {
         return deletedInfo;
-    }
+    }*/
 
     public synchronized void setDeletedInfoWillBePersisted(final String deletedInfo) throws Exception {
         if (!deletedInfo.equals(this.deletedInfo)) {
