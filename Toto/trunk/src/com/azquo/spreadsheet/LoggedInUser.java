@@ -97,6 +97,11 @@ public class LoggedInUser {
         return user;
     }
 
+    public String getDatabaseType(){
+        return database.getDatabaseType();
+    }
+
+
     public Database getDatabase() {
         return database;
     }

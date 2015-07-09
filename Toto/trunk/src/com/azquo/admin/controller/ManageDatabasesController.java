@@ -154,6 +154,7 @@ public class ManageDatabasesController {
     @RequestMapping(headers = "content-type=multipart/*")
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "database", required = false) String database
+            , @RequestParam(value = "useType", required = false) String useType
             , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
 
     ){
@@ -169,7 +170,7 @@ public class ManageDatabasesController {
                     File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
                     uploadFile.transferTo(moved);
 
-                    importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
+                    importService.importTheFile(loggedInUser, fileName, useType, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
                 } catch (Exception e){
                     String exceptionError = e.getMessage();
                     //trim off the javaspeak

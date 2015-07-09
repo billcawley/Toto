@@ -31,6 +31,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     // edd: hmm, what's going on with database?
     //public static final String DATABASE = "database";
     public static final String REPORTNAME = "report_name";
+    public static final String DATABASETYPE = "database_type";
     public static final String REPORTCATEGORY = "report_category";
     public static final String USERSTATUS = "user_status";
     public static final String FILENAME = "filename";
@@ -46,6 +47,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         toReturn.put(BUSINESSID, onlineReport.getBusinessId());
         toReturn.put(DATABASEID, onlineReport.getDatabaseId());
         toReturn.put(REPORTNAME, onlineReport.getReportName());
+        toReturn.put(DATABASETYPE,onlineReport.getDatabaseType());
         toReturn.put(REPORTCATEGORY,onlineReport.getReportCategory());
         toReturn.put(USERSTATUS, onlineReport.getUserStatus());
         toReturn.put(FILENAME, onlineReport.getFilename());
@@ -66,6 +68,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
                         , rs.getInt(DATABASEID)
                         , ""
                         , rs.getString(REPORTNAME)
+                        , rs.getString(DATABASETYPE)
                         , rs.getString(REPORTCATEGORY)
                         , rs.getString(USERSTATUS)
                         , rs.getString(FILENAME)
@@ -93,7 +96,10 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         return findOneWithWhereSQLAndParameters(" WHERE `" + DATABASEID + "` = :" + DATABASEID + " and `" + REPORTNAME + "` = :" + REPORTNAME, namedParams);
     }
 
-    public List<OnlineReport> findForBusinessIdAndUserStatus(final int businessId, String userStatus) {
+    public List<OnlineReport> findForDatabaseIdAndUserStatus(final int databaseId, String userStatus, String databaseType) {
+        if (databaseType.length() == 0){
+            databaseType = "none";
+        }
         String[] statuses = userStatus.split(",");
         StringBuilder statusSelect = new StringBuilder("(");
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -104,28 +110,32 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
             namedParams.addValue(USERSTATUS + count, "%" + statuses[count].trim() + "%");
             statusSelect.append(USERSTATUS + " like :" + USERSTATUS + count);
         }
+
         statusSelect.append(")");
 
-        namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(DATABASEID, databaseId);
+        namedParams.addValue(DATABASETYPE, databaseType);
         namedParams.addValue(USERSTATUS, "%" + userStatus + "%");
         namedParams.addValue(ACTIVE, true);
-        return findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " and " + ACTIVE + " = :" + ACTIVE + " and " + statusSelect + " order by " + REPORTCATEGORY + ", " + REPORTNAME, namedParams, false);
-    }
-
-    public List<OnlineReport> findForBusinessId(final int businessId) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(BUSINESSID, businessId);
-        namedParams.addValue(ACTIVE, true);
-        return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + ACTIVE + " = :" + ACTIVE, namedParams, false);
+        return findListWithWhereSQLAndParameters(" WHERE (`" + DATABASETYPE + "` = :" + DATABASETYPE + " OR `" + DATABASEID + "` = :" + DATABASEID + ") and " + ACTIVE + " = :" + ACTIVE + " and " + statusSelect + " order by " + REPORTCATEGORY + ", " + REPORTNAME, namedParams, false);
     }
 
 
-    public List<OnlineReport> findForDatabaseId(final int databaseId) {
+
+
+    public List<OnlineReport> findForDatabaseId(final int databaseId, String databaseType) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        if (databaseType.length() == 0){
+            databaseType = "none";
+        }
         namedParams.addValue(DATABASEID, databaseId);
+        namedParams.addValue(DATABASETYPE, databaseType);
         namedParams.addValue(ACTIVE, true);
-        return findListWithWhereSQLAndParameters("WHERE " + DATABASEID + " = :" + DATABASEID + " and " + ACTIVE + " = :" + ACTIVE, namedParams, false);
+        return findListWithWhereSQLAndParameters("WHERE " + DATABASETYPE + " = :" + DATABASETYPE + " OR (" + DATABASEID + " = :" + DATABASEID + " and " + ACTIVE + " = :" + ACTIVE + ")", namedParams, false);
     }
+
+
+
 
     public void removeForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();

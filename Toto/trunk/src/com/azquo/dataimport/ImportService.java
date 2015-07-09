@@ -53,15 +53,16 @@ public final class ImportService {
     @Autowired
     private UploadRecordDAO uploadRecordDAO;
 
-    public void importTheFile(LoggedInUser loggedInUser, String fileName, String filePath) throws Exception {
+    public void importTheFile(LoggedInUser loggedInUser, String fileName,  String filePath) throws Exception {
+        //used for Magento importing (data  - not report templates)
         List<String> languages = new ArrayList<String>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        importTheFile(loggedInUser, fileName, filePath, "", true, languages);
+        importTheFile(loggedInUser, fileName, filePath, "", "", true, languages);
     }
-    public void importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, String fileType, boolean skipBase64, List<String> attributeNames) throws Exception{
+    public void importTheFile(LoggedInUser loggedInUser, String fileName, String useType, String filePath, String fileType, boolean skipBase64, List<String> attributeNames) throws Exception{
        String error = "";
         try{
-           importTheFile1(loggedInUser, fileName, filePath, fileType, skipBase64, attributeNames);
+           importTheFile1(loggedInUser, fileName, useType, filePath, fileType, skipBase64, attributeNames);
        }catch(Exception e){
            error = e.getMessage();
            if (error.contains("error:")) error = error.substring(error.indexOf("error:"));
@@ -75,7 +76,7 @@ public final class ImportService {
     }
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    public void importTheFile1(LoggedInUser loggedInUser, String fileName, String filePath, String fileType, boolean skipBase64, List<String> attributeNames)
+    public void importTheFile1(LoggedInUser loggedInUser, String fileName, String useType, String filePath, String fileType, boolean skipBase64, List<String> attributeNames)
             throws Exception {
 
 
@@ -120,7 +121,7 @@ public final class ImportService {
             }
         }
         if (fileName.contains(".xls")) {
-            readBook(loggedInUser, fileName, tempFile, attributeNames);
+            readBook(loggedInUser, fileName, tempFile, attributeNames, (useType!=null && useType.length() > 0));
         } else {
             if (tempFile.length() > 0) {
                 filePath = tempFile;
@@ -295,17 +296,17 @@ public final class ImportService {
 
     // todo - directory location should be the database code!
 
-    private void uploadReport(LoggedInUser loggedInUser, AzquoBook azquoBook, String fileName, String reportName) throws Exception {
+    private void uploadReport(LoggedInUser loggedInUser, AzquoBook azquoBook, String fileName, String reportName, String reportType) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = 0;
-        String pathName = adminService.getBusinessPrefix(loggedInUser);
-        if (loggedInUser.getDatabase() != null) {
+        String pathName = reportType;
+        if (pathName.length()== 0) {
             databaseId = loggedInUser.getDatabase().getId();
             pathName = loggedInUser.getDatabase().getMySQLName();
         }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         if (or==null){
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName,"","", fileName, "", "", OnlineReport.AZQUO_BOOK,  true); // default to old for the moment
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName,"","", "", fileName, "", "", OnlineReport.AZQUO_BOOK,  true); // default to old for the moment
         }else{
             or.setActive(false);
             onlineReportDAO.store(or);
@@ -323,12 +324,16 @@ public final class ImportService {
         onlineReportDAO.store(or);
     }
 
-    private void readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames) throws Exception {
+    private void readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean useType) throws Exception {
         AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService);
         azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = azquoBook.getReportName();
         if (reportName != null) {
-            uploadReport(loggedInUser, azquoBook, fileName, reportName);
+            String reportType = "";
+            if (useType){
+                reportType=loggedInUser.getDatabaseType();
+            }
+            uploadReport(loggedInUser, azquoBook, fileName, reportName, reportType);
             return;
         }
         if (loggedInUser.getDatabase() == null) {

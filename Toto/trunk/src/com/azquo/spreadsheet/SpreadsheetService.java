@@ -367,26 +367,29 @@ public class SpreadsheetService {
     // on logging into Magento reports for example
 
     public void showUserMenu(ModelMap model, LoggedInUser loggedInUser) {
-        List<OnlineReport> onlineReports = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getStatus());
-        model.addAttribute("welcome", "Welcome to Azquo!");
-        if (loggedInUser.getDatabase() != null) {
-            model.addAttribute("database", loggedInUser.getDatabase().getName());
-        }
+        Map<String, Database> databases = loginService.foundDatabases(loggedInUser.getUser());
+         model.addAttribute("welcome", "Welcome to Azquo!");
         List<Map<String, String>> reports = new ArrayList<Map<String, String>>();
-        String reportCategory = "";
+        for (String dbName:databases.keySet()) {
+            Database database = databases.get(dbName);
+            List<OnlineReport> onlineReports = onlineReportDAO.findForDatabaseIdAndUserStatus(database.getId(), loggedInUser.getUser().getStatus(),database.getDatabaseType());
+            //TODO  set a database for each report - also check permissions
+            model.addAttribute("database", database);
+            String reportCategory = "";
 
-        for (OnlineReport onlineReport : onlineReports) {
-            Map<String, String> vReport = new HashMap<String, String>();
-            if (!onlineReport.getReportCategory().equals(reportCategory)){
-                vReport.put("category", onlineReport.getReportCategory());
-            }else{
-                vReport.put("category","");
+            for (OnlineReport onlineReport : onlineReports) {
+                Map<String, String> vReport = new HashMap<String, String>();
+                if (!onlineReport.getReportCategory().equals(reportCategory)) {
+                    vReport.put("category", onlineReport.getReportCategory());
+                } else {
+                    vReport.put("category", "");
+                }
+                reportCategory = onlineReport.getReportCategory();
+                vReport.put("name", onlineReport.getReportName());
+                vReport.put("explanation", onlineReport.getExplanation());
+                vReport.put("link", "/api/Online/?opcode=loadsheet&reportid=" + onlineReport.getId());
+                reports.add(vReport);
             }
-            reportCategory = onlineReport.getReportCategory();
-            vReport.put("name", onlineReport.getReportName());
-            vReport.put("explanation", onlineReport.getExplanation());
-            vReport.put("link", "/api/Online/?opcode=loadsheet&reportid=" + onlineReport.getId());
-            reports.add(vReport);
         }
         model.addAttribute("reports", reports);
     }

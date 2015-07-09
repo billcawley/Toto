@@ -19,6 +19,7 @@ public class OnlineReport extends StandardEntity {
     private int databaseId;
     private String database; // for sending parameters only
     private String reportName;
+    private String databaseType;
     private String reportCategory;
     private String userStatus;
     private String filename;
@@ -37,6 +38,7 @@ public class OnlineReport extends StandardEntity {
             , @JsonProperty("databaseId") int databaseId
             , @JsonProperty("database") String database
             , @JsonProperty("reportName") String reportName
+            , @JsonProperty("databaseType") String databaseType
             , @JsonProperty("reportCategory") String reportCategory
             , @JsonProperty("userStatus") String userStatus
             , @JsonProperty("filename") String filename
@@ -50,6 +52,7 @@ public class OnlineReport extends StandardEntity {
         this.databaseId = databaseId;
         this.database = database;
         this.reportName = reportName;
+        this.databaseType = databaseType;
         this.reportCategory = reportCategory;
         this.userStatus = userStatus;
         this.filename = filename;
@@ -101,11 +104,18 @@ public class OnlineReport extends StandardEntity {
         this.reportName = reportName;
     }
 
+    public String getDatabaseType() { return databaseType;  }
+
+    public void setDatabaseType(String databaseType) {
+        this.databaseType = databaseType;
+    }
+
     public String getReportCategory() { return reportCategory;  }
 
     public void setReportCategory(String reportCategory) {
         this.reportCategory = reportCategory;
     }
+
 
     public String getUserStatus() {
         return userStatus;
@@ -164,6 +174,7 @@ public class OnlineReport extends StandardEntity {
                 ", databaseId=" + databaseId +
                 ", database='" + database + '\'' +
                 ", reportName='" + reportName + '\'' +
+                ", businessType='" + databaseType + '\'' +
                 ", reportCategory='" + reportCategory + '\'' +
                 ", userStatus='" + userStatus + '\'' +
                 ", filename='" + filename + '\'' +

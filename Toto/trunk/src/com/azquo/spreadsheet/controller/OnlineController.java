@@ -111,7 +111,7 @@ public class OnlineController {
                     }
                 }
                 OnlineReport onlineReport = null;
-                if (reportId != null && reportId.length() > 0) {
+                if (reportId != null && reportId.length() > 0 && !reportId.equals("1")) {
                     //report id is assumed to be integer - sent from the website
                     onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
                 }
@@ -123,7 +123,13 @@ public class OnlineController {
                             onlineReport.setPathname(loggedInUser.getDatabase().getMySQLName());
                         } else {
                             db = loggedInUser.getDatabase();
-                            onlineReport.setPathname(adminService.getBusinessPrefix(loggedInUser));
+                            if (db==null && database!=null && database.length() > 0){
+                                db = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
+                                if (db != null){
+                                    loggedInUser.setDatabase(db);
+                                }
+                            }
+                            onlineReport.setPathname(onlineReport.getDatabaseType());
                         }
                         if (db != null) {
                             onlineReport.setDatabase(db.getName());
@@ -182,8 +188,8 @@ public class OnlineController {
                         String fileName = uploadfile.getOriginalFilename();
                         File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
                         uploadfile.transferTo(moved);
-
-                        importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
+                        //importing here cannot set 'useType' to a value
+                        importService.importTheFile(loggedInUser, fileName, "", moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
                         result = "File imported successfully";
 
                     } else {
@@ -196,10 +202,18 @@ public class OnlineController {
                     model.addAttribute("content", result);
                     return "utf8javascript";
                 }
+                if (reportId.equals("1")){
+                    if (!loggedInUser.getUser().isAdministrator()) {
+                        spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
+                        return "azquoReports";
+                    } else {
+                        return "redirect:/api/ManageReports";
+                    }
+
+                }
                 if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
                     // logic here is going to change to support the different renderers
-                    if (onlineReport.getId() != 1) {// todo, make this makem a bit more sense, get rid of report id 1 being a special case
-                        loggedInUser.setReportId(onlineReport.getId());// that was below, whoops!
+                         loggedInUser.setReportId(onlineReport.getId());// that was below, whoops!
                         if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK){
                             long time = System.currentTimeMillis();
                             String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
@@ -222,14 +236,6 @@ public class OnlineController {
                         spreadsheetService.readExcel(model, loggedInUser, onlineReport, spreadsheetName);
                         return "onlineReport";
                         // was provenance setting here,
-                    } else {
-                        if (!loggedInUser.getUser().isAdministrator()) {
-                            spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
-                            return "azquoReports";
-                        } else {
-                            return "redirect:/api/ManageReports";
-                        }
-                    }
                 }
                 model.addAttribute("content", result);
             } catch (Exception e) {

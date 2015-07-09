@@ -9,6 +9,7 @@ import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.LoginService;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
@@ -51,6 +52,8 @@ public class AdminService {
     private OnlineReportDAO onlineReportDAO;
     @Autowired
     private RMIClient rmiClient;
+    @Autowired
+    private LoginService loginService;
 
     // from the old excel sheet (I mean register in Excel, not a browser!) keeping for the mo as it may be useful in the new admin or for Azquo.com
 
@@ -251,14 +254,18 @@ public class AdminService {
 
 
     public List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
-        List<OnlineReport> reportList;
-        if (loggedInUser.getUser().isAdministrator()) {
-            reportList = onlineReportDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
-        } else {
-            // there was a look here based on splitting te user status by , but it made no sense, this happens inside this function
-            reportList = onlineReportDAO.findForBusinessIdAndUserStatus(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getStatus());
+        List<OnlineReport> reportList = new ArrayList<OnlineReport>();
+        List<OnlineReport> reports = null;
+        List<Database> databases = databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+        for (Database database:databases) {
+            reports = onlineReportDAO.findForDatabaseId(database.getId(), database.getDatabaseType());
+            for (OnlineReport report:reports){
+                report.setDatabase(database.getName());
+            }
+            reportList.addAll(reports);
+
         }
-        if (reportList != null) {
+        if (reportList.size() > 0) {
             for (OnlineReport onlineReport : reportList) {
                 Database database = databaseDAO.findById(onlineReport.getDatabaseId());
                 if (database != null) {//in case database has been deleted without deleting the report reference.....
@@ -266,7 +273,7 @@ public class AdminService {
                 }
             }
         } else {
-            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, 0, "", "", "No reports found", "", "", "", "", OnlineReport.AZQUO_BOOK, true); // default to old for the moment
+            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, 0, "", "", "", "No reports found", "", "", "", "", OnlineReport.AZQUO_BOOK, true); // default to old for the moment
             reportList.add(notFound);
         }
         return reportList;

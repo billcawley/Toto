@@ -192,8 +192,8 @@ I'll add better tracking of where an error is later
         // added, as an operator, should make it more robust when used with decode string
         // this assumes that the , will be taken care of after the parsing
         statement = statement.replace(",", " , ").replace("  ", " ");
-        statement = statement.replace("level lowest", "level 100");
-        statement = statement.replace("level all", "level 101");
+        statement = statement.replaceAll("(?i)level lowest", "level 100");
+        statement = statement.replaceAll("(?i)level all", "level 101");
 
  /* so now we have things like this, should be ready for a basic test
         !1 level 2 from !2 to !3 as !4

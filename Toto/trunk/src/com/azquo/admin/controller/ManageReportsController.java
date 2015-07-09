@@ -42,6 +42,7 @@ public class ManageReportsController {
                 boolean store = false;
                 String explanation = request.getParameter("explanation" + report.getId());
                 String userStatus = request.getParameter("userStatus" + report.getId());
+                String businessType = request.getParameter("businessType" + report.getId());
                 String category = request.getParameter("reportCategory" + report.getId());
                 if (explanation != null && !explanation.equals(report.getExplanation())){
                     report.setExplanation(explanation);
@@ -50,6 +51,10 @@ public class ManageReportsController {
                 if (userStatus != null && !userStatus.equals("userStatus")) {
                     report.setUserStatus(request.getParameter("userStatus" + report.getId()));
                     store = true;
+                }
+                if (businessType!=null && !businessType.equals(report.getDatabaseType())){
+                    report.setDatabaseType(businessType);
+                    store=true;
                 }
                 if (category!=null && !category.equals(report.getReportCategory())){
                     report.setReportCategory(category);
