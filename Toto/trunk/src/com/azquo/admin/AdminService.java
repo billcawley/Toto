@@ -55,9 +55,9 @@ public class AdminService {
     @Autowired
     private LoginService loginService;
 
-    // from the old excel sheet (I mean register in Excel, not a browser!) keeping for the mo as it may be useful in the new admin or for Azquo.com
+    // after uncommenting to use it won't requite the activation email initially
 
-/*    public void registerBusiness(final String email
+    public void registerBusiness(final String email
             , final String userName
             , final String password
             , final String businessName
@@ -66,11 +66,11 @@ public class AdminService {
             , final String address3
             , final String address4
             , final String postcode
-            , final String telephone) throws Exception {
+            , final String telephone, final String website) throws Exception {
         // we need to check for existing businesses
         final String key = shaHash(System.currentTimeMillis() + "");
-        final Business.BusinessDetails bd = new Business.BusinessDetails(address1, address2, address3, address4, postcode, telephone, "website???", key);
-        final Business business = new Business(0, LocalDateTime.now(), LocalDateTime.now(), businessName, 0, bd);
+        final Business.BusinessDetails bd = new Business.BusinessDetails(address1, address2, address3, address4, postcode, telephone, website, key);
+        final Business business = new Business(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), businessName, 0, bd);
         final Business existing = businessDAO.findByName(businessName);
         if (existing != null) { // ok new criteria, overwrite if the business was not already key validated
             if (existing.getEndDate().isAfter(LocalDateTime.now())) {
@@ -89,8 +89,9 @@ public class AdminService {
         }
         businessDAO.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
-        final User user = new User(0, LocalDateTime.now(), LocalDateTime.now(), business.getId(), email, userName, "administrator", encrypt(password, salt), salt);
+        final User user = new User(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt);
         userDao.store(user);
+        /*
         azquoMailer.sendEMail(user.getEmail()
                 , user.getName()
                 , "Azquo account activation for " + businessName
@@ -99,9 +100,9 @@ public class AdminService {
         azquoMailer.sendEMail("info@azquo.com"
                 , "Azquo Support"
                 , "Azquo account activation for " + businessName
-                , "<html>Dear " + user.getName() + "<br/><br/>Welcome to Azquo!<br/><br/>Your account key is : " + key + "</html>");
+                , "<html>Dear " + user.getName() + "<br/><br/>Welcome to Azquo!<br/><br/>Your account key is : " + key + "</html>");*/
     }
-
+/*
     public String confirmKey(final String businessName, final String email, final String password, final String key, String spreadsheetName) throws Exception{
         final Business business = businessDAO.findByName(businessName);
         if (business != null && business.getBusinessDetails().validationKey.equals(key)) {

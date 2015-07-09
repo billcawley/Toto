@@ -31,22 +31,15 @@ public class DSImportService {
     @Autowired
     private DSSpreadsheetService dsSpreadsheetService;
 
-    public static final String IDENTIFIER = "key";
     public static final String CHILDOF = "child of ";
     public static final String PARENTOF = "parent of ";
     public static final String ATTRIBUTE = "attribute ";
     public static final String LANGUAGE = "language ";
-    public static final String PLURAL = "plural ";
     public static final String PEERS = "peers";
     public static final String LOCAL = "local";
     public static final String EQUALS = "equals";
-    public static final String COMPOSITION = "composition";
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-    SimpleDateFormat ukdf2 = new SimpleDateFormat("dd/MM/yy");
-    SimpleDateFormat ukdf4 = new SimpleDateFormat("dd/MM/yyyy");
-    SimpleDateFormat ukdf3 = new SimpleDateFormat("dd MMM yyyy");
 
     static class ImportHeading {
         int column;
@@ -59,12 +52,10 @@ public class DSImportService {
         Set<Name> childOf;
         String attribute;
         Set<Integer> peerHeadings;
-        String plural;
         //Name topParent;
         boolean identifier;
         boolean contextItem;
         boolean local;
-        String composition;
         String equalsString;
         String lineValue;
         Name lineName;
@@ -80,49 +71,54 @@ public class DSImportService {
             childOf = null;
             attribute = null;
             peerHeadings = new HashSet<Integer>();
-            plural = null;
             // topParent = null;
             identifier = false;
             contextItem = false;
             local = false;
-            composition = null;
             equalsString = null;
             lineValue = "";
             lineName = null;
         }
     }
 
-    private Date tryDate (String maybeDate, SimpleDateFormat df){
-        try{
+    private Date tryDate(String maybeDate, SimpleDateFormat df) {
+        try {
             return df.parse(maybeDate);
-        }catch(Exception e){
+        } catch (Exception e) {
             return null;
         }
     }
 
+    static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+    static final SimpleDateFormat ukdf2 = new SimpleDateFormat("dd/MM/yy");
+    static final SimpleDateFormat ukdf4 = new SimpleDateFormat("dd/MM/yyyy");
+    static final SimpleDateFormat ukdf3 = new SimpleDateFormat("dd MMM yyyy");
+
     // todo - probably a slightly nicer API call for this
-    public Date isADate(String maybeDate){
-         Date date = tryDate(maybeDate.substring(0,10), sdf);
-         if (date!=null) return date;
-         date = tryDate(maybeDate.substring(0,10), ukdf4);
-        if (date!=null) return date;
-        date = tryDate(maybeDate.substring(0,11), ukdf3);
-        if (date!=null) return date;
-        return tryDate(maybeDate.substring(0,8), ukdf2);
+    public Date isADate(String maybeDate) {
+        Date date = tryDate(maybeDate.substring(0, 10), sdf);
+        if (date != null) return date;
+        date = tryDate(maybeDate.substring(0, 10), ukdf4);
+        if (date != null) return date;
+        date = tryDate(maybeDate.substring(0, 11), ukdf3);
+        if (date != null) return date;
+        return tryDate(maybeDate.substring(0, 8), ukdf2);
     }
 
+    // currently only two types of import supported and detection on file name (best idea?). Run the import and persist.
 
     public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
         System.out.println("reading file " + filePath);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         if (fileType.toLowerCase().startsWith("sets")) {
-            setsImport(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), new FileInputStream(filePath), attributeNames, fileType);
+            setsImport(azquoMemoryDBConnection, new FileInputStream(filePath), attributeNames, fileType);
         } else {
-            valuesImport(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), filePath, fileType, attributeNames);
+            valuesImport(azquoMemoryDBConnection, filePath, fileType, attributeNames);
         }
-        dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken).persist();
+        azquoMemoryDBConnection.persist();
     }
 
-
+    // the readClause function would say that "parent of thing123" would return " thing123" if it was a readClause on "parent of"
     private String readClause(String keyName, String phrase) {
         if (phrase.length() >= keyName.length() && phrase.toLowerCase().startsWith(keyName)) {
             return phrase.substring(keyName.length()).trim();
@@ -130,20 +126,24 @@ public class DSImportService {
         return null;
     }
 
+        // this is called for all the ; separated clauses in a header e.g. Gender; parent of Customer; child of Genders
     private void interpretClause(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportHeading heading, String clause) throws Exception {
-        if (readClause(IDENTIFIER, clause) != null) {
-            heading.identifier = true;
-        }
-        // Edd just tweaking things. Notably if fields like this were already null the logic is redundant, I'll assume they were not
-        String readClause = readClause(PARENTOF, clause);
+        String readClause = readClause(PARENTOF, clause); // parent of names in the specified column
         if (readClause != null) {
-            heading.parentOf = readClause.replace(Name.QUOTE + "","");
+            heading.parentOf = readClause.replace(Name.QUOTE + "", "");
+            if (heading.parentOf.length() == 0) {
+                throw new Exception(clause + " not understood");
+            }
         }
-        readClause = readClause(CHILDOF, clause);
+        // e.g. child of all orders
+        readClause = readClause(CHILDOF, clause); // child of relates to a name in the database - the hook to existing data
         if (readClause != null) {
-            heading.childOfString = readClause.replace(Name.QUOTE + "","");
+            heading.childOfString = readClause.replace(Name.QUOTE + "", "");
+            if (heading.childOfString.length() == 0) {
+                throw new Exception(clause + " not understood");
+            }
         }
-        readClause = readClause(LANGUAGE, clause);
+        readClause = readClause(LANGUAGE, clause); // default language for itentifying the name
         if (readClause != null) {
             heading.attribute = readClause;
             heading.identifier = true;
@@ -151,7 +151,7 @@ public class DSImportService {
                 throw new Exception(clause + " not understood");
             }
         }
-        readClause = readClause(ATTRIBUTE, clause);
+        readClause = readClause(ATTRIBUTE, clause); // to add attributes to other columns so Customer; attribute address1, externally a . gets converted to ;attribute so Customer.address1. Can even go.address1 apparently
         if (readClause != null) {
             heading.attribute = readClause.replace("`", "");
             if (heading.attribute.length() == 0) {
@@ -161,24 +161,13 @@ public class DSImportService {
                 heading.attribute = Constants.DEFAULT_DISPLAY_NAME;
             }
         }
-        if (readClause(LOCAL, clause) != null) {
+        if (readClause(LOCAL, clause) != null) {// local names in child of, can work with parent of but then it's the subject that it affects
             heading.local = true;
         }
-        readClause = readClause(PLURAL, clause);
-        if (readClause != null) {
-            heading.plural = readClause;
-            if (heading.plural.length() == 0) {
-                throw new Exception(clause + " not understood");
-            }
-        }
-        readClause = readClause(EQUALS, clause);
+        readClause = readClause(EQUALS, clause); // the actual Azquo name if the heading name is not appropriate
         if (readClause != null) {
             heading.equalsString = readClause;
-        }
-        readClause = readClause(COMPOSITION, clause);
-        if (readClause != null) {
-            heading.composition = readClause;
-            if (heading.composition.length() == 0) {
+            if (heading.equalsString.length() == 0) {
                 throw new Exception(clause + " not understood");
             }
         }
@@ -220,9 +209,12 @@ public class DSImportService {
         }
     }
 
+    // headings are clauses separated by semicolons, first is the heading name the onto the extra stuff
+    // essentially parsing through all the relevant things in a heading to populate an ImportHeading
+
     private void interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, ImportHeading heading, List<String> attributeNames) throws Exception {
         StringTokenizer clauses = new StringTokenizer(headingString, ";");
-        heading.heading = clauses.nextToken().replace(Name.QUOTE + "","");
+        heading.heading = clauses.nextToken().replace(Name.QUOTE + "", "");
         heading.name = nameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames);//at this stage, look for a name, but don't create it unless necessary
         while (clauses.hasMoreTokens()) {
             interpretClause(azquoMemoryDBConnection, heading, clauses.nextToken().trim());
@@ -312,7 +304,7 @@ public class DSImportService {
     public Name includeInSet(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
         //namesFound is a quick lookup to avoid going to findOrCreateNameInParent
         String np = name + ",";
-        if (parent != null){
+        if (parent != null) {
             np += parent.getId();
         }
         Name found = namesFound.get(np);
@@ -348,19 +340,19 @@ public class DSImportService {
             //filetype should be first word only
             fileType = fileType.substring(0, fileType.indexOf(" "));
         }
-        if (fileType.contains("_")) fileType = fileType.substring(0,fileType.indexOf("_"));
+        if (fileType.contains("_")) fileType = fileType.substring(0, fileType.indexOf("_"));
         long track = System.currentTimeMillis();
         CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
         csvReader.setUseTextQualifier(true);
-         String[]headers= null;
-          Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
-        if (importInterpreter != null ){
+        String[] headers = null;
+        Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
+        if (importInterpreter != null) {
             String importHeaders = importInterpreter.getAttribute(headingsString);
-            if (importHeaders != null){
+            if (importHeaders != null) {
                 headers = importHeaders.split("¬");
             }
         }
-        if (headers==null){
+        if (headers == null) {
             csvReader.readHeaders();
             headers = csvReader.getHeaders();
             if (headers.length < 2) {
@@ -395,29 +387,28 @@ public class DSImportService {
             for (ImportHeading heading : headings) {
 //                trackers.put(heading.name.getDefaultDisplayName(), 0L);
                 heading.lineValue = csvReader.get(heading.column).intern();
-                if (heading.attribute != null && heading.attribute.equalsIgnoreCase(dateLang)){
+                if (heading.attribute != null && heading.attribute.equalsIgnoreCase(dateLang)) {
                     //interpret the date and change to standard form
                     //todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-                       Date date = isADate(heading.lineValue);
-                       if (date != null){
-                           heading.lineValue = sdf.format(date);
-                       }
-                   }
+                    Date date = isADate(heading.lineValue);
+                    if (date != null) {
+                        heading.lineValue = sdf.format(date);
+                    }
+                }
                 heading.lineName = null;
             }
-            if (headings.get(0).lineValue.length() > 0 || headings.get(0).column==-1) {//skip any line that has a blank in the first column unless we're not interested in that column
-                getCompositeValues(headings);
+            if (headings.get(0).lineValue.length() > 0 || headings.get(0).column == -1) {//skip any line that has a blank in the first column unless we're not interested in that column
                 try {
                     valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
-                }catch(Exception e){
+                } catch (Exception e) {
                     throw new Exception("error: line " + lineNo + " " + e.getMessage());
                 }
                 Long now = System.nanoTime();
-                if (now - time > trigger){
-                     System.out.println("line no " + lineNo + " time = " + (now - time));
-                 }
+                if (now - time > trigger) {
+                    System.out.println("line no " + lineNo + " time = " + (now - time));
+                }
                 time = now;
-                if (lineNo % 5000 == 0){
+                if (lineNo % 5000 == 0) {
                     System.out.println("imported line count " + lineNo);
                 }
                 if (valuecount - lastReported >= 5000) {
@@ -428,10 +419,10 @@ public class DSImportService {
         }
         System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
         System.out.println("---------- namesfound size " + namesFound.size());
-        for (String trackName : trackers.keySet()){
+        for (String trackName : trackers.keySet()) {
             System.out.println("---------- " + trackName + " \t\t" + trackers.get(trackName));
         }
-     }
+    }
 
 
     private void readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<ImportHeading> headings, String fileType, List<String> attributeNames) throws Exception {
@@ -465,9 +456,9 @@ public class DSImportService {
                 if (head.startsWith(";")) {
                     head = lastHeading + head;
                 } else {
-                    if (head.contains(";")){
+                    if (head.contains(";")) {
                         lastHeading = head.substring(0, head.indexOf(";"));
-                    }else{
+                    } else {
                         lastHeading = head;
                     }
                 }
@@ -587,22 +578,22 @@ public class DSImportService {
                         valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue);
                     }
                 }
-                if (heading.identityHeading >= 0 && heading.attribute!=null && (!heading.attribute.equalsIgnoreCase(dateLang) || (isADate(heading.lineValue) ==null))) {
+                if (heading.identityHeading >= 0 && heading.attribute != null && (!heading.attribute.equalsIgnoreCase(dateLang) || (isADate(heading.lineValue) == null))) {
                     // funnily enough no longer using attributes
                     handleAttribute(azquoMemoryDBConnection, namesFound, heading, headings);
                 }
                 if (heading.parentOf != null && !heading.local) {
-                      handleParent(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
+                    handleParent(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
                 }
                 if (heading.childOf != null) {
                     if (heading.lineName != null) {
-                        for (Name parent : heading.childOf){
+                        for (Name parent : heading.childOf) {
                             parent.addChildWillBePersisted(heading.lineName);
                         }
                     } else {
                         String childNameString = heading.lineValue;
                         if (childNameString.length() > 0) {
-                            for (Name parent:heading.childOf){
+                            for (Name parent : heading.childOf) {
                                 heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childNameString, parent, heading.local, attributeNames);
                             }
                         }
@@ -610,9 +601,9 @@ public class DSImportService {
                 }
             }
             long now = System.nanoTime();
-            if (now - time > toolong){
+            if (now - time > toolong) {
                 System.out.println(heading.heading + " took " + (now - time));
-        }
+            }
             time = System.nanoTime();
         }
         return valueCount;
@@ -644,7 +635,7 @@ public class DSImportService {
                         importHeading.peerHeadings.add(peerHeading);
                     }
                 }
-                if (importHeading.attribute != null){ // && !importHeading.attribute.equals(Constants.DEFAULT_DISPLAY_NAME)) {
+                if (importHeading.attribute != null) { // && !importHeading.attribute.equals(Constants.DEFAULT_DISPLAY_NAME)) {
                     String headingName = importHeading.heading;
                     if (importHeading.equalsString != null) {
                         headingName = importHeading.equalsString;
@@ -665,7 +656,7 @@ public class DSImportService {
                 if (importHeading.childOfString != null) {
                     importHeading.childOf = new HashSet<Name>();
                     String[] parents = importHeading.childOfString.split(",");//TODO this does not take into account names with commas inside.......
-                    for (String parent:parents){
+                    for (String parent : parents) {
                         importHeading.childOf.add(nameService.findOrCreateNameInParent(azquoMemoryDBConnection, parent, null, false));
                     }
                 }
@@ -691,9 +682,10 @@ public class DSImportService {
         }
         */
     }
-    private List<String> setLocalLanguage(ImportHeading heading, List<String> defaultLanguages){
+
+    private List<String> setLocalLanguage(ImportHeading heading, List<String> defaultLanguages) {
         List<String> languages = new ArrayList<String>();
-        if (heading.attribute != null && !heading.attribute.equalsIgnoreCase(dateLang)){
+        if (heading.attribute != null && !heading.attribute.equalsIgnoreCase(dateLang)) {
             languages.add(heading.attribute);
         } else {
             languages.addAll(defaultLanguages);
@@ -707,16 +699,16 @@ public class DSImportService {
         if (heading.lineValue.length() == 0) {
             return;
         }
-        if (heading.lineName != null){
+        if (heading.lineName != null) {
             if (heading.childOf != null) {
-                for (Name parent:heading.childOf){
+                for (Name parent : heading.childOf) {
                     parent.addChildWillBePersisted(heading.lineName);
                 }
             }
         } else {
             heading.lineName = includeInParents(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, setLocalLanguage(heading, attributeNames));
-         }
-        if (childHeading.lineValue.length()==0){
+        }
+        if (childHeading.lineValue.length() == 0) {
             throw new Exception("blank value for parent of " + heading.lineValue);
         }
         if (childHeading.lineName == null) {
@@ -740,8 +732,8 @@ public class DSImportService {
         if (attribute == null) {
             attribute = Constants.DEFAULT_DISPLAY_NAME;
         }
-       identityHeading.lineName.setAttributeWillBePersisted(attribute, heading.lineValue);
-   }
+        identityHeading.lineName.setAttributeWillBePersisted(attribute, heading.lineValue);
+    }
 
     private boolean findPeers(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, Set<Name> namesForValue, List<String> attributeNames) throws Exception {
         //ImportHeading headingWithPeers = heading;
@@ -777,41 +769,13 @@ public class DSImportService {
         return hasRequiredPeers;
     }
 
-    private void getCompositeValues(List<ImportHeading> headings) {
-        int adjusted = 2;
-        //loops in case there are multiple levels of dependencies
-        while (adjusted > 1) {
-            adjusted = 0;
-            for (ImportHeading heading : headings) {
-                if (heading.composition != null) {
-                    String result = heading.composition;
-                    int headingMarker = result.indexOf("`");
-                    while (headingMarker >= 0) {
-                        int headingEnd = result.indexOf("`", headingMarker + 1);
-                        if (headingEnd > 0) {
-                            int compItem = findHeading(result.substring(headingMarker + 1, headingEnd), headings);
-                            if (compItem >= 0) {
-                                result = result.replace(result.substring(headingMarker, headingEnd + 1), headings.get(compItem).lineValue);
-                            }
-                        }
-                        headingMarker = result.indexOf("`", headingMarker + 1);
-                    }
-                    if (!result.equals(heading.lineValue)) {
-                        heading.lineValue = result;
-                        adjusted++;
-                    }
-                }
-            }
-        }
-    }
-
     public void setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames, String fileName) throws Exception {
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
-        String sheetSetName= "";
+        String sheetSetName = "";
         Name sheetSet = null;
-        if (fileName.charAt(4) == '-'){
+        if (fileName.charAt(4) == '-') {
             sheetSetName = fileName.substring(5);
-            sheetSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,sheetSetName, null, false, attributeNames);
+            sheetSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, sheetSetName, null, false, attributeNames);
         }
         String line;
         while ((line = br.readLine()) != null) {
@@ -823,9 +787,9 @@ public class DSImportService {
                 String setName = st.nextToken().replace("\"", "");//sometimes the last line of imported spreadsheets has come up as ""
                 if (setName.length() > 0) {
                     interpretHeading(azquoMemoryDBConnection, setName, importHeading, attributeNames);
-                    if (importHeading.heading.equalsIgnoreCase(sheetSetName)){
+                    if (importHeading.heading.equalsIgnoreCase(sheetSetName)) {
                         importHeading.name = sheetSet;
-                    }else{
+                    } else {
                         importHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, importHeading.heading, sheetSet, true, attributeNames);
                     }
                     if (importHeading.name != null) { // is this a concern? I'll throw an exception in case (based on IntelliJ warning)
@@ -842,14 +806,14 @@ public class DSImportService {
                                     }
                                     child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, set, false, attributeNames);
                                 } else {
-                                     child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, sheetSet, true, attributeNames);
-                                     //new names will have been added to sheet set unnecessarily, so:
+                                    child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, sheetSet, true, attributeNames);
+                                    //new names will have been added to sheet set unnecessarily, so:
                                 }
                                 children.add(child);
                             }
                         }
                         nameService.clearChildren(set);
-                        for (Name child:children){
+                        for (Name child : children) {
                             if (sheetSet != null) sheetSet.removeFromChildrenWillBePersisted(child);
                             set.addChildWillBePersisted(child);
                         }

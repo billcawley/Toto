@@ -87,6 +87,7 @@ public class DSDataLoadService {
         return nameService.findByName(azquoMemoryDBConnection, "all years") == null;
     }
 
+    // generally default data but after the first time it will stay as it was then.
 
     public String findRequiredTables(final DatabaseAccessToken databaseAccessToken, final String remoteAddress) throws Exception {
         final AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
@@ -108,6 +109,7 @@ public class DSDataLoadService {
     }
 
     // might be a case for koloboke if speed becomes a concern
+    // this function is too big for intellij to analyse properly, I'm not sure how much of a concern this is.
     public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Map<String, List<Map<String, String>>> tableMap = new HashMap<String, List<Map<String, String>>>();
@@ -125,11 +127,11 @@ public class DSDataLoadService {
                 String tableName = line.substring(10);
                 System.out.println();
                 System.out.print("Initial load of : " + tableName);
-                // I'm not going to support tables being loaded in two chunks I see no point. THis would overwrite data if a table were referenced twice
+                // I'm not going to support tables being loaded in two chunks I see no point. This would overwrite data if a table were referenced twice.
                 currentTableDataMap = new ArrayList<Map<String, String>>(); // and I know this repeats keys for each row, the goal here is ease of use for importing, not efficiency
                 /* a further comment on efficiency :
                 this kind of loading means over 10x the size in memory vs the file size but cutting this down is a bit pointless as it will take about this much
-                in the memorydb. If we're really tight getting rid of the maps per line and leaving it as an arraylist might help but the existing removal of tables as they're used
+                in the memorydb. If we're really tight getting rid of the maps per line and leaving it as an ArrayList might help but the existing removal of tables as they're used
                 probably goes a long way to stopping memory spikes.*/
                 tableMap.put(tableName, currentTableDataMap);
             } else { // data, is it the first one?
@@ -158,7 +160,7 @@ public class DSDataLoadService {
         System.out.println();
         System.out.println("initial load of magento data done");
         System.out.println("Trying to make some product objects");
-        // Not sure about the string literals here. On the other hadn they're not referenced anywhere else in the Java, these are database references.
+        // Not sure about the string literals here. On the other hand they're not referenced anywhere else in the Java, these are database references.
         // in Azquo the import defines the schema, do we assume that someone writing Magento reports would look here or just inspect? Is it necessary to control such things?
         Name topProduct = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "product", null, false);
         Name productAttributesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product Attributes", topProduct, false);
@@ -206,10 +208,6 @@ public class DSDataLoadService {
 
         }
         tableMap.remove("core_store");
-
-
-
-
 
         for (Map<String, String> entityTypeRecord : tableMap.get("eav_entity_type")) {
             if (entityTypeRecord.get("entity_type_code") != null) {
@@ -410,10 +408,7 @@ public class DSDataLoadService {
                     bundleName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + parentId, allSKUs, true, languages);
                     azquoProductsFound.put(parentId, bundleName);
                     allProducts.addChildWillBePersisted(bundleName);
-
-
                 }
-
             }
             String childId = attVals.get("product_id");
             Name childName = azquoProductsFound.get(childId);
@@ -422,7 +417,6 @@ public class DSDataLoadService {
                 childName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + childId, allSKUs, true, languages);
                 azquoProductsFound.put(childId, childName);
                 allProducts.addChildWillBePersisted(childName);
-
             }
             String sKU = childName.getAttribute("SKU");
             String price = attVals.get("selection_price_value");
@@ -432,7 +426,6 @@ public class DSDataLoadService {
         if (currentParent.length() > 0) {
             bundleName.setAttributeWillBePersisted("bundleprices", bundlePrices);
         }
-
 
         tableMap.remove("catalog_product_bundle_selection");
         Name entities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Entities", null, false);
@@ -497,7 +490,6 @@ public class DSDataLoadService {
         languages.clear();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
 
-
         Name customersName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "customer", null, false, languages);
         Name allCustomersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All customers", customersName, false, languages);
 
@@ -514,10 +506,8 @@ public class DSDataLoadService {
                 String groupString = group.get("customer_group_code");
                 Name groupName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, groupString, allGroupsName, true, languages);
                 customerGroups.put(groupId, groupName);
-
             }
         }
-
 
         //NOW THE CUSTOMERS!
         for (Map<String, String> attribute : tableMap.get("eav_attribute")) {
@@ -602,9 +592,7 @@ public class DSDataLoadService {
                     customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Customer " + addressRec.get("parent_id"), allCustomersName, true, languages);
                     azquoCustomersFound.put(addressRec.get("parent_id"), customer);
                 }
-
                 addressMap.put(addressRec.get("entity_id"), customer);
-
             }
             tableMap.remove("customer_address_entity");
 
@@ -626,8 +614,6 @@ public class DSDataLoadService {
             tableMap.remove("customer_address_entity_varchar");
             System.out.println("customer info done");
         }
-
-
 
         Map<String, Name> azquoOrdersFound = new HashMap<String, Name>();
 
@@ -692,8 +678,6 @@ public class DSDataLoadService {
                     if (qty > 1) {
                         weight *= qty;//store total weight
                     }
-
-
                 } catch (Exception e) {
                     //ignore the line
                 }
@@ -749,7 +733,6 @@ public class DSDataLoadService {
                 } catch (Exception e) {
                     //leave orderTime as is
                 }
-
                 part51 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 Name dateName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderDate, allDates, false, defaultLanguage);
@@ -950,13 +933,11 @@ public class DSDataLoadService {
     }
 
     private void calcBundle(AzquoMemoryDBConnection azquoMemoryDBConnection, SaleItem bundleTotal, List<SaleItem> bundleItems, Name priceName, Name taxName) throws Exception {
-
         /* Magento does not put prices into bundled items (though this routime checks just in case)
         so this routine looks up the bundled price in the bundle table.
 
         If it fails to find a bundled price, it totals all the 'full' prices for the unaccounted lines, then apportions the rest of the bundle price and tax accordingly
           */
-
         double totalOrigPrice = 0.0;
         int unknownCount = 0;
         double priceRemaining = bundleTotal.price;
@@ -988,7 +969,6 @@ public class DSDataLoadService {
                 if (saleItem.price > 0) {
                     saleItem.tax = bundleTotal.tax * saleItem.price / bundleTotal.price;
                 }
-
             }
 
             if (saleItem.price > 0.0) {
@@ -1033,7 +1013,6 @@ public class DSDataLoadService {
             namesForValue.add(saleItem.itemName);
             namesForValue.add(taxName);
             valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, df.format(saleItem.tax), namesForValue);
-
         }
     }
 
@@ -1061,5 +1040,4 @@ public class DSDataLoadService {
                 "'entity_id, order_id, created_at,total_qty','sales_flat_shipment','$starttime','entity_id'\n" +
                 "'item_id,product_id,qty','cataloginventory_stock_item','','item_id'\n";
     }
-
 }

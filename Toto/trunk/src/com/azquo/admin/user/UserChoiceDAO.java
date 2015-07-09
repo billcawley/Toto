@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * Created by bill on 22/04/14.
  *
- * Modified by edd to remove report specifity, this was per reporty and included standard options such as sorting etc. Now it does not and options are shared across reports.
+ * Modified by edd to remove report specifity, this was per report and included standard options such as sorting etc. Now it does not and options are shared across reports.
  */
 public final class UserChoiceDAO extends StandardDAO<UserChoice> {
 
