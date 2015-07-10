@@ -241,14 +241,17 @@ public class ZKAzquoBookUtils {
                         if (!cellValue.getStringValue().isEmpty() && !bottomColHeadings.get(localCol).equals(".")) { // then something to set. Note : if col heading ON THE DB SIDE is . then don't populate
                             // the notable thing ehre is that ZK uses the object type to work out data type
                             SCell cell = sheet.getInternalSheet().getCell(row, col);
-                            if (NumberUtils.isNumber(cellValue.getStringValue())) {
-                                cell.setValue(cellValue.getDoubleValue());// think that works . . .
-                            } else {
-                                cell.setValue(cellValue.getStringValue());// think that works . . .
-                            }
-                            // see if this works for highlighting
-                            if (cellValue.isHighlighted()){
-                                CellOperationUtil.applyFontColor(Ranges.range(sheet, row,col), "#FF0000");
+                            // logic I didn't initially implement : don't overwrite if there's a formulae in there
+                            if (cell.getType() != SCell.CellType.FORMULA){
+                                if (NumberUtils.isNumber(cellValue.getStringValue())) {
+                                    cell.setValue(cellValue.getDoubleValue());// think that works . . .
+                                } else {
+                                    cell.setValue(cellValue.getStringValue());// think that works . . .
+                                }
+                                // see if this works for highlighting
+                                if (cellValue.isHighlighted()){
+                                    CellOperationUtil.applyFontColor(Ranges.range(sheet, row,col), "#FF0000");
+                                }
                             }
                         }
                         col++;

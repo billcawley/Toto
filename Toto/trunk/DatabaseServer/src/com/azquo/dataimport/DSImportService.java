@@ -331,6 +331,8 @@ public class DSImportService {
 
     Map<String, Long> trackers = new ConcurrentHashMap<String, Long>();
 
+    // the big function that deals with data importing
+
     public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
         trackers = new ConcurrentHashMap<String, Long>();
         // little local cache just to speed things up
@@ -345,6 +347,8 @@ public class DSImportService {
         CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
         csvReader.setUseTextQualifier(true);
         String[] headers = null;
+        // ok beginning to understand. It looks for a name for the file type, this name can have headers and/or the definitions for each header
+        // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         if (importInterpreter != null) {
             String importHeaders = importInterpreter.getAttribute(headingsString);
@@ -363,15 +367,12 @@ public class DSImportService {
                 csvReader.readHeaders();
                 headers = csvReader.getHeaders();
             }
-
-
         }
-        // what we're doing here is going through the headers, First thing to do is to set up the peers if defined for a header
-        // then we find or create each header as a name in the database. If the name has peers it's added to the nameimportheading map, a way to find the header for that name with peers
-        // namesWithPeersHeaderMap is a map of the names which have peers, colums headed by such names will have the value in them, hence why we need to hold the header so we cna get the value
-        //final HashMap<Name, String> namesWithPeersHeaderMap = new HashMap<Name, String>();
+        // correcting the comment : readHeaders is about creating a set of ImportHeadings
+        // notable that internally it might use attributes from the relevant data import name to supplement the header information
         final List<ImportHeading> headings = new ArrayList<ImportHeading>();
         readHeaders(azquoMemoryDBConnection, headers, headings, fileType, attributeNames);
+        // further information put into the ImportHeadings based off the initial info
         fillInHeaderInformation(azquoMemoryDBConnection, headings);
         int valuecount = 0; // purely for logging
         int lastReported = 0;
@@ -380,16 +381,18 @@ public class DSImportService {
         long trigger = 2000000;
         Long time = System.nanoTime();
 
-        while (csvReader.readRecord()) {
+        while (csvReader.readRecord()) { // now to the data itself, headers should have been sorted one way or another,
             lineNo++;
             //ImportHeading contextPeersItem = null;
             //if (csvReader.get(0).length() == 0) break;//break if the first line element is blank
+            // ok it's worth noting here - the data for the line is being added to the ImportHeadings, thus after they are passed to functions that actually import the data.
             for (ImportHeading heading : headings) {
 //                trackers.put(heading.name.getDefaultDisplayName(), 0L);
-                heading.lineValue = csvReader.get(heading.column).intern();
+                heading.lineValue = csvReader.get(heading.column).intern();// since strings may be repeated intern, should save a bit of memory using the String pool
                 if (heading.attribute != null && heading.attribute.equalsIgnoreCase(dateLang)) {
                     //interpret the date and change to standard form
                     //todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
+                    // ok so the thing here is to try to standardise date formatting
                     Date date = isADate(heading.lineValue);
                     if (date != null) {
                         heading.lineValue = sdf.format(date);
@@ -397,6 +400,7 @@ public class DSImportService {
                 }
                 heading.lineName = null;
             }
+
             if (headings.get(0).lineValue.length() > 0 || headings.get(0).column == -1) {//skip any line that has a blank in the first column unless we're not interested in that column
                 try {
                     valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
@@ -424,6 +428,7 @@ public class DSImportService {
         }
     }
 
+    //
 
     private void readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<ImportHeading> headings, String fileType, List<String> attributeNames) throws Exception {
         int col = 0;
@@ -471,7 +476,7 @@ public class DSImportService {
         }
     }
 
-
+    // each line of values (or names as it may practically be)
     private int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings, HashMap<String, Name> namesFound, List<String> attributeNames) throws Exception {
         List<Name> contextNames = new ArrayList<Name>();
         String value;
@@ -613,6 +618,7 @@ public class DSImportService {
     private void fillInHeaderInformation(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings) throws Exception {
         for (ImportHeading importHeading : headings) {
             if (importHeading.heading != null) {
+                // ok find the indexes of peers and get shirty if you can't find them
                 if (importHeading.name != null && importHeading.name.getPeers().size() > 0 && !importHeading.contextItem) {
                     for (Name peer : importHeading.name.getPeers().keySet()) {
                         //three possibilities to find the peer:
@@ -635,14 +641,18 @@ public class DSImportService {
                         importHeading.peerHeadings.add(peerHeading);
                     }
                 }
+
+                // having an attribute means the content of this column relates to a name in another column, need to find that name
                 if (importHeading.attribute != null) { // && !importHeading.attribute.equals(Constants.DEFAULT_DISPLAY_NAME)) {
                     String headingName = importHeading.heading;
-                    if (importHeading.equalsString != null) {
+                    if (importHeading.equalsString != null) {// the equals string seems to be a way for a heading to have an alias, not completely clear on the usage but I'm guessing by this point the alias is no longer important so overwrite it with the equals value
                         headingName = importHeading.equalsString;
                     }
-                    importHeading.identityHeading = findHeading(headingName, headings);
+                    importHeading.identityHeading = findHeading(headingName, headings); // so if it's Customer,Address1 we need to find customer. THis findheading will look for the Customter with identifier = true or the first one without an attribute
                     if (importHeading.identityHeading >= 0) {
-                        headings.get(importHeading.identityHeading).identifier = true;//actively set the identifier as setting the attribute below might confuse the issue
+                        headings.get(importHeading.identityHeading).identifier = true;//it may not be true (as in found due to no attribute rather than language), in which case set it true now . . .need to consider this logic
+                        // so now we have an identifier for this name go through all columns for this name and set the identity heading and attribute to avoid ambiguity? Of course if it set this on more than one heading it would make no sense
+                        // some unclear logic here, this needs refactoring
                         for (ImportHeading heading2 : headings) {
                             //this is for the cases where the default display name is not the identifier.
                             if (heading2.heading != null && heading2.heading.equals(importHeading.heading) && heading2.attribute == null) {
@@ -653,6 +663,7 @@ public class DSImportService {
                         }
                     }
                 }
+                // child of being in Azquo context
                 if (importHeading.childOfString != null) {
                     importHeading.childOf = new HashSet<Name>();
                     String[] parents = importHeading.childOfString.split(",");//TODO this does not take into account names with commas inside.......
@@ -660,6 +671,7 @@ public class DSImportService {
                         importHeading.childOf.add(nameService.findOrCreateNameInParent(azquoMemoryDBConnection, parent, null, false));
                     }
                 }
+                // parent of being in context of this upload, if you can't find the heading throw an exception
                 if (importHeading.parentOf != null) {
                     importHeading.childHeading = findHeading(importHeading.parentOf, headings);
                     if (importHeading.childHeading < 0) {
@@ -670,17 +682,6 @@ public class DSImportService {
                 }
             }
         }
-        /*
-        //attribute topparents must be found after the identity heading topparent is found
-        for (ImportHeading importHeading:headings) {
-            if (importHeading.heading != null) {
-                if (importHeading.attribute != null) {
-                    findTopParent(azquoMemoryDBConnection, importHeading, headings, attributeNames);
-
-                }
-            }
-        }
-        */
     }
 
     private List<String> setLocalLanguage(ImportHeading heading, List<String> defaultLanguages) {
@@ -694,12 +695,13 @@ public class DSImportService {
 
     }
 
+    // namesFound is a cache. Then the heading we care about then the list of all headings.
     private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
-        ImportHeading childHeading = headings.get(heading.childHeading);
-        if (heading.lineValue.length() == 0) {
+        if (heading.lineValue.length() == 0) { // so nothing to do
             return;
         }
-        if (heading.lineName != null) {
+        ImportHeading childHeading = headings.get(heading.childHeading);
+        if (heading.lineName != null) { // This function is called in two places in interpret line, the firts time this will be null the second time not
             if (heading.childOf != null) {
                 for (Name parent : heading.childOf) {
                     parent.addChildWillBePersisted(heading.lineName);
