@@ -147,7 +147,7 @@ public class MagentoController {
         }
     }
 
-    // when not multipart
+    // when nt multipart
 
     @RequestMapping
     @ResponseBody
@@ -166,7 +166,7 @@ public class MagentoController {
             return "error: no database selected";
         }
         if (dataLoadService.magentoDBNeedsSettingUp(loggedInUser.getDataAccessToken())){
-            String magentoSetupFile = spreadsheetService.getHomeDir() + "/databases/Magen/setup/magentosetup.xlsx";
+            String magentoSetupFile = spreadsheetService.getHomeDir() + "/databases/ecommerce/setup/ecommerce setup.xlsx";
             String fileName = "magentosetup.xlsx";
             importService.importTheFile(loggedInUser, fileName, magentoSetupFile);
         }
