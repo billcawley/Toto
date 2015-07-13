@@ -616,7 +616,7 @@ public class AzquoBook {
                 String region = name.getText().substring(dataRegionPrefix.length()).toLowerCase();
                 UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
-                    userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, getSheetDefinedOptionsStringForRegion(region));
+                    userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, getSheetDefinedOptionsStringForRegion(region) != null ? getSheetDefinedOptionsStringForRegion(region) : "");
                 }
                 vRegion.name = region;
                 vRegion.maxrows = userRegionOptions != null ? userRegionOptions.getRowLimit() + "" : "0";
@@ -647,7 +647,7 @@ public class AzquoBook {
                 try {
                     UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, regionName);
                     if (userRegionOptions == null) {
-                        userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, regionName, getSheetDefinedOptionsStringForRegion(regionName));
+                        userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, regionName, getSheetDefinedOptionsStringForRegion(regionName) != null ? getSheetDefinedOptionsStringForRegion(regionName) : "");
                     }
                     fillRegion(loggedInUser, regionName, highlighted, userRegionOptions);
                 } catch (RemoteException re) {
