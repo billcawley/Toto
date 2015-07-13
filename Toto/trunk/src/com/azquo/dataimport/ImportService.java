@@ -57,7 +57,7 @@ public final class ImportService {
         //used for Magento importing (data  - not report templates)
         List<String> languages = new ArrayList<String>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        importTheFile(loggedInUser, fileName, filePath, "", "", true, languages);
+        importTheFile(loggedInUser, fileName, "", filePath, "", true, languages);
     }
     public void importTheFile(LoggedInUser loggedInUser, String fileName, String useType, String filePath, String fileType, boolean skipBase64, List<String> attributeNames) throws Exception{
        String error = "";
