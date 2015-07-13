@@ -297,7 +297,8 @@ seaports;children   container;children
         boolean starting = true;
         for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) {
             List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
-            if (lastHeadingDefinitionCellIndex> 0 && !headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex)))  starting = false;// Don't permute until you have something to permute!
+            if (lastHeadingDefinitionCellIndex > 0 && !headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex)))
+                starting = false;// Don't permute until you have something to permute!
             while (!starting && headingDefinitionRowIndex < noOfHeadingDefinitionRows - 1 // we're not on the last row
                     && headingLists.get(headingDefinitionRowIndex + 1).size() > 1 // the next row is not a single cell (will all rows be the same length?)
                     && headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex + 1)) // and the last cell is the only not null one
@@ -675,7 +676,7 @@ seaports;children   container;children
     // plan with refactoring is for this to do some of what was in the old get excel data function. Taking the full region and imposing useful user limits
     // note, one could derive column and row headings from the source data's headings but passing them is easier if they are to hand which the should be
     // also deals with highlighting
-    // todo : I'm not entirely happy with the way max rows and cols causes total sorting, I think maybe that should be configured another way
+    // todo : general cleanup, check logic is clean as it should be. Probably keep row sort support even if not heavily used
 
     private List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
             , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays) throws Exception {
@@ -683,8 +684,8 @@ seaports;children   container;children
         if (sourceData == null || sourceData.isEmpty()) {
             return sourceData;
         }
-
-        // todo : can we tell from params whether we need to sort/filter at all? Want to chuck it back if necessary . . .
+        Integer sortOnColIndex = findPosition(columnHeadings, sortColString);
+        Integer sortOnRowIndex = findPosition(rowHeadings, sortRowString); // not used at the mo maybe remove
 
         int totalRows = sourceData.size();
         int totalCols = sourceData.get(0).size();
@@ -692,26 +693,28 @@ seaports;children   container;children
         // sorting on totals overrides an explicitly selected ordering. Hmmmmm.
         boolean sortOnColTotals = false;
         boolean sortOnRowTotals = false;
-        if (maxRows != 0){
+        if (maxRows != 0) {
             if (Math.abs(maxRows) < totalRows) {
-                sortOnRowTotals = true;
-                sortRowAsc = maxRows < 0;
+                if (sortOnColIndex == -1) { // only cause total sortring if a column hasn't been passed
+                    sortOnRowTotals = true;
+                    sortRowAsc = maxRows < 0;
+                }
             } else {
                 maxRows = 0; // zero it as it's a moot point
             }
         }
-        if (maxCols != 0){
+        if (maxCols != 0) {
             if (Math.abs(maxCols) < totalCols) {
-                sortOnColTotals = true;
-                sortColAsc = maxCols < 0;
+                if (sortOnRowIndex == -1) { // only cause total sortring if a sorting row hasn't been passed
+                    sortOnColTotals = true;
+                    sortColAsc = maxCols < 0;
+                }
             } else {
                 maxCols = 0;
             }
         }
         maxRows = Math.abs(maxRows);
         maxCols = Math.abs(maxCols);
-        Integer sortOnColIndex = findPosition(columnHeadings, sortColString);
-        Integer sortOnRowIndex = findPosition(rowHeadings, sortRowString);
         if (sortOnColIndex == -1 && sortOnRowIndex == -1 && !sortOnColTotals && !sortOnRowTotals) { // then there's no sorting to do!
             return sourceData;
         }
@@ -770,10 +773,10 @@ seaports;children   container;children
         int blockRowCount = 0;
         List<List<AzquoCell>> sortedCells = new ArrayList<List<AzquoCell>>();
         // zero passed or set above means don't limit
-        if (maxRows == 0){
+        if (maxRows == 0) {
             maxRows = totalRows;
         }
-        if (maxCols == 0){
+        if (maxCols == 0) {
             maxCols = totalCols;
         }
         for (rowNo = 0; rowNo < maxRows; rowNo++) {
@@ -1086,7 +1089,7 @@ I think that this is an ideal candidate for multithreading to speed things up
     private List<List<DataRegionHeading>> getRowHeadingsAsArray(List<List<AzquoCell>> cellArray) {
         List<List<DataRegionHeading>> toReturn = new ArrayList<List<DataRegionHeading>>();
         for (List<AzquoCell> cell : cellArray) {
-            if (!cell.isEmpty()){
+            if (!cell.isEmpty()) {
                 toReturn.add(cell.get(0).getRowHeadings());
             }
         }
@@ -1157,7 +1160,7 @@ I think that this is an ideal candidate for multithreading to speed things up
     public String formatRowHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, int unsortedRow, int col, String jsonFunction) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         DataRegionHeading dataRegionHeading = getRowDataRegionHeading(azquoMemoryDBConnection, rowHeadingsSource, unsortedRow, col, databaseAccessToken.getLanguages());
-        if (dataRegionHeading != null){
+        if (dataRegionHeading != null) {
             if (dataRegionHeading.getName() != null) {
                 return formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
             } else {
@@ -1252,7 +1255,7 @@ I think that this is an ideal candidate for multithreading to speed things up
                             , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                             , cell.getUnsortedRow(), cell.getUnsortedCol(), totalSetSize, databaseAccessToken.getLanguages());
 
-                    if (azquoCell != null){
+                    if (azquoCell != null) {
                         final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
                         final Set<DataRegionHeading> headingsForCell = new HashSet<DataRegionHeading>();
                         headingsForCell.addAll(azquoCell.getColumnHeadings());

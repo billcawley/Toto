@@ -61,7 +61,7 @@ public class UserRegionOptions extends StandardEntity{
         if (hideRows == 0){
             hideRows = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
         }
-        this.sortable = getOptionFromSpreadsheetOptions(SORTABLE, spreadsheetSource) != null && getOptionFromSpreadsheetOptions(SORTABLE, spreadsheetSource).trim().equalsIgnoreCase("true");
+        this.sortable = spreadsheetSource.contains("sortable"); // the get option thing is no good for just an "exists with no value" check, this is the same
         this.rowLimit = asNumber(getOptionFromSpreadsheetOptions(ROWLIMIT, spreadsheetSource));
         this.columnLimit = asNumber(getOptionFromSpreadsheetOptions(COLUMNLIMIT, spreadsheetSource));
         // currently sort columns and rows are not supported in this way

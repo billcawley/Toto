@@ -913,29 +913,32 @@ public class AzquoBook {
                             String[] givenStrings = givenHeadings.get(headingsRegion);
                             UserRegionOptions userRegionOptions = // bit hacky but should work
                                     userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, headingsRegion.substring(headingsRegion.indexOf(":") + 1));
+                            if (userRegionOptions == null){ // forgot this backup here :P todo : maybe pass through from before? Possible?
+                                userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, headingsRegion.substring(headingsRegion.indexOf(":") + 1), getSheetDefinedOptionsStringForRegion(headingsRegion.substring(headingsRegion.indexOf(":") + 1)));
+                            }
                             if (headingsRegion.startsWith("columns:")) {
                                 origContent = givenStrings[colNo - headingsRange.getFirstColumn()];
                                 headingsRegion = headingsRegion.substring(8);
-                                // logic culd perhaps be rearranged but I'm hoping to zap this class shortly.
-                                if (userRegionOptions.getSortColumn().equals(origContent) && userRegionOptions.getSortColumnAsc()) {//sort is currently up
-                                    content += "<div class='sortup'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','" + origContent + "');\"><img src='/images/sortup.png'></a></div>";
-                                } else {
+                                // logic could perhaps be rearranged but I'm hoping to zap this class shortly.
+                                if (userRegionOptions.getSortColumn() != null && userRegionOptions.getSortColumn().equals(origContent) && userRegionOptions.getSortColumnAsc()) {//sort is currently up
                                     content += "<div class='sortup'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','');\"><img src='/images/sort0.png'></a></div>";
-                                }
-                                if (userRegionOptions.getSortColumn().equals(origContent) && !userRegionOptions.getSortColumnAsc()) {//sort down
-                                    content += "<div class='sortdown'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','" + origContent + "-desc');\"><img src='/images/sortdown.png'></a></div>";
                                 } else {
+                                    content += "<div class='sortup'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','" + origContent + "');\"><img src='/images/sortup.png'></a></div>";
+                                }
+                                if (userRegionOptions.getSortColumn() != null && userRegionOptions.getSortColumn().equals(origContent) && !userRegionOptions.getSortColumnAsc()) {//sort down
                                     content += "<div class='sortdown'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','');\"><img src='/images/sort0.png'></a></div>";
+                                } else {
+                                    content += "<div class='sortdown'><a href='#' onclick=\"sortCol('" + headingsRegion.trim() + "','" + origContent + "-desc');\"><img src='/images/sortdown.png'></a></div>";
                                 }
                             } else {
                                 origContent = givenStrings[colNo - headingsRange.getFirstColumn()];
                                 headingsRegion = headingsRegion.substring(5);
-                                if (userRegionOptions.getSortRow().equals(origContent) && userRegionOptions.getSortRowAsc()) {//sort is currently left?
+                                if (userRegionOptions.getSortRow() != null && userRegionOptions.getSortRow().equals(origContent) && userRegionOptions.getSortRowAsc()) {//sort is currently left?
                                     content += "<div class='sortleft'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','" + origContent + "');\"><img src='/images/sortleft.png'></a></div>";
                                 } else {
                                     content += "<div class='sortleft'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','');\"><img src='/images/sort.png'></a></div>";
                                 }
-                                if (userRegionOptions.getSortRow().equals(origContent) && !userRegionOptions.getSortRowAsc()) {//sort is currently right?
+                                if (userRegionOptions.getSortRow() != null && userRegionOptions.getSortRow().equals(origContent) && !userRegionOptions.getSortRowAsc()) {//sort is currently right?
                                     content += "<div class='sortright'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','" + origContent + "-desc');\"><img src='/images/sortright.png'></a></div>";
                                 } else {
                                     content += "<div class='sortright'><a href='#' onclick=\"sortRow('" + headingsRegion.trim() + "','');\"><img src='/images/sort.png'></a></div>";

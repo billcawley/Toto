@@ -162,18 +162,32 @@ public class OnlineController {
                             UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), onlineReport.getId(), region);
                             userRegionOptionsDAO.removeById(userRegionOptions);
                         } else {
-                            // todo, put in the new record
                             UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), onlineReport.getId(), region);
                             if (userRegionOptions == null){
                                 userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), onlineReport.getId(), region, loggedInUser.getAzquoBook().getSheetDefinedOptionsStringForRegion(region));
                             }
                             // set under the new method and store
-
                             userRegionOptions.setRowLimit(Integer.parseInt(request.getParameter("maxrows" + region)));
                             userRegionOptions.setColumnLimit(Integer.parseInt(request.getParameter("maxcols" + region)));
                             userRegionOptions.setHideRows(Integer.parseInt(request.getParameter("hiderows" + region)));
                             userRegionOptions.setSortable(request.getParameter("sortable" + region) != null && request.getParameter("sortable" + region).length() > 0);
+                            userRegionOptionsDAO.store(userRegionOptions);
                         }
+                    } else if (choiceName.startsWith("sort ")){ // the syntax passed is "sort " + region + " by column"; todo - fix this?? or wait for AB to be disabled
+                        String region = choiceName.substring("sort ".length(), choiceName.length() - " by column".length());
+                        // currently just support columns
+                        UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), onlineReport.getId(), region);
+                        if (userRegionOptions == null){
+                            userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), onlineReport.getId(), region, loggedInUser.getAzquoBook().getSheetDefinedOptionsStringForRegion(region));
+                        }
+                        boolean asc = true;
+                        if (choiceValue.endsWith("-desc")){
+                            asc = false;
+                            choiceValue = choiceValue.substring(0, choiceValue.length() - "-desc".length());
+                        }
+                        userRegionOptions.setSortColumn(choiceValue);
+                        userRegionOptions.setSortColumnAsc(asc);
+                        userRegionOptionsDAO.store(userRegionOptions);
                     } else {
                         // then we assume vanilla
                         spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, choiceValue);

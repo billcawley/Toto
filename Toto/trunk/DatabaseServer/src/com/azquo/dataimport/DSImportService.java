@@ -481,7 +481,6 @@ public class DSImportService {
         List<Name> contextNames = new ArrayList<Name>();
         String value;
         int valueCount = 0;
-        ImportHeading contextPeersItem = null;
         /*
         for (ImportHeading importHeading:headings){
              if (!importHeading.local){
@@ -489,23 +488,25 @@ public class DSImportService {
             }
         }
         */
-
+        // it seems this will put some names into the database, not sure why only if parentof is not null?
+        // prepare the local parent of columns. Customer is in all customers local
         for (ImportHeading importHeading : headings) {
-            if (importHeading.local && importHeading.parentOf != null) {
+            if (importHeading.local && importHeading.parentOf != null) { // local and it is a parentof, inside this function it will use the childheading set up - should maybe check for that instead??
                 handleParent(azquoMemoryDBConnection, namesFound, importHeading, headings, attributeNames);
             }
         }
         long toolong = 200000;
         long time = System.nanoTime();
+        ImportHeading contextPeersItem = null;
         for (ImportHeading heading : headings) {
             //long track = System.currentTimeMillis();
             if (heading.contextItem) {
                 contextNames.add(heading.name);
                 if (heading.name.getPeers().size() > 0) {
-                    contextPeersItem = heading;
+                    contextPeersItem = heading; // so skip this heading but now contextPeersItem is set?? I assume one name with peers allowed. Or the most recent one.
                 }
             } else {
-                if (contextNames.size() > 0 && heading.name != null) {
+                if (contextNames.size() > 0 && heading.name != null) { // ok so some context names and a name for this column? I guess as in not an attribute column for example
                     contextNames.add(heading.name);
                     if (contextPeersItem != null) {
                         final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
@@ -701,9 +702,9 @@ public class DSImportService {
             return;
         }
         ImportHeading childHeading = headings.get(heading.childHeading);
-        if (heading.lineName != null) { // This function is called in two places in interpret line, the firts time this will be null the second time not
+        if (heading.lineName != null) { // This function is called in two places in interpret line, the first time this will be null the second time not
             if (heading.childOf != null) {
-                for (Name parent : heading.childOf) {
+                for (Name parent : heading.childOf) { // apparently there can be multiple childofs, put the name for the line in th appropriate sets.
                     parent.addChildWillBePersisted(heading.lineName);
                 }
             }
