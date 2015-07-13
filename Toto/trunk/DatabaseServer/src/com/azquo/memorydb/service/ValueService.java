@@ -360,13 +360,7 @@ public final class ValueService {
 
         // no reverse polish converted formula, just sum
         if (!hasCalc) {
-            for (Name oneName : names) { // inexpensive check based on peers which we don't use that much now
-                if (oneName.getPeers().size() == 0 && oneName.getChildren().size() > 0) {
-                    locked.isTrue = true;
-                    break;
-                }
-            }
-            return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, totalSetSize, function);
+              return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, totalSetSize, function, locked);
         } else {
             // this is where the work done by the shunting yard algorithm is used
             // ok I think I know why an array was used, to easily reference the entry before
@@ -466,7 +460,7 @@ public final class ValueService {
 
     // on a standard non-calc cell this will give the result
 
-    public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) {
+    public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, MutableBoolean locked) {
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
 
@@ -507,6 +501,9 @@ public final class ValueService {
         part2NanoCallTime += (System.nanoTime() - point);
         totalNanoCallTime += (System.nanoTime() - start);
         numberOfTimesCalled++;
+        if (values.size() > 1){
+            locked.isTrue = true;
+        }
         if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.COUNT){
             return values.size();
         }
