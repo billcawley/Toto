@@ -5,6 +5,7 @@ import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
+import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.csvreader.CsvReader;
@@ -346,31 +347,45 @@ public class DSImportService {
         long track = System.currentTimeMillis();
         CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
         csvReader.setUseTextQualifier(true);
+        csvReader.readHeaders();
+        String[] headers2 = csvReader.getHeaders();
+        //start again...
+        csvReader.close();
+        uploadFile = new FileInputStream(filePath);
+        if (headers2.length < 2) {
+             // new pipe support, hope it will work adding in here
+            if (headers2.length == 1 && headers2[0].contains("|")){
+                csvReader = new CsvReader(uploadFile, '|', Charset.forName("UTF-8"));
+            } else {
+                csvReader = new CsvReader(uploadFile, ',', Charset.forName("UTF-8"));
+            }
+        }else{
+            csvReader = new CsvReader(uploadFile, '\t',Charset.forName("UTF-8"));
+        }
         String[] headers = null;
         // ok beginning to understand. It looks for a name for the file type, this name can have headers and/or the definitions for each header
         // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
+        boolean skipTopLine = false;
         if (importInterpreter != null) {
             String importHeaders = importInterpreter.getAttribute(headingsString);
+            if (importHeaders==null){
+                importHeaders = importInterpreter.getAttribute(headingsString + "1");
+                if (importHeaders != null){
+                    skipTopLine = true;
+                }
+            }
             if (importHeaders != null) {
                 headers = importHeaders.split("¬");
             }
         }
+
         if (headers == null) {
             csvReader.readHeaders();
             headers = csvReader.getHeaders();
-            if (headers.length < 2) {
-                //start again...
-                csvReader.close();
-                uploadFile = new FileInputStream(filePath);
-                // new pipe support, hope it will work adding in here
-                if (headers.length == 1 && headers[0].contains("|")){
-                    csvReader = new CsvReader(uploadFile, '|', Charset.forName("UTF-8"));
-                } else {
-                    csvReader = new CsvReader(uploadFile, ',', Charset.forName("UTF-8"));
-                }
-                csvReader.readHeaders();
-                headers = csvReader.getHeaders();
+         }else{
+            if (skipTopLine){
+                csvReader.readRecord();
             }
         }
         // correcting the comment : readHeaders is about creating a set of ImportHeadings
