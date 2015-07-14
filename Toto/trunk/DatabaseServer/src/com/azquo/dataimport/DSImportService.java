@@ -363,7 +363,12 @@ public class DSImportService {
                 //start again...
                 csvReader.close();
                 uploadFile = new FileInputStream(filePath);
-                csvReader = new CsvReader(uploadFile, ',', Charset.forName("UTF-8"));
+                // new pipe support, hope it will work adding in here
+                if (headers.length == 1 && headers[0].contains("|")){
+                    csvReader = new CsvReader(uploadFile, '|', Charset.forName("UTF-8"));
+                } else {
+                    csvReader = new CsvReader(uploadFile, ',', Charset.forName("UTF-8"));
+                }
                 csvReader.readHeaders();
                 headers = csvReader.getHeaders();
             }
