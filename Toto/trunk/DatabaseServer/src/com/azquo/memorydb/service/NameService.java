@@ -543,7 +543,7 @@ public final class NameService {
         return parseQuery(azquoMemoryDBConnection, setFormula, langs);
     }
 
-    // todo : sort exceptions? Move to another class?
+    // todo : sort exceptions? Move to another class? Also should the namestack be more generic
 
     public final List<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
         /*
@@ -555,7 +555,7 @@ public final class NameService {
         * These will be replaced by !<id>   e.g. !1234
         * */
         final List<Name> toReturn = new ArrayList<Name>();
-        List<List<Name>> nameStack = new ArrayList<List<Name>>();
+        List<Collection<Name>> nameStack = new ArrayList<Collection<Name>>(); // make this more generic, the key is in the name marker bits, might use different collections depending on operator!
         List<String> formulaStrings = new ArrayList<String>();
         List<String> nameStrings = new ArrayList<String>();
         List<String> attributeStrings = new ArrayList<String>(); // attribute names is taken. Perhaps need to think about function parameter names
@@ -592,7 +592,8 @@ public final class NameService {
             if (op == NAMEMARKER) {
                 stackCount++;
                 List<Name> nextNames = interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings);
-                nameStack.add(nextNames);
+                // the collection implementation used here will affect performance, going to try a linked hash set. Some memory overhead but some functions like retain all should be much faster
+                nameStack.add(new LinkedHashSet<Name>(nextNames)); // order and set contains speed, should do it! Memory overhead but it gets chucked after
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + setFormula);
             } else if (op == '*') { // * meaning intersection here . . .
@@ -603,11 +604,10 @@ public final class NameService {
                 }
                 nameStack.get(stackCount - 1).retainAll(allNames);
                 nameStack.remove(stackCount);
-            } else if (op == '/') {
+            } else if (op == '/') { // this can be slow : todo - speed up? Is it the retainall? Should I be using sets?
                 Set<Name> parents = new HashSet<Name>();
                 for (Name child : nameStack.get(stackCount)) {
                     parents.addAll(child.findAllParents());
-
                 }
                 nameStack.get(stackCount - 1).retainAll(parents);
                 nameStack.remove(stackCount);
@@ -618,13 +618,12 @@ public final class NameService {
                 nameStack.get(stackCount - 1).addAll(nameStack.get(stackCount));
                 nameStack.remove(stackCount);
             } else if (op== ASSYMBOL){
-
-                Name totalName = nameStack.get(stackCount).get(0);
+//                Name totalName = nameStack.get(stackCount).get(0);
+                Name totalName = nameStack.get(stackCount).iterator().next(); // alternative if we're using a linked hash set
                 totalName.setChildrenWillBePersisted(nameStack.get(stackCount-1));
                 nameStack.remove(stackCount);
                 nameStack.get(stackCount-1).clear();
                 nameStack.get(stackCount-1).add(totalName);
-
             }
             pos = nextTerm;
         }

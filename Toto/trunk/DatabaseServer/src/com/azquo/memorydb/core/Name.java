@@ -365,7 +365,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // might seem inefficient but the adds and removes deal with parents and things. Might reconsider code if used more heavily
     // each add/remove is safe but for predictability best to synchronize the lot here I think
-    public synchronized void setChildrenWillBePersisted(List<Name> children) throws Exception {
+    public synchronized void setChildrenWillBePersisted(Collection<Name> children) throws Exception {
         for (Name oldChild : this.getChildren()) {
             removeFromChildrenWillBePersisted(oldChild);
         }

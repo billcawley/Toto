@@ -685,12 +685,12 @@ seaports;children   container;children
             return sourceData;
         }
         Integer sortOnColIndex = findPosition(columnHeadings, sortColString);
-        Integer sortOnRowIndex = findPosition(rowHeadings, sortRowString); // not used at the mo maybe remove
+        Integer sortOnRowIndex = findPosition(rowHeadings, sortRowString); // not used at the mo
+        // new logic states that sorting on row or col totals only happens if a sort row or col hasn't been passed and there are more rows or cols than max rows or cols
 
         int totalRows = sourceData.size();
         int totalCols = sourceData.get(0).size();
 
-        // sorting on totals overrides an explicitly selected ordering. Hmmmmm.
         boolean sortOnColTotals = false;
         boolean sortOnRowTotals = false;
         if (maxRows != 0) {
