@@ -195,6 +195,7 @@ public class OnlineController {
                     opcode = "loadsheet";
                 }
                 if (opcode.equals("upload")) {
+                    reportId="";
                     if (submit.length() > 0) {
                         if (database.length() > 0) {
                             loginService.switchDatabase(loggedInUser, database);
@@ -206,6 +207,7 @@ public class OnlineController {
                         importService.importTheFile(loggedInUser, fileName, "", moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
                         result = "File imported successfully";
 
+
                     } else {
                         model.addAttribute("azquodatabaselist", spreadsheetService.createDatabaseSelect(loggedInUser));
                         return "upload";
@@ -216,7 +218,7 @@ public class OnlineController {
                     model.addAttribute("content", result);
                     return "utf8javascript";
                 }
-                if (reportId.equals("1")){
+                if (reportId != null && reportId.equals("1")){
                     if (!loggedInUser.getUser().isAdministrator()) {
                         spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
                         return "azquoReports";
