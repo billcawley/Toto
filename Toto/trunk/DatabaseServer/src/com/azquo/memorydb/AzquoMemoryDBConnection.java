@@ -14,10 +14,9 @@ import java.util.*;
  * but which will stop code outside this package getting to the DB object itself
  * not necessary functionally, trying to enforce code structure
  * <p/>
- * RIght, I'm going to chuck a few more things in her such as Provenance, Language and loose.
- * I'd rather not but right now the alternative is more messy.
- * <p/>
- * todo : address exactly what goes in here which is not a reference to the memory database
+ *
+ * has been stripped right down to the db and permission,s I think that makes sense
+ *
  */
 public class AzquoMemoryDBConnection {
 

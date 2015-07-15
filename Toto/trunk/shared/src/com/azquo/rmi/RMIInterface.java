@@ -1,6 +1,7 @@
 package com.azquo.rmi;
 
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 
 import java.rmi.Remote;
@@ -38,14 +39,8 @@ public interface RMIInterface extends Remote {
 
     List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
 
-    String formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, String jsonFunction) throws RemoteException;
-
-    String formatRowHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, int unsortedRow, int col, String jsonFunction) throws RemoteException;
-
-    String formatColumnHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> columnHeadingsSource, int row, int unsortedCol, String jsonFunction)  throws RemoteException;
-
-    String getJsonList(DatabaseAccessToken databaseAccessToken, String listName, String listChoice, String entered, String jsonFunction) throws RemoteException;
+    List<DisplayValuesForProvenance> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws RemoteException;
 
     boolean isDatabaseLoaded(String mysqlName) throws RemoteException;
 

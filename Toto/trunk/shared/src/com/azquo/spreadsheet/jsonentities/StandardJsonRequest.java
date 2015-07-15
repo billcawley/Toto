@@ -1,4 +1,4 @@
-package com.azquo.spreadsheet.jsonrequestentities;
+package com.azquo.spreadsheet.jsonentities;
 
 import java.io.Serializable;
 

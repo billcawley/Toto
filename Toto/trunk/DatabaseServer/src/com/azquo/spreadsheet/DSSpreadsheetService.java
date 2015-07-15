@@ -6,6 +6,7 @@ import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.service.MutableBoolean;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
+import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import org.apache.commons.lang.math.NumberUtils;
@@ -100,26 +101,6 @@ public class DSSpreadsheetService {
             }
         }
     }*/
-
-
-    public String getJsonList(DatabaseAccessToken databaseAccessToken, String listName, String listChoice, String entered, String jsonFunction) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        try {
-            List<Name> possibles = nameService.parseQuery(azquoMemoryDBConnection, listChoice + " select \"" + entered + "\"");
-            List<String> nameStrings = getIndividualNames(possibles);
-            StringBuilder output = new StringBuilder();
-            output.append(jsonFunction).append("({\"selection\":\"").append(listName).append("\",\"choices\":[");
-            int count = 0;
-            for (String nameString : nameStrings) {
-                if (count++ > 0) output.append(",");
-                output.append("\"").append(nameString.replace("\"", "\\\"")).append("\"");
-            }
-            output.append("]})");
-            return output.toString();
-        } catch (Exception e) {
-            return "";
-        }
-    }
 
     /*
 
@@ -290,7 +271,6 @@ seaports;children   container;children
             return output;
         }
         final int lastHeadingDefinitionCellIndex = headingLists.get(0).size() - 1; // the headingLists will be square, that is to say all row lists the same length as prepared by createHeadingArraysFromSpreadsheetRegion
-
         // ok here's the logic, what's passed is a 2d array of lists, as created from createHeadingArraysFromSpreadsheetRegion
         // we would just run through the rows running a 2d permutation on each row BUT there's a rule that if there's
         // a row below blank except the right most one then add that right most one to the one above
@@ -310,7 +290,6 @@ seaports;children   container;children
             output.addAll(permuted);
         }
         return output;
-
     }
 
     // what we're saying is it's only got one cell in the heading definition filled and it's the last one.
@@ -401,7 +380,6 @@ seaports;children   container;children
             uName.name = name;
             uName.string = lastName;
             pending.add(uName);
-
         }
         output.addAll(findUniqueNames(pending));
         return output;
@@ -530,18 +508,15 @@ seaports;children   container;children
         }
         return toReturn;
     }
+
     // function that can be called by the front end to deliver the data and headings
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int filterCount, int maxRows, int maxCols
-            , String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, int highlightDays) throws Exception { // edd max rows is very simple, just chop the rows, todo -= work out the toher max params which are odd!
+            , String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, int highlightDays) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, databaseAccessToken.getLanguages(), highlightDays);
         List<List<CellForDisplay>> displayData = new ArrayList<List<CellForDisplay>>();
-        // todo - what's a reasonable "standard" limit for return?
-/*        if (eddMaxRows != 0 && data.size() > eddMaxRows){
-            data = data.subList(0, eddMaxRows);
-        }*/
         for (List<AzquoCell> sourceRow : data) {
             List<CellForDisplay> displayDataRow = new ArrayList<CellForDisplay>();
             displayData.add(displayDataRow);
@@ -625,29 +600,6 @@ seaports;children   container;children
         return null; // couldn't find it . . .
     }
 
-    // to find a heading server side for provenance
-
-    private DataRegionHeading getRowDataRegionHeading(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
-            , int unsortedRow, int col, List<String> languages) throws Exception {
-        final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
-        final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists);
-        if (rowHeadings.size() > unsortedRow && rowHeadings.get(unsortedRow).size() > col) {
-            return rowHeadings.get(unsortedRow).get(col);
-        }
-        return null; // couldn't find it . . .
-    }
-
-    private DataRegionHeading getColumnDataRegionHeading(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> colHeadingsSource
-            , int row, int unsortedCol, List<String> languages) throws Exception {
-        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages);
-        final List<List<DataRegionHeading>> columnHeadings = transpose2DList(expandHeadings(transpose2DList(columnHeadingLists))); // note the double transpose! Expand is for row orientation but we want it transposed back so it's like it is when viewing
-        // we shold be looking at few on the outside list and more on the inner lists
-        if (columnHeadings.size() > row && columnHeadings.get(row).size() > unsortedCol) {
-            return columnHeadings.get(row).get(unsortedCol);
-        }
-        return null; // couldn't find it . . .
-    }
-
     // for looking up a heading given a string. Used to find the col/row index to sort on
 
     private int findPosition(List<List<DataRegionHeading>> headings, String toFind) {
@@ -673,10 +625,8 @@ seaports;children   container;children
         return -1;
     }
 
-    // plan with refactoring is for this to do some of what was in the old get excel data function. Taking the full region and imposing useful user limits
     // note, one could derive column and row headings from the source data's headings but passing them is easier if they are to hand which the should be
     // also deals with highlighting
-    // todo : general cleanup, check logic is clean as it should be. Probably keep row sort support even if not heavily used
 
     private List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
             , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays) throws Exception {
@@ -695,7 +645,7 @@ seaports;children   container;children
         boolean sortOnRowTotals = false;
         if (maxRows != 0) {
             if (Math.abs(maxRows) < totalRows) {
-                if (sortOnColIndex == -1) { // only cause total sortring if a column hasn't been passed
+                if (sortOnColIndex == -1) { // only cause total sorting if a column hasn't been passed
                     sortOnRowTotals = true;
                     sortRowAsc = maxRows < 0;
                 }
@@ -705,7 +655,7 @@ seaports;children   container;children
         }
         if (maxCols != 0) {
             if (Math.abs(maxCols) < totalCols) {
-                if (sortOnRowIndex == -1) { // only cause total sortring if a sorting row hasn't been passed
+                if (sortOnRowIndex == -1) { // only cause total sorting if a sorting row hasn't been passed
                     sortOnColTotals = true;
                     sortColAsc = maxCols < 0;
                 }
@@ -727,6 +677,7 @@ seaports;children   container;children
         }
         boolean rowNumbers = true;
         int rowNo = 0;
+        // populate the maps that will be sorted
         for (List<AzquoCell> rowCells : sourceData) {
             double sortRowTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total. This row total or value is used when sorting by a column.
             int colNo = 0;
@@ -752,8 +703,6 @@ seaports;children   container;children
             }
             sortRowTotals.put(rowNo++, sortRowTotal);
         }
-
-        //right, the question is do we need to sort, these functions used to decide internally, I won't have that now
         List<Integer> sortedRows = null;
         if (sortOnColIndex != -1 || sortOnRowTotals) { // then we need to sort the rows
             if (rowNumbers) {
@@ -767,12 +716,10 @@ seaports;children   container;children
         if (sortOnRowIndex != -1 || sortOnColTotals) { // then we need to sort the cols
             sortedCols = sortDoubleValues(sortColumnTotals, sortColAsc);
         }
-
         // OK pasting and changing what was in format data region, it's only called by this
-
         int blockRowCount = 0;
         List<List<AzquoCell>> sortedCells = new ArrayList<List<AzquoCell>>();
-        // zero passed or set above means don't limit
+        // zero passed or set above means don't limit, this feels a little hacky but we need a less than condition on the for loop. Both for limiting and we need this type of loop as the index looks up on the sort
         if (maxRows == 0) {
             maxRows = totalRows;
         }
@@ -781,14 +728,15 @@ seaports;children   container;children
         }
         for (rowNo = 0; rowNo < maxRows; rowNo++) {
             List<AzquoCell> rowCells = sourceData.get(sortedRows != null ? sortedRows.get(rowNo) : rowNo); // if a sort happened use the row number according to it
-
             List<AzquoCell> newRow = new ArrayList<AzquoCell>();
-            sortedCells.add(newRow);
-            // this may often be a straight copy (if no col sorting) but not too bothered about the possible speed increase
-            for (int colNo = 0; colNo < maxCols; colNo++) {
-                newRow.add(rowCells.get(sortedCols != null ? sortedCols.get(colNo) : colNo)); // use the sort if it was done
+            if (sortedCols != null){
+                for (int colNo = 0; colNo < maxCols; colNo++) {
+                    newRow.add(rowCells.get(sortedCols.get(colNo)));
+                }
+            } else { // just jam in the row unchanged
+                newRow = rowCells;
             }
-
+            sortedCells.add(newRow);
             /* ok here's a thing . . . I think this code that used to chop didn't take into account row sorting. Should be pretty easy to just do here I think
             to be clear what this is doing is checking for chunks of blank rows and remoiving them from the results - worth noting that this doesn't compensate for the max,
             one could end up with less than the max when there was more data available as the max was loaded then chopped. On the other hand typical max ordering would mean that
@@ -847,33 +795,23 @@ seaports;children   container;children
                 }
             }
         }
-
-        //formatLockMap(loggedInConnection, region, lockArray);
         valueService.printSumStats();
         valueService.printFindForNamesIncludeChildrenStats();
-        //loggedInConnection.setDataHeadingsMap(region, dataHeadingsMap);
         logger.info("time to execute : " + (System.currentTimeMillis() - track));
         return sortedCells;
     }
 
-    /* I need to make more sense of getExcelDataForColumnsRowsAndContext, going to start here
-     this just gets the data, no sorting or anything like that
-     and nothing stateful, no interacting with logged connections or anything like that though it needs a connection
-
-     Given the flexibility on headings being names or attributes and the result of a cell being a number from a value or sum of values or formula or attributes I need to think about data in and out
-
-     Parameters
+    /*
+    Parameters
 
     The connection to the relevant DB
     Row and column headings (very possibly more than one heading for a given row or column if permutation is involved) and context names list
     Languages is attribute names but I think I'll call it languages as that's what it would practically be - used when looking up names for formulae
 
     So,it's going to return relevant data to the region. The values actually shown, (typed?) objects for ZKspreadsheet, locked or not, the headings are useful (though one could perhaps derive them)
-it seems that there should be a cell map or object and that's what this should return rather than having a bunch of multidimensional arrays
+    it seems that there should be a cell map or object and that's what this should return rather than having a bunch of multidimensional arrays
 
-ok I'm going for that object type (AzquoCell), outer list rows inner items on those rows, hope that's standard. Outside this function the sorting etc will happen.
-
-I think that this is an ideal candidate for multithreading to speed things up
+    ok I'm going for that object type (AzquoCell), outer list rows inner items on those rows, hope that's standard. Outside this function the sorting etc will happen.
 
     */
 
@@ -912,7 +850,6 @@ I think that this is an ideal candidate for multithreading to speed things up
                     List<DataRegionHeading> rowHeadings = headingsForEachRow.get(rowNo);
                     if (rowNo % 1000 == 0) System.out.print(".");
                     List<AzquoCell> returnRow = new ArrayList<AzquoCell>();
-                    //todo, multithread on building this region? Since it's already added a different thread could modify the lists, that SHOULD work? Possible to have non udpated lists at the end? sort later!
                     int colNo = 0;
                     for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                         // values I need to build the CellUI
@@ -931,7 +868,7 @@ I think that this is an ideal candidate for multithreading to speed things up
         }
     }
 
-    // factored this off to enable getting a single cell
+    // factored this off to enable getting a single cell, also useful to be called from the multi threading
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<Name> contextNames, int rowNo, int colNo, Map<Name, Integer> totalSetSize, List<String> languages) throws Exception {
@@ -940,8 +877,7 @@ I think that this is an ideal candidate for multithreading to speed things up
         Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
         Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
-
-        //check that we do have both row and column headings, oterhiwse blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
+        //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
         for (DataRegionHeading heading : rowHeadings) {
             if (heading != null) {
                 headingsForThisCell.add(heading);
@@ -1015,7 +951,6 @@ I think that this is an ideal candidate for multithreading to speed things up
                 } catch (Exception e) {
                     //ignore
                 }
-
                 // ZK would sant this typed? Maybe just sort out later?
                 if (attributeResult != null) {
                     attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
@@ -1023,7 +958,6 @@ I think that this is an ideal candidate for multithreading to speed things up
                 } else {
                     stringValue = "";
                 }
-
             }
         }
                 /* something to note : in the old model there was a map of headings used for each cell. I could add headingsForThisCell to the cell which would be a unique set for each cell
@@ -1034,7 +968,6 @@ I think that this is an ideal candidate for multithreading to speed things up
     private List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
             , final List<List<DataRegionHeading>> headingsForEachColumn
             , final List<Name> contextNames, List<String> languages) throws Exception {
-        //tryMultiThreaded = !tryMultiThreaded;
         long track = System.currentTimeMillis();
         int totalRows = headingsForEachRow.size();
         int totalCols = headingsForEachColumn.size();
@@ -1114,10 +1047,8 @@ I think that this is an ideal candidate for multithreading to speed things up
     // used when comparing values. So ignore the currency symbol if the numbers are the same
     private String stripCurrency(String val) {
         //TODO we need to be able to detect other currencies
-
         if (val.length() > 1 && "$£".contains(val.substring(0, 1))) {
             return val.substring(1);
-
         }
         return val;
     }
@@ -1142,98 +1073,43 @@ I think that this is an ideal candidate for multithreading to speed things up
     }
 
     // todo, when cell contents are from attributes??
-    // also the json funciton bit? Another case here where perhaps the database server shgould be returning objkects rather than JSON? Not sure . . .
-    public String formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, String jsonFunction) throws Exception {
+    public List<DisplayValuesForProvenance> getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, null, databaseAccessToken.getLanguages());
         if (azquoCell != null) {
             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
             //Set<Name> specialForProvenance = new HashSet<Name>();
             if (valuesForCell.getValues() != null) {
-                return formatCellProvenanceForOutput(azquoMemoryDBConnection, valuesForCell.getValues(), jsonFunction);
+                return getCellProvenance(valuesForCell.getValues());
             }
         }
-        return ""; //"error: data has not been sent for that row/col/region";
-    }
-
-    public String formatRowHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, int unsortedRow, int col, String jsonFunction) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        DataRegionHeading dataRegionHeading = getRowDataRegionHeading(azquoMemoryDBConnection, rowHeadingsSource, unsortedRow, col, databaseAccessToken.getLanguages());
-        if (dataRegionHeading != null) {
-            if (dataRegionHeading.getName() != null) {
-                return formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
-            } else {
-                return dataRegionHeading.getAttribute();
-            }
-        }
-        return "";
-    }
-
-    public String formatColumnHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> columnHeadingsSource, int row, int unsortedCol, String jsonFunction) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        DataRegionHeading dataRegionHeading = getColumnDataRegionHeading(azquoMemoryDBConnection, columnHeadingsSource, row, unsortedCol, databaseAccessToken.getLanguages());
-        if (dataRegionHeading != null) {
-            if (dataRegionHeading.getName() != null) {
-                return formatProvenanceForOutput(dataRegionHeading.getName().getProvenance(), jsonFunction);
-            } else {
-                return dataRegionHeading.getAttribute();
-            }
-        }
-        return "";
+        return new ArrayList<DisplayValuesForProvenance>(); //just empty ok? null? Unsure
     }
 
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
     // not exactly sure why
-    // this might make it a bit more difficult to jackson but we should aim to do it when azquobook is moved
-
-    public String formatCellProvenanceForOutput(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, String jsonFunction) {
-        StringBuilder output = new StringBuilder();
-        output.append(jsonFunction).append("({\"provenance\":[{");
+    public List<DisplayValuesForProvenance> getCellProvenance(List<Value> values) {
+        List<DisplayValuesForProvenance> toReturn = new ArrayList<DisplayValuesForProvenance>();
         if (values.size() > 1 || (values.size() > 0 && values.get(0) != null)) {
             valueService.sortValues(values);
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
             Date provdate = values.get(0).getProvenance().getTimeStamp();
             Set<Value> oneUpdate = new HashSet<Value>();
             Provenance p = null;
-            boolean firstHeading = true;
             for (Value value : values) {
                 if (value.getProvenance().getTimeStamp() == provdate) {
                     oneUpdate.add(value);
                     p = value.getProvenance();
                 } else {
-                    if (firstHeading) {
-                        firstHeading = false;
-                    } else {
-                        output.append("},{");
-                    }
-                    output.append(valueService.printExtract(azquoMemoryDBConnection, oneUpdate, p));
+                        toReturn.add(valueService.getDisplayValuesForProvenance(oneUpdate, p));
                     oneUpdate = new HashSet<Value>();
                     provdate = value.getProvenance().getTimeStamp();
                 }
             }
-            if (!firstHeading) {
-                output.append(",");
-            }
-            output.append(valueService.printExtract(azquoMemoryDBConnection, oneUpdate, p));
+            toReturn.add(valueService.getDisplayValuesForProvenance(oneUpdate, p));
         }
-        output.append("}]})");
-        return output.toString();
-    }
-
-    public String formatProvenanceForOutput(Provenance provenance, String jsonFunction) {
-        String output;
-        if (provenance == null) {
-            output = "{provenance:[{\"who\":\"no provenance\"}]}";
-        } else {
-            //String user = provenance.getUser();
-            output = "{\"provenance\":[{\"who\":\"" + provenance.getUser() + "\",\"when\":\"" + provenance.getTimeStamp() + "\",\"how\":\"" + provenance.getMethod() + "\",\"where\":\"" + provenance.getName() + "\",\"value\":\"\",\"context\":\"" + provenance.getContext().replace("\n", ",") + "\"}]}";
-        }
-        if (jsonFunction != null && jsonFunction.length() > 0) {
-            return jsonFunction + "(" + output + ")";
-        } else {
-            return output;
-        }
+        return toReturn;
     }
 
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells

@@ -39,8 +39,6 @@ public class AdminService {
     @Autowired
     private UserDAO userDao;
     @Autowired
-    private UserChoiceDAO userChoiceDAO;
-    @Autowired
     private LoginRecordDAO loginRecordDAO;
     @Autowired
     private OpenDatabaseDAO openDatabaseDAO;

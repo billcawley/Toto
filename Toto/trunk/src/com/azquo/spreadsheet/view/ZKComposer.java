@@ -6,8 +6,7 @@ import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
@@ -34,9 +33,7 @@ import org.zkoss.zssex.ui.widget.Ghost;
 import org.zkoss.zul.*;
 
 import java.io.File;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Created by cawley on 02/03/15
@@ -242,14 +239,13 @@ public class ZKComposer extends SelectorComposer<Component> {
             try {
                 // ok this is a bit nasty, after Azquobook is zapped we could try something different
                 // todo - sort after zapping azquobook! Maybe clickable again?
-                String provenance = spreadsheetService.formatDataRegionProvenanceForOutput(loggedInUser, region
-                        , cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow(), cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn(), "");
-                if (provenance.length() > 2){
-                    provenance = provenance.substring(1, provenance.length() - 1); // zap the brackets
-                    ObjectMapper mapper = new ObjectMapper();
-                    JsonNode actualObj = mapper.readTree(provenance);// try and parse
+                List<DisplayValuesForProvenance> displayValuesForProvenances = spreadsheetService.getDisplayValuesForProvenance(loggedInUser, region
+                        , cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow(), cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn());
+                if (!displayValuesForProvenances.isEmpty()){
                     StringBuilder toShow = new StringBuilder();
-                    resolveJsonNode(0,toShow, actualObj);
+                    for (DisplayValuesForProvenance displayValuesForProvenance : displayValuesForProvenances){
+                        resolveDisplayValuesForProvenance(0,toShow, displayValuesForProvenance);
+                    }
                     fullProvenance = toShow.toString();
                     fullProvenance = fullProvenance.replace("<br/>", " ");
                     fullProvenance = fullProvenance.replace("<b>", "");
@@ -306,50 +302,22 @@ public class ZKComposer extends SelectorComposer<Component> {
         return null;
     }
 
-    public static void resolveJsonNode(int tab, StringBuilder stringBuilder, JsonNode jsonNode){
-        resolveJsonNode(tab,stringBuilder,jsonNode,null);
-    }
-    // static to factor for the mo. Note this is hacky and nasty and will be changed when I can zap azquo book. Objets will be moved over RMI and I will be able to build more easily here
-    public static void resolveJsonNode(int tab, StringBuilder stringBuilder, JsonNode jsonNode, String key){
-        if(jsonNode.isObject()) {
-            Iterator<Map.Entry<String, JsonNode>> iterator = jsonNode.fields();
-            while(iterator.hasNext()) {
-                Map.Entry<String, JsonNode> entry = iterator.next();
-                if (!entry.getKey().equalsIgnoreCase("name")
-                        && !entry.getKey().equalsIgnoreCase("value")
-                        && !entry.getKey().equalsIgnoreCase("provenance")
-                        && !entry.getKey().equalsIgnoreCase("items")
-                        && !entry.getKey().equalsIgnoreCase("heading")
-                        ){
-                    for (int i = 0; i < tab; i++){
-                        stringBuilder.append("\t");
-                    }
-                    stringBuilder.append(entry.getKey() + "\n");
-                    resolveJsonNode(++tab, stringBuilder, entry.getValue());
-                } else {
-                    if (entry.getKey().equalsIgnoreCase("items")){
-                        tab++;
-                    }
-                    resolveJsonNode(tab, stringBuilder, entry.getValue(), entry.getKey());
-                }
-            }
+    public static void resolveDisplayValuesForProvenance(int tab, StringBuilder stringBuilder, DisplayValuesForProvenance displayValuesForProvenance){
+        for (int i = 0; i < tab; i++){
+            stringBuilder.append("\t");
         }
-        if(jsonNode.isArray()) {
-            for(JsonNode jsonNode1 : jsonNode) {
-                resolveJsonNode(tab, stringBuilder, jsonNode1);
-            }
+        if (displayValuesForProvenance.name != null){
+            stringBuilder.append(displayValuesForProvenance.name);
+            stringBuilder.append("\t");
+            stringBuilder.append(displayValuesForProvenance.value);
+            stringBuilder.append("\n");
         }
-        if(jsonNode.isValueNode()) {
-            if (key == null || !key.equalsIgnoreCase("value")) { // value is always tacked on at the end
-                for (int i = 0; i < tab; i++){
-                    stringBuilder.append("\t");
-                }
-            }
-            stringBuilder.append(jsonNode.asText());
-            if (key == null || !key.equalsIgnoreCase("name")) {
-                stringBuilder.append("\n");
-            } else { // after a name don't new line just make another tab for value
-                stringBuilder.append("\t");
+        if (displayValuesForProvenance.heading != null){ // then assume we have items too!
+            stringBuilder.append(displayValuesForProvenance.heading);
+            stringBuilder.append("\n");
+            tab++;
+            for (DisplayValuesForProvenance displayValuesForProvenance1 : displayValuesForProvenance.items){
+                resolveDisplayValuesForProvenance(tab, stringBuilder, displayValuesForProvenance1);
             }
         }
     }

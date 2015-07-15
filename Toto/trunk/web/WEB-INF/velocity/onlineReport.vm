@@ -999,18 +999,6 @@
         return ok;
     }
 
-    function chooseFromList(editedName){
-        var entered = document.getElementById("select" + editedName).value.trim();
-        if (entered.length > 3) {
-            azquojson("Online", "opcode=choosefromlist&editedname=" + editedName + "&editedvalue=" + encodeURIComponent(entered));
-        }
-
-
-    }
-
-
-
-
     positionSelection();
     convertRegions();
     setSpreadsheetSize();

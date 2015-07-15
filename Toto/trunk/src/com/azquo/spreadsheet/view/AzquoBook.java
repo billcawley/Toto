@@ -8,6 +8,7 @@ import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.spreadsheet.*;
+import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import com.csvreader.CsvWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
@@ -838,14 +839,6 @@ public class AzquoBook {
                         content += addOption(nameString, origContent);
                     }
                     content += "</select>";
-                } else {
-                    if (choiceList.size() > 1499) {
-                        content = "<input class = '" + selectClass + "' type='text' oninput='`chooseFromList(\"" + choiceName + "\")' id='select" + choiceName + "' class='" + cellClass + "' value='" + origContent + "' />" + cr;
-                    } else {
-                        content = "";
-                    }
-                    cell.setValue("");
-
                 }
             }
         }
@@ -1086,7 +1079,8 @@ public class AzquoBook {
                     regionInfo.region = name.getText().toLowerCase();
                     return regionInfo;
                 } else {
-                    if (row >= r.getFirstRow() && row < r.getFirstRow() + r.getRowCount() && col >= r.getFirstColumn() && col < r.getFirstColumn() + r.getColumnCount()) {
+                    if (row >= r.getFirstRow() && row < r.getFirstRow() + r.getRowCount() && col >= r.getFirstColumn() && col < r.getFirstColumn() + r.getColumnCount()
+                            && name.getText().toLowerCase().startsWith("az_")) { // don't want other random ranges referenced
                         regionInfo.row = row - r.getFirstRow();
                         regionInfo.col = col - r.getFirstColumn();
                         regionInfo.region = name.getText().toLowerCase();
@@ -1098,31 +1092,16 @@ public class AzquoBook {
         return null;
     }
 
+    // ok json rendering is in here now and via jackson which is much much better, wondering whether it should be pushed into the controller?
+
     public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) throws Exception {
         RegionInfo regionInfo = getRegionInfo(row, col);
         if (regionInfo == null) return "";
-        if (regionInfo.region.startsWith("az_displayrowheadings")) {
-            String region = regionInfo.region.substring(21);
-            List<List<String>> rowHeadings = loggedInUser.getSentCells(region).getRowHeadings();
-            String heading = rowHeadings.get(regionInfo.row).get(regionInfo.col);
-            if (heading != null) {
-                return spreadsheetService.formatRowHeadingProvenanceForOutput(loggedInUser, region, regionInfo.row, regionInfo.col, jsonFunction);
-            } else {
-                return "";
-            }
-        } else if (regionInfo.region.startsWith("az_displaycolumnheadings")) {
-            String region = regionInfo.region.substring(24);
-            List<List<String>> colHeadings = loggedInUser.getSentCells(region).getColumnHeadings();
-            // this was transposed (col/row reveresed) I don't think that's right any more
-            String heading = colHeadings.get(regionInfo.row).get(regionInfo.col);
-            if (heading != null) {
-                return spreadsheetService.formatColumnHeadingProvenanceForOutput(loggedInUser, region, regionInfo.row, regionInfo.col, jsonFunction);
-            } else {
-                return "";
-            }
-        } else if (regionInfo.region.startsWith(dataRegionPrefix)) {
+        if (regionInfo.region.startsWith(dataRegionPrefix)) {
             String region = regionInfo.region.substring(dataRegionPrefix.length());
-            return spreadsheetService.formatDataRegionProvenanceForOutput(loggedInUser, region, regionInfo.row, regionInfo.col, jsonFunction);
+            Map<String, List<DisplayValuesForProvenance>> provenanceForJackson = new HashMap<String, List<DisplayValuesForProvenance>>();
+            provenanceForJackson.put("provenance", spreadsheetService.getDisplayValuesForProvenance(loggedInUser, region, regionInfo.row, regionInfo.col));
+            return jsonFunction + "(" + jacksonMapper.writeValueAsString(provenanceForJackson) + ")";
         }
         return "";
     }

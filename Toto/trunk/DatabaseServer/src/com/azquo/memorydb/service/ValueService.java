@@ -5,6 +5,7 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.*;
+import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -257,53 +258,54 @@ public final class ValueService {
 
         return values;
     }
-/* unused commenting
-    // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
-    public Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names, boolean payAttentionToAdditive) {
-        long start = System.nanoTime();
 
-        final Set<Value> values = new HashSet<Value>();
-        // assume that the first set of names is the most restrictive
-        Set<Name> smallestNames = names.get(0);
-        part1NanoCallTime1 += (System.nanoTime() - start);
-        long point = System.nanoTime();
+    /* unused commenting
+        // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
+        public Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names, boolean payAttentionToAdditive) {
+            long start = System.nanoTime();
 
-        final Set<Value> valueSet = new HashSet<Value>();
-        for (Name name : smallestNames) {
-            valueSet.addAll(findValuesForNameIncludeAllChildren(name, payAttentionToAdditive));
-        }
-        // this seems a fairly crude implementation, list all values for the name sets then check that that values list is in all the name sets
-        part2NanoCallTime1 += (System.nanoTime() - point);
-        point = System.nanoTime();
-        for (Value value : valueSet) {
-            boolean theValueIsOk = true;
-            for (Set<Name> nameSet : names) {
-                if (!nameSet.equals(smallestNames)) { // ignore the one we started with
-                    boolean foundInChildList = false;
-                    for (Name valueNames : value.getNames()) {
-                        if (nameService.inParentSet(valueNames, nameSet) != null) {
-                            foundInChildList = true;
+            final Set<Value> values = new HashSet<Value>();
+            // assume that the first set of names is the most restrictive
+            Set<Name> smallestNames = names.get(0);
+            part1NanoCallTime1 += (System.nanoTime() - start);
+            long point = System.nanoTime();
+
+            final Set<Value> valueSet = new HashSet<Value>();
+            for (Name name : smallestNames) {
+                valueSet.addAll(findValuesForNameIncludeAllChildren(name, payAttentionToAdditive));
+            }
+            // this seems a fairly crude implementation, list all values for the name sets then check that that values list is in all the name sets
+            part2NanoCallTime1 += (System.nanoTime() - point);
+            point = System.nanoTime();
+            for (Value value : valueSet) {
+                boolean theValueIsOk = true;
+                for (Set<Name> nameSet : names) {
+                    if (!nameSet.equals(smallestNames)) { // ignore the one we started with
+                        boolean foundInChildList = false;
+                        for (Name valueNames : value.getNames()) {
+                            if (nameService.inParentSet(valueNames, nameSet) != null) {
+                                foundInChildList = true;
+                                break;
+                            }
+                        }
+                        if (!foundInChildList) {
+                            theValueIsOk = false;
                             break;
                         }
                     }
-                    if (!foundInChildList) {
-                        theValueIsOk = false;
-                        break;
-                    }
+                }
+                if (theValueIsOk) { // it was in all the names :)
+                    values.add(value);
                 }
             }
-            if (theValueIsOk) { // it was in all the names :)
-                values.add(value);
-            }
-        }
-        part3NanoCallTime1 += (System.nanoTime() - point);
-        numberOfTimesCalled1++;
-        //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
-        //track = System.nanoTime();
+            part3NanoCallTime1 += (System.nanoTime() - point);
+            numberOfTimesCalled1++;
+            //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
+            //track = System.nanoTime();
 
-        return values;
-    }
-*/
+            return values;
+        }
+    */
     public void printFindForNamesIncludeChildrenStats() {
         if (numberOfTimesCalled1 > 0) {
             logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
@@ -360,7 +362,7 @@ public final class ValueService {
 
         // no reverse polish converted formula, just sum
         if (!hasCalc) {
-              return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, totalSetSize, function, locked);
+            return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, totalSetSize, function, locked);
         } else {
             // this is where the work done by the shunting yard algorithm is used
             // ok I think I know why an array was used, to easily reference the entry before
@@ -393,7 +395,7 @@ public final class ValueService {
                         Name name = nameService.getNameFromListAndMarker(term, formulaNames);
                         Set<Name> seekSet = new HashSet<Name>(calcnames);
                         //if (name.getPeers().size() == 0 || name.getPeers().size() == calcnames.size()) {
-                            seekSet.add(name);
+                        seekSet.add(name);
                         //} else {
                         //    seekSet = nameService.trimNames(name, seekSet);
                         //    seekSet.add(name);
@@ -442,9 +444,9 @@ public final class ValueService {
                     }
                     // basic sum across the names/attributes (not going into children)
                     // comma separated for non numeric. If mixed it will default to the string
-                    try{
+                    try {
                         numericResult += Double.parseDouble(attValue);
-                    } catch(Exception e){
+                    } catch (Exception e) {
                         if (stringResult == null) {
                             stringResult = attValue;
                         } else {
@@ -477,14 +479,14 @@ public final class ValueService {
             if (value.getText() != null && value.getText().length() > 0) {
                 try {
                     double doubleValue = Double.parseDouble(value.getText());
-                    if (first){
+                    if (first) {
                         max = doubleValue;
                         min = doubleValue;
                     } else {
-                        if (doubleValue < min){
+                        if (doubleValue < min) {
                             min = doubleValue;
                         }
-                        if (doubleValue > max){
+                        if (doubleValue > max) {
                             max = doubleValue;
                         }
                     }
@@ -501,22 +503,22 @@ public final class ValueService {
         part2NanoCallTime += (System.nanoTime() - point);
         totalNanoCallTime += (System.nanoTime() - start);
         numberOfTimesCalled++;
-        if (values.size() > 1){
+        if (values.size() > 1) {
             locked.isTrue = true;
         }
-        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.COUNT){
+        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.COUNT) {
             return values.size();
         }
-        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.AVERAGE){
-            if (values.size() == 0){
+        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.AVERAGE) {
+            if (values.size() == 0) {
                 return 0; // avoid dividing by zero
             }
             return sumValue / values.size();
         }
-        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.MAX){
+        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.MAX) {
             return max;
         }
-        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.MIN){
+        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.MIN) {
             return min;
         }
         return sumValue; // default to sum, no function
@@ -612,9 +614,9 @@ public final class ValueService {
 */
     // find the most used name by a set of values, used by printBatch to derive headings
 
-    private Name getMostUsedName(Set<Value> values, Name topParent) {
+    private Name getMostUsedName(Set<DummyValue> values, Name topParent) {
         Map<Name, Integer> nameCount = new HashMap<Name, Integer>();
-        for (Value value : values) {
+        for (DummyValue value : values) {
             for (Name name : value.getNames()) {
                 if (topParent == null || name.findATopParent() == topParent) {
                     Integer origCount = nameCount.get(name);
@@ -651,18 +653,43 @@ public final class ValueService {
         });
     }
 
+    // printbatch was creating a value, no good
+    private static class DummyValue {
+
+        private final String valueText;
+        private final Collection<Name> names;
+
+        public DummyValue(String valueText, Collection<Name> names) {
+            this.valueText = valueText;
+            this.names = names;
+        }
+
+        public String getValueText() {
+            return valueText;
+        }
+
+        public Collection<Name> getNames() {
+            return names;
+        }
+    }
+
     /* print a bunch of values in json. It seems to find the name which represents the most values and displays
     them under them then the name that best represents the rest etc etc until all values have been displayed
-    there is some dodgy stuff in here in terms of manual json creation and new Value(), right now ZKBook uses the result of this function
-    but as AzquoBook is pahed out will need to sort it.
       */
 
-    private StringBuffer printBatch(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values) {
-        StringBuffer sb = new StringBuffer();
+    private List<DisplayValuesForProvenance> getJsonValuesFromValues(Set<Value> values) {
+        Set<DummyValue> convertedToDummy = new HashSet<DummyValue>();
+        for (Value value : values) {
+            convertedToDummy.add(new DummyValue(value.getText(), value.getNames()));
+        }
+        return getJsonValuesFromDummyValues(convertedToDummy);
+    }
+
+    private List<DisplayValuesForProvenance> getJsonValuesFromDummyValues(Set<DummyValue> values) {
         //int debugCount = 0;
         boolean headingNeeded = false;
-        boolean firstValue = true; // was called firstname, makes no sense!
-        for (Value value : values) {
+        List<DisplayValuesForProvenance> jsonValueForProvenances = new ArrayList<DisplayValuesForProvenance>();
+        for (DummyValue value : values) {
             if (value.getNames().size() > 1) {
                 headingNeeded = true;
                 break;
@@ -671,40 +698,26 @@ public final class ValueService {
             for (Name name : value.getNames()) {
                 nameFound = name.getDefaultDisplayName(); // so it's always going to be the last name??
             }
-            if (firstValue) {
-                firstValue = false;
-            } else {
-                sb.append(",");
-            }
-            sb.append("{");
-            //debugCount = value.getNames().size();
-            sb.append(jsonValue("name", nameFound, false));
-            sb.append(jsonValue("value", value.getText(), true));
-            sb.append("}");
-
+            jsonValueForProvenances.add(new DisplayValuesForProvenance(nameFound, value.getValueText()));
         }
-
         if (headingNeeded) {
-            boolean firstHeading = true;
             Name topParent = null;
             while (values.size() > 0) {
                 Name heading = getMostUsedName(values, topParent);
                 topParent = heading.findATopParent();
-                Set<Value> extract = new HashSet<Value>();
-                Set<Value> slimExtract = new HashSet<Value>();
-                for (Value value : values) {
+                Set<DummyValue> extract = new HashSet<DummyValue>();
+                Set<DummyValue> slimExtract = new HashSet<DummyValue>();
+                for (DummyValue value : values) {
                     if (value.getNames().contains(heading)) {
                         extract.add(value);
                         //creating a new 'value' with one less name for recursion
                         try {
-                            // todo : get rid of this!
-                            Value slimValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), null, value.getText(), null);
                             Set<Name> slimNames = new HashSet<Name>();
                             for (Name name : value.getNames()) {
                                 slimNames.add(name);
                             }
                             slimNames.remove(heading);
-                            slimValue.setNames(slimNames);
+                            DummyValue slimValue = new DummyValue(value.getValueText(), slimNames);
                             slimExtract.add(slimValue);
                         } catch (Exception e) {
                             // exception from value constructor, should not happen
@@ -714,38 +727,16 @@ public final class ValueService {
                     }
                 }
                 values.removeAll(extract);
-                if (firstHeading) {
-                    firstHeading = false;
-                } else {
-                    sb.append(",");
-                }
-                sb.append("{");
-                sb.append(jsonValue("heading", heading.getDefaultDisplayName(), false));
-                sb.append(",\"items\":[").append(printBatch(azquoMemoryDBConnection, slimExtract).toString()).append("]");
-                sb.append("}");
+                jsonValueForProvenances.add(new DisplayValuesForProvenance(heading.getDefaultDisplayName(), getJsonValuesFromDummyValues(slimExtract)));
             }
         }
-        return sb;
+        return jsonValueForProvenances;
 
     }
 
-    // again, should we be using jackson??
-
-    private String jsonValue(String val1, String val2, boolean comma) {
-        String result = "\"" + val1 + "\":\"" + val2.replace("\"", "\\\"") + "\"";
-        if (!comma) {
-            return result;
-        }
-        return "," + result;
-    }
-
-    public StringBuffer printExtract(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values, Provenance p) {
+    public DisplayValuesForProvenance getDisplayValuesForProvenance(Set<Value> values, Provenance p) {
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
-        StringBuffer sb = new StringBuffer();
-        sb.append(jsonValue("heading", "<b>" + df.format(p.getTimeStamp()) + "</b> by <b>" + p.getUser() + "</b><br/>Method:" + p.getMethod() + " " + p.getName(), false));
-        sb.append(",\"items\":[");
-        sb.append(printBatch(azquoMemoryDBConnection, values));
-        sb.append("]");
-        return sb;
+        return new DisplayValuesForProvenance("<b>" + df.format(p.getTimeStamp()) + "</b> by <b>" + p.getUser() + "</b><br/>Method:" + p.getMethod() + " " + p.getName()
+                , getJsonValuesFromValues(values));
     }
 }

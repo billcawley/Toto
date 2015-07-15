@@ -11,6 +11,7 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
+import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
@@ -330,10 +331,6 @@ public class SpreadsheetService {
         loggedInUser.getAzquoBook().saveBookActive(response, fileName, env.getProperty("azquo.home") + "/onlinereports/Admin/Azquoblank.xls");
     }
 
-    public String getJsonList(DatabaseAccessToken databaseAccessToken, String listName, String listChoice, String entered, String jsonFunction) throws  Exception{
-        return rmiClient.getServerInterface().getJsonList(databaseAccessToken, listName, listChoice, entered, jsonFunction);
-    }
-
     public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) throws Exception {
         return loggedInUser.getAzquoBook().getProvenance(loggedInUser, row, col, jsonFunction);
     }
@@ -428,35 +425,15 @@ public class SpreadsheetService {
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
-    public String formatDataRegionProvenanceForOutput(LoggedInUser loggedInUser, String region, int rowInt, int colInt, String jsonFunction) throws Exception {
+    public List<DisplayValuesForProvenance> getDisplayValuesForProvenance(LoggedInUser loggedInUser, String region, int rowInt, int colInt) throws Exception {
         final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
         if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
             return rmiClient.getServerInterface().formatDataRegionProvenanceForOutput(loggedInUser.getDataAccessToken(), cellsAndHeadingsForDisplay.getRowHeadingsSource()
                     , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
-                    , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(), jsonFunction);
+                    , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol());
         }
-        return ""; // maybe "not found"?
-    }
-
-    public String formatRowHeadingProvenanceForOutput(LoggedInUser loggedInUser, String region, int rowInt, int colInt, String jsonFunction) throws Exception {
-        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
-        if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null && cellsAndHeadingsForDisplay.getData().get(rowInt).get(0) != null) {
-            final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(0); // ok to be clear what's going on : I'm grabbing one cell from that row to get the unsorted row index
-            return rmiClient.getServerInterface().formatRowHeadingProvenanceForOutput(loggedInUser.getDataAccessToken(), cellsAndHeadingsForDisplay.getRowHeadingsSource()
-                    , cellForDisplay.getUnsortedRow(), colInt, jsonFunction);
-        }
-        return ""; // maybe "not found"?
-    }
-
-    public String formatColumnHeadingProvenanceForOutput(LoggedInUser loggedInUser, String region, int rowInt, int colInt, String jsonFunction) throws Exception {
-        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
-        if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(0) != null && cellsAndHeadingsForDisplay.getData().get(0).get(colInt) != null) {
-            final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(0).get(colInt); // ok to be clear what's going on : I'm grabbing one cell from that column to cet the unsorted column index
-            return rmiClient.getServerInterface().formatColumnHeadingProvenanceForOutput(loggedInUser.getDataAccessToken(),cellsAndHeadingsForDisplay.getColHeadingsSource()
-                    ,rowInt,cellForDisplay.getUnsortedCol(),jsonFunction);
-        }
-        return ""; // maybe "not found"?
+        return new ArrayList<DisplayValuesForProvenance>(); // maybe "not found"?
     }
 
     public void saveData(LoggedInUser loggedInUser, String region) throws Exception {

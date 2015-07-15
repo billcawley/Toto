@@ -7,6 +7,7 @@ import com.azquo.memorydb.core.MemoryDBManager;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
+import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 
 import java.rmi.RemoteException;
@@ -141,36 +142,9 @@ public class RMIImplementation implements RMIInterface {
     }
  
     @Override
-    public String formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, String jsonFunction) throws RemoteException {
+    public List<DisplayValuesForProvenance> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws RemoteException {
         try {
-            return dsSpreadsheetService.formatDataRegionProvenanceForOutput(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource,unsortedRow,unsortedCol,jsonFunction);
-        } catch (Exception e) {
-            throw new RemoteException("Database Server Exception", e);
-        }
-    }
-
-    @Override
-    public String formatRowHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, int unsortedRow, int col, String jsonFunction) throws RemoteException {
-        try {
-            return dsSpreadsheetService.formatRowHeadingProvenanceForOutput(databaseAccessToken, rowHeadingsSource, unsortedRow, col, jsonFunction);
-        } catch (Exception e) {
-            throw new RemoteException("Database Server Exception", e);
-        }
-    }
-
-    @Override
-    public String formatColumnHeadingProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> columnHeadingsSource, int row, int unsortedCol, String jsonFunction) throws RemoteException {
-        try {
-            return dsSpreadsheetService.formatColumnHeadingProvenanceForOutput(databaseAccessToken,columnHeadingsSource,row,unsortedCol,jsonFunction);
-        } catch (Exception e) {
-            throw new RemoteException("Database Server Exception", e);
-        }
-    }
-
-    @Override
-    public String getJsonList(DatabaseAccessToken databaseAccessToken, String listName, String listChoice, String entered, String jsonFunction) throws RemoteException {
-        try {
-            return dsSpreadsheetService.getJsonList(databaseAccessToken,listName,listChoice,entered,jsonFunction);
+            return dsSpreadsheetService.getDataRegionProvenance(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource,unsortedRow,unsortedCol);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

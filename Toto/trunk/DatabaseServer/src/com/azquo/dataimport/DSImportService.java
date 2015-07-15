@@ -162,7 +162,7 @@ public class DSImportService {
                 heading.attribute = Constants.DEFAULT_DISPLAY_NAME;
             }
         }
-        if (readClause(LOCAL, clause) != null) {// local names in child of, can work with parent of but then it's the subject that it affects
+        if (readClause(LOCAL, clause) != null) { // local names in child of, can work with parent of but then it's the subject that it affects
             heading.local = true;
         }
         readClause = readClause(EQUALS, clause); // the actual Azquo name if the heading name is not appropriate
@@ -222,7 +222,6 @@ public class DSImportService {
         }
     }
 
-
     private int findContextHeading(Name name, List<ImportHeading> headings) {
         for (int headingNo = 0; headingNo < headings.size(); headingNo++) {
             ImportHeading heading = headings.get(headingNo);
@@ -267,9 +266,7 @@ public class DSImportService {
         return headingFound;
     }
 
-
     /*
-
         public String findTopParent(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception{
             //need to work out the topparent for use when classifing names found in this column
             ImportHeading identity = heading;
@@ -403,8 +400,8 @@ public class DSImportService {
 
         while (csvReader.readRecord()) { // now to the data itself, headers should have been sorted one way or another,
             lineNo++;
-            //ImportHeading contextPeersItem = null;
-            //if (csvReader.get(0).length() == 0) break;//break if the first line element is blank
+            // ImportHeading contextPeersItem = null;
+            // if (csvReader.get(0).length() == 0) break;//break if the first line element is blank
             // ok it's worth noting here - the data for the line is being added to the ImportHeadings, thus after they are passed to functions that actually import the data.
             for (ImportHeading heading : headings) {
 //                trackers.put(heading.name.getDefaultDisplayName(), 0L);
@@ -447,8 +444,6 @@ public class DSImportService {
             System.out.println("---------- " + trackName + " \t\t" + trackers.get(trackName));
         }
     }
-
-    //
 
     private void readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<ImportHeading> headings, String fileType, List<String> attributeNames) throws Exception {
         int col = 0;

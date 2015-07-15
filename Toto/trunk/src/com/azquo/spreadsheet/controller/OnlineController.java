@@ -1,6 +1,5 @@
 package com.azquo.spreadsheet.controller;
 
-import com.azquo.admin.AdminService;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
@@ -49,8 +48,6 @@ public class OnlineController {
     private UserRegionOptionsDAO userRegionOptionsDAO;
     @Autowired
     private SpreadsheetService spreadsheetService;
-    @Autowired
-    private AdminService adminService;
     @Autowired
     private ImportService importService;
 
@@ -147,10 +144,6 @@ public class OnlineController {
                     row = Integer.parseInt(rowStr);
                 } catch (Exception e) {
                     //rowStr can be blank or '0'
-                }
-                // azquobook dropdowns
-                if (opcode.equals("choosefromlist")){
-                    result =  spreadsheetService.getJsonList(loggedInUser.getDataAccessToken(),choiceName, loggedInUser.getAzquoBook().getRangeData(choiceName + "choice"), choiceValue, jsonFunction);
                 }
                 // highlighting etc. From the top right menu and the azquobook context menu, can be zapped later
                 if ((opcode.equals("setchosen")) && choiceName != null) {

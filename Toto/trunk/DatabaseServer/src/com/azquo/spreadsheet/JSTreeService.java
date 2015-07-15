@@ -7,7 +7,7 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import com.azquo.spreadsheet.jsonrequestentities.NameJsonRequest;
+import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -326,8 +326,8 @@ public class JSTreeService {
             this.type = type;
         }
     }
-    // todo : jackson!
-    // zapped details parameter which is always true
+
+    // todo : can we move the object? It's called in a funciton that returns some other stuff, hmmmmmmmmm
     private String getJsonChildren(AzquoMemoryDBConnection loggedInConnection, String tokenString, int jsTreeId, Name name, boolean parents, Map<String, JSTreeService.JsTreeNode> lookup, String searchTerm) throws Exception {
         Map<String,Boolean> state = new HashMap<String, Boolean>();
         state.put("opened", true);
