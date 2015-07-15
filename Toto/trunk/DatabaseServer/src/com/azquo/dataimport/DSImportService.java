@@ -39,6 +39,7 @@ public class DSImportService {
     public static final String PEERS = "peers";
     public static final String LOCAL = "local";
     public static final String EQUALS = "equals";
+    public static final String COMPOSITION = "composition";
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
 
@@ -57,6 +58,7 @@ public class DSImportService {
         boolean identifier;
         boolean contextItem;
         boolean local;
+        String composition;
         String equalsString;
         String lineValue;
         Name lineName;
@@ -76,6 +78,7 @@ public class DSImportService {
             identifier = false;
             contextItem = false;
             local = false;
+            composition = null;
             equalsString = null;
             lineValue = "";
             lineName = null;
@@ -169,6 +172,13 @@ public class DSImportService {
         if (readClause != null) {
             heading.equalsString = readClause;
             if (heading.equalsString.length() == 0) {
+                throw new Exception(clause + " not understood");
+            }
+        }
+        readClause = readClause(COMPOSITION, clause);
+        if (readClause != null) {
+            heading.composition = readClause;
+            if (heading.composition.length() == 0) {
                 throw new Exception(clause + " not understood");
             }
         }
@@ -419,6 +429,7 @@ public class DSImportService {
             }
 
             if (headings.get(0).lineValue.length() > 0 || headings.get(0).column == -1) {//skip any line that has a blank in the first column unless we're not interested in that column
+                getCompositeValues(headings);
                 try {
                     valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
                 } catch (Exception e) {
@@ -785,6 +796,34 @@ public class DSImportService {
             }
         }
         return hasRequiredPeers;
+    }
+
+    private void getCompositeValues(List<ImportHeading> headings) {
+        int adjusted = 2;
+        //loops in case there are multiple levels of dependencies
+        while (adjusted > 1) {
+            adjusted = 0;
+            for (ImportHeading heading : headings) {
+                if (heading.composition != null) {
+                    String result = heading.composition;
+                    int headingMarker = result.indexOf("`");
+                    while (headingMarker >= 0) {
+                        int headingEnd = result.indexOf("`", headingMarker + 1);
+                        if (headingEnd > 0) {
+                            int compItem = findHeading(result.substring(headingMarker + 1, headingEnd), headings);
+                            if (compItem >= 0) {
+                                result = result.replace(result.substring(headingMarker, headingEnd + 1), headings.get(compItem).lineValue);
+                            }
+                        }
+                        headingMarker = result.indexOf("`", headingMarker + 1);
+                    }
+                    if (!result.equals(heading.lineValue)) {
+                        heading.lineValue = result;
+                        adjusted++;
+                    }
+                }
+            }
+        }
     }
 
     public void setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames, String fileName) throws Exception {
