@@ -2,6 +2,8 @@ package com.azquo.spreadsheet;
 
 import com.azquo.memorydb.core.Name;
 
+import java.util.Set;
+
 /**
  * Created by cawley on 03/02/15.
  * <p/>
@@ -22,12 +24,14 @@ public class DataRegionHeading {
     private final String attribute;
     private final boolean writeAllowed;
     private final BASIC_RESOLVE_FUNCTION function;
+    private final Set<Name> nameCountSet;
 
-    public DataRegionHeading(Name name, boolean writeAllowed, BASIC_RESOLVE_FUNCTION function) {
+    public DataRegionHeading(Name name, boolean writeAllowed, BASIC_RESOLVE_FUNCTION function, Set<Name> nameCountSet) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
         this.function = function;
+        this.nameCountSet = nameCountSet;
     }
 
     // no functions with attributes for the moment
@@ -36,6 +40,7 @@ public class DataRegionHeading {
         this.attribute = attribute;
         this.writeAllowed = writeAllowed;
         this.function = null;
+        this.nameCountSet = null;
     }
 
     public Name getName() {
@@ -48,6 +53,10 @@ public class DataRegionHeading {
 
     public boolean isWriteAllowed() {
         return writeAllowed;
+    }
+
+    public Set<Name> getNameCountSet() {
+        return nameCountSet;
     }
 
     public BASIC_RESOLVE_FUNCTION getFunction() {

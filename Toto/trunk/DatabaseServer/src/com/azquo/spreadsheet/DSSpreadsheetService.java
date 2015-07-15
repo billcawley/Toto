@@ -13,6 +13,7 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.naming.NamingEnumeration;
 import javax.servlet.ServletContext;
 import java.net.InetAddress;
 import java.time.LocalDateTime;
@@ -143,7 +144,18 @@ seaports;children   container;children
                                 sourceCell = sourceCell.substring(sourceCell.indexOf("(") + 1, sourceCell.trim().length() - 1);// +1 - 1 to get rid of the brackets
                             }
                         }
-                        row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames), azquoMemoryDBConnection, function));
+                        String NAMECOUNT = "NAMECOUNT";
+                        if (sourceCell.toUpperCase().startsWith(NAMECOUNT)){
+                            // should strip off the function
+                            sourceCell = sourceCell.substring(0, sourceCell.indexOf("(", NAMECOUNT.length())) + sourceCell.substring(sourceCell.indexOf(")",sourceCell.indexOf("(", NAMECOUNT.length())) + 1);
+                            Set<Name> nameCountSet = new HashSet<Name>(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames)); // put what would have caused multiple headings into namecount
+                            List<DataRegionHeading> forNameCount = new ArrayList<DataRegionHeading>();
+                            forNameCount.add(new DataRegionHeading(null, false, function, nameCountSet));
+                            row.add(forNameCount);
+                        } else {
+                            row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames), azquoMemoryDBConnection, function));
+
+                        }
                     }
                 }
             }
@@ -893,7 +905,7 @@ seaports;children   container;children
             }
             rowAndColumnHeadingsForThisCell = new HashSet<DataRegionHeading>(headingsForThisCell);
             if (headingsForThisCell.size() > hCount) {
-                headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection, null));
+                headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection, null)); // no functions (including namecount) for context
             } else {
                 headingsForThisCell.clear();
                 checked = false;
@@ -912,9 +924,18 @@ seaports;children   container;children
             locked.isTrue = true;
             stringValue = "";
         } else {
-            // ok new logic here, we need to know if we're going to use attributes or values
-            boolean headingsHaveAttributes = headingsHaveAttributes(headingsForThisCell);
-            if (!headingsHaveAttributes) { // we go the value route (the standard/old one), need the headings as names,
+            // ok new logic here, we need to know if we're going to use attributes or values or namecount!
+            DataRegionHeading nameCountHeading = getHeadingWithNameCount(headingsForThisCell);
+            if (nameCountHeading != null){
+                Set<Name> nameCountSet = nameCountHeading.getNameCountSet();
+                for (DataRegionHeading dataRegionHeading : headingsForThisCell){
+                    if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null){ // should be fine
+                        nameCountSet.retainAll(dataRegionHeading.getName().findAllChildren(false));
+                    }
+                }
+                doubleValue = nameCountSet.size();
+                stringValue = doubleValue + "";
+            } else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
                 // TODO - peer additive check. If using peers and not additive, don't include children
                 List<Value> values = new ArrayList<Value>();
                 // now , get the function from the headings
@@ -1179,7 +1200,7 @@ seaports;children   container;children
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<DataRegionHeading>();
         for (Name name : names) {
             // will the new write permissions cause an overhead?
-            dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function));
+            dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null));
         }
         return dataRegionHeadings;
     }
@@ -1212,4 +1233,14 @@ seaports;children   container;children
         }
         return false;
     }
+
+    public DataRegionHeading getHeadingWithNameCount(Collection<DataRegionHeading> dataRegionHeadings) {
+        for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
+            if (dataRegionHeading.getNameCountSet() != null) {
+                return dataRegionHeading;
+            }
+        }
+        return null;
+    }
+
 }

@@ -33,6 +33,7 @@ public class DSImportService {
     private DSSpreadsheetService dsSpreadsheetService;
 
     public static final String CHILDOF = "child of ";
+    public static final String REMOVEFROM = "remove from ";
     public static final String PARENTOF = "parent of ";
     public static final String ATTRIBUTE = "attribute ";
     public static final String LANGUAGE = "language ";
@@ -49,9 +50,11 @@ public class DSImportService {
         Name name;
         String parentOf;
         String childOfString;
+        String removeFromString;
         int identityHeading;
         int childHeading;
         Set<Name> childOf;
+        Set<Name> removeFrom;
         String attribute;
         Set<Integer> peerHeadings;
         //Name topParent;
@@ -69,9 +72,11 @@ public class DSImportService {
             name = null;
             parentOf = null;
             childOfString = null;
+            removeFromString = null;
             identityHeading = -1;
             childHeading = -1;
             childOf = null;
+            removeFrom = null;
             attribute = null;
             peerHeadings = new HashSet<Integer>();
             // topParent = null;
@@ -100,13 +105,13 @@ public class DSImportService {
 
     // todo - probably a slightly nicer API call for this
     public Date isADate(String maybeDate) {
-        Date date = tryDate(maybeDate.substring(0, 10), sdf);
+        Date date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, sdf);
         if (date != null) return date;
-        date = tryDate(maybeDate.substring(0, 10), ukdf4);
+        date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, ukdf4);
         if (date != null) return date;
-        date = tryDate(maybeDate.substring(0, 11), ukdf3);
+        date = tryDate(maybeDate.length() > 11 ? maybeDate.substring(0, 11) : maybeDate, ukdf3);
         if (date != null) return date;
-        return tryDate(maybeDate.substring(0, 8), ukdf2);
+        return tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 8) : maybeDate, ukdf2);
     }
 
     // currently only two types of import supported and detection on file name (best idea?). Run the import and persist.
@@ -144,6 +149,14 @@ public class DSImportService {
         if (readClause != null) {
             heading.childOfString = readClause.replace(Name.QUOTE + "", "");
             if (heading.childOfString.length() == 0) {
+                throw new Exception(clause + " not understood");
+            }
+        }
+        // e.g. opposite of above
+        readClause = readClause(REMOVEFROM, clause); // child of relates to a name in the database - the hook to existing data
+        if (readClause != null) {
+            heading.removeFromString = readClause.replace(Name.QUOTE + "", "");
+            if (heading.removeFromString.length() == 0) {
                 throw new Exception(clause + " not understood");
             }
         }
@@ -618,6 +631,27 @@ public class DSImportService {
                     handleParent(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
                 }
                 if (heading.childOf != null) {
+                    if (heading.lineName != null) { // could if ever be null after preparing the headers?
+                        for (Name parent : heading.childOf) {
+                            parent.addChildWillBePersisted(heading.lineName);
+                        }
+                    } else {
+                        String childNameString = heading.lineValue;
+                        if (childNameString.length() > 0) {
+                            for (Name parent : heading.childOf) {
+                                heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childNameString, parent, heading.local, attributeNames);
+                            }
+                        }
+                    }
+                }
+                if (heading.removeFrom != null) {
+                    if (heading.lineName != null) {
+                        for (Name remove : heading.removeFrom) {
+                            remove.removeFromChildrenWillBePersisted(heading.lineName);
+                        }
+                    }
+                }
+                if (heading != null) {
                     if (heading.lineName != null) {
                         for (Name parent : heading.childOf) {
                             parent.addChildWillBePersisted(heading.lineName);
@@ -696,6 +730,14 @@ public class DSImportService {
                     String[] parents = importHeading.childOfString.split(",");//TODO this does not take into account names with commas inside.......
                     for (String parent : parents) {
                         importHeading.childOf.add(nameService.findOrCreateNameInParent(azquoMemoryDBConnection, parent, null, false));
+                    }
+                }
+                // reverse
+                if (importHeading.removeFromString != null) {
+                    importHeading.removeFrom = new HashSet<Name>();
+                    String[] removes = importHeading.removeFromString.split(",");//TODO this does not take into account names with commas inside.......
+                    for (String remove : removes) {// also not language specific. THis is a simple lookup, don't want a find or create
+                        importHeading.removeFrom.add(nameService.findByName(azquoMemoryDBConnection, remove));
                     }
                 }
                 // parent of being in context of this upload, if you can't find the heading throw an exception

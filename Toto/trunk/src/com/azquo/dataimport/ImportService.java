@@ -61,18 +61,9 @@ public final class ImportService {
     }
     public void importTheFile(LoggedInUser loggedInUser, String fileName, String useType, String filePath, String fileType, boolean skipBase64, List<String> attributeNames) throws Exception{
        String error = "";
-        try{
            importTheFile1(loggedInUser, fileName, useType, filePath, fileType, skipBase64, attributeNames);
-       }catch(Exception e){
-           error = e.getMessage();
-           if (error.contains("error:")) error = error.substring(error.indexOf("error:"));
-       }
         UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, "", error);//;should record the error????
         uploadRecordDAO.store(uploadRecord);
-        if (error.length() > 0){
-            throw new Exception(error);
-        }
-
     }
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions

@@ -165,6 +165,7 @@ public final class Name extends AzquoMemoryDBEntity {
     public String toString() {
         return "Name{" +
                 "id=" + getId() +
+                ", default display name=" + getDefaultDisplayName() +
                 ", provenance=" + provenance +
                 ", additive=" + additive +
                 ", nameAttributes=" + nameAttributes +
