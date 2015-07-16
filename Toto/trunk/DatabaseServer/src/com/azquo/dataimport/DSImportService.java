@@ -5,7 +5,6 @@ import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
-import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.csvreader.CsvReader;
@@ -44,13 +43,12 @@ public class DSImportService {
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
 
+    // a thought, should a line be a different object which has the line stuff (line value etc) and an import heading?
     static class ImportHeading {
         int column;
         String heading;
         Name name;
-        String parentOf;
-        String childOfString;
-        String removeFromString;
+        String parentOf, childOfString, removeFromString;
         int identityHeading;
         int childHeading;
         Set<Name> childOf;
@@ -135,7 +133,8 @@ public class DSImportService {
         return null;
     }
 
-        // this is called for all the ; separated clauses in a header e.g. Gender; parent of Customer; child of Genders
+    // this is called for all the ; separated clauses in a header e.g. Gender; parent of Customer; child of Genders
+    // it feels like an enum or array could help here but I'm not sure . . .
     private void interpretClause(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportHeading heading, String clause) throws Exception {
         String readClause = readClause(PARENTOF, clause); // parent of names in the specified column
         if (readClause != null) {
@@ -338,7 +337,6 @@ public class DSImportService {
     }
 
     public Name includeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, String name, Set<Name> parents, boolean local, List<String> attributeNames) throws Exception {
-
         Name child = null;
         if (parents == null) {
             child = includeInSet(azquoMemoryDBConnection, namesFound, name, null, local, attributeNames);
@@ -373,14 +371,14 @@ public class DSImportService {
         csvReader.close();
         uploadFile = new FileInputStream(filePath);
         if (headers2.length < 2) {
-             // new pipe support, hope it will work adding in here
-            if (headers2.length == 1 && headers2[0].contains("|")){
+            // new pipe support, hope it will work adding in here
+            if (headers2.length == 1 && headers2[0].contains("|")) {
                 csvReader = new CsvReader(uploadFile, '|', Charset.forName("UTF-8"));
             } else {
                 csvReader = new CsvReader(uploadFile, ',', Charset.forName("UTF-8"));
             }
-        }else{
-            csvReader = new CsvReader(uploadFile, '\t',Charset.forName("UTF-8"));
+        } else {
+            csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
         }
         String[] headers = null;
         // ok beginning to understand. It looks for a name for the file type, this name can have headers and/or the definitions for each header
@@ -389,9 +387,9 @@ public class DSImportService {
         boolean skipTopLine = false;
         if (importInterpreter != null) {
             String importHeaders = importInterpreter.getAttribute(headingsString);
-            if (importHeaders==null){
+            if (importHeaders == null) {
                 importHeaders = importInterpreter.getAttribute(headingsString + "1");
-                if (importHeaders != null){
+                if (importHeaders != null) {
                     skipTopLine = true;
                 }
             }
@@ -403,8 +401,8 @@ public class DSImportService {
         if (headers == null) {
             csvReader.readHeaders();
             headers = csvReader.getHeaders();
-         }else{
-            if (skipTopLine){
+        } else {
+            if (skipTopLine) {
                 csvReader.readRecord();
             }
         }

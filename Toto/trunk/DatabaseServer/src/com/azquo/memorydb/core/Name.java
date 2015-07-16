@@ -26,11 +26,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * when the list gets too big.
  * <p/>
  * Update on memory : got it to about 850 bytes (magento example DB). Will park for the mo, further change would probably involve changes to attributes,
- * I mean the name attributes not being held here for example
+ * I mean the name of attributes not being held here for example
  * <p/>
  * attributes case insensitive . . .not entirely happy about this
  * <p/>
  * was comparable but this resulted in a code warning I've moved the comparator to NameService
+ *
+ * I wonder about CopyOnWriteArrayLists but not so bothered plus they might take a little more memory.
  */
 public final class Name extends AzquoMemoryDBEntity {
 
@@ -228,6 +230,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // don't allow external classes to set the parents I mean by function or otherwise, Name can manage this based on set children
     // before could just edit the parents as I pleased now I can't need getters and setters based on the map
+    // synchronize on parents?
 
     private void addToParents(final Name name) throws Exception {
         if (parentsAsSet != null) {
@@ -754,40 +757,45 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // protected to only be used by the database loading, can't be called in the constructor as name by id maps may not be populated
+    // changing synchronized to only relevant poritons
 
-    protected synchronized void populateFromJson() throws Exception {
+    protected void populateFromJson() throws Exception {
         if (getAzquoMemoryDB().getNeedsLoading() || jsonCache != null) { // only acceptable if we have json and it's during the loading process
             try {
-                JsonTransport transport = jacksonMapper.readValue(jsonCache, JsonTransport.class);
-                jsonCache = null;// free the memory
-                this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
-                this.additive = transport.additive;
-                //this.attributes = transport.attributes;
-                List<String> attributeKeys = new ArrayList<String>();
-                List<String> attributeValues = new ArrayList<String>();
-                for (String key : transport.attributes.keySet()) {
-                    attributeKeys.add(key.toUpperCase());
-                    attributeValues.add(transport.attributes.get(key));
-                }
-                nameAttributes = new NameAttributes(attributeKeys, attributeValues);
-                LinkedHashMap<Integer, Boolean> peerIds = transport.peerIds;
-                if (!peerIds.isEmpty()) {
-                    peers = new LinkedHashMap<Name, Boolean>();
-                }
-                for (Integer peerId : peerIds.keySet()) {
-                    peers.put(getAzquoMemoryDB().getNameById(peerId), peerIds.get(peerId));
-                }
+                // if I define this inside the synchronized block then it won't be visible outside, the add to parents will act on the sometimes empty choldren class variable
+                // need to think clearly about what needs synchroniseation
                 LinkedHashSet<Name> children = new LinkedHashSet<Name>();
-                LinkedHashSet<Integer> childrenIds = transport.childrenIds;
-                for (Integer childId : childrenIds) {
-                    children.add(getAzquoMemoryDB().getNameById(childId));
-                }
+                synchronized (this) {
+                    JsonTransport transport = jacksonMapper.readValue(jsonCache, JsonTransport.class);
+                    jsonCache = null;// free the memory
+                    this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
+                    this.additive = transport.additive;
+                    //this.attributes = transport.attributes;
+                    List<String> attributeKeys = new ArrayList<String>();
+                    List<String> attributeValues = new ArrayList<String>();
+                    for (String key : transport.attributes.keySet()) {
+                        attributeKeys.add(key.toUpperCase());
+                        attributeValues.add(transport.attributes.get(key));
+                    }
+                    nameAttributes = new NameAttributes(attributeKeys, attributeValues);
+                    LinkedHashMap<Integer, Boolean> peerIds = transport.peerIds;
+                    if (!peerIds.isEmpty()) {
+                        peers = new LinkedHashMap<Name, Boolean>();
+                    }
+                    for (Integer peerId : peerIds.keySet()) {
+                        peers.put(getAzquoMemoryDB().getNameById(peerId), peerIds.get(peerId));
+                    }
+                    LinkedHashSet<Integer> childrenIds = transport.childrenIds;
+                    for (Integer childId : childrenIds) {
+                        children.add(getAzquoMemoryDB().getNameById(childId));
+                    }
 
-                // what we're doign here is the same as setchildrenwillbepersisted but without checks as during loading conditions may not be met
-                // now a low level function that just checks the size for where to put the data
-                //
-                setChildrenNoChecks(children);
-                // need to sort out the parents
+                    // what we're doign here is the same as setchildrenwillbepersisted but without checks as during loading conditions may not be met
+                    // now a low level function that just checks the size for where to put the data
+                    setChildrenNoChecks(children);
+                }
+                // need to sort out the parents - I deliberately excluded this from synchronizeation or one could theroetically hit a deadlock
+                // addToParents can be synchronized on the child
                 for (Name newChild : children) {
                     newChild.addToParents(this);
                 }

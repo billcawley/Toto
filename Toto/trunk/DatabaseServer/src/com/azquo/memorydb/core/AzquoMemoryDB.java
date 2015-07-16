@@ -5,10 +5,7 @@ import com.azquo.memorydb.dao.StandardDAO;
 import org.apache.log4j.Logger;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -91,7 +88,8 @@ public final class AzquoMemoryDB {
         // loop over the possible persisted tables making the empty sets, cunning
         if (standardDAO != null) {
             for (StandardDAO.PersistedTable persistedTable : StandardDAO.PersistedTable.values()) {
-                entitiesToPersist.put(persistedTable.name(), Collections.newSetFromMap(new HashMap<AzquoMemoryDBEntity, Boolean>()));
+                // wasn't concurrent, surely it should be?
+                entitiesToPersist.put(persistedTable.name(), Collections.newSetFromMap(new ConcurrentHashMap<AzquoMemoryDBEntity, Boolean>()));
             }
         }
         if (standardDAO != null) {
@@ -198,12 +196,12 @@ public final class AzquoMemoryDB {
                 // here we'll populate the memory DB from the database
 
                 /* ok this code is a bit annoying, one could run through the table names from the outside but then you need to switch on it for the constructor
-                one could use AzquomemoryDBEntity if having some kind of init from Json function but this makes the objects more mutable than I'd like
+                one could use AzquoMemoryDBEntity if having some kind of init from Json function but this makes the objects more mutable than I'd like
                 so we stay with this for the moment
                 these 3 commands will automatically load the data into the memory DB set as persisted
                 Load order is important as value and name use provenance and value uses names. Names uses itself hence all names need initialisation finished after the id map is sorted
 
-                This is why when multi threading we wait util a type of entity is fully loaded before mmoving onto the next
+                This is why when multi threading we wait util a type of entity is fully loaded before moving onto the next
 
                 Atomic integers to pass through to the multi threaded code to track numbers
 
@@ -214,7 +212,7 @@ public final class AzquoMemoryDB {
 
                 final int step = 500000; // not so much step now as id range given how we're now querying mysql
 
-                // create thread pool, rack up the loading rtasks and wait for it to finish. Repeat for name and values.
+                // create thread pool, rack up the loading tasks and wait for it to finish. Repeat for name and values.
                 ExecutorService executor = Executors.newFixedThreadPool(loadingThreads);
                 int from = 0;
                 int maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.provenance.name());
@@ -248,7 +246,7 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
-                // wait untill all are loaded before linking
+                // wait until all are loaded before linking
                 System.out.println(provenaceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded,  " + (System.currentTimeMillis() - track) + "ms");
                 if (memoryTrack) {
                     System.out.println("Used Memory after list load:"
@@ -295,7 +293,7 @@ public final class AzquoMemoryDB {
             if (!entitiesToPersist.isEmpty()) {
                 System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
                 List<JsonRecordTransport> recordsToStore = new ArrayList<JsonRecordTransport>();
-                // todo : write nlocking the db probably should start here
+                // todo : write locking the db probably should start here
                 for (AzquoMemoryDBEntity entity : new ArrayList<AzquoMemoryDBEntity>(entities)) { // we're taking a copy of the set before running through it.
                     // in looking at multi threading I don't know if this bit is so important, it should be fast, it's more the sql
                     JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
@@ -310,7 +308,7 @@ public final class AzquoMemoryDB {
                 }
                 // and end here
                 try {
-                    standardDAO.persistJsonRecords(this, tableToStoreIn, recordsToStore);
+                    standardDAO.persistJsonRecords(this, tableToStoreIn, recordsToStore);// note this is multi threaded internally
                 } catch (Exception e) {
                     // currently I'll just stack trace this, not sure of what would be the best strategy
                     e.printStackTrace();
@@ -319,7 +317,7 @@ public final class AzquoMemoryDB {
         }
     }
 
-    // will block currently!
+    // will block currently! - a concern due to the writing synchronized above?
 
     protected synchronized int getNextId() {
         nextId++; // increment but return what it was . . .a little messy but I want that value in memory to be what it says
@@ -338,6 +336,7 @@ public final class AzquoMemoryDB {
 
     //fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
     // TODO address whether wrapping in a hash set here is the best plan. Memory of that object not such of an issue since it should be small and disposable
+    // The iterator from CopyOnWriteArray does NOT support changes e.g. remove. A point.
 
     private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
         Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
@@ -496,20 +495,17 @@ public final class AzquoMemoryDB {
     protected void addNameToDb(final Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (newName.getId() > 0 && nameByIdMap.get(newName.getId()) != null) {
-            throw new Exception("tried to add a name to the database with an existing id! new id = " + newName.getId());
-        } else {
-            //synchronized (nameByIdMap){
-            nameByIdMap.put(newName.getId(), newName);
-            //}
+        // there was a check that the name had an Id greater than 0, I don't know why
+        //if (newName.getId() > 0 && nameByIdMap.get(newName.getId()) != null) {
+        if (nameByIdMap.putIfAbsent(newName.getId(), newName) != null) {
+            throw new Exception("tried to add a name to the database with an existing id!");
         }
+
     }
 
     protected void removeNameFromDb(final Name toRemove) throws Exception {
         toRemove.checkDatabaseMatches(this);
-        //synchronized (nameByIdMap) {
         nameByIdMap.remove(toRemove.getId());
-        //}
     }
 
     // ok I'd have liked this to be part of add name to db but the name won't have been initialised, add name to db is called in the name constructor
@@ -524,37 +520,49 @@ public final class AzquoMemoryDB {
         }
     }
 
-    // like above but for one attribute
+    // Sets indexes for names, this needs to be thread safe to support multi threaded name linking
 
     public void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
+        // upper and lower seems a bit arbitrary. Hmmm.
         String lcAttributeValue = attributeValue.toLowerCase().trim();
         String ucAttributeName = attributeName.toUpperCase().trim();
-        if (nameByAttributeMap.get(ucAttributeName) == null) { // make a new map for the attributes
-            nameByAttributeMap.put(ucAttributeName.intern(), new ConcurrentHashMap<String, List<Name>>());
-        }
-        final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
         if (lcAttributeValue.indexOf(Name.QUOTE) >= 0 && !ucAttributeName.equals(Name.CALCULATION)) {
             lcAttributeValue = lcAttributeValue.replace(Name.QUOTE, '\'');
         }
-        List<Name> names = namesForThisAttribute.get(lcAttributeValue);
-        if (names != null) {
-            if (!names.contains(name)) {
-                names.add(name);
+
+        // adapted from stack overflow, cheers!
+        Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
+        if (namesForThisAttribute == null) {
+            final Map<String, List<Name>> newNamesForThisAttribute = new ConcurrentHashMap<String, List<Name>>();
+            namesForThisAttribute = nameByAttributeMap.putIfAbsent(ucAttributeName.intern(), newNamesForThisAttribute);// in ConcurrentHashMap this is atomic, thanks Doug!
+            if (namesForThisAttribute == null) {// the new one went in, use it, otherwise use the one that "sneaked" in there in the mean time :)
+                namesForThisAttribute = newNamesForThisAttribute;
             }
-        } else {
-            final List<Name> possibles = new ArrayList<Name>();
-            possibles.add(name);
-            namesForThisAttribute.put(lcAttributeValue.intern(), possibles);
         }
+
+        // same pattern but for the lists. Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
+
+        List<Name> names = namesForThisAttribute.get(lcAttributeValue);
+        if (names == null){
+            final List<Name> newNames = new CopyOnWriteArrayList<Name>();// cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
+            names = namesForThisAttribute.putIfAbsent(lcAttributeValue, newNames);
+            if (names == null){
+                names = newNames;
+            }
+        }
+        // ok, got names
+        names.add(name); // threadsafe, internally locked but of course just for this particular attribute and value heh.
+        // Could maybe get a little speed by adding a special case for the first name . . .meh.
     }
 
+    // I think this is just much more simple re thread safety in that if we can't find the map and list we just don't do anything and the final remove should be safe according to CopyOnWriteArray
 
     protected void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
         String ucAttributeName = attributeName.toUpperCase().trim();
         String lcAttributeValue = attributeValue.toLowerCase().trim();
         name.checkDatabaseMatches(this);
-        if (nameByAttributeMap.get(ucAttributeName) != null) {// the map we care about
-            final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
+        final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
+        if (namesForThisAttribute != null) {// the map we care about
             final List<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(lcAttributeValue);
             if (namesForThatAttributeAndAttributeValue != null) {
                 namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the set . . .
@@ -562,14 +570,61 @@ public final class AzquoMemoryDB {
         }
     }
 
+    private class BatchLinker implements Runnable {
+        private final AtomicInteger loadTracker;
+        private final List<Name> batchToLink;
+
+        public BatchLinker(AtomicInteger loadTracker, List<Name> batchToLink) {
+            this.loadTracker = loadTracker;
+            this.batchToLink = batchToLink;
+        }
+
+        @Override
+        public void run() { // well this is what's going to truly test concurrent modification of a database
+            for (Name name : batchToLink){
+                try { // I think the only exception is the db not matching one.
+                    name.populateFromJson();
+                    addNameToAttributeNameMap(name);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    break;
+                }
+            }
+            System.out.println("Linked : " + loadTracker.addAndGet(batchToLink.size()));
+        }
+    }
+
     // to be called after loading moves the json and extracts attributes to useful maps here
     // called after loading as the names reference themselves
+    // going to try a basic multi-thread with batches of 100000 names. It's linking millions of names that's the issue not thousands.
+
+    int batchLinkSize = 100000;
 
     private synchronized void initNames() throws Exception {
+
+        // there may be a certain overhead to building the batches but otherwise it's dealing with millions of threads. My gut says this will be more of an overhead.
+        ExecutorService executor = Executors.newFixedThreadPool(loadingThreads);
+        AtomicInteger loadTracker = new AtomicInteger(0);
+        ArrayList<Name> batchLink = new ArrayList<Name>(batchLinkSize);
+        for (Name name : nameByIdMap.values()) {
+            batchLink.add(name);
+            if (batchLink.size() == batchLinkSize){
+                executor.execute(new BatchLinker(loadTracker, batchLink));
+                batchLink = new ArrayList<Name>();
+            }
+        }
+        // link leftovers
+        executor.execute(new BatchLinker(loadTracker, batchLink));
+        executor.shutdown();
+        if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+            throw new Exception("Database " + getMySQLName() + " took longer than an hour to link");
+        }
+/*
         for (Name name : nameByIdMap.values()) {
             name.populateFromJson();
             addNameToAttributeNameMap(name);
-        }
+        }*/
+
     }
 
     // trying for new more simplified persistence - make functions not linked to classes
@@ -590,20 +645,16 @@ public final class AzquoMemoryDB {
     protected void addValueToDb(final Value newValue) throws Exception {
         newValue.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (valueByIdMap.get(newValue.getId()) != null) {
+        if (valueByIdMap.putIfAbsent(newValue.getId(), newValue) != null) { // != null means there was something in there
             throw new Exception("tried to add a value to the database with an existing id!");
-        } else {
-            valueByIdMap.put(newValue.getId(), newValue);
         }
     }
 
     protected void addProvenanceToDb(final Provenance newProvenance) throws Exception {
         newProvenance.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (provenanceByIdMap.get(newProvenance.getId()) != null) {
-            throw new Exception("tried to add a value to the database with an existing id!");
-        } else {
-            provenanceByIdMap.put(newProvenance.getId(), newProvenance);
+        if (provenanceByIdMap.putIfAbsent(newProvenance.getId(), newProvenance) != null) {
+            throw new Exception("tried to add a privenance to the database with an existing id!");
         }
     }
 
