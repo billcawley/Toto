@@ -40,6 +40,7 @@ public class DSImportService {
     public static final String LOCAL = "local";
     public static final String EQUALS = "equals";
     public static final String COMPOSITION = "composition";
+    public static final String DEFAULT = "default";
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
 
@@ -60,6 +61,7 @@ public class DSImportService {
         boolean contextItem;
         boolean local;
         String composition;
+        String defaultValue;
         String equalsString;
         String lineValue;
         Name lineName;
@@ -82,6 +84,7 @@ public class DSImportService {
             contextItem = false;
             local = false;
             composition = null;
+            defaultValue = null;
             equalsString = null;
             lineValue = "";
             lineName = null;
@@ -193,6 +196,10 @@ public class DSImportService {
             if (heading.composition.length() == 0) {
                 throw new Exception(clause + " not understood");
             }
+        }
+        readClause = readClause(DEFAULT, clause);
+        if (readClause != null && readClause.length() > 0) {
+            heading.defaultValue = readClause;
         }
         if (readClause(PEERS, clause) != null) {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
@@ -427,6 +434,9 @@ public class DSImportService {
             for (ImportHeading heading : headings) {
 //                trackers.put(heading.name.getDefaultDisplayName(), 0L);
                 heading.lineValue = csvReader.get(heading.column).intern();// since strings may be repeated intern, should save a bit of memory using the String pool
+                if (heading.defaultValue!=null && (heading.lineValue == null || heading.lineValue.length()==0)){
+                    heading.lineValue = heading.defaultValue;
+                }
                 if (heading.attribute != null && heading.attribute.equalsIgnoreCase(dateLang)) {
                     //interpret the date and change to standard form
                     //todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
@@ -442,7 +452,7 @@ public class DSImportService {
             if (headings.get(0).lineValue.length() > 0 || headings.get(0).column == -1) {//skip any line that has a blank in the first column unless we're not interested in that column
                 getCompositeValues(headings);
                 try {
-                    valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames);
+                    valuecount += interpretLine(azquoMemoryDBConnection, headings, namesFound, attributeNames, lineNo);
                 } catch (Exception e) {
                     throw new Exception("error: line " + lineNo + " " + e.getMessage());
                 }
@@ -514,7 +524,7 @@ public class DSImportService {
     }
 
     // each line of values (or names as it may practically be)
-    private int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings, HashMap<String, Name> namesFound, List<String> attributeNames) throws Exception {
+    private int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportHeading> headings, HashMap<String, Name> namesFound, List<String> attributeNames, int lineNo) throws Exception {
         List<Name> contextNames = new ArrayList<Name>();
         String value;
         int valueCount = 0;
@@ -529,7 +539,7 @@ public class DSImportService {
         // prepare the local parent of columns. Customer is in all customers local
         for (ImportHeading importHeading : headings) {
             if (importHeading.local && importHeading.parentOf != null) { // local and it is a parentof, inside this function it will use the childheading set up - should maybe check for that instead??
-                handleParent(azquoMemoryDBConnection, namesFound, importHeading, headings, attributeNames);
+                handleParent(azquoMemoryDBConnection, namesFound, importHeading, headings, attributeNames, lineNo);
             }
         }
         long toolong = 200000;
@@ -626,7 +636,7 @@ public class DSImportService {
                     handleAttribute(azquoMemoryDBConnection, namesFound, heading, headings);
                 }
                 if (heading.parentOf != null && !heading.local) {
-                    handleParent(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames);
+                    handleParent(azquoMemoryDBConnection, namesFound, heading, headings, attributeNames, lineNo);
                 }
                 if (heading.childOf != null) {
                     if (heading.lineName != null) { // could if ever be null after preparing the headers?
@@ -749,7 +759,7 @@ public class DSImportService {
     }
 
     // namesFound is a cache. Then the heading we care about then the list of all headings.
-    private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames) throws Exception {
+    private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportHeading heading, List<ImportHeading> headings, List<String> attributeNames, int lineNo) throws Exception {
         if (heading.lineValue.length() == 0) { // so nothing to do
             return;
         }
@@ -764,7 +774,7 @@ public class DSImportService {
             heading.lineName = includeInParents(azquoMemoryDBConnection, namesFound, heading.lineValue, heading.childOf, heading.local, setLocalLanguage(heading, attributeNames));
         }
         if (childHeading.lineValue.length() == 0) {
-            throw new Exception("blank value for parent of " + heading.lineValue);
+            throw new Exception("Line " + lineNo + ": blank value for child of " + heading.lineValue);
         }
         if (childHeading.lineName == null) {
             childHeading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childHeading.lineValue, heading.lineName, heading.local, setLocalLanguage(childHeading, attributeNames));
