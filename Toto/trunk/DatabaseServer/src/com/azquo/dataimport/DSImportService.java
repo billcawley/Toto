@@ -649,21 +649,7 @@ public class DSImportService {
                         }
                     }
                 }
-                if (heading != null) {
-                    if (heading.lineName != null) {
-                        for (Name parent : heading.childOf) {
-                            parent.addChildWillBePersisted(heading.lineName);
-                        }
-                    } else {
-                        String childNameString = heading.lineValue;
-                        if (childNameString.length() > 0) {
-                            for (Name parent : heading.childOf) {
-                                heading.lineName = includeInSet(azquoMemoryDBConnection, namesFound, childNameString, parent, heading.local, attributeNames);
-                            }
-                        }
-                    }
-                }
-            }
+             }
             long now = System.nanoTime();
             if (now - time > toolong) {
                 System.out.println(heading.heading + " took " + (now - time));
