@@ -41,6 +41,7 @@ public class DSImportService {
     public static final String EQUALS = "equals";
     public static final String COMPOSITION = "composition";
     public static final String DEFAULT = "default";
+    public static final String NONZERO = "nonzero";
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
 
@@ -62,6 +63,7 @@ public class DSImportService {
         boolean local;
         String composition;
         String defaultValue;
+        boolean nonZero;
         String equalsString;
         String lineValue;
         Name lineName;
@@ -85,6 +87,7 @@ public class DSImportService {
             local = false;
             composition = null;
             defaultValue = null;
+            nonZero = false;
             equalsString = null;
             lineValue = "";
             lineName = null;
@@ -200,6 +203,9 @@ public class DSImportService {
         readClause = readClause(DEFAULT, clause);
         if (readClause != null && readClause.length() > 0) {
             heading.defaultValue = readClause;
+        }
+        if (readClause(NONZERO, clause) != null){
+            heading.nonZero = true;
         }
         if (readClause(PEERS, clause) != null) {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
@@ -358,6 +364,16 @@ public class DSImportService {
     Map<String, Long> trackers = new ConcurrentHashMap<String, Long>();
 
     // the big function that deals with data importing
+
+    private boolean isZero(String text){
+        try{
+            double d = Double.parseDouble(text);
+            if (d==0.0) return true;
+            return false;
+        }catch(Exception e){
+            return true;
+        }
+    }
 
     public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
         trackers = new ConcurrentHashMap<String, Long>();
@@ -599,6 +615,7 @@ public class DSImportService {
                         } else {
                             value = "";
                         }
+                        if (heading.nonZero && isZero(value)) value = "";
                         if (value.trim().length() > 0) { // no point storing if there's no value!
                             valueCount++;
                             // finally store our value and names for it
@@ -625,6 +642,7 @@ public class DSImportService {
                     } else {
                         value = "";
                     }
+                    if (heading.nonZero && isZero(value)) value = "";
                     if (value.trim().length() > 0) { // no point storing if there's no value!
                         valueCount++;
                         // finally store our value and names for it
