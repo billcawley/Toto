@@ -895,13 +895,14 @@ seaports;children   container;children
         if (alreadyTested.contains(containsSet)) return 0;
         alreadyTested.add(containsSet);
         int count = 0;
-        Set<Name> remainder = new HashSet<Name>(memberSet.getChildren());
+        Set<Name> remainder = new HashSet<Name>(selectionSet);
+        remainder.retainAll(memberSet.findAllChildren(false));
         remainder.retainAll(containsSet.getChildren());
         if (remainder.size() > 0) {
             return remainder.size();
         } else {
             for (Name child : containsSet.getChildren()) {
-                count += totalNameSet(child, memberSet, alreadyTested);
+                count += totalNameSet(child, memberSet, selectionSet,alreadyTested);
             }
         }
         return count;
@@ -924,7 +925,7 @@ seaports;children   container;children
         }
         Set<Name> alreadyTested = new HashSet<Name>();
         if (containsSet != null && memberSet != null) {
-            return totalNameSet(containsSet, memberSet, alreadyTested);
+            return totalNameSet(containsSet, memberSet, selectionSet, alreadyTested);
         }
         return 0;
     }
@@ -933,7 +934,7 @@ seaports;children   container;children
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<Name> contextNames, int rowNo, int colNo, Map<Name, Integer> totalSetSize, List<String> languages) throws Exception {
-        String stringValue;
+        String stringValue=null;
         double doubleValue = 0;
         Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
         Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
