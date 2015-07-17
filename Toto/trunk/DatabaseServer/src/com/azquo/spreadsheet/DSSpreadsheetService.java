@@ -145,6 +145,7 @@ seaports;children   container;children
                             }
                         }
                         String NAMECOUNT = "NAMECOUNT";
+                        String TOTALNAMECOUNT = "TOTALNAMECOUNT";
                         if (sourceCell.toUpperCase().startsWith(NAMECOUNT)) {
                             // should strip off the function
                             sourceCell = sourceCell.substring(sourceCell.indexOf("(", NAMECOUNT.length()) + 1); // chop off the beginning
@@ -152,6 +153,16 @@ seaports;children   container;children
                             Set<Name> nameCountSet = new HashSet<Name>(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames)); // put what would have caused multiple headings into namecount
                             List<DataRegionHeading> forNameCount = new ArrayList<DataRegionHeading>();
                             forNameCount.add(new DataRegionHeading(null, false, function, nameCountSet));
+                            row.add(forNameCount);
+                        } else if (sourceCell.toUpperCase().startsWith(TOTALNAMECOUNT)) {
+                            // should strip off the function
+                            sourceCell = sourceCell.substring(sourceCell.indexOf("(", NAMECOUNT.length()) + 1); // chop off the beginning
+                            sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
+                            String selectionType = sourceCell.substring(0,sourceCell.indexOf(","));
+                            String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1);
+                            Set<Name> selectionSet = new HashSet<Name>(nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames));
+                            List<DataRegionHeading> forNameCount = new ArrayList<DataRegionHeading>();
+                            forNameCount.add(new DataRegionHeading(nameService.findByName(azquoMemoryDBConnection, selectionType), false, function, selectionSet));
                             row.add(forNameCount);
                         } else {
                             row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames), azquoMemoryDBConnection, function));
@@ -880,7 +891,7 @@ seaports;children   container;children
         }
     }
 
-    private int totalNameSet(Name containsSet, Name memberSet, Set<Name> alreadyTested) {
+    private int totalNameSet(Name containsSet, Name memberSet, Set<Name> selectionSet, Set<Name> alreadyTested) {
         if (alreadyTested.contains(containsSet)) return 0;
         alreadyTested.add(containsSet);
         int count = 0;
@@ -899,9 +910,11 @@ seaports;children   container;children
     private int getTotalNameCount(Set<DataRegionHeading> headings) {
         Name memberSet = null;
         Name containsSet = null;
+        Set<Name> selectionSet = null;
         for (DataRegionHeading heading : headings) {
             if (heading.getName() != null) {
-                if (heading.getFunction() == DataRegionHeading.BASIC_RESOLVE_FUNCTION.TOTALNAMECOUNT) {
+                if (heading.getNameCountSet() != null) {
+                    selectionSet = heading.getNameCountSet();
                     containsSet = heading.getName();
                 } else {
                     memberSet = heading.getName();
@@ -969,16 +982,18 @@ seaports;children   container;children
             }
             DataRegionHeading nameCountHeading = getHeadingWithNameCount(headingsForThisCell);
             if (nameCountHeading != null) {
-                Set<Name> nameCountSet = nameCountHeading.getNameCountSet();
-                for (DataRegionHeading dataRegionHeading : headingsForThisCell) {
-                    if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null) { // should be fine
-                        nameCountSet.retainAll(dataRegionHeading.getName().findAllChildren(false));
+                if (nameCountHeading.getName() != null){
+                    doubleValue = getTotalNameCount(headingsForThisCell);
+                } else {
+                    Set<Name> nameCountSet = nameCountHeading.getNameCountSet();
+                    for (DataRegionHeading dataRegionHeading : headingsForThisCell) {
+                        if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null) { // should be fine
+                            nameCountSet.retainAll(dataRegionHeading.getName().findAllChildren(false));
+                        }
                     }
+                    doubleValue = nameCountSet.size();
+                    stringValue = doubleValue + "";
                 }
-                doubleValue = nameCountSet.size();
-                stringValue = doubleValue + "";
-            } else if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.TOTALNAMECOUNT) {
-                stringValue = Integer.toString(getTotalNameCount(headingsForThisCell));
             } else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
                 // TODO - peer additive check. If using peers and not additive, don't include children
                 List<Value> values = new ArrayList<Value>();
