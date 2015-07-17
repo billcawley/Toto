@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,7 +37,8 @@ public class StandardDAO {
 
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
-    public static final int UPDATELIMIT = 5000;
+//    public static final int UPDATELIMIT = 5000;
+    public static final int UPDATELIMIT = 2500; // going to 2.5k as now some of the records can be quite large! Also simultaneous.
 
     // the basic data persistence tables have but two columns, these two :)
     private static final String ID = "id";
@@ -83,7 +85,7 @@ public class StandardDAO {
                     insertSql.delete(insertSql.length() - 2, insertSql.length());
                     //System.out.println(insertSql.toString());
                     jdbcTemplate.update(insertSql.toString(), namedParams);
-                    System.out.println("bulk inserted " + records.size() + " into " + tableName + " in " + (System.currentTimeMillis() - track));
+                    System.out.println("bulk inserted " + DecimalFormat.getInstance().format(records.size()) + " into " + tableName + " in " + (System.currentTimeMillis() - track));
                 }
         }
     }

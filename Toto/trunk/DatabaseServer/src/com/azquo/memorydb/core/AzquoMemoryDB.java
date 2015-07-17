@@ -294,8 +294,8 @@ public final class AzquoMemoryDB {
                 System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
                 List<JsonRecordTransport> recordsToStore = new ArrayList<JsonRecordTransport>();
                 // todo : write locking the db probably should start here
+                // multi thread this chunk? It can slow things down a little . . .
                 for (AzquoMemoryDBEntity entity : new ArrayList<AzquoMemoryDBEntity>(entities)) { // we're taking a copy of the set before running through it.
-                    // in looking at multi threading I don't know if this bit is so important, it should be fast, it's more the sql
                     JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
                     if (entity.getNeedsDeleting()) {
                         state = JsonRecordTransport.State.DELETE;
@@ -315,6 +315,7 @@ public final class AzquoMemoryDB {
                 }
             }
         }
+        System.out.println("persist done.");
     }
 
     // will block currently! - a concern due to the writing synchronized above?

@@ -145,17 +145,16 @@ seaports;children   container;children
                             }
                         }
                         String NAMECOUNT = "NAMECOUNT";
-                        String TOTALNAMECOUNT = "TOTALNAMECOUNT";
-                        if (sourceCell.toUpperCase().startsWith(NAMECOUNT) || sourceCell.toUpperCase().startsWith(TOTALNAMECOUNT)){
+                        if (sourceCell.toUpperCase().startsWith(NAMECOUNT)) {
                             // should strip off the function
-                            sourceCell = sourceCell.substring(0, sourceCell.indexOf("(", NAMECOUNT.length())) + sourceCell.substring(sourceCell.indexOf(")",sourceCell.indexOf("(", NAMECOUNT.length())) + 1);
+                            sourceCell = sourceCell.substring(sourceCell.indexOf("(", NAMECOUNT.length()) + 1); // chop off the beginning
+                            sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
                             Set<Name> nameCountSet = new HashSet<Name>(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames)); // put what would have caused multiple headings into namecount
                             List<DataRegionHeading> forNameCount = new ArrayList<DataRegionHeading>();
                             forNameCount.add(new DataRegionHeading(null, false, function, nameCountSet));
                             row.add(forNameCount);
                         } else {
                             row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames), azquoMemoryDBConnection, function));
-
                         }
                     }
                 }
@@ -742,7 +741,7 @@ seaports;children   container;children
         for (rowNo = 0; rowNo < maxRows; rowNo++) {
             List<AzquoCell> rowCells = sourceData.get(sortedRows != null ? sortedRows.get(rowNo) : rowNo); // if a sort happened use the row number according to it
             List<AzquoCell> newRow = new ArrayList<AzquoCell>();
-            if (sortedCols != null){
+            if (sortedCols != null) {
                 for (int colNo = 0; colNo < maxCols; colNo++) {
                     newRow.add(rowCells.get(sortedCols.get(colNo)));
                 }
@@ -881,37 +880,37 @@ seaports;children   container;children
         }
     }
 
-    private int totalNameSet(Name containsSet, Name memberSet, Set<Name> alreadyTested){
+    private int totalNameSet(Name containsSet, Name memberSet, Set<Name> alreadyTested) {
         if (alreadyTested.contains(containsSet)) return 0;
         alreadyTested.add(containsSet);
         int count = 0;
         Set<Name> remainder = new HashSet<Name>(memberSet.getChildren());
         remainder.retainAll(containsSet.getChildren());
-        if (remainder.size() > 0){
+        if (remainder.size() > 0) {
             return remainder.size();
-        }else{
-            for (Name child:containsSet.getChildren()){
+        } else {
+            for (Name child : containsSet.getChildren()) {
                 count += totalNameSet(child, memberSet, alreadyTested);
             }
         }
         return count;
     }
 
-    private int getTotalNameCount(Set<DataRegionHeading> headings){
+    private int getTotalNameCount(Set<DataRegionHeading> headings) {
         Name memberSet = null;
         Name containsSet = null;
-        for (DataRegionHeading heading:headings){
-            if (heading.getName() != null){
-                if (heading.getFunction() == DataRegionHeading.BASIC_RESOLVE_FUNCTION.TOTALNAMECOUNT){
+        for (DataRegionHeading heading : headings) {
+            if (heading.getName() != null) {
+                if (heading.getFunction() == DataRegionHeading.BASIC_RESOLVE_FUNCTION.TOTALNAMECOUNT) {
                     containsSet = heading.getName();
-                }else{
+                } else {
                     memberSet = heading.getName();
                 }
             }
 
         }
         Set<Name> alreadyTested = new HashSet<Name>();
-        if (containsSet != null && memberSet != null){
+        if (containsSet != null && memberSet != null) {
             return totalNameSet(containsSet, memberSet, alreadyTested);
         }
         return 0;
@@ -978,13 +977,13 @@ seaports;children   container;children
                 }
                 doubleValue = nameCountSet.size();
                 stringValue = doubleValue + "";
-            }else if( function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.TOTALNAMECOUNT) {
+            } else if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.TOTALNAMECOUNT) {
                 stringValue = Integer.toString(getTotalNameCount(headingsForThisCell));
-           }  else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
+            } else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
                 // TODO - peer additive check. If using peers and not additive, don't include children
                 List<Value> values = new ArrayList<Value>();
                 // now , get the function from the headings
-                  if (function != null) {
+                if (function != null) {
                     locked.isTrue = true;
                 }
                 doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, languages, function); // true = pay attention to names additive flag
@@ -1162,7 +1161,7 @@ seaports;children   container;children
                     oneUpdate.add(value);
                     p = value.getProvenance();
                 } else {
-                        toReturn.add(valueService.getDisplayValuesForProvenance(oneUpdate, p));
+                    toReturn.add(valueService.getDisplayValuesForProvenance(oneUpdate, p));
                     oneUpdate = new HashSet<Value>();
                     provdate = value.getProvenance().getTimeStamp();
                 }
