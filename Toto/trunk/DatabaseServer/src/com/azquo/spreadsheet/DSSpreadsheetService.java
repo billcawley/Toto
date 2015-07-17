@@ -145,7 +145,8 @@ seaports;children   container;children
                             }
                         }
                         String NAMECOUNT = "NAMECOUNT";
-                        if (sourceCell.toUpperCase().startsWith(NAMECOUNT)){
+                        String TOTALNAMECOUNT = "TOTALNAMECOUNT";
+                        if (sourceCell.toUpperCase().startsWith(NAMECOUNT) || sourceCell.toUpperCase().startsWith(TOTALNAMECOUNT)){
                             // should strip off the function
                             sourceCell = sourceCell.substring(0, sourceCell.indexOf("(", NAMECOUNT.length())) + sourceCell.substring(sourceCell.indexOf(")",sourceCell.indexOf("(", NAMECOUNT.length())) + 1);
                             Set<Name> nameCountSet = new HashSet<Name>(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames)); // put what would have caused multiple headings into namecount
@@ -880,6 +881,42 @@ seaports;children   container;children
         }
     }
 
+    private int totalNameSet(Name containsSet, Name memberSet, Set<Name> alreadyTested){
+        if (alreadyTested.contains(containsSet)) return 0;
+        alreadyTested.add(containsSet);
+        int count = 0;
+        Set<Name> remainder = new HashSet<Name>(memberSet.getChildren());
+        remainder.retainAll(containsSet.getChildren());
+        if (remainder.size() > 0){
+            return remainder.size();
+        }else{
+            for (Name child:containsSet.getChildren()){
+                count += totalNameSet(child, memberSet, alreadyTested);
+            }
+        }
+        return count;
+    }
+
+    private int getTotalNameCount(Set<DataRegionHeading> headings){
+        Name memberSet = null;
+        Name containsSet = null;
+        for (DataRegionHeading heading:headings){
+            if (heading.getName() != null){
+                if (heading.getFunction() == DataRegionHeading.BASIC_RESOLVE_FUNCTION.TOTALNAMECOUNT){
+                    containsSet = heading.getName();
+                }else{
+                    memberSet = heading.getName();
+                }
+            }
+
+        }
+        Set<Name> alreadyTested = new HashSet<Name>();
+        if (containsSet != null && memberSet != null){
+            return totalNameSet(containsSet, memberSet, alreadyTested);
+        }
+        return 0;
+    }
+
     // factored this off to enable getting a single cell, also useful to be called from the multi threading
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
@@ -925,27 +962,29 @@ seaports;children   container;children
             stringValue = "";
         } else {
             // ok new logic here, we need to know if we're going to use attributes or values or namecount!
+            DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;
+            for (DataRegionHeading heading : headingsForThisCell) {
+                if (heading.getFunction() != null) {
+                    function = heading.getFunction();
+                }
+            }
             DataRegionHeading nameCountHeading = getHeadingWithNameCount(headingsForThisCell);
-            if (nameCountHeading != null){
+            if (nameCountHeading != null) {
                 Set<Name> nameCountSet = nameCountHeading.getNameCountSet();
-                for (DataRegionHeading dataRegionHeading : headingsForThisCell){
-                    if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null){ // should be fine
+                for (DataRegionHeading dataRegionHeading : headingsForThisCell) {
+                    if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null) { // should be fine
                         nameCountSet.retainAll(dataRegionHeading.getName().findAllChildren(false));
                     }
                 }
                 doubleValue = nameCountSet.size();
                 stringValue = doubleValue + "";
-            } else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
+            }else if( function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.TOTALNAMECOUNT) {
+                stringValue = Integer.toString(getTotalNameCount(headingsForThisCell));
+           }  else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
                 // TODO - peer additive check. If using peers and not additive, don't include children
                 List<Value> values = new ArrayList<Value>();
                 // now , get the function from the headings
-                DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;
-                for (DataRegionHeading heading : headingsForThisCell) {
-                    if (heading.getFunction() != null) {
-                        function = heading.getFunction();
-                    }
-                }
-                if (function != null) {
+                  if (function != null) {
                     locked.isTrue = true;
                 }
                 doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, languages, function); // true = pay attention to names additive flag

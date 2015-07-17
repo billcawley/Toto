@@ -18,7 +18,7 @@ import java.util.Set;
  */
 public class DataRegionHeading {
 
-    public enum BASIC_RESOLVE_FUNCTION {COUNT, AVERAGE, MAX, MIN}
+    public enum BASIC_RESOLVE_FUNCTION {COUNT, AVERAGE, MAX, MIN, TOTALNAMECOUNT}
 
     private final Name name;
     private final String attribute;
