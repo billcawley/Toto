@@ -971,7 +971,7 @@ seaports;children   container;children
         }
         MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
         for (DataRegionHeading heading : headingsForThisCell) {
-            if (heading.getName() == null && heading.getAttribute() == null) {
+            if (heading.getName() == null && heading.getAttribute() == null && heading.getNameCountSet() == null) {
                 checked = false;
             }
             if (!heading.isWriteAllowed()) { // this replaces the isallowed check that was in the functions that resolved the cell values

@@ -410,6 +410,9 @@ public final class NameService {
                 //carry on regardless!
             }
         }
+        if (level == 1){ // then no need to get clever, just return the children
+            return new ArrayList<Name>(name.getChildren()); // a little botehred by this as it may just be wrapped again on the outside.
+        }
         List<Name> namesFound = new ArrayList<Name>();
         addNames(name, namesFound, 0, level);
         return namesFound;
@@ -554,7 +557,6 @@ public final class NameService {
         *
         * These will be replaced by !<id>   e.g. !1234
         * */
-        final List<Name> toReturn = new ArrayList<Name>();
         List<Collection<Name>> nameStack = new ArrayList<Collection<Name>>(); // make this more generic, the key is in the name marker bits, might use different collections depending on operator!
         List<String> formulaStrings = new ArrayList<String>();
         List<String> nameStrings = new ArrayList<String>();
@@ -632,12 +634,17 @@ public final class NameService {
         if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
             hasPermissions = true;
         }
-        for (Name possible : nameStack.get(0)) {
-            if (possible == null || (possible.getAttribute("CONFIDENTIAL") == null && (!hasPermissions || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())))) {
-                toReturn.add(possible);
+        if (hasPermissions || azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB("CONFIDENTIAL")){ // then we need to check permissions etc
+            final List<Name> toReturn = new ArrayList<Name>();
+            for (Name possible : nameStack.get(0)) {
+                if (possible == null || (possible.getAttribute("CONFIDENTIAL") == null && (!hasPermissions || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())))) {
+                    toReturn.add(possible);
+                }
             }
+            return toReturn;
+        } else { // just make a copy as list and return. This colleciton copying all over the pace bothers me a bit.
+            return new ArrayList<Name>(nameStack.get(0));
         }
-        return toReturn;
     }
 
     public Name inParentSet(Name name, Collection<Name> maybeParents) {
@@ -748,6 +755,7 @@ public final class NameService {
     }
 
     private List<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
+            System.out.println("interpret set term :" + setTerm + " refrerenced names : " + referencedNames);
         //System.out.println("interpret set term . . ." + setTerm);
         List<Name> namesFound = new ArrayList<Name>();
 

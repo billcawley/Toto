@@ -350,6 +350,12 @@ public final class AzquoMemoryDB {
         return Collections.emptySet(); // moving away from nulls
     }
 
+    // for checking confidential, will same considerable time
+
+    public boolean attributeExistsInDB(final String attributeName) {
+        return nameByAttributeMap.get(attributeName.toUpperCase().trim()) != null;
+    }
+
     // same as above but then zap any not in the parent
 
     private Set<Name> getNamesForAttributeAndParent(final String attributeName, final String attributeValue, Name parent) {
