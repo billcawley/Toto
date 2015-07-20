@@ -890,19 +890,25 @@ seaports;children   container;children
             }
         }
     }
+    int counter = 0;
 
-    private int totalNameSet(Name containsSet, Name memberSet, Set<Name> selectionSet, Set<Name> alreadyTested) {
+    private int totalNameSet(Name containsSet, Set<Name> selectionSet, Set<Name> alreadyTested) {
+        counter++;
+        if (counter%10000 == 0){
+            System.out.println("totalNameSet contains set : " + containsSet.getDefaultDisplayName());
+        }
         if (alreadyTested.contains(containsSet)) return 0;
         alreadyTested.add(containsSet);
         int count = 0;
         Set<Name> remainder = new HashSet<Name>(selectionSet);
-        remainder.retainAll(memberSet.findAllChildren(false));
         remainder.retainAll(containsSet.getChildren());
         if (remainder.size() > 0) {
             return remainder.size();
         } else {
             for (Name child : containsSet.getChildren()) {
-                count += totalNameSet(child, memberSet, selectionSet,alreadyTested);
+                if (!child.getChildren().isEmpty()){
+                    count += totalNameSet(child, selectionSet,alreadyTested);
+                }
             }
         }
         return count;
@@ -925,7 +931,9 @@ seaports;children   container;children
         }
         Set<Name> alreadyTested = new HashSet<Name>();
         if (containsSet != null && memberSet != null) {
-            return totalNameSet(containsSet, memberSet, selectionSet, alreadyTested);
+            Set<Name> remainder = new HashSet<Name>(selectionSet);
+            remainder.retainAll(memberSet.findAllChildren(false));
+            return totalNameSet(containsSet, remainder, alreadyTested);
         }
         return 0;
     }
@@ -989,12 +997,22 @@ seaports;children   container;children
                     Set<Name> nameCountSet = nameCountHeading.getNameCountSet();
                     for (DataRegionHeading dataRegionHeading : headingsForThisCell) {
                         if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null) { // should be fine
-                            nameCountSet.retainAll(dataRegionHeading.getName().findAllChildren(false));
+                            if (nameCountSet.size() < dataRegionHeading.getName().findAllChildren(false).size()){
+                                System.out.println("going for a retainall in namecount, first set size " + nameCountSet.size() + ", second set " + dataRegionHeading.getName().findAllChildren(false).size());
+                                nameCountSet.retainAll(dataRegionHeading.getName().findAllChildren(false));
+                                System.out.println("done");
+                            } else {// I have a theory that this swap could make things faster but I'm not 100%
+                                System.out.println("going for a reversed retainall in namecount, first set size " + nameCountSet.size() + ", second set " + dataRegionHeading.getName().findAllChildren(false).size());
+                                Set<Name> nameCountSet2 = new HashSet<Name>(dataRegionHeading.getName().findAllChildren(false));
+                                nameCountSet2.retainAll(nameCountSet);
+                                nameCountSet = nameCountSet2;
+                                System.out.println("done");
+                            }
                         }
                     }
                     doubleValue = nameCountSet.size();
-                    stringValue = doubleValue + "";
                 }
+                stringValue = doubleValue + "";
             } else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
                 // TODO - peer additive check. If using peers and not additive, don't include children
                 List<Value> values = new ArrayList<Value>();

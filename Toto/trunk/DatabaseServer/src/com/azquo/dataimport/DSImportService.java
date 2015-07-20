@@ -12,9 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by cawley on 20/05/15.
@@ -113,7 +118,7 @@ public class DSImportService {
 
     // going to follow the pattern above, no getters, the final will take care of setting
 
-    public class ImportCellWithHeading{
+    public class ImportCellWithHeading {
         private final ImmutableImportHeading immutableImportHeading;
         private String value;
         private Name name;
@@ -414,6 +419,54 @@ public class DSImportService {
         return child;
     }
 
+    private final int batchSize = 100000;
+
+
+    private class BatchImporter implements Runnable {
+        private final AzquoMemoryDBConnection azquoMemoryDBConnection;
+        private final AtomicInteger valueTracker;
+        private int lineNo;
+        private final List<List<ImportCellWithHeading>> dataToLoad;
+        private final Map<String, Name> namesFound;
+        private final List<String> attributeNames;
+
+        public BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection, AtomicInteger valueTracker, List<List<ImportCellWithHeading>> dataToLoad, Map<String, Name> namesFound, List<String> attributeNames, int lineNo) {
+            this.azquoMemoryDBConnection = azquoMemoryDBConnection;
+            this.valueTracker = valueTracker;
+            this.dataToLoad = dataToLoad;
+            this.namesFound = namesFound;
+            this.attributeNames = attributeNames;
+            this.lineNo = lineNo;
+        }
+
+        @Override
+        public void run() { // well this is what's going to truly test concurrent modification of a database
+            long trigger = 10;
+            Long time = System.currentTimeMillis();
+            for (List<ImportCellWithHeading> lineToLoad : dataToLoad) {
+                if (lineToLoad.get(0).value.length() > 0 || lineToLoad.get(0).immutableImportHeading.column == -1) {//skip any line that has a blank in the first column unless we're not interested in that column
+                    getCompositeValues(lineToLoad);
+                    try {
+                        valueTracker.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFound, attributeNames, lineNo));
+                    } catch (Exception e) {
+                        System.out.println("error: line " + lineNo);
+                        e.printStackTrace();
+                        break;
+                    }
+                    Long now = System.currentTimeMillis();
+                    if (now - time > trigger) {
+                        System.out.println("line no " + lineNo + " time = " + (now - time) + "ms");
+                    }
+                    time = now;
+                }
+                lineNo++;
+            }
+            System.out.println("Batch finishing : " + DecimalFormat.getInstance().format(lineNo) + " imported.");
+            System.out.println("Values Imported : " + DecimalFormat.getInstance().format(valueTracker));
+        }
+    }
+
+
     Map<String, Long> trackers = new ConcurrentHashMap<String, Long>();
 
     // the big function that deals with data importing
@@ -421,31 +474,40 @@ public class DSImportService {
     public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
         trackers = new ConcurrentHashMap<String, Long>();
         // little local cache just to speed things up
-        InputStream uploadFile = new FileInputStream(filePath);
-        final HashMap<String, Name> namesFound = new HashMap<String, Name>();
+        final Map<String, Name> namesFound = new ConcurrentHashMap<String, Name>();
         if (fileType.indexOf(" ") > 0) {
             //filetype should be first word only
             fileType = fileType.substring(0, fileType.indexOf(" "));
         }
         if (fileType.contains("_")) fileType = fileType.substring(0, fileType.indexOf("_"));
         long track = System.currentTimeMillis();
-        CsvReader csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
-        csvReader.setUseTextQualifier(true);
-        csvReader.readHeaders();
-        String[] headers2 = csvReader.getHeaders();
-        //start again...
-        csvReader.close();
-        uploadFile = new FileInputStream(filePath);
-        if (headers2.length < 2) {
-            // new pipe support, hope it will work adding in here
-            if (headers2.length == 1 && headers2[0].contains("|")) {
-                csvReader = new CsvReader(uploadFile, '|', Charset.forName("UTF-8"));
-            } else {
-                csvReader = new CsvReader(uploadFile, ',', Charset.forName("UTF-8"));
+        char delimiter = ',';
+        BufferedReader br = new BufferedReader(new FileReader(filePath));
+        String firstLine = br.readLine();
+        br.close();
+        if (firstLine != null){
+            if (firstLine.contains("\t")){
+                delimiter = '\t';
             }
-        } else {
-            csvReader = new CsvReader(uploadFile, '\t', Charset.forName("UTF-8"));
+            if (firstLine.contains("|")){
+                delimiter = '|';
+            }
         }
+
+        // now we know the delimiter can CSV read, I've read jackson is pretty quick
+
+/*
+        // jackson CSV example, I believe it is
+		CsvMapper csvMapper = new CsvMapper();
+		csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
+        CsvSchema schema = csvMapper.schemaFor(String[].class)
+                .withColumnSeparator('\t')
+                .withLineSeparator("\n");
+		MappingIterator<String[]> iterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));*/
+
+        InputStream uploadFile = new FileInputStream(filePath);
+        CsvReader csvReader = new CsvReader(uploadFile, delimiter, Charset.forName("UTF-8"));
+        csvReader.setUseTextQualifier(true);
         String[] headers = null;
         // ok beginning to understand. It looks for a name for the file type, this name can have headers and/or the definitions for each header
         // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
@@ -472,7 +534,7 @@ public class DSImportService {
                 csvReader.readRecord();
             }
         }
-        if (csvReader.getRawRecord().startsWith("Seasons;language")){
+        if (csvReader.getRawRecord().startsWith("Seasons;language")) {
             System.out.println("hey!");
         }
         // correcting the comment : readHeaders is about creating a set of ImportHeadings
@@ -482,25 +544,24 @@ public class DSImportService {
         // further information put into the ImportHeadings based off the initial info
         fillInHeaderInformation(azquoMemoryDBConnection, mutableImportHeadings);
         final List<ImmutableImportHeading> immutableImportHeadings = new ArrayList<ImmutableImportHeading>();
-        for (MutableImportHeading mutableImportHeading : mutableImportHeadings){
+        for (MutableImportHeading mutableImportHeading : mutableImportHeadings) {
             immutableImportHeadings.add(new ImmutableImportHeading(mutableImportHeading));
         }
-        int valuecount = 0; // purely for logging
-        int lastReported = 0;
         // having read the headers go through each record
-        int lineNo = 0;
-        long trigger = 2000000;
-        Long time = System.nanoTime();
 
         // now, since this will be multi threaded need to make line objects, Immutable ones methinks!
 
+        int lineNo = 0;
+        ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDBConnection.getAzquoMemoryDB().getLoadingThreads());
+        AtomicInteger valueTracker = new AtomicInteger(0);
+        ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<List<ImportCellWithHeading>>(batchSize);
         while (csvReader.readRecord()) { // now to the data itself, headers should have been sorted one way or another,
             lineNo++;
             List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<ImportCellWithHeading>();
             for (ImmutableImportHeading immutableImportHeading : immutableImportHeadings) {
 //                trackers.put(heading.name.getDefaultDisplayName(), 0L);
                 String lineValue = csvReader.get(immutableImportHeading.column).intern();// since strings may be repeated intern, should save a bit of memory using the String pool
-                if (immutableImportHeading.defaultValue !=null && lineValue.length() == 0){
+                if (immutableImportHeading.defaultValue != null && lineValue.length() == 0) {
                     lineValue = immutableImportHeading.defaultValue;
                 }
                 if (immutableImportHeading.attribute != null && immutableImportHeading.attribute.equalsIgnoreCase(dateLang)) {
@@ -512,38 +573,24 @@ public class DSImportService {
                         lineValue = sdf.format(date);
                     }
                 }
-                // ok no name yet, hmmmmm
-                importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading,lineValue,null, lineNo));
-//                heading.lineName = null;
+                importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue, null, lineNo));
             }
-
-            if (csvReader.getRawRecord().startsWith("SS15	2.43")){
-                System.out.println("hey!");
-            }
-
-
-            if (importCellsWithHeading.get(0).value.length() > 0 || immutableImportHeadings.get(0).column == -1) {//skip any line that has a blank in the first column unless we're not interested in that column
-                getCompositeValues(importCellsWithHeading);
-                try {
-                    valuecount += interpretLine(azquoMemoryDBConnection, importCellsWithHeading, namesFound, attributeNames, lineNo);
-                } catch (Exception e) {
-                    System.out.println("error: line " + lineNo + " : " + csvReader.getRawRecord());
-                    throw e;
-                }
-                Long now = System.nanoTime();
-                if (now - time > trigger) {
-                    System.out.println("line no " + lineNo + " time = " + (now - time));
-                }
-                time = now;
-                if (lineNo % 5000 == 0) {
-                    System.out.println("imported line count " + lineNo);
-                }
-                if (valuecount - lastReported >= 5000) {
-                    System.out.println("imported value count " + valuecount);
-                    lastReported = valuecount;
-                }
+            //batch it up!
+            linesBatched.add(importCellsWithHeading);
+            if (linesBatched.size() == batchSize) {
+                executor.execute(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFound, attributeNames, lineNo));
+                linesBatched = new ArrayList<List<ImportCellWithHeading>>(batchSize);
             }
         }
+        // load leftovers
+        executor.execute(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFound, attributeNames, lineNo));
+        executor.shutdown();
+        if (!executor.awaitTermination(8, TimeUnit.HOURS)) {
+            throw new Exception("File " + filePath + " took longer than 8 hours to load for : " + azquoMemoryDBConnection.getAzquoMemoryDB().getMySQLName());
+        }
+        // wasn't closing before, maybe why the files stayed there
+        csvReader.close();
+        uploadFile.close();
         System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
         System.out.println("---------- namesfound size " + namesFound.size());
         for (String trackName : trackers.keySet()) {
@@ -598,7 +645,7 @@ public class DSImportService {
     }
 
     // each line of values (or names as it may practically be)
-    private int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, HashMap<String, Name> namesFound, List<String> attributeNames, int lineNo) throws Exception {
+    private int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFound, List<String> attributeNames, int lineNo) throws Exception {
         List<Name> contextNames = new ArrayList<Name>();
         String value;
         int valueCount = 0;
@@ -734,7 +781,7 @@ public class DSImportService {
                         }
                     }
                 }
-             }
+            }
             long now = System.nanoTime();
             if (now - time > toolong) {
                 System.out.println(cell.immutableImportHeading.heading + " took " + (now - time));
@@ -834,7 +881,7 @@ public class DSImportService {
     }
 
     // namesFound is a cache. Then the heading we care about then the list of all headings.
-    private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
+    private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
         if (cellWithHeading.value.length() == 0) { // so nothing to do
             return;
         }
@@ -847,7 +894,7 @@ public class DSImportService {
             }
         } else {
             cellWithHeading.name = includeInParents(azquoMemoryDBConnection, namesFound, cellWithHeading.value
-                    , cellWithHeading.immutableImportHeading.childOf, cellWithHeading.immutableImportHeading.local , setLocalLanguage(cellWithHeading.immutableImportHeading, attributeNames));
+                    , cellWithHeading.immutableImportHeading.childOf, cellWithHeading.immutableImportHeading.local, setLocalLanguage(cellWithHeading.immutableImportHeading, attributeNames));
         }
 
         ImportCellWithHeading childCell = cells.get(cellWithHeading.immutableImportHeading.childHeading);
@@ -861,7 +908,7 @@ public class DSImportService {
         cellWithHeading.name.addChildWillBePersisted(childCell.name);
     }
 
-    public void handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportCellWithHeading cell, List<ImportCellWithHeading> cells) throws Exception {
+    public void handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, ImportCellWithHeading cell, List<ImportCellWithHeading> cells) throws Exception {
         // these two are the same, don't really understand, will just convert. Edd.
         ImportCellWithHeading identity = cells.get(cell.immutableImportHeading.identityHeading);
         ImportCellWithHeading identityCell = cells.get(cell.immutableImportHeading.identityHeading);
@@ -880,7 +927,7 @@ public class DSImportService {
         identityCell.name.setAttributeWillBePersisted(attribute, cell.value);
     }
 
-    private boolean findPeers(AzquoMemoryDBConnection azquoMemoryDBConnection, HashMap<String, Name> namesFound, ImportCellWithHeading cell, List<ImportCellWithHeading> cells, Set<Name> namesForValue, List<String> attributeNames) throws Exception {
+    private boolean findPeers(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, ImportCellWithHeading cell, List<ImportCellWithHeading> cells, Set<Name> namesForValue, List<String> attributeNames) throws Exception {
         //ImportHeading headingWithPeers = heading;
         boolean hasRequiredPeers = true;
         namesForValue.add(cell.immutableImportHeading.name); // the one at the top of this headingNo, the name with peers.

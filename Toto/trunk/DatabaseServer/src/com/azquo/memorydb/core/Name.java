@@ -796,7 +796,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
                 // need to sort out the parents - I deliberately excluded this from synchronizeation or one could theroetically hit a deadlock
                 // addToParents can be synchronized on the child
-                // this is a significant cost in loading - parents are derived not stored. Maybe change this?
+
                 for (Name newChild : children) {
                     newChild.addToParents(this);
                 }

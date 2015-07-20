@@ -611,7 +611,7 @@ public final class AzquoMemoryDB {
             batchLink.add(name);
             if (batchLink.size() == batchLinkSize){
                 executor.execute(new BatchLinker(loadTracker, batchLink));
-                batchLink = new ArrayList<Name>();
+                batchLink = new ArrayList<Name>(batchLinkSize);
             }
         }
         // link leftovers
