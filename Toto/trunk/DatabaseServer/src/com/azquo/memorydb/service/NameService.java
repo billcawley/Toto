@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
  * todo : can the string parsing and json generation be moved out of here?
  */
 public final class NameService {
-    public final String MEMBEROF = "->";
+    public static final String MEMBEROF = "->";
 
     @Autowired
     ValueService valueService;//used only in formating children for output
@@ -257,7 +257,7 @@ public final class NameService {
         */
         Name parent = topParent;
         while (parentName != null) {
-            if (remainder.contains(MEMBEROF)){
+            if (remainder.contains(MEMBEROF) && !remainder.endsWith(MEMBEROF)){
                 remainder = remainder.substring(remainder.indexOf(MEMBEROF) + 2);
             }else{
                 remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length() - 1));
@@ -557,14 +557,17 @@ public final class NameService {
         *
         * These will be replaced by !<id>   e.g. !1234
         * */
-        List<Collection<Name>> nameStack = new ArrayList<Collection<Name>>(); // make this more generic, the key is in the name marker bits, might use different collections depending on operator!
+        if (setFormula.length()==0){
+            return new ArrayList<Name>();
+        }
+         List<Collection<Name>> nameStack = new ArrayList<Collection<Name>>(); // make this more generic, the key is in the name marker bits, might use different collections depending on operator!
         List<String> formulaStrings = new ArrayList<String>();
         List<String> nameStrings = new ArrayList<String>();
         List<String> attributeStrings = new ArrayList<String>(); // attribute names is taken. Perhaps need to think about function parameter names
 
         setFormula = stringUtils.parseStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
-        setFormula = setFormula.replace(AS,ASSYMBOL + "");
+        setFormula = setFormula.replace(AS, ASSYMBOL + "");
         setFormula = stringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*/" + NAMEMARKER + NameService.ASSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
