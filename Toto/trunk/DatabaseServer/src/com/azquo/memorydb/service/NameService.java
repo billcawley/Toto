@@ -755,7 +755,6 @@ public final class NameService {
     }
 
     private List<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
-            System.out.println("interpret set term :" + setTerm + " refrerenced names : " + referencedNames);
         //System.out.println("interpret set term . . ." + setTerm);
         List<Name> namesFound = new ArrayList<Name>();
 

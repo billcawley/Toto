@@ -890,24 +890,24 @@ seaports;children   container;children
             }
         }
     }
-    int counter = 0;
 
-    private int totalNameSet(Name containsSet, Set<Name> selectionSet, Set<Name> alreadyTested) {
-        counter++;
-        if (counter%10000 == 0){
-            System.out.println("totalNameSet contains set : " + containsSet.getDefaultDisplayName());
-        }
+    private int totalNameSet(Name containsSet, Set<Name> selectionSet, Set<Name> alreadyTested, int track) {
+//            System.out.println("totalNameSet track " + track + " contains set : " + containsSet.getDefaultDisplayName() + ", children size : " + containsSet.getChildren().size());
+        track++;
         if (alreadyTested.contains(containsSet)) return 0;
         alreadyTested.add(containsSet);
         int count = 0;
-        Set<Name> remainder = new HashSet<Name>(selectionSet);
-        remainder.retainAll(containsSet.getChildren());
-        if (remainder.size() > 0) {
-            return remainder.size();
+        for (Name child : containsSet.getChildren()){
+            if (selectionSet.contains(child)){
+                count++;
+            }
+        }
+        if (count > 0) {
+            return count;
         } else {
             for (Name child : containsSet.getChildren()) {
                 if (!child.getChildren().isEmpty()){
-                    count += totalNameSet(child, selectionSet,alreadyTested);
+                    count += totalNameSet(child, selectionSet,alreadyTested, track);
                 }
             }
         }
@@ -933,7 +933,7 @@ seaports;children   container;children
         if (containsSet != null && memberSet != null) {
             Set<Name> remainder = new HashSet<Name>(selectionSet);
             remainder.retainAll(memberSet.findAllChildren(false));
-            return totalNameSet(containsSet, remainder, alreadyTested);
+            return totalNameSet(containsSet, remainder, alreadyTested, 0);
         }
         return 0;
     }
@@ -992,21 +992,21 @@ seaports;children   container;children
             DataRegionHeading nameCountHeading = getHeadingWithNameCount(headingsForThisCell);
             if (nameCountHeading != null) {
                 if (nameCountHeading.getName() != null){
+                    long track = System.currentTimeMillis();
+                    //System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName());
                     doubleValue = getTotalNameCount(headingsForThisCell);
+                    System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName() + " done, took : " + (System.currentTimeMillis() - track));
                 } else {
-                    Set<Name> nameCountSet = nameCountHeading.getNameCountSet();
+                    Set<Name> nameCountSet = new HashSet<Name>(nameCountHeading.getNameCountSet());
                     for (DataRegionHeading dataRegionHeading : headingsForThisCell) {
                         if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null) { // should be fine
+                            // speed on this should be acceptable
                             if (nameCountSet.size() < dataRegionHeading.getName().findAllChildren(false).size()){
-                                System.out.println("going for a retainall in namecount, first set size " + nameCountSet.size() + ", second set " + dataRegionHeading.getName().findAllChildren(false).size());
                                 nameCountSet.retainAll(dataRegionHeading.getName().findAllChildren(false));
-                                System.out.println("done");
                             } else {// I have a theory that this swap could make things faster but I'm not 100%
-                                System.out.println("going for a reversed retainall in namecount, first set size " + nameCountSet.size() + ", second set " + dataRegionHeading.getName().findAllChildren(false).size());
                                 Set<Name> nameCountSet2 = new HashSet<Name>(dataRegionHeading.getName().findAllChildren(false));
                                 nameCountSet2.retainAll(nameCountSet);
                                 nameCountSet = nameCountSet2;
-                                System.out.println("done");
                             }
                         }
                     }

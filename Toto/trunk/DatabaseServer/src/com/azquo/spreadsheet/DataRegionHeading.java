@@ -2,6 +2,7 @@ package com.azquo.spreadsheet;
 
 import com.azquo.memorydb.core.Name;
 
+import java.util.Collections;
 import java.util.Set;
 
 /**
@@ -31,7 +32,7 @@ public class DataRegionHeading {
         this.attribute = null;
         this.writeAllowed = writeAllowed;
         this.function = function;
-        this.nameCountSet = nameCountSet;
+        this.nameCountSet =  nameCountSet != null ? Collections.unmodifiableSet(nameCountSet) : null;
     }
 
     // no functions with attributes for the moment
