@@ -8,6 +8,10 @@ import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.csvreader.CsvReader;
+import com.fasterxml.jackson.databind.MappingIterator;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvParser;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
@@ -496,18 +500,18 @@ public class DSImportService {
 
         // now we know the delimiter can CSV read, I've read jackson is pretty quick
 
-/*
+
         // jackson CSV example, I believe it is
 		CsvMapper csvMapper = new CsvMapper();
 		csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
         CsvSchema schema = csvMapper.schemaFor(String[].class)
-                .withColumnSeparator('\t')
+                .withColumnSeparator(delimiter)
                 .withLineSeparator("\n");
-		MappingIterator<String[]> iterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));*/
+		MappingIterator<String[]> lineIterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));
 
-        InputStream uploadFile = new FileInputStream(filePath);
+/*        InputStream uploadFile = new FileInputStream(filePath);
         CsvReader csvReader = new CsvReader(uploadFile, delimiter, Charset.forName("UTF-8"));
-        csvReader.setUseTextQualifier(true);
+        csvReader.setUseTextQualifier(true);*/
         String[] headers = null;
         // ok beginning to understand. It looks for a name for the file type, this name can have headers and/or the definitions for each header
         // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
@@ -527,16 +531,14 @@ public class DSImportService {
         }
 
         if (headers == null) {
-            csvReader.readHeaders();
-            headers = csvReader.getHeaders();
+//            csvReader.readHeaders();
+            headers = lineIterator.next();
         } else {
             if (skipTopLine) {
-                csvReader.readRecord();
+                lineIterator.next();
             }
         }
-        if (csvReader.getRawRecord().startsWith("Seasons;language")) {
-            System.out.println("hey!");
-        }
+
         // correcting the comment : readHeaders is about creating a set of ImportHeadings
         // notable that internally it might use attributes from the relevant data import name to supplement the header information
         List<MutableImportHeading> mutableImportHeadings = new ArrayList<MutableImportHeading>();
@@ -555,12 +557,15 @@ public class DSImportService {
         ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDBConnection.getAzquoMemoryDB().getLoadingThreads());
         AtomicInteger valueTracker = new AtomicInteger(0);
         ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<List<ImportCellWithHeading>>(batchSize);
-        while (csvReader.readRecord()) { // now to the data itself, headers should have been sorted one way or another,
+        //while (csvReader.readRecord()) { // now to the data itself, headers should have been sorted one way or another,
+        while (lineIterator.hasNext()) { // new Jackson call . . .
+            String[] lineValues = lineIterator.next();
             lineNo++;
             List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<ImportCellWithHeading>();
             for (ImmutableImportHeading immutableImportHeading : immutableImportHeadings) {
 //                trackers.put(heading.name.getDefaultDisplayName(), 0L);
-                String lineValue = csvReader.get(immutableImportHeading.column).intern();// since strings may be repeated intern, should save a bit of memory using the String pool
+//                String lineValue = csvReader.get(immutableImportHeading.column).intern();// since strings may be repeated intern, should save a bit of memory using the String pool
+                String lineValue = lineValues[immutableImportHeading.column].intern();// since strings may be repeated intern, should save a bit of memory using the String pool. Hopefully not a big performance hit?
                 if (immutableImportHeading.defaultValue != null && lineValue.length() == 0) {
                     lineValue = immutableImportHeading.defaultValue;
                 }
@@ -589,8 +594,9 @@ public class DSImportService {
             throw new Exception("File " + filePath + " took longer than 8 hours to load for : " + azquoMemoryDBConnection.getAzquoMemoryDB().getMySQLName());
         }
         // wasn't closing before, maybe why the files stayed there
-        csvReader.close();
-        uploadFile.close();
+//        csvReader.close();
+//        uploadFile.close();
+        lineIterator.close();
         System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
         System.out.println("---------- namesfound size " + namesFound.size());
         for (String trackName : trackers.keySet()) {

@@ -774,6 +774,7 @@ public final class Name extends AzquoMemoryDBEntity {
                     List<String> attributeKeys = new ArrayList<String>();
                     List<String> attributeValues = new ArrayList<String>();
                     for (String key : transport.attributes.keySet()) {
+                        // todo - should I be interning here?
                         attributeKeys.add(key.toUpperCase());
                         attributeValues.add(transport.attributes.get(key));
                     }

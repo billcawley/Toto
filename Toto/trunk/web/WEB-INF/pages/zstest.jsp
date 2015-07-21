@@ -7,8 +7,8 @@
     <title>Azquo report</title>
     <style>
         @font-face {
-            font-family: 'Barcode';
-            src: url('/ConnectCode39.ttf');
+            font-family: 'CCode39';
+            src: url('/CCode39.ttf');
         }
 
         .menubutton{
