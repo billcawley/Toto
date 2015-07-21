@@ -486,11 +486,11 @@ public class DSImportService {
         String firstLine = br.readLine();
         br.close();
         if (firstLine != null){
-            if (firstLine.contains("\t")){
-                delimiter = '\t';
-            }
             if (firstLine.contains("|")){
                 delimiter = '|';
+            }
+            if (firstLine.contains("\t")){
+                delimiter = '\t';
             }
         }
 

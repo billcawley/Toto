@@ -15,6 +15,7 @@ import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.api.model.Validation;
 import org.zkoss.zss.model.*;
 
+import java.rmi.RemoteException;
 import java.util.*;
 
 /**
@@ -129,155 +130,181 @@ public class ZKAzquoBookUtils {
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
 
 
+        String errorMessage = null;
+
          if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
-            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
-                    regionToStringLists(contextDescription, sheet), userRegionOptions);
-             loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
-            // now, put the headings into the sheet!
-            // might be factored into fill range in a bit
-            CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayColumnHeadings" + region);
-            CellRegion displayRowHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayRowHeadings" + region);
-            CellRegion displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
+             try{
+                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
+                         regionToStringLists(contextDescription, sheet), userRegionOptions);
+                 loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
+                 // now, put the headings into the sheet!
+                 // might be factored into fill range in a bit
+                 CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayColumnHeadings" + region);
+                 CellRegion displayRowHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayRowHeadings" + region);
+                 CellRegion displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
 
-            int rowsToAdd;
-            int colsToAdd;
+                 int rowsToAdd;
+                 int colsToAdd;
 
-            if (displayDataRegion != null) {
-                // add rows
-                int maxCol = 0;
-                for (int i = 0; i <= sheet.getLastRow(); i++) {
-                    if (sheet.getLastColumn(i) > maxCol) {
-                        maxCol = sheet.getLastColumn(i);
-                    }
-                }
-                if ((displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
-                    rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
-                    int insertRow = displayDataRegion.getRow() + 2; // I think this is correct, middle row of 3?
-                    Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
-                    Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
-                    CellOperationUtil.insertRow(insertRange);
-                    CellOperationUtil.paste(copySource, insertRange);
-                    int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
-                    if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
-                        insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
-                    }
-                }
-                // add columns
-                int maxRow = sheet.getLastRow();
-                if(displayDataRegion.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayDataRegion.getColumnCount() > 2) { // then we need to expand
-                    colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
-                    int insertCol = displayDataRegion.getColumn() + 2; // I think this is correct, just after the second column?
-                    Range copySource = Ranges.range(sheet, 0, insertCol - 1, maxRow, insertCol - 1);
-                    Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the 3rd col
-                    CellOperationUtil.insertColumn(insertRange);
-                    // will this paste the lot?
-                    CellOperationUtil.paste(copySource, insertRange);
-                    int originalWidth = sheet.getInternalSheet().getColumn(insertCol).getWidth();
-                    if (originalWidth != sheet.getInternalSheet().getColumn(insertCol).getWidth()) { // height may not match on insert
-                        insertRange.setColumnWidth(originalWidth); // hopefully set the lot in one go??
-                    }
-                }
-                int row = 0;
-                // ok there should be the right space for the headings
-                if (displayRowHeadings!=null) {
-                    row = displayRowHeadings.getRow();
-                    for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
-                        int col = displayRowHeadings.getColumn();
-                        for (String heading : rowHeading) {
-                            if (heading != null && (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
-                                sheet.getInternalSheet().getCell(row, col).setValue(heading);
-                            }
-                            col++;
-                        }
-                        row++;
-                    }
-                }
+                 if (displayDataRegion != null) {
+                     // add rows
+                     int maxCol = 0;
+                     for (int i = 0; i <= sheet.getLastRow(); i++) {
+                         if (sheet.getLastColumn(i) > maxCol) {
+                             maxCol = sheet.getLastColumn(i);
+                         }
+                     }
+                     if ((displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
+                         rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
+                         int insertRow = displayDataRegion.getRow() + 2; // I think this is correct, middle row of 3?
+                         Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
+                         Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+                         CellOperationUtil.insertRow(insertRange);
+                         CellOperationUtil.paste(copySource, insertRange);
+                         int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
+                         if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
+                             insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
+                         }
+                     }
+                     // add columns
+                     int maxRow = sheet.getLastRow();
+                     if(displayDataRegion.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayDataRegion.getColumnCount() > 2) { // then we need to expand
+                         colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
+                         int insertCol = displayDataRegion.getColumn() + 2; // I think this is correct, just after the second column?
+                         Range copySource = Ranges.range(sheet, 0, insertCol - 1, maxRow, insertCol - 1);
+                         Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the 3rd col
+                         CellOperationUtil.insertColumn(insertRange);
+                         // will this paste the lot?
+                         CellOperationUtil.paste(copySource, insertRange);
+                         int originalWidth = sheet.getInternalSheet().getColumn(insertCol).getWidth();
+                         if (originalWidth != sheet.getInternalSheet().getColumn(insertCol).getWidth()) { // height may not match on insert
+                             insertRange.setColumnWidth(originalWidth); // hopefully set the lot in one go??
+                         }
+                     }
+                     int row = 0;
+                     // ok there should be the right space for the headings
+                     if (displayRowHeadings!=null) {
+                         row = displayRowHeadings.getRow();
+                         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
+                             int col = displayRowHeadings.getColumn();
+                             for (String heading : rowHeading) {
+                                 if (heading != null && (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
+                                     sheet.getInternalSheet().getCell(row, col).setValue(heading);
+                                 }
+                                 col++;
+                             }
+                             row++;
+                         }
+                     }
 
-                //← → ↑ ↓ ↔ ↕// ah I can just paste it here, thanks IntelliJ :)
-                if (displayColumnHeadings != null) {
-                    row = displayColumnHeadings.getRow();
-                    for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
-                        boolean columnSort = false;
-                        if (row - displayColumnHeadings.getRow() == cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1 && userRegionOptions.getSortable()) { // meaning last row of headings and sortable
-                            columnSort = true;
-                        }
-                        int col = displayColumnHeadings.getColumn();
-                        for (String heading : colHeading) {
-                            if (columnSort) {
-                                String sortArrow = " ↕";
-                                if (heading.equals(userRegionOptions.getSortColumn())) {
-                                    sortArrow = userRegionOptions.getSortColumnAsc() ? " ↑" : " ↓";
-                                }
-                                if (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) {
-                                    sheet.getInternalSheet().getCell(row, col).setValue(heading + sortArrow);
-                                } else {
-                                    sheet.getInternalSheet().getCell(row, col).setValue(sheet.getInternalSheet().getCell(row, col).getValue() + sortArrow);
-                                }
-                                String value = sheet.getInternalSheet().getCell(row, col).getStringValue();
-                                value = value.substring(0, value.length() - 2);
-                                Range chosenRange = Ranges.range(sheet, row, col, row, col);
-                                // todo, investigate how commas would fit in in a heading name
-                                // think I'll just zap em for the mo.
-                                value = value.replace(",", "");
-                                chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true,
-                                        value + " ↕," + value + " ↑," + value + " ↓", null,
-                                        true, "Select Sorting", "",
-                                        true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
-                            } else if (heading != null && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) { // vanilla, overwrite if not
-                                sheet.getInternalSheet().getCell(row, col).setValue(heading);
-                            }
-                            col++;
-                        }
-                        row++;
-                    }
+                     //← → ↑ ↓ ↔ ↕// ah I can just paste it here, thanks IntelliJ :)
+                     if (displayColumnHeadings != null) {
+                         row = displayColumnHeadings.getRow();
+                         for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
+                             boolean columnSort = false;
+                             if (row - displayColumnHeadings.getRow() == cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1 && userRegionOptions.getSortable()) { // meaning last row of headings and sortable
+                                 columnSort = true;
+                             }
+                             int col = displayColumnHeadings.getColumn();
+                             for (String heading : colHeading) {
+                                 if (columnSort) {
+                                     String sortArrow = " ↕";
+                                     if (heading.equals(userRegionOptions.getSortColumn())) {
+                                         sortArrow = userRegionOptions.getSortColumnAsc() ? " ↑" : " ↓";
+                                     }
+                                     if (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) {
+                                         sheet.getInternalSheet().getCell(row, col).setValue(heading + sortArrow);
+                                     } else {
+                                         sheet.getInternalSheet().getCell(row, col).setValue(sheet.getInternalSheet().getCell(row, col).getValue() + sortArrow);
+                                     }
+                                     String value = sheet.getInternalSheet().getCell(row, col).getStringValue();
+                                     value = value.substring(0, value.length() - 2);
+                                     Range chosenRange = Ranges.range(sheet, row, col, row, col);
+                                     // todo, investigate how commas would fit in in a heading name
+                                     // think I'll just zap em for the mo.
+                                     value = value.replace(",", "");
+                                     chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true,
+                                             value + " ↕," + value + " ↑," + value + " ↓", null,
+                                             true, "Select Sorting", "",
+                                             true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
+                                 } else if (heading != null && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) { // vanilla, overwrite if not
+                                     sheet.getInternalSheet().getCell(row, col).setValue(heading);
+                                 }
+                                 col++;
+                             }
+                             row++;
+                         }
 
-                    // for the moment don't allow user coolum sorting (row heading sorting). SHouldn't be too difficult to add
+                         // for the moment don't allow user coolum sorting (row heading sorting). SHouldn't be too difficult to add
 
 /*                if (sortable != null && sortable.equalsIgnoreCase("all")) { // criteria from azquobook to make row heading sortable
                 }*/
-                }
+                     }
 
-                row = displayDataRegion.getRow();
-                List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
-                for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
-                    int col = displayDataRegion.getColumn();
-                    int localCol = 0;
-                    for (CellForDisplay cellValue : rowCellValues) {
-                        if (!cellValue.getStringValue().isEmpty() && !bottomColHeadings.get(localCol).equals(".")) { // then something to set. Note : if col heading ON THE DB SIDE is . then don't populate
-                            // the notable thing ehre is that ZK uses the object type to work out data type
-                            SCell cell = sheet.getInternalSheet().getCell(row, col);
-                            // logic I didn't initially implement : don't overwrite if there's a formulae in there
-                            if (cell.getType() != SCell.CellType.FORMULA){
-                                if (NumberUtils.isNumber(cellValue.getStringValue())) {
-                                    cell.setValue(cellValue.getDoubleValue());// think that works . . .
-                                } else {
-                                    cell.setValue(cellValue.getStringValue());// think that works . . .
-                                }
-                                // see if this works for highlighting
-                                if (cellValue.isHighlighted()){
-                                    CellOperationUtil.applyFontColor(Ranges.range(sheet, row,col), "#FF0000");
-                                }
-                            }
-                        }
-                        col++;
-                        localCol++;
-                    }
-                    row++;
-                }
-                // this is a pain, it seems I need to call 2 functions on each formula cell or the formaul may not be calculated. ANNOYING!
-                Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator(); // only rows with values in them
-                while (rowIterator.hasNext()) {
-                    Iterator<SCell> cellIterator = sheet.getInternalSheet().getCellIterator(rowIterator.next().getIndex());
-                    while (cellIterator.hasNext()) {
-                        SCell cell = cellIterator.next();
-                        if (cell.getType() == SCell.CellType.FORMULA) {
-                            //System.out.println("doing the cell thing on " + cell);
-                            cell.getFormulaResultType();
-                            cell.clearFormulaResultCache();
-                        }
-                    }
-                }
-            }
+                     row = displayDataRegion.getRow();
+                     List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
+                     for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
+                         int col = displayDataRegion.getColumn();
+                         int localCol = 0;
+                         for (CellForDisplay cellValue : rowCellValues) {
+                             if (!cellValue.getStringValue().isEmpty() && !bottomColHeadings.get(localCol).equals(".")) { // then something to set. Note : if col heading ON THE DB SIDE is . then don't populate
+                                 // the notable thing ehre is that ZK uses the object type to work out data type
+                                 SCell cell = sheet.getInternalSheet().getCell(row, col);
+                                 // logic I didn't initially implement : don't overwrite if there's a formulae in there
+                                 if (cell.getType() != SCell.CellType.FORMULA){
+                                     if (NumberUtils.isNumber(cellValue.getStringValue())) {
+                                         cell.setValue(cellValue.getDoubleValue());// think that works . . .
+                                     } else {
+                                         cell.setValue(cellValue.getStringValue());// think that works . . .
+                                     }
+                                     // see if this works for highlighting
+                                     if (cellValue.isHighlighted()){
+                                         CellOperationUtil.applyFontColor(Ranges.range(sheet, row,col), "#FF0000");
+                                     }
+                                 }
+                             }
+                             col++;
+                             localCol++;
+                         }
+                         row++;
+                     }
+                     // this is a pain, it seems I need to call 2 functions on each formula cell or the formaul may not be calculated. ANNOYING!
+                     Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator(); // only rows with values in them
+                     while (rowIterator.hasNext()) {
+                         Iterator<SCell> cellIterator = sheet.getInternalSheet().getCellIterator(rowIterator.next().getIndex());
+                         while (cellIterator.hasNext()) {
+                             SCell cell = cellIterator.next();
+                             if (cell.getType() == SCell.CellType.FORMULA) {
+                                 //System.out.println("doing the cell thing on " + cell);
+                                 cell.getFormulaResultType();
+                                 cell.clearFormulaResultCache();
+                             }
+                         }
+                     }
+                 }
+             } catch (RemoteException re) {
+                 // is printing the stack trace going to jam the logs unnecessarily?
+                 Throwable t = re.detail.getCause();
+                 if (t != null) {
+                     errorMessage = t.getLocalizedMessage();
+                     t.printStackTrace();
+                 } else {
+                     errorMessage = re.getMessage();
+                     re.printStackTrace();
+                 }
+             } catch (Exception e) {
+                 errorMessage = e.getMessage();
+                 e.printStackTrace();
+             }
+             if (errorMessage != null){
+                 // maybe move to the top left? Unsure
+                 CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);// this function should not be called without a valid data region
+                 if (dataRegion != null) {
+                     sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching header and context regions for this data region : az_DataRegion" + region);
+                 } else {
+                     System.out.println("no region found for az_DataRegion" + region);
+                 }
+             }
         } else {
             CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);// this function should not be called without a valid data region
             if (dataRegion != null) {

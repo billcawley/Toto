@@ -6,7 +6,10 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <title>Azquo report</title>
     <style>
-
+        @font-face {
+            font-family: 'Barcode';
+            src: url('/ConnectCode39.ttf');
+        }
 
         .menubutton{
             position:absolute;
