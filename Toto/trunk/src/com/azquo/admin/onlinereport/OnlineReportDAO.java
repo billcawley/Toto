@@ -93,7 +93,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         namedParams.addValue(DATABASEID, databaseId);
         namedParams.addValue(REPORTNAME, reportName);
         namedParams.addValue(ACTIVE, true);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + DATABASEID + "` = :" + DATABASEID + " and `" + REPORTNAME + "` = :" + REPORTNAME, namedParams);
+        return findOneWithWhereSQLAndParameters(" WHERE `" + DATABASEID + "` = :" + DATABASEID + " and `" + REPORTNAME + "` = :" + REPORTNAME + " and `" + ACTIVE + "` = :" + ACTIVE, namedParams);
     }
 
     public List<OnlineReport> findForDatabaseIdAndUserStatus(final int databaseId, String userStatus, String databaseType) {

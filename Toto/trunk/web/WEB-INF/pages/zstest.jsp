@@ -30,7 +30,7 @@
             border:1px solid silver;
             width:250px;
             display:none;
-            z-index:3;
+            z-index:12;
             background-color: white;
             height:400px
 
