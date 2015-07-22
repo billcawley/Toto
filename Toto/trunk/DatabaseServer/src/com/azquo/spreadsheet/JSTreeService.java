@@ -123,6 +123,7 @@ public class JSTreeService {
                     current.child.name.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, position);
                     return "true";
                 }
+                // add delete node?
                 if (op.equals("details")) {
                     return "true,\"namedetails\":" + getChildStructureFormattedForOutput(current.child.name);
                 }

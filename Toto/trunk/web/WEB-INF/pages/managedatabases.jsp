@@ -99,7 +99,9 @@ Uploads
                 <select name="database">
                     <option value="">None</option>
             <c:forEach items="${databases}" var="database">
-                <option value="${database.name}">${database.name}</option>
+                <option value="${database.name}" <c:if test="${database.name == lastSelected}">
+                    selected
+                </c:if>>${database.name}</option>
             </c:forEach>
             </select>
             </td>

@@ -335,6 +335,14 @@ public final class AzquoMemoryDB {
         return nameByIdMap.get(id);
     }
 
+    public int getNameCount() {
+        return nameByIdMap.size();
+    }
+
+    public int getValueCount() {
+        return valueByIdMap.size();
+    }
+
     //fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
     // TODO address whether wrapping in a hash set here is the best plan. Memory of that object not such of an issue since it should be small and disposable
     // The iterator from CopyOnWriteArray does NOT support changes e.g. remove. A point.

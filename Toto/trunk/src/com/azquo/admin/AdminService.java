@@ -375,6 +375,10 @@ public class AdminService {
         return null;
     }
 
+    public void storeDatabase(Database database) {
+        databaseDAO.store(database);
+    }
+
     // code adapted from spreadsheet service which it wilol be removed from
     public void removeDatabaseById(LoggedInUser loggedInUser,  int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
@@ -412,6 +416,20 @@ public class AdminService {
             return rmiClient.getServerInterface().isDatabaseLoaded(database.getMySQLName());
         }
         return false;
+    }
+
+    public int getNameCount(LoggedInUser loggedInUser,  Database database) throws Exception {
+        if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+            return rmiClient.getServerInterface().getNameCount(database.getMySQLName());
+        }
+        return 0;
+    }
+
+    public int getValueCount(LoggedInUser loggedInUser,  Database database) throws Exception {
+        if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+            return rmiClient.getServerInterface().getValueCount(database.getMySQLName());
+        }
+        return 0;
     }
 
 }

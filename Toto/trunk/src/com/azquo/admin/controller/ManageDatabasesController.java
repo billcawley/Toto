@@ -131,7 +131,14 @@ public class ManageDatabasesController {
             List<DisplayDataBase> displayDataBases = new ArrayList<DisplayDataBase>();
             try {
                 for (Database database : databaseList){
-                        displayDataBases.add(new DisplayDataBase(adminService.isDatabaseLoaded(loggedInUser, database), database));
+                    boolean isLoaded = adminService.isDatabaseLoaded(loggedInUser, database);
+                        displayDataBases.add(new DisplayDataBase(isLoaded, database));
+                    if (isLoaded && (adminService.getNameCount(loggedInUser, database) != database.getNameCount()
+                            || adminService.getValueCount(loggedInUser, database) != database.getValueCount())){ // then update the counts
+                        database.setNameCount(adminService.getNameCount(loggedInUser, database));
+                        database.setValueCount(adminService.getValueCount(loggedInUser, database));
+                        adminService.storeDatabase(database);
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -147,6 +154,7 @@ public class ManageDatabasesController {
             }
             model.put("databases", displayDataBases);
             model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
+            model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             return "managedatabases";
         }
     }
@@ -158,6 +166,9 @@ public class ManageDatabasesController {
             , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
 
     ){
+        if (database  != null){
+            request.getSession().setAttribute("lastSelected", database);
+        }
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
@@ -184,12 +195,20 @@ public class ManageDatabasesController {
             List<DisplayDataBase> displayDataBases = new ArrayList<DisplayDataBase>();
             try {
                 for (Database database1 : databaseList){
-                    displayDataBases.add(new DisplayDataBase(adminService.isDatabaseLoaded(loggedInUser, database1), database1));
+                    boolean isLoaded = adminService.isDatabaseLoaded(loggedInUser, database1);
+                    displayDataBases.add(new DisplayDataBase(isLoaded, database1));
+                    if (isLoaded && (adminService.getNameCount(loggedInUser, database1) != database1.getNameCount()
+                            || adminService.getValueCount(loggedInUser, database1) != database1.getValueCount())){ // then update the counts
+                        database1.setNameCount(adminService.getNameCount(loggedInUser, database1));
+                        database1.setValueCount(adminService.getValueCount(loggedInUser, database1));
+                        adminService.storeDatabase(database1);
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
             model.put("databases", displayDataBases);
+            model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             return "managedatabases";
         }

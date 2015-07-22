@@ -117,7 +117,7 @@ public class RMIImplementation implements RMIInterface {
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int filterCount, int maxRows, int maxCols, String sortRow,
                                                                     boolean sortRowAsc, String sortCol, boolean sortColumnAsc, int highlightDays) throws RemoteException {
         try {
-            return dsSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource,filterCount,maxRows,maxCols,sortRow, sortRowAsc,sortCol, sortColumnAsc, highlightDays);
+            return dsSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColumnAsc, highlightDays);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -144,7 +144,7 @@ public class RMIImplementation implements RMIInterface {
     @Override
     public List<DisplayValuesForProvenance> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws RemoteException {
         try {
-            return dsSpreadsheetService.getDataRegionProvenance(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource,unsortedRow,unsortedCol);
+            return dsSpreadsheetService.getDataRegionProvenance(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -172,6 +172,24 @@ public class RMIImplementation implements RMIInterface {
     public boolean isDatabaseLoaded(String mysqlName) throws RemoteException {
         try {
             return memoryDBManager.isDBLoaded(mysqlName);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public int getNameCount(String mysqlName) throws RemoteException {
+        try {
+            return memoryDBManager.getAzquoMemoryDB(mysqlName).getNameCount();
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public int getValueCount(String mysqlName) throws RemoteException {
+        try {
+            return memoryDBManager.getAzquoMemoryDB(mysqlName).getValueCount();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

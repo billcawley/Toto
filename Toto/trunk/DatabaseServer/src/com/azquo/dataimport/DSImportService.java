@@ -7,7 +7,6 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
-import com.csvreader.CsvReader;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
@@ -448,6 +447,7 @@ public class DSImportService {
             long trigger = 10;
             Long time = System.currentTimeMillis();
             for (List<ImportCellWithHeading> lineToLoad : dataToLoad) {
+                // todo, move this check outside??
                 if (lineToLoad.get(0).value.length() > 0 || lineToLoad.get(0).immutableImportHeading.column == -1) {//skip any line that has a blank in the first column unless we're not interested in that column
                     getCompositeValues(lineToLoad);
                     try {
@@ -565,7 +565,7 @@ public class DSImportService {
             for (ImmutableImportHeading immutableImportHeading : immutableImportHeadings) {
 //                trackers.put(heading.name.getDefaultDisplayName(), 0L);
 //                String lineValue = csvReader.get(immutableImportHeading.column).intern();// since strings may be repeated intern, should save a bit of memory using the String pool
-                String lineValue = lineValues[immutableImportHeading.column].intern();// since strings may be repeated intern, should save a bit of memory using the String pool. Hopefully not a big performance hit?
+                String lineValue = immutableImportHeading.column != -1 ? lineValues[immutableImportHeading.column].intern() : "";// since strings may be repeated intern, should save a bit of memory using the String pool. Hopefully not a big performance hit?
                 if (immutableImportHeading.defaultValue != null && lineValue.length() == 0) {
                     lineValue = immutableImportHeading.defaultValue;
                 }
