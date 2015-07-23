@@ -564,6 +564,12 @@ public final class NameService {
         List<String> formulaStrings = new ArrayList<String>();
         List<String> nameStrings = new ArrayList<String>();
         List<String> attributeStrings = new ArrayList<String>(); // attribute names is taken. Perhaps need to think about function parameter names
+        Name possibleName = findByName(azquoMemoryDBConnection,setFormula);
+        if (possibleName!=null){
+            List<Name> toReturn = new ArrayList<Name>();
+            toReturn.add(possibleName);
+            return toReturn;
+        }
 
         setFormula = stringUtils.parseStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
