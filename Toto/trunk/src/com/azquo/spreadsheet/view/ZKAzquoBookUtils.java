@@ -300,7 +300,7 @@ public class ZKAzquoBookUtils {
                  // maybe move to the top left? Unsure
                  CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);// this function should not be called without a valid data region
                  if (dataRegion != null) {
-                     sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching header and context regions for this data region : az_DataRegion" + region);
+                     sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching header and context regions for this data region : az_DataRegion" + region + " : " + errorMessage);
                  } else {
                      System.out.println("no region found for az_DataRegion" + region);
                  }
