@@ -586,6 +586,28 @@ seaports;children   container;children
         return dataToShow;
     }
 
+
+    private List<Name> getContextNames(AzquoMemoryDBConnection azquoMemoryDBConnection,List<List<String>> contextSource)throws Exception{
+        final List<Name> contextNames = new ArrayList<Name>();
+        for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell
+            for (String contextItem : contextItems) {
+                final StringTokenizer st = new StringTokenizer(contextItem, "\n");
+                while (st.hasMoreTokens()) {
+                    final List<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBConnection, st.nextToken().trim());
+                    if (thisContextNames.size() > 1) {
+                        throw new Exception("error: context names must be individual - use 'as' to put sets in context");
+                    }
+                    if (thisContextNames.size() > 0) {
+                        //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
+                        contextNames.add(thisContextNames.get(0));
+                    }
+                }
+            }
+        }
+        return contextNames;
+
+    }
+
     // when doing things like saving/provenance the client needs to say "here's a region description and original position" to locate a cell server side
 
     private AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
@@ -599,23 +621,8 @@ seaports;children   container;children
         if (columnHeadings.size() == 0 || rowHeadings.size() == 0) {
             throw new Exception("no headings passed");
         }
-        final List<Name> contextNames = new ArrayList<Name>();
-        for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell
-            for (String contextItem : contextItems) {
-                final StringTokenizer st = new StringTokenizer(contextItem, "\n");
-                while (st.hasMoreTokens()) {
-                    final List<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, st.nextToken().trim());
-                    if (thisContextNames.size() > 1) {
-                        throw new Exception("error: context names must be individual - use 'as' to put sets in context");
-                    }
-                    if (thisContextNames.size() > 0) {
-                        //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
-                        contextNames.add(thisContextNames.get(0));
-                    }
-                }
-            }
-        }
-        // now onto the bit to find the specific cell - the column headings were transposed then expanded so they're in the same format as the row headings
+        final List<Name> contextNames = getContextNames(azquoMemoryDBCOnnection, contextSource);
+         // now onto the bit to find the specific cell - the column headings were transposed then expanded so they're in the same format as the row headings
         // that is to say : the outside list's size is the number of columns or headings. So, do we have the row and col?
         if (unsortedRow < rowHeadings.size() && unsortedCol < columnHeadings.size()) {
             return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextNames, unsortedRow, unsortedCol, totalSetSize, languages);
@@ -1020,18 +1027,23 @@ seaports;children   container;children
                 if (function != null) {
                     locked.isTrue = true;
                 }
-                doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, languages, function); // true = pay attention to names additive flag
-                //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                if (values.size() == 1 && !locked.isTrue) {
+                if (headingsForThisCell.size() > 0) {
+                    doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, languages, function); // true = pay attention to names additive flag
+                    //if there's only one value, treat it as text (it may be text, or may include £,$,%)
+                    if (values.size() == 1 && !locked.isTrue) {
 
-                    Value value = values.get(0);
-                    stringValue = value.getText();
-                    if (stringValue.contains("\n")) {
-                        stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
+                        Value value = values.get(0);
+                        stringValue = value.getText();
+                        if (stringValue.contains("\n")) {
+                            stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
+                        }
+                        // was isnumber test here to add a double to the
+                    } else {
+                        stringValue = doubleValue + "";
                     }
-                    // was isnumber test here to add a double to the
-                } else {
-                    stringValue = doubleValue + "";
+                }else{
+                    stringValue = "";
+                    doubleValue  = 0;
                 }
                 listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(values);
             } else {  // now, new logic for attributes
@@ -1210,6 +1222,7 @@ seaports;children   container;children
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         int numberOfValuesModified = 0;
         Map<Name, Integer> totalSetSize = new HashMap<Name, Integer>();
+        List<Name> contextNames =getContextNames(azquoMemoryDBConnection,cellsAndHeadingsForDisplay.getContextSource());
         int rowCounter = 0;
         for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
             int columnCounter = 0;
@@ -1229,10 +1242,12 @@ seaports;children   container;children
                         final Set<DataRegionHeading> headingsForCell = new HashSet<DataRegionHeading>();
                         headingsForCell.addAll(azquoCell.getColumnHeadings());
                         headingsForCell.addAll(azquoCell.getRowHeadings());
-                        // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
+                         // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
                         // right, switch here to deal with attribute based cell values
-
                         if (valuesForCell.getValues() != null) {
+                            // this call to make the hash set seems rather unefficient
+                            Set<Name> cellNames = new HashSet<Name>(namesFromDataRegionHeadings(headingsForCell));
+                            cellNames.addAll(contextNames);
                             if (valuesForCell.getValues().size() == 1) {
                                 final Value theValue = valuesForCell.getValues().get(0);
                                 logger.info("trying to overwrite");
@@ -1245,8 +1260,7 @@ seaports;children   container;children
                                 }
                             } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue().length() > 0) {
                                 logger.info("storing new value here . . .");
-                                // this call to make the hash set seems rather unefficient
-                                valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), namesFromDataRegionHeadings(headingsForCell));
+                                  valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), cellNames);
                                 numberOfValuesModified++;
                             }
                         } else {
