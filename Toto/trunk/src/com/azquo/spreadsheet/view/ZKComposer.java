@@ -135,7 +135,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-        SName name = getNamedRegionForRowAndColonSelectedSheet(event.getRow(), event.getColumn());
+        SName name = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
         if (name != null) { // as it stands regions should not overlap, we find a name that means we know what to (try) to do
             // ok it matches a name
             if (name.getName().endsWith("Chosen")) {// would have been a one cell name
@@ -144,20 +144,25 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
             if (name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
                 String region = name.getName().substring("az_DataRegion".length());
-                if (loggedInUser.getSentCells(region) != null) {
-                    CellForDisplay cellForDisplay = loggedInUser.getSentCells(region).getData().get(row - name.getRefersToCellRegion().getRow()).get(col - name.getRefersToCellRegion().getColumn());
-                    Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
-                    if (NumberUtils.isNumber(chosen)) {
-                        cellForDisplay.setDoubleValue(Double.parseDouble(chosen));
-                    }
-                    cellForDisplay.setStringValue(chosen);
-                    int highlightDays = 0;
-                    if (book.getInternalBook().getAttribute("highlightDays") != null) { // maybe factor the string literals??
-                        highlightDays = (Integer) book.getInternalBook().getAttribute("highlightDays");
-                    }
-                    if (highlightDays > 0) {
-                        cellForDisplay.setHighlighted(true);
-                        CellOperationUtil.applyFontColor(Ranges.range(event.getSheet(), row, col), "#FF0000");
+                final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
+                if (sentCells != null) {
+                    // the data region as defined on the cheet may be larger than the sent cells
+                    if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow()
+                            && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()){
+                        CellForDisplay cellForDisplay = sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).get(col - name.getRefersToCellRegion().getColumn());
+                        Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
+                        if (NumberUtils.isNumber(chosen)) {
+                            cellForDisplay.setDoubleValue(Double.parseDouble(chosen));
+                        }
+                        cellForDisplay.setStringValue(chosen);
+                        int highlightDays = 0;
+                        if (book.getInternalBook().getAttribute("highlightDays") != null) { // maybe factor the string literals??
+                            highlightDays = (Integer) book.getInternalBook().getAttribute("highlightDays");
+                        }
+                        if (highlightDays > 0) {
+                            cellForDisplay.setHighlighted(true);
+                            CellOperationUtil.applyFontColor(Ranges.range(event.getSheet(), row, col), "#FF0000");
+                        }
                     }
                 }
             }
@@ -209,7 +214,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
                 ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
-                zkAzquoBookUtils.populateBook(newBook); // reload the data
+                if (zkAzquoBookUtils.populateBook(newBook)){ // check if formulae made saveable data
+                    Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
+                }
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
             } catch (Exception e) {
                 e.printStackTrace();
@@ -230,7 +237,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
         // roght now a right click gets provenance ready, dunno if I need to do this
-        SName name = getNamedRegionForRowAndColonSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
+        SName name = getNamedRegionForRowAndColumnSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
         if (name != null && name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
             provenanceLabel.setValue("");
             String region = name.getName().substring("az_DataRegion".length());
@@ -288,7 +295,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         editPopup.open(cellMouseEvent.getClientx() - 130, cellMouseEvent.getClienty());
     }
 
-    private SName getNamedRegionForRowAndColonSelectedSheet(int row, int col) {
+    private SName getNamedRegionForRowAndColumnSelectedSheet(int row, int col) {
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = myzss.getBook();
         for (SName name : book.getInternalBook().getNames()) { // seems best to loop through names checking which matches I think

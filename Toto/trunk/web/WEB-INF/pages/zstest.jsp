@@ -1,4 +1,5 @@
 <%@page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@taglib prefix="zssjsp" uri="http://www.zkoss.org/jsp/zss" %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -278,7 +279,7 @@
         <button id="xlsButton">XLS</button>
         <button id="pdfButton">PDF</button>
         <button id="inspectButton" onclick="inspectDatabase()">Inspect</button> -->
-        <button id="saveData" onclick="postAjax('Save')" style="display:none;">Save Data</button>
+        <button id="saveData" onclick="postAjax('Save')" <c:if test="${showSave == false}"> style="display:none;" </c:if>>Save Data</button>
     </div>
 </div>
 <div style="height: calc(100% - 100px);">
