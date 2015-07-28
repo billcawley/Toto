@@ -114,15 +114,23 @@ public class ZKAzquoBookUtils {
                         int startCol = displayDataRegion.getColumn();
                         int endCol = displayDataRegion.getLastColumn();
                         for (int row = startRow; row <= endRow; row++) {
-                            for (int col = startCol; col < endCol; col++) {
+                            for (int col = startCol; col <= endCol; col++) {
                                 SCell sCell = sheet.getInternalSheet().getCell(row, col);
-                                if (sCell.getType() == SCell.CellType.FORMULA && sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
-                                    if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow() // as ever check ranges of the data region vs actual data sent.
-                                            && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
+                                if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow() // as ever check ranges of the data region vs actual data sent.
+                                        && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
+                                    if (sCell.getType() == SCell.CellType.FORMULA) {
                                         CellForDisplay cellForDisplay = sentCells.getData().get(row - startRow).get(col - startCol);
-                                        if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
-                                            cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
-                                            showSave = true;
+                                        if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
+                                              if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
+                                                cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                showSave = true;
+                                            }
+                                        }else if (sCell.getFormulaResultType() == SCell.CellType.STRING){
+                                            if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())){
+                                                cellForDisplay.setStringValue(sCell.getStringValue());
+                                                showSave = true;
+                                            }
+
                                         }
                                     }
                                 }
