@@ -159,10 +159,14 @@ seaports;children   container;children
                             sourceCell = sourceCell.substring(sourceCell.indexOf("(", NAMECOUNT.length()) + 1); // chop off the beginning
                             sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
                             String selectionType = sourceCell.substring(0,sourceCell.indexOf(","));
+                            Set<Name> typeSet = new HashSet<Name>(nameService.parseQuery(azquoMemoryDBConnection,selectionType, attributeNames));
+                            if (typeSet.size() != 1){
+                                throw new Exception("selection types must be single cells = use 'as'");
+                            }
                             String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1);
                             Set<Name> selectionSet = new HashSet<Name>(nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames));
                             List<DataRegionHeading> forNameCount = new ArrayList<DataRegionHeading>();
-                            forNameCount.add(new DataRegionHeading(nameService.findByName(azquoMemoryDBConnection, selectionType), false, function, selectionSet));
+                            forNameCount.add(new DataRegionHeading(typeSet.iterator().next(), false, function, selectionSet));
                             row.add(forNameCount);
                         } else {
                             row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames), azquoMemoryDBConnection, function));
@@ -1244,6 +1248,15 @@ seaports;children   container;children
                         headingsForCell.addAll(azquoCell.getRowHeadings());
                          // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
                         // right, switch here to deal with attribute based cell values
+
+                        //first align text and numbers where appropriate
+
+                        try{
+                            cell.setStringValue(cell.getDoubleValue()+"");
+
+                        }catch(Exception e){
+
+                        }
                         if (cell.getStringValue().endsWith("%")){
                               String percent = cell.getStringValue().substring(0,cell.getStringValue().length() - 1);
                               try {
