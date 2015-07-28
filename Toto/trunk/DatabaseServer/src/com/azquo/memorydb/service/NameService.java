@@ -135,6 +135,7 @@ public final class NameService {
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(id);
     }
 
+
     public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent, final List<String> attributeNames) throws Exception {
         if (attributeValue.charAt(0) == NAMEMARKER) {
             throw new Exception("error: getNameByAttribute should no longer have name marker passed to it!");
@@ -570,7 +571,10 @@ public final class NameService {
             toReturn.add(possibleName);
             return toReturn;
         }
-
+        //todo - find a better way of using 'parseQuery` for other operations
+        if (setFormula.startsWith("deduplicate")){
+            return deduplicate(azquoMemoryDBConnection,setFormula.substring(12));
+        }
         setFormula = stringUtils.parseStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
         setFormula = setFormula.replace(AS, ASSYMBOL + "");
@@ -616,7 +620,7 @@ public final class NameService {
                 nameStack.get(stackCount - 1).retainAll(allNames);
                 nameStack.remove(stackCount);
             } else if (op == '/') { // this can be slow : todo - speed up? Is it the retainall? Should I be using sets?
-                Set<Name> parents = new HashSet<Name>();
+                Set<Name> parents = new HashSet<Name>(nameStack.get(stackCount));
                 for (Name child : nameStack.get(stackCount)) {
                     parents.addAll(child.findAllParents());
                 }
@@ -639,7 +643,7 @@ public final class NameService {
             pos = nextTerm;
         }
 
-        boolean hasPermissions = false;
+           boolean hasPermissions = false;
         if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
             hasPermissions = true;
         }
@@ -655,6 +659,55 @@ public final class NameService {
             return new ArrayList<Name>(nameStack.get(0));
         }
     }
+
+    private List<Name> deduplicate(AzquoMemoryDBConnection azquoMemoryDBConnection, String formula)throws Exception{
+        List<Name> toReturn = new ArrayList<Name>();
+        int toPos = formula.indexOf(" to ");
+        if (toPos < 0) return toReturn;
+        String baseSet = formula.substring(0,toPos);
+        String binSet = formula.substring(toPos + 4);
+        Name name = findByName(azquoMemoryDBConnection, baseSet);
+        Name rubbishBin = findOrCreateNameInParent(azquoMemoryDBConnection,binSet,null,false);
+        if (name==null) return toReturn;
+        List<String> languages = new ArrayList<String>();
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        for (Name child:name.findAllChildren(false)){
+            if (!rubbishBin.getChildren().contains(child)) {
+                Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(languages, child.getDefaultDisplayName(), name);
+                if (possibles.size() > 1) {
+                    for (Name child2 : possibles) {
+                        if (child2.getId() != child.getId()) {
+                            Set<Name> existingChildren = new HashSet<Name>(child2.getChildren());
+                            for (Name grandchild : existingChildren) {
+                                child.addChildWillBePersisted(grandchild);
+                                child2.removeFromChildrenWillBePersisted(grandchild);
+                            }
+                            Set<Name> existingParents = new HashSet<Name>(child2.getParents());
+                            for (Name parentInLaw : existingParents) {
+                                parentInLaw.addChildWillBePersisted(child);
+                                parentInLaw.removeFromChildrenWillBePersisted(child2);
+                            }
+                            child.transferValues(child2);
+                            child2.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME,"duplicate-" + child2.getDefaultDisplayName());
+
+                            rubbishBin.addChildWillBePersisted(child2);
+
+                        }
+                    }
+
+                }
+            }
+
+        }
+        toReturn.add(rubbishBin);
+        azquoMemoryDBConnection.persist();
+        return toReturn;
+
+
+
+
+    }
+
 
     public Name inParentSet(Name name, Collection<Name> maybeParents) {
         if (maybeParents.contains(name)) {
