@@ -496,6 +496,8 @@ public class DSImportService {
             if (firstLine.contains("\t")){
                 delimiter = '\t';
             }
+        }else{
+            return;//if he first line is blank, ignore the sheet
         }
 
         // now we know the delimiter can CSV read, I've read jackson is pretty quick
