@@ -163,6 +163,7 @@ public class ZKAzquoBookUtils {
 
     private List<List<String>> regionToStringLists(CellRegion region, Sheet sheet) {
         List<List<String>> toReturn = new ArrayList<List<String>>();
+        if (region==null) return toReturn;
         for (int rowIndex = region.getRow(); rowIndex <= region.getLastRow(); rowIndex++) {
             List<String> row = new ArrayList<String>();
             toReturn.add(row);
