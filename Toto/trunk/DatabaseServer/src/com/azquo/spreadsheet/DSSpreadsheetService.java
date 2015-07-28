@@ -722,11 +722,11 @@ seaports;children   container;children
                     }
                 }
                 // info for an up/down number sort, possibly on total values of each row
-                if (sortOnRowTotals || sortOnColIndex == colNo) { // while running through the cells either add the lot for rowtotals or just the column we care about
+                if ((sortOnRowTotals && !headingsHaveAttributes(cell.getColumnHeadings())) || sortOnColIndex == colNo) { // while running through the cells either add the lot for rowtotals or just the column we care about
                     sortRowTotal += cell.getDoubleValue();
                 }
                 // info for a left/rigt number sort possibly on column totals (left/right string sort not supported)
-                if (sortOnColTotals || sortOnRowIndex == rowNo) {
+                if ((sortOnColTotals && !headingsHaveAttributes(cell.getRowHeadings())) || sortOnRowIndex == rowNo) {
                     sortColumnTotals.put(colNo, sortColumnTotals.get(colNo) + cell.getDoubleValue());
                 }
                 colNo++;
@@ -1244,6 +1244,15 @@ seaports;children   container;children
                         headingsForCell.addAll(azquoCell.getRowHeadings());
                          // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
                         // right, switch here to deal with attribute based cell values
+                        if (cell.getStringValue().endsWith("%")){
+                              String percent = cell.getStringValue().substring(0,cell.getStringValue().length() - 1);
+                              try {
+                                  double d = Double.parseDouble(percent) / 100;
+                                  cell.setStringValue(d + "");
+                              }catch(Exception e){
+                                  //do nothing
+                              }
+                         }
                         if (valuesForCell.getValues() != null) {
                             // this call to make the hash set seems rather unefficient
                             Set<Name> cellNames = new HashSet<Name>(namesFromDataRegionHeadings(headingsForCell));
