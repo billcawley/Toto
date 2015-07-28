@@ -567,7 +567,7 @@ public class DSImportService {
             for (ImmutableImportHeading immutableImportHeading : immutableImportHeadings) {
 //                trackers.put(heading.name.getDefaultDisplayName(), 0L);
 //                String lineValue = csvReader.get(immutableImportHeading.column).intern();// since strings may be repeated intern, should save a bit of memory using the String pool
-                String lineValue = immutableImportHeading.column != -1 ? lineValues[immutableImportHeading.column].intern() : "";// since strings may be repeated intern, should save a bit of memory using the String pool. Hopefully not a big performance hit?
+                String lineValue = immutableImportHeading.column != -1 && immutableImportHeading.column < lineValues.length ? lineValues[immutableImportHeading.column].intern() : "";// since strings may be repeated intern, should save a bit of memory using the String pool. Hopefully not a big performance hit?
                 if (immutableImportHeading.defaultValue != null && lineValue.length() == 0) {
                     lineValue = immutableImportHeading.defaultValue;
                 }
