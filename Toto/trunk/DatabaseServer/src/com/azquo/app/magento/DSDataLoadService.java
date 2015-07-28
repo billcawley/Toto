@@ -258,23 +258,39 @@ public class DSDataLoadService {
         Map<String, Name> azquoProductsFound = new HashMap<String, Name>();
         Map<String, Name> azquoCustomersFound = new HashMap<String, Name>();
         List<String> defaultLanguage = new ArrayList<String>();
-        defaultLanguage.add(Constants.DEFAULT_DISPLAY_NAME);
+        defaultLanguage.add("MAGENTOCATEGORYID");
+        boolean hasCategoryIds = azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB("MAGENTOCATEGORYID");//interim - to be removed once all dbs have category ids (swimshop, ambitresearch, lazysusan, thbaker, woods, smiffy)
+        if (!hasCategoryIds){
+            defaultLanguage.clear();
+            defaultLanguage.add(Constants.DEFAULT_DISPLAY_NAME);
+        }
         Map<String, String> categoryNames = new HashMap<String, String>();
         //name the categories
         for (Map<String, String> attributeRow : tableMap.get("catalog_category_entity_varchar")) { // should (!) have us looking in teh right place
             //only picking the name from all the category attributes
             if (attributeRow.get("attribute_id").equals(categoryNameId)) {
-                categoryNames.put(attributeRow.get("entity_id"), attributeRow.get("value"));
+                if (attributeRow.get("store_id").equals("0")){
+                    categoryNames.put(attributeRow.get("entity_id"), attributeRow.get("value"));
+                }
+                if (!hasCategoryIds){//to be removed once every database has category ids
+                    categoryNames.put(attributeRow.get("entity_id"), attributeRow.get("value"));
+                }
             }
         }
         tableMap.remove("catalog_category_entity_varchar");
         for (Map<String, String> entityTypeRecord : tableMap.get("catalog_category_entity")) {
-            //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1` becomes '`bottom`,`higher`,`top`
+             //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1` becomes '`bottom`,`higher`,`top`
+
             StringTokenizer pathBits = new StringTokenizer(entityTypeRecord.get("path"), "/");
+
             String path = "";
+            String thisCatNo  = entityTypeRecord.get("entity_id");
             while (pathBits.hasMoreTokens()) {
                 String catNo = pathBits.nextToken();
-                String catName = categoryNames.get(catNo);
+                String catName = catNo;
+                if (!hasCategoryIds){
+                    catName = categoryNames.get(catNo);
+                }
                 if (catName != null) {
                     path = "`" + catName + "`," + path;
                 } else {
@@ -282,10 +298,17 @@ public class DSDataLoadService {
                     path = "`" + catNo + "`," + path;
                 }
             }
+
             //TODO consider what might happen if importing categories from two different databases - don't do it!
             Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, defaultLanguage);
+            if (!hasCategoryIds){
+                categoryName.setAttributeWillBePersisted("MAGENTOCATEGORYID", thisCatNo);
+            }else{
+                categoryName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, categoryNames.get(thisCatNo));
+            }
 
-            azquoCategoriesFound.put(entityTypeRecord.get("entity_id"), categoryName);
+
+            azquoCategoriesFound.put(thisCatNo, categoryName);
             allCategories.addChildWillBePersisted(categoryName);
         }
         tableMap.remove("catalog_category_entity");
