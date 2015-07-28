@@ -26,6 +26,7 @@ import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SName;
 import org.zkoss.zss.ui.Spreadsheet;
+import org.zkoss.zss.ui.event.CellAreaEvent;
 import org.zkoss.zss.ui.event.CellMouseEvent;
 import org.zkoss.zss.ui.event.SheetSelectEvent;
 import org.zkoss.zss.ui.event.StopEditingEvent;
@@ -124,13 +125,20 @@ public class ZKComposer extends SelectorComposer<Component> {
         System.out.println("init myzss : " + myzss);
 
     }
-
-    @Listen("onStopEditing = #myzss")
-    public void onStopEditing(StopEditingEvent event) {
-        boolean reload = false;
-        String chosen = (String) event.getEditingValue();
+    // we want this rather than the old onstop editing to check for changes in derived cells . . .
+    @Listen("onAfterCellChange = #myzss")
+    public void onAfterCellChange(CellAreaEvent event) {
         int row = event.getRow();
         int col = event.getColumn();
+        if (row != event.getLastRow() || col != event.getLastColumn()){ // I believe we're only interested in single cells changing
+            return;
+        }
+        Object value = event.getSheet().getInternalSheet().getCell(row,col).getValue();
+        if (value == null){// todo - deleting values may not work well.
+            return;
+        }
+        boolean reload = false;
+        String chosen = value.toString(); // yes hacky, should be ok though I think?
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
