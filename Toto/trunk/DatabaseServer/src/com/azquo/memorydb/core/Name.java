@@ -181,6 +181,21 @@ public final class Name extends AzquoMemoryDBEntity {
         return valuesAsSet != null ? Collections.unmodifiableCollection(valuesAsSet) : values;
     }
 
+    public void transferValues(Name from)throws Exception{
+        if (from.valuesAsSet == null) return;
+        if (valuesAsSet == null){
+            valuesAsSet = from.valuesAsSet;
+
+        }else{
+            for (Value v:from.getValues()){
+                addToValues(v);
+            }
+
+
+        }
+        from.valuesAsSet = null;
+    }
+
     // these two are becoming protected so they can be set by Value.
     // Value will be the reference point for the value name link, the ones here are for fast lookup, no need for persistence
     // following parent pattern re switching to sets etc
