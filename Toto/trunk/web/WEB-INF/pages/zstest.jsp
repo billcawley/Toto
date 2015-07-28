@@ -31,7 +31,7 @@
             border:1px solid silver;
             width:250px;
             display:none;
-            z-index:12;
+            z-index:25;
             background-color: white;
             height:400px
 
