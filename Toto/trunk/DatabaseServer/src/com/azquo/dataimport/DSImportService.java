@@ -14,7 +14,6 @@ import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -125,13 +124,11 @@ public class DSImportService {
         private final ImmutableImportHeading immutableImportHeading;
         private String value;
         private Name name;
-        private final int lineNo;
 
-        public ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value, Name name, int lineNo) {
+        public ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value, Name name) {
             this.immutableImportHeading = immutableImportHeading;
             this.value = value;
             this.name = name;
-            this.lineNo = lineNo;
         }
 
     }
@@ -422,8 +419,6 @@ public class DSImportService {
         return child;
     }
 
-    private final int batchSize = 100000;
-
 
     private class BatchImporter implements Runnable {
         private final AzquoMemoryDBConnection azquoMemoryDBConnection;
@@ -558,6 +553,7 @@ public class DSImportService {
         int lineNo = 0;
         ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDBConnection.getAzquoMemoryDB().getLoadingThreads());
         AtomicInteger valueTracker = new AtomicInteger(0);
+        int batchSize = 100000;
         ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<List<ImportCellWithHeading>>(batchSize);
         //while (csvReader.readRecord()) { // now to the data itself, headers should have been sorted one way or another,
         while (lineIterator.hasNext()) { // new Jackson call . . .
@@ -580,7 +576,7 @@ public class DSImportService {
                         lineValue = sdf.format(date);
                     }
                 }
-                importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue, null, lineNo));
+                importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue, null));
             }
             //batch it up!
             linesBatched.add(importCellsWithHeading);
@@ -599,6 +595,15 @@ public class DSImportService {
 //        csvReader.close();
 //        uploadFile.close();
         lineIterator.close();
+        // edd adding a delete check for tomcat temp files, if read from the other temp directly then leave it alone
+        if (filePath.contains("/usr/")){
+            File test = new File(filePath);
+            if (test.exists()){
+                if (!test.delete()){
+                    System.out.println("unable to delete " + filePath);
+                }
+            }
+        }
         System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
         System.out.println("---------- namesfound size " + namesFound.size());
         for (String trackName : trackers.keySet()) {
@@ -738,11 +743,11 @@ public class DSImportService {
                     contextNames.remove(cell.immutableImportHeading.name);
                 }
                 if (cell.immutableImportHeading.peerHeadings.size() > 0) {
-                    //ImportHeading headingWithPeers = heading;
-                    if (cell.immutableImportHeading.contextItem) { // why does intellij think it always false? that's just wrong!
+                    // intellij is right, it will never be tru after being set before! commenting . . .
+                    /*if (cell.immutableImportHeading.contextItem) { // why does intellij think it always false? that's just wrong!
                         contextPeersItem = cell;
                     }
-                    /*if (contextPeersItem != null) {
+                    if (contextPeersItem != null) {
                         headingWithPeers = contextPeersItem;
                     }*/
                     final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value

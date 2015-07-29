@@ -52,6 +52,27 @@ public class ZKAzquoBookUtils {
         for (UserChoice uc : allChoices) {
             userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
         }
+        /* ok there was a thought of running the sheet, copying to a new, running again,
+        copying to a new but this can make the logic messy and there has to be a way or resetting the
+        original sheet which would be a pain. So I'm going to try my initial thought, set up all the required possibilities
+        at the beginning then execute as normal, the loop below being none the wiser. Only thing : the create sheet command doesn't copy names (I mean excel names!)
+        so I guess I'll try.
+
+        // book.getInternalBook().moveSheetTo(); // will need this if we go this way.
+        SSheet newSheet = book.getInternalBook().createSheet("edd_test", book.getSheetAt(0).getInternalSheet());
+        List<SName> namesForSheet1 = getNamesForSheet(book.getSheetAt(0));
+        for (SName name : namesForSheet1) {
+            final SName newName = book.getInternalBook().createName(name.getName(), newSheet.getSheetName()); // since its in the scope of this sheet it should be ok to be the same name?
+            String formula = name.getRefersToFormula();
+            if (formula.contains("!")){
+                formula = formula.substring(formula.indexOf("!"));
+            }
+            formula = newSheet.getSheetName() + formula;
+            newName.setRefersToFormula(formula);
+            System.out.println(newName.getName() + " - " + newName.getRefersToFormula());
+        }*/
+
+
 
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
@@ -87,6 +108,7 @@ public class ZKAzquoBookUtils {
                     fillRegion(sheet, region, userRegionOptions, loggedInUser);
                 }
             }
+            
             // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
             // can't do this in the fill region as formulae need to be dealt with outside
             Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator(); // only rows with values in them
@@ -169,7 +191,14 @@ public class ZKAzquoBookUtils {
             toReturn.add(row);
             for (int colIndex = region.getColumn(); colIndex <= region.getLastColumn(); colIndex++) {
                 SCell cell = sheet.getInternalSheet().getCell(rowIndex, colIndex);
+                // being paraniod?
+                if (cell.getType() == SCell.CellType.FORMULA) {
+                    //System.out.println("doing the cell thing on " + cell);
+                    cell.getFormulaResultType();
+                    cell.clearFormulaResultCache();
+                }
                 // I assume non null cell has a non null sting value, do I need to check for null?
+
                 row.add(cell != null ? cell.getStringValue() : null);
             }
         }
@@ -386,24 +415,26 @@ public class ZKAzquoBookUtils {
             sheet.getBook().getInternalBook().createSheet(VALIDATION_SHEET);
         }
         Sheet validationSheet = sheet.getBook().getSheet(VALIDATION_SHEET);
+        //validationSheet.getInternalSheet().setSheetVisible(SSheet.SheetVisible.HIDDEN);
         int numberOfValidationsAdded = 0;
         for (SName name : namesForSheet) {
             if (name.getRefersToSheetName().equals(sheet.getSheetName())) {
                 if (name.getName().endsWith("Choice")) {
                     CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
-                    CellRegion chosen = getCellRegionForSheetAndName(sheet, name.getName().substring(0, name.getName().length() - "Choice".length()) + "Chosen");
+                    CellRegion chosen = getCellRegionForSheetAndName(sheet, name.getName().substring(0, name.getName().length() - "Choice".length()) + "Chosen"); // as ever I do wonder about these string literals
                     if (choice != null && chosen != null) {
                         // ok I assume choice is a single cell
                         try {
                             // new code style
                             List<String> choiceOptions = spreadsheetService.getDropDownListForQuery(loggedInUser.getDataAccessToken(), sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).getStringValue(), loggedInUser.getLanguages());
+                            validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(name.getName());
                             int row = 0;
                             for (String choiceOption : choiceOptions) {
+                                row++;// like starting at 1
                                 validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded).setStringValue(choiceOption);
-                                row++;
                             }
-                            Range validationValues = Ranges.range(validationSheet, 0, numberOfValidationsAdded, row, numberOfValidationsAdded);
-                            validationValues.createName("az_Validation" + numberOfValidationsAdded);
+                            Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
+                            //validationValues.createName("az_Validation" + numberOfValidationsAdded);
                             Range chosenRange = Ranges.range(sheet, chosen.getRow(), chosen.getColumn(), chosen.getLastRow(), chosen.getLastColumn());
 
                             //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,

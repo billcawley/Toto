@@ -125,66 +125,36 @@ public class ZKComposer extends SelectorComposer<Component> {
         System.out.println("init myzss : " + myzss);
 
     }
-    // we want this rather than the old onstop editing to check for changes in derived cells . . .
-    @Listen("onAfterCellChange = #myzss")
-    public void onAfterCellChange(CellAreaEvent event) {
-        int row = event.getRow();
-        int col = event.getColumn();
-        if (row != event.getLastRow() || col != event.getLastColumn()){ // I believe we're only interested in single cells changing
-            return;
-        }
-        Object value = event.getSheet().getInternalSheet().getCell(row,col).getValue();
-        if (value == null){// todo - deleting values may not work well.
-            return;
-        }
-        boolean reload = false;
-        String chosen = value.toString(); // yes hacky, should be ok though I think?
+
+    // In theory could just have on cellchange but this seems to have broken the dropdowns onchange stuff, ergh. Luckily it seems there's no need for code duplication
+    // checking for save stuff in the onchange and the other stuff here
+
+    @Listen("onStopEditing = #myzss")
+    public void onStopEditing(StopEditingEvent event) {
+        String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         SName name = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
+        boolean reload = false;
         if (name != null) { // as it stands regions should not overlap, we find a name that means we know what to (try) to do
             // ok it matches a name
             if (name.getName().endsWith("Chosen")) {// would have been a one cell name
                 spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
                 reload = true;
             }
-            if (name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
-                String region = name.getName().substring("az_DataRegion".length());
-                final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
-                if (sentCells != null) {
-                    // the data region as defined on the cheet may be larger than the sent cells
-                    if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow()
-                            && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()){
-                        CellForDisplay cellForDisplay = sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).get(col - name.getRefersToCellRegion().getColumn());
-                        Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
-                        if (NumberUtils.isNumber(chosen)) {
-                            cellForDisplay.setDoubleValue(Double.parseDouble(chosen));
-                        }
-                        cellForDisplay.setStringValue(chosen);
-                        int highlightDays = 0;
-                        if (book.getInternalBook().getAttribute("highlightDays") != null) { // maybe factor the string literals??
-                            highlightDays = (Integer) book.getInternalBook().getAttribute("highlightDays");
-                        }
-                        if (highlightDays > 0) {
-                            cellForDisplay.setHighlighted(true);
-                            CellOperationUtil.applyFontColor(Ranges.range(event.getSheet(), row, col), "#FF0000");
-                        }
-                    }
-                }
-            }
             // todo, add row heading later if required
             if (name.getName().startsWith("az_DisplayColumnHeadings")) { // ok going to try for a sorting detect
                 String region = name.getName().substring("az_DisplayColumnHeadings".length());
                 UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
-                if (userRegionOptions == null){
+                if (userRegionOptions == null) {
                     CellRegion optionsRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), ZKAzquoBookUtils.azOptions + region);
                     String source = null;
                     if (optionsRegion != null) {
                         source = event.getSheet().getInternalSheet().getCell(optionsRegion.getRow(), optionsRegion.getColumn()).getStringValue();
                     }
-                    userRegionOptions = new UserRegionOptions(0,loggedInUser.getUser().getId(), reportId, region, source);
+                    userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, source);
                 }
                 // ok here's the thing, the value on the spreadsheet (heading) is no good, it could be just for display, I want what the database would call the heading
                 // so I'd better get the headings.
@@ -222,7 +192,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
                 ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
-                if (zkAzquoBookUtils.populateBook(newBook)){ // check if formulae made saveable data
+                if (zkAzquoBookUtils.populateBook(newBook)) { // check if formulae made saveable data
                     Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
                 }
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
@@ -230,6 +200,54 @@ public class ZKComposer extends SelectorComposer<Component> {
                 e.printStackTrace();
             }
         }
+    }
+
+    // to detect data changes.
+
+    @Listen("onAfterCellChange = #myzss")
+    public void onAfterCellChange(CellAreaEvent event) {
+        int row = event.getRow();
+        int col = event.getColumn();
+        if (row != event.getLastRow() || col != event.getLastColumn()) { // I believe we're only interested in single cells changing
+            return;
+        }
+        Object value = event.getSheet().getInternalSheet().getCell(row, col).getValue();
+        if (value == null) {
+            return;
+        }
+        String chosen = value.toString(); // yes hacky, should be ok though I think?
+        System.out.println("after cell change : " + row + " col " + col + " chosen");
+        // now how to get the name?? Guess run through them. Feel there should be a better way.
+        final Book book = event.getSheet().getBook();
+        SName name = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
+        if (name != null) { // as it stands regions should not overlap, we find a name that means we know what to (try) to do
+            if (name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
+                LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+                String region = name.getName().substring("az_DataRegion".length());
+                final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
+                if (sentCells != null) {
+                    // the data region as defined on the cheet may be larger than the sent cells
+                    if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow()
+                            && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
+                        CellForDisplay cellForDisplay = sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).get(col - name.getRefersToCellRegion().getColumn());
+                        Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
+                        if (NumberUtils.isNumber(chosen)) {
+                            cellForDisplay.setDoubleValue(Double.parseDouble(chosen));
+                        }
+                        cellForDisplay.setStringValue(chosen);
+                        int highlightDays = 0;
+                        if (book.getInternalBook().getAttribute("highlightDays") != null) { // maybe factor the string literals??
+                            highlightDays = (Integer) book.getInternalBook().getAttribute("highlightDays");
+                        }
+                        if (highlightDays > 0) {
+                            cellForDisplay.setHighlighted(true);
+                            CellOperationUtil.applyFontColor(Ranges.range(event.getSheet(), row, col), "#FF0000");
+                        }
+                    }
+                }
+            }
+        }
+
     }
 
     @Listen("onSheetSelect = #myzss")
@@ -256,18 +274,18 @@ public class ZKComposer extends SelectorComposer<Component> {
                 // todo - sort after zapping azquobook! Maybe clickable again?
                 List<DisplayValuesForProvenance> displayValuesForProvenances = spreadsheetService.getDisplayValuesForProvenance(loggedInUser, region
                         , cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow(), cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn());
-                if (!displayValuesForProvenances.isEmpty()){
+                if (!displayValuesForProvenances.isEmpty()) {
                     StringBuilder toShow = new StringBuilder();
-                    for (DisplayValuesForProvenance displayValuesForProvenance : displayValuesForProvenances){
-                        resolveDisplayValuesForProvenance(0,toShow, displayValuesForProvenance);
+                    for (DisplayValuesForProvenance displayValuesForProvenance : displayValuesForProvenances) {
+                        resolveDisplayValuesForProvenance(0, toShow, displayValuesForProvenance);
                     }
                     fullProvenance = toShow.toString();
                     fullProvenance = fullProvenance.replace("<br/>", " ");
                     fullProvenance = fullProvenance.replace("<b>", "");
                     fullProvenance = fullProvenance.replace("</b>", "");
                     String stringToShow = fullProvenance;
-                    if (stringToShow.length() > 200){
-                        stringToShow = stringToShow.substring(0,200) + " . . .";
+                    if (stringToShow.length() > 200) {
+                        stringToShow = stringToShow.substring(0, 200) + " . . .";
                     }
                     stringToShow = stringToShow.replace("\t", "    ");
                     provenanceLabel.setValue(stringToShow);
@@ -277,23 +295,23 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
             instructionsLabel.setValue("");
             final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
-            if (sentCells != null){
+            if (sentCells != null) {
                 StringBuilder instructionsText = new StringBuilder();
                 instructionsText.append("Column headings\n\n");
-                for (List<String> row : sentCells.getColHeadingsSource()){ // flatten for the mo
-                    for (String cell : row){
+                for (List<String> row : sentCells.getColHeadingsSource()) { // flatten for the mo
+                    for (String cell : row) {
                         instructionsText.append(cell + "\n");
                     }
                 }
                 instructionsText.append("\nRow headings\n\n");
-                for (List<String> row : sentCells.getRowHeadingsSource()){ // flatten for the mo
-                    for (String cell : row){
+                for (List<String> row : sentCells.getRowHeadingsSource()) { // flatten for the mo
+                    for (String cell : row) {
                         instructionsText.append(cell + "\n");
                     }
                 }
                 instructionsText.append("\nContext\n\n");
-                for (List<String> row : sentCells.getContextSource()){ // flatten for the mo
-                    for (String cell : row){
+                for (List<String> row : sentCells.getContextSource()) { // flatten for the mo
+                    for (String cell : row) {
                         instructionsText.append(cell + "\n");
                     }
                 }
@@ -317,21 +335,21 @@ public class ZKComposer extends SelectorComposer<Component> {
         return null;
     }
 
-    public static void resolveDisplayValuesForProvenance(int tab, StringBuilder stringBuilder, DisplayValuesForProvenance displayValuesForProvenance){
-        for (int i = 0; i < tab; i++){
+    public static void resolveDisplayValuesForProvenance(int tab, StringBuilder stringBuilder, DisplayValuesForProvenance displayValuesForProvenance) {
+        for (int i = 0; i < tab; i++) {
             stringBuilder.append("\t");
         }
-        if (displayValuesForProvenance.name != null){
+        if (displayValuesForProvenance.name != null) {
             stringBuilder.append(displayValuesForProvenance.name);
             stringBuilder.append("\t");
             stringBuilder.append(displayValuesForProvenance.value);
             stringBuilder.append("\n");
         }
-        if (displayValuesForProvenance.heading != null){ // then assume we have items too!
+        if (displayValuesForProvenance.heading != null) { // then assume we have items too!
             stringBuilder.append(displayValuesForProvenance.heading);
             stringBuilder.append("\n");
             tab++;
-            for (DisplayValuesForProvenance displayValuesForProvenance1 : displayValuesForProvenance.items){
+            for (DisplayValuesForProvenance displayValuesForProvenance1 : displayValuesForProvenance.items) {
                 resolveDisplayValuesForProvenance(tab, stringBuilder, displayValuesForProvenance1);
             }
         }

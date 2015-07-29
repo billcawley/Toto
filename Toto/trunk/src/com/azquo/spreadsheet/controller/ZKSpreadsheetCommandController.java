@@ -1,16 +1,23 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.admin.user.UserChoiceDAO;
+import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.view.AzquoBook;
+import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
+import org.apache.pdfbox.io.RandomAccess;
+import org.apache.pdfbox.util.PDFMergerUtility;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.zkoss.json.JSONObject;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.Desktop;
+import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
+import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.jsp.JsonUpdateBridge;
 import org.zkoss.zss.model.SName;
@@ -33,6 +40,14 @@ public class ZKSpreadsheetCommandController {
 
     @Autowired
     private SpreadsheetService spreadsheetService;
+
+    @Autowired
+    private UserChoiceDAO userChoiceDAO;
+
+    @Autowired
+    private UserRegionOptionsDAO userRegionOptionsDAO;
+
+    public static final String CHOICES_MAP = "CHOICES_MAP";
 
     @RequestMapping
     public void handleRequest(final HttpServletRequest req, HttpServletResponse resp) throws Exception {
@@ -76,21 +91,51 @@ public class ZKSpreadsheetCommandController {
 
                         Filedownload.save(new AMedia(book.getBookName() + ".xlsx", null, null, file, true));
                     }
+                    boolean permuteTest = true;
                     if ("PDF".equals(action)) {
                         Exporter exporter = Exporters.getExporter("pdf");
                         Book book = ss.getBook();
-                        File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
-                        FileOutputStream fos = null;
-                        try {
-                            fos = new FileOutputStream(file);
-                            exporter.export(book, file);
-                        } finally {
-                            if (fos != null) {
-                                fos.close();
+                        if (!permuteTest){ // standard single
+                            File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
+                            FileOutputStream fos = null;
+                            try {
+                                fos = new FileOutputStream(file);
+                                exporter.export(book, file);
+                            } finally {
+                                if (fos != null) {
+                                    fos.close();
+                                }
                             }
+                            Filedownload.save(new AMedia(book.getBookName() + ".pdf", "pdf", "application/pdf", file, true));
+                        } else {
+                            PDFMergerUtility merger = new PDFMergerUtility();
+                            ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
+                            for (int i = 0; i < 4; i++) {
+                                // similar to reloading in the ZKComposer
+                                final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+                                for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
+                                    newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                                }
+                                zkAzquoBookUtils.populateBook(newBook);
+                                File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
+                                FileOutputStream fos = null;
+                                try {
+                                    fos = new FileOutputStream(file);
+                                    exporter.export(newBook, fos);
+                                } finally {
+                                    if (fos != null) {
+                                        fos.close();
+                                    }
+                                }
+                                merger.addSource(file);
+                            }
+                            File merged = File.createTempFile(Long.toString(System.currentTimeMillis()), "merged");
+                            merger.setDestinationFileName(merged.getAbsolutePath());
+                            merger.mergeDocuments();
+                            Filedownload.save(new AMedia(book.getBookName() + "merged.pdf", "pdf", "application/pdf", merged, true));
                         }
-                        Filedownload.save(new AMedia(book.getBookName() + ".pdf", "pdf", "application/pdf", file, true));
                     }
+
                     if ("Save".equals(action)) {
                         LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                         // todo - provenance?
