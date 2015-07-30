@@ -1,5 +1,7 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -43,6 +45,7 @@ public class ZKSpreadsheetCommandController {
 
     @Autowired
     private UserChoiceDAO userChoiceDAO;
+    private OnlineReportDAO onlineReportDAO;
 
     @Autowired
     private UserRegionOptionsDAO userRegionOptionsDAO;
@@ -138,12 +141,13 @@ public class ZKSpreadsheetCommandController {
 
                     if ("Save".equals(action)) {
                         LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-                        // todo - provenance?
+                        OnlineReport onlineReport = onlineReportDAO.findById(loggedInUser.getReportId());
+                        //spreadsheetService.setProvenance(loggedInUser.getDataAccessToken(),loggedInUser.getUser().getName(),"in spreadsheet",onlineReport.getReportName(), loggedInUser.getContext());
                         final Book book = ss.getBook();
                         for (SName name : book.getInternalBook().getNames()) {
                             if (name.getName().toLowerCase().startsWith(AzquoBook.azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
                                 String region = name.getName().substring(AzquoBook.azDataRegion.length());
-                                    spreadsheetService.saveData(loggedInUser, region.toLowerCase());
+                                    spreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getReportName());
                             }
                         }
                     }
