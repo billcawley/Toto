@@ -613,20 +613,31 @@ public final class NameService {
                 throw new Exception("not understood:  " + setFormula);
             } else if (op == '*') { // * meaning intersection here . . .
                 //assume that the second term implies 'level all'
+                long start = System.currentTimeMillis();
+                System.out.println("starting * set sizes  nameStack(stackcount)" +  nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
                 Set<Name> allNames = new HashSet<Name>();
                 for (Name name : nameStack.get(stackCount)) {
                     addNames(name, allNames, 0, ALL_LEVEL_INT);
                 }
+                long now = System.currentTimeMillis();
+                System.out.println("find all parents in parse query part 1 " + (now - start));
                 nameStack.get(stackCount - 1).retainAll(allNames);
+                System.out.println("after retainall " + (System.currentTimeMillis() - start));
                 nameStack.remove(stackCount);
             } else if (op == '/') { // this can be slow : todo - speed up? Is it the retainall? Should I be using sets?
                 Set<Name> parents = new HashSet<Name>(nameStack.get(stackCount));
+                long start = System.currentTimeMillis();
+                System.out.println("starting / set sizes  nameStack(stackcount)" +  nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
                 for (Name child : nameStack.get(stackCount)) {
-                    parents.addAll(child.findAllParents());
+                    findAllParents(child,parents);
                 }
+                long now = System.currentTimeMillis();
+                System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size());
+                start = now;
                 nameStack.get(stackCount - 1).retainAll(parents);
-                nameStack.remove(stackCount);
-            } else if (op == '-') {
+                System.out.println("after retainall " + (System.currentTimeMillis() - start));
+                 nameStack.remove(stackCount);
+             } else if (op == '-') {
                 nameStack.get(stackCount - 1).removeAll(nameStack.get(stackCount));
                 nameStack.remove(stackCount);
             } else if (op == '+') {
@@ -659,6 +670,17 @@ public final class NameService {
             return new ArrayList<Name>(nameStack.get(0));
         }
     }
+
+    private void findAllParents(Name name, final Set<Name> allParents) {
+
+        for (Name parent : name.getParents()) {
+            if (!allParents.contains(parent)) {
+                allParents.add(parent);
+                findAllParents(parent, allParents);
+            }
+        }
+    }
+
 
     private List<Name> deduplicate(AzquoMemoryDBConnection azquoMemoryDBConnection, String formula)throws Exception{
         List<Name> toReturn = new ArrayList<Name>();
