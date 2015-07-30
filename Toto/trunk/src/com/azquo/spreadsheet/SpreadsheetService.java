@@ -436,11 +436,11 @@ public class SpreadsheetService {
         return new ArrayList<DisplayValuesForProvenance>(); // maybe "not found"?
     }
 
-    public void saveData(LoggedInUser loggedInUser, String region) throws Exception {
+    public void saveData(LoggedInUser loggedInUser, String region, String reportName) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
         if (cellsAndHeadingsForDisplay != null){
-            rmiClient.getServerInterface().saveData(loggedInUser.getDataAccessToken(), cellsAndHeadingsForDisplay);
+            rmiClient.getServerInterface().saveData(loggedInUser.getDataAccessToken(), cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext());
         }
-   }
+    }
 
 }
