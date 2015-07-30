@@ -681,6 +681,7 @@ public class AzquoBook {
     }
 
     private void setChoices(LoggedInUser loggedInUser) {
+        String context = "";
         createChosenMap();
         createChoiceMap();//to check when choice cells may be changed
         for (Range range : chosenMap.keySet()) {
@@ -691,10 +692,12 @@ public class AzquoBook {
                     UserChoice userChoice = userChoiceDAO.findForUserIdAndChoice(loggedInUser.getUser().getId(), choiceName);
                     if (userChoice != null) {
                         range.setValue(userChoice.getChoiceValue());
+                        context += choiceName + " = " + userChoice.getChoiceValue() + "; ";
                     }
                 }
             }
         }
+        loggedInUser.setContext(context);
         calculateAll();
         // was sheet options here, will be dealt with later by USERRegionoption
     }
@@ -1134,7 +1137,7 @@ public class AzquoBook {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
                 String region = name.getText().substring(dataRegionPrefix.length());
-                spreadsheetService.saveData(loggedInUser, region.toLowerCase());
+                spreadsheetService.saveData(loggedInUser, region.toLowerCase(), getReportName());
             }
         }
     }
