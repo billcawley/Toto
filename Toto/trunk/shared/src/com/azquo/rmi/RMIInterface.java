@@ -39,6 +39,8 @@ public interface RMIInterface extends Remote {
 
     List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
 
+
+
     List<DisplayValuesForProvenance> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws RemoteException;
 
@@ -50,5 +52,8 @@ public interface RMIInterface extends Remote {
 
     void unloadDatabase(String mysqlName) throws RemoteException;
 
-    void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws RemoteException;
+    void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws RemoteException;
+
+    void  setProvenance(DatabaseAccessToken databaseAccessToken,String user, String method, String name, String context) throws RemoteException;
+
 }
