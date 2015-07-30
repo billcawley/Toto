@@ -416,6 +416,13 @@ seaports;children   container;children
         return getIndividualNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages));
     }
 
+    public void setProvenance(DatabaseAccessToken databaseAccessToken, String user, String method, String name, String context)throws Exception{
+        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+        azquoMemoryDBConnection.setProvenance(user, method, name, context);
+
+    }
+
+
     private List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
         final List<Integer> sortedValues = new ArrayList<Integer>();
         List<Map.Entry<Integer, Double>> list = new ArrayList<Map.Entry<Integer, Double>>(sortTotals.entrySet());
@@ -1222,8 +1229,9 @@ seaports;children   container;children
     }
 
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
-    public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws Exception {
+    public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+        azquoMemoryDBConnection.setProvenance(user,"in spreadsheet", reportName, context);
         int numberOfValuesModified = 0;
         Map<Name, Integer> totalSetSize = new HashMap<Name, Integer>();
         List<Name> contextNames =getContextNames(azquoMemoryDBConnection,cellsAndHeadingsForDisplay.getContextSource());
@@ -1250,9 +1258,11 @@ seaports;children   container;children
                         // right, switch here to deal with attribute based cell values
 
                         //first align text and numbers where appropriate
-
                         try{
-                            cell.setStringValue(cell.getDoubleValue()+"");
+                            if (cell.getDoubleValue()!=0.0) {
+
+                                cell.setStringValue(cell.getDoubleValue() + "");
+                            }
 
                         }catch(Exception e){
 
