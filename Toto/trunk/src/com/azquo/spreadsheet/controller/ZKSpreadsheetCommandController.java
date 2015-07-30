@@ -45,6 +45,8 @@ public class ZKSpreadsheetCommandController {
 
     @Autowired
     private UserChoiceDAO userChoiceDAO;
+
+    @Autowired
     private OnlineReportDAO onlineReportDAO;
 
     @Autowired
