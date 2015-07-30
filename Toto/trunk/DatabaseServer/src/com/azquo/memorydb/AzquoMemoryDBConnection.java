@@ -55,6 +55,10 @@ public class AzquoMemoryDBConnection {
 
     }
 
+    public void setProvenance(final String user,final String method, final String name,final String context)throws Exception{
+        this.provenance = new Provenance(getAzquoMemoryDB(),user,new Date(),method, name, context);
+    }
+
     public Provenance getProvenance(String where) {
         if (provenance == null) {
             try {
