@@ -151,9 +151,9 @@ public class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws RemoteException {
+    public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws RemoteException {
         try {
-            dsSpreadsheetService.saveData(databaseAccessToken,cellsAndHeadingsForDisplay);
+            dsSpreadsheetService.saveData(databaseAccessToken,cellsAndHeadingsForDisplay, user, reportName, context);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -194,4 +194,15 @@ public class RMIImplementation implements RMIInterface {
             throw new RemoteException("Database Server Exception", e);
         }
     }
+
+    @Override
+    public void setProvenance (DatabaseAccessToken databaseAccessToken, String user, String method, String  name, String context)throws RemoteException {
+        try {
+            dsSpreadsheetService.setProvenance(databaseAccessToken, user, method, name, context);
+        } catch (Exception e) {
+            throw new RemoteException("Database server exception", e);
+        }
+    }
+
+       //memoryDBManager.getAzquoMemoryDB(databaseAccessT)
 }
