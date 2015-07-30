@@ -52,6 +52,7 @@ public class ZKAzquoBookUtils {
         for (UserChoice uc : allChoices) {
             userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
         }
+        String context="";
         /* ok there was a thought of running the sheet, copying to a new, running again,
         copying to a new but this can make the logic messy and there has to be a way or resetting the
         original sheet which would be a pain. So I'm going to try my initial thought, set up all the required possibilities
@@ -81,6 +82,7 @@ public class ZKAzquoBookUtils {
                 CellRegion choice = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
                 if (choice != null) {
                     sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoices.get(choiceName));
+                    context+= choiceName + " = " + userChoices.get(choiceName) + ";";
                 }
             }
             // ok the plan here is remove all the merges then put them back in after the regions are expanded.
@@ -178,6 +180,8 @@ public class ZKAzquoBookUtils {
             }
             addValidation(namesForSheet, sheet, loggedInUser);
         }
+        loggedInUser.setContext(context);
+
         return showSave;
     }
 
