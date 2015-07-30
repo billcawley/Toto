@@ -34,6 +34,7 @@ public class LoggedInUser {
 
     private String readPermissions;
     private String writePermissions;
+    private String context;
 
     private static final String defaultRegion = "default-region";
 
@@ -49,6 +50,7 @@ public class LoggedInUser {
 
         this.readPermissions = readPermissions;
         this.writePermissions = writePermissions;
+        this.context = null;
 
     }
 
@@ -125,6 +127,17 @@ public class LoggedInUser {
     public void setWritePermissions(String writePermissions) {
         this.writePermissions = writePermissions;
     }
+
+    public String getContext() {
+        return context;
+    }
+
+    public void setContext(String context) {
+        this.context = context;
+    }
+
+
+
 
     public DatabaseAccessToken getDataAccessToken(){
         return new DatabaseAccessToken(database.getMySQLName(), readPermissions,writePermissions,languages);
