@@ -429,8 +429,18 @@ public class ZKAzquoBookUtils {
                     if (choice != null && chosen != null) {
                         // ok I assume choice is a single cell
                         try {
-                            // new code style
-                            List<String> choiceOptions = spreadsheetService.getDropDownListForQuery(loggedInUser.getDataAccessToken(), sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).getStringValue(), loggedInUser.getLanguages());
+                            List<String>choiceOptions = null;
+                            String query= sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).getStringValue();
+                            if (query.startsWith("\"") || query.startsWith("“")){
+                                //crude - if there is a comma in any option this will fail
+                                query  = query.replace("\"","").replace("“","").replace("”","");
+                                String[] choices = query.split(",");
+                                for (String choice2:choices){
+                                    choiceOptions.add(choice2);
+                                }
+                            }else{
+                                choiceOptions = spreadsheetService.getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
+                            }
                             validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(name.getName());
                             int row = 0;
                             for (String choiceOption : choiceOptions) {
