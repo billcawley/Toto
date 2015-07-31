@@ -688,6 +688,7 @@ public final class ValueService {
     private List<DisplayValuesForProvenance> getJsonValuesFromDummyValues(Set<DummyValue> values) {
         //int debugCount = 0;
         boolean headingNeeded = false;
+        double dValue = 0.0;
         List<DisplayValuesForProvenance> jsonValueForProvenances = new ArrayList<DisplayValuesForProvenance>();
         for (DummyValue value : values) {
             if (value.getNames().size() > 1) {
@@ -710,6 +711,11 @@ public final class ValueService {
                 for (DummyValue value : values) {
                     if (value.getNames().contains(heading)) {
                         extract.add(value);
+                        try{
+                            dValue += Double.parseDouble(value.getValueText());
+                        }catch(Exception e){
+                            //ignore
+                        }
                         //creating a new 'value' with one less name for recursion
                         try {
                             Set<Name> slimNames = new HashSet<Name>();
@@ -727,7 +733,14 @@ public final class ValueService {
                     }
                 }
                 values.removeAll(extract);
-                jsonValueForProvenances.add(new DisplayValuesForProvenance(heading.getDefaultDisplayName(), getJsonValuesFromDummyValues(slimExtract)));
+                String dString = "";
+                if (dValue>0.0){
+                    dString = ("[" + dValue +"]").replace(".0]","]");
+
+                }
+
+                jsonValueForProvenances.add(new DisplayValuesForProvenance(heading.getDefaultDisplayName() + dString, getJsonValuesFromDummyValues(slimExtract)));
+                dValue = 0;
             }
         }
         return jsonValueForProvenances;
@@ -736,7 +749,8 @@ public final class ValueService {
 
     public DisplayValuesForProvenance getDisplayValuesForProvenance(Set<Value> values, Provenance p) {
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
-        return new DisplayValuesForProvenance("<b>" + df.format(p.getTimeStamp()) + "</b> by <b>" + p.getUser() + "</b><br/>Method:" + p.getMethod() + " " + p.getName()
+        return new DisplayValuesForProvenance("<b>" + df.format(p.getTimeStamp()) + "</b>" +
+                " by <b>" + p.getUser() + "</b><br/>" + p.getMethod() + " " + p.getName() + " with " + p.getContext()
                 , getJsonValuesFromValues(values));
     }
 }
