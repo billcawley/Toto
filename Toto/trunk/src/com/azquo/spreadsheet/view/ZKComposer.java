@@ -44,15 +44,15 @@ public class ZKComposer extends SelectorComposer<Component> {
     Spreadsheet myzss;
 
     Menupopup editPopup = new Menupopup();
-    Label provenanceLabel = new Label();
+    //Label provenanceLabel = new Label();
     Label instructionsLabel = new Label();
     SpreadsheetService spreadsheetService;
     UserChoiceDAO userChoiceDAO;
     UserRegionOptionsDAO userRegionOptionsDAO;
     AdminService adminService;
 
-    String fullProvenance = "";
 
+    Popup provenancePopup = null;
 
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
@@ -74,20 +74,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         editPopup.appendChild(item1);
         editPopup.appendChild(item2);
 
-        Popup provenancePopup = new Popup();
+        provenancePopup = new Popup();
         provenancePopup.setId("provenancePopup");
-        provenanceLabel.setMultiline(true);
-        provenancePopup.appendChild(provenanceLabel);
-
-        final Button button = new Button("Download Full Audit");
-        button.addEventListener("onClick",
-                new EventListener<Event>() {
-                    public void onEvent(Event event) throws Exception {
-                        Filedownload.save(fullProvenance, "text/csv", "provenance.csv");
-                    }
-                });
-
-        provenancePopup.appendChild(button);
         item1.setPopup(provenancePopup); // I think that will automatically work??
 
         Popup instructionsPopup = new Popup();
@@ -265,7 +253,11 @@ public class ZKComposer extends SelectorComposer<Component> {
         // roght now a right click gets provenance ready, dunno if I need to do this
         SName name = getNamedRegionForRowAndColumnSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
         if (name != null && name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
-            provenanceLabel.setValue("");
+            Component popupChild = provenancePopup.getFirstChild();
+            while (popupChild != null){
+                provenancePopup.removeChild(popupChild);
+                popupChild = provenancePopup.getFirstChild();
+            }
             String region = name.getName().substring("az_DataRegion".length());
             Book book = myzss.getBook();
             LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
@@ -279,21 +271,57 @@ public class ZKComposer extends SelectorComposer<Component> {
                     for (DisplayValuesForProvenance displayValuesForProvenance : displayValuesForProvenances) {
                         resolveDisplayValuesForProvenance(0, toShow, displayValuesForProvenance);
                     }
-                    fullProvenance = toShow.toString();
-                    fullProvenance = fullProvenance.replace("<br/>", " ");
-                    fullProvenance = fullProvenance.replace("<b>", "");
-                    fullProvenance = fullProvenance.replace("</b>", "");
-                    String stringToShow = fullProvenance;
-                    if (stringToShow.length() > 200) {
-                        stringToShow = stringToShow.substring(0, 200) + " . . .";
+                    String stringToShow = toShow.toString();
+                     stringToShow = stringToShow.replace("<br/>", " ").replace("<b>", "").replace("</b>", "");
+                    final String  fullProvenance = stringToShow;
+                    stringToShow = stringToShow.replace("\t", "....");
+                    int spreadPos = stringToShow.indexOf("in spreadsheet");
+                    int nextBlock = stringToShow.length();
+                    while  (spreadPos >= 0){
+                        int endLine = stringToShow.indexOf("\n");
+                        nextBlock = stringToShow.indexOf("in spreadsheet",endLine);
+                        if (nextBlock < 0){
+                            nextBlock = stringToShow.length();
+                        }else{
+                            nextBlock = stringToShow.lastIndexOf("\n", nextBlock) + 1;
+                        }
+                        final Toolbarbutton provButton = new Toolbarbutton(stringToShow.substring(0,endLine));
+                        provButton.addEventListener("onClick",
+                                new EventListener<Event>() {
+                                    public void onEvent(Event event) throws Exception {
+                                        Filedownload.save(fullProvenance, "text/csv", "provenance.csv");
+                                    }
+                                });
+                        provenancePopup.appendChild(provButton);
+                        Label provenanceLabel = new Label();
+                        provenanceLabel.setMultiline(true);
+
+                        provenanceLabel.setValue(trimString(stringToShow.substring(endLine, nextBlock)));
+                        provenancePopup.appendChild(provenanceLabel);
+                        stringToShow = stringToShow.substring(nextBlock);
+                        spreadPos = stringToShow.indexOf("in spreadsheet");
+
+
                     }
-                    stringToShow = stringToShow.replace("\t", "    ");
-                    provenanceLabel.setValue(stringToShow);
+                    Label provenanceLabel = new Label();
+                    provenanceLabel.setMultiline(true);
+                    provenanceLabel.setValue(trimString(stringToShow));
+                    provenancePopup.appendChild(provenanceLabel);
+
+                    final Toolbarbutton button = new Toolbarbutton("Download Full Audit");
+                    button.addEventListener("onClick",
+                            new EventListener<Event>() {
+                                public void onEvent(Event event) throws Exception {
+                                    Filedownload.save(fullProvenance, "text/csv", "provenance.csv");
+                                }
+                            });
+
+                    provenancePopup.appendChild(button);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            instructionsLabel.setValue("");
+              instructionsLabel.setValue("");
             final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
             if (sentCells != null) {
                 StringBuilder instructionsText = new StringBuilder();
@@ -333,6 +361,15 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
         }
         return null;
+    }
+
+    private String trimString(String stringToShow){
+
+        if (stringToShow.length() > 200) {
+            stringToShow = stringToShow.substring(0, 200) + " . . .";
+        }
+        return stringToShow;
+
     }
 
     public static void resolveDisplayValuesForProvenance(int tab, StringBuilder stringBuilder, DisplayValuesForProvenance displayValuesForProvenance) {
