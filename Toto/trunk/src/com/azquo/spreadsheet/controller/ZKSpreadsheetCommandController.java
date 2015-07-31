@@ -8,7 +8,6 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
-import org.apache.pdfbox.io.RandomAccess;
 import org.apache.pdfbox.util.PDFMergerUtility;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -16,12 +15,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.zkoss.json.JSONObject;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.Desktop;
-import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.jsp.JsonUpdateBridge;
+import org.zkoss.zss.model.CellRegion;
+import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zul.Filedownload;
@@ -30,7 +31,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.Writer;
+import java.util.*;
 
 /**
  * Created by cawley on 05/03/15
@@ -51,8 +54,6 @@ public class ZKSpreadsheetCommandController {
 
     @Autowired
     private UserRegionOptionsDAO userRegionOptionsDAO;
-
-    public static final String CHOICES_MAP = "CHOICES_MAP";
 
     @RequestMapping
     public void handleRequest(final HttpServletRequest req, HttpServletResponse resp) throws Exception {
@@ -96,60 +97,66 @@ public class ZKSpreadsheetCommandController {
 
                         Filedownload.save(new AMedia(book.getBookName() + ".xlsx", null, null, file, true));
                     }
-                    boolean permuteTest = true;
-                    if ("PDF".equals(action)) {
-                        Exporter exporter = Exporters.getExporter("pdf");
+
+                    boolean pdfDefault = false;
+
+                    if ("PDFMerge".equals(action)) {
                         Book book = ss.getBook();
-                        if (!permuteTest){ // standard single
-                            File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
-                            FileOutputStream fos = null;
-                            try {
-                                fos = new FileOutputStream(file);
-                                exporter.export(book, file);
-                            } finally {
-                                if (fos != null) {
-                                    fos.close();
-                                }
+                        // Look for the relevant name in the sheet
+                        CellRegion pdfRules = ZKAzquoBookUtils.getCellRegionForSheetAndName(ss.getSelectedSheet(), "az_PDFDispatchNote");
+                        List<String> choices = new ArrayList<String>();
+                        if (pdfRules != null) {
+                            final String stringValue = ss.getSelectedSheet().getInternalSheet().getCell(pdfRules.getRow(), pdfRules.getColumn()).getStringValue();
+                            StringTokenizer st = new StringTokenizer(stringValue, ",");
+                            while (st.hasMoreTokens()) {
+                                choices.add(st.nextToken().trim());
                             }
-                            Filedownload.save(new AMedia(book.getBookName() + ".pdf", "pdf", "application/pdf", file, true));
-                        } else {
+                        }
+
+
+                        if (!choices.isEmpty()) {
                             PDFMergerUtility merger = new PDFMergerUtility();
-                            ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
-                            for (int i = 0; i < 4; i++) {
-                                // similar to reloading in the ZKComposer
-                                final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
-                                for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
-                                    newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
-                                }
-                                zkAzquoBookUtils.populateBook(newBook);
-                                File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
-                                FileOutputStream fos = null;
-                                try {
-                                    fos = new FileOutputStream(file);
-                                    exporter.export(newBook, fos);
-                                } finally {
-                                    if (fos != null) {
-                                        fos.close();
-                                    }
-                                }
-                                merger.addSource(file);
+                            // ok this is where things get interesting, need to work out how to express the logic.
+                            List<String> filesCreated = new ArrayList<String>();
+                            // the filesCreated is added to internally and the other arraylist is just to track choices
+                            resolveAndRenderChoices(filesCreated, book, choices, new ArrayList<String>());
+                            for (String filePath : filesCreated){
+                                merger.addSource(filePath);
                             }
                             File merged = File.createTempFile(Long.toString(System.currentTimeMillis()), "merged");
                             merger.setDestinationFileName(merged.getAbsolutePath());
                             merger.mergeDocuments();
                             Filedownload.save(new AMedia(book.getBookName() + "merged.pdf", "pdf", "application/pdf", merged, true));
+                        } else {
+                            pdfDefault = true;
                         }
+                    }
+
+                    if ("PDF".equals(action) || pdfDefault) {
+                        Exporter exporter = Exporters.getExporter("pdf");
+                        Book book = ss.getBook();
+                        File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
+                        FileOutputStream fos = null;
+                        try {
+                            fos = new FileOutputStream(file);
+                            exporter.export(book, file);
+                        } finally {
+                            if (fos != null) {
+                                fos.close();
+                            }
+                        }
+                        Filedownload.save(new AMedia(book.getBookName() + ".pdf", "pdf", "application/pdf", file, true));
                     }
 
                     if ("Save".equals(action)) {
                         LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-                        OnlineReport onlineReport = onlineReportDAO.findById(loggedInUser.getReportId());
-                        //spreadsheetService.setProvenance(loggedInUser.getDataAccessToken(),loggedInUser.getUser().getName(),"in spreadsheet",onlineReport.getReportName(), loggedInUser.getContext());
+                        // todo - provenance?
                         final Book book = ss.getBook();
+                        OnlineReport onlineReport = onlineReportDAO.findById(loggedInUser.getReportId());
                         for (SName name : book.getInternalBook().getNames()) {
                             if (name.getName().toLowerCase().startsWith(AzquoBook.azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
                                 String region = name.getName().substring(AzquoBook.azDataRegion.length());
-                                    spreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getReportName());
+                                spreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport != null ? onlineReport.getReportName() : "");
                             }
                         }
                     }
@@ -166,6 +173,101 @@ public class ZKSpreadsheetCommandController {
         bridge.process(result);
         Writer w = resp.getWriter();
         w.append(result.toJSONString());
+    }
+
+    private void resolveAndRenderChoices(List<String> toReturn, Book book, List<String> choices, List<String> selectedChoices) throws Exception {
+        // will be nothing to set first time round
+        int index = 0;
+        LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+        for (String selectedChoice : selectedChoices) {
+            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choices.get(index), selectedChoice);
+            index++;
+        }
+        // ok the options are set, run the book to find our choices
+        Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+        for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
+            newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+        }
+        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
+        zkAzquoBookUtils.populateBook(newBook);
+        // here should be the list we're after
+        final List<String> choiceList = getChoiceList(book, choices.get(selectedChoices.size()));
+        if (choiceList.isEmpty()) { // ok if no options on the choice list we want then I guess render this one and return
+            toReturn.add(renderBook(newBook));
+        } else { // ok there's a list
+            if (selectedChoices.size() == choices.size() - 1) { // that means that with this new list we're at the last level, create pdfs for each option
+                for (String selectedChoice : choiceList) {
+                    // previous choices will have been set, just do this last one
+                    spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choices.get(choices.size() - 1), selectedChoice);
+                    // ok ALL the choices are set, run the book
+                    newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+                    for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
+                        newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                    }
+                    zkAzquoBookUtils.populateBook(newBook);
+                    // and render to PDF
+                    toReturn.add(renderBook(newBook));
+                }
+            } else { // not the last level, add this choice and recurse, take it off after, think this workd
+                for (String selectedChoice : choiceList) {
+                    selectedChoices.add(selectedChoice);
+                    resolveAndRenderChoices(toReturn, book, choices, selectedChoices);
+                    selectedChoices.remove(selectedChoices.size() - 1);
+                }
+            }
+        }
+    }
+
+    List<String> getChoiceList(Book book, String choice) {
+        List<String> toReturn = new ArrayList<String>();
+        Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
+        if (validationSheet != null) {
+            int col = 0;
+            SCell cell = validationSheet.getInternalSheet().getCell(0, col);
+            if (cell.isNull()) { // first was null don't bother searching
+                return toReturn;
+            }
+            while (!cell.isNull()) { // go along the top columns looking for the choice we're interested in
+                if (cell.getStringValue().equals(choice + "Choice")) {
+                    break;
+                }
+                col++;
+                cell = validationSheet.getInternalSheet().getCell(0, col);
+            }
+            if (!cell.isNull()) { // then we found it
+                int row = 1;
+                cell = validationSheet.getInternalSheet().getCell(row, col);
+                while (!cell.isNull()) {
+                    toReturn.add(cell.getStringValue());
+                    row++;
+                    cell = validationSheet.getInternalSheet().getCell(row, col);
+                }
+            }
+        }
+        return toReturn;
+    }
+
+    public String renderBook(Book book) throws IOException {
+        Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
+        if (validationSheet != null) {
+            try{
+                book.getInternalBook().deleteSheet(validationSheet.getInternalSheet());
+            } catch (Exception ignored){
+                // todo - bring this up with ZK?
+            }
+        }
+        Exporter exporter = Exporters.getExporter("pdf");
+        File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(file);
+            exporter.export(book, fos);
+        } finally {
+            if (fos != null) {
+                fos.close();
+            }
+        }
+        return file.getAbsolutePath();
     }
 
 }

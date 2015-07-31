@@ -196,13 +196,12 @@ public class ZKAzquoBookUtils {
             for (int colIndex = region.getColumn(); colIndex <= region.getLastColumn(); colIndex++) {
                 SCell cell = sheet.getInternalSheet().getCell(rowIndex, colIndex);
                 // being paraniod?
-                if (cell.getType() == SCell.CellType.FORMULA) {
+                if (cell != null && cell.getType() == SCell.CellType.FORMULA) {
                     //System.out.println("doing the cell thing on " + cell);
                     cell.getFormulaResultType();
                     cell.clearFormulaResultCache();
                 }
                 // I assume non null cell has a non null sting value, do I need to check for null?
-
                 row.add(cell != null ? cell.getStringValue() : null);
             }
         }
@@ -388,7 +387,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public List<SName> getNamesForSheet(Sheet sheet) {
+    public static List<SName> getNamesForSheet(Sheet sheet) {
         List<SName> names = new ArrayList<SName>();
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
             if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(sheet.getSheetName())) {

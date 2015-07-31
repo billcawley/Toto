@@ -243,7 +243,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
         Book book = sheetSelectEvent.getSheet().getBook();
-        zkAzquoBookUtils.addValidation(zkAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),
+        zkAzquoBookUtils.addValidation(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),
                 (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
     }
 
