@@ -19,9 +19,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.model.SName;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by bill on 22/04/14.
@@ -234,6 +237,14 @@ public class OnlineController {
                             book.getInternalBook().setAttribute(REPORT_ID, loggedInUser.getReportId());
                             ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO,userRegionOptionsDAO);
                             model.put("showSave", bookUtils.populateBook(book));
+                            final List<SName> names = book.getInternalBook().getNames();
+                            List<String> pdfMerges = new ArrayList<String>();
+                            for (SName name : names){
+                                if (name.getName().startsWith("az_PDF")){
+                                    pdfMerges.add(name.getName().substring("az_PDF".length()).replace("_", " "));
+                                }
+                            }
+                            model.addAttribute("pdfMerges", pdfMerges);
                             request.setAttribute(BOOK, book);
                             if (loggedInUser.getDatabase() != null) {
                                 model.addAttribute("databaseChosen", loggedInUser.getDatabase().getName());

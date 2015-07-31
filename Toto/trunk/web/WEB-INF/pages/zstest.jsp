@@ -280,6 +280,10 @@
         <button id="pdfButton">PDF</button>
         <button id="inspectButton" onclick="inspectDatabase()">Inspect</button> -->
         <button id="saveData" onclick="postAjax('Save')" <c:if test="${showSave == false}"> style="display:none;" </c:if>>Save Data</button>
+        <c:forEach items="${pdfMerges}" var="pdfMerge">
+            &nbsp;<button id="${pdfMerge}" onclick="postAjax('PDFMerge${pdfMerge}')">PDF : ${pdfMerge}</button>
+        </c:forEach>
+
     </div>
 </div>
 <div style="height: calc(100% - 100px);">

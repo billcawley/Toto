@@ -100,10 +100,10 @@ public class ZKSpreadsheetCommandController {
 
                     boolean pdfDefault = false;
 
-                    if ("PDFMerge".equals(action)) {
+                    if (action != null && action.startsWith("PDFMerge")) {
                         Book book = ss.getBook();
                         // Look for the relevant name in the sheet
-                        CellRegion pdfRules = ZKAzquoBookUtils.getCellRegionForSheetAndName(ss.getSelectedSheet(), "az_PDFDispatchNote");
+                        CellRegion pdfRules = ZKAzquoBookUtils.getCellRegionForSheetAndName(ss.getSelectedSheet(), "az_PDF" + action.substring("PDFMerge".length()).replace(" ", "_")); // just reverse what I did for the UI
                         List<String> choices = new ArrayList<String>();
                         if (pdfRules != null) {
                             final String stringValue = ss.getSelectedSheet().getInternalSheet().getCell(pdfRules.getRow(), pdfRules.getColumn()).getStringValue();
