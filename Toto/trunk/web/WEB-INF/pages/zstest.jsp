@@ -110,28 +110,7 @@
 
 
 
-        .highlightoptions {
-            display:none;
-            width: 160px;
-            height: 200px;
-            position: absolute;
-            z-index: 4;
-            padding: 0px 10px 10px 10px;
-            background-color: #eeeeee;
-            border: 1px solid #444444;
-            top: 100px;
-            left: 100px;
-            line-height: 8px;
-            text-align: center;
-        }
-
-        .highlightoptions a{
-            text-decoration:none;
-            font-weight: bold;
-            color:#444444;
-        }
-
-        .button{
+            .button{
             height:20px;
             width:60px;
             background: transparent url("/images/button.png") no-repeat left top;
@@ -222,21 +201,14 @@
 
 
 
-    function showHighlight() {
-        document.getElementById("highlightoptions").style.display = "block";
-        document.getElementById(dataRegionMenu).style.display = "none";
-    }
-
-    function highlight(days){
-        document.getElementById("editedName").value = "highlight";
-        document.getElementById("editedValue").value = days + "";
-        document.getElementById("opcode").value="setchosen";
-        document.azquoform.submit();
-    }
-
     function openTopMenu(){
-        document.getElementById("topmenubox").style.display="block";
-        topMenuOpening = true;
+        var topmenu = document.getElementById("topmenubox");
+        if (topmenu.style.display == "block"){
+            topmenu.stype.display="none";
+
+        }else {
+            topmenu.style.display = "block";
+        }
     }
 
 
@@ -253,22 +225,7 @@
                 <li><a href="#" onclick="postAjax('PDF');">Download as PDF</a></li>
                 <li><a href="#" onclick="inspectDatabase();">Inspect database</a></li>
                 <li><a href="#" onclick="uploadFile();">Upload file</a></li>
-                <li>
-                    <a href="#"  onclick="showHighlight();">Highlight changed data
-                        (currently $hdays days)
-                    </a>
-                </li>
-            </ul>
-        </div>
-        <div id="highlightoptions" class="highlightoptions">
-            <p>Highlight data changed recently</p>
-            <div class="highlightoption"><a href="#" onclick="highlight(0)">None</a></div>
-            <div class="highlightoption"><a href="#" onclick="highlight(1)">1 day</a></div>
-            <div class="highlightoption"><a href="#" onclick="highlight(7)">7 days</a></div>
-            <div class="highlightoption"><a href="#" onclick="highlight(30)">30 days</a></div>
-            <div class="highlightoption"><a href="#" onclick="highlight(90)">90 days</a></div>
-            <div class="highlightoption"><a href="#" onclick="highlight(365)">1 year</a></div>
-
+               </ul>
         </div>
 
 
