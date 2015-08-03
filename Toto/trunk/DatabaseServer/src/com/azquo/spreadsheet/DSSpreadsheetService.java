@@ -672,6 +672,7 @@ seaports;children   container;children
     private List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
             , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays) throws Exception {
         long track = System.currentTimeMillis();
+        List<List<AzquoCell>> toReturn = sourceData;
         if (sourceData == null || sourceData.isEmpty()) {
             return sourceData;
         }
@@ -706,116 +707,120 @@ seaports;children   container;children
         }
         maxRows = Math.abs(maxRows);
         maxCols = Math.abs(maxCols);
-        if (sortOnColIndex == -1 && sortOnRowIndex == -1 && !sortOnColTotals && !sortOnRowTotals) { // then there's no sorting to do!
-            return sourceData;
-        }
-        // was a null check on sortRow and sortCol but it can't be null, it will be negative if none found
-        final Map<Integer, Double> sortRowTotals = new HashMap<Integer, Double>();
-        final Map<Integer, String> sortRowStrings = new HashMap<Integer, String>();
-        final Map<Integer, Double> sortColumnTotals = new HashMap<Integer, Double>();
-        for (int colNo = 0; colNo < totalCols; colNo++) {
-            sortColumnTotals.put(colNo, 0.00);
-        }
-        boolean rowNumbers = true;
-        int rowNo = 0;
-        // populate the maps that will be sorted
-        for (List<AzquoCell> rowCells : sourceData) {
-            double sortRowTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total. This row total or value is used when sorting by a column.
-            int colNo = 0;
-            sortRowStrings.put(rowNo, "");
-            for (AzquoCell cell : rowCells) {
-                // ok these bits are for sorting. Could put a check on whether a number was actually the result but not so bothered
-                // info for an up/down string sort
-                if (sortOnColIndex == colNo) {// the point here is that sorting on a single column can be non numeric so we support that by jamming the string value in here
-                    sortRowStrings.put(rowNo, cell.getStringValue());
-                    if (cell.getStringValue().length() > 0 && !NumberUtils.isNumber(cell.getStringValue())) {
-                        rowNumbers = false;
+        if (sortOnColIndex != -1 || sortOnRowIndex != -1 || sortOnColTotals || sortOnRowTotals) { // then there's no sorting to do!
+            // was a null check on sortRow and sortCol but it can't be null, it will be negative if none found
+            final Map<Integer, Double> sortRowTotals = new HashMap<Integer, Double>();
+            final Map<Integer, String> sortRowStrings = new HashMap<Integer, String>();
+            final Map<Integer, Double> sortColumnTotals = new HashMap<Integer, Double>();
+            for (int colNo = 0; colNo < totalCols; colNo++) {
+                sortColumnTotals.put(colNo, 0.00);
+            }
+            boolean rowNumbers = true;
+            int rowNo = 0;
+            // populate the maps that will be sorted
+            for (List<AzquoCell> rowCells : sourceData) {
+                double sortRowTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total. This row total or value is used when sorting by a column.
+                int colNo = 0;
+                sortRowStrings.put(rowNo, "");
+                for (AzquoCell cell : rowCells) {
+                    // ok these bits are for sorting. Could put a check on whether a number was actually the result but not so bothered
+                    // info for an up/down string sort
+                    if (sortOnColIndex == colNo) {// the point here is that sorting on a single column can be non numeric so we support that by jamming the string value in here
+                        sortRowStrings.put(rowNo, cell.getStringValue());
+                        if (cell.getStringValue().length() > 0 && !NumberUtils.isNumber(cell.getStringValue())) {
+                            rowNumbers = false;
+                        }
                     }
+                    // info for an up/down number sort, possibly on total values of each row
+                    if ((sortOnRowTotals && !headingsHaveAttributes(cell.getColumnHeadings())) || sortOnColIndex == colNo) { // while running through the cells either add the lot for rowtotals or just the column we care about
+                        sortRowTotal += cell.getDoubleValue();
+                    }
+                    // info for a left/rigt number sort possibly on column totals (left/right string sort not supported)
+                    if ((sortOnColTotals && !headingsHaveAttributes(cell.getRowHeadings())) || sortOnRowIndex == rowNo) {
+                        sortColumnTotals.put(colNo, sortColumnTotals.get(colNo) + cell.getDoubleValue());
+                    }
+                    colNo++;
                 }
-                // info for an up/down number sort, possibly on total values of each row
-                if ((sortOnRowTotals && !headingsHaveAttributes(cell.getColumnHeadings())) || sortOnColIndex == colNo) { // while running through the cells either add the lot for rowtotals or just the column we care about
-                    sortRowTotal += cell.getDoubleValue();
-                }
-                // info for a left/rigt number sort possibly on column totals (left/right string sort not supported)
-                if ((sortOnColTotals && !headingsHaveAttributes(cell.getRowHeadings())) || sortOnRowIndex == rowNo) {
-                    sortColumnTotals.put(colNo, sortColumnTotals.get(colNo) + cell.getDoubleValue());
-                }
-                colNo++;
+                sortRowTotals.put(rowNo++, sortRowTotal);
             }
-            sortRowTotals.put(rowNo++, sortRowTotal);
-        }
-        List<Integer> sortedRows = null;
-        if (sortOnColIndex != -1 || sortOnRowTotals) { // then we need to sort the rows
-            if (rowNumbers) {
-                sortedRows = sortDoubleValues(sortRowTotals, sortRowAsc);
-            } else {
-                sortedRows = sortStringValues(sortRowStrings, sortRowAsc);
+            List<Integer> sortedRows = null;
+            if (sortOnColIndex != -1 || sortOnRowTotals) { // then we need to sort the rows
+                if (rowNumbers) {
+                    sortedRows = sortDoubleValues(sortRowTotals, sortRowAsc);
+                } else {
+                    sortedRows = sortStringValues(sortRowStrings, sortRowAsc);
+                }
             }
-        }
 
-        List<Integer> sortedCols = null;
-        if (sortOnRowIndex != -1 || sortOnColTotals) { // then we need to sort the cols
-            sortedCols = sortDoubleValues(sortColumnTotals, sortColAsc);
-        }
-        // OK pasting and changing what was in format data region, it's only called by this
-        int blockRowCount = 0;
-        List<List<AzquoCell>> sortedCells = new ArrayList<List<AzquoCell>>();
-        // zero passed or set above means don't limit, this feels a little hacky but we need a less than condition on the for loop. Both for limiting and we need this type of loop as the index looks up on the sort
-        if (maxRows == 0) {
-            maxRows = totalRows;
-        }
-        if (maxCols == 0) {
-            maxCols = totalCols;
-        }
-        for (rowNo = 0; rowNo < maxRows; rowNo++) {
-            List<AzquoCell> rowCells = sourceData.get(sortedRows != null ? sortedRows.get(rowNo) : rowNo); // if a sort happened use the row number according to it
-            List<AzquoCell> newRow = new ArrayList<AzquoCell>();
-            if (sortedCols != null) {
-                for (int colNo = 0; colNo < maxCols; colNo++) {
-                    newRow.add(rowCells.get(sortedCols.get(colNo)));
-                }
-            } else { // just jam in the row unchanged
-                newRow = rowCells;
+            List<Integer> sortedCols = null;
+            if (sortOnRowIndex != -1 || sortOnColTotals) { // then we need to sort the cols
+                sortedCols = sortDoubleValues(sortColumnTotals, sortColAsc);
             }
-            sortedCells.add(newRow);
+            // OK pasting and changing what was in format data region, it's only called by this
+            int blockRowCount = 0;
+            List<List<AzquoCell>> sortedCells = new ArrayList<List<AzquoCell>>();
+            // zero passed or set above means don't limit, this feels a little hacky but we need a less than condition on the for loop. Both for limiting and we need this type of loop as the index looks up on the sort
+            if (maxRows == 0) {
+                maxRows = totalRows;
+            }
+            if (maxCols == 0) {
+                maxCols = totalCols;
+            }
+            for (rowNo = 0; rowNo < maxRows; rowNo++) {
+                List<AzquoCell> rowCells = sourceData.get(sortedRows != null ? sortedRows.get(rowNo) : rowNo); // if a sort happened use the row number according to it
+                List<AzquoCell> newRow = new ArrayList<AzquoCell>();
+                if (sortedCols != null) {
+                    for (int colNo = 0; colNo < maxCols; colNo++) {
+                        newRow.add(rowCells.get(sortedCols.get(colNo)));
+                    }
+                } else { // just jam in the row unchanged
+                    newRow = rowCells;
+                }
+                sortedCells.add(newRow);
             /* ok here's a thing . . . I think this code that used to chop didn't take into account row sorting. Should be pretty easy to just do here I think
             to be clear what this is doing is checking for chunks of blank rows and remoiving them from the results - worth noting that this doesn't compensate for the max,
             one could end up with less than the max when there was more data available as the max was loaded then chopped. On the other hand typical max ordering would mean that
             by this point it would all be blank rows anyway */
-            if (++blockRowCount == filterCount) {
-                // we need the equivalent check of blank rows, checking the cell's list of names or values should do this
-                // go back from the end
-                boolean rowsBlank = true;
-                for (int j = 0; j < filterCount; j++) {
-                    List<AzquoCell> rowToCheck = sortedCells.get((sortedCells.size() - 1) - j); // size - 1 for the last index
-                    for (AzquoCell cellToCheck : rowToCheck) {
+                if (++blockRowCount == filterCount) {
+                    // we need the equivalent check of blank rows, checking the cell's list of names or values should do this
+                    // go back from the end
+                    boolean rowsBlank = true;
+                    for (int j = 0; j < filterCount; j++) {
+                        List<AzquoCell> rowToCheck = sortedCells.get((sortedCells.size() - 1) - j); // size - 1 for the last index
+                        for (AzquoCell cellToCheck : rowToCheck) {
                           /*
                         if ((cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames().isEmpty())
                                 || (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty())) {// there were values or names for the call
                             */
-                        //CHECKING VALUES ONLY
-                        if (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {// there were values or names for the call
-                            rowsBlank = false;
+                            //CHECKING VALUES ONLY
+                            if (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {// there were values or names for the call
+                                rowsBlank = false;
+                                break;
+                            }
+                        }
+                        if (!rowsBlank) {
                             break;
                         }
                     }
-                    if (!rowsBlank) {
-                        break;
+                    if (rowsBlank) {
+                        for (int i = 0; i < filterCount; i++) {
+                            sortedCells.remove(sortedCells.size() - 1);
+                        }
                     }
+                    blockRowCount = 0;
                 }
-                if (rowsBlank) {
-                    for (int i = 0; i < filterCount; i++) {
-                        sortedCells.remove(sortedCells.size() - 1);
-                    }
-                }
-                blockRowCount = 0;
+
             }
-            // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
-            if (highlightDays > 0) {
-                for (AzquoCell azquoCell : newRow) {
+            toReturn = sortedCells;
+        }
+
+        // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
+        if (highlightDays > 0) {
+            for (List<AzquoCell> row:toReturn) {
+                for (AzquoCell azquoCell : row) {
                     long age = 10000; // about 30 years old as default
                     ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-                    if (valuesForCell.getValues() != null || !valuesForCell.getValues().isEmpty()) {
+                    if (valuesForCell != null && (valuesForCell.getValues() != null || !valuesForCell.getValues().isEmpty())) {
                         for (Value value : valuesForCell.getValues()) {
                             if (value.getText().length() > 0) {
                                 if (value.getProvenance() == null) {
@@ -836,10 +841,11 @@ seaports;children   container;children
                 }
             }
         }
+
         valueService.printSumStats();
         valueService.printFindForNamesIncludeChildrenStats();
         logger.info("time to execute : " + (System.currentTimeMillis() - track));
-        return sortedCells;
+        return toReturn;
     }
 
     /*
@@ -1060,6 +1066,14 @@ seaports;children   container;children
             } else {  // now, new logic for attributes
                 List<Name> names = new ArrayList<Name>();
                 List<String> attributes = new ArrayList<String>();
+                for (DataRegionHeading heading:headingsForThisCell){
+                    if (heading.getName() != null){
+                        names.add(heading.getName());
+                    }
+                    if (heading.getAttribute()!=null){
+                        attributes.add(heading.getAttribute());
+                    }
+                }
                 listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
                 String attributeResult = valueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked, names, attributes);
                 try {
@@ -1298,9 +1312,16 @@ seaports;children   container;children
                         } else {
                             if (valuesForCell.getNames().size() == 1 && valuesForCell.getAttributeNames().size() == 1) { // allows a simple store
                                 Name toChange = valuesForCell.getNames().get(0);
-                                String attribute = valuesForCell.getAttributeNames().get(0);
-                                logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
-                                toChange.setAttributeWillBePersisted(attribute, cell.getStringValue());
+                                String attribute = valuesForCell.getAttributeNames().get(0).substring(1);//remove the initial '.'
+                                Name attSet = nameService.findByName(azquoMemoryDBConnection,attribute);
+                                if (attSet!= null && attSet.getChildren().size() > 0){
+                                    logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getStringValue() + " within " + attribute);
+                                    Name category = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,cell.getStringValue(), attSet, true);
+                                    category.addChildWillBePersisted(toChange);
+                                }else {
+                                    logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
+                                    toChange.setAttributeWillBePersisted(attribute, cell.getStringValue());
+                                }
                             }
                         }
                     }
