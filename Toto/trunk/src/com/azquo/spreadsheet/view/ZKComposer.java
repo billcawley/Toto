@@ -1,6 +1,8 @@
 package com.azquo.spreadsheet.view;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
@@ -48,11 +50,13 @@ public class ZKComposer extends SelectorComposer<Component> {
     Label instructionsLabel = new Label();
     SpreadsheetService spreadsheetService;
     UserChoiceDAO userChoiceDAO;
+    OnlineReportDAO onlineReportDAO;
     UserRegionOptionsDAO userRegionOptionsDAO;
     AdminService adminService;
 
 
     Popup provenancePopup = null;
+    Popup highlightPopup = null;
 
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
@@ -68,26 +72,36 @@ public class ZKComposer extends SelectorComposer<Component> {
         Menuitem item1 = new Menuitem("Audit");
         item1.setId("provenance");
         Menuitem item2 = new Menuitem("Region Spec");
+        Menuitem item3 = new Menuitem("highlight options");
         item2.setId("regionSpec");
+        item3.setId("highlightOptions");
 //        Menuitem item3 = new Menuitem("Region Options");
 //        item3.setId("regionOptions");
         editPopup.appendChild(item1);
         editPopup.appendChild(item2);
+        editPopup.appendChild(item3);
 
         provenancePopup = new Popup();
         provenancePopup.setId("provenancePopup");
+        provenancePopup.setDraggable("true");
+        provenancePopup.setDroppable("true");
         item1.setPopup(provenancePopup); // I think that will automatically work??
 
+
         Popup instructionsPopup = new Popup();
-        instructionsPopup.setId("instructionsPopup");
+         instructionsPopup.setId("instructionsPopup");
         instructionsLabel.setMultiline(true);
         instructionsPopup.appendChild(instructionsLabel);
+        highlightPopup = new Popup();
+        highlightPopup.setId("highlightPopup");
         item2.setPopup(instructionsPopup);
+        item3.setPopup(highlightPopup);
 
         if (myzss.getFirstChild() != null) {
             myzss.getFirstChild().appendChild(editPopup);
             myzss.getFirstChild().appendChild(provenancePopup);
             myzss.getFirstChild().appendChild(instructionsPopup);
+            myzss.getFirstChild().appendChild(highlightPopup);
         } else { // it took some considerable time to work out this hack
             Ghost g = new Ghost();
             g.setAttribute("zsschildren", "");
@@ -95,6 +109,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             g.appendChild(editPopup);
             g.appendChild(provenancePopup);
             g.appendChild(instructionsPopup);
+            g.appendChild(highlightPopup);
         }
 
 //        myzss.appendChild(editPopup);
@@ -285,11 +300,12 @@ public class ZKComposer extends SelectorComposer<Component> {
                         }else{
                             nextBlock = stringToShow.lastIndexOf("\n", nextBlock) + 1;
                         }
-                        final Toolbarbutton provButton = new Toolbarbutton(stringToShow.substring(0,endLine));
+                        final String provLine = stringToShow.substring(0,endLine);
+                        final Toolbarbutton provButton = new Toolbarbutton(provLine);
                         provButton.addEventListener("onClick",
                                 new EventListener<Event>() {
                                     public void onEvent(Event event) throws Exception {
-                                        Filedownload.save(fullProvenance, "text/csv", "provenance.csv");
+                                        showProvenance(provLine);
                                     }
                                 });
                         provenancePopup.appendChild(provButton);
@@ -325,28 +341,91 @@ public class ZKComposer extends SelectorComposer<Component> {
             final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
             if (sentCells != null) {
                 StringBuilder instructionsText = new StringBuilder();
-                instructionsText.append("Column headings\n\n");
+                instructionsText.append("COLUMN HEADINGS\n\n");
                 for (List<String> row : sentCells.getColHeadingsSource()) { // flatten for the mo
                     for (String cell : row) {
                         instructionsText.append(cell + "\n");
                     }
                 }
-                instructionsText.append("\nRow headings\n\n");
+                instructionsText.append("\nROW HEADINGS\n\n");
                 for (List<String> row : sentCells.getRowHeadingsSource()) { // flatten for the mo
                     for (String cell : row) {
                         instructionsText.append(cell + "\n");
                     }
                 }
-                instructionsText.append("\nContext\n\n");
+                instructionsText.append("\nCONTEXT\n\n");
                 for (List<String> row : sentCells.getContextSource()) { // flatten for the mo
                     for (String cell : row) {
                         instructionsText.append(cell + "\n");
                     }
                 }
                 instructionsLabel.setValue(instructionsText.toString());
+
             }
-        }
+
+            popupChild = highlightPopup.getFirstChild();
+            while (popupChild != null){
+                highlightPopup.removeChild(popupChild);
+                popupChild = highlightPopup.getFirstChild();
+            }
+            int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+            UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+            int highlightDays = 0;
+            if (userRegionOptions!=null) {
+                highlightDays = userRegionOptions.getHighlightDays();
+            }
+            String highlightString = "no highlight";
+            if (highlightDays > 0) highlightString = highlightDays + " days";
+            final String highlightList = "Current highlight is " + highlightString + "\n";
+            Label highlightLabel = new Label();
+            highlightLabel.setMultiline(true);
+            highlightLabel.setValue(highlightList);
+            highlightPopup.appendChild(highlightLabel);
+            addHighlight(highlightPopup, 0, region);
+            addHighlight(highlightPopup, 1, region);
+            addHighlight(highlightPopup, 7, region);
+            addHighlight(highlightPopup, 30, region);
+            addHighlight(highlightPopup, 90, region);
+
+
+          }
         editPopup.open(cellMouseEvent.getClientx() - 130, cellMouseEvent.getClienty());
+    }
+
+    private void showProvenance(String provline){
+        final Book book = myzss.getBook();
+        int inSpreadPos = provline.indexOf("in spreadsheet");
+        if (inSpreadPos < 0) return;
+        int withPos = provline.indexOf(" with ", inSpreadPos);
+        if (withPos < 0) return;
+        String reportName = provline.substring(inSpreadPos + 14, withPos).trim();
+        String paramString = provline.substring(withPos + 6);
+        int equalsPos = paramString.indexOf(" = ");
+        LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+        while (equalsPos > 0){
+            int endParam = paramString.indexOf(";");
+            if (endParam < 0) endParam = paramString.length();
+            String paramName = paramString.substring(0, equalsPos).trim();
+            String paramValue = paramString.substring(equalsPos + 3, endParam).trim();
+            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), paramName, paramValue);
+            paramString = paramString.substring(endParam);
+            if (paramString.length() > 0) paramString = paramString.substring(1);//remove the semicolon
+            equalsPos = paramString.indexOf(" = ");
+        }
+        Session session = Sessions.getCurrent();
+        int databaseId = loggedInUser.getDatabase().getId();
+        ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
+        onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
+        OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
+        if (or == null){
+            or = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
+        }
+        if (or != null){
+            Clients.evalJavaScript("window.open(\"Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName()+ "\")");
+
+        }else{
+            Clients.evalJavaScript("alert(\"the report '" + reportName + "` is no longer available\")");
+        }
     }
 
     private SName getNamedRegionForRowAndColumnSelectedSheet(int row, int col) {
@@ -366,7 +445,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     private String trimString(String stringToShow){
 
         if (stringToShow.length() > 200) {
-            stringToShow = stringToShow.substring(0, 200) + " . . .";
+            stringToShow = stringToShow.substring(0, 200) + " . . .\n";
         }
         return stringToShow;
 
@@ -391,4 +470,66 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
         }
     }
+
+    private void addHighlight(Popup highlightPopup, final int days, final String region){
+
+
+        String hDays = days + " days";
+        if (days==0) hDays = "none";
+        final Toolbarbutton highlightButton = new Toolbarbutton("highlight " + hDays);
+        highlightButton.addEventListener("onClick",
+                new EventListener<Event>() {
+                    public void onEvent(Event event) throws Exception {
+                        showHighlight(days, region);
+                    }
+                });
+        highlightPopup.appendChild(highlightButton);
+        Label highlightLabel = (new Label("\n\n"));
+        highlightLabel.setMultiline(true);
+        highlightPopup.appendChild(highlightLabel);
+
+    }
+
+    private void showHighlight(int days, String region){
+
+
+         Book book = myzss.getBook();
+        boolean reload = false;
+        LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+        int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+        for (SName name : book.getInternalBook().getNames()) {
+            if (name.getName().toLowerCase().startsWith("az_dataregion")) {
+                region = name.getName().substring(13);
+                UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+                if (userRegionOptions == null) {
+                    if (days == 0) break;
+                    userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, "highlight=" + days + "\n");
+                } else {
+                    if (userRegionOptions.getHighlightDays() == days) break;
+                    userRegionOptions.setHighlightDays(days);
+                }
+                userRegionOptionsDAO.store(userRegionOptions);
+                reload = true;
+            }
+        }
+        if (!reload) return;
+        try {
+            // new book from same source
+            final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+            for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
+                newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+            }
+            ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
+            if (zkAzquoBookUtils.populateBook(newBook)) { // check if formulae made saveable data
+                Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
+            }
+            myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+
+    };
 }
+
