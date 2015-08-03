@@ -56,6 +56,13 @@ public class AzquoMemoryDBConnection {
     }
 
     public void setProvenance(final String user,final String method, final String name,final String context)throws Exception{
+        if (this.provenance !=null   && this.provenance.getUser().equals(user) && this.provenance.getMethod().equals(method) && this.provenance.getContext().equals(context)){
+            long elapsed = new Date().getTime() - this.provenance.getTimeStamp().getTime();
+            if (elapsed < 300000) {// five minutes
+                return;
+            }
+
+        }
         this.provenance = new Provenance(getAzquoMemoryDB(),user,new Date(),method, name, context);
     }
 
