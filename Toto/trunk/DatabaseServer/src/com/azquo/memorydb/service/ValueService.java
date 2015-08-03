@@ -735,7 +735,16 @@ public final class ValueService {
                 values.removeAll(extract);
                 String dString = "";
                 if (dValue>0.0){
-                    dString = ("[" + dValue +"]").replace(".0]","]");
+                    dString = dValue + "";
+                    if (dString.endsWith(".0")) dString = dString.replace(".0","");
+                    int dotPos = dString.indexOf(".");
+                    if (dotPos > 3 && dString.length() > dotPos + 3){
+                        dString = dString.substring(0,dotPos + 3);
+                    }
+                    dString = "[" + dString + "]";
+                    if (dString.length() > 6 && dString.indexOf(".") > 0){
+
+                    }
 
                 }
 
