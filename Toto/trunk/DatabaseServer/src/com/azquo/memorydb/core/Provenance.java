@@ -44,7 +44,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
         getAzquoMemoryDB().addProvenanceToDb(this);
     }
 
-    // protected as only to be called by azquo memorydb, populates from JSON
+    // protected as only to be called by azquo memorydb, populates from JSON. If provenance had many instances maybe I'd intern here but I don't think there's much point.
 
     protected Provenance(final AzquoMemoryDB azquoMemoryDB, final int id, String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id);

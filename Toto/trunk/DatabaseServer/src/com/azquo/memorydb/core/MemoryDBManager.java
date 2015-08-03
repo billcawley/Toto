@@ -6,7 +6,7 @@ import java.util.HashMap;
 
 /**
  * Oh-kay. While one can spin up a memory db from spring this is probably not the way to go, this will be the object that
- * reads the entries in the database table and spins up the memory databases according to that
+ * reads the entries in the database table and spins up the memory databases according to that - it will need support for different servers.
  */
 public final class MemoryDBManager {
 

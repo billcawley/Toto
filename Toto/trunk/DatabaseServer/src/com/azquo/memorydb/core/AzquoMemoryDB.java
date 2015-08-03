@@ -177,7 +177,7 @@ public final class AzquoMemoryDB {
     synchronized private void loadData() {
         boolean memoryTrack = "true".equals(azquoProperties.getProperty("memorytrack"));
         if (needsLoading) { // only allow it once!
-            long track = System.currentTimeMillis();
+            long startTime = System.currentTimeMillis();
             System.out.println("loading data for " + getMySQLName());
             // using system.gc before and after loading to get an idea of DB memory overhead
             long marker = System.currentTimeMillis();
@@ -211,7 +211,7 @@ public final class AzquoMemoryDB {
                 AtomicInteger valuesLoaded = new AtomicInteger();
 
                 final int step = 500000; // not so much step now as id range given how we're now querying mysql
-
+                marker = System.currentTimeMillis();
                 // create thread pool, rack up the loading tasks and wait for it to finish. Repeat for name and values.
                 ExecutorService executor = Executors.newFixedThreadPool(loadingThreads);
                 int from = 0;
@@ -224,6 +224,8 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
+                System.out.println("Provenance loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
+                marker = System.currentTimeMillis();
                 executor = Executors.newFixedThreadPool(loadingThreads);
                 from = 0;
                 maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.name.name());
@@ -235,6 +237,8 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
+                System.out.println("Names loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
+                marker = System.currentTimeMillis();
                 executor = Executors.newFixedThreadPool(loadingThreads);
                 from = 0;
                 maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.value.name());
@@ -246,8 +250,10 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
+                System.out.println("Values loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
+                marker = System.currentTimeMillis();
                 // wait until all are loaded before linking
-                System.out.println(provenaceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded,  " + (System.currentTimeMillis() - track) + "ms");
+                System.out.println(provenaceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded in " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
                 if (memoryTrack) {
                     System.out.println("Used Memory after list load:"
                             + (runtime.totalMemory() - runtime.freeMemory()) / mb);
@@ -258,8 +264,7 @@ public final class AzquoMemoryDB {
                     System.out.println("Used Memory after init names :"
                             + (runtime.totalMemory() - runtime.freeMemory()) / mb);
                 }
-                System.out.println("names init, " + (System.currentTimeMillis() - track) + "ms");
-                System.out.println("loaded data for " + getMySQLName());
+                System.out.println("Names init/linked in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
             } catch (Exception e) {
                 logger.error("could not load data for " + getMySQLName() + "!", e);
             }
@@ -276,7 +281,7 @@ public final class AzquoMemoryDB {
                 System.out.println("Total Memory:" + runtime.totalMemory() / mb);
                 System.out.println("Max Memory:" + runtime.maxMemory() / mb);
             }
-            System.out.println("Total load time : " + (System.currentTimeMillis() - track) + "ms");
+            System.out.println("Total load time for " + getMySQLName() + " "  + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
         }
     }
 
@@ -536,20 +541,22 @@ public final class AzquoMemoryDB {
     }
 
     // Sets indexes for names, this needs to be thread safe to support multi threaded name linking
+    // todo - address the uppercase situation with attributes - are they always stored like that? Am I reprocessing strings unnecessarily?
 
     public void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
         // upper and lower seems a bit arbitrary. Hmmm.
-        String lcAttributeValue = attributeValue.toLowerCase().trim();
-        String ucAttributeName = attributeName.toUpperCase().trim();
+        // these interns have been tested as helping memory usage
+        String lcAttributeValue = attributeValue.toLowerCase().trim().intern();
+        String ucAttributeName = attributeName.toUpperCase().trim().intern();
         if (lcAttributeValue.indexOf(Name.QUOTE) >= 0 && !ucAttributeName.equals(Name.CALCULATION)) {
-            lcAttributeValue = lcAttributeValue.replace(Name.QUOTE, '\'');
+            lcAttributeValue = lcAttributeValue.replace(Name.QUOTE, '\'').intern();
         }
 
         // adapted from stack overflow, cheers!
         Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
         if (namesForThisAttribute == null) {
             final Map<String, List<Name>> newNamesForThisAttribute = new ConcurrentHashMap<String, List<Name>>();
-            namesForThisAttribute = nameByAttributeMap.putIfAbsent(ucAttributeName.intern(), newNamesForThisAttribute);// in ConcurrentHashMap this is atomic, thanks Doug!
+            namesForThisAttribute = nameByAttributeMap.putIfAbsent(ucAttributeName, newNamesForThisAttribute);// in ConcurrentHashMap this is atomic, thanks Doug!
             if (namesForThisAttribute == null) {// the new one went in, use it, otherwise use the one that "sneaked" in there in the mean time :)
                 namesForThisAttribute = newNamesForThisAttribute;
             }

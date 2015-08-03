@@ -142,6 +142,7 @@ public class DSDataLoadService {
                     String[] lineValues = line.split("\t", -1);
                     Map<String, String> dataRowMap = new HashMap<String, String>();
                     for (int i = 0; i < lineValues.length; i++) {
+                        // I think this is a fair .intern, assuming from here the strings are used "as is"
                         String val = lineValues[i].intern();
                         // //zap the time element of any dates imported
                         // Date date = valueService.interpretDate(val);
