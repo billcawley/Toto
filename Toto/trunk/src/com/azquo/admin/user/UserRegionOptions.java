@@ -45,6 +45,7 @@ public class UserRegionOptions extends StandardEntity{
     public static String SORTABLE = "sortable";
     public static String ROWLIMIT = "maxrows";
     public static String COLUMNLIMIT = "maxcols";
+    public static String HIGHLIGHT = "highlight";
 
     public UserRegionOptions(int id, int userId, int reportId, String region, String spreadsheetSource) {
         this.id = id;
@@ -69,6 +70,7 @@ public class UserRegionOptions extends StandardEntity{
         this.sortRowAsc = false;
         this.sortColumn = null;
         this.sortColumnAsc = false;
+        this.highlightDays = asNumber(getOptionFromSpreadsheetOptions(HIGHLIGHT, spreadsheetSource));
     }
 
 
