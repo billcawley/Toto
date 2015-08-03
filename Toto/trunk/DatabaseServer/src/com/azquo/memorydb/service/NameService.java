@@ -682,40 +682,67 @@ public final class NameService {
     }
 
 
+    private void dedupeOne(Name name, Set<Name> possibles, Name rubbishBin)throws Exception{
+
+        for (Name child2 : possibles) {
+            if (child2.getId() != name.getId()) {
+                Set<Name> existingChildren = new HashSet<Name>(child2.getChildren());
+                for (Name grandchild : existingChildren) {
+                    name.addChildWillBePersisted(grandchild);
+                    child2.removeFromChildrenWillBePersisted(grandchild);
+                }
+                Set<Name> existingParents = new HashSet<Name>(child2.getParents());
+                for (Name parentInLaw : existingParents) {
+                    parentInLaw.addChildWillBePersisted(name);
+                    parentInLaw.removeFromChildrenWillBePersisted(child2);
+                }
+                name.transferValues(child2);
+                child2.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME,"duplicate-" + child2.getDefaultDisplayName());
+
+                rubbishBin.addChildWillBePersisted(child2);
+
+            }
+        }
+
+    }
+
     private List<Name> deduplicate(AzquoMemoryDBConnection azquoMemoryDBConnection, String formula)throws Exception{
         List<Name> toReturn = new ArrayList<Name>();
         int toPos = formula.indexOf(" to ");
         if (toPos < 0) return toReturn;
         String baseSet = formula.substring(0,toPos);
         String binSet = formula.substring(toPos + 4);
-        Name name = findByName(azquoMemoryDBConnection, baseSet);
-        Name rubbishBin = findOrCreateNameInParent(azquoMemoryDBConnection,binSet,null,false);
-        if (name==null) return toReturn;
+        Name rubbishBin = findOrCreateNameInParent(azquoMemoryDBConnection, binSet, null, false);
+        Collection<Name> names = (Collection<Name>)parseQuery(azquoMemoryDBConnection, baseSet);
+        if (names.size()==0) return toReturn;
+        if (names.size() > 1){
+            Map<String, Set<Name>> nameMap = new HashMap<String, Set<Name>>();
+            for (Name name:names){
+                String nameString = name.getDefaultDisplayName();
+                if (nameMap.get(nameString) == null) {
+                    nameMap.put(nameString, new HashSet<Name>());
+                }
+                nameMap.get(nameString).add(name);
+            }
+            for (String nameString:nameMap.keySet()){
+                if (nameMap.get(nameString).size() > 1){
+                    Set<Name> dups = nameMap.get(nameString);
+                    dedupeOne(dups.iterator().next(), dups, rubbishBin);
+                }
+            }
+            toReturn.add(rubbishBin);
+            return toReturn;
+
+        }
+        Name name = names.iterator().next();
         List<String> languages = new ArrayList<String>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         for (Name child:name.findAllChildren(false)){
             if (!rubbishBin.getChildren().contains(child)) {
                 Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(languages, child.getDefaultDisplayName(), name);
+
                 if (possibles.size() > 1) {
-                    for (Name child2 : possibles) {
-                        if (child2.getId() != child.getId()) {
-                            Set<Name> existingChildren = new HashSet<Name>(child2.getChildren());
-                            for (Name grandchild : existingChildren) {
-                                child.addChildWillBePersisted(grandchild);
-                                child2.removeFromChildrenWillBePersisted(grandchild);
-                            }
-                            Set<Name> existingParents = new HashSet<Name>(child2.getParents());
-                            for (Name parentInLaw : existingParents) {
-                                parentInLaw.addChildWillBePersisted(child);
-                                parentInLaw.removeFromChildrenWillBePersisted(child2);
-                            }
-                            child.transferValues(child2);
-                            child2.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME,"duplicate-" + child2.getDefaultDisplayName());
-
-                            rubbishBin.addChildWillBePersisted(child2);
-
-                        }
-                    }
+                    dedupeOne(child, possibles, rubbishBin);
 
                 }
             }
