@@ -1234,6 +1234,8 @@ seaports;children   container;children
                 } else {
                     toReturn.add(valueService.getDisplayValuesForProvenance(oneUpdate, p));
                     oneUpdate = new HashSet<Value>();
+                    oneUpdate.add(value);
+                    p = value.getProvenance();
                     provdate = value.getProvenance().getTimeStamp();
                 }
             }
@@ -1314,9 +1316,9 @@ seaports;children   container;children
                                 Name toChange = valuesForCell.getNames().get(0);
                                 String attribute = valuesForCell.getAttributeNames().get(0).substring(1);//remove the initial '.'
                                 Name attSet = nameService.findByName(azquoMemoryDBConnection,attribute);
-                                if (attSet!= null && attSet.getChildren().size() > 0){
+                                if(attSet != null && attSet.getChildren().size() > 0 && !azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB(attribute)){
                                     logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getStringValue() + " within " + attribute);
-                                    Name category = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,cell.getStringValue(), attSet, true);
+                                    Name category = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getStringValue(), attSet, true);
                                     category.addChildWillBePersisted(toChange);
                                 }else {
                                     logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
