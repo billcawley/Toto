@@ -32,4 +32,3 @@ public class DisplayValuesForProvenance implements Serializable{
         this.value = value;
     }
 }
-

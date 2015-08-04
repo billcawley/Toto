@@ -7,12 +7,13 @@ import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.apache.commons.lang.math.NumberUtils;
+import org.zkoss.poi.ss.usermodel.*;
 import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
-import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.api.model.*;
+import org.zkoss.zss.api.model.CellStyle;
 import org.zkoss.zss.api.model.Sheet;
-import org.zkoss.zss.api.model.Validation;
 import org.zkoss.zss.model.*;
 
 import java.rmi.RemoteException;
@@ -52,7 +53,7 @@ public class ZKAzquoBookUtils {
         for (UserChoice uc : allChoices) {
             userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
         }
-        String context="";
+        String context = "";
         /* ok there was a thought of running the sheet, copying to a new, running again,
         copying to a new but this can make the logic messy and there has to be a way or resetting the
         original sheet which would be a pain. So I'm going to try my initial thought, set up all the required possibilities
@@ -77,6 +78,19 @@ public class ZKAzquoBookUtils {
 
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
+            /* commenting locked for the mo
+            // run through every cell unlocking to I can later lock. Setting locking on a large selection seems to zap formatting
+            for (int i = 0; i <= sheet.getLastRow(); i++) {
+                for (int j = 0; j < sheet.getLastColumn(i); j++){
+                    Range selection =  Ranges.range(sheet, i,j);
+                    CellStyle oldStyle = selection.getCellStyle();
+                    EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
+                    newStyle.setLocked(false);
+                    selection.setCellStyle(newStyle);
+                }
+            }*/
+
+
             // see if we can impose the user choices on the sheet
             for (String choiceName : userChoices.keySet()) {
                 CellRegion choice = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
@@ -149,12 +163,11 @@ public class ZKAzquoBookUtils {
                                                 cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
                                                 showSave = true;
                                             }
-                                        }else if (sCell.getFormulaResultType() == SCell.CellType.STRING){
+                                        } else if (sCell.getFormulaResultType() == SCell.CellType.STRING){
                                             if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())){
                                                 cellForDisplay.setStringValue(sCell.getStringValue());
                                                 showSave = true;
                                             }
-
                                         }
                                     }
                                 }
@@ -163,6 +176,26 @@ public class ZKAzquoBookUtils {
                     }
                 }
             }
+/* commenting locking for the moment
+            // now protect. Doing so before seems to cause problems
+            Ranges.range(sheet).protectSheet("azquo",
+                    true, //allowSelectingLockedCells
+                    true, //allowSelectingUnlockedCells,
+                    true, //allowFormattingCells
+                    true, //allowFormattingColumns
+                    true, //allowFormattingRows
+                    true, //allowInsertColumns
+                    true, //allowInsertRows
+                    true, //allowInsertingHyperlinks
+                    true, //allowDeletingColumns
+                    true, //boolean allowDeletingRows
+                    true, //allowSorting
+                    true, //allowFiltering
+                    true, //allowUsingPivotTables
+                    true, //drawingObjects
+                    true  //boolean scenarios
+            );*/
+
             // all data for that sheet should be populated
             // snap the charts - currently just top left, do bottom right also?
             for (SChart chart : sheet.getInternalSheet().getCharts()) {
@@ -213,7 +246,6 @@ public class ZKAzquoBookUtils {
         CellRegion columnHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_ColumnHeadings" + region);
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
-
 
         String errorMessage = null;
 
@@ -320,7 +352,7 @@ public class ZKAzquoBookUtils {
                             row++;
                         }
 
-                        // for the moment don't allow user coolum sorting (row heading sorting). SHouldn't be too difficult to add
+                        // for the moment don't allow user coolum sorting (row heading sorting). Shouldn't be too difficult to add
 
 /*                if (sortable != null && sortable.equalsIgnoreCase("all")) { // criteria from azquobook to make row heading sortable
                 }*/
@@ -346,6 +378,14 @@ public class ZKAzquoBookUtils {
                                     if (cellValue.isHighlighted()) {
                                         CellOperationUtil.applyFontColor(Ranges.range(sheet, row, col), "#FF0000");
                                     }
+                                    /* commented for the moment, requires the overall unlock per sheet followed by the protect later
+                                    if (cellValue.isLocked()){
+                                        Range selection =  Ranges.range(sheet, row, col);
+                                        CellStyle oldStyle = selection.getCellStyle();
+                                        EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
+                                        newStyle.setLocked(true);
+                                        selection.setCellStyle(newStyle);
+                                    }*/
                                 }
                             }
                             col++;

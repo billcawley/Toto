@@ -89,7 +89,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
 
         Popup instructionsPopup = new Popup();
-         instructionsPopup.setId("instructionsPopup");
+        instructionsPopup.setId("instructionsPopup");
         instructionsLabel.setMultiline(true);
         instructionsPopup.appendChild(instructionsLabel);
         highlightPopup = new Popup();
@@ -269,7 +269,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         SName name = getNamedRegionForRowAndColumnSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
         if (name != null && name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
             Component popupChild = provenancePopup.getFirstChild();
-            while (popupChild != null){
+            while (popupChild != null) {
                 provenancePopup.removeChild(popupChild);
                 popupChild = provenancePopup.getFirstChild();
             }
@@ -287,20 +287,20 @@ public class ZKComposer extends SelectorComposer<Component> {
                         resolveDisplayValuesForProvenance(0, toShow, displayValuesForProvenance);
                     }
                     String stringToShow = toShow.toString();
-                     stringToShow = stringToShow.replace("<br/>", " ").replace("<b>", "").replace("</b>", "");
-                    final String  fullProvenance = stringToShow;
+                    stringToShow = stringToShow.replace("<br/>", " ").replace("<b>", "").replace("</b>", "");
+                    final String fullProvenance = stringToShow;
                     stringToShow = stringToShow.replace("\t", "....");
                     int spreadPos = stringToShow.indexOf("in spreadsheet");
                     int nextBlock = stringToShow.length();
-                    while  (spreadPos >= 0){
+                    while (spreadPos >= 0) {
                         int endLine = stringToShow.indexOf("\n");
-                        nextBlock = stringToShow.indexOf("in spreadsheet",endLine);
-                        if (nextBlock < 0){
+                        nextBlock = stringToShow.indexOf("in spreadsheet", endLine);
+                        if (nextBlock < 0) {
                             nextBlock = stringToShow.length();
-                        }else{
+                        } else {
                             nextBlock = stringToShow.lastIndexOf("\n", nextBlock) + 1;
                         }
-                        final String provLine = stringToShow.substring(0,endLine);
+                        final String provLine = stringToShow.substring(0, endLine);
                         final Toolbarbutton provButton = new Toolbarbutton(provLine);
                         provButton.addEventListener("onClick",
                                 new EventListener<Event>() {
@@ -337,7 +337,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-              instructionsLabel.setValue("");
+            instructionsLabel.setValue("");
             final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
             if (sentCells != null) {
                 StringBuilder instructionsText = new StringBuilder();
@@ -364,14 +364,14 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
 
             popupChild = highlightPopup.getFirstChild();
-            while (popupChild != null){
+            while (popupChild != null) {
                 highlightPopup.removeChild(popupChild);
                 popupChild = highlightPopup.getFirstChild();
             }
             int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
             UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
             int highlightDays = 0;
-            if (userRegionOptions!=null) {
+            if (userRegionOptions != null) {
                 highlightDays = userRegionOptions.getHighlightDays();
             }
             String highlightString = "no highlight";
@@ -388,11 +388,11 @@ public class ZKComposer extends SelectorComposer<Component> {
             addHighlight(highlightPopup, 90, region);
 
 
-          }
+        }
         editPopup.open(cellMouseEvent.getClientx() - 130, cellMouseEvent.getClienty());
     }
 
-    private void showProvenance(String provline){
+    private void showProvenance(String provline) {
         final Book book = myzss.getBook();
         int inSpreadPos = provline.indexOf("in spreadsheet");
         if (inSpreadPos < 0) return;
@@ -402,7 +402,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         String paramString = provline.substring(withPos + 6);
         int equalsPos = paramString.indexOf(" = ");
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        while (equalsPos > 0){
+        while (equalsPos > 0) {
             int endParam = paramString.indexOf(";");
             if (endParam < 0) endParam = paramString.length();
             String paramName = paramString.substring(0, equalsPos).trim();
@@ -417,13 +417,12 @@ public class ZKComposer extends SelectorComposer<Component> {
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
         onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
-        if (or == null){
+        if (or == null) {
             or = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
         }
-        if (or != null){
-            Clients.evalJavaScript("window.open(\"Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName()+ "\")");
-
-        }else{
+        if (or != null) {
+            Clients.evalJavaScript("window.open(\"Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + "\")");
+        } else {
             Clients.evalJavaScript("alert(\"the report '" + reportName + "` is no longer available\")");
         }
     }
@@ -442,7 +441,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         return null;
     }
 
-    private String trimString(String stringToShow){
+    private String trimString(String stringToShow) {
 
         if (stringToShow.length() > 200) {
             stringToShow = stringToShow.substring(0, 200) + " . . .\n";
@@ -471,11 +470,11 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-    private void addHighlight(Popup highlightPopup, final int days, final String region){
+    private void addHighlight(Popup highlightPopup, final int days, final String region) {
 
 
         String hDays = days + " days";
-        if (days==0) hDays = "none";
+        if (days == 0) hDays = "none";
         final Toolbarbutton highlightButton = new Toolbarbutton("highlight " + hDays);
         highlightButton.addEventListener("onClick",
                 new EventListener<Event>() {
@@ -490,10 +489,10 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     }
 
-    private void showHighlight(int days, String region){
+    private void showHighlight(int days, String region) {
 
 
-         Book book = myzss.getBook();
+        Book book = myzss.getBook();
         boolean reload = false;
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
@@ -529,7 +528,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
 
 
+    }
 
-    };
+    ;
 }
 

@@ -38,6 +38,11 @@ public class DSImportService {
     @Autowired
     private DSSpreadsheetService dsSpreadsheetService;
 
+    /* these are heading clauses. I think heading definitions can be in the data file but Azquo is setup to support data
+    "as it comes". Hence when dealing with a new set of data the key is to set up sets and headings so that the system can load the data.
+    Setting up the sets and headings could be seen as similar to setting up the tables in an SQL database.
+     */
+
     public static final String CHILDOF = "child of ";
     public static final String REMOVEFROM = "remove from ";
     public static final String PARENTOF = "parent of ";
@@ -51,7 +56,6 @@ public class DSImportService {
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
 
-    // a thought, should a line be a different object which has the line stuff (line value etc) and an import heading?
     // To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't
     // do this initially. No problem, initially make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.
     // could of course copy all fields into line but this makes the constructor needlessly complex.
@@ -119,6 +123,7 @@ public class DSImportService {
     }
 
     // going to follow the pattern above, no getters, the final will take care of setting
+    // I'd have liked to make this immutable but existing logic for things like composite mean this may be changed before loading
 
     public class ImportCellWithHeading {
         private final ImmutableImportHeading immutableImportHeading;
