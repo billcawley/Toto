@@ -34,6 +34,7 @@ public final class DatabaseDAO extends StandardDAO<Database> {
     public static final String DATABASETYPE = "database_type";
     public static final String NAMECOUNT = "name_count";
     public static final String VALUECOUNT = "value_count";
+    public static final String DATABASESERVERID = "database_server_id";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(Database database) {
@@ -47,6 +48,7 @@ public final class DatabaseDAO extends StandardDAO<Database> {
         toReturn.put(DATABASETYPE, database.getDatabaseType());
         toReturn.put(NAMECOUNT, database.getNameCount());
         toReturn.put(VALUECOUNT, database.getValueCount());
+        toReturn.put(DATABASESERVERID, database.getDatabaseServerId());
         return toReturn;
     }
 
@@ -63,7 +65,8 @@ public final class DatabaseDAO extends StandardDAO<Database> {
                         , rs.getString(MYSQLNAME)
                         , rs.getString(DATABASETYPE)
                         , rs.getInt(NAMECOUNT)
-                        , rs.getInt(VALUECOUNT));
+                        , rs.getInt(VALUECOUNT)
+                        , rs.getInt(DATABASESERVERID));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

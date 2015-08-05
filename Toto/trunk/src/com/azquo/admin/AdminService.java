@@ -9,13 +9,11 @@ import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.LoginService;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 
 /**
@@ -37,6 +35,8 @@ public class AdminService {
     @Autowired
     private DatabaseDAO databaseDAO;
     @Autowired
+    private DatabaseServerDAO databaseServerDAO;
+    @Autowired
     private UserDAO userDao;
     @Autowired
     private LoginRecordDAO loginRecordDAO;
@@ -50,8 +50,6 @@ public class AdminService {
     private OnlineReportDAO onlineReportDAO;
     @Autowired
     private RMIClient rmiClient;
-    @Autowired
-    private LoginService loginService;
 
     // after uncommenting to use it won't requite the activation email initially
 
@@ -126,12 +124,12 @@ public class AdminService {
 
     public String getBusinessPrefix(final LoggedInUser loggedInUser) {
         Business b = businessDAO.findById(loggedInUser.getUser().getBusinessId());
-        return (b.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "");
+        return b != null ? (b.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "") : null;
     }
 
     // ok in new report/datavase server split creating a database needs distinct bits
 
-    public void createDatabase(final String databaseName, final String databaseType, final LoggedInUser loggedInUser) throws Exception {
+    public void createDatabase(final String databaseName, final String databaseType, final LoggedInUser loggedInUser, DatabaseServer databaseServer) throws Exception {
         if (loggedInUser.getUser().isAdministrator()) {
             Database existing = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), databaseName);
             if (existing != null) {
@@ -139,27 +137,30 @@ public class AdminService {
             }
             final String mysqlName = getSQLDatabaseName(loggedInUser, databaseName);
             final Business b = businessDAO.findById(loggedInUser.getUser().getBusinessId());
-            final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), b.getId(), databaseName, mysqlName, databaseType, 0, 0);
+            if (b == null){
+                throw new Exception("That business does not exist");
+            }
+            final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), b.getId(), databaseName, mysqlName, databaseType, 0, 0, databaseServer.getId());
             databaseDAO.store(database);
             // will be over to the DB side
-            createDatabase(database.getMySQLName());
-            loggedInUser.setDatabase(database);
+            createDatabase(databaseServer, database.getMySQLName());
+            loggedInUser.setDatabaseWithServer(databaseServer, database);
         } else {
             throw new Exception("Only administrators can create databases");
         }
     }
 
     // will be for the database side
-    public void emptyDatabase(String mysqlName) throws Exception {
-        rmiClient.getServerInterface().emptyDatabase(mysqlName);
+    public void emptyDatabase(DatabaseServer databaseServer, Database database) throws Exception {
+        rmiClient.getServerInterface(databaseServer.getIp()).emptyDatabase(database.getMySQLName());
     }
 
-    public void dropDatabase(String mysqlName) throws Exception {
-        rmiClient.getServerInterface().dropDatabase(mysqlName);
+    public void dropDatabase(DatabaseServer databaseServer, Database database) throws Exception {
+        rmiClient.getServerInterface(databaseServer.getIp()).dropDatabase(database.getMySQLName());
     }
 
-    private void createDatabase(final String mysqlName) throws Exception {
-        rmiClient.getServerInterface().createDatabase(mysqlName);
+    private void createDatabase(DatabaseServer databaseServer, final String mysqlName) throws Exception {
+        rmiClient.getServerInterface(databaseServer.getIp()).createDatabase(mysqlName);
     }
 
     public void createUser(final String email
@@ -391,43 +392,42 @@ public class AdminService {
             uploadRecordDAO.removeForDatabaseId(db.getId());
             String mySQLName = db.getMySQLName();
             databaseDAO.removeById(db);
-            dropDatabase(mySQLName);
+            dropDatabase(databaseServerDAO.findById(db.getDatabaseServerId()), db);
         }
     }
 
     public void emptyDatabaseById(LoggedInUser loggedInUser,  int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            String mySQLName = db.getMySQLName();
-            emptyDatabase(mySQLName);
+            emptyDatabase(databaseServerDAO.findById(db.getDatabaseServerId()), db);
         }
     }
 
     public void unloadDatabase(LoggedInUser loggedInUser,  int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            rmiClient.getServerInterface().unloadDatabase(db.getMySQLName());
+            rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).unloadDatabase(db.getMySQLName());
         }
     }
 
     // a little inconsistent but it will be called using a database object, no point looking up again
     public boolean isDatabaseLoaded(LoggedInUser loggedInUser,  Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            return rmiClient.getServerInterface().isDatabaseLoaded(database.getMySQLName());
+            return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).isDatabaseLoaded(database.getMySQLName());
         }
         return false;
     }
 
     public int getNameCount(LoggedInUser loggedInUser,  Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            return rmiClient.getServerInterface().getNameCount(database.getMySQLName());
+            return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getNameCount(database.getMySQLName());
         }
         return 0;
     }
 
     public int getValueCount(LoggedInUser loggedInUser,  Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            return rmiClient.getServerInterface().getValueCount(database.getMySQLName());
+            return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getValueCount(database.getMySQLName());
         }
         return 0;
     }

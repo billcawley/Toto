@@ -2,6 +2,7 @@ package com.azquo.app.magento.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.app.magento.service.DataLoadService;
@@ -56,6 +57,8 @@ public class MagentoController {
     @Autowired
     AdminService adminService;
 
+    @Autowired
+    private DatabaseServerDAO databaseServerDAO;
 
     // we should start using the logger really
     //private static final Logger logger = Logger.getLogger(MagentoController.class);
@@ -96,10 +99,11 @@ public class MagentoController {
                 }
             }
 
-            // need to look at this carefully. I don't think the Logged InCOnnection is how I'd implement this if I started again. On the other hand
             if (op.equals("restart")) {
                 Database existingDb = loggedInUser.getDatabase();
-                adminService.emptyDatabase(loggedInUser.getDatabase().getMySQLName());
+                if (existingDb != null){
+                    adminService.emptyDatabase(databaseServerDAO.findById(existingDb.getDatabaseServerId()), loggedInUser.getDatabase());
+                }
                 //loginService.switchDatabase(loggedInUser, null); // something to do with booting it from memory, not sure if we care?
                 loginService.switchDatabase(loggedInUser, existingDb);
                 return findRequiredTables(loggedInUser, request.getRemoteAddr());

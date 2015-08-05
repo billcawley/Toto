@@ -2,6 +2,8 @@ package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseServer;
+import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -33,6 +35,8 @@ import java.util.List;
 public class ManageDatabasesController {
     @Autowired
     private AdminService adminService;
+    @Autowired
+    private DatabaseServerDAO databaseServerDAO;
     @Autowired
     private SpreadsheetService spreadsheetService;
     @Autowired
@@ -89,6 +93,7 @@ public class ManageDatabasesController {
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "createDatabase", required = false) String createDatabase
             , @RequestParam(value = "databaseType", required = false) String databaseType
+            , @RequestParam(value = "databaseServerId", required = false) String databaseServerId
             , @RequestParam(value = "emptyId", required = false) String emptyId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "unloadId", required = false) String unloadId
@@ -104,8 +109,8 @@ public class ManageDatabasesController {
         } else {
             StringBuilder error = new StringBuilder();
             try {
-                if (createDatabase != null && !createDatabase.isEmpty()) {
-                    adminService.createDatabase(createDatabase, databaseType, loggedInUser);
+                if (createDatabase != null && !createDatabase.isEmpty() && databaseServerId != null && !databaseServerId.isEmpty()) {
+                    adminService.createDatabase(createDatabase, databaseType, loggedInUser, databaseServerDAO.findById(Integer.parseInt(databaseServerId)));
                 }
                 if (emptyId != null && NumberUtils.isNumber(emptyId)) {
                     adminService.emptyDatabaseById(loggedInUser, Integer.parseInt(emptyId));
@@ -153,6 +158,7 @@ public class ManageDatabasesController {
                 model.put("error", exceptionError);
             }
             model.put("databases", displayDataBases);
+            model.put("databaseServers", databaseServerDAO.findAll());
             model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             return "managedatabases";

@@ -1,103 +1,247 @@
--- as a general rule any non linking tables need an auto increment id as defined in admin.entities.StandardEntity
-
+--
+-- Table structure for table `business`
+--
 
 CREATE TABLE IF NOT EXISTS `business` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `start_date` timestamp NOT NULL,
-  `end_date` timestamp NOT NULL,
-  `business_name` varchar(255) NOT NULL,
+  `id` int(11) NOT NULL,
+  `start_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `end_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `business_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `parent_id` int(11) NOT NULL,
-  `business_details` text NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `business_name` (`business_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+  `business_details` text COLLATE utf8_unicode_ci NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `user` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `start_date` timestamp NOT NULL,
-  `end_date` timestamp NOT NULL,
-  `business_id` int(11) NOT NULL,
-  `email` varchar(255) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `status` varchar(255) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `salt` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `database`
+--
 
 CREATE TABLE IF NOT EXISTS `database` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `start_date` timestamp NOT NULL,
-  `end_date` timestamp NOT NULL,
+  `id` int(11) NOT NULL,
+  `start_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `end_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `business_id` int(11) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `mysql_name` varchar(255) NOT NULL,
+  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `mysql_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `database_type` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `name_count` int(11) NOT NULL,
-  `value_count` int(11) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+  `value_count` int(11) NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `permission` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `start_date` timestamp NOT NULL,
-  `end_date` timestamp NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `database_id` int(11) NOT NULL,
-  `read_list` text NOT NULL,
-  `write_list` text NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+-- --------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS `upload_record` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `date` timestamp NOT NULL,
-  `business_id` int(11) NOT NULL,
-  `database_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `file_name` varchar (255) NOT NULL,
-  `file_type` text NOT NULL,
-  `comments` text NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+--
+-- Table structure for table `database_server`
+--
+
+CREATE TABLE IF NOT EXISTS `database_server` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ip` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sftp_url` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `login_record`
+--
 
 CREATE TABLE IF NOT EXISTS `login_record` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `database_id` int(11) NOT NULL,
-  `time` timestamp NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB AUTO_INCREMENT=594 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `open_database` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `database_id` int(11) NOT NULL,
-  `open` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `close` timestamp,
-  PRIMARY KEY (`id`),
-  KEY `close` (`close`),
-  KEY `database_id` (`database_id`,`close`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+-- --------------------------------------------------------
 
+--
+-- Table structure for table `online_report`
+--
 
 CREATE TABLE IF NOT EXISTS `online_report` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
+  `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `business_id` int(11) NOT NULL,
   `database_id` int(11) NOT NULL,
-  `report_name`  varchar(255) NOT NULL,
-  `user_status` varchar(255) NOT NULL,
-  `filename` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `business_id` (`business_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+  `report_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `database_type` varchar(255) COLLATE utf8_unicode_ci DEFAULT '',
+  `report_category` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `user_status` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `filename` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `explanation` text COLLATE utf8_unicode_ci NOT NULL,
+  `renderer` int(11) NOT NULL DEFAULT '0',
+  `active` tinyint(1) NOT NULL DEFAULT '1'
+) ENGINE=InnoDB AUTO_INCREMENT=193 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `user_choices` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `open_database`
+--
+
+CREATE TABLE IF NOT EXISTS `open_database` (
+  `id` int(11) NOT NULL,
+  `database_id` int(11) NOT NULL,
+  `open` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `close` datetime NOT NULL DEFAULT '0000-00-00 00:00:00'
+) ENGINE=InnoDB AUTO_INCREMENT=1180 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `permission`
+--
+
+CREATE TABLE IF NOT EXISTS `permission` (
+  `id` int(11) NOT NULL,
+  `start_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `end_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `user_id` int(11) NOT NULL,
+  `database_id` int(11) NOT NULL,
+  `read_list` text COLLATE utf8_unicode_ci NOT NULL,
+  `write_list` text COLLATE utf8_unicode_ci NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `upload_record`
+--
+
+CREATE TABLE IF NOT EXISTS `upload_record` (
+  `id` int(11) NOT NULL,
+  `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `business_id` int(11) NOT NULL,
+  `database_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `file_type` text COLLATE utf8_unicode_ci NOT NULL,
+  `comments` text COLLATE utf8_unicode_ci NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=92 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user`
+--
+
+CREATE TABLE IF NOT EXISTS `user` (
+  `id` int(11) NOT NULL,
+  `start_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `end_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `business_id` int(11) NOT NULL,
+  `email` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `status` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `password` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `salt` varchar(255) COLLATE utf8_unicode_ci NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=100 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_choice`
+--
+
+CREATE TABLE IF NOT EXISTS `user_choice` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `choice_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `choice_value` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_region_options`
+--
+
+CREATE TABLE IF NOT EXISTS `user_region_options` (
+  `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `report_id` int(11) NOT NULL,
-  `choice_name` varchar(255) NOT NULL,
-  `choice_value` varchar(255) NOT NULL,
-  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+  `region` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `hide_rows` int(4) NOT NULL DEFAULT '0',
+  `sortable` tinyint(1) NOT NULL DEFAULT '0',
+  `row_limit` int(4) NOT NULL DEFAULT '0',
+  `column_limit` int(4) NOT NULL DEFAULT '0',
+  `sort_row` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `sort_row_asc` tinyint(1) NOT NULL DEFAULT '0',
+  `sort_column` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `sort_column_asc` tinyint(1) NOT NULL DEFAULT '0',
+  `highlight_days` int(3) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `business`
+--
+ALTER TABLE `business`
+ADD PRIMARY KEY (`id`), ADD UNIQUE KEY `business_name` (`business_name`);
+
+--
+-- Indexes for table `database`
+--
+ALTER TABLE `database`
+ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `database_server`
+--
+ALTER TABLE `database_server`
+ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `login_record`
+--
+ALTER TABLE `login_record`
+ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `online_report`
+--
+ALTER TABLE `online_report`
+ADD PRIMARY KEY (`id`), ADD KEY `business_id` (`business_id`);
+
+--
+-- Indexes for table `open_database`
+--
+ALTER TABLE `open_database`
+ADD PRIMARY KEY (`id`), ADD KEY `close` (`close`), ADD KEY `database_id` (`database_id`,`close`);
+
+--
+-- Indexes for table `permission`
+--
+ALTER TABLE `permission`
+ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `upload_record`
+--
+ALTER TABLE `upload_record`
+ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `user`
+--
+ALTER TABLE `user`
+ADD PRIMARY KEY (`id`), ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indexes for table `user_choice`
+--
+ALTER TABLE `user_choice`
+ADD PRIMARY KEY (`id`), ADD UNIQUE KEY `duplicatechecker` (`user_id`,`choice_name`), ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `user_region_options`
+--
+ALTER TABLE `user_region_options`
+ADD PRIMARY KEY (`id`);

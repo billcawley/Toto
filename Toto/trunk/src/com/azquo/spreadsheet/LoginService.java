@@ -27,6 +27,8 @@ public class LoginService {
     @Autowired
     private LoginRecordDAO loginRecordDAO;
     @Autowired
+    private DatabaseServerDAO databaseServerDao;
+    @Autowired
     private DatabaseDAO databaseDAO;
     @Autowired
     private PermissionDAO permissionDao;
@@ -86,7 +88,11 @@ public class LoginService {
         if (database != null) {
             permission = permissionDao.findByBusinessUserAndDatabase(user, database);
         }
-        LoggedInUser loggedInUser = new LoggedInUser(user,database, permission != null ? permission.getReadList() : null, permission != null ? permission.getWriteList() : null);
+        DatabaseServer databaseServer = null;
+        if (database != null){
+            databaseServer = databaseServerDao.findById(database.getDatabaseServerId());
+        }
+        LoggedInUser loggedInUser = new LoggedInUser(user,databaseServer,database, permission != null ? permission.getReadList() : null, permission != null ? permission.getWriteList() : null);
         loginRecordDAO.store(new LoginRecord(0, user.getId(), database != null ? database.getId() : 0, new Date()));
         // I zapped something to do with anonymising here, don't know if it's still relevant
         return loggedInUser;
@@ -129,7 +135,11 @@ public class LoginService {
     // we used to record open counts, this will need to be dealt with server side
 
     public void switchDatabase(LoggedInUser loggedInUser, Database db) throws Exception {
-        loggedInUser.setDatabase(db);
+        DatabaseServer databaseServer = null;
+        if (db != null){
+            databaseServer = databaseServerDao.findById(db.getDatabaseServerId());
+        }
+        loggedInUser.setDatabaseWithServer(databaseServer, db);
     }
 
 }

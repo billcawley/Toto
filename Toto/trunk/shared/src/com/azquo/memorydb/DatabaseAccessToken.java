@@ -11,17 +11,23 @@ import java.util.List;
  */
 public class DatabaseAccessToken implements Serializable {
 
+    private final String serverIp; // not strictly part of the access token but I think it should probably be in here
     private final String databaseMySQLName;
     private final String readPermissions;
     private final String writePermissions;
     private final List<String> languages;
 //    private final int sessionId;// optional, it might be useful to jam the client side session id in here, certainly useful for jstree initially
 
-    public DatabaseAccessToken(String databaseMySQLName, String readPermissions, String writePermissions, List<String> languages) {
+    public DatabaseAccessToken(String serverIp, String databaseMySQLName, String readPermissions, String writePermissions, List<String> languages) {
+        this.serverIp = serverIp;
         this.databaseMySQLName = databaseMySQLName;
         this.readPermissions = readPermissions;
         this.writePermissions = writePermissions;
         this.languages = languages;
+    }
+
+    public String getServerIp() {
+        return serverIp;
     }
 
     public String getDatabaseMySQLName() {
@@ -43,7 +49,8 @@ public class DatabaseAccessToken implements Serializable {
     @Override
     public String toString() {
         return "DatabaseAccessToken{" +
-                "databaseMySQLName='" + databaseMySQLName + '\'' +
+                "serverIp='" + serverIp + '\'' +
+                ", databaseMySQLName='" + databaseMySQLName + '\'' +
                 ", readPermissions='" + readPermissions + '\'' +
                 ", writePermissions='" + writePermissions + '\'' +
                 ", languages=" + languages +

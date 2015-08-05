@@ -1,12 +1,12 @@
 package com.azquo.dataimport;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.database.UploadRecord;
 import com.azquo.admin.database.UploadRecordDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
-import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -15,6 +15,11 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.view.AzquoBook;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemOptions;
+import org.apache.commons.vfs2.Selectors;
+import org.apache.commons.vfs2.impl.StandardFileSystemManager;
+import org.apache.commons.vfs2.provider.sftp.SftpFileSystemConfigBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
@@ -31,7 +36,6 @@ import java.util.zip.ZipInputStream;
  */
 
 public final class ImportService {
-
 
 
     //private static final String reportPath = "/home/bill/apache-tomcat-7.0.47/dataimport/";
@@ -53,15 +57,16 @@ public final class ImportService {
     @Autowired
     private UploadRecordDAO uploadRecordDAO;
 
-    public void importTheFile(LoggedInUser loggedInUser, String fileName,  String filePath) throws Exception {
+    public void importTheFile(LoggedInUser loggedInUser, String fileName, String filePath) throws Exception {
         //used for Magento importing (data  - not report templates)
         List<String> languages = new ArrayList<String>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         importTheFile(loggedInUser, fileName, "", filePath, "", true, languages);
     }
-    public void importTheFile(LoggedInUser loggedInUser, String fileName, String useType, String filePath, String fileType, boolean skipBase64, List<String> attributeNames) throws Exception{
-       String error = "";
-           importTheFile1(loggedInUser, fileName, useType, filePath, fileType, skipBase64, attributeNames);
+
+    public void importTheFile(LoggedInUser loggedInUser, String fileName, String useType, String filePath, String fileType, boolean skipBase64, List<String> attributeNames) throws Exception {
+        String error = "";
+        importTheFile1(loggedInUser, fileName, useType, filePath, fileType, skipBase64, attributeNames);
         UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, "", error);//;should record the error????
         uploadRecordDAO.store(uploadRecord);
     }
@@ -71,13 +76,12 @@ public final class ImportService {
             throws Exception {
 
 
-
         //fileType is now always the first word of the spreadsheet/dataimport file name
-        if (fileType.length()==0){
+        if (fileType.length() == 0) {
             int slashpos = filePath.lastIndexOf("/");
-            if (slashpos > 0){
+            if (slashpos > 0) {
                 int dotPos = filePath.indexOf(".", slashpos);
-                if (dotPos > 0){
+                if (dotPos > 0) {
                     fileType = filePath.substring(slashpos + 1, dotPos);
                 }
             }
@@ -112,12 +116,12 @@ public final class ImportService {
             }
         }
         if (fileName.contains(".xls")) {
-            readBook(loggedInUser, fileName, tempFile, attributeNames, (useType!=null && useType.length() > 0));
+            readBook(loggedInUser, fileName, tempFile, attributeNames, (useType != null && useType.length() > 0));
         } else {
             if (tempFile.length() > 0) {
                 filePath = tempFile;
             }
-            readPreparedFile(loggedInUser.getDataAccessToken(), filePath, fileType, attributeNames);
+            readPreparedFile(loggedInUser, filePath, fileType, attributeNames);
         }
     }
 
@@ -228,6 +232,7 @@ public final class ImportService {
 
 
     private static byte[] codes = new byte[256];
+
     static {
         for (int i = 0; i < 256; i++) {
             codes[i] = -1;
@@ -291,14 +296,14 @@ public final class ImportService {
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = 0;
         String pathName = reportType;
-        if (pathName.length()== 0) {
+        if (pathName.length() == 0) {
             databaseId = loggedInUser.getDatabase().getId();
             pathName = loggedInUser.getDatabase().getMySQLName();
         }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
-        if (or==null){
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName,"","", "", fileName, "", "", OnlineReport.AZQUO_BOOK,  true); // default to old for the moment
-        }else{
+        if (or == null) {
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName, "", "", "", fileName, "", "", OnlineReport.AZQUO_BOOK, true); // default to old for the moment
+        } else {
             or.setActive(false);
             onlineReportDAO.store(or);
         }
@@ -321,8 +326,8 @@ public final class ImportService {
         String reportName = azquoBook.getReportName();
         if (reportName != null) {
             String reportType = "";
-            if (useType){
-                reportType=loggedInUser.getDatabaseType();
+            if (useType) {
+                reportType = loggedInUser.getDatabaseType();
             }
             uploadReport(loggedInUser, azquoBook, fileName, reportName, reportType);
             return;
@@ -340,10 +345,62 @@ public final class ImportService {
     private void readSheet(LoggedInUser loggedInUser, AzquoBook azquoBook, final String tempFileName, final int sheetNo, List<String> attributeNames) throws Exception {
         String tempName = azquoBook.convertSheetToCSV(tempFileName, sheetNo);
         String fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
-        readPreparedFile(loggedInUser.getDataAccessToken(), tempName, fileType, attributeNames);
+        readPreparedFile(loggedInUser, tempName, fileType, attributeNames);
     }
 
-    public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
-        rmiClient.getServerInterface().readPreparedFile(databaseAccessToken,filePath,fileType,attributeNames);
+    static String LOCALIP = "127.0.0.1";
+
+    public void readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileType, List<String> attributeNames) throws Exception {
+        // right - here we're going to have to move the file if the DB server is not local.
+        DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
+        DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+        if (databaseServer.getIp().equals(LOCALIP)){
+            rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames);
+        } else {
+            // move it
+            String remoteFilePath = copyFileToDatabaseServer(filePath, databaseServer.getSftpUrl());
+            rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, remoteFilePath, fileType, attributeNames);
+        }
     }
+
+
+    // modified internet example
+    public String copyFileToDatabaseServer(String filePath, String sftpDestination) {
+        StandardFileSystemManager manager = new StandardFileSystemManager();
+        String toReturn = null;
+        try {
+            File file = new File(filePath);
+            if (!file.exists()){
+                throw new RuntimeException("Error. Local file not found");
+            }
+            //Initializes the file manager
+            manager.init();
+            //Setup our SFTP configuration
+            FileSystemOptions opts = new FileSystemOptions();
+            SftpFileSystemConfigBuilder.getInstance().setStrictHostKeyChecking(opts, "no");
+            SftpFileSystemConfigBuilder.getInstance().setUserDirIsRoot(opts, false);
+            SftpFileSystemConfigBuilder.getInstance().setTimeout(opts, 10000);
+            String fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
+            //Create the SFTP URI using the host name, userid, password,  remote path and file name
+            String sftpUri = sftpDestination + fileName;
+            // Create local file object
+            FileObject localFile = manager.resolveFile(file.getAbsolutePath());
+            // Create remote file object
+            FileObject remoteFile = manager.resolveFile(sftpUri, opts);
+            // Copy local file to sftp server
+            remoteFile.copyFrom(localFile, Selectors.SELECT_SELF);
+            System.out.println("File upload successful");
+            int atPoint = sftpDestination.indexOf("@");
+            toReturn = sftpDestination.substring(sftpDestination.indexOf("/", atPoint)) + fileName; // should be the path of the file on the remote machine.
+            // I'm going to zap the file now
+            localFile.delete();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            manager.close();
+        }
+        return toReturn;
+    }
+
 }

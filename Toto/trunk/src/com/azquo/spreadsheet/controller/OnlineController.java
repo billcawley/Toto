@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.database.Database;
@@ -45,6 +46,8 @@ public class OnlineController {
     private OnlineReportDAO onlineReportDAO;
     @Autowired
     private DatabaseDAO databaseDAO;
+    @Autowired
+    private DatabaseServerDAO databaseServerDAO;
     @Autowired
     private UserChoiceDAO userChoiceDAO;
     @Autowired
@@ -126,7 +129,7 @@ public class OnlineController {
                             if (db==null && database!=null && database.length() > 0){
                                 db = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
                                 if (db != null){
-                                    loggedInUser.setDatabase(db);
+                                    loggedInUser.setDatabaseWithServer(databaseServerDAO.findById(db.getDatabaseServerId()), db);
                                 }
                             }
                             onlineReport.setPathname(onlineReport.getDatabaseType());

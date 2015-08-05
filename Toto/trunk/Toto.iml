@@ -54,6 +54,8 @@
     <orderEntry type="module" module-name="shared" />
     <orderEntry type="library" name="org.apache.servicemix.bundles:org.apache.servicemix.bundles.spring-context-support:4.1.6.RELEASE_1" level="project" />
     <orderEntry type="library" name="org.apache.pdfbox:pdfbox:1.8.10" level="project" />
+    <orderEntry type="library" name="org.apache.commons:commons-vfs2:2.0" level="project" />
+    <orderEntry type="library" name="com.jcraft:jsch:0.1.50" level="project" />
   </component>
   <component name="org.twodividedbyzero.idea.findbugs">
     <option name="_basePreferences">

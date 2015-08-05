@@ -15,19 +15,19 @@ public final class DataLoadService {
     RMIClient rmiClient;
 
     public String findLastUpdate(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
-        return rmiClient.getServerInterface().findLastUpdate(databaseAccessToken, remoteAddress);
+        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).findLastUpdate(databaseAccessToken, remoteAddress);
     }
 
     public boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws Exception{
-        return rmiClient.getServerInterface().magentoDBNeedsSettingUp(databaseAccessToken);
+        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).magentoDBNeedsSettingUp(databaseAccessToken);
     }
 
 
     public String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
-        return rmiClient.getServerInterface().findRequiredTables(databaseAccessToken, remoteAddress);
+        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).findRequiredTables(databaseAccessToken, remoteAddress);
     }
 
     public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws Exception {
-        rmiClient.getServerInterface().loadData(databaseAccessToken, filePath, remoteAddress);
+        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).loadData(databaseAccessToken, filePath, remoteAddress);
     }
 }

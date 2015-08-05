@@ -21,6 +21,7 @@ public final class Database extends StandardEntity {
     String databaseType;
     int nameCount;
     int valueCount;
+    int databaseServerId;
 
     public Database(int id, LocalDateTime startDate
             , LocalDateTime endDate
@@ -29,7 +30,9 @@ public final class Database extends StandardEntity {
             , String mySQLName
             , String databaseType
             , int nameCount
-            , int valueCount) {
+            , int valueCount
+            , int databaseServerId
+                    ) {
         this.id = id;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -39,6 +42,7 @@ public final class Database extends StandardEntity {
         this.databaseType = databaseType;
         this.nameCount = nameCount;
         this.valueCount = valueCount;
+        this.databaseServerId = databaseServerId;
     }
 
     public LocalDateTime getStartDate() {
@@ -100,10 +104,6 @@ public final class Database extends StandardEntity {
         this.databaseType = databaseType;
     }
 
-
-
-
-
     public int getNameCount() {
         return nameCount;
     }
@@ -120,6 +120,10 @@ public final class Database extends StandardEntity {
         this.valueCount = valueCount;
     }
 
+    public int getDatabaseServerId() {
+        return databaseServerId;
+    }
+
     @Override
     public String toString() {
         return "Database{" +
@@ -132,6 +136,7 @@ public final class Database extends StandardEntity {
                 ", databaseType='" + databaseType + '\'' +
                 ", nameCount=" + nameCount +
                 ", valueCount=" + valueCount +
+                ", databaseServerId=" + databaseServerId +
                 '}';
     }
 }

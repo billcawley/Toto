@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet;
 
 import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.user.User;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -32,13 +33,16 @@ public class LoggedInUser {
 
     private Database database;
 
+    // I'm a little unsure about this being separate but it will work for the moment
+    private DatabaseServer databaseServer;
+
     private String readPermissions;
     private String writePermissions;
     private String context;
 
     private static final String defaultRegion = "default-region";
 
-    protected LoggedInUser(final User user, Database database, String readPermissions, String writePermissions) {
+    protected LoggedInUser(final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions) {
         this.user = user;
         reportId = 0;
         sentCellsMaps = new HashMap<String, CellsAndHeadingsForDisplay>();
@@ -47,6 +51,7 @@ public class LoggedInUser {
         languages = new ArrayList<String>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         this.database = database;
+        this.databaseServer = databaseServer;
 
         this.readPermissions = readPermissions;
         this.writePermissions = writePermissions;
@@ -108,7 +113,8 @@ public class LoggedInUser {
         return database;
     }
 
-    public void setDatabase(Database database) {
+    public void setDatabaseWithServer(DatabaseServer databaseServer, Database database) {
+        this.databaseServer = databaseServer;
         this.database = database;
     }
 
@@ -136,10 +142,11 @@ public class LoggedInUser {
         this.context = context;
     }
 
-
-
+    public DatabaseServer getDatabaseServer() {
+        return databaseServer;
+    }
 
     public DatabaseAccessToken getDataAccessToken(){
-        return new DatabaseAccessToken(database.getMySQLName(), readPermissions,writePermissions,languages);
+        return new DatabaseAccessToken(databaseServer.getIp(), database.getMySQLName(), readPermissions,writePermissions,languages);
     }
 }

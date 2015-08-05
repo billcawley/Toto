@@ -17,7 +17,13 @@
 <br/>${error}
 <table>
   <tr>
-  <form action="/api/ManageDatabases" method="post"><td>New Database</td><td><input name="createDatabase"/></td><td><input name="databaseType"/></td><td><input type="submit" name="Create Database" value="Create Database"/></td></form>
+  <form action="/api/ManageDatabases" method="post"><td>New Database</td><td><input name="createDatabase"/></td><td><input name="databaseType"/></td><td>
+      <select name="databaseServerId">
+      <c:forEach items="${databaseServers}" var="databaseServer">
+          <option value="${databaseServer.id}">${databaseServer.name} - ${databaseServer.ip}</option>
+      </c:forEach>
+  </select><input type="submit" name="Create Database" value="Create Database"/>
+  </td></form>
   </tr>
   <form action="/api/ManageDatabases" method="post">
     <tr>

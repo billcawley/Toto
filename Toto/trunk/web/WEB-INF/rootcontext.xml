@@ -59,6 +59,7 @@
     <bean name="userChoiceDao" class="com.azquo.admin.user.UserChoiceDAO"/>
     <bean name="userRegionOptionsDao" class="com.azquo.admin.user.UserRegionOptionsDAO"/>
     <bean name="databaseDao" class="com.azquo.admin.database.DatabaseDAO"/>
+    <bean name="databaseServerDao" class="com.azquo.admin.database.DatabaseServerDAO"/>
     <bean name="loginRecordDao" class="com.azquo.admin.user.LoginRecordDAO"/>
     <bean name="accessDao" class="com.azquo.admin.user.PermissionDAO"/>
     <bean name="loginService" class="com.azquo.spreadsheet.LoginService"/>
