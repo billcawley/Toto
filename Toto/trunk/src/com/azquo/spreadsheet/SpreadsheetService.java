@@ -10,8 +10,8 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
-import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
@@ -425,7 +425,7 @@ public class SpreadsheetService {
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
-    public List<DisplayValuesForProvenance> getDisplayValuesForProvenance(LoggedInUser loggedInUser, String region, int rowInt, int colInt) throws Exception {
+    public List<TreeNode> getTreeNode(LoggedInUser loggedInUser, String region, int rowInt, int colInt) throws Exception {
         final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
         if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
@@ -434,8 +434,15 @@ public class SpreadsheetService {
                     , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                     , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol());
         }
-        return new ArrayList<DisplayValuesForProvenance>(); // maybe "not found"?
+        return new ArrayList<TreeNode>(); // maybe "not found"?
     }
+
+
+    public TreeNode getTreeNode(LoggedInUser loggedInUser, String values) throws Exception {
+
+             return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).formatJstreeDataForOutput(loggedInUser.getDataAccessToken(), values);
+     }
+
 
     public void saveData(LoggedInUser loggedInUser, String region, String reportName) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
@@ -443,6 +450,28 @@ public class SpreadsheetService {
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
             rmiClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext());
         }
+    }
+
+    public String setChoices(LoggedInUser loggedInUser, String provline){
+         int inSpreadPos = provline.indexOf("in spreadsheet");
+        if (inSpreadPos < 0) return null;
+        int withPos = provline.indexOf(" with ", inSpreadPos);
+        if (withPos < 0) return null;
+        String reportName = provline.substring(inSpreadPos + 14, withPos).trim();
+        String paramString = provline.substring(withPos + 6);
+        int equalsPos = paramString.indexOf(" = ");
+        while (equalsPos > 0){
+            int endParam = paramString.indexOf(";");
+            if (endParam < 0) endParam = paramString.length();
+            String paramName = paramString.substring(0, equalsPos).trim();
+            String paramValue = paramString.substring(equalsPos + 3, endParam).trim();
+            setUserChoice(loggedInUser.getUser().getId(), paramName, paramValue);
+            paramString = paramString.substring(endParam);
+            if (paramString.length() > 0) paramString = paramString.substring(1);//remove the semicolon
+            equalsPos = paramString.indexOf(" = ");
+        }
+        return reportName;
+
     }
 
 }
