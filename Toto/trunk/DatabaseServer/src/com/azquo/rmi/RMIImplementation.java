@@ -3,11 +3,11 @@ package com.azquo.rmi;
 import com.azquo.app.magento.DSDataLoadService;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.MemoryDBManager;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
-import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 
 import java.rmi.RemoteException;
@@ -140,9 +140,20 @@ public class RMIImplementation implements RMIInterface {
             throw new RemoteException("Database Server Exception", e);
         }
     }
- 
+
+
+    public TreeNode formatJstreeDataForOutput(DatabaseAccessToken databaseAccessToken, String jsTreeString) throws RemoteException {
+        try {
+              return dsSpreadsheetService.getDataList(databaseAccessToken, jsTreeService.interpretNameString(databaseAccessToken,jsTreeString));
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+
+
     @Override
-    public List<DisplayValuesForProvenance> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws RemoteException {
+    public List<TreeNode> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws RemoteException {
         try {
             return dsSpreadsheetService.getDataRegionProvenance(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol);
         } catch (Exception e) {
@@ -195,14 +206,6 @@ public class RMIImplementation implements RMIInterface {
         }
     }
 
-    @Override
-    public void setProvenance (DatabaseAccessToken databaseAccessToken, String user, String method, String  name, String context)throws RemoteException {
-        try {
-            dsSpreadsheetService.setProvenance(databaseAccessToken, user, method, name, context);
-        } catch (Exception e) {
-            throw new RemoteException("Database server exception", e);
-        }
-    }
 
        //memoryDBManager.getAzquoMemoryDB(databaseAccessT)
 }

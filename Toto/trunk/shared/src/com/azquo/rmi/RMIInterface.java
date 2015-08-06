@@ -1,7 +1,7 @@
 package com.azquo.rmi;
 
 import com.azquo.memorydb.DatabaseAccessToken;
-import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
+import com.azquo.memorydb.TreeNode;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 
 import java.rmi.Remote;
@@ -41,8 +41,10 @@ public interface RMIInterface extends Remote {
 
 
 
-    List<DisplayValuesForProvenance> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+    List<TreeNode> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws RemoteException;
+
+    TreeNode formatJstreeDataForOutput(DatabaseAccessToken databaseAccessToken, String nameString) throws RemoteException;
 
     boolean isDatabaseLoaded(String mysqlName) throws RemoteException;
 
@@ -54,6 +56,5 @@ public interface RMIInterface extends Remote {
 
     void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws RemoteException;
 
-    void  setProvenance(DatabaseAccessToken databaseAccessToken,String user, String method, String name, String context) throws RemoteException;
 
 }
