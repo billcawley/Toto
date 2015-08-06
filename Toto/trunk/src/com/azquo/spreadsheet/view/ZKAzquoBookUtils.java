@@ -94,11 +94,13 @@ public class ZKAzquoBookUtils {
             // see if we can impose the user choices on the sheet
             for (String choiceName : userChoices.keySet()) {
                 CellRegion choice = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
-                if (choice != null) {
-                    sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoices.get(choiceName));
-                    context+= choiceName + " = " + userChoices.get(choiceName) + ";";
+                  if (choice != null) {
+                     String userChoice = userChoices.get(choiceName);
+                     sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoice);
+                     context+= choiceName + " = " + userChoices.get(choiceName) + ";";
                 }
             }
+            setDefaultChoices(loggedInUser, sheet, userChoices);//overrides any other choice
             // ok the plan here is remove all the merges then put them back in after the regions are expanded.
             List<CellRegion> merges = new ArrayList<CellRegion>(sheet.getInternalSheet().getMergedRegions());
             for (CellRegion merge : merges) {
@@ -241,6 +243,47 @@ public class ZKAzquoBookUtils {
         return toReturn;
     }
 
+    private void setDefaultChoices(LoggedInUser loggedInUser, Sheet sheet, Map<String, String>userChoices){
+
+        for (String choiceName : userChoices.keySet()) {
+
+            CellRegion choiceList = getCellRegionForSheetAndName(sheet, choiceName + "Choice");
+            if (choiceList != null) {
+                String choiceString = getRegionValue(sheet, choiceList);
+                int defaultPos = choiceString.indexOf("default:");
+                if (defaultPos > 0) {
+                    String defaultString = choiceString.substring(defaultPos + 8).trim();
+                    int dotPos = defaultString.indexOf(".");
+                    if (dotPos > 0) {
+                        CellRegion defaultName = getCellRegionForSheetAndName(sheet, defaultString.substring(0, dotPos) + "Chosen");
+                        if (defaultName!=null) {
+                            String query = "`" + getRegionValue(sheet, defaultName) + "`" + defaultString.substring(dotPos);
+                            try {
+                                List<String> choiceOptions = spreadsheetService.getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
+                                if (choiceOptions.size() == 1){
+                                    CellRegion chosen = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
+                                    if (chosen!= null) {
+                                        sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(choiceOptions.get(0));//at last!  set the option
+                                    }
+                                }
+                            }catch(Exception e){
+                                //don't bother if you cant find it.
+
+                            }
+                        }
+
+                    }
+                }
+
+            }
+        }
+
+    }
+
+
+    private String getRegionValue(Sheet sheet, CellRegion region){
+        return sheet.getInternalSheet().getCell(region.getRow(), region.getColumn()).getStringValue();
+    }
 
     private void fillRegion(Sheet sheet, String region, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) throws Exception {
         CellRegion columnHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_ColumnHeadings" + region);
@@ -469,7 +512,11 @@ public class ZKAzquoBookUtils {
                         // ok I assume choice is a single cell
                         try {
                             List<String>choiceOptions = null;
-                            String query= sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).getStringValue();
+                            String query= getRegionValue(sheet,choice);
+                            if (query.toLowerCase().contains("default")){
+                                query = query.substring(0, query.toLowerCase().indexOf("default"));
+                            }
+
                             if (query.startsWith("\"") || query.startsWith("“")){
                                 //crude - if there is a comma in any option this will fail
                                 query  = query.replace("\"","").replace("“","").replace("”","");
