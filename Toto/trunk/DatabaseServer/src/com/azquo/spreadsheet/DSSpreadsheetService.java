@@ -2,11 +2,11 @@ package com.azquo.spreadsheet;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.service.MutableBoolean;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import org.apache.commons.lang.math.NumberUtils;
@@ -413,6 +413,19 @@ seaports;children   container;children
     }
 
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
+
+        //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices)
+        int dotPos = query.indexOf(".");
+        if (dotPos > 0) {//todo check that it's not part of a name
+            Name possibleName = nameService.findByName(getConnectionFromAccessToken(databaseAccessToken), query.substring(0, dotPos));
+             if (possibleName!=null){
+                String result = possibleName.getAttribute(query.substring(dotPos + 1));
+                 List<String> toReturn = new ArrayList<String>();
+                 toReturn.add(result);
+                 return toReturn;
+             }
+       }
+
         return getIndividualNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages));
     }
 
@@ -955,8 +968,16 @@ seaports;children   container;children
         }
         Set<Name> alreadyTested = new HashSet<Name>();
         if (containsSet != null && memberSet != null) {
+            //example here  - find all mailings to customers
+            //contains set = all mailings - may have many mailings to a single customer
+            //selection set = the set of customers individually
+            //containsset = subset of customer so:
+
+            /*
             Set<Name> remainder = new HashSet<Name>(selectionSet);
-            remainder.retainAll(memberSet.findAllChildren(false));
+           remainder.retainAll(memberSet.findAllChildren(false));
+            */
+            Set<Name> remainder = selectionSet;//MAYBE FASTER TO TEST THE WHOLE SET EACH TIME THAN TO CREATE THE TWO NEW SETS (see above) - todo test this theory!
             return totalNameSet(containsSet, remainder, alreadyTested, 0);
         }
         return 0;
@@ -1017,24 +1038,24 @@ seaports;children   container;children
             if (nameCountHeading != null) {
                 if (nameCountHeading.getName() != null){
                     long track = System.currentTimeMillis();
-                    //System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName());
+                   //System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName());
                     doubleValue = getTotalNameCount(headingsForThisCell);
                     System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName() + " done, took : " + (System.currentTimeMillis() - track));
                 } else {
-                    Set<Name> nameCountSet = new HashSet<Name>(nameCountHeading.getNameCountSet());
+                    Set<Name> nameCountSet = nameCountHeading.getNameCountSet();
+                    doubleValue = 0.0;
                     for (DataRegionHeading dataRegionHeading : headingsForThisCell) {
                         if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null) { // should be fine
-                            // speed on this should be acceptable
+                            // REMOVE CREATION OF NEW SET AND 'retailAll' - very slow
+                            Set<Name> nameCountSet2 = new HashSet<Name>(dataRegionHeading.getName().findAllChildren(false));
+
                             if (nameCountSet.size() < dataRegionHeading.getName().findAllChildren(false).size()){
-                                nameCountSet.retainAll(dataRegionHeading.getName().findAllChildren(false));
-                            } else {// I have a theory that this swap could make things faster but I'm not 100%
-                                Set<Name> nameCountSet2 = new HashSet<Name>(dataRegionHeading.getName().findAllChildren(false));
-                                nameCountSet2.retainAll(nameCountSet);
-                                nameCountSet = nameCountSet2;
+                                doubleValue = findOverlap(nameCountSet, nameCountSet2);
+                            }else{
+                                doubleValue = findOverlap(nameCountSet2, nameCountSet);
                             }
                         }
                     }
-                    doubleValue = nameCountSet.size();
                 }
                 stringValue = doubleValue + "";
             } else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
@@ -1093,6 +1114,14 @@ seaports;children   container;children
                 /* something to note : in the old model there was a map of headings used for each cell. I could add headingsForThisCell to the cell which would be a unique set for each cell
                  but instead I'll just add the headings and row and context, I think it would be less memory. 3 object references vs a set*/
         return new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextNames, rowNo, colNo, stringValue, doubleValue, false);
+    }
+
+    private int findOverlap(Set<Name> set1, Set<Name> set2){
+        int count = 0;
+        for (Name name:set1){
+            if (set2.contains(name)) count++;
+        }
+        return count;
     }
 
     private List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
@@ -1203,7 +1232,7 @@ seaports;children   container;children
     }
 
     // todo, when cell contents are from attributes??
-    public List<DisplayValuesForProvenance> getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+    public List<TreeNode> getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, null, databaseAccessToken.getLanguages());
@@ -1211,16 +1240,36 @@ seaports;children   container;children
             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
             //Set<Name> specialForProvenance = new HashSet<Name>();
             if (valuesForCell.getValues() != null) {
-                return getCellProvenance(valuesForCell.getValues());
+                return nodify(valuesForCell.getValues());
             }
         }
-        return new ArrayList<DisplayValuesForProvenance>(); //just empty ok? null? Unsure
+        return new ArrayList<TreeNode>(); //just empty ok? null? Unsure
     }
+
+    public TreeNode getDataList(DatabaseAccessToken databaseAccessToken, Set<Name> names)throws Exception{
+        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+
+        List<Value> values = null;
+        for (Name name:names) {
+            if (values == null) {
+                values = new ArrayList<Value>(valueService.findValuesForNameIncludeAllChildren(name, true));
+
+            } else{
+                values.retainAll(valueService.findValuesForNameIncludeAllChildren(name, true));
+            }
+        }
+        TreeNode toReturn = new TreeNode();
+        toReturn.setChildren(nodify(values));
+        return toReturn;
+     }
+
+
+
 
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
     // not exactly sure why
-    public List<DisplayValuesForProvenance> getCellProvenance(List<Value> values) {
-        List<DisplayValuesForProvenance> toReturn = new ArrayList<DisplayValuesForProvenance>();
+    public List<TreeNode> nodify(List<Value> values) {
+        List<TreeNode> toReturn = new ArrayList<TreeNode>();
         if (values.size() > 1 || (values.size() > 0 && values.get(0) != null)) {
             valueService.sortValues(values);
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
@@ -1232,14 +1281,14 @@ seaports;children   container;children
                     oneUpdate.add(value);
                     p = value.getProvenance();
                 } else {
-                    toReturn.add(valueService.getDisplayValuesForProvenance(oneUpdate, p));
+                    toReturn.add(valueService.getTreeNode(oneUpdate, p));
                     oneUpdate = new HashSet<Value>();
                     oneUpdate.add(value);
                     p = value.getProvenance();
                     provdate = value.getProvenance().getTimeStamp();
                 }
             }
-            toReturn.add(valueService.getDisplayValuesForProvenance(oneUpdate, p));
+            toReturn.add(valueService.getTreeNode(oneUpdate, p));
         }
         return toReturn;
     }
