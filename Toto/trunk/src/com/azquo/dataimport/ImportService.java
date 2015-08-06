@@ -300,9 +300,14 @@ public final class ImportService {
             databaseId = loggedInUser.getDatabase().getId();
             pathName = loggedInUser.getDatabase().getMySQLName();
         }
+        int renderer = OnlineReport.AZQUO_BOOK;
+        if (azquoBook.getRangeData("az_ZKSheet")!=null){
+            renderer = OnlineReport.ZK_AZQUO_BOOK;
+
+        }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         if (or == null) {
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName, "", "", "", fileName, "", "", OnlineReport.AZQUO_BOOK, true); // default to old for the moment
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName,"","", "", fileName, "", "", renderer,  true); // default to old for the moment
         } else {
             or.setActive(false);
             onlineReportDAO.store(or);
