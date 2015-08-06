@@ -29,9 +29,8 @@ import java.util.List;
 
 /**
  * Created by bill on 22/04/14.
- *
+ * <p/>
  * Currently deals with a fair bit for AzquoBook, this may shrink in time.
- *
  */
 
 @Controller
@@ -83,6 +82,7 @@ public class OnlineController {
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
+            , @RequestParam(value = "provline", required = false, defaultValue = "") String provline
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
 
     ) {
@@ -118,28 +118,6 @@ public class OnlineController {
                     //report id is assumed to be integer - sent from the website
                     onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
                 }
-                if (onlineReport != null) {
-                    if (onlineReport.getId() != 1) {
-                        if (onlineReport.getDatabaseId() > 0) {
-                            db = databaseDAO.findById(onlineReport.getDatabaseId());
-                            loginService.switchDatabase(loggedInUser, db);
-                            onlineReport.setPathname(loggedInUser.getDatabase().getMySQLName());
-                        } else {
-                            db = loggedInUser.getDatabase();
-                            if (db==null && database!=null && database.length() > 0){
-                                db = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
-                                if (db != null){
-                                    loggedInUser.setDatabaseWithServer(databaseServerDAO.findById(db.getDatabaseServerId()), db);
-                                }
-                            }
-                            onlineReport.setPathname(onlineReport.getDatabaseType());
-                        }
-                        if (db != null) {
-                            onlineReport.setDatabase(db.getName());
-                            database = onlineReport.getDatabase();
-                        }
-                    }
-                }
                 /* todo, sort provenance setting later
                 if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.hasAzquoMemoryDB()) {
                     loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(), "");
@@ -150,6 +128,17 @@ public class OnlineController {
                     row = Integer.parseInt(rowStr);
                 } catch (Exception e) {
                     //rowStr can be blank or '0'
+                }
+                if (opcode.equals("provline")) {
+                    String reportName = spreadsheetService.setChoices(loggedInUser, provline);
+                    onlineReport = null;
+                    if (reportName != null) {
+                        onlineReport = onlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
+                        if (onlineReport == null) {
+                            onlineReport = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
+                        }
+                    }
+                    opcode = "loadsheet";
                 }
                 // highlighting etc. From the top right menu and the azquobook context menu, can be zapped later
                 if ((opcode.equals("setchosen")) && choiceName != null) {
@@ -229,8 +218,29 @@ public class OnlineController {
                 if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
                     // logic here is going to change to support the different renderers
                          loggedInUser.setReportId(onlineReport.getId());// that was below, whoops!
+                    if (onlineReport != null) {
+                        if (onlineReport.getDatabaseId() > 0) {
+                            db = databaseDAO.findById(onlineReport.getDatabaseId());
+                            loginService.switchDatabase(loggedInUser, db);
+                            onlineReport.setPathname(loggedInUser.getDatabase().getMySQLName());
+                        } else {
+                            db = loggedInUser.getDatabase();
+                            if (db == null && database != null && database.length() > 0) {
+                                db = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
+                                if (db != null) {
+                                    loggedInUser.setDatabaseWithServer(databaseServerDAO.findById(db.getDatabaseServerId()), db);
+                                }
+                            }
+                            onlineReport.setPathname(onlineReport.getDatabaseType());
+                        }
+                        if (db != null) {
+                            onlineReport.setDatabase(db.getName());
+                        }
+                    }
                         if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK){
                             long time = System.currentTimeMillis();
+
+
                             String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                             final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                             // the first two make sense. Little funny about the second two but we need a reference to these
@@ -260,6 +270,8 @@ public class OnlineController {
                         return "onlineReport";
                         // was provenance setting here,
                 }
+
+
                 model.addAttribute("content", result);
             } catch (Exception e) {
                 logger.error("online controller error", e);
@@ -271,6 +283,8 @@ public class OnlineController {
             return e.getMessage();
         }
     }
+
+
 
     // when not multipart - this is a bit annoying, hopefully can find a way around it later
     @RequestMapping
@@ -288,7 +302,8 @@ public class OnlineController {
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
+            , @RequestParam(value = "provline", required = false, defaultValue = "") String provline
     ) {
-        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, jsonFunction, rowStr, colStr, opcode, spreadsheetName, database, reportToLoad, submit, null);
+        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, jsonFunction, rowStr, colStr, opcode, spreadsheetName, database, reportToLoad, submit, provline, null);
     }
 }
