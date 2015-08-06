@@ -1,15 +1,16 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.*;
-import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -673,23 +674,23 @@ public final class ValueService {
         }
     }
 
-    /* print a bunch of values in json. It seems to find the name which represents the most values and displays
+    /* nodify the values. It finds the name which represents the most values and displays
     them under them then the name that best represents the rest etc etc until all values have been displayed
       */
 
-    private List<DisplayValuesForProvenance> getJsonValuesFromValues(Set<Value> values) {
+    private List<TreeNode> getTreeNodesFromValues(Set<Value> values) {
         Set<DummyValue> convertedToDummy = new HashSet<DummyValue>();
         for (Value value : values) {
             convertedToDummy.add(new DummyValue(value.getText(), value.getNames()));
         }
-        return getJsonValuesFromDummyValues(convertedToDummy);
+        return getTreeNodesFromDummyValues(convertedToDummy);
     }
 
-    private List<DisplayValuesForProvenance> getJsonValuesFromDummyValues(Set<DummyValue> values) {
+    private List<TreeNode> getTreeNodesFromDummyValues(Set<DummyValue> values) {
         //int debugCount = 0;
         boolean headingNeeded = false;
         double dValue = 0.0;
-        List<DisplayValuesForProvenance> jsonValueForProvenances = new ArrayList<DisplayValuesForProvenance>();
+        List<TreeNode> nodeList = new ArrayList<TreeNode>();
         for (DummyValue value : values) {
             if (value.getNames().size() > 1) {
                 headingNeeded = true;
@@ -699,7 +700,7 @@ public final class ValueService {
             for (Name name : value.getNames()) {
                 nameFound = name.getDefaultDisplayName(); // so it's always going to be the last name??
             }
-            jsonValueForProvenances.add(new DisplayValuesForProvenance(nameFound, value.getValueText()));
+            nodeList.add(new TreeNode(nameFound, value.getValueText()));
         }
         if (headingNeeded) {
             Name topParent = null;
@@ -748,18 +749,32 @@ public final class ValueService {
 
                 }
 
-                jsonValueForProvenances.add(new DisplayValuesForProvenance(heading.getDefaultDisplayName() + dString, getJsonValuesFromDummyValues(slimExtract)));
+                nodeList.add(new TreeNode("",heading.getDefaultDisplayName() + dString, getTreeNodesFromDummyValues(slimExtract)));
                 dValue = 0;
             }
         }
-        return jsonValueForProvenances;
+        return nodeList;
 
     }
 
-    public DisplayValuesForProvenance getDisplayValuesForProvenance(Set<Value> values, Provenance p) {
+
+    public TreeNode getTreeNode(Set<Value> values, Provenance p) {
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
-        return new DisplayValuesForProvenance("<b>" + df.format(p.getTimeStamp()) + "</b>" +
-                " by <b>" + p.getUser() + "</b><br/>" + p.getMethod() + " " + p.getName() + " with " + p.getContext()
-                , getJsonValuesFromValues(values));
+        String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
+        String method = p.getMethod();
+        if (p.getName()!=null){
+            method  += " " + p.getName();
+        }
+        if (p.getContext()!=null && p.getContext().length() > 0) method += " with " + p.getContext();
+        String link = null;
+
+        if (method.contains("spreadsheet")){
+            try{
+                link = "/api/Online?opcode=provline&provline=" + URLEncoder.encode(method,"UTF-8");
+            }catch(Exception e){
+
+            }
+        }
+        return new TreeNode(source, method, link, getTreeNodesFromValues(values));
     }
 }

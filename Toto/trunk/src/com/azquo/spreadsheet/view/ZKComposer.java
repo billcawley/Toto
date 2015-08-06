@@ -8,7 +8,6 @@ import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
-import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
@@ -34,6 +33,7 @@ import org.zkoss.zss.ui.event.SheetSelectEvent;
 import org.zkoss.zss.ui.event.StopEditingEvent;
 import org.zkoss.zssex.ui.widget.Ghost;
 import org.zkoss.zul.*;
+import com.azquo.memorydb.TreeNode;
 
 import java.io.File;
 import java.util.List;
@@ -279,15 +279,14 @@ public class ZKComposer extends SelectorComposer<Component> {
             try {
                 // ok this is a bit nasty, after Azquobook is zapped we could try something different
                 // todo - sort after zapping azquobook! Maybe clickable again?
-                List<DisplayValuesForProvenance> displayValuesForProvenances = spreadsheetService.getDisplayValuesForProvenance(loggedInUser, region
+                List<TreeNode> TreeNodes = spreadsheetService.getTreeNode(loggedInUser, region
                         , cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow(), cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn());
-                if (!displayValuesForProvenances.isEmpty()) {
+                if (!TreeNodes.isEmpty()) {
                     StringBuilder toShow = new StringBuilder();
-                    for (DisplayValuesForProvenance displayValuesForProvenance : displayValuesForProvenances) {
-                        resolveDisplayValuesForProvenance(0, toShow, displayValuesForProvenance);
+                    for (TreeNode TreeNode : TreeNodes) {
+                        resolveTreeNode(0, toShow, TreeNode);
                     }
                     String stringToShow = toShow.toString();
-                    stringToShow = stringToShow.replace("<br/>", " ").replace("<b>", "").replace("</b>", "");
                     final String fullProvenance = stringToShow;
                     stringToShow = stringToShow.replace("\t", "....");
                     int spreadPos = stringToShow.indexOf("in spreadsheet");
@@ -394,34 +393,24 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     private void showProvenance(String provline) {
         final Book book = myzss.getBook();
-        int inSpreadPos = provline.indexOf("in spreadsheet");
-        if (inSpreadPos < 0) return;
-        int withPos = provline.indexOf(" with ", inSpreadPos);
-        if (withPos < 0) return;
-        String reportName = provline.substring(inSpreadPos + 14, withPos).trim();
-        String paramString = provline.substring(withPos + 6);
-        int equalsPos = paramString.indexOf(" = ");
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        while (equalsPos > 0) {
-            int endParam = paramString.indexOf(";");
-            if (endParam < 0) endParam = paramString.length();
-            String paramName = paramString.substring(0, equalsPos).trim();
-            String paramValue = paramString.substring(equalsPos + 3, endParam).trim();
-            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), paramName, paramValue);
-            paramString = paramString.substring(endParam);
-            if (paramString.length() > 0) paramString = paramString.substring(1);//remove the semicolon
-            equalsPos = paramString.indexOf(" = ");
-        }
+        String reportName = spreadsheetService.setChoices(loggedInUser,provline);
+        OnlineReport or = null;
+        if (reportName !=null) {
         Session session = Sessions.getCurrent();
         int databaseId = loggedInUser.getDatabase().getId();
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
         onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
-        OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
+            or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         if (or == null) {
             or = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
         }
+        }else{
+            reportName = "unspecified";
+        }
         if (or != null) {
-            Clients.evalJavaScript("window.open(\"Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + "\")");
+            Clients.evalJavaScript("window.open(\"/api/Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName()+ "\")");
+
         } else {
             Clients.evalJavaScript("alert(\"the report '" + reportName + "` is no longer available\")");
         }
@@ -450,22 +439,26 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     }
 
-    public static void resolveDisplayValuesForProvenance(int tab, StringBuilder stringBuilder, DisplayValuesForProvenance displayValuesForProvenance) {
+    public static void resolveTreeNode(int tab, StringBuilder stringBuilder, com.azquo.memorydb.TreeNode treeNode) {
         for (int i = 0; i < tab; i++) {
             stringBuilder.append("\t");
         }
-        if (displayValuesForProvenance.name != null) {
-            stringBuilder.append(displayValuesForProvenance.name);
+        if (treeNode.getName() != null) {
+            stringBuilder.append(treeNode.getName());
+            String value = treeNode.getValue();
+            if (value!= null) {
             stringBuilder.append("\t");
-            stringBuilder.append(displayValuesForProvenance.value);
+
+                stringBuilder.append(treeNode.getValue());
+            }
             stringBuilder.append("\n");
         }
-        if (displayValuesForProvenance.heading != null) { // then assume we have items too!
-            stringBuilder.append(displayValuesForProvenance.heading);
+        if (treeNode.getHeading() != null) { // then assume we have items too!
+            stringBuilder.append(treeNode.getHeading());
             stringBuilder.append("\n");
             tab++;
-            for (DisplayValuesForProvenance displayValuesForProvenance1 : displayValuesForProvenance.items) {
-                resolveDisplayValuesForProvenance(tab, stringBuilder, displayValuesForProvenance1);
+            for (TreeNode treeNode1 : treeNode.getChildren()) {
+                resolveTreeNode(tab, stringBuilder, treeNode1);
             }
         }
     }
@@ -528,8 +521,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
 
 
-    }
 
-    ;
+    };
 }
 

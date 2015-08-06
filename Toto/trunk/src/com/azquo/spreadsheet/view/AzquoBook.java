@@ -7,8 +7,8 @@ import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
+import com.azquo.memorydb.TreeNode;
 import com.azquo.spreadsheet.*;
-import com.azquo.spreadsheet.jsonentities.DisplayValuesForProvenance;
 import com.csvreader.CsvWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
@@ -1102,8 +1102,8 @@ public class AzquoBook {
         if (regionInfo == null) return "";
         if (regionInfo.region.startsWith(dataRegionPrefix)) {
             String region = regionInfo.region.substring(dataRegionPrefix.length());
-            Map<String, List<DisplayValuesForProvenance>> provenanceForJackson = new HashMap<String, List<DisplayValuesForProvenance>>();
-            provenanceForJackson.put("provenance", spreadsheetService.getDisplayValuesForProvenance(loggedInUser, region, regionInfo.row, regionInfo.col));
+            Map<String, List<TreeNode>> provenanceForJackson = new HashMap<String, List<TreeNode>>();
+            provenanceForJackson.put("provenance", spreadsheetService.getTreeNode(loggedInUser, region, regionInfo.row, regionInfo.col));
             return jsonFunction + "(" + jacksonMapper.writeValueAsString(provenanceForJackson) + ")";
         }
         return "";
