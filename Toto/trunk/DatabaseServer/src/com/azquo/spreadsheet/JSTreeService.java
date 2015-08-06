@@ -3,6 +3,7 @@ package com.azquo.spreadsheet;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
@@ -59,6 +60,33 @@ public class JSTreeService {
     // This lookup was against the LIC but I can't use this on client/server. Could find a way to zap it fully if I understand the logic, putting the last id in there as well
     // string literals in here . . .
     // jstree id really should be a number but it seems to be true on new? FOr the mo leave as string here
+    public Set<Name> interpretNameString(DatabaseAccessToken databaseAccessToken, String nameString)throws Exception{
+        Set<Name> names = new HashSet<Name>();
+        String[] namesString = nameString.split(",");
+        if (namesString[0].startsWith("jstreeids:")){
+            Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(databaseAccessToken.toString());
+            namesString[0]= namesString[0].substring(10);
+            for(String jstreeId:namesString){
+                JSTreeService.JsTreeNode currentNode = lookup.get(jstreeId);
+                if (currentNode.child.name != null){
+                    names.add(currentNode.child.name);
+                }
+
+            }
+            return names;
+
+        }else{
+            AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+            for (String nString:namesString){
+                Name name = nameService.findByName(azquoMemoryDBConnection, nString);
+                if (name!=null) names.add(name);
+
+            }
+        }
+        return names;
+    }
+
+
     public String processRequest(DatabaseAccessToken databaseAccessToken, String json, String jsTreeId, String topNode, String op
             , String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
