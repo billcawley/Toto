@@ -17,16 +17,16 @@
   public String showNode(TreeNode node){
 
     StringBuilder output = new StringBuilder();
+    String text = node.getValue();
+    if (node.getHeading()!=null)  text +=" <b>" + node.getHeading() + "</b>";
+    if (node.getName() != null) text += " " + node.getName();
+
     output.append("<div style=\"position:relative;left:50px\">\n");
     if (node.getLink()!=null && node.getLink().length() > 0){
-      output.append("<a href=\"" + node.getLink() + "\">" + node.getName() + "</a>");
+      output.append("<a href=\"" + node.getLink() + "\">" + text + "</a>");
 
     }else{
-      if (node.getValue()!=null){
-        output.append(node.getValue() + " " + node.getName());
-      }else{
-        output.append(node.getName());
-      }
+      output.append(text);
 
     }
     if (node.getChildren()!=null){
