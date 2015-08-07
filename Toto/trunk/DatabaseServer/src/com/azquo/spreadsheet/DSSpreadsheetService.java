@@ -13,7 +13,6 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.naming.NamingEnumeration;
 import javax.servlet.ServletContext;
 import java.net.InetAddress;
 import java.time.LocalDateTime;
@@ -428,13 +427,6 @@ seaports;children   container;children
 
         return getIndividualNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages));
     }
-
-    public void setProvenance(DatabaseAccessToken databaseAccessToken, String user, String method, String name, String context)throws Exception{
-        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        azquoMemoryDBConnection.setProvenance(user, method, name, context);
-
-    }
-
 
     private List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
         final List<Integer> sortedValues = new ArrayList<Integer>();
@@ -977,8 +969,9 @@ seaports;children   container;children
             Set<Name> remainder = new HashSet<Name>(selectionSet);
            remainder.retainAll(memberSet.findAllChildren(false));
             */
-            Set<Name> remainder = selectionSet;//MAYBE FASTER TO TEST THE WHOLE SET EACH TIME THAN TO CREATE THE TWO NEW SETS (see above) - todo test this theory!
-            return totalNameSet(containsSet, remainder, alreadyTested, 0);
+            //Set<Name> remainder = selectionSet;//MAYBE FASTER TO TEST THE WHOLE SET EACH TIME THAN TO CREATE THE TWO NEW SETS (see above) - todo test this theory!
+            //return totalNameSet(containsSet, remainder, alreadyTested, 0);
+            return totalNameSet(containsSet, selectionSet, alreadyTested, 0);
         }
         return 0;
     }
@@ -987,7 +980,7 @@ seaports;children   container;children
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<Name> contextNames, int rowNo, int colNo, Map<Name, Integer> totalSetSize, List<String> languages) throws Exception {
-        String stringValue=null;
+        String stringValue;
         double doubleValue = 0;
         Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
         Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
@@ -1037,19 +1030,16 @@ seaports;children   container;children
             DataRegionHeading nameCountHeading = getHeadingWithNameCount(headingsForThisCell);
             if (nameCountHeading != null) {
                 if (nameCountHeading.getName() != null){
-                    long track = System.currentTimeMillis();
                    //System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName());
                     doubleValue = getTotalNameCount(headingsForThisCell);
-                    System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName() + " done, took : " + (System.currentTimeMillis() - track));
                 } else {
                     Set<Name> nameCountSet = nameCountHeading.getNameCountSet();
                     doubleValue = 0.0;
                     for (DataRegionHeading dataRegionHeading : headingsForThisCell) {
                         if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null) { // should be fine
-                            // REMOVE CREATION OF NEW SET AND 'retailAll' - very slow
-                            Set<Name> nameCountSet2 = new HashSet<Name>(dataRegionHeading.getName().findAllChildren(false));
-
-                            if (nameCountSet.size() < dataRegionHeading.getName().findAllChildren(false).size()){
+                            // we know this is a cached set internally, no need to create a new set - might be expensive
+                            Collection<Name> nameCountSet2 = dataRegionHeading.getName().findAllChildren(false);
+                            if (nameCountSet.size() < nameCountSet2.size()){
                                 doubleValue = findOverlap(nameCountSet, nameCountSet2);
                             }else{
                                 doubleValue = findOverlap(nameCountSet2, nameCountSet);
@@ -1116,7 +1106,7 @@ seaports;children   container;children
         return new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextNames, rowNo, colNo, stringValue, doubleValue, false);
     }
 
-    private int findOverlap(Set<Name> set1, Set<Name> set2){
+    private int findOverlap(Collection<Name> set1, Collection<Name> set2){
         int count = 0;
         for (Name name:set1){
             if (set2.contains(name)) count++;
@@ -1246,9 +1236,8 @@ seaports;children   container;children
         return new ArrayList<TreeNode>(); //just empty ok? null? Unsure
     }
 
-    public TreeNode getDataList(DatabaseAccessToken databaseAccessToken, Set<Name> names)throws Exception{
-        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
 
+    public TreeNode getDataList(Set<Name> names)throws Exception{
         List<Value> values = null;
         String heading = "";
         for (Name name:names) {
@@ -1332,12 +1321,9 @@ seaports;children   container;children
                         //first align text and numbers where appropriate
                         try{
                             if (cell.getDoubleValue()!=0.0) {
-
                                 cell.setStringValue(cell.getDoubleValue() + "");
                             }
-
-                        }catch(Exception e){
-
+                        }catch(Exception ignored){
                         }
                         if (cell.getStringValue().endsWith("%")){
                               String percent = cell.getStringValue().substring(0,cell.getStringValue().length() - 1);

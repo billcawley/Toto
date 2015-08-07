@@ -184,7 +184,7 @@ public final class AzquoMemoryDB {
             Runtime runtime = Runtime.getRuntime();
             long usedMB = 0;
             if (memoryTrack) {
-                System.gc();
+                System.gc(); // assuming of course the JVM actually listens :)
                 System.out.println("gc time : " + (System.currentTimeMillis() - marker));
                 usedMB = (runtime.totalMemory() - runtime.freeMemory()) / mb;
                 System.out.println("Used Memory:"

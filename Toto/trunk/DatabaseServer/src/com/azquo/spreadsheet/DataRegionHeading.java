@@ -57,10 +57,22 @@ public class DataRegionHeading {
     }
 
     public Set<Name> getNameCountSet() {
+        // leaving this unprotected for the mo, could make unmodifiable if strange behavior creeps in
         return nameCountSet;
     }
 
     public BASIC_RESOLVE_FUNCTION getFunction() {
         return function;
+    }
+
+    @Override
+    public String toString() {
+        return "DataRegionHeading{" +
+                "name=" + name +
+                ", attribute='" + attribute + '\'' +
+                ", writeAllowed=" + writeAllowed +
+                ", function=" + function +
+                ", nameCountSetSize=" + (nameCountSet != null ? nameCountSet.size() : "") +
+                '}';
     }
 }

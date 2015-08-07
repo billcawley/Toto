@@ -15,7 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -27,6 +29,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by cawley on 20/05/15.
  * <p/>
  * Has a fair bit of the logic that was in the original import service.
+ *
+ * Azquo has no schema like an SQL database but to load data a basic set structure needs to be defined
+ * and rules for interpreting files need to be also. These two together effectively are the equivalent of an SQL schema.
+ *
  */
 public class DSImportService {
 
@@ -38,7 +44,8 @@ public class DSImportService {
     @Autowired
     private DSSpreadsheetService dsSpreadsheetService;
 
-    /* these are heading clauses. I think heading definitions can be in the data file but Azquo is setup to support data
+    /*
+    These are heading clauses. I think heading definitions can be in the data file but Azquo is setup to support data
     "as it comes". Hence when dealing with a new set of data the key is to set up sets and headings so that the system can load the data.
     Setting up the sets and headings could be seen as similar to setting up the tables in an SQL database.
      */
@@ -56,9 +63,11 @@ public class DSImportService {
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
 
-    // To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't
-    // do this initially. No problem, initially make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.
-    // could of course copy all fields into line but this makes the constructor needlessly complex.
+    /*
+    To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't
+    do this initially. No problem, initially make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.
+    could of course copy all fields into line but this makes the constructor needlessly complex.
+    */
     private class MutableImportHeading {
         int column = -1;
         String heading = null;
@@ -79,7 +88,7 @@ public class DSImportService {
         String equalsString = null;
     }
 
-    // do I really need getters?
+    // I see no reason for getters here. Class only used here.
     private class ImmutableImportHeading {
         final int column;
         final String heading;
@@ -135,25 +144,25 @@ public class DSImportService {
             this.value = value;
             this.name = name;
         }
-
     }
 
-    private Date tryDate(String maybeDate, SimpleDateFormat df) {
+    // Switched to Java 8 calls. Should really, finally, move away from java.util.Date. Of course the legacy with SQL code is not helpful.
+
+    static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd/MM/yy");
+    static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd MMM yyyy");
+    static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    private LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
         try {
-            return df.parse(maybeDate);
-        } catch (Exception e) {
+            return LocalDate.parse(maybeDate, dateTimeFormatter);
+        } catch (DateTimeParseException e) {
             return null;
         }
     }
 
-    static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-    static final SimpleDateFormat ukdf2 = new SimpleDateFormat("dd/MM/yy");
-    static final SimpleDateFormat ukdf4 = new SimpleDateFormat("dd/MM/yyyy");
-    static final SimpleDateFormat ukdf3 = new SimpleDateFormat("dd MMM yyyy");
-
-    // todo - probably a slightly nicer API call for this
-    public Date isADate(String maybeDate) {
-        Date date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, sdf);
+    public LocalDate isADate(String maybeDate) {
+        LocalDate date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, dateTimeFormatter);
         if (date != null) return date;
         date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, ukdf4);
         if (date != null) return date;
@@ -162,7 +171,10 @@ public class DSImportService {
         return tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 8) : maybeDate, ukdf2);
     }
 
-    // currently only two types of import supported and detection on file name (best idea?). Run the import and persist.
+    /*
+    Currently only two types of import supported and detection on file name (best idea?). Run the import and persist.
+    Sets being as mentioned at the top one of the two files that are needed along with import headers to set up a database ready to load data.
+    */
 
     public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
         System.out.println("reading file " + filePath);
@@ -184,8 +196,9 @@ public class DSImportService {
     }
 
     // this is called for all the ; separated clauses in a header e.g. Gender; parent of Customer; child of Genders
-    // it feels like an enum or array could help here but I'm not sure . . .
+    // Edd : it feels like an enum or array could help here but I'm not sure . . .
     private void interpretClause(AzquoMemoryDBConnection azquoMemoryDBConnection, MutableImportHeading heading, String clause) throws Exception {
+        // not NOT parent of an existing name in the DB, parent of other data in the line
         String readClause = readClause(PARENTOF, clause); // parent of names in the specified column
         if (readClause != null) {
             heading.parentOf = readClause.replace(Name.QUOTE + "", "");
@@ -209,7 +222,8 @@ public class DSImportService {
                 throw new Exception(clause + " not understood");
             }
         }
-        readClause = readClause(LANGUAGE, clause); // default language for itentifying the name
+        // language being attribute
+        readClause = readClause(LANGUAGE, clause); // default language for identifying the name
         if (readClause != null) {
             heading.attribute = readClause;
             heading.identifier = true;
@@ -217,6 +231,7 @@ public class DSImportService {
                 throw new Exception(clause + " not understood");
             }
         }
+        // same as language really but .Name is special - it means default display name. Watch out for this.
         readClause = readClause(ATTRIBUTE, clause); // to add attributes to other columns so Customer; attribute address1, externally a . gets converted to ;attribute so Customer.address1. Can even go.address1 apparently
         if (readClause != null) {
             heading.attribute = readClause.replace("`", "");
@@ -237,6 +252,7 @@ public class DSImportService {
                 throw new Exception(clause + " not understood");
             }
         }
+        // combine more than one row
         readClause = readClause(COMPOSITION, clause);
         if (readClause != null) {
             heading.composition = readClause;
@@ -244,10 +260,12 @@ public class DSImportService {
                 throw new Exception(clause + " not understood");
             }
         }
+        // if there's no value on the line a default
         readClause = readClause(DEFAULT, clause);
         if (readClause != null && readClause.length() > 0) {
             heading.defaultValue = readClause;
         }
+        // peers, not 100% on this, guess the old peers idea. Which was a way of ensuring membership of certain sets for a value.
         if (readClause(PEERS, clause) != null) {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
             heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
@@ -286,17 +304,22 @@ public class DSImportService {
         }
     }
 
-    // headings are clauses separated by semicolons, first is the heading name the onto the extra stuff
-    // essentially parsing through all the relevant things in a heading to populate an ImportHeading
+    /*
+    headings are clauses separated by semicolons, first is the heading name the onto the extra stuff
+    essentially parsing through all the relevant things in a heading to populate an ImportHeading
+    */
 
     private void interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, MutableImportHeading heading, List<String> attributeNames) throws Exception {
         StringTokenizer clauses = new StringTokenizer(headingString, ";");
-        heading.heading = clauses.nextToken().replace(Name.QUOTE + "", "");
+        heading.heading = clauses.nextToken().replace(Name.QUOTE + "", ""); // the heading na,e being the first
         heading.name = nameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames);//at this stage, look for a name, but don't create it unless necessary
+        // loop over the clauses making sense and modifying the heading object as you go
         while (clauses.hasMoreTokens()) {
             interpretClause(azquoMemoryDBConnection, heading, clauses.nextToken().trim());
         }
     }
+
+    // when dealing with peers I think, need to find the index of appropriate column in the uploaded file
 
     private int findContextHeading(Name name, List<MutableImportHeading> headings) {
         for (int headingNo = 0; headingNo < headings.size(); headingNo++) {
@@ -308,6 +331,8 @@ public class DSImportService {
         return -1;
     }
 
+    // find a heading by index but there are conditions. I'm not 100% on this. Allows equals and begins with the search term and a comma and certain clauses are not allowed
+
     private int findHeading(String nameToFind, List<ImportCellWithHeading> headings) {
         //look for a column with identifier, or, if not found, a column that does not specify an attribute
         int headingFound = -1;
@@ -318,6 +343,7 @@ public class DSImportService {
                 if (heading.identifier) {
                     return headingNo;
                 }
+                // ah I see the logic here. Identifier means it's the one to use, if not then there must be only one - if more than one are found then it's too ambiguous to work with.
                 if (headingFound == -1) {
                     headingFound = headingNo;
                 } else {
@@ -328,7 +354,7 @@ public class DSImportService {
         return headingFound;
     }
 
-    // duplicate for mutable, probably should remove later
+    // very similar to above, not sure of an obvious factor
 
     private int findMutableHeading(String nameToFind, List<MutableImportHeading> headings) {
         //look for a column with identifier, or, if not found, a column that does not specify an attribute
@@ -397,6 +423,9 @@ public class DSImportService {
             return "";
         }
     */
+
+    // as the name says, not completely sure how it all fits in but this is a function that actually modifies the db it doesn't defer to other functions in this class
+
     public Name includeInSet(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
         //namesFound is a quick lookup to avoid going to findOrCreateNameInParent
         String np = name + ",";
@@ -412,6 +441,8 @@ public class DSImportService {
         return found;
     }
 
+    // to make a batch call to the above if there are a list of parents
+
     public Name includeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, String name, Set<Name> parents, boolean local, List<String> attributeNames) throws Exception {
         Name child = null;
         if (parents == null) {
@@ -424,8 +455,13 @@ public class DSImportService {
         return child;
     }
 
+    /*
+    Created by Edd to try to improve speed through multi threading. There's still a bottleneck in the initial parsing
+    (maybe use a Spliterator?) but it can now batch up simply parsed lines and stack them here for importing.
+     */
 
     private class BatchImporter implements Runnable {
+
         private final AzquoMemoryDBConnection azquoMemoryDBConnection;
         private final AtomicInteger valueTracker;
         private int lineNo;
@@ -471,19 +507,19 @@ public class DSImportService {
     }
 
 
-    Map<String, Long> trackers = new ConcurrentHashMap<String, Long>();
-
-    // the big function that deals with data importing
+    // The big function that deals with data importing
 
     public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
-        trackers = new ConcurrentHashMap<String, Long>();
         // little local cache just to speed things up
         final Map<String, Name> namesFound = new ConcurrentHashMap<String, Name>();
         if (fileType.indexOf(" ") > 0) {
-            //filetype should be first word only
+            //file type should be first word only
             fileType = fileType.substring(0, fileType.indexOf(" "));
         }
-        if (fileType.contains("_")) fileType = fileType.substring(0, fileType.indexOf("_"));
+        if (fileType.contains("_")){
+            fileType = fileType.substring(0, fileType.indexOf("_"));
+        }
+        // grab the first line to check on delimiters
         long track = System.currentTimeMillis();
         char delimiter = ',';
         BufferedReader br = new BufferedReader(new FileReader(filePath));
@@ -499,21 +535,13 @@ public class DSImportService {
         }else{
             return;//if he first line is blank, ignore the sheet
         }
-
         // now we know the delimiter can CSV read, I've read jackson is pretty quick
-
-
-        // jackson CSV example, I believe it is
 		CsvMapper csvMapper = new CsvMapper();
 		csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
         CsvSchema schema = csvMapper.schemaFor(String[].class)
                 .withColumnSeparator(delimiter)
                 .withLineSeparator("\n");
 		MappingIterator<String[]> lineIterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));
-
-/*        InputStream uploadFile = new FileInputStream(filePath);
-        CsvReader csvReader = new CsvReader(uploadFile, delimiter, Charset.forName("UTF-8"));
-        csvReader.setUseTextQualifier(true);*/
         String[] headers = null;
         // ok beginning to understand. It looks for a name for the file type, this name can have headers and/or the definitions for each header
         // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
@@ -528,12 +556,11 @@ public class DSImportService {
                 }
             }
             if (importHeaders != null) {
-                headers = importHeaders.split("¬");
+                headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
             }
         }
 
         if (headers == null) {
-//            csvReader.readHeaders();
             headers = lineIterator.next();
         } else {
             if (skipTopLine) {
@@ -552,15 +579,13 @@ public class DSImportService {
             immutableImportHeadings.add(new ImmutableImportHeading(mutableImportHeading));
         }
         // having read the headers go through each record
-
-        // now, since this will be multi threaded need to make line objects, Immutable ones methinks!
+        // now, since this will be multi threaded need to make line objects, Cannot be completely immutable due to the current logic, I may be able to change this, not sure
 
         int lineNo = 0;
         ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDBConnection.getAzquoMemoryDB().getLoadingThreads());
         AtomicInteger valueTracker = new AtomicInteger(0);
         int batchSize = 100000;
         ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<List<ImportCellWithHeading>>(batchSize);
-        //while (csvReader.readRecord()) { // now to the data itself, headers should have been sorted one way or another,
         while (lineIterator.hasNext()) { // new Jackson call . . .
             String[] lineValues = lineIterator.next();
             lineNo++;
@@ -573,12 +598,14 @@ public class DSImportService {
                     lineValue = immutableImportHeading.defaultValue;
                 }
                 if (immutableImportHeading.attribute != null && immutableImportHeading.attribute.equalsIgnoreCase(dateLang)) {
-                    //interpret the date and change to standard form
-                    //todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-                    // ok so the thing here is to try to standardise date formatting
-                    Date date = isADate(lineValue);
+                    /*
+                    interpret the date and change to standard form
+                    todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
+                    edd switched to java 8 API calls, hope all will still work
+                    */
+                    LocalDate date = isADate(lineValue);
                     if (date != null) {
-                        lineValue = sdf.format(date);
+                        lineValue = dateTimeFormatter.format(date);
                     }
                 }
                 importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue, null));
@@ -597,8 +624,6 @@ public class DSImportService {
             throw new Exception("File " + filePath + " took longer than 8 hours to load for : " + azquoMemoryDBConnection.getAzquoMemoryDB().getMySQLName());
         }
         // wasn't closing before, maybe why the files stayed there
-//        csvReader.close();
-//        uploadFile.close();
         lineIterator.close();
         // edd adding a delete check for tomcat temp files, if read from the other temp directly then leave it alone
         if (filePath.contains("/usr/")){
@@ -609,17 +634,14 @@ public class DSImportService {
                 }
             }
         }
-        System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) + "ms for " + lineNo + " lines");
+        System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + lineNo + " lines");
         System.out.println("---------- namesfound size " + namesFound.size());
-        for (String trackName : trackers.keySet()) {
-            System.out.println("---------- " + trackName + " \t\t" + trackers.get(trackName));
-        }
     }
 
     private void readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<MutableImportHeading> headings, String fileType, List<String> attributeNames) throws Exception {
         int col = 0;
-        //if the file is of type (e.g.) 'sales' and there is a name 'dataimport sales', thisis uses as an interpreter.  It need not interpret every column heading, but
-        // any attribute of the same name as a column heading will be used.
+        //  if the file is of type (e.g.) 'sales' and there is a name 'dataimport sales', this is used as an interpreter.
+        //  It need not interpret every column heading, but any attribute of the same name as a column heading will be used.
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         String lastHeading = "";
         for (String header : headers) {
@@ -644,6 +666,7 @@ public class DSImportService {
                     dividerPos = head.lastIndexOf(headingDivider);
                 }
                 heading.column = col;
+                //  seems for lasy shorthand where starting with ; will ass the previous heading name. Not sure off the top of my head of the advantages
                 if (head.startsWith(";")) {
                     head = lastHeading + head;
                 } else {
@@ -661,6 +684,8 @@ public class DSImportService {
             col++;
         }
     }
+
+    // todo - edd understand properly! Bet there's some factoring to do
 
     // each line of values (or names as it may practically be)
     private int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFound, List<String> attributeNames, int lineNo) throws Exception {

@@ -19,9 +19,8 @@ import java.util.*;
  * Created by cawley on 20/05/15.
  * <p/>
  * The new home of Magento loading logic. Much of this was in DataLoadService.
- *
+ * <p/>
  * Really the logic in here is defined by the data as dumped from Magento.
- *
  */
 public class DSDataLoadService {
 
@@ -48,6 +47,8 @@ public class DSDataLoadService {
 
     @Autowired
     private ValueService valueService;
+
+    // convenience local object, don't see a need for getters/setters
 
     private static class SaleItem {
         public Name itemName;
@@ -108,8 +109,11 @@ public class DSDataLoadService {
         return requiredTables;
     }
 
-    // might be a case for koloboke if speed becomes a concern
-    // this function is too big for intellij to analyse properly, I'm not sure how much of a concern this is.
+    /* might be a case for koloboke if speed becomes a concern
+    this function is too big for intellij to analyse properly, I'm not sure how much of a concern this is.
+    in terms of logic it's essentially translating Magento into Azquo.
+    I don't think it could be don't by a sheet, too much logic e.g. calculating bundles.
+      */
     public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Map<String, List<Map<String, String>>> tableMap = new HashMap<String, List<Map<String, String>>>();
@@ -119,7 +123,6 @@ public class DSDataLoadService {
         List<Map<String, String>> currentTableDataMap = null;
         String[] currentColumnNames = null;
         int count = 0;
-        System.gc();
         while ((line = br.readLine()) != null) {
             if (line.startsWith("||||TABLE:")) {
                 count = 0;
@@ -193,8 +196,8 @@ public class DSDataLoadService {
                 Name storeGroup = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, allStoresName, true, languages);
                 storeGroupMap.put(groupId, storeGroup);
             }
-
         }
+
         tableMap.remove("core_store_group");
         Map<String, Name> storeMap = new HashMap<String, Name>();
 
@@ -206,7 +209,6 @@ public class DSDataLoadService {
                 Name store = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, storeGroupMap.get(groupId), true, languages);
                 storeMap.put(storeId, store);
             }
-
         }
         tableMap.remove("core_store");
 
@@ -261,7 +263,7 @@ public class DSDataLoadService {
         List<String> defaultLanguage = new ArrayList<String>();
         defaultLanguage.add("MAGENTOCATEGORYID");
         boolean hasCategoryIds = azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB("MAGENTOCATEGORYID");//interim - to be removed once all dbs have category ids (swimshop, ambitresearch, lazysusan, thbaker, woods, smiffy)
-        if (!hasCategoryIds){
+        if (!hasCategoryIds) {
             defaultLanguage.clear();
             defaultLanguage.add(Constants.DEFAULT_DISPLAY_NAME);
         }
@@ -270,26 +272,24 @@ public class DSDataLoadService {
         for (Map<String, String> attributeRow : tableMap.get("catalog_category_entity_varchar")) { // should (!) have us looking in teh right place
             //only picking the name from all the category attributes
             if (attributeRow.get("attribute_id").equals(categoryNameId)) {
-                if (attributeRow.get("store_id").equals("0")){
+                if (attributeRow.get("store_id").equals("0")) {
                     categoryNames.put(attributeRow.get("entity_id"), attributeRow.get("value"));
                 }
-                if (!hasCategoryIds){//to be removed once every database has category ids
+                if (!hasCategoryIds) {//to be removed once every database has category ids
                     categoryNames.put(attributeRow.get("entity_id"), attributeRow.get("value"));
                 }
             }
         }
         tableMap.remove("catalog_category_entity_varchar");
         for (Map<String, String> entityTypeRecord : tableMap.get("catalog_category_entity")) {
-             //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1` becomes '`bottom`,`higher`,`top`
-
+            //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1` becomes '`bottom`,`higher`,`top`
             StringTokenizer pathBits = new StringTokenizer(entityTypeRecord.get("path"), "/");
-
             String path = "";
-            String thisCatNo  = entityTypeRecord.get("entity_id");
+            String thisCatNo = entityTypeRecord.get("entity_id");
             while (pathBits.hasMoreTokens()) {
                 String catNo = pathBits.nextToken();
                 String catName = catNo;
-                if (!hasCategoryIds){
+                if (!hasCategoryIds) {
                     catName = categoryNames.get(catNo);
                 }
                 if (catName != null) {
@@ -299,22 +299,18 @@ public class DSDataLoadService {
                     path = "`" + catNo + "`," + path;
                 }
             }
-
             //TODO consider what might happen if importing categories from two different databases - don't do it!
             Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, defaultLanguage);
-            if (!hasCategoryIds){
+            if (!hasCategoryIds) {
                 categoryName.setAttributeWillBePersisted("MAGENTOCATEGORYID", thisCatNo);
-            }else{
+            } else {
                 categoryName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, categoryNames.get(thisCatNo));
             }
-
-
             azquoCategoriesFound.put(thisCatNo, categoryName);
             allCategories.addChildWillBePersisted(categoryName);
         }
         tableMap.remove("catalog_category_entity");
         languages = new ArrayList<String>();
-
         languages.add("SKU");
         List<String> productLanguages = new ArrayList<String>(languages);
         for (Map<String, String> entityRow : tableMap.get("catalog_product_entity")) {
@@ -516,7 +512,6 @@ public class DSDataLoadService {
 
         Name customersName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "customer", null, false, languages);
         Name allCustomersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All customers", customersName, false, languages);
-
         Name allCountriesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All countries", customersName, false, languages);
         Name allGroupsName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All customer groups", customersName, false, languages);
         languages.clear();
@@ -673,7 +668,6 @@ public class DSDataLoadService {
                 calcBundle(azquoMemoryDBConnection, bundleTotal, bundleItems, priceName, taxName);
                 bundleItems = new ArrayList<SaleItem>();
                 bundleLine = "";
-
             }
             String productId = salesRow.get("product_id");
             Name productName = azquoProductsFound.get(productId);
@@ -772,7 +766,6 @@ public class DSDataLoadService {
                 //NEW STORAGE METHOD  - PRICE + QUANTITY ATTRIBUTES OF THE ORDER ITEM
                 //orderItemName.setAttributeWillBePersisted("price", price+"");
                 //orderItemName.setAttributeWillBePersisted("quantity",qty + "");
-
                 //....................END OF NEW STORAGE METHOD - LINE BELOW TO BE DELETED
                 Set<Name> namesForValue = new HashSet<Name>();
                 if (bundleLine.length() == 0) {
@@ -833,7 +826,6 @@ public class DSDataLoadService {
                 logMemUseage();
             }
         }
-
         if (bundleLine.length() > 0) {
             calcBundle(azquoMemoryDBConnection, bundleTotal, bundleItems, priceName, taxName);
         }
@@ -843,12 +835,12 @@ public class DSDataLoadService {
         for (Map<String, String> orderRow : tableMap.get("sales_flat_order")) {
             //only importing the IDs at present
             Name orderName = azquoOrdersFound.get("Order " + orderRow.get("entity_id"));
-             if (orderName != null) {
-                 Name store = storeMap.get(orderRow.get("store_id"));
-                 if (store != null){
-                     store.addChildWillBePersisted(orderName);
-                 }
-                 String customer = orderRow.get("customer_id");
+            if (orderName != null) {
+                Name store = storeMap.get(orderRow.get("store_id"));
+                if (store != null) {
+                    store.addChildWillBePersisted(orderName);
+                }
+                String customer = orderRow.get("customer_id");
                 String magentoCustomer;
                 Name customerName;
                 if (customer == null || customer.length() == 0) {
@@ -959,7 +951,6 @@ public class DSDataLoadService {
     private void calcBundle(AzquoMemoryDBConnection azquoMemoryDBConnection, SaleItem bundleTotal, List<SaleItem> bundleItems, Name priceName, Name taxName) throws Exception {
         /* Magento does not put prices into bundled items (though this routime checks just in case)
         so this routine looks up the bundled price in the bundle table.
-
         If it fails to find a bundled price, it totals all the 'full' prices for the unaccounted lines, then apportions the rest of the bundle price and tax accordingly
           */
         double totalOrigPrice = 0.0;
@@ -1013,7 +1004,6 @@ public class DSDataLoadService {
             }
         }
         Double unallocatedPriceRemaining = priceRemaining;
-
         for (SaleItem saleItem : bundleItems) {
             if (saleItem.price == 0.0) {
                 if (--unknownCount == 0) {
