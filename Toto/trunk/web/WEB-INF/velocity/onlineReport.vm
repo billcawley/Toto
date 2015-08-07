@@ -930,16 +930,21 @@
         var output = "<ul" + style + ">";
         for (var i = 0; i < provDisplays.length; i++) {
             var provDisplay = provDisplays[i];
-            if (provDisplay.hasOwnProperty("who") || provDisplay.hasOwnProperty("heading") || provDisplay.hasOwnProperty("value")) {
-                if (provDisplay.who > "") {
-                    output += "<li>" + provDisplay.when + " by " + provDisplay.who + "<br/>" + provDisplay.how + " " + provDisplay.where + "</li></ul>";
-                    return output;
+            if (provDisplay.hasOwnProperty("heading") || provDisplay.hasOwnProperty("value")) {
+                var text = provDisplay.name;
+                if (provDisplay.heading > ""){
+                    text = provDisplay.heading + " " + provDisplay.name;
                 }
-                if (provDisplay.heading) {
-                    output += '<li onclick="tree_click(this);">' + provDisplay.heading + "</li>";
-                    output += decodeProvenance(provDisplay.items, level + 1);
+                text = provDisplay.value + " " + text;
+                 if (provDisplay.link > ""){
+                    text = "<a href=\"" + provDisplay.link + "\">" + text + "</a>";
+                }
+                if (provDisplay.children.length > 0) {
+
+                    output += '<li onclick="tree_click(this);">' + text + "</li>";
+                    output += decodeProvenance(provDisplay.children, level + 1);
                 } else {
-                    output += "<li>" + provDisplay.value + " " + provDisplay.name + "</li>";
+                    output += "<li>" + text + "</li>";
                 }
             }else{
                 output += "<li>New Data</li>";
