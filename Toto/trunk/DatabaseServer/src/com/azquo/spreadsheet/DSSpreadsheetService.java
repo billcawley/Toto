@@ -1250,6 +1250,7 @@ seaports;children   container;children
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
 
         List<Value> values = null;
+        String heading = "";
         for (Name name:names) {
             if (values == null) {
                 values = new ArrayList<Value>(valueService.findValuesForNameIncludeAllChildren(name, true));
@@ -1257,9 +1258,15 @@ seaports;children   container;children
             } else{
                 values.retainAll(valueService.findValuesForNameIncludeAllChildren(name, true));
             }
+            if (heading.length() > 0) heading += ", ";
+            heading += name.getDefaultDisplayName();
         }
         TreeNode toReturn = new TreeNode();
+        toReturn.setHeading(heading);
+        toReturn.setValue("");
         toReturn.setChildren(nodify(values));
+        valueService.addNodeValues(toReturn);
+
         return toReturn;
      }
 
