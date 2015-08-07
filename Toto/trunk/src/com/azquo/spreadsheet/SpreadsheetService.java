@@ -9,6 +9,7 @@ import com.azquo.admin.user.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
@@ -391,7 +392,7 @@ public class SpreadsheetService {
         model.addAttribute("reports", reports);
     }
 
-    public void showNameDetails(ModelMap model, LoggedInUser loggedInUser, String database, String rootId, String parents, String searchNames) throws Exception {
+    public void showNameDetails(ModelMap model, LoggedInUser loggedInUser, String database, String rootId, String parents, String searchNames, String language) throws Exception {
         model.addAttribute("message","");
         if (database != null && database.length() > 0) {
             Database newDB = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
@@ -404,6 +405,10 @@ public class SpreadsheetService {
         model.addAttribute("parents", parents);
         model.addAttribute("rootid", rootId);
         model.addAttribute("searchnames", searchNames);
+        model.addAttribute("attributeChosen", language);
+        List<String>attributes = getAttributeList(loggedInUser.getDataAccessToken());
+        model.addAttribute("attributes", attributes);
+
     }
 
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception{
@@ -420,8 +425,12 @@ public class SpreadsheetService {
                 , userRegionOptions.getSortRowAsc(), userRegionOptions.getSortColumn(), userRegionOptions.getSortColumnAsc(), userRegionOptions.getHighlightDays());
     }
 
-    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm) throws Exception{
-        return rmiClient.getServerInterface(dataAccessToken.getServerIp()).processJSTreeRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, itemsChosen, position, backupSearchTerm);
+    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm, String language) throws Exception{
+        return rmiClient.getServerInterface(dataAccessToken.getServerIp()).processJSTreeRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, itemsChosen, position, backupSearchTerm, language);
+    }
+
+    public List<String> getAttributeList(DatabaseAccessToken databaseAccessToken)throws Exception{
+        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getAttributeList(databaseAccessToken);
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)

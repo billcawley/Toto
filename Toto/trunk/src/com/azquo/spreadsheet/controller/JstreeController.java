@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.memorydb.Constants;
 import com.azquo.spreadsheet.*;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,8 +49,12 @@ public class JstreeController {
             , @RequestParam(value = "json", required = false) String json
             , @RequestParam(value = "parents", required = false) String parents
             , @RequestParam(value = "topnode", required = false) String topNode //only for use at root.
+            , @RequestParam(value = "attribute", required = false) String attribute //only for use at root.
             , @RequestParam(value = "itemschosen", required = false) String itemsChosen
     ) throws Exception {
+        if (attribute==null || attribute.length()==0){
+            attribute = Constants.DEFAULT_DISPLAY_NAME;
+        }
         String jsonFunction = "azquojsonfeed";
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser == null) {
@@ -71,9 +76,10 @@ public class JstreeController {
             }
             // todo - clean up the logic here
             String result = spreadsheetService.processJSTreeRequest(loggedInUser.getDataAccessToken(),json,jsTreeId,topNode
-                    ,op,parent,parents != null && parents.equals("true"),itemsChosen,position,backupSearchTerm);
+                    ,op,parent,parents != null && parents.equals("true"),itemsChosen,position,backupSearchTerm,attribute);
             model.addAttribute("content", result);
             // seems to be the logic from before, if children/new then don't do the funciton. Not sure why . . .
+            if (op==null) op="";
             if (!op.equals("children") && !op.equals("new")) {
                 model.addAttribute("content", jsonFunction + "({\"response\":" + result + "})");
             } else {
@@ -81,7 +87,7 @@ public class JstreeController {
                     if (parents == null){
                         parents = "false";
                     }
-                    spreadsheetService.showNameDetails(model, loggedInUser,database,result,parents, itemsChosen);
+                    spreadsheetService.showNameDetails(model, loggedInUser,database,result,parents, itemsChosen, attribute);
                     return "jstree";
                 }
             }

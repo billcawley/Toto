@@ -217,8 +217,12 @@ public final class NameService {
 
     }
 
-    public List<Name> findTopNames(final AzquoMemoryDBConnection azquoMemoryDBConnection) {
-        return azquoMemoryDBConnection.getAzquoMemoryDB().findTopNames();
+    public List<Name> findTopNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String language) {
+        if (language.equals(Constants.DEFAULT_DISPLAY_NAME)){
+            return azquoMemoryDBConnection.getAzquoMemoryDB().findTopNames();
+        }else{
+            return azquoMemoryDBConnection.getAzquoMemoryDB().findTopNames(language);
+        }
     }
 
 
@@ -669,6 +673,10 @@ public final class NameService {
         } else { // just make a copy as list and return. This colleciton copying all over the pace bothers me a bit.
             return new ArrayList<Name>(nameStack.get(0));
         }
+    }
+
+    public List<String> attributeList(AzquoMemoryDBConnection azquoMemoryDBConnection){
+        return azquoMemoryDBConnection.getAzquoMemoryDB().getAttributes();
     }
 
     private void findAllParents(Name name, final Set<Name> allParents) {

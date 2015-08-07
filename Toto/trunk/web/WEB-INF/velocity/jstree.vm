@@ -72,6 +72,11 @@
             padding:20px:
          }
 
+        .simpleselect{
+            background-color:white;
+            border:0;
+        }
+
     </style>
 
 
@@ -79,9 +84,19 @@
 <body>
 <div id="wrapper" onmmouseout="closeWindowDelay()">
     <form  method="post" id="names" name="names">
+        <div id="attributeList" onchange="changeLanguage()">Attribute (language) <select  class="simpleselect" id="attributeChosen">
+            #foreach($attribute in $attributes)
+                <option value="$attribute"
+                #if ($attribute == $attributeChosen)
+                    selected
+                #end
+                 >$attribute </option>
+            #end
+        </select>
+        </div>
         <div id="container"></div>
         Select items: <input class="itemselect" type="text" value="" id="itemschosen" name="itemschosen"/>
-        <div class="choicesubmit"><p><a href="#" onclick="submitChoice()">Submit</a></p></div>
+        <div class="choicesubmit"><p><a href="#" onclick="submitChoice()">Show data</a></p></div>
     </form>
     <div class="namedetails" id="namedetails" style="display:none">
         <div class="closebutton"><a href="#" onclick="hideDetails();"><img src="https://data.azquo.com/images/closebutton.png" alt="close button"/></a></div>
@@ -116,7 +131,7 @@
                 'core' : {
                     'data' : {
                         "state" : {"opened" : true },
-                        "url" : "/api/Jstree?op=children&topnode=$rootid&parents=" + parents + "&itemschosen=" + searchNames,
+                        "url" : "/api/Jstree?op=children&topnode=$rootid&parents=" + parents + "&itemschosen=" + searchNames + "&attribute=" + decodeURI(document.getElementById("attributeChosen").value),
                         "dataType": "JSON",
                         "data" : function (node) {
                             return { "id" : node.id };
@@ -202,6 +217,11 @@
         });
 
 
+        function changeLanguage(){
+            window.open("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
+
+        }
+
         function submitChoice(){
             var itemsChosen = "";
             if (document.getElementById("itemschosen").value == "") {
@@ -275,7 +295,7 @@
 
 
         function azquojson(functionName, params){
-            var htmlText = "/api/" + functionName + "?" + params;
+            var htmlText = "/api/" + functionName + "?" + params + "&attribute=" + encodeURI(document.getElementById("attributeChosen").value);
             var script = document.createElement('script'),
                     head = document.getElementsByTagName('head')[0] || document.documentElement;
             script.src = htmlText;

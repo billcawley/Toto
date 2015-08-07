@@ -35,7 +35,11 @@ public interface RMIInterface extends Remote {
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColumnAsc, int highlightDays) throws RemoteException;
 
-    String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm) throws RemoteException;
+    String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm, String language) throws RemoteException;
+
+    List<String> getAttributeList(DatabaseAccessToken databaseAccessToken)throws RemoteException;
+
+
 
     List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
 

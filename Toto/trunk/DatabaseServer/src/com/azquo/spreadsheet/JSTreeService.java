@@ -86,10 +86,19 @@ public class JSTreeService {
         return names;
     }
 
+    public List<String>getAttributeList(DatabaseAccessToken databaseAccessToken)throws Exception{
+        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        return nameService.attributeList(azquoMemoryDBConnection);
+    }
+
 
     public String processRequest(DatabaseAccessToken databaseAccessToken, String json, String jsTreeId, String topNode, String op
-            , String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm) throws Exception {
+            , String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm, String language) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        if (language == null || language.length() == 0){
+            language = Constants.DEFAULT_DISPLAY_NAME;
+
+        }
 
         // trying for the tree id here, hope that will work
         Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(databaseAccessToken.toString()); // todo, sort this hack later, it's called in
@@ -123,7 +132,7 @@ public class JSTreeService {
             }
             if (op.equals("new")) {
                 int rootId = 0;
-                if (current.child.name != null) {
+                if (current!=null && current.child.name != null) {
                     rootId = current.child.name.getId();
                 }
                 return rootId + "";
@@ -135,7 +144,7 @@ public class JSTreeService {
                 if (itemsChosen == null) {
                     itemsChosen = backupSearchTerm;
                 }
-                return getJsonChildren(azquoMemoryDBConnection, databaseAccessToken.toString(), Integer.parseInt(jsTreeId), current.child.name, parents, lookup, itemsChosen);
+                return getJsonChildren(azquoMemoryDBConnection, databaseAccessToken.toString(), Integer.parseInt(jsTreeId), current.child.name, parents, lookup, itemsChosen, language);
             }
             if (current.child.name != null) {
                 if (op.equals("move_node")) {
@@ -357,7 +366,7 @@ public class JSTreeService {
     }
 
     // todo : can we move the object? It's called in a funciton that returns some other stuff, hmmmmmmmmm
-    private String getJsonChildren(AzquoMemoryDBConnection loggedInConnection, String tokenString, int jsTreeId, Name name, boolean parents, Map<String, JSTreeService.JsTreeNode> lookup, String searchTerm) throws Exception {
+    private String getJsonChildren(AzquoMemoryDBConnection loggedInConnection, String tokenString, int jsTreeId, Name name, boolean parents, Map<String, JSTreeService.JsTreeNode> lookup, String searchTerm, String language) throws Exception {
         Map<String,Boolean> state = new HashMap<String, Boolean>();
         state.put("opened", true);
         String text = "";
@@ -365,18 +374,18 @@ public class JSTreeService {
         if (jsTreeId == 0 && name == null) {
             text = "root";
             if (searchTerm == null || searchTerm.length() == 0) {
-                children = nameService.findTopNames(loggedInConnection);
+                children = nameService.findTopNames(loggedInConnection, language);
             } else {
                 try {
                     children = nameService.parseQuery(loggedInConnection, searchTerm);
                 } catch (Exception e) {//carry on
                 }
                 if (children == null || children.size() == 0) {
-                    children = nameService.findContainingName(loggedInConnection, searchTerm, Constants.DEFAULT_DISPLAY_NAME);
+                    children = nameService.findContainingName(loggedInConnection, searchTerm, language);
                 }
             }
         } else if (name != null) {
-            text = name.getDefaultDisplayName();
+            text = name.getAttribute(language);
             if (!parents) {
                 for (Name child : name.getChildren()) {
                     children.add(child);
@@ -406,12 +415,12 @@ public class JSTreeService {
                     childTriples.add(new JsonChildren.Triple(lastId, (children.size() - 100) + " more....", childrenBoolean));
                     break;
                 }
-                childTriples.add(new JsonChildren.Triple(lastId, child.getDefaultDisplayName(), childrenBoolean));
+                childTriples.add(new JsonChildren.Triple(lastId, child.getAttribute(language), childrenBoolean));
                 count++;
             }
             if (name != null) {
                 for (String attName : name.getAttributes().keySet()) {
-                    if (!attName.equals(Constants.DEFAULT_DISPLAY_NAME)) {
+                    if (!attName.equals(language)) {
                         lastJSTreeIdMap.put(tokenString, ++lastId);
                         JSTreeService.NameOrValue nameOrValue = new JSTreeService.NameOrValue();
                         nameOrValue.values = null;

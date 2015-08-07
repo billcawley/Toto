@@ -124,13 +124,23 @@ public class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm) throws RemoteException {
+    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm, String language) throws RemoteException {
         try {
-            return jsTreeService.processRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, itemsChosen, position, backupSearchTerm);
+            return jsTreeService.processRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, itemsChosen, position, backupSearchTerm, language);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
+
+    @Override
+    public List<String> getAttributeList(DatabaseAccessToken databaseAccessToken)throws RemoteException{
+        try {
+            return jsTreeService.getAttributeList(databaseAccessToken);
+        }catch (Exception e){
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
 
     @Override
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
@@ -144,7 +154,7 @@ public class RMIImplementation implements RMIInterface {
 
     public TreeNode formatJstreeDataForOutput(DatabaseAccessToken databaseAccessToken, String jsTreeString) throws RemoteException {
         try {
-              return dsSpreadsheetService.getDataList(jsTreeService.interpretNameString(databaseAccessToken,jsTreeString));
+              return dsSpreadsheetService.getDataList(jsTreeService.interpretNameString(databaseAccessToken, jsTreeString));
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

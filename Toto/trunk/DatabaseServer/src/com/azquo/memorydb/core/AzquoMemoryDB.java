@@ -352,6 +352,14 @@ public final class AzquoMemoryDB {
     // TODO address whether wrapping in a hash set here is the best plan. Memory of that object not such of an issue since it should be small and disposable
     // The iterator from CopyOnWriteArray does NOT support changes e.g. remove. A point.
 
+    public List<String> getAttributes(){
+        List<String> attributes = new ArrayList<String>();
+        for (String attribute:nameByAttributeMap.keySet()){
+            attributes.add(attribute);
+        }
+        return attributes;
+    }
+
     private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
         Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
         if (map != null) { // that attribute is there
@@ -495,6 +503,35 @@ public final class AzquoMemoryDB {
             }
         }
     }
+
+    public List<Name> findTopNames(String language) {
+        Map <String, List<Name>>thisMap = nameByAttributeMap.get(language);
+
+        final List<Name> toReturn = new ArrayList<Name>();
+        for (List<Name> names : thisMap.values()) {
+            for (Name name:names) {
+                if (name.getParents().size() == 0) {
+                    toReturn.add(name);
+                }else {
+                    boolean include = true;
+                    for (Name parent : name.getParents()) {
+                        if (parent.getAttribute(language) != null) {
+                            include = false;
+                            break;
+                        }
+                    }
+                    if (include) {
+                        toReturn.add(name);
+                    }
+                }
+            }
+
+        }
+        return toReturn;
+    }
+
+
+
 
     public List<Name> findTopNames() {
         final List<Name> toReturn = new ArrayList<Name>();
