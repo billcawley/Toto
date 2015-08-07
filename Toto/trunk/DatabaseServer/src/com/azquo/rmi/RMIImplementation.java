@@ -144,7 +144,7 @@ public class RMIImplementation implements RMIInterface {
 
     public TreeNode formatJstreeDataForOutput(DatabaseAccessToken databaseAccessToken, String jsTreeString) throws RemoteException {
         try {
-              return dsSpreadsheetService.getDataList(databaseAccessToken, jsTreeService.interpretNameString(databaseAccessToken,jsTreeString));
+              return dsSpreadsheetService.getDataList(jsTreeService.interpretNameString(databaseAccessToken,jsTreeString));
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
