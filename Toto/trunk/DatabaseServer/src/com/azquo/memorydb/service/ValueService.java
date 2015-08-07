@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.net.URLEncoder;
 import java.text.DateFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -688,28 +689,47 @@ public final class ValueService {
 
     private List<TreeNode> getTreeNodesFromDummyValues(Set<DummyValue> values) {
         //int debugCount = 0;
+        int maxSize = 10;
         boolean headingNeeded = false;
         double dValue = 0.0;
         List<TreeNode> nodeList = new ArrayList<TreeNode>();
+        int count = 0;
         for (DummyValue value : values) {
             if (value.getNames().size() > 1) {
                 headingNeeded = true;
+                break;
+            }
+            count++;
+            if (count > maxSize){
+                nodeList.add(new TreeNode((values.size() - maxSize) + " more...","",0));
                 break;
             }
             String nameFound = null;
             for (Name name : value.getNames()) {
                 nameFound = name.getDefaultDisplayName(); // so it's always going to be the last name??
             }
-            nodeList.add(new TreeNode(nameFound, value.getValueText()));
+            String val = value.getValueText();
+            double d = 0;
+            try {
+                d = Double.parseDouble(val);
+                if (d!= 0){
+                    val = roundValue(d);
+                }
+
+            }catch (Exception e){
+
+            }
+            nodeList.add(new TreeNode(nameFound, val, d));
         }
         if (headingNeeded) {
             Name topParent = null;
             while (values.size() > 0) {
+                count++;
                 Name heading = getMostUsedName(values, topParent);
                 topParent = heading.findATopParent();
                 Set<DummyValue> extract = new HashSet<DummyValue>();
                 Set<DummyValue> slimExtract = new HashSet<DummyValue>();
-                for (DummyValue value : values) {
+                 for (DummyValue value : values) {
                     if (value.getNames().contains(heading)) {
                         extract.add(value);
                         try{
@@ -734,27 +754,21 @@ public final class ValueService {
                     }
                 }
                 values.removeAll(extract);
-                String dString = "";
-                if (dValue>0.0){
-                    dString = dValue + "";
-                    if (dString.endsWith(".0")) dString = dString.replace(".0","");
-                    int dotPos = dString.indexOf(".");
-                    if (dotPos > 3 && dString.length() > dotPos + 3){
-                        dString = dString.substring(0,dotPos + 3);
-                    }
-                    dString = "[" + dString + "]";
-                    if (dString.length() > 6 && dString.indexOf(".") > 0){
 
-                    }
-
-                }
-
-                nodeList.add(new TreeNode("",heading.getDefaultDisplayName() + dString, getTreeNodesFromDummyValues(slimExtract)));
+                nodeList.add(new TreeNode("",heading.getDefaultDisplayName(), "", roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract)));
                 dValue = 0;
             }
         }
         return nodeList;
 
+    }
+
+    public String roundValue(double dValue){
+        Locale locale = Locale.getDefault();
+        NumberFormat nf = NumberFormat.getInstance(locale);
+        String dString = nf.format(dValue);
+        //todo - format this prettily, particularly when there are many decimal places
+         return dString;
     }
 
 
@@ -765,7 +779,7 @@ public final class ValueService {
         if (p.getName()!=null){
             method  += " " + p.getName();
         }
-        if (p.getContext()!=null && p.getContext().length() > 0) method += " with " + p.getContext();
+        if (p.getContext()!=null && p.getContext().length() > 1) method += " with " + p.getContext();
         String link = null;
 
         if (method.contains("spreadsheet")){
@@ -775,6 +789,19 @@ public final class ValueService {
 
             }
         }
-        return new TreeNode(source, method, link, getTreeNodesFromValues(values));
+        TreeNode toReturn =new TreeNode(source, method, link,  null, 0, getTreeNodesFromValues(values));
+        addNodeValues(toReturn);
+        return toReturn;
     }
+
+    public void addNodeValues(TreeNode t) {
+        double d = 0;
+        for (TreeNode child : t.getChildren()) {
+             d += child.getDvalue();
+           }
+        t.setValue(roundValue(d));
+        t.setDvalue(d);
+    }
+
+
 }
