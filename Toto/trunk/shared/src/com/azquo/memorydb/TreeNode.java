@@ -12,6 +12,7 @@ public class TreeNode implements Serializable{
     String name;
     String link;
     String value;
+    double dValue;
     List<TreeNode> children;
 
     public TreeNode(){
@@ -19,6 +20,7 @@ public class TreeNode implements Serializable{
         name= null;
         link= null;
         value = null;
+        dValue = 0;
         children= null;
     }
 
@@ -28,24 +30,27 @@ public class TreeNode implements Serializable{
         this.children = children;
         this.name = name;
         this.value = null;
+        this.dValue = 0;
         this.link = null;
     }
 
 
-    public TreeNode(String name, String value) {
+    public TreeNode(String name, String value, double dValue) {
         this.heading = null;
         this.children = new ArrayList<TreeNode>();
         this.name = name;
         this.value = value;
+        this.dValue = dValue;
         this.link = null;
     }
 
-    public TreeNode(String heading, String name, String link, List<TreeNode> children){
+    public TreeNode(String heading, String name, String link, String value, double dValue, List<TreeNode> children){
         this.heading = heading;
         this.children = children;
         this.link = link;
         this.name = name;
-        this.value = null;
+        this.value = value;
+        this.dValue = dValue;
     }
 
     public void setHeading(String heading){
@@ -80,6 +85,11 @@ public class TreeNode implements Serializable{
     public String getValue(){
         return this.value;
     }
+    public void setDvalue(double dValue){
+        this.dValue = dValue;
+    }
+
+    public double getDvalue() {return this.dValue;}
 
     public void setChildren(List<TreeNode> children){
         this.children = children;
