@@ -196,7 +196,7 @@
 
 
     function uploadFile(){
-         window.open("/api/Online?op=upload", "_blank", "toolbar=no, status=no,scrollbars=no, resizable=no, top=150, left=200, width=300, height=300")
+         window.open("/api/Online?opcode=upload", "_blank", "toolbar=no, status=no,scrollbars=no, resizable=no, top=150, left=200, width=300, height=300")
     }
 
 
