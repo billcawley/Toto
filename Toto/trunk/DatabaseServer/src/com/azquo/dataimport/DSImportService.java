@@ -33,6 +33,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Azquo has no schema like an SQL database but to load data a basic set structure needs to be defined
  * and rules for interpreting files need to be also. These two together effectively are the equivalent of an SQL schema.
  *
+ * I should add a full step through of logic here for values loading
+ *
+ * on a line is it a value or is it used for structure
+ *
  */
 public class DSImportService {
 
@@ -199,66 +203,76 @@ public class DSImportService {
     // Edd : it feels like an enum or array could help here but I'm not sure . . .
     private void interpretClause(AzquoMemoryDBConnection azquoMemoryDBConnection, MutableImportHeading heading, String clause) throws Exception {
         // not NOT parent of an existing name in the DB, parent of other data in the line
-        final String notUnderstood = " not understood";
-        int wordEnd = clause.indexOf(" ");
-        if (wordEnd < 0){
-            wordEnd = clause.length();
-        }
-        String firstWord = clause.substring(0, wordEnd).toLowerCase();
-        if (PARENTOF.startsWith(firstWord)){
-             String subClause = readClause(PARENTOF, clause); // parent of names in the specified column
-            heading.parentOf = subClause.replace(Name.QUOTE + "", "");
+        String readClause = readClause(PARENTOF, clause); // parent of names in the specified column
+        if (readClause != null) {
+            heading.parentOf = readClause.replace(Name.QUOTE + "", "");
             if (heading.parentOf.length() == 0) {
-                throw new Exception(clause + notUnderstood);
+                throw new Exception(clause + " not understood");
             }
-        }else if(CHILDOF.startsWith(firstWord)) {        // e.g. child of all orders
-                 heading.childOfString = readClause(CHILDOF, clause).replace(Name.QUOTE + "", "");
-                if (heading.childOfString.length() == 0) {
-                    throw new Exception(clause + notUnderstood);
-                }
-        }else if (REMOVEFROM.startsWith(firstWord)){
-            // e.g. opposite of above
-            String subClause = readClause(REMOVEFROM, clause); // child of relates to a name in the database - the hook to existing data
-             heading.removeFromString = subClause.replace(Name.QUOTE + "", "");
-                if (heading.removeFromString.length() == 0) {
-                    throw new Exception(clause + notUnderstood);
-                }
-         }else if( firstWord.equals(LANGUAGE)){
-                   heading.attribute = readClause(LANGUAGE, clause);
-                heading.identifier = true;
-                if (heading.attribute.length() == 0) {
-                    throw new Exception(clause + notUnderstood);
+        }
+        // e.g. child of all orders
+        readClause = readClause(CHILDOF, clause); // child of relates to a name in the database - the hook to existing data
+        if (readClause != null) {
+            heading.childOfString = readClause.replace(Name.QUOTE + "", "");
+            if (heading.childOfString.length() == 0) {
+                throw new Exception(clause + " not understood");
             }
-        }else if(firstWord.equals(ATTRIBUTE)){
-        // same as language really but .Name is special - it means default display name. Watch out for this.
-             heading.attribute = readClause(ATTRIBUTE, clause).replace("`", "");
+        }
+        // e.g. opposite of above
+        readClause = readClause(REMOVEFROM, clause); // child of relates to a name in the database - the hook to existing data
+        if (readClause != null) {
+            heading.removeFromString = readClause.replace(Name.QUOTE + "", "");
+            if (heading.removeFromString.length() == 0) {
+                throw new Exception(clause + " not understood");
+            }
+        }
+        // language being attribute
+        readClause = readClause(LANGUAGE, clause); // default language for identifying the name
+        if (readClause != null) {
+            heading.attribute = readClause;
+            heading.identifier = true;
             if (heading.attribute.length() == 0) {
-                throw new Exception(clause + notUnderstood);
+                throw new Exception(clause + " not understood");
+            }
+        }
+        // same as language really but .Name is special - it means default display name. Watch out for this.
+        readClause = readClause(ATTRIBUTE, clause); // to add attributes to other columns so Customer; attribute address1, externally a . gets converted to ;attribute so Customer.address1. Can even go.address1 apparently
+        if (readClause != null) {
+            heading.attribute = readClause.replace("`", "");
+            if (heading.attribute.length() == 0) {
+                throw new Exception(clause + " not understood");
             }
             if (heading.attribute.equalsIgnoreCase("name")) {
                 heading.attribute = Constants.DEFAULT_DISPLAY_NAME;
             }
-        }else  if (firstWord.equals(LOCAL)) { // local names in child of, can work with parent of but then it's the subject that it affects
+        }
+        if (readClause(LOCAL, clause) != null) { // local names in child of, can work with parent of but then it's the subject that it affects
             heading.local = true;
         }
-         if (firstWord.equals(EQUALS)) {
-            heading.equalsString = readClause(EQUALS, clause);
+        readClause = readClause(EQUALS, clause); // the actual Azquo name if the heading name is not appropriate
+        if (readClause != null) {
+            heading.equalsString = readClause;
             if (heading.equalsString.length() == 0) {
-                throw new Exception(clause + notUnderstood);
+                throw new Exception(clause + " not understood");
             }
-        }else if(firstWord.equals(COMPOSITION)){
+        }
         // combine more than one row
-             heading.composition = readClause(COMPOSITION, clause);
+        readClause = readClause(COMPOSITION, clause);
+        if (readClause != null) {
+            heading.composition = readClause;
             if (heading.composition.length() == 0) {
-                throw new Exception(clause + notUnderstood);
+                throw new Exception(clause + " not understood");
             }
-        }else if(firstWord.equals(DEFAULT)) {
-            String subClause = readClause(DEFAULT, clause);
-            if (subClause != null && subClause.length() > 0) {
-                heading.defaultValue = subClause;
-            }
-            // peers, not 100% on this, guess the old peers idea. Which was a way of ensuring membership of certain sets for a value.
-        }else if (firstWord.equals(PEERS)) {
+        }
+        // if there's no value on the line a default
+        readClause = readClause(DEFAULT, clause);
+        if (readClause != null && readClause.length() > 0) {
+            heading.defaultValue = readClause;
+        }
+        /* peers, {peer1, peer2, peer3}. Makes sure the heading exists as a name then set the peers (creating if necessary?) against this name - note it's using the name
+          notable that we're not using a custom peers structure rather peers for the name, this is what is references later and will be persisted
+           */
+        if (readClause(PEERS, clause) != null) {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
             heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
             String peersString = readClause(PEERS, clause);
@@ -293,10 +307,7 @@ public class DSImportService {
                     throw new Exception("Unclosed }");
                 }
             }
-        }else{
-            throw new Exception(firstWord + notUnderstood);
         }
-
     }
 
     /*
@@ -505,6 +516,7 @@ public class DSImportService {
     // The big function that deals with data importing
 
     public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
+        // Preparatory stuff
         // little local cache just to speed things up
         final Map<String, Name> namesFound = new ConcurrentHashMap<String, Name>();
         if (fileType.indexOf(" ") > 0) {
@@ -562,9 +574,13 @@ public class DSImportService {
                 lineIterator.next();
             }
         }
-
-        // correcting the comment : readHeaders is about creating a set of ImportHeadings
-        // notable that internally it might use attributes from the relevant data import name to supplement the header information
+        /*
+        End preparatory stuff
+        readHeaders is about creating a set of ImportHeadings
+        notable that internally it might use attributes from the relevant data import name to supplement the header information
+        to be more specific : that name called by "dataimport " + fileType has been hit for its "headingsString" attribute already to produce headers
+        but it could be asked for something more specific according to the header name. Redundant? todo - confirm logic with Bill but not right now
+        */
         List<MutableImportHeading> mutableImportHeadings = new ArrayList<MutableImportHeading>();
         readHeaders(azquoMemoryDBConnection, headers, mutableImportHeadings, fileType, attributeNames);
         // further information put into the ImportHeadings based off the initial info
@@ -633,6 +649,8 @@ public class DSImportService {
         System.out.println("---------- namesfound size " + namesFound.size());
     }
 
+    // run through the headers. Mostly this means running through clauses,
+
     private void readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<MutableImportHeading> headings, String fileType, List<String> attributeNames) throws Exception {
         int col = 0;
         //  if the file is of type (e.g.) 'sales' and there is a name 'dataimport sales', this is used as an interpreter.
@@ -643,14 +661,17 @@ public class DSImportService {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 MutableImportHeading heading = new MutableImportHeading();
                 String head = null;
+                // stored header overrides one on the file. A little odd IMO - as also mentioned in the comment where the function is called
                 if (importInterpreter != null) {
                     head = importInterpreter.getAttribute(header);
                 }
                 if (head == null) {
                     head = header;
                 }
+
                 head = head.replace(".", ";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
                 int dividerPos = head.lastIndexOf(headingDivider);
+                // right, headingDivider, |. It seems to work backwards, stacking context headings for this heading.
                 while (dividerPos > 0) {
                     MutableImportHeading contextHeading = new MutableImportHeading();
                     interpretHeading(azquoMemoryDBConnection, head.substring(dividerPos + 1), contextHeading, attributeNames);
@@ -701,10 +722,14 @@ public class DSImportService {
                 handleParent(azquoMemoryDBConnection, namesFound, importCellWithHeading, cells, attributeNames, lineNo);
             }
         }
-        long toolong = 2000000;
+        long toolong = 200000;
         long time = System.nanoTime();
         ImportCellWithHeading contextPeersItem = null;
         for (ImportCellWithHeading cell : cells) {
+
+            // ok the gist seems to be that there's peers as defined in a context item in which case it's looking in context items and peers
+            // and then normal peers which doesn't look at the context?
+
             //long track = System.currentTimeMillis();
             if (cell.immutableImportHeading.contextItem) {
                 contextNames.add(cell.immutableImportHeading.name);
@@ -713,12 +738,12 @@ public class DSImportService {
                 }
             } else {
                 if (contextNames.size() > 0 && cell.immutableImportHeading.name != null) { // ok so some context names and a name for this column? I guess as in not an attribute column for example
-                    contextNames.add(cell.immutableImportHeading.name);
-                    if (contextPeersItem != null) {
+                    contextNames.add(cell.immutableImportHeading.name);// add this name onto the context stack - for our purposes now it's
+                    if (contextPeersItem != null) { // a value cell HAS to have peers, context headings are only for values
                         final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
-                        namesForValue.add(contextPeersItem.immutableImportHeading.name);
+                        namesForValue.add(contextPeersItem.immutableImportHeading.name);// ok the "defining" name with the peers. Are we only using peers on importing?
                         boolean foundAll = true;
-                        for (Name peer : contextPeersItem.immutableImportHeading.name.getPeers().keySet()) {
+                        for (Name peer : contextPeersItem.immutableImportHeading.name.getPeers().keySet()) { // ok so a value with peers
                             //is this peer in the contexts?
                             Name possiblePeer = null;
                             for (Name contextPeer : contextNames) {
@@ -763,20 +788,12 @@ public class DSImportService {
                             // finally store our value and names for it
                             valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue);
                         }
-
                     }
                     contextNames.remove(cell.immutableImportHeading.name);
                 }
                 if (cell.immutableImportHeading.peerHeadings.size() > 0) {
-                    // intellij is right, it will never be tru after being set before! commenting . . .
-                    /*if (cell.immutableImportHeading.contextItem) { // why does intellij think it always false? that's just wrong!
-                        contextPeersItem = cell;
-                    }
-                    if (contextPeersItem != null) {
-                        headingWithPeers = contextPeersItem;
-                    }*/
                     final Set<Name> namesForValue = new HashSet<Name>(); // the names we're going to look for for this value
-
+                    // this will check peers also, ergh?
                     boolean hasRequiredPeers = findPeers(azquoMemoryDBConnection, namesFound, cell, cells, namesForValue, attributeNames);
                     if (hasRequiredPeers) {
                         // now we have the set of names for that name with peers get the value from that headingNo it's a header for
@@ -1031,7 +1048,7 @@ public class DSImportService {
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
         String sheetSetName = "";
         Name sheetSet = null;
-        if (fileName.length() > 4 && fileName.charAt(4) == '-') {
+        if (fileName.charAt(4) == '-') {
             sheetSetName = fileName.substring(5);
             sheetSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, sheetSetName, null, false, attributeNames);
         }
