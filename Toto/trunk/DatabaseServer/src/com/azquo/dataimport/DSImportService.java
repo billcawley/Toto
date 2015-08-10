@@ -29,14 +29,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by cawley on 20/05/15.
  * <p/>
  * Has a fair bit of the logic that was in the original import service.
- *
+ * <p/>
  * Azquo has no schema like an SQL database but to load data a basic set structure needs to be defined
  * and rules for interpreting files need to be also. These two together effectively are the equivalent of an SQL schema.
- *
+ * <p/>
  * I should add a full step through of logic here for values loading
- *
+ * <p/>
  * on a line is it a value or is it used for structure
- *
  */
 public class DSImportService {
 
@@ -196,87 +195,86 @@ public class DSImportService {
         if (phrase.length() >= keyName.length() && phrase.toLowerCase().startsWith(keyName)) {
             return phrase.substring(keyName.length()).trim();
         }
-        return null;
+        return "";
     }
 
     // this is called for all the ; separated clauses in a header e.g. Gender; parent of Customer; child of Genders
     // Edd : it feels like an enum or array could help here but I'm not sure . . .
+
     private void interpretClause(AzquoMemoryDBConnection azquoMemoryDBConnection, MutableImportHeading heading, String clause) throws Exception {
         // not NOT parent of an existing name in the DB, parent of other data in the line
-        String readClause = readClause(PARENTOF, clause); // parent of names in the specified column
-        if (readClause != null) {
-            heading.parentOf = readClause.replace(Name.QUOTE + "", "");
+        final String notUnderstood = " not understood";
+        int wordEnd = clause.indexOf(" ");
+        if (wordEnd < 0) {
+            wordEnd = clause.length();
+        }
+        String firstWord = clause.substring(0, wordEnd).toLowerCase();
+        // not NOT parent of an existing name in the DB, parent of other data in the line
+        if (PARENTOF.startsWith(firstWord)) {
+            String subClause = readClause(PARENTOF, clause); // parent of names in the specified column
+            heading.parentOf = subClause.replace(Name.QUOTE + "", "");
             if (heading.parentOf.length() == 0) {
-                throw new Exception(clause + " not understood");
+                throw new Exception(clause + notUnderstood);
             }
-        }
-        // e.g. child of all orders
-        readClause = readClause(CHILDOF, clause); // child of relates to a name in the database - the hook to existing data
-        if (readClause != null) {
-            heading.childOfString = readClause.replace(Name.QUOTE + "", "");
+            // e.g. child of all orders
+        } else if (CHILDOF.startsWith(firstWord)) {        // e.g. child of all orders
+            heading.childOfString = readClause(CHILDOF, clause).replace(Name.QUOTE + "", "");
             if (heading.childOfString.length() == 0) {
-                throw new Exception(clause + " not understood");
+                throw new Exception(clause + notUnderstood);
             }
-        }
-        // e.g. opposite of above
-        readClause = readClause(REMOVEFROM, clause); // child of relates to a name in the database - the hook to existing data
-        if (readClause != null) {
-            heading.removeFromString = readClause.replace(Name.QUOTE + "", "");
+            // e.g. opposite of above
+        } else if (REMOVEFROM.startsWith(firstWord)) {
+            // e.g. opposite of above
+            String subClause = readClause(REMOVEFROM, clause); // child of relates to a name in the database - the hook to existing data
+            heading.removeFromString = subClause.replace(Name.QUOTE + "", "");
             if (heading.removeFromString.length() == 0) {
-                throw new Exception(clause + " not understood");
+                throw new Exception(clause + notUnderstood);
             }
-        }
-        // language being attribute
-        readClause = readClause(LANGUAGE, clause); // default language for identifying the name
-        if (readClause != null) {
-            heading.attribute = readClause;
+            // language being attribute
+        } else if (firstWord.equals(LANGUAGE)) {
+            heading.attribute = readClause(LANGUAGE, clause);
             heading.identifier = true;
             if (heading.attribute.length() == 0) {
-                throw new Exception(clause + " not understood");
+                throw new Exception(clause + notUnderstood);
             }
-        }
-        // same as language really but .Name is special - it means default display name. Watch out for this.
-        readClause = readClause(ATTRIBUTE, clause); // to add attributes to other columns so Customer; attribute address1, externally a . gets converted to ;attribute so Customer.address1. Can even go.address1 apparently
-        if (readClause != null) {
-            heading.attribute = readClause.replace("`", "");
+            // same as language really but .Name is special - it means default display name. Watch out for this.
+        } else if (firstWord.equals(ATTRIBUTE)) {
+            // same as language really but .Name is special - it means default display name. Watch out for this.
+            heading.attribute = readClause(ATTRIBUTE, clause).replace("`", "");
             if (heading.attribute.length() == 0) {
-                throw new Exception(clause + " not understood");
+                throw new Exception(clause + notUnderstood);
             }
             if (heading.attribute.equalsIgnoreCase("name")) {
                 heading.attribute = Constants.DEFAULT_DISPLAY_NAME;
             }
-        }
-        if (readClause(LOCAL, clause) != null) { // local names in child of, can work with parent of but then it's the subject that it affects
+        } else if (firstWord.equals(LOCAL)) { // local names in child of, can work with parent of but then it's the subject that it affects
             heading.local = true;
         }
-        readClause = readClause(EQUALS, clause); // the actual Azquo name if the heading name is not appropriate
-        if (readClause != null) {
-            heading.equalsString = readClause;
+        if (firstWord.equals(EQUALS)) {
+            heading.equalsString = readClause(EQUALS, clause);
             if (heading.equalsString.length() == 0) {
-                throw new Exception(clause + " not understood");
+                throw new Exception(clause + notUnderstood);
             }
-        }
-        // combine more than one row
-        readClause = readClause(COMPOSITION, clause);
-        if (readClause != null) {
-            heading.composition = readClause;
+        } else if (firstWord.equals(COMPOSITION)) {
+            // combine more than one row
+            heading.composition = readClause(COMPOSITION, clause);
             if (heading.composition.length() == 0) {
-                throw new Exception(clause + " not understood");
+                throw new Exception(clause + notUnderstood);
             }
-        }
-        // if there's no value on the line a default
-        readClause = readClause(DEFAULT, clause);
-        if (readClause != null && readClause.length() > 0) {
-            heading.defaultValue = readClause;
-        }
+            // if there's no value on the line a default
+        } else if (firstWord.equals(DEFAULT)) {
+            String subClause = readClause(DEFAULT, clause);
+            if (subClause.length() > 0) {
+                heading.defaultValue = subClause;
+            }
         /* peers, {peer1, peer2, peer3}. Makes sure the heading exists as a name then set the peers (creating if necessary?) against this name - note it's using the name
           notable that we're not using a custom peers structure rather peers for the name, this is what is references later and will be persisted
            */
-        if (readClause(PEERS, clause) != null) {
+        } else if (firstWord.equals(PEERS)) {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
             heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
             String peersString = readClause(PEERS, clause);
-            if (peersString != null && peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
+            if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
                 if (peersString.contains("}")) {
                     peersString = peersString.substring(1, peersString.indexOf("}"));
                     final StringTokenizer st = new StringTokenizer(peersString, ",");
@@ -307,7 +305,10 @@ public class DSImportService {
                     throw new Exception("Unclosed }");
                 }
             }
+        } else {
+            throw new Exception(firstWord + notUnderstood);
         }
+
     }
 
     /*
@@ -523,7 +524,7 @@ public class DSImportService {
             //file type should be first word only
             fileType = fileType.substring(0, fileType.indexOf(" "));
         }
-        if (fileType.contains("_")){
+        if (fileType.contains("_")) {
             fileType = fileType.substring(0, fileType.indexOf("_"));
         }
         // grab the first line to check on delimiters
@@ -532,23 +533,23 @@ public class DSImportService {
         BufferedReader br = new BufferedReader(new FileReader(filePath));
         String firstLine = br.readLine();
         br.close();
-        if (firstLine != null){
-            if (firstLine.contains("|")){
+        if (firstLine != null) {
+            if (firstLine.contains("|")) {
                 delimiter = '|';
             }
-            if (firstLine.contains("\t")){
+            if (firstLine.contains("\t")) {
                 delimiter = '\t';
             }
-        }else{
+        } else {
             return;//if he first line is blank, ignore the sheet
         }
         // now we know the delimiter can CSV read, I've read jackson is pretty quick
-		CsvMapper csvMapper = new CsvMapper();
-		csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
+        CsvMapper csvMapper = new CsvMapper();
+        csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
         CsvSchema schema = csvMapper.schemaFor(String[].class)
                 .withColumnSeparator(delimiter)
                 .withLineSeparator("\n");
-		MappingIterator<String[]> lineIterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));
+        MappingIterator<String[]> lineIterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));
         String[] headers = null;
         // ok beginning to understand. It looks for a name for the file type, this name can have headers and/or the definitions for each header
         // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
@@ -637,10 +638,10 @@ public class DSImportService {
         // wasn't closing before, maybe why the files stayed there
         lineIterator.close();
         // edd adding a delete check for tomcat temp files, if read from the other temp directly then leave it alone
-        if (filePath.contains("/usr/")){
+        if (filePath.contains("/usr/")) {
             File test = new File(filePath);
-            if (test.exists()){
-                if (!test.delete()){
+            if (test.exists()) {
+                if (!test.delete()) {
                     System.out.println("unable to delete " + filePath);
                 }
             }
