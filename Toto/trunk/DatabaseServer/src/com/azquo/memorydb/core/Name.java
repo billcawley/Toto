@@ -859,6 +859,31 @@ public final class Name extends AzquoMemoryDBEntity {
         }
         return "";
     }
+    /*
+    ints to a string example. Could halve the size of some big names although would I need to change to ISO in the DB? utf can support this but it will not be as efficient as it could be
+        int[] testInts = new int[6];
+        testInts[0] = 123235;
+        testInts[1] = 0;
+        testInts[2] = 6543823;
+        testInts[3] = 8353495;
+        testInts[4] = 7354056;
+        testInts[5] = 78;
+        ByteBuffer byteBuffer = ByteBuffer.allocate(testInts.length * 4);
+        for (int i = 0; i < testInts.length; i++){
+            byteBuffer.putInt(testInts[i]);
+        }
+        String asString = new String(byteBuffer.array(), StandardCharsets.ISO_8859_1);
+        System.out.println("byte test : " + asString);
+        // now to convert back?
+        byte[] fromString = asString.getBytes(StandardCharsets.ISO_8859_1);
+        ByteBuffer anotherByteBuffer = ByteBuffer.wrap(fromString);
+        int index = 0;
+        while (index < anotherByteBuffer.capacity()){
+            System.out.println("int : " + anotherByteBuffer.getInt(index));
+            index += 4;
+        }
+
+     */
 
     // protected to only be used by the database loading, can't be called in the constructor as name by id maps may not be populated
     // changing synchronized to only relevant portions
