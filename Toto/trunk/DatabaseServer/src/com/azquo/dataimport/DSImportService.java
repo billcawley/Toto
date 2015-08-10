@@ -199,74 +199,66 @@ public class DSImportService {
     // Edd : it feels like an enum or array could help here but I'm not sure . . .
     private void interpretClause(AzquoMemoryDBConnection azquoMemoryDBConnection, MutableImportHeading heading, String clause) throws Exception {
         // not NOT parent of an existing name in the DB, parent of other data in the line
-        String readClause = readClause(PARENTOF, clause); // parent of names in the specified column
-        if (readClause != null) {
-            heading.parentOf = readClause.replace(Name.QUOTE + "", "");
+        final String notUnderstood = " not understood";
+        int wordEnd = clause.indexOf(" ");
+        if (wordEnd < 0){
+            wordEnd = clause.length();
+        }
+        String firstWord = clause.substring(0, wordEnd).toLowerCase();
+        if (PARENTOF.startsWith(firstWord)){
+             String subClause = readClause(PARENTOF, clause); // parent of names in the specified column
+            heading.parentOf = subClause.replace(Name.QUOTE + "", "");
             if (heading.parentOf.length() == 0) {
-                throw new Exception(clause + " not understood");
+                throw new Exception(clause + notUnderstood);
             }
-        }
-        // e.g. child of all orders
-        readClause = readClause(CHILDOF, clause); // child of relates to a name in the database - the hook to existing data
-        if (readClause != null) {
-            heading.childOfString = readClause.replace(Name.QUOTE + "", "");
-            if (heading.childOfString.length() == 0) {
-                throw new Exception(clause + " not understood");
+        }else if(CHILDOF.startsWith(firstWord)) {        // e.g. child of all orders
+                 heading.childOfString = readClause(CHILDOF, clause).replace(Name.QUOTE + "", "");
+                if (heading.childOfString.length() == 0) {
+                    throw new Exception(clause + notUnderstood);
+                }
+        }else if (REMOVEFROM.startsWith(firstWord)){
+            // e.g. opposite of above
+            String subClause = readClause(REMOVEFROM, clause); // child of relates to a name in the database - the hook to existing data
+             heading.removeFromString = subClause.replace(Name.QUOTE + "", "");
+                if (heading.removeFromString.length() == 0) {
+                    throw new Exception(clause + notUnderstood);
+                }
+         }else if( firstWord.equals(LANGUAGE)){
+                   heading.attribute = readClause(LANGUAGE, clause);
+                heading.identifier = true;
+                if (heading.attribute.length() == 0) {
+                    throw new Exception(clause + notUnderstood);
             }
-        }
-        // e.g. opposite of above
-        readClause = readClause(REMOVEFROM, clause); // child of relates to a name in the database - the hook to existing data
-        if (readClause != null) {
-            heading.removeFromString = readClause.replace(Name.QUOTE + "", "");
-            if (heading.removeFromString.length() == 0) {
-                throw new Exception(clause + " not understood");
-            }
-        }
-        // language being attribute
-        readClause = readClause(LANGUAGE, clause); // default language for identifying the name
-        if (readClause != null) {
-            heading.attribute = readClause;
-            heading.identifier = true;
-            if (heading.attribute.length() == 0) {
-                throw new Exception(clause + " not understood");
-            }
-        }
+        }else if(firstWord.equals(ATTRIBUTE)){
         // same as language really but .Name is special - it means default display name. Watch out for this.
-        readClause = readClause(ATTRIBUTE, clause); // to add attributes to other columns so Customer; attribute address1, externally a . gets converted to ;attribute so Customer.address1. Can even go.address1 apparently
-        if (readClause != null) {
-            heading.attribute = readClause.replace("`", "");
+             heading.attribute = readClause(ATTRIBUTE, clause).replace("`", "");
             if (heading.attribute.length() == 0) {
-                throw new Exception(clause + " not understood");
+                throw new Exception(clause + notUnderstood);
             }
             if (heading.attribute.equalsIgnoreCase("name")) {
                 heading.attribute = Constants.DEFAULT_DISPLAY_NAME;
             }
-        }
-        if (readClause(LOCAL, clause) != null) { // local names in child of, can work with parent of but then it's the subject that it affects
+        }else  if (firstWord.equals(LOCAL)) { // local names in child of, can work with parent of but then it's the subject that it affects
             heading.local = true;
         }
-        readClause = readClause(EQUALS, clause); // the actual Azquo name if the heading name is not appropriate
-        if (readClause != null) {
-            heading.equalsString = readClause;
+         if (firstWord.equals(EQUALS)) {
+            heading.equalsString = readClause(EQUALS, clause);
             if (heading.equalsString.length() == 0) {
-                throw new Exception(clause + " not understood");
+                throw new Exception(clause + notUnderstood);
             }
-        }
+        }else if(firstWord.equals(COMPOSITION)){
         // combine more than one row
-        readClause = readClause(COMPOSITION, clause);
-        if (readClause != null) {
-            heading.composition = readClause;
+             heading.composition = readClause(COMPOSITION, clause);
             if (heading.composition.length() == 0) {
-                throw new Exception(clause + " not understood");
+                throw new Exception(clause + notUnderstood);
             }
-        }
-        // if there's no value on the line a default
-        readClause = readClause(DEFAULT, clause);
-        if (readClause != null && readClause.length() > 0) {
-            heading.defaultValue = readClause;
-        }
-        // peers, not 100% on this, guess the old peers idea. Which was a way of ensuring membership of certain sets for a value.
-        if (readClause(PEERS, clause) != null) {
+        }else if(firstWord.equals(DEFAULT)) {
+            String subClause = readClause(DEFAULT, clause);
+            if (subClause != null && subClause.length() > 0) {
+                heading.defaultValue = subClause;
+            }
+            // peers, not 100% on this, guess the old peers idea. Which was a way of ensuring membership of certain sets for a value.
+        }else if (firstWord.equals(PEERS)) {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
             heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
             String peersString = readClause(PEERS, clause);
@@ -301,7 +293,10 @@ public class DSImportService {
                     throw new Exception("Unclosed }");
                 }
             }
+        }else{
+            throw new Exception(firstWord + notUnderstood);
         }
+
     }
 
     /*
@@ -706,7 +701,7 @@ public class DSImportService {
                 handleParent(azquoMemoryDBConnection, namesFound, importCellWithHeading, cells, attributeNames, lineNo);
             }
         }
-        long toolong = 200000;
+        long toolong = 2000000;
         long time = System.nanoTime();
         ImportCellWithHeading contextPeersItem = null;
         for (ImportCellWithHeading cell : cells) {
@@ -1036,7 +1031,7 @@ public class DSImportService {
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
         String sheetSetName = "";
         Name sheetSet = null;
-        if (fileName.charAt(4) == '-') {
+        if (fileName.length() > 4 && fileName.charAt(4) == '-') {
             sheetSetName = fileName.substring(5);
             sheetSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, sheetSetName, null, false, attributeNames);
         }
