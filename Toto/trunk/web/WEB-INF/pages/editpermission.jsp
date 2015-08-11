@@ -24,7 +24,7 @@ Edit/New Permission<br/>
       <td>Database</td>
       <td><select name="databaseId">
         <c:forEach items="${databases}" var="database">
-          <option value="${database.id}"<c:if test="${database.id = databaseId}"> selected</c:if>>${database.name}</option>
+          <option value="${database.id}"<c:if test="${database.id == databaseId}"> selected</c:if>>${database.name}</option>
         </c:forEach>
         </select>
       </td>
@@ -33,7 +33,7 @@ Edit/New Permission<br/>
       <td>User</td>
       <td><select name="userId">
         <c:forEach items="${users}" var="user">
-          <option value="${user.id}"<c:if test="${user.id = userId}"> selected</c:if>>${user.email}</option>
+          <option value="${user.id}"<c:if test="${user.id == userId}"> selected</c:if>>${user.email}</option>
         </c:forEach>
       </select>
       </td>
