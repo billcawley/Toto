@@ -16,6 +16,7 @@ import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -481,6 +482,94 @@ public class SpreadsheetService {
         }
         return reportName;
 
+    }
+
+    // adapted from some VB and description at http://grandzebu.net/informatique/codbar-en/ean13.htm
+    // requires a 12 digits string and returns a string to use with EAN13.TTF
+    // currently will return blank if the string can't be made, maybe it should exception
+
+    public static String prepareEAN13Barcode(String source){
+        int checksum = 0;
+        int first;
+        if (source == null){
+            return "";
+        }
+        if (source.length() == 13){ // assume it's got the checksum already (how you'd read a barcode) and zap it
+            source = source.substring(0,12);
+        } else if (source.length() != 12){ // handle source where the extra digit has been calculated?
+            return "";
+        }
+        if (!NumberUtils.isDigits(source)){ // org.apache.commons.lang.math convenience call. It should be obvious what it's doing :)
+            return "";
+        }
+/*        For i% = 12 To 1 Step -2
+        checksum% = checksum% + Val(Mid$(chaine$, i%, 1))
+        Next*/
+// vb starts from index 1 on a string
+        // odd indexed chars, we're counting from the RIGHT (the indexes do end up as odd in java as String indexes start at 0)
+        for (int i = 11; i >= 0; i -= 2){
+            checksum += Integer.parseInt(source.substring(i, i + 1));
+        }
+        checksum *= 3; // odd indexed chars * 3
+        //checksum% = checksum% * 3
+        //add on the even indexed chars
+        for (int i = 10; i >= 0; i -= 2){
+            checksum += Integer.parseInt(source.substring(i,i + 1));
+        }
+//        chaine$ = chaine$ & (10 - checksum% Mod 10) Mod 10
+        source += (10 - checksum%10); // I think equivalent?
+//        'The first digit is taken just as it is, the second one come from table A
+        StringBuilder toReturn = new StringBuilder();
+        // first digit not coded
+        toReturn.append(source.charAt(0));
+        // second always table A
+        toReturn.append((char) (65 + Integer.parseInt(source.substring(1,2))));
+        first = Integer.parseInt(source.substring(0,1));
+        // switch based on the first number for the next 5 digits. I don't really understand why but it's the rules
+        for (int i = 2; i <= 6; i++){
+            boolean tableA = false;
+            switch (i){
+                case 2:
+                    if (first >= 0 && first <= 3){
+                        tableA = true;
+                    }
+                    break;
+                case 3:
+                    if (first == 0 || first == 4 || first == 7 || first == 8){
+                        tableA = true;
+                    }
+                    break;
+                case 4:
+                    if (first == 0 || first == 1 || first == 4 || first == 5 || first == 9){
+                        tableA = true;
+                    }
+                    break;
+                case 5:
+                    if (first == 0 || first == 2 || first == 5 || first == 6 || first == 7){
+                        tableA = true;
+                    }
+                    break;
+                case 6:
+                    if (first == 0 || first == 3 || first == 6 || first == 8 || first == 9){
+                        tableA = true;
+                    }
+                    break;
+            }
+            if (tableA){
+                toReturn.append((char) (65 + Integer.parseInt(source.substring(i,i + 1))));
+            } else {
+                toReturn.append((char) (75 + Integer.parseInt(source.substring(i,i + 1))));
+            }
+        }
+        // add separator
+        toReturn.append("*");
+        // last 6 digits including the checksum on table c
+        for (int i = 7; i <= 12; i++) {// the checksum was added, source is 13 long
+            toReturn.append((char) (97 + Integer.parseInt(source.substring(i,i + 1))));
+
+        }
+        toReturn.append("+"); // end marker
+        return toReturn.toString();
     }
 
 }
