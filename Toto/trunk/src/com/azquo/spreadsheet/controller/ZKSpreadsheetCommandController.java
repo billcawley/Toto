@@ -191,7 +191,7 @@ public class ZKSpreadsheetCommandController {
         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
         zkAzquoBookUtils.populateBook(newBook);
         // here should be the list we're after
-        final List<String> choiceList = getChoiceList(book, choices.get(selectedChoices.size()));
+        final List<String> choiceList = getChoiceList(newBook, choices.get(selectedChoices.size()));
         if (choiceList.isEmpty()) { // ok if no options on the choice list we want then I guess render this one and return
             toReturn.add(renderBook(newBook));
         } else { // ok there's a list
