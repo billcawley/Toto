@@ -580,7 +580,13 @@ public final class NameService {
             return deduplicate(azquoMemoryDBConnection,setFormula.substring(12));
         }
         setFormula = stringUtils.parseStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
-        List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
+        List<Name> referencedNames = null;
+        try {
+             referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
+        }catch (Exception e){
+            if (setFormula.toLowerCase().equals("!00 children")) return new ArrayList<Name>();
+            throw e;
+        }
         setFormula = setFormula.replace(AS, ASSYMBOL + "");
         setFormula = stringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*/" + NAMEMARKER + NameService.ASSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
