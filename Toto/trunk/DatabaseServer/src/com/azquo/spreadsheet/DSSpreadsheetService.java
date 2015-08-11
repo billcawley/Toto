@@ -1,6 +1,8 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.*;
@@ -14,6 +16,10 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.servlet.ServletContext;
+import javax.xml.crypto.Data;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -42,6 +48,9 @@ public class DSSpreadsheetService {
 
     @Autowired
     ServletContext servletContext;
+
+    @Autowired
+    DSImportService importService;
 
     // best way to do this? A bean?
     public final StringUtils stringUtils;
@@ -75,6 +84,7 @@ public class DSSpreadsheetService {
 /*    public void anonymise(DatabaseAccessToken databaseAccessToken) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         List<Name> anonNames = nameService.findContainingName(azquoMemoryDBConnection, "", Name.ANON);
+
 
         for (Name set : anonNames) {
             String anonName = set.getAttribute(Name.ANON);
@@ -555,6 +565,9 @@ seaports;children   container;children
             , String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, int highlightDays) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, databaseAccessToken.getLanguages(), highlightDays);
+       if (data.size()==0){
+           return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<List<CellForDisplay>>(),null,null,null);
+       }
         List<List<CellForDisplay>> displayData = new ArrayList<List<CellForDisplay>>();
         for (List<AzquoCell> sourceRow : data) {
             List<CellForDisplay> displayDataRow = new ArrayList<CellForDisplay>();
@@ -563,6 +576,7 @@ seaports;children   container;children
                 displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol()));
             }
         }
+
         return new CellsAndHeadingsForDisplay(convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), databaseAccessToken.getLanguages())
                 , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource);
     }
@@ -574,8 +588,11 @@ seaports;children   container;children
         final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists);
         final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages);
         final List<List<DataRegionHeading>> columnHeadings = expandHeadings(transpose2DList(columnHeadingLists));
-        if (columnHeadings.size() == 0 || rowHeadings.size() == 0) {
+        if (columnHeadings.size() == 0) {
             throw new Exception("no headings passed");
+        }
+        if (rowHeadings.size()==0){
+            return new ArrayList<List<AzquoCell>>();
         }
         final List<Name> contextNames = new ArrayList<Name>();
         for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell
@@ -1028,7 +1045,7 @@ seaports;children   container;children
                 }
             }
             DataRegionHeading nameCountHeading = getHeadingWithNameCount(headingsForThisCell);
-            if (nameCountHeading != null) {
+            if (nameCountHeading != null && headingsForThisCell.size() == 2) {//these functions only work if there's no context
                 if (nameCountHeading.getName() != null){
                    //System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName());
                     doubleValue = getTotalNameCount(headingsForThisCell);
@@ -1289,10 +1306,67 @@ seaports;children   container;children
         return toReturn;
     }
 
+    public void importDataFromSpreadsheet(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user)throws Exception{
+
+
+        //write the columnheadings and data to a temporary file, then import it
+        String fileName = "temp_" + user;
+        File temp = File.createTempFile(fileName +".csv", "csv");
+        String tempName = temp.getPath();
+        temp.deleteOnExit();
+        BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(temp), 1000);
+        StringBuffer sb = new StringBuffer();
+        List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(0);
+        boolean firstCol = true;
+        for (String heading:colHeadings){
+            if (!firstCol){
+                sb.append("\t");
+            }else{
+                firstCol = false;
+            }
+            sb.append(heading);
+
+        }
+        sb.append("\n");
+        bout.write(String.valueOf(sb).getBytes(),0,sb.length());
+        List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
+        for (List<CellForDisplay> row:data){
+            sb = new StringBuffer();
+            firstCol = true;
+            for(CellForDisplay cellForDisplay:row){
+                if (!firstCol) sb.append("\t");
+                else firstCol =false;
+                sb.append(cellForDisplay.getStringValue());
+            }
+            sb.append("\n");
+            bout.write(String.valueOf(sb).getBytes(),0,sb.length());
+
+        }
+        bout.flush();
+        bout.close();
+        List<String> languages = new ArrayList<String>();
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        importService.readPreparedFile(databaseAccessToken,tempName,"csv", languages);
+
+
+
+
+    }
+
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
     public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws Exception {
+
+
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.setProvenance(user,"in spreadsheet", reportName, context);
+        if (cellsAndHeadingsForDisplay.getRowHeadings()==null){
+            importDataFromSpreadsheet(databaseAccessToken,cellsAndHeadingsForDisplay, user);
+            return;
+        }
+
+
+
+
         int numberOfValuesModified = 0;
         Map<Name, Integer> totalSetSize = new HashMap<Name, Integer>();
         List<Name> contextNames =getContextNames(azquoMemoryDBConnection,cellsAndHeadingsForDisplay.getContextSource());

@@ -94,11 +94,11 @@ public class ZKAzquoBookUtils {
             // see if we can impose the user choices on the sheet
             for (String choiceName : userChoices.keySet()) {
                 CellRegion choice = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
-                  if (choice != null) {
-                     String userChoice = userChoices.get(choiceName);
-                     sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoice);
-                     context+= choiceName + " = " + userChoices.get(choiceName) + ";";
-                }
+                if (choice != null && choice.getRowCount() == 1){
+                        String userChoice = userChoices.get(choiceName);
+                        sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoice);
+                        context += choiceName + " = " + userChoices.get(choiceName) + ";";
+                 }
             }
             setDefaultChoices(loggedInUser, sheet, userChoices);//overrides any other choice
             // ok the plan here is remove all the merges then put them back in after the regions are expanded.
@@ -156,7 +156,7 @@ public class ZKAzquoBookUtils {
                         for (int row = startRow; row <= endRow; row++) {
                             for (int col = startCol; col <= endCol; col++) {
                                 SCell sCell = sheet.getInternalSheet().getCell(row, col);
-                                if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow() // as ever check ranges of the data region vs actual data sent.
+                                if (sentCells.getData() != null && sentCells.getData().size() > row - name.getRefersToCellRegion().getRow() // as ever check ranges of the data region vs actual data sent.
                                         && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
                                     if (sCell.getType() == SCell.CellType.FORMULA) {
                                         CellForDisplay cellForDisplay = sentCells.getData().get(row - startRow).get(col - startCol);
@@ -291,6 +291,22 @@ public class ZKAzquoBookUtils {
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
 
         String errorMessage = null;
+        if (columnHeadingsDescription != null && rowHeadingsDescription==null){
+            List<List<String>> colHeadings = regionToStringLists(columnHeadingsDescription, sheet);
+            List<List<CellForDisplay>>dataRegionCells = new ArrayList<List<CellForDisplay>>();
+            CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
+            for (int rowNo=0;rowNo < dataRegion.getRowCount();rowNo++){
+                List<CellForDisplay> oneRow = new ArrayList<CellForDisplay>();
+                for (int colNo = 0;colNo < dataRegion.getColumnCount();colNo++){
+                    oneRow.add(new CellForDisplay(false,"",0, false, rowNo, colNo));
+                }
+                dataRegionCells.add(oneRow);
+            }
+
+            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null,dataRegionCells, null, null,null);
+            loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
+            return;
+        }
 
         if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
             try {
@@ -314,7 +330,7 @@ public class ZKAzquoBookUtils {
                             maxCol = sheet.getLastColumn(i);
                         }
                     }
-                    if ((displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
+                    if (cellsAndHeadingsForDisplay.getRowHeadings()!=null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
                         rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
                         int insertRow = displayDataRegion.getRow() + 2; // I think this is correct, middle row of 3?
                         Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
@@ -343,7 +359,7 @@ public class ZKAzquoBookUtils {
                     }
                     int row = 0;
                     // ok there should be the right space for the headings
-                    if (displayRowHeadings != null) {
+                    if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings()!=null) {
                         row = displayRowHeadings.getRow();
                         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
                             int col = displayRowHeadings.getColumn();
@@ -403,24 +419,25 @@ public class ZKAzquoBookUtils {
 
                     row = displayDataRegion.getRow();
                     List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
-                    for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
-                        int col = displayDataRegion.getColumn();
-                        int localCol = 0;
-                        for (CellForDisplay cellValue : rowCellValues) {
-                            if (!cellValue.getStringValue().isEmpty() && !bottomColHeadings.get(localCol).equals(".")) { // then something to set. Note : if col heading ON THE DB SIDE is . then don't populate
-                                // the notable thing ehre is that ZK uses the object type to work out data type
-                                SCell cell = sheet.getInternalSheet().getCell(row, col);
-                                // logic I didn't initially implement : don't overwrite if there's a formulae in there
-                                if (cell.getType() != SCell.CellType.FORMULA) {
-                                    if (NumberUtils.isNumber(cellValue.getStringValue())) {
-                                        cell.setValue(cellValue.getDoubleValue());// think that works . . .
-                                    } else {
-                                        cell.setValue(cellValue.getStringValue());// think that works . . .
-                                    }
-                                    // see if this works for highlighting
-                                    if (cellValue.isHighlighted()) {
-                                        CellOperationUtil.applyFontColor(Ranges.range(sheet, row, col), "#FF0000");
-                                    }
+                    if (cellsAndHeadingsForDisplay.getData()!=null) {
+                        for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
+                            int col = displayDataRegion.getColumn();
+                            int localCol = 0;
+                            for (CellForDisplay cellValue : rowCellValues) {
+                                if (!cellValue.getStringValue().isEmpty() && !bottomColHeadings.get(localCol).equals(".")) { // then something to set. Note : if col heading ON THE DB SIDE is . then don't populate
+                                    // the notable thing ehre is that ZK uses the object type to work out data type
+                                    SCell cell = sheet.getInternalSheet().getCell(row, col);
+                                    // logic I didn't initially implement : don't overwrite if there's a formulae in there
+                                    if (cell.getType() != SCell.CellType.FORMULA) {
+                                        if (NumberUtils.isNumber(cellValue.getStringValue())) {
+                                            cell.setValue(cellValue.getDoubleValue());// think that works . . .
+                                        } else {
+                                            cell.setValue(cellValue.getStringValue());// think that works . . .
+                                        }
+                                        // see if this works for highlighting
+                                        if (cellValue.isHighlighted()) {
+                                            CellOperationUtil.applyFontColor(Ranges.range(sheet, row, col), "#FF0000");
+                                        }
                                     /* commented for the moment, requires the overall unlock per sheet followed by the protect later
                                     if (cellValue.isLocked()){
                                         Range selection =  Ranges.range(sheet, row, col);
@@ -429,12 +446,13 @@ public class ZKAzquoBookUtils {
                                         newStyle.setLocked(true);
                                         selection.setCellStyle(newStyle);
                                     }*/
+                                    }
                                 }
+                                col++;
+                                localCol++;
                             }
-                            col++;
-                            localCol++;
+                            row++;
                         }
-                        row++;
                     }
                 }
             } catch (RemoteException re) {
@@ -510,12 +528,12 @@ public class ZKAzquoBookUtils {
                     CellRegion chosen = getCellRegionForSheetAndName(sheet, name.getName().substring(0, name.getName().length() - "Choice".length()) + "Chosen"); // as ever I do wonder about these string literals
                     if (choice != null && chosen != null) {
                         // ok I assume choice is a single cell
-                        try {
-                            List<String>choiceOptions = null;
-                            String query= getRegionValue(sheet,choice);
-                            if (query.toLowerCase().contains("default")){
-                                query = query.substring(0, query.toLowerCase().indexOf("default"));
-                            }
+                        List<String>choiceOptions = null;
+                        String query= getRegionValue(sheet,choice);
+                        if (query.toLowerCase().contains("default")){
+                            query = query.substring(0, query.toLowerCase().indexOf("default"));
+                        }
+                        try{
 
                             if (query.startsWith("\"") || query.startsWith("“")){
                                 //crude - if there is a comma in any option this will fail
@@ -535,12 +553,18 @@ public class ZKAzquoBookUtils {
                             }
                             Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
                             //validationValues.createName("az_Validation" + numberOfValidationsAdded);
-                            Range chosenRange = Ranges.range(sheet, chosen.getRow(), chosen.getColumn(), chosen.getLastRow(), chosen.getLastColumn());
+                            for (int rowNo=chosen.getRow(); rowNo < chosen.getRow() + chosen.getRowCount();rowNo++){
+                                for (int colNo = chosen.getColumn(); colNo < chosen.getColumn() + chosen.getColumnCount();colNo++){
 
-                            //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
-                            chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
-                                    true, "title", "msg",
-                                    false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+                                    Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
+
+                                    //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
+                                    chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
+                                            true, "title", "msg",
+                                            false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+
+                                }
+                            }
 /*                                    book.getInternalBook().addEventListener(
                                             new ModelEventListener() {
                                                 @Override

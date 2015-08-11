@@ -375,7 +375,7 @@ public class AzquoBook {
         logger.info("loading " + region);
         Range rowHeadings = getRange("az_rowheadings" + region);
         if (rowHeadings == null) {
-            throw new Exception("no range az_rowHeadings" + region);
+            return;//no need to have row headings - if no row headings regio is treated as a data entry region
         }
         //don't bother to display yet - maybe need to filter out or sort
         Range columnHeadings = getRange("az_columnheadings" + region);
@@ -1291,6 +1291,11 @@ public class AzquoBook {
 
 
     public void convertRangeToCSV(final Worksheet sheet, final CsvWriter csvW, Range range, Map<String, String> newNames, boolean transpose) throws Exception {
+
+        /*  NewNames here is a very short list which will convert 'next...' into the next available number for that variable, the value being held as the attribute 'next' on that name - e.g. for invoices
+        *   the code is now defunct, but was present at SVN version 1161
+        *
+        * */
         Row row;
         Cells cells = sheet.getCells();
         int rows; // No of rows

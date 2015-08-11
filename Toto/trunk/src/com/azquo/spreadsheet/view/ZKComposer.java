@@ -143,7 +143,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         boolean reload = false;
         if (name != null) { // as it stands regions should not overlap, we find a name that means we know what to (try) to do
             // ok it matches a name
-            if (name.getName().endsWith("Chosen")) {// would have been a one cell name
+            if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// would have been a one cell name
                 spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
                 reload = true;
             }
@@ -222,14 +222,17 @@ public class ZKComposer extends SelectorComposer<Component> {
         System.out.println("after cell change : " + row + " col " + col + " chosen");
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
-        SName name = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
+        SName name = getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
         if (name != null) { // as it stands regions should not overlap, we find a name that means we know what to (try) to do
-            if (name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
-                LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-                String region = name.getName().substring("az_DataRegion".length());
-                final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
-                if (sentCells != null) {
-                    // the data region as defined on the cheet may be larger than the sent cells
+            LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+            String region = name.getName().substring("az_DataRegion".length());
+            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
+            if (sentCells != null) {
+                // the data region as defined on the cheet may be larger than the sent cells
+                if (sentCells.getData()==null){//data region with no row headings - simply set 'save data'
+                    Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
+
+                }else {
                     if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow()
                             && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
                         CellForDisplay cellForDisplay = sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).get(col - name.getRefersToCellRegion().getColumn());
@@ -266,8 +269,8 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
         // roght now a right click gets provenance ready, dunno if I need to do this
-        SName name = getNamedRegionForRowAndColumnSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
-        if (name != null && name.getName().startsWith("az_DataRegion")) { // then I assume they're editing data
+        SName name = getNamedDataRegionForRowAndColumnSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
+        if (name != null) { // then I assume they're editing data
             Component popupChild = provenancePopup.getFirstChild();
             while (popupChild != null) {
                 provenancePopup.removeChild(popupChild);
@@ -429,6 +432,22 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
         return null;
     }
+
+    private SName getNamedDataRegionForRowAndColumnSelectedSheet(int row, int col) {
+        // now how to get the name?? Guess run through them. Feel there should be a better way.
+        final Book book = myzss.getBook();
+        for (SName name : book.getInternalBook().getNames()) { // seems best to loop through names checking which matches I think
+            if (name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
+                    && name.getName().toLowerCase().startsWith("az_dataregion")
+                    && name.getRefersToCellRegion() != null
+                    && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
+                    && col >= name.getRefersToCellRegion().getColumn() && col <= name.getRefersToCellRegion().getLastColumn()) {
+                return name;
+            }
+        }
+        return null;
+    }
+
 
     private String trimString(String stringToShow) {
 
