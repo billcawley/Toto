@@ -429,10 +429,14 @@ public class ZKAzquoBookUtils {
                                     SCell cell = sheet.getInternalSheet().getCell(row, col);
                                     // logic I didn't initially implement : don't overwrite if there's a formulae in there
                                     if (cell.getType() != SCell.CellType.FORMULA) {
-                                        if (NumberUtils.isNumber(cellValue.getStringValue())) {
-                                            cell.setValue(cellValue.getDoubleValue());// think that works . . .
+                                        if (cell.getCellStyle().getFont().getName().equalsIgnoreCase("Code EAN13")){ // then a special case, need to use barcode encoding
+                                            cell.setValue(SpreadsheetService.prepareEAN13Barcode(cellValue.getStringValue()));// guess we'll see how that goes!
                                         } else {
-                                            cell.setValue(cellValue.getStringValue());// think that works . . .
+                                            if (NumberUtils.isNumber(cellValue.getStringValue())) {
+                                                cell.setValue(cellValue.getDoubleValue());// think that works . . .
+                                            } else {
+                                                cell.setValue(cellValue.getStringValue());// think that works . . .
+                                            }
                                         }
                                         // see if this works for highlighting
                                         if (cellValue.isHighlighted()) {

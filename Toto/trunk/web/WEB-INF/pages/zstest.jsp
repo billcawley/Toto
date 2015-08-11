@@ -11,6 +11,10 @@
             font-family: 'CCode39';
             src: url('/CCode39.ttf');
         }
+        @font-face {
+            font-family: 'Code EAN13';
+            src: url('/ean13.ttf');
+        }
 
         .menubutton{
             position:absolute;
