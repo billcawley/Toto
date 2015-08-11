@@ -66,11 +66,12 @@ public class DSImportService {
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
 
-    // TODO - EDD UNDERSTANDS PROPERLY UP TO THIS LINE, TRY TO GET IT TO THE BOTTOM
     /*
     To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't
     do this initially. No problem, initially make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.
     could of course copy all fields into line but this makes the constructor needlessly complex.
+
+    Notably there are things calculated on every line that could perhaps be moved. Plus things like peer headings could hold the references to the other headings rather than indexes.
     */
     private class MutableImportHeading {
         // column index
@@ -110,7 +111,7 @@ public class DSImportService {
         // a default value if the line value is blank
         String defaultValue = null;
         // a way for a heading to have an alias or more specifically for its name to be overridden for the purposes of how headings find each other
-        // need to clarify useage of this
+        // need to clarify usage of this - not able to right now
         String equalsString = null;
     }
 
@@ -163,7 +164,6 @@ public class DSImportService {
         private final ImmutableImportHeading immutableImportHeading;
         private String value;
         private Name name;
-
         public ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value, Name name) {
             this.immutableImportHeading = immutableImportHeading;
             this.value = value;
@@ -290,6 +290,7 @@ public class DSImportService {
             }
         /* peers, {peer1, peer2, peer3}. Makes sure the heading exists as a name then set the peers (creating if necessary?) against this name - note it's using the name
           notable that we're not using a custom peers structure rather peers for the name, this is what is references later and will be persisted
+          I think we're going to move away from peers in name itself whch means we'll need to store them in the heading probably
            */
         } else if (firstWord.equals(PEERS)) {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
@@ -347,7 +348,7 @@ public class DSImportService {
         }
     }
 
-    // when dealing with peers I think, need to find the index of appropriate column in the uploaded file
+    // when dealing populating peer headings first look for the headings then look at the context headings, that's what this does.
 
     private int findContextHeading(Name name, List<MutableImportHeading> headings) {
         for (int headingNo = 0; headingNo < headings.size(); headingNo++) {
@@ -359,7 +360,10 @@ public class DSImportService {
         return -1;
     }
 
-    // find a heading by index but there are conditions. I'm not 100% on this. Allows equals and begins with the search term and a comma and certain clauses are not allowed
+    /* find a heading by index, is used when trying to find peer headings and composite values
+    The extra logic aside simply from heading matching is the identifier flag (multiple attributes mean many headings with the same name)
+    Or attribute being null (thus we don't care about identifier) or equalsString not being null? equals String parked for the mo after talking with Bill
+    */
 
     private int findHeading(String nameToFind, List<ImportCellWithHeading> headings) {
         //look for a column with identifier, or, if not found, a column that does not specify an attribute
@@ -403,6 +407,8 @@ public class DSImportService {
         }
         return headingFound;
     }
+
+    // last shot at getting a heading for peer headings, upon finding the right heading then create a name for the heading based on the heading (not line value)
 
     private int findLowerLevelHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String peerName, List<MutableImportHeading> headings) throws Exception {
         //look for a column with a set name specified as a subset of the peer name
@@ -501,8 +507,7 @@ public class DSImportService {
         }
     }
 
-
-    // The big function that deals with data importing
+    // calls header validation and batches up the data with headers ready for batch importing
 
     public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
         // Preparatory stuff
@@ -555,7 +560,7 @@ public class DSImportService {
                 headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
             }
         }
-
+        // we might use the headers on the data file, are we ever actually doing this?
         if (headers == null) {
             headers = lineIterator.next();
         } else {
@@ -573,6 +578,7 @@ public class DSImportService {
         List<MutableImportHeading> mutableImportHeadings = new ArrayList<MutableImportHeading>();
         readHeaders(azquoMemoryDBConnection, headers, mutableImportHeadings, fileType, attributeNames);
         // further information put into the ImportHeadings based off the initial info
+        // I could put more in here - there's stuff going on in the values import that is header only stuff
         fillInHeaderInformation(azquoMemoryDBConnection, mutableImportHeadings);
         final List<ImmutableImportHeading> immutableImportHeadings = new ArrayList<ImmutableImportHeading>();
         for (MutableImportHeading mutableImportHeading : mutableImportHeadings) {
@@ -580,34 +586,18 @@ public class DSImportService {
         }
         // having read the headers go through each record
         // now, since this will be multi threaded need to make line objects, Cannot be completely immutable due to the current logic, I may be able to change this, not sure
-
         int lineNo = 0;
         ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDBConnection.getAzquoMemoryDB().getLoadingThreads());
         AtomicInteger valueTracker = new AtomicInteger(0);
-        int batchSize = 100000;
+        int batchSize = 100000; // a bit arbitrary, I wonder shuld I go smaller?
         ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<List<ImportCellWithHeading>>(batchSize);
         while (lineIterator.hasNext()) { // new Jackson call . . .
             String[] lineValues = lineIterator.next();
             lineNo++;
             List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<ImportCellWithHeading>();
             for (ImmutableImportHeading immutableImportHeading : immutableImportHeadings) {
-//                trackers.put(heading.name.getDefaultDisplayName(), 0L);
-//                String lineValue = csvReader.get(immutableImportHeading.column).intern();// since strings may be repeated intern, should save a bit of memory using the String pool
-                String lineValue = immutableImportHeading.column != -1 && immutableImportHeading.column < lineValues.length ? lineValues[immutableImportHeading.column].intern() : "";// since strings may be repeated intern, should save a bit of memory using the String pool. Hopefully not a big performance hit?
-                if (immutableImportHeading.defaultValue != null && lineValue.length() == 0) {
-                    lineValue = immutableImportHeading.defaultValue;
-                }
-                if (immutableImportHeading.attribute != null && immutableImportHeading.attribute.equalsIgnoreCase(dateLang)) {
-                    /*
-                    interpret the date and change to standard form
-                    todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-                    edd switched to java 8 API calls, hope all will still work
-                    */
-                    LocalDate date = isADate(lineValue);
-                    if (date != null) {
-                        lineValue = dateTimeFormatter.format(date);
-                    }
-                }
+                // since strings may be repeated intern, should save a bit of memory using the String pool. Hopefully not a big performance hit? Also I figure trimming here does no harm
+                String lineValue = immutableImportHeading.column != -1 && immutableImportHeading.column < lineValues.length ? lineValues[immutableImportHeading.column].trim().intern() : "";
                 importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue, null));
             }
             //batch it up!
@@ -671,7 +661,7 @@ public class DSImportService {
                     dividerPos = head.lastIndexOf(headingDivider);
                 }
                 heading.column = col;
-                //  seems for lasy shorthand where starting with ; will ass the previous heading name. Not sure off the top of my head of the advantages
+                //  to deal with the .replace(".", ";attribute ")
                 if (head.startsWith(";")) {
                     head = lastHeading + head;
                 } else {
@@ -690,20 +680,15 @@ public class DSImportService {
         }
     }
 
+    // TODO - EDD UNDERSTANDS PROPERLY UP TO THIS LINE, TRY TO GET IT TO THE BOTTOM
+
     // todo - edd understand properly! Bet there's some factoring to do
 
-    // each line of values (or names as it may practically be)
+    // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
     private int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFound, List<String> attributeNames, int lineNo) throws Exception {
-        List<Name> contextNames = new ArrayList<Name>();
+        List<Name> contextNames = new ArrayList<Name>(); // stacks cumulatively across the line
         String value;
         int valueCount = 0;
-        /*
-        for (ImportHeading importHeading:headings){
-             if (!importHeading.local){
-                importHeading.lineName = includeInSet(azquoMemoryDBConnection,namesFound,importHeading.lineValue,null,false,attributeNames);
-            }
-        }
-        */
         // it seems this will put some names into the database, not sure why only if parentof is not null?
         // prepare the local parent of columns. Customer is in all customers local
         for (ImportCellWithHeading importCellWithHeading : cells) {
@@ -715,6 +700,22 @@ public class DSImportService {
         long time = System.nanoTime();
         ImportCellWithHeading contextPeersItem = null;
         for (ImportCellWithHeading cell : cells) {
+            // this basic value checking was outside, I see no reason it shouldn't be in here
+            if (cell.immutableImportHeading.defaultValue != null && cell.value.length() == 0) {
+                cell.value = cell.immutableImportHeading.defaultValue;
+            }
+            if (cell.immutableImportHeading.attribute != null && cell.immutableImportHeading.attribute.equalsIgnoreCase(dateLang)) {
+                    /*
+                    interpret the date and change to standard form
+                    todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
+                    edd switched to java 8 API calls, hope all will still work
+                    */
+                LocalDate date = isADate(cell.value);
+                if (date != null) {
+                    cell.value = dateTimeFormatter.format(date);
+                }
+            }
+
 
             /* ok the gist seems to be that there's peers as defined in a context item in which case it's looking in context items and peers
             a notable thing about context : after something has been added to context names it stays there for subsequent cells.
@@ -839,6 +840,7 @@ public class DSImportService {
         return valueCount;
     }
 
+    // sort peer headings, attribute headings, child of remove from, parent of
 
     private void fillInHeaderInformation(AzquoMemoryDBConnection azquoMemoryDBConnection, List<MutableImportHeading> headings) throws Exception {
         for (MutableImportHeading mutableImportHeading : headings) {
