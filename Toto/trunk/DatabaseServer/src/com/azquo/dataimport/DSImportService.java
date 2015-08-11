@@ -56,8 +56,8 @@ public class DSImportService {
     public static final String CHILDOF = "child of ";
     public static final String REMOVEFROM = "remove from ";
     public static final String PARENTOF = "parent of ";
-    public static final String ATTRIBUTE = "attribute ";
-    public static final String LANGUAGE = "language ";
+    public static final String ATTRIBUTE = "attribute";
+    public static final String LANGUAGE = "language";
     public static final String PEERS = "peers";
     public static final String LOCAL = "local";
     public static final String EQUALS = "equals";
@@ -271,8 +271,7 @@ public class DSImportService {
             }
         } else if (firstWord.equals(LOCAL)) { // local names in child of, can work with parent of but then it's the subject that it affects
             heading.local = true;
-        }
-        if (firstWord.equals(EQUALS)) {
+        }else if (firstWord.equals(EQUALS)) {
             heading.equalsString = readClause(EQUALS, clause);
             if (heading.equalsString.length() == 0) {
                 throw new Exception(clause + notUnderstood);
@@ -296,7 +295,7 @@ public class DSImportService {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
             heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
             String peersString = readClause(PEERS, clause);
-            if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
+            if (peersString != null && peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
                 if (peersString.contains("}")) {
                     peersString = peersString.substring(1, peersString.indexOf("}"));
                     final StringTokenizer st = new StringTokenizer(peersString, ",");
