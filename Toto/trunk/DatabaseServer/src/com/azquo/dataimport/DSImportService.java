@@ -803,7 +803,8 @@ public class DSImportService {
                 }
                 // ok that's the peer/value stuff done I think
                 if (cell.immutableImportHeading.identityHeading >= 0 && cell.immutableImportHeading.attribute != null
-                        && (!cell.immutableImportHeading.attribute.equalsIgnoreCase(dateLang) || (isADate(cell.value) == null))) {
+                        && cell.value.length() > 0
+                        && (!cell.immutableImportHeading.attribute.equalsIgnoreCase(dateLang) || (isADate(cell.value) != null))) {
                     // funnily enough no longer using attributes
                     handleAttribute(azquoMemoryDBConnection, namesFound, cell, cells);
                 }
