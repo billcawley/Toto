@@ -566,7 +566,7 @@ seaports;children   container;children
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, databaseAccessToken.getLanguages(), highlightDays);
        if (data.size()==0){
-           return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<List<CellForDisplay>>(),null,null,null);
+           return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<List<CellForDisplay>>(),null,colHeadingsSource,null);
        }
         List<List<CellForDisplay>> displayData = new ArrayList<List<CellForDisplay>>();
         for (List<AzquoCell> sourceRow : data) {
@@ -1004,7 +1004,7 @@ seaports;children   container;children
         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
         //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
         for (DataRegionHeading heading : rowHeadings) {
-            if (heading != null) {
+            if (heading != null  && (heading.getName()!=null || (heading.getAttribute()!= null && !heading.getAttribute().equals(".")) || heading.getNameCountSet()!=null)) {
                 headingsForThisCell.add(heading);
             }
         }
@@ -1012,7 +1012,7 @@ seaports;children   container;children
         boolean checked = true;
         if (hCount > 0) {
             for (DataRegionHeading heading : columnHeadings) {
-                if (heading != null) {
+                if (heading != null  && (heading.getName()!=null ||(heading.getAttribute()!= null && !heading.getAttribute().equals(".")) || heading.getNameCountSet()!=null)) {
                     headingsForThisCell.add(heading);
                 }
             }
@@ -1105,6 +1105,7 @@ seaports;children   container;children
                 listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
                 String attributeResult = valueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked, names, attributes);
                 try {
+
                     doubleValue = Double.parseDouble(attributeResult);
                 } catch (Exception e) {
                     //ignore
@@ -1336,7 +1337,9 @@ seaports;children   container;children
             for(CellForDisplay cellForDisplay:row){
                 if (!firstCol) sb.append("\t");
                 else firstCol =false;
-                sb.append(cellForDisplay.getStringValue());
+                String val = cellForDisplay.getStringValue();
+                if (val==null) val="";//for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
+                sb.append(val);
             }
             sb.append("\n");
             bout.write(String.valueOf(sb).getBytes(),0,sb.length());
@@ -1359,7 +1362,7 @@ seaports;children   container;children
 
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.setProvenance(user,"in spreadsheet", reportName, context);
-        if (cellsAndHeadingsForDisplay.getRowHeadings()==null){
+        if (cellsAndHeadingsForDisplay.getRowHeadings()==null && cellsAndHeadingsForDisplay.getData().size() > 0){
             importDataFromSpreadsheet(databaseAccessToken,cellsAndHeadingsForDisplay, user);
             return;
         }
