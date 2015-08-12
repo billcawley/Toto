@@ -15,6 +15,7 @@ import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 
 import java.rmi.RemoteException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -29,6 +30,7 @@ public class ZKAzquoBookUtils {
     final SpreadsheetService spreadsheetService;
     final UserChoiceDAO userChoiceDAO;
     final UserRegionOptionsDAO userRegionOptionsDAO;
+    final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 
     public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO) {
         this.spreadsheetService = spreadsheetService;
@@ -266,7 +268,6 @@ public class ZKAzquoBookUtils {
             List<List<String>> colHeadings = regionToStringLists(columnHeadingsDescription, sheet);
             List<List<CellForDisplay>> dataRegionCells = new ArrayList<List<CellForDisplay>>();
             CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
-            if (dataRegion != null) {
                 for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
                     List<CellForDisplay> oneRow = new ArrayList<CellForDisplay>();
                     for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
@@ -278,7 +279,6 @@ public class ZKAzquoBookUtils {
                 loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
                 return;
             }
-        }
 
         if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
             try {
@@ -400,10 +400,22 @@ public class ZKAzquoBookUtils {
                                     // the notable thing ehre is that ZK uses the object type to work out data type
                                     SCell cell = sheet.getInternalSheet().getCell(row, col);
                                     // logic I didn't initially implement : don't overwrite if there's a formulae in there
+                                    boolean hasValue = false;
                                     if (cell.getType() != SCell.CellType.FORMULA) {
-                                        if (cell.getCellStyle().getFont().getName().equalsIgnoreCase("Code EAN13")) { // then a special case, need to use barcode encoding
-                                            cell.setValue(SpreadsheetService.prepareEAN13Barcode(cellValue.getStringValue()));// guess we'll see how that goes!
-                                        } else {
+                                        if (cell.getCellStyle().getDataFormat().toLowerCase().contains("mm")){//allow users to format their own dates.  All dates on file are yyyy-MM-dd
+                                             Calendar c = Calendar.getInstance();
+                                            try {
+                                                Date date = df.parse(cellValue.getStringValue());
+                                                if (date != null) {
+                                                    cell.setValue(date.getTime() / (1000 * 3600 * 24) + 25570);//convert date to days relative to 1970
+                                                    hasValue = true;
+                                                }
+                                            }catch(Exception e){
+
+                                            }
+
+                                        }
+                                        if (!hasValue) {
                                             if (NumberUtils.isNumber(cellValue.getStringValue())) {
                                                 cell.setValue(cellValue.getDoubleValue());// think that works . . .
                                             } else {
