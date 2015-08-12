@@ -542,13 +542,36 @@ public class DSImportService {
         CsvSchema schema = csvMapper.schemaFor(String[].class)
                 .withColumnSeparator(delimiter)
                 .withLineSeparator("\n");
-        MappingIterator<String[]> lineIterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));
+        // keep this one separate so it can be closed at the end
+        MappingIterator<String[]> originalLineIterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));
+        Iterator<String[]> lineIterator = originalLineIterator; // for the data, it might be reassigned in the case of transposing
         String[] headers = null;
         // ok beginning to understand. It looks for a name for the file type, this name can have headers and/or the definitions for each header
         // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         boolean skipTopLine = false;
         if (importInterpreter != null) {
+            if ("true".equalsIgnoreCase(importInterpreter.getAttribute("transpose"))){
+                // ok we want to transpose, will use similar logic to the server side transpose
+                final List<String[]> sourceList = new ArrayList<String[]>();
+                while (lineIterator.hasNext()){ // it will be closed at the end. Worth noting that transposing shouldn't really be done on massive files, I can't imagine it would be
+                    sourceList.add(lineIterator.next());
+                }
+                final List<String[]> flipped = new ArrayList<String[]>(); // from ths I can get a compatible iterator
+                if (!sourceList.isEmpty()) { // there's data to transpose
+                    final int oldXMax = sourceList.get(0).length; // size of nested list, as described above (that is to say get the length of one row)
+                    for (int newY = 0; newY < oldXMax; newY++) {
+                        String[] newRow = new String[sourceList.size()]; // make a new row
+                        int index = 0;
+                        for (String[] oldRow : sourceList) { // and step down each of the old rows
+                            newRow[index] = oldRow[newY];//so as we're moving across the new row we're moving down the old rows on a fixed column
+                            index++;
+                        }
+                        flipped.add(newRow);
+                    }
+                    lineIterator = flipped.iterator(); // replace the iterator, I was keen to keep the pattern the Jackson uses, this seems to support it, the original is closed at the bottom either way
+                }
+            }
             String importHeaders = importInterpreter.getAttribute(headingsString);
             if (importHeaders == null) {
                 importHeaders = importInterpreter.getAttribute(headingsString + "1");
@@ -614,7 +637,7 @@ public class DSImportService {
             throw new Exception("File " + filePath + " took longer than 8 hours to load for : " + azquoMemoryDBConnection.getAzquoMemoryDB().getMySQLName());
         }
         // wasn't closing before, maybe why the files stayed there
-        lineIterator.close();
+        originalLineIterator.close();
         // edd adding a delete check for tomcat temp files, if read from the other temp directly then leave it alone
         if (filePath.contains("/usr/")) {
             File test = new File(filePath);

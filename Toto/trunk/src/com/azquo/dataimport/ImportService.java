@@ -45,8 +45,6 @@ public final class ImportService {
     @Autowired
     private OnlineReportDAO onlineReportDAO;
     @Autowired
-    private AdminService adminService;
-    @Autowired
     private SpreadsheetService spreadsheetService;
     @Autowired
     private UserChoiceDAO userChoiceDAO;
@@ -115,6 +113,7 @@ public final class ImportService {
                 tempFile = unzip(tempFile, fileName.substring(fileName.length() - 4));
             }
         }
+        // todo - multiple files in zip file?
         if (fileName.contains(".xls")) {
             readBook(loggedInUser, fileName, tempFile, attributeNames, (useType != null && useType.length() > 0));
         } else {
@@ -140,7 +139,7 @@ public final class ImportService {
     private String unzip(String fileName, String suffix) {
         String outputFile = fileName.substring(0, fileName.length() - 4);
         try {
-            byte[] data = new byte[1000];
+            byte[] data = new byte[1024*1024]; // changing this to 10k should it be more?
             int byteRead;
 
 
@@ -150,14 +149,13 @@ public final class ImportService {
             zin.getNextEntry();
             File tmpOutput = File.createTempFile(outputFile, suffix);
             tmpOutput.deleteOnExit();
-            BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(tmpOutput), 1000);
-            while ((byteRead = zin.read(data, 0, 1000)) != -1) {
+            BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(tmpOutput), data.length);
+            while ((byteRead = zin.read(data, 0, data.length)) != -1) {
                 bout.write(data, 0, byteRead);
             }
             bout.flush();
             bout.close();
             return tmpOutput.getPath();
-            // }
         } catch (Exception e) {
             e.printStackTrace();
         }
