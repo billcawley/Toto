@@ -296,7 +296,7 @@ public class DSImportService {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
             heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
             String peersString = readClause(PEERS, clause);
-            if (peersString != null && peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
+            if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
                 if (peersString.contains("}")) {
                     peersString = peersString.substring(1, peersString.indexOf("}"));
                     final StringTokenizer st = new StringTokenizer(peersString, ",");
@@ -689,9 +689,25 @@ public class DSImportService {
         List<Name> contextNames = new ArrayList<Name>(); // stacks cumulatively across the line
         String value;
         int valueCount = 0;
-        // it seems this will put some names into the database, not sure why only if parentof is not null?
-        // prepare the local parent of columns. Customer is in all customers local
+        // initial pass to deal with defaults, dates and local parents
         for (ImportCellWithHeading importCellWithHeading : cells) {
+            // this basic value checking was outside, I see no reason it shouldn't be in here
+            if (importCellWithHeading.immutableImportHeading.defaultValue != null && importCellWithHeading.value.length() == 0) {
+                importCellWithHeading.value = importCellWithHeading.immutableImportHeading.defaultValue;
+            }
+            if (importCellWithHeading.immutableImportHeading.attribute != null && importCellWithHeading.immutableImportHeading.attribute.equalsIgnoreCase(dateLang)) {
+                    /*
+                    interpret the date and change to standard form
+                    todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
+                    edd switched to java 8 API calls, hope all will still work
+                    */
+                LocalDate date = isADate(importCellWithHeading.value);
+                if (date != null) {
+                    importCellWithHeading.value = dateTimeFormatter.format(date);
+                }
+            }
+            // prepare the local parent of columns. Customer is in all customers local
+            // ok local is done up here and not local below (handle parent being called twice)? Plus the name attached to the cell (not heading!) will be set below . . . perhaps how local is dealt with. Hmmmmmmmm
             if (importCellWithHeading.immutableImportHeading.local && importCellWithHeading.immutableImportHeading.parentOf != null) { // local and it is a parentof, inside this function it will use the childheading set up - should maybe check for that instead??
                 handleParent(azquoMemoryDBConnection, namesFound, importCellWithHeading, cells, attributeNames, lineNo);
             }
@@ -700,21 +716,6 @@ public class DSImportService {
         long time = System.nanoTime();
         ImportCellWithHeading contextPeersItem = null;
         for (ImportCellWithHeading cell : cells) {
-            // this basic value checking was outside, I see no reason it shouldn't be in here
-            if (cell.immutableImportHeading.defaultValue != null && cell.value.length() == 0) {
-                cell.value = cell.immutableImportHeading.defaultValue;
-            }
-            if (cell.immutableImportHeading.attribute != null && cell.immutableImportHeading.attribute.equalsIgnoreCase(dateLang)) {
-                    /*
-                    interpret the date and change to standard form
-                    todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-                    edd switched to java 8 API calls, hope all will still work
-                    */
-                LocalDate date = isADate(cell.value);
-                if (date != null) {
-                    cell.value = dateTimeFormatter.format(date);
-                }
-            }
 
 
             /* ok the gist seems to be that there's peers as defined in a context item in which case it's looking in context items and peers
@@ -746,7 +747,7 @@ public class DSImportService {
                             // couldn't find it in the context so look through the headings?
                             if (possiblePeer == null) {
                                 //look at the headings
-                                // this is NOT dependant on the value of the line itself, really it should be outside this loop
+                                // this is NOT dependant on the value of the line itself, really it should be outside this loop - though the peerCell.name below is a different matter . . .
                                 int colFound = findHeading(peer.getDefaultDisplayName(), cells);
                                 if (colFound < 0) {
                                     foundAll = false;
@@ -806,6 +807,7 @@ public class DSImportService {
                     // funnily enough no longer using attributes
                     handleAttribute(azquoMemoryDBConnection, namesFound, cell, cells);
                 }
+                // not local this time - handle attribute and find peers might have set the cell name?
                 if (cell.immutableImportHeading.parentOf != null && !cell.immutableImportHeading.local) {
                     handleParent(azquoMemoryDBConnection, namesFound, cell, cells, attributeNames, lineNo);
                 }
