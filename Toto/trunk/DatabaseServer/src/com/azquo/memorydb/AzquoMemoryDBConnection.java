@@ -56,9 +56,12 @@ public class AzquoMemoryDBConnection {
     }
 
     public void setProvenance(final String user,final String method, final String name,final String context)throws Exception{
-        if (this.provenance !=null   && this.provenance.getUser().equals(user) && this.provenance.getMethod().equals(method) && this.provenance.getContext().equals(context)){
+        if (this.provenance !=null   && this.provenance.getUser().equals(user)){
             long elapsed = new Date().getTime() - this.provenance.getTimeStamp().getTime();
-            if (elapsed < 300000) {// five minutes
+            if(this.provenance.getMethod().equals(method) && this.provenance.getContext().equals(context) &&elapsed < 300000) {// five minutes
+                return;
+            }
+            if (this.provenance.getMethod().contains("spreadsheet") && elapsed < 10000) { //ten seconds to allow entering in the spreadsheet to override the subsequent importing
                 return;
             }
 
