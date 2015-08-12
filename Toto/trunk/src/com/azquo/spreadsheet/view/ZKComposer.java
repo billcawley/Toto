@@ -36,6 +36,7 @@ import org.zkoss.zul.*;
 import com.azquo.memorydb.TreeNode;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -134,6 +135,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
+        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO); // used in more than one place
         String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
@@ -144,7 +146,12 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (name != null) { // as it stands regions should not overlap, we find a name that means we know what to (try) to do
             // ok it matches a name
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// would have been a one cell name
-                spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), name.getName().substring(0, name.getName().length() - "Chosen".length()), chosen);
+                String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
+                spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
+                List<String> changedChoice = new ArrayList<String>();
+                changedChoice.add(choice);
+                // hopefully self explanatory :)
+                zkAzquoBookUtils.blankDependantChoices(loggedInUser,changedChoice,event.getSheet());
                 reload = true;
             }
             // todo, add row heading later if required
@@ -194,7 +201,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                 for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
-                ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
                 if (zkAzquoBookUtils.populateBook(newBook)) { // check if formulae made saveable data
                     Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
                 }

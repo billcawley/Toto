@@ -175,6 +175,12 @@ public class ZKSpreadsheetCommandController {
         w.append(result.toJSONString());
     }
 
+    /*
+    Note : a method I didn't follow for this involved making the extra sheets and rendering in one go
+            SSheet newSheet = book.getInternalBook().createSheet("edd_test", book.getSheetAt(0).getInternalSheet());
+    and then copy the names (which are not copied by doing this). It wasn't practical (can't really remember why!) but worth remembering the abiolity to copy sheets.
+     */
+
     private void resolveAndRenderChoices(List<String> toReturn, Book book, List<String> choices, List<String> selectedChoices) throws Exception {
         // will be nothing to set first time round
         int index = 0;

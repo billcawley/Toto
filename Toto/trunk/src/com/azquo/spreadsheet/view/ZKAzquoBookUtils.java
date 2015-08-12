@@ -7,12 +7,10 @@ import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.apache.commons.lang.math.NumberUtils;
-import org.zkoss.poi.ss.usermodel.*;
 import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.*;
-import org.zkoss.zss.api.model.CellStyle;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 
@@ -54,27 +52,6 @@ public class ZKAzquoBookUtils {
             userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
         }
         String context = "";
-        /* ok there was a thought of running the sheet, copying to a new, running again,
-        copying to a new but this can make the logic messy and there has to be a way or resetting the
-        original sheet which would be a pain. So I'm going to try my initial thought, set up all the required possibilities
-        at the beginning then execute as normal, the loop below being none the wiser. Only thing : the create sheet command doesn't copy names (I mean excel names!)
-        so I guess I'll try.
-
-        // book.getInternalBook().moveSheetTo(); // will need this if we go this way.
-        SSheet newSheet = book.getInternalBook().createSheet("edd_test", book.getSheetAt(0).getInternalSheet());
-        List<SName> namesForSheet1 = getNamesForSheet(book.getSheetAt(0));
-        for (SName name : namesForSheet1) {
-            final SName newName = book.getInternalBook().createName(name.getName(), newSheet.getSheetName()); // since its in the scope of this sheet it should be ok to be the same name?
-            String formula = name.getRefersToFormula();
-            if (formula.contains("!")){
-                formula = formula.substring(formula.indexOf("!"));
-            }
-            formula = newSheet.getSheetName() + formula;
-            newName.setRefersToFormula(formula);
-            System.out.println(newName.getName() + " - " + newName.getRefersToFormula());
-        }*/
-
-
 
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
@@ -94,11 +71,11 @@ public class ZKAzquoBookUtils {
             // see if we can impose the user choices on the sheet
             for (String choiceName : userChoices.keySet()) {
                 CellRegion choice = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
-                if (choice != null && choice.getRowCount() == 1){
-                        String userChoice = userChoices.get(choiceName);
-                        sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoice);
-                        context += choiceName + " = " + userChoices.get(choiceName) + ";";
-                 }
+                if (choice != null && choice.getRowCount() == 1) {
+                    String userChoice = userChoices.get(choiceName);
+                    sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoice);
+                    context += choiceName + " = " + userChoices.get(choiceName) + ";";
+                }
             }
             setDefaultChoices(loggedInUser, sheet, userChoices);//overrides any other choice
             // ok the plan here is remove all the merges then put them back in after the regions are expanded.
@@ -126,7 +103,7 @@ public class ZKAzquoBookUtils {
                     fillRegion(sheet, region, userRegionOptions, loggedInUser);
                 }
             }
-            
+
             // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
             // can't do this in the fill region as formulae need to be dealt with outside
             Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator(); // only rows with values in them
@@ -161,12 +138,12 @@ public class ZKAzquoBookUtils {
                                     if (sCell.getType() == SCell.CellType.FORMULA) {
                                         CellForDisplay cellForDisplay = sentCells.getData().get(row - startRow).get(col - startCol);
                                         if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
-                                              if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
+                                            if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
                                                 cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
                                                 showSave = true;
                                             }
-                                        } else if (sCell.getFormulaResultType() == SCell.CellType.STRING){
-                                            if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())){
+                                        } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
+                                            if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
                                                 cellForDisplay.setStringValue(sCell.getStringValue());
                                                 showSave = true;
                                             }
@@ -224,7 +201,7 @@ public class ZKAzquoBookUtils {
 
     private List<List<String>> regionToStringLists(CellRegion region, Sheet sheet) {
         List<List<String>> toReturn = new ArrayList<List<String>>();
-        if (region==null) return toReturn;
+        if (region == null) return toReturn;
         for (int rowIndex = region.getRow(); rowIndex <= region.getLastRow(); rowIndex++) {
             List<String> row = new ArrayList<String>();
             toReturn.add(row);
@@ -243,10 +220,8 @@ public class ZKAzquoBookUtils {
         return toReturn;
     }
 
-    private void setDefaultChoices(LoggedInUser loggedInUser, Sheet sheet, Map<String, String>userChoices){
-
+    private void setDefaultChoices(LoggedInUser loggedInUser, Sheet sheet, Map<String, String> userChoices) {
         for (String choiceName : userChoices.keySet()) {
-
             CellRegion choiceList = getCellRegionForSheetAndName(sheet, choiceName + "Choice");
             if (choiceList != null) {
                 String choiceString = getRegionValue(sheet, choiceList);
@@ -256,32 +231,28 @@ public class ZKAzquoBookUtils {
                     int dotPos = defaultString.indexOf(".");
                     if (dotPos > 0) {
                         CellRegion defaultName = getCellRegionForSheetAndName(sheet, defaultString.substring(0, dotPos) + "Chosen");
-                        if (defaultName!=null) {
+                        if (defaultName != null) {
                             String query = "`" + getRegionValue(sheet, defaultName) + "`" + defaultString.substring(dotPos);
                             try {
                                 List<String> choiceOptions = spreadsheetService.getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
-                                if (choiceOptions.size() == 1){
+                                if (choiceOptions.size() == 1) {
                                     CellRegion chosen = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
-                                    if (chosen!= null) {
+                                    if (chosen != null) {
                                         sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(choiceOptions.get(0));//at last!  set the option
                                     }
                                 }
-                            }catch(Exception e){
+                            } catch (Exception e) {
                                 //don't bother if you cant find it.
-
                             }
                         }
-
                     }
                 }
 
             }
         }
-
     }
 
-
-    private String getRegionValue(Sheet sheet, CellRegion region){
+    private String getRegionValue(Sheet sheet, CellRegion region) {
         return sheet.getInternalSheet().getCell(region.getRow(), region.getColumn()).getStringValue();
     }
 
@@ -291,21 +262,22 @@ public class ZKAzquoBookUtils {
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
 
         String errorMessage = null;
-        if (columnHeadingsDescription != null && rowHeadingsDescription==null){
+        if (columnHeadingsDescription != null && rowHeadingsDescription == null) {
             List<List<String>> colHeadings = regionToStringLists(columnHeadingsDescription, sheet);
-            List<List<CellForDisplay>>dataRegionCells = new ArrayList<List<CellForDisplay>>();
+            List<List<CellForDisplay>> dataRegionCells = new ArrayList<List<CellForDisplay>>();
             CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
-            for (int rowNo=0;rowNo < dataRegion.getRowCount();rowNo++){
-                List<CellForDisplay> oneRow = new ArrayList<CellForDisplay>();
-                for (int colNo = 0;colNo < dataRegion.getColumnCount();colNo++){
-                    oneRow.add(new CellForDisplay(false,"",0, false, rowNo, colNo));
+            if (dataRegion != null) {
+                for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
+                    List<CellForDisplay> oneRow = new ArrayList<CellForDisplay>();
+                    for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
+                        oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo));
+                    }
+                    dataRegionCells.add(oneRow);
                 }
-                dataRegionCells.add(oneRow);
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null);
+                loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
+                return;
             }
-
-            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null,dataRegionCells, null, null,null);
-            loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
-            return;
         }
 
         if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
@@ -330,7 +302,7 @@ public class ZKAzquoBookUtils {
                             maxCol = sheet.getLastColumn(i);
                         }
                     }
-                    if (cellsAndHeadingsForDisplay.getRowHeadings()!=null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
+                    if (cellsAndHeadingsForDisplay.getRowHeadings() != null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
                         rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
                         int insertRow = displayDataRegion.getRow() + 2; // I think this is correct, middle row of 3?
                         Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
@@ -357,9 +329,9 @@ public class ZKAzquoBookUtils {
                             insertRange.setColumnWidth(originalWidth); // hopefully set the lot in one go??
                         }
                     }
-                    int row = 0;
+                    int row;
                     // ok there should be the right space for the headings
-                    if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings()!=null) {
+                    if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
                         row = displayRowHeadings.getRow();
                         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
                             int col = displayRowHeadings.getColumn();
@@ -419,7 +391,7 @@ public class ZKAzquoBookUtils {
 
                     row = displayDataRegion.getRow();
                     List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
-                    if (cellsAndHeadingsForDisplay.getData()!=null) {
+                    if (cellsAndHeadingsForDisplay.getData() != null) {
                         for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
                             int col = displayDataRegion.getColumn();
                             int localCol = 0;
@@ -429,7 +401,7 @@ public class ZKAzquoBookUtils {
                                     SCell cell = sheet.getInternalSheet().getCell(row, col);
                                     // logic I didn't initially implement : don't overwrite if there's a formulae in there
                                     if (cell.getType() != SCell.CellType.FORMULA) {
-                                        if (cell.getCellStyle().getFont().getName().equalsIgnoreCase("Code EAN13")){ // then a special case, need to use barcode encoding
+                                        if (cell.getCellStyle().getFont().getName().equalsIgnoreCase("Code EAN13")) { // then a special case, need to use barcode encoding
                                             cell.setValue(SpreadsheetService.prepareEAN13Barcode(cellValue.getStringValue()));// guess we'll see how that goes!
                                         } else {
                                             if (NumberUtils.isNumber(cellValue.getStringValue())) {
@@ -523,30 +495,27 @@ public class ZKAzquoBookUtils {
             sheet.getBook().getInternalBook().createSheet(VALIDATION_SHEET);
         }
         Sheet validationSheet = sheet.getBook().getSheet(VALIDATION_SHEET);
-        //validationSheet.getInternalSheet().setSheetVisible(SSheet.SheetVisible.HIDDEN);
+        validationSheet.getInternalSheet().setSheetVisible(SSheet.SheetVisible.HIDDEN);
         int numberOfValidationsAdded = 0;
         for (SName name : namesForSheet) {
-            if (name.getRefersToSheetName().equals(sheet.getSheetName())) {
+            if (name.getRefersToSheetName().equals(sheet.getSheetName())) { // why am I checking this again? A little confused
                 if (name.getName().endsWith("Choice")) {
                     CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
                     CellRegion chosen = getCellRegionForSheetAndName(sheet, name.getName().substring(0, name.getName().length() - "Choice".length()) + "Chosen"); // as ever I do wonder about these string literals
                     if (choice != null && chosen != null) {
                         // ok I assume choice is a single cell
-                        List<String>choiceOptions = null;
-                        String query= getRegionValue(sheet,choice);
-                        if (query.toLowerCase().contains("default")){
+                        List<String> choiceOptions = new ArrayList<String>(); // was null, see no help in that
+                        String query = getRegionValue(sheet, choice);
+                        if (query.toLowerCase().contains("default")) {
                             query = query.substring(0, query.toLowerCase().indexOf("default"));
                         }
-                        try{
-
-                            if (query.startsWith("\"") || query.startsWith("“")){
+                        try {
+                            if (query.startsWith("\"") || query.startsWith("“")) {
                                 //crude - if there is a comma in any option this will fail
-                                query  = query.replace("\"","").replace("“","").replace("”","");
+                                query = query.replace("\"", "").replace("“", "").replace("”", "");
                                 String[] choices = query.split(",");
-                                for (String choice2:choices){
-                                    choiceOptions.add(choice2);
-                                }
-                            }else{
+                                Collections.addAll(choiceOptions, choices);
+                            } else {
                                 choiceOptions = spreadsheetService.getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
                             }
                             validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(name.getName());
@@ -557,11 +526,9 @@ public class ZKAzquoBookUtils {
                             }
                             Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
                             //validationValues.createName("az_Validation" + numberOfValidationsAdded);
-                            for (int rowNo=chosen.getRow(); rowNo < chosen.getRow() + chosen.getRowCount();rowNo++){
-                                for (int colNo = chosen.getColumn(); colNo < chosen.getColumn() + chosen.getColumnCount();colNo++){
-
+                            for (int rowNo = chosen.getRow(); rowNo < chosen.getRow() + chosen.getRowCount(); rowNo++) {
+                                for (int colNo = chosen.getColumn(); colNo < chosen.getColumn() + chosen.getColumnCount(); colNo++) {
                                     Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
-
                                     //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
                                     chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
                                             true, "title", "msg",
@@ -569,16 +536,6 @@ public class ZKAzquoBookUtils {
 
                                 }
                             }
-/*                                    book.getInternalBook().addEventListener(
-                                            new ModelEventListener() {
-                                                @Override
-                                                public void onEvent(ModelEvent modelEvent) {
-                                                    System.out.println(modelEvent);
-                                                    if (modelEvent.getName().equals("onDataValidationContentChange")){
-                                                        modelEvent.getObjectId();
-                                                    }
-                                                }
-                                            });*/
                         } catch (Exception e) {
                             Range chosenRange = Ranges.range(sheet, chosen.getRow(), chosen.getColumn(), chosen.getLastRow(), chosen.getLastColumn());
                             chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "{\"" + e.getMessage() + "\"}", null,
@@ -590,6 +547,38 @@ public class ZKAzquoBookUtils {
                     }
                 }
             }
+        }
+    }
+
+    /* so a user changes a drop down, we need dependant drop downs to have theiur choices blanked. Currently I assume on one sheet
+    the choices are without prefix or suffix, I expect Pallet not PalletChosen. Check the choice fields for dependencies,
+    zap the option in the db then recurse if necessary.
+     */
+    public void blankDependantChoices(LoggedInUser loggedInUser, List<String> changedChoices, Sheet sheet) {
+        List<String> affectedChoices = new ArrayList<String>();
+        for (SName name : getNamesForSheet(sheet)) { // this should be fine? I mean getNamesForSheet.
+            String nameName = name.getName();
+            if (nameName.endsWith("Choice")) {
+                CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
+                if (choice != null) {
+                    final SCell cell = sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn());
+                    if (cell.getType() == SCell.CellType.FORMULA) { // it chould be for choices
+                        String query = cell.getFormulaValue(); // otherwise we'll see the result
+                        for (String changed : changedChoices) {
+                            if (query.toUpperCase().contains((changed + "Chosen").toUpperCase())) { // not sure if this chould be case insensetive, I'll make it so for the moment
+                                // so that choice is dependant on one of the things chosen, The dropdown will change so need to zap the choice
+                                String affectedChoice = nameName.substring(0, nameName.length() - "Choice".length());
+                                affectedChoices.add(affectedChoice);
+                                spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), affectedChoice, null);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (!affectedChoices.isEmpty()) {
+            // then recurse
+            blankDependantChoices(loggedInUser, affectedChoices, sheet);
         }
     }
 }
