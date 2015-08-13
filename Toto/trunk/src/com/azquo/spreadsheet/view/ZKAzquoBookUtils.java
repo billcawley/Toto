@@ -80,6 +80,11 @@ public class ZKAzquoBookUtils {
                 }
             }
             setDefaultChoices(loggedInUser, sheet, userChoices);//overrides any other choice
+            /* TODO ok, after mulling the issue of selecting the first on each list automatically I think here is the place to do it
+            If I don't do it here it will have to be after like UI clicks and cause the sheet to reload, here the strategy should be I think to see which choices are not set
+            and to try to get the first one and set it. Depending on the structure this may take a few passes but it shouldn't be that heavy. Later.
+             */
+
             // ok the plan here is remove all the merges then put them back in after the regions are expanded.
             List<CellRegion> merges = new ArrayList<CellRegion>(sheet.getInternalSheet().getMergedRegions());
             for (CellRegion merge : merges) {
