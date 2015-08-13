@@ -205,7 +205,7 @@ public class JSTreeService {
                     name = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameJsonRequest.id);
                 } else {
                     // new name . . .
-                    name = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance("imported"), true);
+                    name = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), true);
                 }
                 if (name == null) {
                     return "error: name for id not found : " + nameJsonRequest.id;
