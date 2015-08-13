@@ -358,11 +358,11 @@ public final class ImportService {
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         if (databaseServer.getIp().equals(LOCALIP)){
-            rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames);
+            rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames, loggedInUser.getUser().getName());
         } else {
             // move it
             String remoteFilePath = copyFileToDatabaseServer(filePath, databaseServer.getSftpUrl());
-            rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, remoteFilePath, fileType, attributeNames);
+            rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, remoteFilePath, fileType, attributeNames, loggedInUser.getUser().getName());
         }
     }
 

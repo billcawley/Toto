@@ -29,7 +29,7 @@ public interface RMIInterface extends Remote {
 
     String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws RemoteException;
 
-    void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws RemoteException;
+    void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames, String user) throws RemoteException;
 
     CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource

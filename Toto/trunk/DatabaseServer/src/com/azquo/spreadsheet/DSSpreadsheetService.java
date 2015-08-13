@@ -1307,7 +1307,7 @@ seaports;children   container;children
         return toReturn;
     }
 
-    public void importDataFromSpreadsheet(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user)throws Exception{
+    public void importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user)throws Exception{
 
 
         //write the columnheadings and data to a temporary file, then import it
@@ -1349,7 +1349,7 @@ seaports;children   container;children
         bout.close();
         List<String> languages = new ArrayList<String>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        importService.readPreparedFile(databaseAccessToken,tempName,"csv", languages);
+        importService.readPreparedFile(azquoMemoryDBConnection,tempName,"csv", languages);
 
 
 
@@ -1363,7 +1363,7 @@ seaports;children   container;children
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.setProvenance(user,"in spreadsheet", reportName, context);
         if (cellsAndHeadingsForDisplay.getRowHeadings()==null && cellsAndHeadingsForDisplay.getData().size() > 0){
-            importDataFromSpreadsheet(databaseAccessToken,cellsAndHeadingsForDisplay, user);
+            importDataFromSpreadsheet(azquoMemoryDBConnection,cellsAndHeadingsForDisplay, user);
             return;
         }
 
