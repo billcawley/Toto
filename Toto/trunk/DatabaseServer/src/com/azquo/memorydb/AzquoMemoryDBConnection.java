@@ -51,32 +51,25 @@ public class AzquoMemoryDBConnection {
     protected Provenance provenance = null;
 
     public Provenance getProvenance() {
-        return getProvenance("in spreadsheet");
+        if (provenance == null) {
+            try {
+                provenance = new Provenance(getAzquoMemoryDB(), "unknown provenance", new Date(), "", "", "-");
+            } catch (Exception ignored) {
+            }
+        }
+        return provenance;
 
     }
 
     public void setProvenance(final String user,final String method, final String name,final String context)throws Exception{
         if (this.provenance !=null   && this.provenance.getUser().equals(user)){
             long elapsed = new Date().getTime() - this.provenance.getTimeStamp().getTime();
-            if(this.provenance.getMethod().equals(method) && this.provenance.getContext().equals(context) &&elapsed < 300000) {// five minutes
-                return;
-            }
-            if (this.provenance.getMethod().contains("spreadsheet") && elapsed < 10000) { //ten seconds to allow entering in the spreadsheet to override the subsequent importing
+            if(this.provenance.getMethod().equals(method) && this.provenance.getContext().equals(context) &&elapsed < 600000) {// ten minutes
                 return;
             }
 
         }
         this.provenance = new Provenance(getAzquoMemoryDB(),user,new Date(),method, name, context);
-    }
-
-    public Provenance getProvenance(String where) {
-        if (provenance == null) {
-            try {
-                provenance = new Provenance(getAzquoMemoryDB(), where, new Date(), "", "", "-");
-            } catch (Exception ignored) {
-            }
-        }
-        return provenance;
     }
 
     // tellingly never used.
