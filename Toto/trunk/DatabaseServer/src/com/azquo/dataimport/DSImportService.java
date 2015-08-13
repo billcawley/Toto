@@ -63,6 +63,7 @@ public class DSImportService {
     public static final String EQUALS = "equals";
     public static final String COMPOSITION = "composition";
     public static final String DEFAULT = "default";
+    public static final String NONZERO = "nonzero";
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
 
@@ -112,6 +113,8 @@ public class DSImportService {
         String defaultValue = null;
         // a way for a heading to have an alias or more specifically for its name to be overridden for the purposes of how headings find each other
         // need to clarify usage of this - not able to right now
+        boolean nonZero = false;
+        //don't import zero values;
         String equalsString = null;
     }
 
@@ -133,6 +136,7 @@ public class DSImportService {
         final boolean local;
         final String composition;
         final String defaultValue;
+        final boolean nonZero;
         final String equalsString;
 
         public ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
@@ -153,6 +157,7 @@ public class DSImportService {
             this.local = mutableImportHeading.local;
             this.composition = mutableImportHeading.composition;
             this.defaultValue = mutableImportHeading.defaultValue;
+            this.nonZero = mutableImportHeading.nonZero;
             this.equalsString = mutableImportHeading.equalsString;
         }
     }
@@ -177,6 +182,7 @@ public class DSImportService {
     static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd/MM/yy");
     static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd MMM yyyy");
     static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    static final DateTimeFormatter ukdf5 = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
     private LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
         try {
@@ -193,7 +199,9 @@ public class DSImportService {
         if (date != null) return date;
         date = tryDate(maybeDate.length() > 11 ? maybeDate.substring(0, 11) : maybeDate, ukdf3);
         if (date != null) return date;
-        return tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 8) : maybeDate, ukdf2);
+        date =  tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 8) : maybeDate, ukdf2);
+        if (date!=null) return date;
+        return tryDate(maybeDate.length() > 11 ? maybeDate.substring(0,11):maybeDate, ukdf5);
     }
 
     /*
@@ -201,9 +209,19 @@ public class DSImportService {
     Sets being as mentioned at the top one of the two files that are needed along with import headers to set up a database ready to load data.
     */
 
-    public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames) throws Exception {
+    public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames, String user) throws Exception {
         System.out.println("reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        azquoMemoryDBConnection.setProvenance(user,"imported",filePath,"");
+        readPreparedFile(azquoMemoryDBConnection, filePath, fileType, attributeNames);
+
+    }
+
+
+
+    public void readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
+
+
         if (fileType.toLowerCase().startsWith("sets")) {
             setsImport(azquoMemoryDBConnection, new FileInputStream(filePath), attributeNames, fileType);
         } else {
@@ -292,6 +310,8 @@ public class DSImportService {
           notable that we're not using a custom peers structure rather peers for the name, this is what is references later and will be persisted
           I think we're going to move away from peers in name itself whch means we'll need to store them in the heading probably
            */
+        } else if (firstWord.equals(NONZERO)){
+            heading.nonZero = true;
         } else if (firstWord.equals(PEERS)) {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
             heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
@@ -800,6 +820,7 @@ public class DSImportService {
                         } else {
                             value = "";
                         }
+                        if (cell.immutableImportHeading.nonZero && isZero(value)) value = "";
                         if (value.trim().length() > 0) { // no point storing if there's no value!
                             valueCount++;
                             // finally store our value and names for it
@@ -818,6 +839,7 @@ public class DSImportService {
                     } else {
                         value = "";
                     }
+                    if (cell.immutableImportHeading.nonZero && isZero(value)) value = "";
                     if (value.trim().length() > 0) { // no point storing if there's no value!
                         valueCount++;
                         // finally store our value and names for it
@@ -1073,6 +1095,17 @@ public class DSImportService {
         }
     }
 
+
+    private boolean isZero(String text){
+        try{
+            double d = Double.parseDouble(text);
+            if (d==0.0) return true;
+            return false;
+        }catch(Exception e){
+            return true;
+        }
+    }
+
     public void setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames, String fileName) throws Exception {
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
         String sheetSetName = "";
@@ -1128,5 +1161,6 @@ public class DSImportService {
                 }
             }
         }
+
     }
 }
