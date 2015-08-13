@@ -71,6 +71,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         userRegionOptionsDAO = (UserRegionOptionsDAO) applicationContext.getBean("userRegionOptionsDao");
         adminService = (AdminService) applicationContext.getBean("adminService");
         editPopup.setId("editPopup");
+        editPopup.setStyle("background-color:#ffffcc");
         Menuitem item1 = new Menuitem("Audit");
         item1.setId("provenance");
         Menuitem item2 = new Menuitem("Region Spec");
@@ -87,7 +88,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         provenancePopup.setId("provenancePopup");
         provenancePopup.setDraggable("true");
         provenancePopup.setDroppable("true");
-        item1.setPopup(provenancePopup); // I think that will automatically work??
+        provenancePopup.setStyle("background:#ffffcc");
+         item1.setPopup(provenancePopup); // I think that will automatically work??
 
 
         Popup instructionsPopup = new Popup();
@@ -512,7 +514,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
         if (treeNode.getHeading() != null) { // then assume we have items too!
             stringBuilder.append(treeNode.getHeading());
-            stringBuilder.append("\n");
+            //stringBuilder.append("\n");
             tab++;
             for (TreeNode treeNode1 : treeNode.getChildren()) {
                 resolveTreeNode(tab, stringBuilder, treeNode1);
