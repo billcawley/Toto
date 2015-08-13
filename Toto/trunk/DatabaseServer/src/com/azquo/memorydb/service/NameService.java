@@ -371,7 +371,7 @@ public final class NameService {
         } else {
             logger.debug("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
             // todo - we should not be getting the provenance from the connection
-            Provenance provenance = azquoMemoryDBConnection.getProvenance("imported");
+            Provenance provenance = azquoMemoryDBConnection.getProvenance();
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
             // was != which would probably have worked but safer with !.equals
             if (!attributeNames.get(0).equals(Constants.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
