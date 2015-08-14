@@ -233,11 +233,14 @@ public class ZKComposer extends SelectorComposer<Component> {
         try {
              chosen = cellData.getStringValue();
         }catch(Exception e){
-            if (cellData!=null){
+            try{
+
                 doubleValue = cellData.getDoubleValue();
                 isDouble = true;
                 chosen = doubleValue + "";
 
+            }catch(Exception e2){
+                chosen="";
             }
          }
         String dataFormat = Ranges.range(event.getSheet(),row, col).getCellStyle().getDataFormat();
