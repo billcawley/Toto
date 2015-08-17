@@ -24,6 +24,7 @@ import org.zkoss.zss.jsp.JsonUpdateBridge;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
+import org.zkoss.zss.model.impl.pdf.PdfExporter;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zul.Filedownload;
 
@@ -263,6 +264,7 @@ public class ZKSpreadsheetCommandController {
             }
         }
         Exporter exporter = Exporters.getExporter("pdf");
+        //((PdfExporter) exporter).getPrintSetup().setLandscape(false);
         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
         FileOutputStream fos = null;
         try {

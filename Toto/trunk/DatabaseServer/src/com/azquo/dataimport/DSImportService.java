@@ -65,6 +65,7 @@ public class DSImportService {
     public static final String COMPOSITION = "composition";
     public static final String DEFAULT = "default";
     public static final String NONZERO = "nonzero";
+    public static final String USELINENUMBER = "uselinenumber";
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
 
@@ -112,10 +113,12 @@ public class DSImportService {
         String composition = null;
         // a default value if the line value is blank
         String defaultValue = null;
+        //don't import zero values;
+        boolean nonZero = false;
+        //put the line number in as a value if there isn't one - for spark resonse. A bit hacky I feel, let's see if others need it
+        boolean useLineNumber = false;
         // a way for a heading to have an alias or more specifically for its name to be overridden for the purposes of how headings find each other
         // need to clarify usage of this - not able to right now
-        boolean nonZero = false;
-        //don't import zero values;
         String equalsString = null;
         // todo : add context headings here? They build up according to the headers, no need to calculate each time
     }
@@ -139,6 +142,7 @@ public class DSImportService {
         final String composition;
         final String defaultValue;
         final boolean nonZero;
+        final boolean useLineNumber;
         final String equalsString;
 
         public ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
@@ -160,6 +164,7 @@ public class DSImportService {
             this.composition = mutableImportHeading.composition;
             this.defaultValue = mutableImportHeading.defaultValue;
             this.nonZero = mutableImportHeading.nonZero;
+            this.useLineNumber = mutableImportHeading.useLineNumber;
             this.equalsString = mutableImportHeading.equalsString;
         }
     }
@@ -202,9 +207,9 @@ public class DSImportService {
         if (date != null) return date;
         date = tryDate(maybeDate.length() > 11 ? maybeDate.substring(0, 11) : maybeDate, ukdf3);
         if (date != null) return date;
-        date =  tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 8) : maybeDate, ukdf2);
-        if (date!=null) return date;
-        return tryDate(maybeDate.length() > 11 ? maybeDate.substring(0,11):maybeDate, ukdf5);
+        date = tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 8) : maybeDate, ukdf2);
+        if (date != null) return date;
+        return tryDate(maybeDate.length() > 11 ? maybeDate.substring(0, 11) : maybeDate, ukdf5);
     }
 
     /*
@@ -215,11 +220,10 @@ public class DSImportService {
     public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames, String user) throws Exception {
         System.out.println("reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        azquoMemoryDBConnection.setProvenance(user,"imported",filePath,"");
+        azquoMemoryDBConnection.setProvenance(user, "imported", filePath, "");
         readPreparedFile(azquoMemoryDBConnection, filePath, fileType, attributeNames);
 
     }
-
 
 
     public void readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
@@ -312,8 +316,10 @@ public class DSImportService {
           notable that we're not using a custom peers structure rather peers for the name, this is what is references later and will be persisted
           I think we're going to move away from peers in name itself whch means we'll need to store them in the heading probably
            */
-        } else if (firstWord.equals(NONZERO)){
+        } else if (firstWord.equals(NONZERO)) {
             heading.nonZero = true;
+        } else if (firstWord.equals(USELINENUMBER)) {
+            heading.useLineNumber = true;
         } else if (firstWord.equals(PEERS)) {
             // TODO : address what happens if peer criteria intersect down the hierarchy, that is to say a child either directly or indirectly or two parent names with peer lists, I think this should not be allowed!
             heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
@@ -639,7 +645,7 @@ public class DSImportService {
         }
         // having read the headers go through each record
         // now, since this will be multi threaded need to make line objects, Cannot be completely immutable due to the current logic, I may be able to change this, not sure
-        int lineNo = 0;
+        int lineNo = 1; // start at 1, we think of the first line being 1 not 0.
         // pretty vanilla multi threading bits
         ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDBConnection.getAzquoMemoryDB().getLoadingThreads());
         AtomicInteger valueTracker = new AtomicInteger(0);
@@ -657,12 +663,12 @@ public class DSImportService {
             //batch it up!
             linesBatched.add(importCellsWithHeading);
             if (linesBatched.size() == batchSize) {
-                executor.execute(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFound, attributeNames, lineNo));
+                executor.execute(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFound, attributeNames, lineNo - batchSize)); // line no should be the start
                 linesBatched = new ArrayList<List<ImportCellWithHeading>>(batchSize);
             }
         }
         // load leftovers
-        executor.execute(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFound, attributeNames, lineNo));
+        executor.execute(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFound, attributeNames, lineNo - linesBatched.size()));
         executor.shutdown();
         if (!executor.awaitTermination(8, TimeUnit.HOURS)) {
             throw new Exception("File " + filePath + " took longer than 8 hours to load for : " + azquoMemoryDBConnection.getAzquoMemoryDB().getMySQLName());
@@ -678,7 +684,7 @@ public class DSImportService {
                 }
             }
         }
-        System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + lineNo + " lines");
+        System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + (lineNo - 1) + " lines");
         System.out.println("---------- namesfound size " + namesFound.size());
     }
 
@@ -747,6 +753,10 @@ public class DSImportService {
             // this basic value checking was outside, I see no reason it shouldn't be in here
             if (importCellWithHeading.immutableImportHeading.defaultValue != null && importCellWithHeading.lineValue.length() == 0) {
                 importCellWithHeading.lineValue = importCellWithHeading.immutableImportHeading.defaultValue;
+            }
+            // for spark pallet numbers, ergh
+            if (importCellWithHeading.immutableImportHeading.useLineNumber && importCellWithHeading.lineValue.length() == 0) {
+                importCellWithHeading.lineValue = lineNo + "";
             }
             if (importCellWithHeading.immutableImportHeading.attribute != null && importCellWithHeading.immutableImportHeading.attribute.equalsIgnoreCase(dateLang)) {
                     /*
@@ -1103,12 +1113,11 @@ public class DSImportService {
     }
 
 
-    private boolean isZero(String text){
-        try{
+    private boolean isZero(String text) {
+        try {
             double d = Double.parseDouble(text);
-            if (d==0.0) return true;
-            return false;
-        }catch(Exception e){
+            return d == 0.0;
+        } catch (Exception e) {
             return true;
         }
     }

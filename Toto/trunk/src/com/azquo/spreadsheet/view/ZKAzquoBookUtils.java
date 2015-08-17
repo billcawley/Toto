@@ -285,7 +285,7 @@ public class ZKAzquoBookUtils {
                 return;
             }
 
-        if (columnHeadingsDescription != null && rowHeadingsDescription != null) {
+        if (columnHeadingsDescription != null) {
             try {
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
                         regionToStringLists(contextDescription, sheet), userRegionOptions);
@@ -406,25 +406,28 @@ public class ZKAzquoBookUtils {
                                     SCell cell = sheet.getInternalSheet().getCell(row, col);
                                     // logic I didn't initially implement : don't overwrite if there's a formulae in there
                                     boolean hasValue = false;
+
+
                                     if (cell.getType() != SCell.CellType.FORMULA) {
                                         if (cell.getCellStyle().getDataFormat().toLowerCase().contains("mm")){//allow users to format their own dates.  All dates on file are yyyy-MM-dd
-                                             Calendar c = Calendar.getInstance();
                                             try {
                                                 Date date = df.parse(cellValue.getStringValue());
                                                 if (date != null) {
                                                     cell.setValue(date.getTime() / (1000 * 3600 * 24) + 25570);//convert date to days relative to 1970
                                                     hasValue = true;
                                                 }
-                                            }catch(Exception e){
-
+                                            } catch (Exception ignored){
                                             }
-
                                         }
                                         if (!hasValue) {
-                                            if (NumberUtils.isNumber(cellValue.getStringValue())) {
-                                                cell.setValue(cellValue.getDoubleValue());// think that works . . .
+                                            if (cell.getCellStyle().getFont().getName().equalsIgnoreCase("Code EAN13")){ // then a special case, need to use barcode encoding
+                                                cell.setValue(SpreadsheetService.prepareEAN13Barcode(cellValue.getStringValue()));// guess we'll see how that goes!
                                             } else {
-                                                cell.setValue(cellValue.getStringValue());// think that works . . .
+                                                if (NumberUtils.isNumber(cellValue.getStringValue())) {
+                                                    cell.setValue(cellValue.getDoubleValue());// think that works . . .
+                                                } else {
+                                                    cell.setValue(cellValue.getStringValue());// think that works . . .
+                                                }
                                             }
                                         }
                                         // see if this works for highlighting
