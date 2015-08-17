@@ -221,7 +221,13 @@ public class ZKAzquoBookUtils {
                     cell.clearFormulaResultCache();
                 }
                 // I assume non null cell has a non null sting value, do I need to check for null?
-                row.add(cell != null ? cell.getStringValue() : null);
+                String toShow = null;
+                try{
+                    toShow = cell.getStringValue();
+                }catch(Exception e){
+
+                }
+                  row.add(toShow);
             }
         }
         return toReturn;
