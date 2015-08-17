@@ -62,10 +62,10 @@ public class AzquoBook {
     //public String nameChosenJson = null;  // used only for passing the parameter when admin/inspection chooses a name
     int topCell = -1;
     int leftCell = -1;
-    List<Integer> colWidth = new ArrayList<Integer>();
+    List<Integer> colWidth = new ArrayList<>();
     // now add css for each used style
-    Map<String, String> shortStyles = new HashMap<String, String>();
-    Map<Style, Style> highlightStyles = new HashMap<Style, Style>();
+    Map<String, String> shortStyles = new HashMap<>();
+    Map<Style, Style> highlightStyles = new HashMap<>();
     Map<Range, String> chosenMap = null;
     Map<Range, String> choiceMap = null;
     Map<Cell, CellArea> mergedCells = null;
@@ -114,8 +114,8 @@ public class AzquoBook {
     int maxHeight = 0;
 
     private Formatter sOut;
-    Map<Range, String> sortableHeadings = new HashMap<Range, String>();
-    Map<String, String[]> givenHeadings = new HashMap<String, String[]>();
+    Map<Range, String> sortableHeadings = new HashMap<>();
+    Map<String, String[]> givenHeadings = new HashMap<>();
 
     private static final Map<String, String> SHORTSTYLES = new HashMap<String, String>() {
         {
@@ -178,7 +178,7 @@ public class AzquoBook {
     }
 
     private void createMergeMap() {
-        mergedCells = new HashMap<Cell, CellArea>();
+        mergedCells = new HashMap<>();
         for (Object o : azquoCells.getMergedCells()) { // can't seem to get a typed list
             CellArea r = (CellArea) o;
             mergedCells.put(azquoCells.get(r.StartRow, r.StartColumn), r);
@@ -202,7 +202,7 @@ public class AzquoBook {
         if (range != null){
            try {
                return range.getCellOrNull(0, 0).getStringValue();
-           }catch(Exception e){
+           }catch(Exception ignored){
            }
         }
         return null;
@@ -213,7 +213,7 @@ public class AzquoBook {
     }*/
 
     private void createChosenMap() {
-        chosenMap = new HashMap<Range, String>();
+        chosenMap = new HashMap<>();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().endsWith("chosen") && name.getRange().getWorksheet() == azquoSheet) {
@@ -225,7 +225,7 @@ public class AzquoBook {
     }
 
     private void createChoiceMap() {
-        choiceMap = new HashMap<Range, String>();
+        choiceMap = new HashMap<>();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().endsWith("choice") && name.getRange().getWorksheet() == azquoSheet) {
@@ -244,7 +244,7 @@ public class AzquoBook {
 
     private void setupColwidths() {
         maxWidth = 0;
-        colWidth = new ArrayList<Integer>();
+        colWidth = new ArrayList<>();
         for (int c = 0; c <= maxCol; c++) {
             int colW = azquoCells.getColumnWidthPixel(c);
             shortStyles.put("left:" + maxWidth + "px;width:" + colW + "px", "cp" + c);
@@ -344,7 +344,7 @@ public class AzquoBook {
     // ok I'm returning an Array of strings as some of the book code for soting needs it. It will be the bottom of columsn or the right of rows, as indicated by the boolean
     private String[] fillRange(String regionName, List<List<String>> headingArray, boolean rowHeadings) {
         // for the headings, the lockmap is "locked"
-        List<String> toReturn = new ArrayList<String>();
+        List<String> toReturn = new ArrayList<>();
         Range range = getRange(regionName);
         if (range == null || headingArray == null || headingArray.isEmpty()) return new String[0];
         insertRows(range, headingArray.size());
@@ -436,7 +436,7 @@ public class AzquoBook {
 
     private List<String> interpretList(String list) {
         //expects a list  "aaaa","bbbb"  etc, though it will pay attention only to the quotes
-        List<String> items = new ArrayList<String>();
+        List<String> items = new ArrayList<>();
         StringBuffer item = new StringBuffer();
         boolean inItem = false;
         int pos = 0;
@@ -612,7 +612,7 @@ public class AzquoBook {
     }
 
     public void fillVelocityOptionInfo(LoggedInUser loggedInUser, ModelMap model, int reportId) {
-        List<VRegion> vRegions = new ArrayList<VRegion>();
+        List<VRegion> vRegions = new ArrayList<>();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
@@ -623,17 +623,17 @@ public class AzquoBook {
                     userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, getSheetDefinedOptionsStringForRegion(region) != null ? getSheetDefinedOptionsStringForRegion(region) : "");
                 }
                 vRegion.name = region;
-                vRegion.maxrows = userRegionOptions != null ? userRegionOptions.getRowLimit() + "" : "0";
-                vRegion.maxcols = userRegionOptions != null ? userRegionOptions.getColumnLimit() + "" : "0";
-                vRegion.hiderows = userRegionOptions != null ? userRegionOptions.getHideRows() + "" : "0";
+                vRegion.maxrows = userRegionOptions.getRowLimit() + "";
+                vRegion.maxcols = userRegionOptions.getColumnLimit() + "";
+                vRegion.hiderows = userRegionOptions.getHideRows() + "";
                 String sortable = "";
-                if (userRegionOptions != null && userRegionOptions.getSortable()) sortable = "checked";
+                if (userRegionOptions.getSortable()) sortable = "checked";
                 vRegion.sortable = sortable;
                 vRegion.rowdata = getHTMLTableData("az_RowHeadings" + region);
                 vRegion.coldata = getHTMLTableData("az_ColumnHeadings" + region);
                 vRegion.contextdata = getHTMLTableData("az_Context" + region);
                 vRegions.add(vRegion);
-                model.addAttribute("hdays", userRegionOptions != null ? userRegionOptions.getHighlightDays() + "" : "0");
+                model.addAttribute("hdays", userRegionOptions.getHighlightDays() + "");
             }
         }
         model.addAttribute("menuregions", vRegions);
@@ -809,9 +809,9 @@ public class AzquoBook {
             if (choice != null) {
                 int choiceRow = 0;
                 if (choice.getRowCount() > 1) choiceRow = cell.getRow() - chosenRange.getFirstRow();
-                List<String> choiceList = new ArrayList<String>();
+                List<String> choiceList = new ArrayList<>();
                 String cellChoice = choice.get(choiceRow, 0).getStringValue();
-                List<String> constants = new ArrayList<String>();
+                List<String> constants = new ArrayList<>();
                 if (cellChoice.startsWith("\"") || cellChoice.startsWith("“")) {
                     constants = interpretList(cellChoice);
                 } else {
@@ -1105,7 +1105,7 @@ public class AzquoBook {
         if (regionInfo == null) return "";
         if (regionInfo.region.startsWith(dataRegionPrefix)) {
             String region = regionInfo.region.substring(dataRegionPrefix.length());
-            Map<String, List<TreeNode>> provenanceForJackson = new HashMap<String, List<TreeNode>>();
+            Map<String, List<TreeNode>> provenanceForJackson = new HashMap<>();
             provenanceForJackson.put("provenance", spreadsheetService.getTreeNode(loggedInUser, region, regionInfo.row, regionInfo.col));
             return jsonFunction + "(" + jacksonMapper.writeValueAsString(provenanceForJackson) + ")";
         }
@@ -1115,9 +1115,9 @@ public class AzquoBook {
     // Changing to return 2d string array, this is what we want to pass to the back end
 
     private List<List<String>> rangeToStringLists(Range range) {
-        List<List<String>> toReturn = new ArrayList<List<String>>();
+        List<List<String>> toReturn = new ArrayList<>();
         for (int rowNo = 0; rowNo < range.getRowCount(); rowNo++) {
-            List<String> row = new ArrayList<String>();
+            List<String> row = new ArrayList<>();
             toReturn.add(row);
             for (int colNo = 0; colNo < range.getColumnCount(); colNo++) {
                 if (range.getCellOrNull(rowNo, colNo) != null) {
@@ -1135,7 +1135,6 @@ public class AzquoBook {
     // need to workout how to detect cell changes from formulae as opposed to manual change.
 
     public void saveData(LoggedInUser loggedInUser) throws Exception {
-        Map<String, String> newNames = new HashMap<String, String>();// if there are ranges starting 'az_next' then substitute these names for the latest number
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
@@ -1221,7 +1220,7 @@ public class AzquoBook {
                 }
             }
         }
-        Map<Cell, Boolean> highlighted = new HashMap<Cell, Boolean>();
+        Map<Cell, Boolean> highlighted = new HashMap<>();
         prepareSheet(loggedInUser, reportId, highlighted);
         //TODO IGNORE ERROR CURRENTLY - SEND BACK IN MESSAGE
         output.append(convertToHTML(loggedInUser, highlighted, reportId));

@@ -46,7 +46,7 @@ public class ZKAzquoBookUtils {
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
 
-        Map<String, String> userChoices = new HashMap<String, String>();
+        Map<String, String> userChoices = new HashMap<>();
         // get the user choices for the report. Can be drop down values, sorting/highlighting etc.
         // a notable point here is that the user choices don't distinguish between sheets
         List<UserChoice> allChoices = userChoiceDAO.findForUserId(loggedInUser.getUser().getId());
@@ -86,7 +86,7 @@ public class ZKAzquoBookUtils {
              */
 
             // ok the plan here is remove all the merges then put them back in after the regions are expanded.
-            List<CellRegion> merges = new ArrayList<CellRegion>(sheet.getInternalSheet().getMergedRegions());
+            List<CellRegion> merges = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());
             for (CellRegion merge : merges) {
                 CellOperationUtil.unmerge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()));
             }
@@ -207,10 +207,10 @@ public class ZKAzquoBookUtils {
     // like rangeToStringLists in azquobook
 
     private List<List<String>> regionToStringLists(CellRegion region, Sheet sheet) {
-        List<List<String>> toReturn = new ArrayList<List<String>>();
+        List<List<String>> toReturn = new ArrayList<>();
         if (region == null) return toReturn;
         for (int rowIndex = region.getRow(); rowIndex <= region.getLastRow(); rowIndex++) {
-            List<String> row = new ArrayList<String>();
+            List<String> row = new ArrayList<>();
             toReturn.add(row);
             for (int colIndex = region.getColumn(); colIndex <= region.getLastColumn(); colIndex++) {
                 SCell cell = sheet.getInternalSheet().getCell(rowIndex, colIndex);
@@ -224,7 +224,7 @@ public class ZKAzquoBookUtils {
                 String toShow = null;
                 try{
                     toShow = cell.getStringValue();
-                }catch(Exception e){
+                } catch (Exception ignored){
 
                 }
                   row.add(toShow);
@@ -277,10 +277,10 @@ public class ZKAzquoBookUtils {
         String errorMessage = null;
         if (columnHeadingsDescription != null && rowHeadingsDescription == null) {
             List<List<String>> colHeadings = regionToStringLists(columnHeadingsDescription, sheet);
-            List<List<CellForDisplay>> dataRegionCells = new ArrayList<List<CellForDisplay>>();
+            List<List<CellForDisplay>> dataRegionCells = new ArrayList<>();
             CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
                 for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
-                    List<CellForDisplay> oneRow = new ArrayList<CellForDisplay>();
+                    List<CellForDisplay> oneRow = new ArrayList<>();
                     for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
                         oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo));
                     }
@@ -491,7 +491,7 @@ public class ZKAzquoBookUtils {
     }
 
     public static List<SName> getNamesForSheet(Sheet sheet) {
-        List<SName> names = new ArrayList<SName>();
+        List<SName> names = new ArrayList<>();
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
             if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(sheet.getSheetName())) {
                 names.add(name);
@@ -530,7 +530,7 @@ public class ZKAzquoBookUtils {
                     CellRegion chosen = getCellRegionForSheetAndName(sheet, name.getName().substring(0, name.getName().length() - "Choice".length()) + "Chosen"); // as ever I do wonder about these string literals
                     if (choice != null && chosen != null) {
                         // ok I assume choice is a single cell
-                        List<String> choiceOptions = new ArrayList<String>(); // was null, see no help in that
+                        List<String> choiceOptions = new ArrayList<>(); // was null, see no help in that
                         String query = getRegionValue(sheet, choice);
                         if (query.toLowerCase().contains("default")) {
                             query = query.substring(0, query.toLowerCase().indexOf("default"));
@@ -581,7 +581,7 @@ public class ZKAzquoBookUtils {
     zap the option in the db then recurse if necessary.
      */
     public void blankDependantChoices(LoggedInUser loggedInUser, List<String> changedChoices, Sheet sheet) {
-        List<String> affectedChoices = new ArrayList<String>();
+        List<String> affectedChoices = new ArrayList<>();
         for (SName name : getNamesForSheet(sheet)) { // this should be fine? I mean getNamesForSheet.
             String nameName = name.getName();
             if (nameName.endsWith("Choice")) {

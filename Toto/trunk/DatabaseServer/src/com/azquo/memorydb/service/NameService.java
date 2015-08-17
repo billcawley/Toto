@@ -62,33 +62,30 @@ public final class NameService {
     public static final String WHERE = "where";
 
     // hopefully thread safe??
-    public final Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = new Comparator<Name>() {
-        @Override
-        public int compare(Name n1, Name n2) {
-            // null checks to keep intellij happy, probably not a bad thing
-            boolean n1Null = n1 == null || n1.getDefaultDisplayName() == null;
-            boolean n2Null = n2 == null || n2.getDefaultDisplayName() == null;
-            if (n1Null && n2Null){
-                return 0;
-            }
-            // is that the right way round? Not sure
-            if (n1Null){
-                return -1;
-            }
-            if (n2Null){
-                return 1;
-            }
-            return n1.getDefaultDisplayName().toUpperCase().compareTo(n2.getDefaultDisplayName().toUpperCase()); // think that will give us a case insensitive sort!
+    public final Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = (n1, n2) -> {
+        // null checks to keep intellij happy, probably not a bad thing
+        boolean n1Null = n1 == null || n1.getDefaultDisplayName() == null;
+        boolean n2Null = n2 == null || n2.getDefaultDisplayName() == null;
+        if (n1Null && n2Null){
+            return 0;
         }
+        // is that the right way round? Not sure
+        if (n1Null){
+            return -1;
+        }
+        if (n2Null){
+            return 1;
+        }
+        return n1.getDefaultDisplayName().toUpperCase().compareTo(n2.getDefaultDisplayName().toUpperCase()); // think that will give us a case insensitive sort!
     };
 
     // get names from a comma separated list. Well expressions describing names.
 
     public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
-        final List<Set<Name>> toReturn = new ArrayList<Set<Name>>();
-        List<String> formulaStrings = new ArrayList<String>();
-        List<String> nameStrings = new ArrayList<String>();
-        List<String> attributeStrings = new ArrayList<String>(); // attribute names is taken. Perhaps need to think about function parameter names
+        final List<Set<Name>> toReturn = new ArrayList<>();
+        List<String> formulaStrings = new ArrayList<>();
+        List<String> nameStrings = new ArrayList<>();
+        List<String> attributeStrings = new ArrayList<>(); // attribute names is taken. Perhaps need to think about function parameter names
         searchByNames = stringUtils.parseStatement(searchByNames, nameStrings, formulaStrings, attributeStrings);
         List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
         // given that parse statement treats "," as an operator this should be ok.
@@ -96,7 +93,7 @@ public final class NameService {
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
             List<Name> nameList = interpretSetTerm(nameName, formulaStrings, referencedNames, attributeStrings);
-            toReturn.add(new HashSet<Name>(nameList));
+            toReturn.add(new HashSet<>(nameList));
         }
         return toReturn;
     }
@@ -104,7 +101,7 @@ public final class NameService {
     // we replace the names with markers for parsing. Then we need to resolve them later, here is where the exception will be thrown. Should be NameNotFoundException?
 
     public List<Name> getNameListFromStringList(List<String> nameStrings, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames) throws Exception {
-        List<Name> referencedNames = new ArrayList<Name>();
+        List<Name> referencedNames = new ArrayList<>();
         for (String nameString : nameStrings) {
             Name toAdd = findByName(azquoMemoryDBConnection, nameString, attributeNames);
             if (toAdd == null) {
@@ -123,7 +120,7 @@ public final class NameService {
     // the parameter is called name as the get attribute function will look up and derive attributes it can't find from parent/combinations
 
     public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, String attribute) {
-        ArrayList<Name> namesList = new ArrayList<Name>(azquoMemoryDBConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name));
+        ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name));
         if (namesList.size() == 0 && attribute.length() > 0){
             namesList = findContainingName(azquoMemoryDBConnection,name,"");//try all the attributes
         }
@@ -145,7 +142,7 @@ public final class NameService {
 
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) throws Exception {
         // aha, not null passed here now, jam in a default display name I think
-        List<String> attNames = new ArrayList<String>();
+        List<String> attNames = new ArrayList<>();
         attNames.add(Constants.DEFAULT_DISPLAY_NAME);
         return findByName(azquoMemoryDBConnection, name, attNames);
     }
@@ -179,7 +176,7 @@ public final class NameService {
             if (possibleParents == null){
                 possibleParents = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parentName.replace(Name.QUOTE, ' ').trim(),null);
              }else{
-                Set<Name>nextParents = new HashSet<Name>();
+                Set<Name>nextParents = new HashSet<>();
                 for (Name parent:possibleParents) {
                     Name foundParent = getNameByAttribute(azquoMemoryDBConnection, parentName, parent, attributeNames);
                     if (foundParent!=null){
@@ -295,7 +292,7 @@ public final class NameService {
         return findOrCreateNameInParent(azquoMemoryDBConnection, name, newParent, local, null);
     }
 
-    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<AzquoMemoryDBConnection, Map<String, Long>>();
+    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<>();
 
     private long addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long marker) {
         long now = System.currentTimeMillis();
@@ -306,7 +303,7 @@ public final class NameService {
                 current = timeTrack.get(azquoMemoryDBConnection).get(trackName);
             }
         } else {
-            timeTrack.put(azquoMemoryDBConnection, new HashMap<String, Long>());
+            timeTrack.put(azquoMemoryDBConnection, new HashMap<>());
         }
         timeTrack.get(azquoMemoryDBConnection).put(trackName, current + toAdd);
         return now;
@@ -328,7 +325,7 @@ public final class NameService {
         }
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an dataimport),and insert a structure into it*/
         if (attributeNames == null) {
-            attributeNames = new ArrayList<String>();
+            attributeNames = new ArrayList<>();
             attributeNames.add(Constants.DEFAULT_DISPLAY_NAME);
         }
 
@@ -383,7 +380,7 @@ public final class NameService {
             if (parent != null) {
                 Map<Name, Boolean> newPeers = parent.getPeers();
                 if (newPeers != null && !newPeers.isEmpty()) {
-                    LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
+                    LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<>();
                     for (Name peer : newPeers.keySet()) {
                         peers2.put(peer, parent.getPeers().get(peer));
 
@@ -416,9 +413,9 @@ public final class NameService {
             }
         }
         if (level == 1){ // then no need to get clever, just return the children
-            return new ArrayList<Name>(name.getChildren()); // a little botehred by this as it may just be wrapped again on the outside.
+            return new ArrayList<>(name.getChildren()); // a little botehred by this as it may just be wrapped again on the outside.
         }
-        List<Name> namesFound = new ArrayList<Name>();
+        List<Name> namesFound = new ArrayList<>();
         addNames(name, namesFound, 0, level);
         return namesFound;
     }
@@ -472,7 +469,7 @@ public final class NameService {
     // note : in default language!
 
     public List<Name> findChildrenFromToCount(final List<Name> names, String fromString, String toString, final String countString, final String countbackString, final String compareWithString, List<Name> referencedNames) throws Exception {
-        final ArrayList<Name> toReturn = new ArrayList<Name>();
+        final ArrayList<Name> toReturn = new ArrayList<>();
         int to = -10000;
         int from = 1;
         int count = parseInt(countString, -1);
@@ -546,7 +543,7 @@ public final class NameService {
     // to find a set of names, a few bits that were part of the original set of functions
     // add the default display name since no attributes were specified.
     public final List<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
-        List<String> langs = new ArrayList<String>();
+        List<String> langs = new ArrayList<>();
         langs.add(Constants.DEFAULT_DISPLAY_NAME);
         return parseQuery(azquoMemoryDBConnection, setFormula, langs);
     }
@@ -562,16 +559,16 @@ public final class NameService {
         *
         * These will be replaced by !<id>   e.g. !1234
         * */
-        if (setFormula.length()==0){
-            return new ArrayList<Name>();
+        if (setFormula.length() == 0){
+            return new ArrayList<>();
         }
-         List<Collection<Name>> nameStack = new ArrayList<Collection<Name>>(); // make this more generic, the key is in the name marker bits, might use different collections depending on operator!
-        List<String> formulaStrings = new ArrayList<String>();
-        List<String> nameStrings = new ArrayList<String>();
-        List<String> attributeStrings = new ArrayList<String>(); // attribute names is taken. Perhaps need to think about function parameter names
+         List<Collection<Name>> nameStack = new ArrayList<>(); // make this more generic, the key is in the name marker bits, might use different collections depending on operator!
+        List<String> formulaStrings = new ArrayList<>();
+        List<String> nameStrings = new ArrayList<>();
+        List<String> attributeStrings = new ArrayList<>(); // attribute names is taken. Perhaps need to think about function parameter names
         Name possibleName = findByName(azquoMemoryDBConnection,setFormula);
         if (possibleName!=null){
-            List<Name> toReturn = new ArrayList<Name>();
+            List<Name> toReturn = new ArrayList<>();
             toReturn.add(possibleName);
             return toReturn;
         }
@@ -580,11 +577,11 @@ public final class NameService {
             return deduplicate(azquoMemoryDBConnection,setFormula.substring(12));
         }
         setFormula = stringUtils.parseStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
-        List<Name> referencedNames = null;
+        List<Name> referencedNames;
         try {
              referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
         }catch (Exception e){
-            if (setFormula.toLowerCase().equals("!00 children")) return new ArrayList<Name>();
+            if (setFormula.toLowerCase().equals("!00 children")) return new ArrayList<>();
             throw e;
         }
         setFormula = setFormula.replace(AS, ASSYMBOL + "");
@@ -618,14 +615,14 @@ public final class NameService {
                 stackCount++;
                 List<Name> nextNames = interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings);
                 // the collection implementation used here will affect performance, going to try a linked hash set. Some memory overhead but some functions like retain all should be much faster
-                nameStack.add(new LinkedHashSet<Name>(nextNames)); // order and set contains speed, should do it! Memory overhead but it gets chucked after
+                nameStack.add(new LinkedHashSet<>(nextNames)); // order and set contains speed, should do it! Memory overhead but it gets chucked after
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + setFormula);
             } else if (op == '*') { // * meaning intersection here . . .
                 //assume that the second term implies 'level all'
                 long start = System.currentTimeMillis();
                 System.out.println("starting * set sizes  nameStack(stackcount)" +  nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
-                Set<Name> allNames = new HashSet<Name>();
+                Set<Name> allNames = new HashSet<>();
                 for (Name name : nameStack.get(stackCount)) {
                     addNames(name, allNames, 0, ALL_LEVEL_INT);
                 }
@@ -635,7 +632,7 @@ public final class NameService {
                 System.out.println("after retainall " + (System.currentTimeMillis() - start));
                 nameStack.remove(stackCount);
             } else if (op == '/') { // this can be slow : todo - speed up? Is it the retainall? Should I be using sets?
-                Set<Name> parents = new HashSet<Name>(nameStack.get(stackCount));
+                Set<Name> parents = new HashSet<>(nameStack.get(stackCount));
                 long start = System.currentTimeMillis();
                 System.out.println("starting / set sizes  nameStack(stackcount)" +  nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
                 for (Name child : nameStack.get(stackCount)) {
@@ -669,7 +666,7 @@ public final class NameService {
             hasPermissions = true;
         }
         if (hasPermissions || azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB("CONFIDENTIAL")){ // then we need to check permissions etc
-            final List<Name> toReturn = new ArrayList<Name>();
+            final List<Name> toReturn = new ArrayList<>();
             for (Name possible : nameStack.get(0)) {
                 if (possible == null || (possible.getAttribute("CONFIDENTIAL") == null && (!hasPermissions || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())))) {
                     toReturn.add(possible);
@@ -677,7 +674,7 @@ public final class NameService {
             }
             return toReturn;
         } else { // just make a copy as list and return. This colleciton copying all over the pace bothers me a bit.
-            return new ArrayList<Name>(nameStack.get(0));
+            return new ArrayList<>(nameStack.get(0));
         }
     }
 
@@ -700,12 +697,12 @@ public final class NameService {
 
         for (Name child2 : possibles) {
             if (child2.getId() != name.getId()) {
-                Set<Name> existingChildren = new HashSet<Name>(child2.getChildren());
+                Set<Name> existingChildren = new HashSet<>(child2.getChildren());
                 for (Name grandchild : existingChildren) {
                     name.addChildWillBePersisted(grandchild);
                     child2.removeFromChildrenWillBePersisted(grandchild);
                 }
-                Set<Name> existingParents = new HashSet<Name>(child2.getParents());
+                Set<Name> existingParents = new HashSet<>(child2.getParents());
                 for (Name parentInLaw : existingParents) {
                     parentInLaw.addChildWillBePersisted(name);
                     parentInLaw.removeFromChildrenWillBePersisted(child2);
@@ -721,20 +718,20 @@ public final class NameService {
     }
 
     private List<Name> deduplicate(AzquoMemoryDBConnection azquoMemoryDBConnection, String formula)throws Exception{
-        List<Name> toReturn = new ArrayList<Name>();
+        List<Name> toReturn = new ArrayList<>();
         int toPos = formula.indexOf(" to ");
         if (toPos < 0) return toReturn;
         String baseSet = formula.substring(0,toPos);
         String binSet = formula.substring(toPos + 4);
         Name rubbishBin = findOrCreateNameInParent(azquoMemoryDBConnection, binSet, null, false);
-        Collection<Name> names = (Collection<Name>)parseQuery(azquoMemoryDBConnection, baseSet);
+        Collection<Name> names = parseQuery(azquoMemoryDBConnection, baseSet);
         if (names.size()==0) return toReturn;
         if (names.size() > 1){
-            Map<String, Set<Name>> nameMap = new HashMap<String, Set<Name>>();
+            Map<String, Set<Name>> nameMap = new HashMap<>();
             for (Name name:names){
                 String nameString = name.getDefaultDisplayName();
                 if (nameMap.get(nameString) == null) {
-                    nameMap.put(nameString, new HashSet<Name>());
+                    nameMap.put(nameString, new HashSet<>());
                 }
                 nameMap.get(nameString).add(name);
             }
@@ -749,7 +746,7 @@ public final class NameService {
 
         }
         Name name = names.iterator().next();
-        List<String> languages = new ArrayList<String>();
+        List<String> languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         for (Name child:name.findAllChildren(false)){
             if (!rubbishBin.getChildren().contains(child)) {
@@ -809,7 +806,7 @@ public final class NameService {
     private void filter(List<Name> names, String condition, List<String> strings, List<String> attributeNames) {
         //NOT HANDLING 'OR' AT PRESENT
         int andPos = condition.toLowerCase().indexOf(" and ");
-        Set<Name> namesToRemove = new HashSet<Name>();
+        Set<Name> namesToRemove = new HashSet<>();
         int lastPos = 0;
         while (lastPos < condition.length()) {
             if (andPos < 0) {
@@ -881,7 +878,7 @@ public final class NameService {
 
     private List<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
         //System.out.println("interpret set term . . ." + setTerm);
-        List<Name> namesFound = new ArrayList<Name>();
+        List<Name> namesFound = new ArrayList<>();
 
         final String levelString = stringUtils.getInstruction(setTerm, LEVEL);
         String fromString = stringUtils.getInstruction(setTerm, FROM);
@@ -905,7 +902,7 @@ public final class NameService {
         if (levelString != null) {
             childrenString = "true";
         }
-        List<Name> names = new ArrayList<Name>();
+        List<Name> names = new ArrayList<>();
         // used to be ; at the end of a name
         String nameString = setTerm;
         if (setTerm.indexOf(' ') > 0) {
@@ -936,7 +933,7 @@ public final class NameService {
         }
         if (parentsString != null) {
             //remove the childless names
-            List<Name> filteredList = new ArrayList<Name>();
+            List<Name> filteredList = new ArrayList<>();
             for (Name possibleName : namesFound) {
                 if (possibleName.getChildren().size() > 0) {
                     filteredList.add(possibleName);
@@ -947,8 +944,8 @@ public final class NameService {
         }
         if (selectString != null){
             String toFind = strings.get(Integer.parseInt(selectString.substring(1, 3))).toLowerCase();
-            List<Name> selectedNames = new ArrayList<Name>();
-            for (Name sname:namesFound){
+            List<Name> selectedNames = new ArrayList<>();
+            for (Name sname : namesFound){
                 if (sname != null && sname.getDefaultDisplayName() != null // is this checking to make intellij happy that important, maybe I want an NPE?
                         && sname.getDefaultDisplayName().toLowerCase().contains(toFind)){
                     selectedNames.add(sname);

@@ -8,14 +8,11 @@ import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
-import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Session;
 import org.zkoss.zk.ui.Sessions;
-import org.zkoss.zk.ui.event.Event;
-import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
@@ -151,7 +148,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// would have been a one cell name
                 String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                 spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
-                List<String> changedChoice = new ArrayList<String>();
+                List<String> changedChoice = new ArrayList<>();
                 changedChoice.add(choice);
                 // hopefully self explanatory :)
                 zkAzquoBookUtils.blankDependantChoices(loggedInUser,changedChoice,event.getSheet());
@@ -217,9 +214,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-    private void reload(Book book, ZKAzquoBookUtils zkAzquoBookUtils){
-    }
-
     // to detect data changes.
 
     @Listen("onAfterCellChange = #myzss")
@@ -233,7 +227,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (cellData == null){
               return;
         }
-        String chosen = null;
+        String chosen;
         boolean isDouble = false;
         double doubleValue = 0.0;
         try {
@@ -327,7 +321,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         final String fullProvenance = stringToShow;
                         stringToShow = stringToShow.replace("\t", "....");
                         int spreadPos = stringToShow.indexOf("in spreadsheet");
-                        int nextBlock = stringToShow.length();
+                        int nextBlock;
                         while (spreadPos >= 0) {
                             int endLine = stringToShow.indexOf("\n");
                             nextBlock = stringToShow.indexOf("in spreadsheet", endLine);
@@ -339,11 +333,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                             final String provLine = stringToShow.substring(0, endLine);
                             final Toolbarbutton provButton = new Toolbarbutton(provLine);
                             provButton.addEventListener("onClick",
-                                    new EventListener<Event>() {
-                                        public void onEvent(Event event) throws Exception {
-                                            showProvenance(provLine);
-                                        }
-                                    });
+                                    event -> showProvenance(provLine));
                             provenancePopup.appendChild(provButton);
                             Label provenanceLabel = new Label();
                             provenanceLabel.setMultiline(true);
@@ -362,11 +352,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
                         final Toolbarbutton button = new Toolbarbutton("Download Full Audit");
                         button.addEventListener("onClick",
-                                new EventListener<Event>() {
-                                    public void onEvent(Event event) throws Exception {
-                                        Filedownload.save(fullProvenance, "text/csv", "provenance.csv");
-                                    }
-                                });
+                                event -> Filedownload.save(fullProvenance, "text/csv", "provenance.csv"));
 
                         provenancePopup.appendChild(button);
                     }
@@ -427,11 +413,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                 highlightLabel.setMultiline(true);
                 highlightLabel.setValue(highlightList);
                 highlightPopup.appendChild(highlightLabel);
-                addHighlight(highlightPopup, 0, region);
-                addHighlight(highlightPopup, 1, region);
-                addHighlight(highlightPopup, 7, region);
-                addHighlight(highlightPopup, 30, region);
-                addHighlight(highlightPopup, 90, region);
+                addHighlight(highlightPopup, 0);
+                addHighlight(highlightPopup, 1);
+                addHighlight(highlightPopup, 7);
+                addHighlight(highlightPopup, 30);
+                addHighlight(highlightPopup, 90);
 
 
             }
@@ -482,7 +468,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     private List<SName> getNamedDataRegionForRowAndColumnSelectedSheet(int row, int col) {
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = myzss.getBook();
-        List<SName> found = new ArrayList<SName>();
+        List<SName> found = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) { // seems best to loop through names checking which matches I think
             if (name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
                     && name.getName().toLowerCase().startsWith("az_dataregion")
@@ -531,18 +517,14 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-    private void addHighlight(Popup highlightPopup, final int days, final String region) {
+    private void addHighlight(Popup highlightPopup, final int days) {
 
 
         String hDays = days + " days";
         if (days == 0) hDays = "none";
         final Toolbarbutton highlightButton = new Toolbarbutton("highlight " + hDays);
         highlightButton.addEventListener("onClick",
-                new EventListener<Event>() {
-                    public void onEvent(Event event) throws Exception {
-                        showHighlight(days, region);
-                    }
-                });
+                event -> showHighlight(days));
         highlightPopup.appendChild(highlightButton);
         Label highlightLabel = (new Label("\n\n"));
         highlightLabel.setMultiline(true);
@@ -550,7 +532,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     }
 
-    private void showHighlight(int days, String region) {
+    private void showHighlight(int days) {
 
 
         Book book = myzss.getBook();
@@ -559,7 +541,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         for (SName name : book.getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith("az_dataregion")) {
-                region = name.getName().substring(13);
+                String region = name.getName().substring(13);
                 UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
                     if (days == 0) break;
@@ -587,9 +569,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-
-
-    };
+    }
 }
 

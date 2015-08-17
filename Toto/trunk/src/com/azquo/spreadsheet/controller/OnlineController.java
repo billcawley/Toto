@@ -218,26 +218,24 @@ public class OnlineController {
                 if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
                     // logic here is going to change to support the different renderers
                          loggedInUser.setReportId(onlineReport.getId());// that was below, whoops!
-                    if (onlineReport != null) {
-                        if (onlineReport.getDatabaseId() > 0) {
-                            db = databaseDAO.findById(onlineReport.getDatabaseId());
-                            loginService.switchDatabase(loggedInUser, db);
-                            onlineReport.setPathname(loggedInUser.getDatabase().getMySQLName());
-                        } else {
-                            db = loggedInUser.getDatabase();
-                            if (db == null && database != null && database.length() > 0) {
-                                db = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
-                                if (db != null) {
-                                    loggedInUser.setDatabaseWithServer(databaseServerDAO.findById(db.getDatabaseServerId()), db);
-                                }
+                    if (onlineReport.getDatabaseId() > 0) {
+                        db = databaseDAO.findById(onlineReport.getDatabaseId());
+                        loginService.switchDatabase(loggedInUser, db);
+                        onlineReport.setPathname(loggedInUser.getDatabase().getMySQLName());
+                    } else {
+                        db = loggedInUser.getDatabase();
+                        if (db == null && database != null && database.length() > 0) {
+                            db = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
+                            if (db != null) {
+                                loggedInUser.setDatabaseWithServer(databaseServerDAO.findById(db.getDatabaseServerId()), db);
                             }
-                            onlineReport.setPathname(onlineReport.getDatabaseType());
                         }
-                        if (db != null) {
-                            onlineReport.setDatabase(db.getName());
-                        }
+                        onlineReport.setPathname(onlineReport.getDatabaseType());
                     }
-                        if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK){
+                    if (db != null) {
+                        onlineReport.setDatabase(db.getName());
+                    }
+                    if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK){
                             long time = System.currentTimeMillis();
 
 
@@ -251,7 +249,7 @@ public class OnlineController {
                             ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO,userRegionOptionsDAO);
                             model.put("showSave", bookUtils.populateBook(book));
                             final List<SName> names = book.getInternalBook().getNames();
-                            List<String> pdfMerges = new ArrayList<String>();
+                            List<String> pdfMerges = new ArrayList<>();
                             for (SName name : names){
                                 if (name.getName().startsWith("az_PDF")){
                                     pdfMerges.add(name.getName().substring("az_PDF".length()).replace("_", " "));

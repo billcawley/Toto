@@ -35,7 +35,7 @@ public final class BusinessDAO extends StandardDAO<Business> {
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final Business business) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, business.getId());
         toReturn.put(STARTDATE, Date.from(business.getStartDate().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(ENDDATE, Date.from(business.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));

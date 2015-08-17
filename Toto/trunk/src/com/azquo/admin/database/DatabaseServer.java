@@ -2,8 +2,6 @@ package com.azquo.admin.database;
 
 import com.azquo.admin.StandardEntity;
 
-import java.util.Date;
-
 /**
  * Created by cawley on 05/08/15.
  * Only edited in the database, can make immutable

@@ -46,9 +46,7 @@ public class RMIServer {
             try {
                 registry.unbind(RMIInterface.serviceName);
                 UnicastRemoteObject.unexportObject(rmiImplementation, true);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            } catch (NotBoundException e) {
+            } catch (RemoteException | NotBoundException e) {
                 e.printStackTrace();
             }
         }

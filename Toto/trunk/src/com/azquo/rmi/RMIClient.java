@@ -13,12 +13,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RMIClient {
 
-
-
-    // I'm not sure if this is best practice but I was writing functions that were just passing through to this so I'll make it availiable here
+    // I'm not sure if this is best practice but I was writing functions that were just passing through to this so I'll make it available here
     // todo - check singleton pattern which I never use properly
 
-    private Map<String, RMIInterface> rmiInterfaceMap = new ConcurrentHashMap<String, RMIInterface>();
+    private Map<String, RMIInterface> rmiInterfaceMap = new ConcurrentHashMap<>();
 
 /*    public RMIClient() throws Exception{
         Registry registry = LocateRegistry.getRegistry("127.0.0.1", 12345);

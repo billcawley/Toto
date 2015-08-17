@@ -53,7 +53,7 @@ public final class Value extends AzquoMemoryDBEntity {
             // tested, .intern here saves memory
             this.text = transport.text.intern();
             this.deletedInfo = transport.deletedInfo;
-            Set<Name> newNames = new HashSet<Name>();
+            Set<Name> newNames = new HashSet<>();
             //System.out.println("name ids" + transport.nameIds);
             for (Integer nameId : transport.nameIds) {
                 Name name = getAzquoMemoryDB().getNameById(nameId);
@@ -165,7 +165,7 @@ public final class Value extends AzquoMemoryDBEntity {
     @Override
     public String getAsJson() {
         // yes could probably use list but lets match collection types . . .
-        Set<Integer> nameIds = new LinkedHashSet<Integer>();
+        Set<Integer> nameIds = new LinkedHashSet<>();
         for (Name name : names) {
             nameIds.add(name.getId());
         }

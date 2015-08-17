@@ -29,7 +29,7 @@ public class DatabaseServerDAO extends StandardDAO<DatabaseServer> {
 
     @Override
     public Map<String, Object> getColumnNameValueMap(DatabaseServer databaseServer) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, databaseServer.getId());
         toReturn.put(NAME, databaseServer.getName());
         toReturn.put(IP, databaseServer.getIp());

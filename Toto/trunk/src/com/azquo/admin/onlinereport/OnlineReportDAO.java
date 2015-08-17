@@ -41,7 +41,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, onlineReport.getId());
         toReturn.put(DATECREATED,  Date.from(onlineReport.getDateCreated().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(BUSINESSID, onlineReport.getBusinessId());
@@ -108,7 +108,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
                 statusSelect.append(" or ");
             }
             namedParams.addValue(USERSTATUS + count, "%" + statuses[count].trim() + "%");
-            statusSelect.append(USERSTATUS + " like :" + USERSTATUS + count);
+            statusSelect.append(USERSTATUS + " like :" + USERSTATUS).append(count);
         }
 
         statusSelect.append(")");

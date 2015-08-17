@@ -39,7 +39,7 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
 
     @Override
     public Map<String, Object> getColumnNameValueMap(UserRegionOptions uro) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, uro.getId());
         toReturn.put(USERID, uro.getUserId());
         toReturn.put(REPORTID, uro.getReportId());

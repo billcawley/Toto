@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Created with IntelliJ IDEA.
@@ -106,7 +107,7 @@ public final class Name extends AzquoMemoryDBEntity {
         }
 
         public Map<String, String> getAsMap(){
-            Map<String, String> attributesAsMap = new HashMap<String, String>();
+            Map<String, String> attributesAsMap = new HashMap<>();
             int count = 0;
             for (String key : attributeKeys) { // hmm, can still access and foreach on the internal array. Np I suppose!
                 attributesAsMap.put(key, attributeValues[count]);
@@ -227,7 +228,7 @@ public final class Name extends AzquoMemoryDBEntity {
     public void transferValues(Name from) throws Exception {
         if (from.valuesAsSet == null) return;
         if (valuesAsSet == null) {
-            valuesAsSet = new HashSet<Value>(from.valuesAsSet);
+            valuesAsSet = new HashSet<>(from.valuesAsSet);
         } else {
             for (Value v : from.getValues()) {
                 addToValues(v);
@@ -250,7 +251,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 if (!valuesList.contains(value)) { // it's this contains expense that means we should stop using arraylists over a certain size
                     // OK, here it may get interesting, what about size???
                     if (valuesList.size() >= ARRAYTHRESHOLD) { // we need to convert. copy the array to a new concurrent hashset then set it
-                        valuesAsSet = Collections.newSetFromMap(new ConcurrentHashMap<Value, Boolean>());// the way to get a thread safe set!
+                        valuesAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>());// the way to get a thread safe set!
                         valuesAsSet.addAll(valuesList); // add the existing ones
                         valuesAsSet.add(value);
                         //values = new ArrayList<Value>(); // to save memory, leaving commented as the saving probably isn't that much and I'm a little worried about concurrency.
@@ -362,7 +363,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 List<Name> parentsList = Arrays.asList(parents);
                 if (!parentsList.contains(name)) {
                     if (parentsList.size() >= ARRAYTHRESHOLD) {
-                        parentsAsSet = Collections.newSetFromMap(new ConcurrentHashMap<Name, Boolean>());
+                        parentsAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
                         parentsAsSet.addAll(parentsList);
                         parentsAsSet.add(name);
                         // parents  new arraylist?
@@ -411,11 +412,12 @@ public final class Name extends AzquoMemoryDBEntity {
     // these two functions moved here from the spreadsheet
 
     public Collection<Name> findAllParents() {
-        final Set<Name> allParents = new HashSet<Name>();
+        final Set<Name> allParents = new HashSet<>();
         findAllParents(this, allParents);
         return allParents;
     }
 
+    // option for collect call but I don't really get it
     private void findAllParents(Name name, final Set<Name> allParents) {
         for (Name parent : name.getParents()) {
             if (!allParents.contains(parent)) {
@@ -464,7 +466,7 @@ public final class Name extends AzquoMemoryDBEntity {
             if (findAllChildrenPayAttentionToAdditiveCache != null) {
                 return Collections.unmodifiableCollection(findAllChildrenPayAttentionToAdditiveCache);
             }
-            Set<Name> allChildrenPayAttentionToAdditive = new HashSet<Name>();
+            Set<Name> allChildrenPayAttentionToAdditive = new HashSet<>();
             findAllChildren(this, true, allChildrenPayAttentionToAdditive);
             if (!allChildrenPayAttentionToAdditive.isEmpty()) {
                 findAllChildrenPayAttentionToAdditiveCache = allChildrenPayAttentionToAdditive;
@@ -474,7 +476,7 @@ public final class Name extends AzquoMemoryDBEntity {
             if (findAllChildrenCache != null) {
                 return Collections.unmodifiableCollection(findAllChildrenCache);
             }
-            Set<Name> allChildren = new HashSet<Name>();
+            Set<Name> allChildren = new HashSet<>();
             findAllChildren(this, false, allChildren);
             if (!allChildren.isEmpty()) {
                 findAllChildrenCache = allChildren;
@@ -504,7 +506,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private synchronized void setChildrenNoChecks(LinkedHashSet<Name> children) {
         if (childrenAsSet != null || children.size() > ARRAYTHRESHOLD) { // then overwrite the map . . I just noticed how this could be dangerous in terms of external references. Make a copy.
-            this.childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<Name, Boolean>()); // NOTE! now we're not using linked, position and ordering will be ignored for large sets of children!!
+            this.childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>()); // NOTE! now we're not using linked, position and ordering will be ignored for large sets of children!!
             this.childrenAsSet.addAll(children);
         } else {
             Name[] newChildren = new Name[children.size()];
@@ -540,7 +542,7 @@ public final class Name extends AzquoMemoryDBEntity {
                     changed = true;
                     // like parents, hope the logic is sound
                     if (childrenList.size() >= ARRAYTHRESHOLD) { // we need to convert. copy the array to a new hashset then set it
-                        childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<Name, Boolean>());
+                        childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
                         childrenAsSet.addAll(childrenList);
                         childrenAsSet.add(child);
                         // children new arraylist?;
@@ -604,7 +606,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 return Collections.unmodifiableMap(parent.peers);
             }
         }
-        return new HashMap<Name, Boolean>();
+        return new HashMap<>();
     }
 
     public Map<String, String> getAttributes() {
@@ -685,8 +687,8 @@ public final class Name extends AzquoMemoryDBEntity {
         // only care about ones in this set
         // code adapted from map based code to lists, may need rewriting
         // again assume nameAttributes reference only set in code synchronized on this block
-        List<String> attributeKeys = new ArrayList<String>(nameAttributes.getAttributeKeys());
-        List<String> attributeValues = new ArrayList<String>(nameAttributes.getAttributeValues());
+        List<String> attributeKeys = new ArrayList<>(nameAttributes.getAttributeKeys());
+        List<String> attributeValues = new ArrayList<>(nameAttributes.getAttributeValues());
 
         int index = attributeKeys.indexOf(attributeName);
         String existing = null;
@@ -730,8 +732,8 @@ public final class Name extends AzquoMemoryDBEntity {
         attributeName = attributeName.toUpperCase();
         int index = nameAttributes.getAttributeKeys().indexOf(attributeName);
         if (index != -1) {
-            List<String> attributeKeys = new ArrayList<String>(nameAttributes.getAttributeKeys());
-            List<String> attributeValues = new ArrayList<String>(nameAttributes.getAttributeValues());
+            List<String> attributeKeys = new ArrayList<>(nameAttributes.getAttributeKeys());
+            List<String> attributeValues = new ArrayList<>(nameAttributes.getAttributeValues());
             getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, attributeValues.get(index), this);
             attributeKeys.remove(index);
             attributeValues.remove(index);
@@ -768,7 +770,7 @@ public final class Name extends AzquoMemoryDBEntity {
     // default to parent check
 
     public String getAttribute(String attributeName) {
-        return getAttribute(attributeName, true, new HashSet<Name>());
+        return getAttribute(attributeName, true, new HashSet<>());
     }
 
 
@@ -801,7 +803,7 @@ public final class Name extends AzquoMemoryDBEntity {
         synchronized (this) {
             if (peers != null) {
                 checkDatabaseMatches(name);// even if not needed throw the damn exception!
-                LinkedHashMap<Name, Boolean> newPeers = new LinkedHashMap<Name, Boolean>(peers);
+                LinkedHashMap<Name, Boolean> newPeers = new LinkedHashMap<>(peers);
                 newPeers.remove(name);
                 peers = Collections.unmodifiableMap(newPeers);
                 setNeedsPersisting();
@@ -841,17 +843,14 @@ public final class Name extends AzquoMemoryDBEntity {
 
     @Override
     public String getAsJson() {
-        LinkedHashMap<Integer, Boolean> peerIds = new LinkedHashMap<Integer, Boolean>();
+        LinkedHashMap<Integer, Boolean> peerIds = new LinkedHashMap<>();
         if (peers != null) {
             for (Name peer : peers.keySet()) {
                 peerIds.put(peer.getId(), peers.get(peer));
             }
         }
-        // yes could probably use list but lets match collection types . . .
-        LinkedHashSet<Integer> childrenIds = new LinkedHashSet<Integer>();
-        for (Name child : getChildren()) {
-            childrenIds.add(child.getId());
-        }
+        // yes could probably use list but lets match collection types, that is to say unique members in the transport though this may have performance implications
+        LinkedHashSet<Integer> childrenIds = getChildren().stream().map(Name::getId).collect(Collectors.toCollection(LinkedHashSet::new));
         try {
             return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(), additive, getAttributes(), peerIds, childrenIds));
         } catch (Exception e) {
@@ -894,15 +893,15 @@ public final class Name extends AzquoMemoryDBEntity {
             try {
                 // if I define this inside the synchronized block then it won't be visible outside, the add to parents will act on the sometimes empty choldren class variable
                 // need to think clearly about what needs synchronization. Given how it is used need it be synchronized at all? Does it matter that much to performance?
-                LinkedHashSet<Name> children = new LinkedHashSet<Name>();
+                LinkedHashSet<Name> children = new LinkedHashSet<>();
                 synchronized (this) {
                     JsonTransport transport = jacksonMapper.readValue(jsonCache, JsonTransport.class);
                     jsonCache = null;// free the memory
                     this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
                     this.additive = transport.additive;
                     //this.attributes = transport.attributes;
-                    List<String> attributeKeys = new ArrayList<String>();
-                    List<String> attributeValues = new ArrayList<String>();
+                    List<String> attributeKeys = new ArrayList<>();
+                    List<String> attributeValues = new ArrayList<>();
                     for (String key : transport.attributes.keySet()) {
                         // interning is clearly saving memory and it seems with little performance overhead
                         attributeKeys.add(key.toUpperCase().intern());
@@ -911,7 +910,7 @@ public final class Name extends AzquoMemoryDBEntity {
                     nameAttributes = new NameAttributes(attributeKeys, attributeValues);
                     LinkedHashMap<Integer, Boolean> peerIds = transport.peerIds;
                     if (!peerIds.isEmpty()) {
-                        peers = new LinkedHashMap<Name, Boolean>();
+                        peers = new LinkedHashMap<>();
                     }
                     for (Integer peerId : peerIds.keySet()) {
                         peers.put(getAzquoMemoryDB().getNameById(peerId), peerIds.get(peerId));
@@ -950,7 +949,7 @@ public final class Name extends AzquoMemoryDBEntity {
         synchronized (this) {
             values = getValues();
             parents = getParents();
-            peerParents = this.peerParents == null ? new ArrayList<Name>() : new ArrayList<Name>(Arrays.asList(this.peerParents));
+            peerParents = this.peerParents == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(this.peerParents));
             // the basics are done here in the synchronized block
             getAzquoMemoryDB().removeNameFromDb(this);
             needsDeleting = true;
@@ -963,7 +962,7 @@ public final class Name extends AzquoMemoryDBEntity {
         // then the actions on other objects
         // remove from values - this will change when value is changed to make more safe
         for (Value v : values) {
-            Set<Name> namesForValue = new HashSet<Name>(v.getNames());
+            Set<Name> namesForValue = new HashSet<>(v.getNames());
             namesForValue.remove(this);
             v.setNamesWillBePersisted(namesForValue);
         }

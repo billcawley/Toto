@@ -2,7 +2,6 @@ package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -133,7 +132,7 @@ public class ManageDatabasesController {
                 model.put("error", error.toString());
             }
             List<Database> databaseList = adminService.getDatabaseListForBusiness(loggedInUser);
-            List<DisplayDataBase> displayDataBases = new ArrayList<DisplayDataBase>();
+            List<DisplayDataBase> displayDataBases = new ArrayList<>();
             try {
                 for (Database database : databaseList){
                     boolean isLoaded = adminService.isDatabaseLoaded(loggedInUser, database);
@@ -198,7 +197,7 @@ public class ManageDatabasesController {
                 }
             }
             List<Database> databaseList = adminService.getDatabaseListForBusiness(loggedInUser);
-            List<DisplayDataBase> displayDataBases = new ArrayList<DisplayDataBase>();
+            List<DisplayDataBase> displayDataBases = new ArrayList<>();
             try {
                 for (Database database1 : databaseList){
                     boolean isLoaded = adminService.isDatabaseLoaded(loggedInUser, database1);

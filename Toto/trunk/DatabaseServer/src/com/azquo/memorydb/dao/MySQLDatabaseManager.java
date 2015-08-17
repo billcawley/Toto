@@ -20,35 +20,35 @@ public class MySQLDatabaseManager {
         databaseName = databaseName.replace("`", "oh no you don't");
 
         // ok balls to trying to load the file, let's just have the strings here
-        jdbcTemplate.update("create database `" + databaseName + "`;", new HashMap<String, Object>()); // check for "database exists" in message?
+        jdbcTemplate.update("create database `" + databaseName + "`;", new HashMap<>()); // check for "database exists" in message?
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`name` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` longtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ;", new HashMap<String, Object>());
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ;", new HashMap<>());
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`value` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` longtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ", new HashMap<String, Object>());
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ", new HashMap<>());
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`provenance` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` longtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1  ;", new HashMap<String, Object>());
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1  ;", new HashMap<>());
     }
 
     public void emptyDatabase(String databaseName) throws IOException {
         databaseName = databaseName.replace("`", "oh no you don't");
-        jdbcTemplate.update("truncate `" + databaseName + "`.name", new HashMap<String, Object>());
-        jdbcTemplate.update("truncate `" + databaseName + "`.value", new HashMap<String, Object>());
-        jdbcTemplate.update("truncate `" + databaseName + "`.provenance", new HashMap<String, Object>());
+        jdbcTemplate.update("truncate `" + databaseName + "`.name", new HashMap<>());
+        jdbcTemplate.update("truncate `" + databaseName + "`.value", new HashMap<>());
+        jdbcTemplate.update("truncate `" + databaseName + "`.provenance", new HashMap<>());
     }
 
     public void dropDatabase(String databaseName) throws IOException {
         // we assume the database name is safe, should we???
         databaseName = databaseName.replace("`", "oh no you don't");
-        jdbcTemplate.update("drop database `" + databaseName + "`", new HashMap<String, Object>());
+        jdbcTemplate.update("drop database `" + databaseName + "`", new HashMap<>());
     }
 
 }

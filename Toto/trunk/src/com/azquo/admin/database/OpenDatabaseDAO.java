@@ -31,7 +31,7 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
 
     @Override
     public Map<String, Object> getColumnNameValueMap(OpenDatabase openDatabase) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, openDatabase.getId());
         toReturn.put(DATABASEID, openDatabase.getDatabaseId());
         toReturn.put(OPEN, openDatabase.getOpen());

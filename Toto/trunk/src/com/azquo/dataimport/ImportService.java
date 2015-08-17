@@ -1,12 +1,11 @@
 package com.azquo.dataimport;
 
-import com.azquo.admin.AdminService;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.database.UploadRecord;
 import com.azquo.admin.database.UploadRecordDAO;
+import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
-import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -24,7 +23,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.zip.ZipInputStream;
 
 /**
@@ -57,7 +58,7 @@ public final class ImportService {
 
     public void importTheFile(LoggedInUser loggedInUser, String fileName, String filePath) throws Exception {
         //used for Magento importing (data  - not report templates)
-        List<String> languages = new ArrayList<String>();
+        List<String> languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         importTheFile(loggedInUser, fileName, "", filePath, "", true, languages);
     }

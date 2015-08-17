@@ -10,9 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
-import java.net.URLEncoder;
-import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Created by bill on 05/08/15.

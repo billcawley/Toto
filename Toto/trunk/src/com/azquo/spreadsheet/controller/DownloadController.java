@@ -43,13 +43,13 @@ public class DownloadController {
         // deliver a preprepared image. Are these names unique? Could images move between spreadsheets unintentionally?
         // Edd note - use nio?
         if (image != null && image.length() > 0) {
-            InputStream input = new BufferedInputStream((new FileInputStream(spreadsheetService.getHomeDir() + "/temp/" + image)));
             response.setContentType("image/png"); // Set up mime type
             OutputStream out = response.getOutputStream();
             byte[] bucket = new byte[32 * 1024];
             int length = 0;
             try {
-                try {
+                // new java 8 syntax, a little odd but I'll leave here for the moment
+                try (InputStream input = new BufferedInputStream((new FileInputStream(spreadsheetService.getHomeDir() + "/temp/" + image)))) {
                     int bytesRead = 0;
                     while (bytesRead != -1) {
                         //aInput.read() returns -1, 0, or more :
@@ -59,8 +59,6 @@ public class DownloadController {
                             length += bytesRead;
                         }
                     }
-                } finally {
-                    input.close();
                 }
                 response.setHeader("Content-Disposition", "inline; filename=\"" + image + "\"");
                 response.setHeader("Content-Length", String.valueOf(length));

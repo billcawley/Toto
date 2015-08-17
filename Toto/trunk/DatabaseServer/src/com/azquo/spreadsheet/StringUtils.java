@@ -115,7 +115,7 @@ I'll add better tracking of where an error is later
         Pattern p = Pattern.compile("" + Name.QUOTE + ".*?" + Name.QUOTE + ""); // don't need escaping here I don't think. Possible to add though.
         Matcher matcher = p.matcher(statement);
         int lastEnd = 0;
-        List<String> quotedNameCache = new ArrayList<String>();
+        List<String> quotedNameCache = new ArrayList<>();
         while (matcher.find()) {
             if (modifiedStatement.length() == 0) {
                 modifiedStatement.append(statement.substring(0, matcher.start()));

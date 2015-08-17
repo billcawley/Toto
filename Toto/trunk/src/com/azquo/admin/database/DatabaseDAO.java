@@ -38,7 +38,7 @@ public final class DatabaseDAO extends StandardDAO<Database> {
 
     @Override
     public Map<String, Object> getColumnNameValueMap(Database database) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, database.getId());
         toReturn.put(STARTDATE, Date.from(database.getStartDate().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(ENDDATE, Date.from(database.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));

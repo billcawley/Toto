@@ -24,7 +24,6 @@ import org.zkoss.zss.jsp.JsonUpdateBridge;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
-import org.zkoss.zss.model.impl.pdf.PdfExporter;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zul.Filedownload;
 
@@ -105,7 +104,7 @@ public class ZKSpreadsheetCommandController {
                         Book book = ss.getBook();
                         // Look for the relevant name in the sheet
                         CellRegion pdfRules = ZKAzquoBookUtils.getCellRegionForSheetAndName(ss.getSelectedSheet(), "az_PDF" + action.substring("PDFMerge".length()).replace(" ", "_")); // just reverse what I did for the UI
-                        List<String> choices = new ArrayList<String>();
+                        List<String> choices = new ArrayList<>();
                         if (pdfRules != null) {
                             final String stringValue = ss.getSelectedSheet().getInternalSheet().getCell(pdfRules.getRow(), pdfRules.getColumn()).getStringValue();
                             StringTokenizer st = new StringTokenizer(stringValue, ",");
@@ -118,12 +117,10 @@ public class ZKSpreadsheetCommandController {
                         if (!choices.isEmpty()) {
                             PDFMergerUtility merger = new PDFMergerUtility();
                             // ok this is where things get interesting, need to work out how to express the logic.
-                            List<String> filesCreated = new ArrayList<String>();
+                            List<String> filesCreated = new ArrayList<>();
                             // the filesCreated is added to internally and the other arraylist is just to track choices
-                            resolveAndRenderChoices(filesCreated, book, choices, new ArrayList<String>());
-                            for (String filePath : filesCreated){
-                                merger.addSource(filePath);
-                            }
+                            resolveAndRenderChoices(filesCreated, book, choices, new ArrayList<>());
+                            filesCreated.forEach(merger::addSource);
                             File merged = File.createTempFile(Long.toString(System.currentTimeMillis()), "merged");
                             merger.setDestinationFileName(merged.getAbsolutePath());
                             merger.mergeDocuments();
@@ -179,7 +176,7 @@ public class ZKSpreadsheetCommandController {
     /*
     Note : a method I didn't follow for this involved making the extra sheets and rendering in one go
             SSheet newSheet = book.getInternalBook().createSheet("edd_test", book.getSheetAt(0).getInternalSheet());
-    and then copy the names (which are not copied by doing this). It wasn't practical (can't really remember why!) but worth remembering the abiolity to copy sheets.
+    and then copy the names (which are not copied by doing this). It wasn't practical (can't really remember why!) but worth remembering the ability to copy sheets.
      */
 
     private void resolveAndRenderChoices(List<String> toReturn, Book book, List<String> choices, List<String> selectedChoices) throws Exception {
@@ -226,7 +223,7 @@ public class ZKSpreadsheetCommandController {
     }
 
     List<String> getChoiceList(Book book, String choice) {
-        List<String> toReturn = new ArrayList<String>();
+        List<String> toReturn = new ArrayList<>();
         Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
         if (validationSheet != null) {
             int col = 0;

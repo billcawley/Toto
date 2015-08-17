@@ -9,7 +9,6 @@ import com.azquo.admin.user.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
@@ -368,7 +367,7 @@ public class SpreadsheetService {
     public void showUserMenu(ModelMap model, LoggedInUser loggedInUser) {
         Map<String, Database> databases = loginService.foundDatabases(loggedInUser.getUser());
          model.addAttribute("welcome", "Welcome to Azquo!");
-        List<Map<String, String>> reports = new ArrayList<Map<String, String>>();
+        List<Map<String, String>> reports = new ArrayList<>();
         for (String dbName:databases.keySet()) {
             Database database = databases.get(dbName);
             List<OnlineReport> onlineReports = onlineReportDAO.findForDatabaseIdAndUserStatus(database.getId(), loggedInUser.getUser().getStatus(),database.getDatabaseType());
@@ -377,7 +376,7 @@ public class SpreadsheetService {
             String reportCategory = "";
 
             for (OnlineReport onlineReport : onlineReports) {
-                Map<String, String> vReport = new HashMap<String, String>();
+                Map<String, String> vReport = new HashMap<>();
                 if (!onlineReport.getReportCategory().equals(reportCategory)) {
                     vReport.put("category", onlineReport.getReportCategory());
                 } else {
@@ -444,7 +443,7 @@ public class SpreadsheetService {
                     , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                     , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol());
         }
-        return new ArrayList<TreeNode>(); // maybe "not found"?
+        return new ArrayList<>(); // maybe "not found"?
     }
 
 

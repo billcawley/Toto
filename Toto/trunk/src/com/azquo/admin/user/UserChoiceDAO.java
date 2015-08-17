@@ -32,7 +32,7 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
 
     @Override
     public Map<String, Object> getColumnNameValueMap(UserChoice ucr) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, ucr.getId());
         toReturn.put(USERID, ucr.getUserId());
         toReturn.put(CHOICENAME, ucr.getChoiceName());

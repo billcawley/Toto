@@ -79,6 +79,7 @@ public class ManageUsersController {
                         error.append("Password required<br/>");
                     }
                     if (error.length() == 0){
+                        assert endDate != null;
                         // then store, it might be new
                         if (toEdit == null){
                             // Have to use  alocadate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime

@@ -36,7 +36,7 @@ public final class PermissionDAO extends StandardDAO<Permission> {
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final Permission permission) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, permission.getId());
         toReturn.put(STARTDATE, Date.from(permission.getStartDate().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(ENDDATE, Date.from(permission.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));

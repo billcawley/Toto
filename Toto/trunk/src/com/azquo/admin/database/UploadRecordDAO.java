@@ -34,7 +34,7 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final UploadRecord uploadRecord) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, uploadRecord.getId());
         toReturn.put(DATE, uploadRecord.getDate());
         toReturn.put(BUSINESSID, uploadRecord.getBusinessId());

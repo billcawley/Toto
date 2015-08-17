@@ -254,7 +254,7 @@ public class AdminService {
 
 
     public List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
-        List<OnlineReport> reportList = new ArrayList<OnlineReport>();
+        List<OnlineReport> reportList = new ArrayList<>();
         List<Database> databases = databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         for (Database database:databases) {
             List<OnlineReport> reports = onlineReportDAO.findForDatabaseId(database.getId(), database.getDatabaseType());
@@ -281,7 +281,7 @@ public class AdminService {
     public List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
             List<UploadRecord> uploadRecords = uploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
-            List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<UploadRecord.UploadRecordForDisplay>();
+            List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<>();
             for (UploadRecord uploadRecord : uploadRecords) {
                 String dbName = "";
                 if (uploadRecord.getDatabaseId() > 0) {
@@ -307,7 +307,7 @@ public class AdminService {
 
     public List<Permission.PermissionForDisplay> getDisplayPermissionList(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
-            List<Permission.PermissionForDisplay> permissions = new ArrayList<Permission.PermissionForDisplay>();
+            List<Permission.PermissionForDisplay> permissions = new ArrayList<>();
             for (Permission permission : permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId())){
                 permissions.add(new Permission.PermissionForDisplay(permission, databaseDAO,userDao));
             }
@@ -348,7 +348,7 @@ public class AdminService {
     public void deletePermissionById(int permissionId, LoggedInUser loggedInUser) {
         Permission permission = permissionDAO.findById(permissionId);
         User user = userDao.findById(permission.getUserId());
-        if (permission != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
+        if (loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
             permissionDAO.removeById(permission);
         }
     }
@@ -390,7 +390,6 @@ public class AdminService {
             openDatabaseDAO.removeForDatabaseId(db.getId());
             permissionDAO.removeForDatabaseId(db.getId());
             uploadRecordDAO.removeForDatabaseId(db.getId());
-            String mySQLName = db.getMySQLName();
             databaseDAO.removeById(db);
             dropDatabase(databaseServerDAO.findById(db.getDatabaseServerId()), db);
         }

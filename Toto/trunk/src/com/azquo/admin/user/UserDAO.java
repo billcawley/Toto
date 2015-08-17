@@ -43,7 +43,7 @@ public class UserDAO extends StandardDAO<User> {
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final User user) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, user.getId());
         toReturn.put(STARTDATE, Date.from(user.getStartDate().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(ENDDATE, Date.from(user.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));

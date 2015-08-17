@@ -158,29 +158,29 @@ WHERE id IN (1,2,3)
     public void persistJsonRecords(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws Exception {
         // currently only the inserter is multithreaded, adding the others shoudl not be difficult
         ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDB.getLoadingThreads());
-        List<JsonRecordTransport> toDelete = new ArrayList<JsonRecordTransport>();
-        List<JsonRecordTransport> toInsert = new ArrayList<JsonRecordTransport>();
-        List<JsonRecordTransport> toUpdate = new ArrayList<JsonRecordTransport>();
+        List<JsonRecordTransport> toDelete = new ArrayList<>();
+        List<JsonRecordTransport> toInsert = new ArrayList<>();
+        List<JsonRecordTransport> toUpdate = new ArrayList<>();
         for (JsonRecordTransport record : records) {
             if (record.state == JsonRecordTransport.State.DELETE) {
                 toDelete.add(record);
                 if (toDelete.size() == UPDATELIMIT) {
                     bulkDelete(azquoMemoryDB, tableName, toDelete);
-                    toDelete = new ArrayList<JsonRecordTransport>();
+                    toDelete = new ArrayList<>();
                 }
             }
             if (record.state == JsonRecordTransport.State.INSERT) {
                 toInsert.add(record);
                 if (toInsert.size() == UPDATELIMIT) {
                     executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert));
-                    toInsert = new ArrayList<JsonRecordTransport>();
+                    toInsert = new ArrayList<>();
                 }
             }
             if (record.state == JsonRecordTransport.State.UPDATE) {
                 toUpdate.add(record);
                 if (toUpdate.size() == UPDATELIMIT) {
                     bulkUpdate(azquoMemoryDB, tableName, toUpdate);
-                    toUpdate = new ArrayList<JsonRecordTransport>();
+                    toUpdate = new ArrayList<>();
                 }
             }
         }
@@ -200,7 +200,7 @@ WHERE id IN (1,2,3)
 
     public final int findMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`";
-        Integer toReturn = jdbcTemplate.queryForObject (SQL_SELECT_ALL, new HashMap<String, Object>(), Integer.class);
+        Integer toReturn = jdbcTemplate.queryForObject (SQL_SELECT_ALL, new HashMap<>(), Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }
 }

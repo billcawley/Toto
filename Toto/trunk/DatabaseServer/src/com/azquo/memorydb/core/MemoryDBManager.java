@@ -16,7 +16,7 @@ public final class MemoryDBManager {
 
     public MemoryDBManager(StandardDAO standardDAO) throws Exception {
         this.standardDAO = standardDAO;
-        memoryDatabaseMap = new HashMap<String, AzquoMemoryDB>(); // by mysql name. Will be unique.
+        memoryDatabaseMap = new HashMap<>(); // by mysql name. Will be unique.
     }
 
     public synchronized AzquoMemoryDB getAzquoMemoryDB(String mySqlName) throws Exception {

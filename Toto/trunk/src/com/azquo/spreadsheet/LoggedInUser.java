@@ -45,10 +45,10 @@ public class LoggedInUser {
     protected LoggedInUser(final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions) {
         this.user = user;
         reportId = 0;
-        sentCellsMaps = new HashMap<String, CellsAndHeadingsForDisplay>();
+        sentCellsMaps = new HashMap<>();
         azquoBook = null;
 
-        languages = new ArrayList<String>();
+        languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         this.database = database;
         this.databaseServer = databaseServer;

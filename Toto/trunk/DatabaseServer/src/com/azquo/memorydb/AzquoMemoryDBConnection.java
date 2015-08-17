@@ -35,12 +35,12 @@ public class AzquoMemoryDBConnection {
         if (databaseAccessToken.getWritePermissions() != null && !databaseAccessToken.getWritePermissions().isEmpty()) {
             writePermissions = nameService.decodeString(this, databaseAccessToken.getWritePermissions(), languages);
         } else {
-            writePermissions = new ArrayList<Set<Name>>();
+            writePermissions = new ArrayList<>();
         }
         if (databaseAccessToken.getReadPermissions() != null && !databaseAccessToken.getReadPermissions().isEmpty()) {
             readPermissions = nameService.decodeString(this, databaseAccessToken.getReadPermissions(), languages);
         } else {
-            readPermissions = new ArrayList<Set<Name>>();
+            readPermissions = new ArrayList<>();
         }
     }
 

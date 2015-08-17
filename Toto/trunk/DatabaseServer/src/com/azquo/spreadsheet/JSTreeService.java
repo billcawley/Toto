@@ -3,7 +3,6 @@ package com.azquo.spreadsheet;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
-import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
@@ -52,8 +51,8 @@ public class JSTreeService {
 
     // todo - stop these being looked up by a dataaccesstoken to string, for the moment it's the nearest I can get to the old logged in connection, need to understand the logic
 
-    Map<String, Map<String, JSTreeService.JsTreeNode>> lookupMap = new ConcurrentHashMap<String, Map<String, JSTreeService.JsTreeNode>>();
-    Map<String, Integer> lastJSTreeIdMap = new ConcurrentHashMap<String, Integer>();
+    Map<String, Map<String, JSTreeService.JsTreeNode>> lookupMap = new ConcurrentHashMap<>();
+    Map<String, Integer> lastJSTreeIdMap = new ConcurrentHashMap<>();
 
     // from the controller, as I say in many comments need to move some of the code back to the controller but for the moment it's forced DB side
     // ok annoyingly the lookup needs to be persisted across calls, so I'll need a map in here of the lookups.
@@ -61,7 +60,7 @@ public class JSTreeService {
     // string literals in here . . .
     // jstree id really should be a number but it seems to be true on new? FOr the mo leave as string here
     public Set<Name> interpretNameString(DatabaseAccessToken databaseAccessToken, String nameString)throws Exception{
-        Set<Name> names = new HashSet<Name>();
+        Set<Name> names = new HashSet<>();
         String[] namesString = nameString.split(",");
         if (namesString[0].startsWith("jstreeids:")){
             Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(databaseAccessToken.toString());
@@ -103,7 +102,7 @@ public class JSTreeService {
         // trying for the tree id here, hope that will work
         Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(databaseAccessToken.toString()); // todo, sort this hack later, it's called in
         if (lookup == null) {
-            lookup = new HashMap<String, JSTreeService.JsTreeNode>();
+            lookup = new HashMap<>();
             lookupMap.put(databaseAccessToken.toString(), lookup);
         }
         if (json != null && json.length() > 0) {
@@ -243,7 +242,7 @@ public class JSTreeService {
                         if (key.equalsIgnoreCase(NameService.PEERS) || (position == nameJsonRequest.attributes.keySet().size() && !foundPeers)) { // the second means run this if we hit the end having not run it
                             foundPeers = true;
                             boolean editingPeers = false;
-                            LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<Name, Boolean>();
+                            LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<>();
                             if (key.equalsIgnoreCase(NameService.PEERS)) { // if it's not then we're in here because no peers were sent so leave the peer list blank
                                 StringTokenizer st = new StringTokenizer(nameJsonRequest.attributes.get(key), ",");
                                 while (st.hasMoreTokens()) {
@@ -321,8 +320,8 @@ public class JSTreeService {
     // was about 40 lines before jackson though the class abopve is of course important
     private String getChildStructureFormattedForOutput(final Name name) throws JsonProcessingException {
         //puts the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
-        Map<String, Object> attributesForJackson = new HashMap<String, Object>();
-        List<String> peers = new ArrayList<String>();
+        Map<String, Object> attributesForJackson = new HashMap<>();
+        List<String> peers = new ArrayList<>();
         if (name.getPeers().size() > 0) {
             for (Name peer : name.getPeers().keySet()) {
                 peers.add(peer.getDefaultDisplayName() + (name.getPeers().get(peer) ? "" : "--")); // add the -- if not additive
@@ -367,10 +366,10 @@ public class JSTreeService {
 
     // todo : can we move the object? It's called in a funciton that returns some other stuff, hmmmmmmmmm
     private String getJsonChildren(AzquoMemoryDBConnection loggedInConnection, String tokenString, int jsTreeId, Name name, boolean parents, Map<String, JSTreeService.JsTreeNode> lookup, String searchTerm, String language) throws Exception {
-        Map<String,Boolean> state = new HashMap<String, Boolean>();
+        Map<String,Boolean> state = new HashMap<>();
         state.put("opened", true);
         String text = "";
-        List<Name> children = new ArrayList<Name>();
+        List<Name> children = new ArrayList<>();
         if (jsTreeId == 0 && name == null) {
             text = "root";
             if (searchTerm == null || searchTerm.length() == 0) {
@@ -396,7 +395,7 @@ public class JSTreeService {
                 }
             }
         }
-        List<JsonChildren.Triple> childTriples = new ArrayList<JsonChildren.Triple>();
+        List<JsonChildren.Triple> childTriples = new ArrayList<>();
         if (children.size() > 0 || (name != null && name.getAttributes().size() > 1)) {
             int lastId = 0;
             if (lastJSTreeIdMap.get(tokenString) != null) {
@@ -432,7 +431,7 @@ public class JSTreeService {
                 }
             }
         } else {
-            return jacksonMapper.writeValueAsString(new JsonChildren(0, state, searchTerm, new ArrayList<JsonChildren.Triple>(), ""));
+            return jacksonMapper.writeValueAsString(new JsonChildren(0, state, searchTerm, new ArrayList<>(), ""));
         }
         String type;
         if (children.size() > 0) {

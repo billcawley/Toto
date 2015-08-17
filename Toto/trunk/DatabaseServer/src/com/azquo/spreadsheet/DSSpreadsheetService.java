@@ -16,7 +16,6 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.servlet.ServletContext;
-import javax.xml.crypto.Data;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -130,10 +129,10 @@ seaports;children   container;children
      */
 
     private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames) throws Exception {
-        List<List<List<DataRegionHeading>>> nameLists = new ArrayList<List<List<DataRegionHeading>>>();
+        List<List<List<DataRegionHeading>>> nameLists = new ArrayList<>();
         for (List<String> sourceRow : headingRegion) { // we're stepping through the cells that describe headings
             // ok here's the thing, before it was just names here, now it could be other things, attribute names formulae etc.
-            List<List<DataRegionHeading>> row = new ArrayList<List<DataRegionHeading>>();
+            List<List<DataRegionHeading>> row = new ArrayList<>();
             nameLists.add(row);
             for (String sourceCell : sourceRow) {
                 if (sourceCell == null || sourceCell.length() == 0) {
@@ -159,8 +158,8 @@ seaports;children   container;children
                             // should strip off the function
                             sourceCell = sourceCell.substring(sourceCell.indexOf("(", NAMECOUNT.length()) + 1); // chop off the beginning
                             sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
-                            Set<Name> nameCountSet = new HashSet<Name>(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames)); // put what would have caused multiple headings into namecount
-                            List<DataRegionHeading> forNameCount = new ArrayList<DataRegionHeading>();
+                            Set<Name> nameCountSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames)); // put what would have caused multiple headings into namecount
+                            List<DataRegionHeading> forNameCount = new ArrayList<>();
                             forNameCount.add(new DataRegionHeading(null, false, function, nameCountSet));
                             row.add(forNameCount);
                         } else if (sourceCell.toUpperCase().startsWith(TOTALNAMECOUNT)) {
@@ -168,13 +167,13 @@ seaports;children   container;children
                             sourceCell = sourceCell.substring(sourceCell.indexOf("(", NAMECOUNT.length()) + 1); // chop off the beginning
                             sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
                             String selectionType = sourceCell.substring(0,sourceCell.indexOf(","));
-                            Set<Name> typeSet = new HashSet<Name>(nameService.parseQuery(azquoMemoryDBConnection,selectionType, attributeNames));
+                            Set<Name> typeSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, selectionType, attributeNames));
                             if (typeSet.size() != 1){
                                 throw new Exception("selection types must be single cells = use 'as'");
                             }
                             String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1);
-                            Set<Name> selectionSet = new HashSet<Name>(nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames));
-                            List<DataRegionHeading> forNameCount = new ArrayList<DataRegionHeading>();
+                            Set<Name> selectionSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames));
+                            List<DataRegionHeading> forNameCount = new ArrayList<>();
                             forNameCount.add(new DataRegionHeading(typeSet.iterator().next(), false, function, selectionSet));
                             row.add(forNameCount);
                         } else {
@@ -226,13 +225,13 @@ seaports;children   container;children
         List<List<T>> toReturn = null;
         for (List<T> permutationDimension : listsToPermute) {
             if (permutationDimension == null) {
-                permutationDimension = new ArrayList<T>();
+                permutationDimension = new ArrayList<>();
                 permutationDimension.add(null);
             }
             if (toReturn == null) { // first one, just assign the single column
-                toReturn = new ArrayList<List<T>>();
+                toReturn = new ArrayList<>();
                 for (T item : permutationDimension) {
-                    List<T> createdRow = new ArrayList<T>();
+                    List<T> createdRow = new ArrayList<>();
                     createdRow.add(item);
                     toReturn.add(createdRow);
                 }
@@ -266,10 +265,10 @@ seaports;children   container;children
 
 
     private <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
-        List<List<T>> toReturn = new ArrayList<List<T>>();
+        List<List<T>> toReturn = new ArrayList<>();
         for (List<T> existingRow : existing2DArray) {
             for (T elementWeWantToAdd : permutationWeWantToAdd) { // for each new element
-                List<T> newRow = new ArrayList<T>(existingRow); // copy the existing row
+                List<T> newRow = new ArrayList<>(existingRow); // copy the existing row
                 newRow.add(elementWeWantToAdd);// add the extra element
                 toReturn.add(newRow);
             }
@@ -301,7 +300,7 @@ seaports;children   container;children
 
 
     private List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists) {
-        List<List<DataRegionHeading>> output = new ArrayList<List<DataRegionHeading>>();
+        List<List<DataRegionHeading>> output = new ArrayList<>();
         final int noOfHeadingDefinitionRows = headingLists.size();
         if (noOfHeadingDefinitionRows == 0) {
             return output;
@@ -363,7 +362,7 @@ seaports;children   container;children
     }
 
     private List<String> findUniqueNames(List<UniqueName> pending) {
-        List<String> output = new ArrayList<String>();
+        List<String> output = new ArrayList<>();
         if (pending.size() == 1) {
             output.add(pending.get(0).string);
             return output;
@@ -400,14 +399,14 @@ seaports;children   container;children
 
     private List<String> getIndividualNames(List<Name> sortedNames) {
         //this routine to output a list of names without duplicates by including parent names on duplicates
-        List<String> output = new ArrayList<String>();
+        List<String> output = new ArrayList<>();
         String lastName = null;
-        List<UniqueName> pending = new ArrayList<UniqueName>();
+        List<UniqueName> pending = new ArrayList<>();
         for (Name name : sortedNames) {
             if (lastName != null) {
                 if (name.getDefaultDisplayName() != null && !name.getDefaultDisplayName().equals(lastName)) {
                     output.addAll(findUniqueNames(pending));
-                    pending = new ArrayList<UniqueName>();
+                    pending = new ArrayList<>();
                     if (output.size() > 1500) break;
                 }
             }
@@ -429,7 +428,7 @@ seaports;children   container;children
             Name possibleName = nameService.findByName(getConnectionFromAccessToken(databaseAccessToken), query.substring(0, dotPos));
              if (possibleName!=null){
                 String result = possibleName.getAttribute(query.substring(dotPos + 1));
-                 List<String> toReturn = new ArrayList<String>();
+                 List<String> toReturn = new ArrayList<>();
                  toReturn.add(result);
                  return toReturn;
              }
@@ -439,14 +438,10 @@ seaports;children   container;children
     }
 
     private List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
-        final List<Integer> sortedValues = new ArrayList<Integer>();
-        List<Map.Entry<Integer, Double>> list = new ArrayList<Map.Entry<Integer, Double>>(sortTotals.entrySet());
+        final List<Integer> sortedValues = new ArrayList<>();
+        List<Map.Entry<Integer, Double>> list = new ArrayList<>(sortTotals.entrySet());
         // sort list based on
-        Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {
-            public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
-                return sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue());
-            }
-        });
+        Collections.sort(list, (o1, o2) -> sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue()));
         for (Map.Entry<Integer, Double> aList : list) {
             sortedValues.add(aList.getKey());
         }
@@ -456,14 +451,10 @@ seaports;children   container;children
     // same thing for strings, I prefer stronger typing
 
     private List<Integer> sortStringValues(Map<Integer, String> sortTotals, final boolean sortRowsUp) {
-        final List<Integer> sortedValues = new ArrayList<Integer>();
-        List<Map.Entry<Integer, String>> list = new ArrayList<Map.Entry<Integer, String>>(sortTotals.entrySet());
+        final List<Integer> sortedValues = new ArrayList<>();
+        List<Map.Entry<Integer, String>> list = new ArrayList<>(sortTotals.entrySet());
         // sort list based on string now
-        Collections.sort(list, new Comparator<Map.Entry<Integer, String>>() {
-            public int compare(Map.Entry<Integer, String> o1, Map.Entry<Integer, String> o2) {
-                return sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue());
-            }
-        });
+        Collections.sort(list, (o1, o2) -> sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue()));
 
         for (Map.Entry<Integer, String> aList : list) {
             sortedValues.add(aList.getKey());
@@ -491,13 +482,13 @@ seaports;children   container;children
     */
 
     private <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
-        final List<List<T>> flipped = new ArrayList<List<T>>();
+        final List<List<T>> flipped = new ArrayList<>();
         if (source2Dlist.size() == 0) {
             return flipped;
         }
         final int oldXMax = source2Dlist.get(0).size(); // size of nested list, as described above (that is to say get the length of one row)
         for (int newY = 0; newY < oldXMax; newY++) {
-            List<T> newRow = new ArrayList<T>(); // make a new row
+            List<T> newRow = new ArrayList<>(); // make a new row
             for (List<T> oldRow : source2Dlist) { // and step down each of the old rows
                 newRow.add(oldRow.get(newY));//so as we're moving across the new row we're moving down the old rows on a fixed column
                 // the transposing is happening as a list which represents a row would typically be accessed by an x value but instead it's being accessed by an y value
@@ -530,9 +521,9 @@ seaports;children   container;children
     // return headings as strings for display, I'm going to put blanks in here if null.
 
     public List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languages) {
-        List<List<String>> toReturn = new ArrayList<List<String>>();
+        List<List<String>> toReturn = new ArrayList<>();
         for (List<DataRegionHeading> row : source) {
-            List<String> returnRow = new ArrayList<String>();
+            List<String> returnRow = new ArrayList<>();
             toReturn.add(returnRow);
             for (DataRegionHeading heading : row) {
                 String cellValue = null;
@@ -566,11 +557,11 @@ seaports;children   container;children
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, databaseAccessToken.getLanguages(), highlightDays);
        if (data.size()==0){
-           return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<List<CellForDisplay>>(),null,colHeadingsSource,null);
+           return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<>(),null,colHeadingsSource,null);
        }
-        List<List<CellForDisplay>> displayData = new ArrayList<List<CellForDisplay>>();
+        List<List<CellForDisplay>> displayData = new ArrayList<>();
         for (List<AzquoCell> sourceRow : data) {
-            List<CellForDisplay> displayDataRow = new ArrayList<CellForDisplay>();
+            List<CellForDisplay> displayDataRow = new ArrayList<>();
             displayData.add(displayDataRow);
             for (AzquoCell sourceCell : sourceRow) {
                 displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol()));
@@ -592,9 +583,9 @@ seaports;children   container;children
             throw new Exception("no headings passed");
         }
         if (rowHeadings.size()==0){
-            return new ArrayList<List<AzquoCell>>();
+            return new ArrayList<>();
         }
-        final List<Name> contextNames = new ArrayList<Name>();
+        final List<Name> contextNames = new ArrayList<>();
         for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell
             for (String contextItem : contextItems) {
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
@@ -621,7 +612,7 @@ seaports;children   container;children
 
 
     private List<Name> getContextNames(AzquoMemoryDBConnection azquoMemoryDBConnection,List<List<String>> contextSource)throws Exception{
-        final List<Name> contextNames = new ArrayList<Name>();
+        final List<Name> contextNames = new ArrayList<>();
         for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell
             for (String contextItem : contextItems) {
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
@@ -731,9 +722,9 @@ seaports;children   container;children
         maxCols = Math.abs(maxCols);
         if (sortOnColIndex != -1 || sortOnRowIndex != -1 || sortOnColTotals || sortOnRowTotals) { // then there's no sorting to do!
             // was a null check on sortRow and sortCol but it can't be null, it will be negative if none found
-            final Map<Integer, Double> sortRowTotals = new HashMap<Integer, Double>();
-            final Map<Integer, String> sortRowStrings = new HashMap<Integer, String>();
-            final Map<Integer, Double> sortColumnTotals = new HashMap<Integer, Double>();
+            final Map<Integer, Double> sortRowTotals = new HashMap<>();
+            final Map<Integer, String> sortRowStrings = new HashMap<>();
+            final Map<Integer, Double> sortColumnTotals = new HashMap<>();
             for (int colNo = 0; colNo < totalCols; colNo++) {
                 sortColumnTotals.put(colNo, 0.00);
             }
@@ -780,7 +771,7 @@ seaports;children   container;children
             }
             // OK pasting and changing what was in format data region, it's only called by this
             int blockRowCount = 0;
-            List<List<AzquoCell>> sortedCells = new ArrayList<List<AzquoCell>>();
+            List<List<AzquoCell>> sortedCells = new ArrayList<>();
             // zero passed or set above means don't limit, this feels a little hacky but we need a less than condition on the for loop. Both for limiting and we need this type of loop as the index looks up on the sort
             if (maxRows == 0) {
                 maxRows = totalRows;
@@ -790,7 +781,7 @@ seaports;children   container;children
             }
             for (rowNo = 0; rowNo < maxRows; rowNo++) {
                 List<AzquoCell> rowCells = sourceData.get(sortedRows != null ? sortedRows.get(rowNo) : rowNo); // if a sort happened use the row number according to it
-                List<AzquoCell> newRow = new ArrayList<AzquoCell>();
+                List<AzquoCell> newRow = new ArrayList<>();
                 if (sortedCols != null) {
                     for (int colNo = 0; colNo < maxCols; colNo++) {
                         newRow.add(rowCells.get(sortedCols.get(colNo)));
@@ -918,7 +909,7 @@ seaports;children   container;children
                 for (int rowNo = startRow; rowNo <= endRow; rowNo++) {
                     List<DataRegionHeading> rowHeadings = headingsForEachRow.get(rowNo);
                     if (rowNo % 1000 == 0) System.out.print(".");
-                    List<AzquoCell> returnRow = new ArrayList<AzquoCell>();
+                    List<AzquoCell> returnRow = new ArrayList<>();
                     int colNo = 0;
                     for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                         // values I need to build the CellUI
@@ -975,7 +966,7 @@ seaports;children   container;children
             }
 
         }
-        Set<Name> alreadyTested = new HashSet<Name>();
+        Set<Name> alreadyTested = new HashSet<>();
         if (containsSet != null && memberSet != null) {
             //example here  - find all mailings to customers
             //contains set = all mailings - may have many mailings to a single customer
@@ -999,7 +990,7 @@ seaports;children   container;children
             , List<Name> contextNames, int rowNo, int colNo, Map<Name, Integer> totalSetSize, List<String> languages) throws Exception {
         String stringValue;
         double doubleValue = 0;
-        Set<DataRegionHeading> headingsForThisCell = new HashSet<DataRegionHeading>();
+        Set<DataRegionHeading> headingsForThisCell = new HashSet<>();
         Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
         //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
@@ -1016,7 +1007,7 @@ seaports;children   container;children
                     headingsForThisCell.add(heading);
                 }
             }
-            rowAndColumnHeadingsForThisCell = new HashSet<DataRegionHeading>(headingsForThisCell);
+            rowAndColumnHeadingsForThisCell = new HashSet<>(headingsForThisCell);
             if (headingsForThisCell.size() > hCount) {
                 headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection, null)); // no functions (including namecount) for context
             } else {
@@ -1067,7 +1058,7 @@ seaports;children   container;children
                 stringValue = doubleValue + "";
             } else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
                 // TODO - peer additive check. If using peers and not additive, don't include children
-                List<Value> values = new ArrayList<Value>();
+                List<Value> values = new ArrayList<>();
                 // now , get the function from the headings
                 if (function != null) {
                     locked.isTrue = true;
@@ -1092,8 +1083,8 @@ seaports;children   container;children
                 }
                 listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(values);
             } else {  // now, new logic for attributes
-                List<Name> names = new ArrayList<Name>();
-                List<String> attributes = new ArrayList<String>();
+                List<Name> names = new ArrayList<>();
+                List<String> attributes = new ArrayList<>();
                 for (DataRegionHeading heading:headingsForThisCell){
                     if (heading.getName() != null){
                         names.add(heading.getName());
@@ -1138,11 +1129,11 @@ seaports;children   container;children
         long track = System.currentTimeMillis();
         int totalRows = headingsForEachRow.size();
         int totalCols = headingsForEachColumn.size();
-        List<List<AzquoCell>> toReturn = new ArrayList<List<AzquoCell>>(totalRows); // make it the right size so multithreading changes the values but not the structure
+        List<List<AzquoCell>> toReturn = new ArrayList<>(totalRows); // make it the right size so multithreading changes the values but not the structure
         for (int i = 0; i < totalRows; i++) {
             toReturn.add(null);// null the rows, basically adding spaces to the return list
         }
-        Map<Name, Integer> totalSetSize = new ConcurrentHashMap<Name, Integer>();// a cache to speed up cell calculation. Short hand of set sizes, we assume they won't change while creating this data.
+        Map<Name, Integer> totalSetSize = new ConcurrentHashMap<>();// a cache to speed up cell calculation. Short hand of set sizes, we assume they won't change while creating this data.
         System.out.println("data region size = " + totalRows + " * " + totalCols);
         int maxRegionSize = 2000000;//random!  set by WFC 29/6/15
         if (totalRows * totalCols > maxRegionSize) {
@@ -1178,7 +1169,7 @@ seaports;children   container;children
 
     // new logic, derive the headings from the data, no need to resort to resorting etc.
     private List<List<DataRegionHeading>> getColumnHeadingsAsArray(List<List<AzquoCell>> cellArray) {
-        List<List<DataRegionHeading>> toReturn = new ArrayList<List<DataRegionHeading>>();
+        List<List<DataRegionHeading>> toReturn = new ArrayList<>();
         for (AzquoCell cell : cellArray.get(0)) {
             toReturn.add(cell.getColumnHeadings());
         }
@@ -1187,7 +1178,7 @@ seaports;children   container;children
 
     // new logic, derive the headings from the data, no need to resort to resorting etc.
     private List<List<DataRegionHeading>> getRowHeadingsAsArray(List<List<AzquoCell>> cellArray) {
-        List<List<DataRegionHeading>> toReturn = new ArrayList<List<DataRegionHeading>>();
+        List<List<DataRegionHeading>> toReturn = new ArrayList<>();
         for (List<AzquoCell> cell : cellArray) {
             if (!cell.isEmpty()) {
                 toReturn.add(cell.get(0).getRowHeadings());
@@ -1251,7 +1242,7 @@ seaports;children   container;children
                 return nodify(valuesForCell.getValues());
             }
         }
-        return new ArrayList<TreeNode>(); //just empty ok? null? Unsure
+        return new ArrayList<>(); //just empty ok? null? Unsure
     }
 
 
@@ -1260,7 +1251,7 @@ seaports;children   container;children
         String heading = "";
         for (Name name:names) {
             if (values == null) {
-                values = new ArrayList<Value>(valueService.findValuesForNameIncludeAllChildren(name, true));
+                values = new ArrayList<>(valueService.findValuesForNameIncludeAllChildren(name, true));
 
             } else{
                 values.retainAll(valueService.findValuesForNameIncludeAllChildren(name, true));
@@ -1283,12 +1274,12 @@ seaports;children   container;children
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
     // not exactly sure why
     public List<TreeNode> nodify(List<Value> values) {
-        List<TreeNode> toReturn = new ArrayList<TreeNode>();
+        List<TreeNode> toReturn = new ArrayList<>();
         if (values.size() > 1 || (values.size() > 0 && values.get(0) != null)) {
             valueService.sortValues(values);
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
             Date provdate = values.get(0).getProvenance().getTimeStamp();
-            Set<Value> oneUpdate = new HashSet<Value>();
+            Set<Value> oneUpdate = new HashSet<>();
             Provenance p = null;
             for (Value value : values) {
                 if (value.getProvenance().getTimeStamp() == provdate) {
@@ -1296,7 +1287,7 @@ seaports;children   container;children
                     p = value.getProvenance();
                 } else {
                     toReturn.add(valueService.getTreeNode(oneUpdate, p));
-                    oneUpdate = new HashSet<Value>();
+                    oneUpdate = new HashSet<>();
                     oneUpdate.add(value);
                     p = value.getProvenance();
                     provdate = value.getProvenance().getTimeStamp();
@@ -1347,7 +1338,7 @@ seaports;children   container;children
         }
         bout.flush();
         bout.close();
-        List<String> languages = new ArrayList<String>();
+        List<String> languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         importService.readPreparedFile(azquoMemoryDBConnection,tempName,"csv", languages);
 
@@ -1371,7 +1362,7 @@ seaports;children   container;children
 
 
         int numberOfValuesModified = 0;
-        Map<Name, Integer> totalSetSize = new HashMap<Name, Integer>();
+        Map<Name, Integer> totalSetSize = new HashMap<>();
         List<Name> contextNames =getContextNames(azquoMemoryDBConnection,cellsAndHeadingsForDisplay.getContextSource());
         int rowCounter = 0;
         for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
@@ -1389,7 +1380,7 @@ seaports;children   container;children
 
                     if (azquoCell != null) {
                         final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-                        final Set<DataRegionHeading> headingsForCell = new HashSet<DataRegionHeading>();
+                        final Set<DataRegionHeading> headingsForCell = new HashSet<>();
                         headingsForCell.addAll(azquoCell.getColumnHeadings());
                         headingsForCell.addAll(azquoCell.getRowHeadings());
                          // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
@@ -1413,7 +1404,7 @@ seaports;children   container;children
                          }
                         if (valuesForCell.getValues() != null) {
                             // this call to make the hash set seems rather unefficient
-                            Set<Name> cellNames = new HashSet<Name>(namesFromDataRegionHeadings(headingsForCell));
+                            Set<Name> cellNames = new HashSet<>(namesFromDataRegionHeadings(headingsForCell));
                             cellNames.addAll(contextNames);
                             if (valuesForCell.getValues().size() == 1) {
                                 final Value theValue = valuesForCell.getValues().get(0);
@@ -1457,7 +1448,7 @@ seaports;children   container;children
     // Four little utility functions added by Edd, required now headings are not names
 
     public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) {
-        List<DataRegionHeading> dataRegionHeadings = new ArrayList<DataRegionHeading>();
+        List<DataRegionHeading> dataRegionHeadings = new ArrayList<>();
         for (Name name : names) {
             // will the new write permissions cause an overhead?
             dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null));
@@ -1466,7 +1457,7 @@ seaports;children   container;children
     }
 
     public Set<Name> namesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
-        Set<Name> names = new HashSet<Name>();
+        Set<Name> names = new HashSet<>();
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
             if (dataRegionHeading.getName() != null) {
                 names.add(dataRegionHeading.getName());
@@ -1476,7 +1467,7 @@ seaports;children   container;children
     }
 
     public Set<String> attributesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
-        Set<String> names = new HashSet<String>();
+        Set<String> names = new HashSet<>();
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
             if (dataRegionHeading.getAttribute() != null) {
                 names.add(dataRegionHeading.getAttribute().substring(1)); // at the mo I assume attributes begin with .

@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Created with IntelliJ IDEA.
@@ -80,26 +81,25 @@ public final class AzquoMemoryDB {
         this.standardDAO = standardDAO;
         needsLoading = true;
         maxIdAtLoad = 0;
-        nameByAttributeMap = new ConcurrentHashMap<String, Map<String, List<Name>>>();
+        nameByAttributeMap = new ConcurrentHashMap<>();
         // commented koloboke should we wish to try that. Not thread safe though.
 /*        nameByIdMap = HashIntObjMaps.newMutableMap();
         valueByIdMap = HashIntObjMaps.newMutableMap();
         provenanceByIdMap = HashIntObjMaps.newMutableMap();*/
-        nameByIdMap = new ConcurrentHashMap<Integer, Name>();
-        valueByIdMap = new ConcurrentHashMap<Integer, Value>();
-        provenanceByIdMap = new ConcurrentHashMap<Integer, Provenance>();
-        entitiesToPersist = new ConcurrentHashMap<String, Set<AzquoMemoryDBEntity>>();
+        nameByIdMap = new ConcurrentHashMap<>();
+        valueByIdMap = new ConcurrentHashMap<>();
+        provenanceByIdMap = new ConcurrentHashMap<>();
+        entitiesToPersist = new ConcurrentHashMap<>();
         // loop over the possible persisted tables making the empty sets, cunning
         if (standardDAO != null) {
             for (StandardDAO.PersistedTable persistedTable : StandardDAO.PersistedTable.values()) {
                 // wasn't concurrent, surely it should be?
-                entitiesToPersist.put(persistedTable.name(), Collections.newSetFromMap(new ConcurrentHashMap<AzquoMemoryDBEntity, Boolean>()));
+                entitiesToPersist.put(persistedTable.name(), Collections.newSetFromMap(new ConcurrentHashMap<>()));
             }
         }
         if (standardDAO != null) {
             loadData();
         }
-
         needsLoading = false;
         nextId = maxIdAtLoad + 1;
     }
@@ -290,7 +290,7 @@ public final class AzquoMemoryDB {
     }
 
     // reads from a list of changed objects
-    // should we syncronize on a write lock object?? I think it might be a plan.
+    // should we synchronize on a write lock object?? I think it might be a plan.
 
     public synchronized void saveDataToMySQL() {
         // this is where I need to think carefully about concurrency, azquodb has the last say when the sets are modified although the flags are another point
@@ -301,10 +301,10 @@ public final class AzquoMemoryDB {
             Set<AzquoMemoryDBEntity> entities = entitiesToPersist.get(tableToStoreIn);
             if (!entitiesToPersist.isEmpty()) {
                 System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
-                List<JsonRecordTransport> recordsToStore = new ArrayList<JsonRecordTransport>();
+                List<JsonRecordTransport> recordsToStore = new ArrayList<>();
                 // todo : write locking the db probably should start here
                 // multi thread this chunk? It can slow things down a little . . .
-                for (AzquoMemoryDBEntity entity : new ArrayList<AzquoMemoryDBEntity>(entities)) { // we're taking a copy of the set before running through it.
+                for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it.
                     JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
                     if (entity.getNeedsDeleting()) {
                         state = JsonRecordTransport.State.DELETE;
@@ -357,11 +357,7 @@ public final class AzquoMemoryDB {
     // The iterator from CopyOnWriteArray does NOT support changes e.g. remove. A point.
 
     public List<String> getAttributes(){
-        List<String> attributes = new ArrayList<String>();
-        for (String attribute:nameByAttributeMap.keySet()){
-            attributes.add(attribute);
-        }
-        return attributes;
+        return Collections.unmodifiableList(new ArrayList<>(nameByAttributeMap.keySet()));
     }
 
     private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
@@ -369,7 +365,7 @@ public final class AzquoMemoryDB {
         if (map != null) { // that attribute is there
             List<Name> names = map.get(attributeValue.toLowerCase().trim());
             if (names != null) { // were there any entries for that value?
-                return new HashSet<Name>(names);
+                return new HashSet<>(names);
             }
         }
         return Collections.emptySet(); // moving away from nulls
@@ -456,7 +452,7 @@ public final class AzquoMemoryDB {
     // get names containing an attribute using wildcards, start end both
 
     private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
-        final Set<Name> names = new HashSet<Name>();
+        final Set<Name> names = new HashSet<>();
         if (attributeName.length() == 0){
             for (String attName:nameByAttributeMap.keySet()){
                 names.addAll(getNamesByAttributeValueWildcards(attName,attributeValueSearch,startsWith, endsWith));
@@ -511,7 +507,7 @@ public final class AzquoMemoryDB {
     public List<Name> findTopNames(String language) {
         Map <String, List<Name>>thisMap = nameByAttributeMap.get(language);
 
-        final List<Name> toReturn = new ArrayList<Name>();
+        final List<Name> toReturn = new ArrayList<>();
         for (List<Name> names : thisMap.values()) {
             for (Name name:names) {
                 if (name.getParents().size() == 0) {
@@ -534,17 +530,10 @@ public final class AzquoMemoryDB {
         return toReturn;
     }
 
-
-
-
+    // trying new collect call java 8 syntax, should be exactly the same as old code - run through the values collecting thosw with no parents and adding them to a list to return.
+    // Collectors.toList uses an arraylist. What heppens if the map is modified? If a problem would have been before.
     public List<Name> findTopNames() {
-        final List<Name> toReturn = new ArrayList<Name>();
-        for (Name name : nameByIdMap.values()) {
-            if (name.getParents().size() == 0) {
-                toReturn.add(name);
-            }
-        }
-        return toReturn;
+        return nameByIdMap.values().stream().filter(name -> name.getParents().size() == 0).collect(Collectors.toList());
     }
 
     public Provenance getProvenanceById(final int id) {
@@ -596,7 +585,7 @@ public final class AzquoMemoryDB {
         // adapted from stack overflow, cheers!
         Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
         if (namesForThisAttribute == null) {
-            final Map<String, List<Name>> newNamesForThisAttribute = new ConcurrentHashMap<String, List<Name>>();
+            final Map<String, List<Name>> newNamesForThisAttribute = new ConcurrentHashMap<>();
             namesForThisAttribute = nameByAttributeMap.putIfAbsent(ucAttributeName, newNamesForThisAttribute);// in ConcurrentHashMap this is atomic, thanks Doug!
             if (namesForThisAttribute == null) {// the new one went in, use it, otherwise use the one that "sneaked" in there in the mean time :)
                 namesForThisAttribute = newNamesForThisAttribute;
@@ -607,7 +596,7 @@ public final class AzquoMemoryDB {
 
         List<Name> names = namesForThisAttribute.get(lcAttributeValue);
         if (names == null){
-            final List<Name> newNames = new CopyOnWriteArrayList<Name>();// cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
+            final List<Name> newNames = new CopyOnWriteArrayList<>();// cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
             names = namesForThisAttribute.putIfAbsent(lcAttributeValue, newNames);
             if (names == null){
                 names = newNames;
@@ -668,12 +657,12 @@ public final class AzquoMemoryDB {
         // there may be a certain overhead to building the batches but otherwise it's dealing with millions of threads. My gut says this will be more of an overhead.
         ExecutorService executor = Executors.newFixedThreadPool(loadingThreads);
         AtomicInteger loadTracker = new AtomicInteger(0);
-        ArrayList<Name> batchLink = new ArrayList<Name>(batchLinkSize);
+        ArrayList<Name> batchLink = new ArrayList<>(batchLinkSize);
         for (Name name : nameByIdMap.values()) {
             batchLink.add(name);
             if (batchLink.size() == batchLinkSize){
                 executor.execute(new BatchLinker(loadTracker, batchLink));
-                batchLink = new ArrayList<Name>(batchLinkSize);
+                batchLink = new ArrayList<>(batchLinkSize);
             }
         }
         // link leftovers

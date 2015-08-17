@@ -30,7 +30,7 @@ public final class LoginRecordDAO extends StandardDAO<LoginRecord> {
 
     @Override
     public Map<String, Object> getColumnNameValueMap(LoginRecord lir) {
-        final Map<String, Object> toReturn = new HashMap<String, Object>();
+        final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, lir.getId());
         toReturn.put(USERID, lir.getUserId());
         toReturn.put(DATABASEID, lir.getDatabaseId());

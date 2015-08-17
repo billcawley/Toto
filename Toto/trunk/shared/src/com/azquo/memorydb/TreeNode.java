@@ -37,7 +37,7 @@ public class TreeNode implements Serializable{
 
     public TreeNode(String name, String value, double dValue) {
         this.heading = null;
-        this.children = new ArrayList<TreeNode>();
+        this.children = new ArrayList<>();
         this.name = name;
         this.value = value;
         this.dValue = dValue;

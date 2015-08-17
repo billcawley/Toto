@@ -99,6 +99,11 @@ public class ManagePermissionsController {
                     }
                     // no error checking on read and write list??
                     if (error.length() == 0){
+                        // to keep intelliJ happy, I'm not sure if this is a good idea or not? I suppose protects against logic above being changed unpredictably
+                        assert userId != null;
+                        assert databaseId != null;
+                        assert startDate != null;
+                        assert endDate != null;
                         // then store, it might be new
                         if (toEdit == null){
                             // Have to use  alocadate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime

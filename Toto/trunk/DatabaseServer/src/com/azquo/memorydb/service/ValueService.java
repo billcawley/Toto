@@ -15,6 +15,7 @@ import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created with IntelliJ IDEA.
@@ -47,7 +48,7 @@ public final class ValueService {
             names = names.substring(2);
         }
         value.setDeletedInfoWillBePersisted(names);
-        value.setNamesWillBePersisted(new HashSet<Name>());
+        value.setNamesWillBePersisted(new HashSet<>());
     }
 
     // one line function, much point??
@@ -56,7 +57,7 @@ public final class ValueService {
         return new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, text, null);
     }
 
-    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<AzquoMemoryDBConnection, Map<String, Long>>();
+    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<>();
 
  /*   private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd) {
         long current = 0;
@@ -80,7 +81,7 @@ public final class ValueService {
         //long marker = System.currentTimeMillis();
         String toReturn = "";
 
-        final Set<Name> validNames = new HashSet<Name>();
+        final Set<Name> validNames = new HashSet<>();
 
         //removed valid name set check - caveat saver! WFC.
         validNames.addAll(names);
@@ -132,7 +133,7 @@ public final class ValueService {
 
     public boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, final String newValueString) throws Exception {
         Value newValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), newValueString, null);
-        newValue.setNamesWillBePersisted(new HashSet<Name>(existingValue.getNames())); // a bit crappy but I'm trying to make it a list internally but interfaced by sets
+        newValue.setNamesWillBePersisted(new HashSet<>(existingValue.getNames())); // a bit crappy but I'm trying to make it a list internally but interfaced by sets
         deleteValue(existingValue);
         return true;
     }
@@ -142,7 +143,7 @@ public final class ValueService {
     public List<Value> findForNames(final Set<Name> names) {
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
         //long track = System.nanoTime();
-        final List<Value> values = new ArrayList<Value>();
+        final List<Value> values = new ArrayList<>();
         // first get the shortest value list
         int smallestNameSetSize = -1;
         Name smallestName = null;
@@ -200,7 +201,7 @@ public final class ValueService {
     public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive, Map<Name, Integer> setSizeCache) {
         long start = System.nanoTime();
 
-        final List<Value> values = new ArrayList<Value>();
+        final List<Value> values = new ArrayList<>();
         // first get the shortest value list taking into account children
         int smallestNameSetSize = -1;
         Name smallestName = null;
@@ -239,7 +240,7 @@ public final class ValueService {
             for (Name name : names) {
                 if (!name.equals(smallestName)) { // ignore the one we started with
                     if (!value.getNames().contains(name)) { // top name not in there check children also
-                        Set<Name> copy = new HashSet<Name>(value.getNames());
+                        Set<Name> copy = new HashSet<>(value.getNames());
                         copy.retainAll(name.findAllChildren(payAttentionToAdditive));
                         if (copy.size() == 0) {
                             //                        count++;
@@ -326,22 +327,22 @@ public final class ValueService {
     public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MutableBoolean locked
             , final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, List<String> attributeNames, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) throws Exception {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
-        List<Name> calcnames = new ArrayList<Name>();
+        List<Name> calcnames = new ArrayList<>();
         String calcString = null;
-        List<Name> formulaNames = new ArrayList<Name>();
+        List<Name> formulaNames = new ArrayList<>();
         boolean hasCalc = false;
         // add all names to calcnames except the the one with CALCULATION
         // and here's a thing : if more than one name has CALCULATION then only the first will be used
         // todo : I think this logic could be cleaned up a little - the way hascalc is set seems wrong but initial attempts to simplify were also wrong
         for (Name name : names) {
             if (!hasCalc) {// then try and find one
-                String calc = name.getAttribute(Name.CALCULATION, false, new HashSet<Name>());
+                String calc = name.getAttribute(Name.CALCULATION, false, new HashSet<>());
                 if (calc != null) {
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
-                    List<String> formulaStrings = new ArrayList<String>();
-                    List<String> nameStrings = new ArrayList<String>();
-                    List<String> attributeStrings = new ArrayList<String>();
+                    List<String> formulaStrings = new ArrayList<>();
+                    List<String> nameStrings = new ArrayList<>();
+                    List<String> attributeStrings = new ArrayList<>();
 
                     calc = stringUtils.parseStatement(calc, nameStrings, formulaStrings, attributeStrings);
                     formulaNames = nameService.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
@@ -395,7 +396,7 @@ public final class ValueService {
                         //int id = Integer.parseInt(term.substring(1));
                         // so get the name and add it to the other names
                         Name name = nameService.getNameFromListAndMarker(term, formulaNames);
-                        Set<Name> seekSet = new HashSet<Name>(calcnames);
+                        Set<Name> seekSet = new HashSet<>(calcnames);
                         //if (name.getPeers().size() == 0 || name.getPeers().size() == calcnames.size()) {
                         seekSet.add(name);
                         //} else {
@@ -432,7 +433,7 @@ public final class ValueService {
                 attValue = n.getAttribute(attribute.replace("`", ""));
                 if (attValue != null) {
                     count++;
-                    if (!locked.isTrue && n.getAttribute(attribute, false, new HashSet<Name>()) == null) { // tha attribute is not against the name itself (it's form the parent or structure)
+                    if (!locked.isTrue && n.getAttribute(attribute, false, new HashSet<>()) == null) { // tha attribute is not against the name itself (it's form the parent or structure)
                         locked.isTrue = true;
                     } else {
                         // this feels a little hacky but I need to record this for saving purposes later
@@ -536,7 +537,7 @@ public final class ValueService {
     }
 
     public List<Value> findValuesForNameIncludeAllChildren(final Name name, boolean payAttentionToAdditive) {
-        List<Value> toReturn = new ArrayList<Value>();
+        List<Value> toReturn = new ArrayList<>();
         toReturn.addAll(name.getValues());
         for (Name child : name.findAllChildren(payAttentionToAdditive)) {
             toReturn.addAll(child.getValues());
@@ -617,7 +618,7 @@ public final class ValueService {
     // find the most used name by a set of values, used by printBatch to derive headings
 
     private Name getMostUsedName(Set<DummyValue> values, Name topParent) {
-        Map<Name, Integer> nameCount = new HashMap<Name, Integer>();
+        Map<Name, Integer> nameCount = new HashMap<>();
         for (DummyValue value : values) {
             for (Name name : value.getNames()) {
                 if (topParent == null || name.findATopParent() == topParent) {
@@ -647,12 +648,8 @@ public final class ValueService {
 
 
     public void sortValues(List<Value> values) {
-        Collections.sort(values, new Comparator<Value>() {
-            public int compare(Value o1, Value o2) {
-                return (o1.getProvenance().getTimeStamp())
-                        .compareTo(o2.getProvenance().getTimeStamp());
-            }
-        });
+        Collections.sort(values, (o1, o2) -> (o1.getProvenance().getTimeStamp())
+                .compareTo(o2.getProvenance().getTimeStamp()));
     }
 
     // printbatch was creating a value, no good
@@ -680,10 +677,7 @@ public final class ValueService {
       */
 
     private List<TreeNode> getTreeNodesFromValues(Set<Value> values) {
-        Set<DummyValue> convertedToDummy = new HashSet<DummyValue>();
-        for (Value value : values) {
-            convertedToDummy.add(new DummyValue(value.getText(), value.getNames()));
-        }
+        Set<DummyValue> convertedToDummy = values.stream().map(value -> new DummyValue(value.getText(), value.getNames())).collect(Collectors.toSet());
         return getTreeNodesFromDummyValues(convertedToDummy);
     }
 
@@ -692,7 +686,7 @@ public final class ValueService {
         int maxSize = 10;
         boolean headingNeeded = false;
         double dValue = 0.0;
-        List<TreeNode> nodeList = new ArrayList<TreeNode>();
+        List<TreeNode> nodeList = new ArrayList<>();
         int count = 0;
         for (DummyValue value : values) {
             if (value.getNames().size() > 1) {
@@ -715,9 +709,7 @@ public final class ValueService {
                 if (d!= 0){
                     val = roundValue(d);
                 }
-
-            }catch (Exception e){
-
+            } catch (Exception ignored){
             }
             nodeList.add(new TreeNode(nameFound, val, d));
         }
@@ -727,8 +719,8 @@ public final class ValueService {
                 count++;
                 Name heading = getMostUsedName(values, topParent);
                 topParent = heading.findATopParent();
-                Set<DummyValue> extract = new HashSet<DummyValue>();
-                Set<DummyValue> slimExtract = new HashSet<DummyValue>();
+                Set<DummyValue> extract = new HashSet<>();
+                Set<DummyValue> slimExtract = new HashSet<>();
                  for (DummyValue value : values) {
                     if (value.getNames().contains(heading)) {
                         extract.add(value);
@@ -739,10 +731,7 @@ public final class ValueService {
                         }
                         //creating a new 'value' with one less name for recursion
                         try {
-                            Set<Name> slimNames = new HashSet<Name>();
-                            for (Name name : value.getNames()) {
-                                slimNames.add(name);
-                            }
+                            Set<Name> slimNames = new HashSet<>(value.getNames());
                             slimNames.remove(heading);
                             DummyValue slimValue = new DummyValue(value.getValueText(), slimNames);
                             slimExtract.add(slimValue);
@@ -766,9 +755,8 @@ public final class ValueService {
     public String roundValue(double dValue){
         Locale locale = Locale.getDefault();
         NumberFormat nf = NumberFormat.getInstance(locale);
-        String dString = nf.format(dValue);
         //todo - format this prettily, particularly when there are many decimal places
-         return dString;
+         return nf.format(dValue);
     }
 
 
@@ -785,8 +773,7 @@ public final class ValueService {
         if (method.contains("spreadsheet")){
             try{
                 link = "/api/Online?opcode=provline&provline=" + URLEncoder.encode(method,"UTF-8");
-            }catch(Exception e){
-
+            } catch (Exception ignored){
             }
         }
         TreeNode toReturn =new TreeNode(source, method, link,  null, 0, getTreeNodesFromValues(values));
