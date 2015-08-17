@@ -199,8 +199,11 @@ public class AzquoBook {
 
     public String getRangeValue(String rangeName) {
         Range range = getRange(rangeName);
-        if (range != null) {
-            return range.getCellOrNull(0, 0).getStringValue();
+        if (range != null){
+           try {
+               return range.getCellOrNull(0, 0).getStringValue();
+           }catch(Exception e){
+           }
         }
         return null;
     }
