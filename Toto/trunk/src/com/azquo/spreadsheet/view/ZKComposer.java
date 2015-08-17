@@ -138,7 +138,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
-        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO); // used in more than one place
+        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO); // used in more than one place
         String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
@@ -207,11 +207,17 @@ public class ZKComposer extends SelectorComposer<Component> {
                 if (zkAzquoBookUtils.populateBook(newBook)) { // check if formulae made saveable data
                     Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
                 }
+//                Clients.evalJavaScript("zUtl.progressbox('test1', 'edd testing',true, '')"); // make another?
+//                Clients.evalJavaScript("zUtl.destroyProgressbox('test1')");
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
             } catch (Exception e) {
                 e.printStackTrace();
             }
+//            new Thread(() -> reload(book, zkAzquoBookUtils)).start(); // java 8 notation, NICE!
         }
+    }
+
+    private void reload(Book book, ZKAzquoBookUtils zkAzquoBookUtils){
     }
 
     // to detect data changes.

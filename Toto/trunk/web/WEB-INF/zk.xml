@@ -1,6 +1,10 @@
 <zk>
     <library-property>
-    <name>org.zkoss.zssex.rt.Runtime.directory</name>
-    <value>/usr/share/zklicense/</value>
-</library-property>
+        <name>org.zkoss.zssex.rt.Runtime.directory</name>
+        <value>/usr/share/zklicense/</value>
+    </library-property>
+    <library-property>
+        <name>org.zkoss.zul.progressbox.position</name>
+        <value>center</value>
+    </library-property>
 </zk>

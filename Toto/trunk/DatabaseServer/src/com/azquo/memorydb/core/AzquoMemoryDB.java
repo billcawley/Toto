@@ -68,7 +68,11 @@ public final class AzquoMemoryDB {
         azquoProperties.load(getClass().getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring
         // now where the default multi threading number is defined. Different number based on the task? Can decide later.
         int availableProcessors = Runtime.getRuntime().availableProcessors();
-        loadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2); // possibly lower, /3 maybe??
+        int possibleLoadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
+        if (possibleLoadingThreads > 4){ // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
+            possibleLoadingThreads = 4;
+        }
+        loadingThreads = possibleLoadingThreads;
         rowFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report geenration
         System.out.println("memory db transport threads : " + loadingThreads);
         System.out.println("row filler threads : " + rowFillerThreads);
