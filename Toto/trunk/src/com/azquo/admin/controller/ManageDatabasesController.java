@@ -190,11 +190,11 @@ public class ManageDatabasesController {
                     importService.importTheFile(loggedInUser, fileName, useType, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
                 } catch (Exception e){
                     String exceptionError = e.getMessage();
+                    e.printStackTrace();
                     //trim off the javaspeak
-                    if (exceptionError.contains("error:"))
+                    if (exceptionError != null && exceptionError.contains("error:"))
                         exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
                     model.put("error", exceptionError);
-                    e.printStackTrace();
                 }
             }
             List<Database> databaseList = adminService.getDatabaseListForBusiness(loggedInUser);
