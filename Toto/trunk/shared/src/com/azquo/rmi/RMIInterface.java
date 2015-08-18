@@ -46,9 +46,9 @@ public interface RMIInterface extends Remote {
 
 
     List<TreeNode> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws RemoteException;
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException;
 
-    TreeNode formatJstreeDataForOutput(DatabaseAccessToken databaseAccessToken, String nameString) throws RemoteException;
+    TreeNode formatJstreeDataForOutput(DatabaseAccessToken databaseAccessToken, String nameString, int maxSize) throws RemoteException;
 
     boolean isDatabaseLoaded(String mysqlName) throws RemoteException;
 

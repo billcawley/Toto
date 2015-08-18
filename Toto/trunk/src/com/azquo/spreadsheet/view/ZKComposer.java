@@ -311,7 +311,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     // ok this is a bit nasty, after Azquobook is zapped we could try something different
                     // todo - sort after zapping azquobook! Maybe clickable again?
                     List<TreeNode> TreeNodes = spreadsheetService.getTreeNode(loggedInUser, region
-                            , cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow(), cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn());
+                            , cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow(), cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn(), 1000);
                     if (!TreeNodes.isEmpty()) {
                         StringBuilder toShow = new StringBuilder();
                         for (TreeNode TreeNode : TreeNodes) {

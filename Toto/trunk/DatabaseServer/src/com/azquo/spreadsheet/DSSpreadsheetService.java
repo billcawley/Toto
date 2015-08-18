@@ -1232,21 +1232,21 @@ seaports;children   container;children
 
     // todo, when cell contents are from attributes??
     public List<TreeNode> getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws Exception {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, null, databaseAccessToken.getLanguages());
         if (azquoCell != null) {
             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
             //Set<Name> specialForProvenance = new HashSet<Name>();
             if (valuesForCell.getValues() != null) {
-                return nodify(valuesForCell.getValues());
+                return nodify(valuesForCell.getValues(), maxSize);
             }
         }
         return new ArrayList<>(); //just empty ok? null? Unsure
     }
 
 
-    public TreeNode getDataList(Set<Name> names)throws Exception{
+    public TreeNode getDataList(Set<Name> names, int maxSize)throws Exception{
         List<Value> values = null;
         String heading = "";
         for (Name name:names) {
@@ -1262,7 +1262,7 @@ seaports;children   container;children
         TreeNode toReturn = new TreeNode();
         toReturn.setHeading(heading);
         toReturn.setValue("");
-        toReturn.setChildren(nodify(values));
+        toReturn.setChildren(nodify(values, maxSize));
         valueService.addNodeValues(toReturn);
 
         return toReturn;
@@ -1273,7 +1273,7 @@ seaports;children   container;children
 
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
     // not exactly sure why
-    public List<TreeNode> nodify(List<Value> values) {
+    public List<TreeNode> nodify(List<Value> values, int maxSize) {
         List<TreeNode> toReturn = new ArrayList<>();
         if (values.size() > 1 || (values.size() > 0 && values.get(0) != null)) {
             valueService.sortValues(values);
@@ -1286,14 +1286,14 @@ seaports;children   container;children
                     oneUpdate.add(value);
                     p = value.getProvenance();
                 } else {
-                    toReturn.add(valueService.getTreeNode(oneUpdate, p));
+                    toReturn.add(valueService.getTreeNode(oneUpdate, p, maxSize));
                     oneUpdate = new HashSet<>();
                     oneUpdate.add(value);
                     p = value.getProvenance();
                     provdate = value.getProvenance().getTimeStamp();
                 }
             }
-            toReturn.add(valueService.getTreeNode(oneUpdate, p));
+            toReturn.add(valueService.getTreeNode(oneUpdate, p, maxSize));
         }
         return toReturn;
     }

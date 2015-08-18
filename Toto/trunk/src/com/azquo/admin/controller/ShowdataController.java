@@ -33,7 +33,7 @@ public class ShowdataController {
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
-            TreeNode node = spreadsheetService.getTreeNode(loggedInUser, chosen);
+            TreeNode node = spreadsheetService.getTreeNode(loggedInUser, chosen, 1000);//1000 is the number of items to show before showing 'more...'
             request.setAttribute("node", node);
             //model.put("node", node);
             return "showdata";

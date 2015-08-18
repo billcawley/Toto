@@ -676,14 +676,13 @@ public final class ValueService {
     them under them then the name that best represents the rest etc etc until all values have been displayed
       */
 
-    private List<TreeNode> getTreeNodesFromValues(Set<Value> values) {
+    private List<TreeNode> getTreeNodesFromValues(Set<Value> values, int maxSize) {
         Set<DummyValue> convertedToDummy = values.stream().map(value -> new DummyValue(value.getText(), value.getNames())).collect(Collectors.toSet());
-        return getTreeNodesFromDummyValues(convertedToDummy);
+        return getTreeNodesFromDummyValues(convertedToDummy, maxSize);
     }
 
-    private List<TreeNode> getTreeNodesFromDummyValues(Set<DummyValue> values) {
+    private List<TreeNode> getTreeNodesFromDummyValues(Set<DummyValue> values, int maxSize) {
         //int debugCount = 0;
-        int maxSize = 10;
         boolean headingNeeded = false;
         double dValue = 0.0;
         List<TreeNode> nodeList = new ArrayList<>();
@@ -744,7 +743,7 @@ public final class ValueService {
                 }
                 values.removeAll(extract);
 
-                nodeList.add(new TreeNode("",heading.getDefaultDisplayName(), "", roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract)));
+                nodeList.add(new TreeNode("",heading.getDefaultDisplayName(), "", roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract, maxSize)));
                 dValue = 0;
             }
         }
@@ -760,7 +759,7 @@ public final class ValueService {
     }
 
 
-    public TreeNode getTreeNode(Set<Value> values, Provenance p) {
+    public TreeNode getTreeNode(Set<Value> values, Provenance p, int maxSize) {
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
         String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
         String method = p.getMethod();
@@ -776,7 +775,7 @@ public final class ValueService {
             } catch (Exception ignored){
             }
         }
-        TreeNode toReturn =new TreeNode(source, method, link,  null, 0, getTreeNodesFromValues(values));
+        TreeNode toReturn =new TreeNode(source, method, link,  null, 0, getTreeNodesFromValues(values, maxSize));
         addNodeValues(toReturn);
         return toReturn;
     }

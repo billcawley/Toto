@@ -152,9 +152,9 @@ public class RMIImplementation implements RMIInterface {
     }
 
 
-    public TreeNode formatJstreeDataForOutput(DatabaseAccessToken databaseAccessToken, String jsTreeString) throws RemoteException {
+    public TreeNode formatJstreeDataForOutput(DatabaseAccessToken databaseAccessToken, String jsTreeString, int maxSize) throws RemoteException {
         try {
-              return dsSpreadsheetService.getDataList(jsTreeService.interpretNameString(databaseAccessToken, jsTreeString));
+              return dsSpreadsheetService.getDataList(jsTreeService.interpretNameString(databaseAccessToken, jsTreeString), maxSize);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -163,9 +163,9 @@ public class RMIImplementation implements RMIInterface {
 
 
     @Override
-    public List<TreeNode> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws RemoteException {
+    public List<TreeNode> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException {
         try {
-            return dsSpreadsheetService.getDataRegionProvenance(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol);
+            return dsSpreadsheetService.getDataRegionProvenance(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, maxSize);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

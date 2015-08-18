@@ -332,8 +332,8 @@ public class SpreadsheetService {
         loggedInUser.getAzquoBook().saveBookActive(response, fileName, env.getProperty("azquo.home") + "/onlinereports/Admin/Azquoblank.xls");
     }
 
-    public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) throws Exception {
-        return loggedInUser.getAzquoBook().getProvenance(loggedInUser, row, col, jsonFunction);
+    public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction, int maxSize) throws Exception {
+        return loggedInUser.getAzquoBook().getProvenance(loggedInUser, row, col, jsonFunction, maxSize);
     }
 
     public StringBuilder createDatabaseSelect(LoggedInUser loggedInUser) {
@@ -434,22 +434,22 @@ public class SpreadsheetService {
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
-    public List<TreeNode> getTreeNode(LoggedInUser loggedInUser, String region, int rowInt, int colInt) throws Exception {
+    public List<TreeNode> getTreeNode(LoggedInUser loggedInUser, String region, int rowInt, int colInt, int maxSize) throws Exception {
         final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
         if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
             return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).formatDataRegionProvenanceForOutput(databaseAccessToken, cellsAndHeadingsForDisplay.getRowHeadingsSource()
                     , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
-                    , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol());
+                    , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(), maxSize);
         }
         return new ArrayList<>(); // maybe "not found"?
     }
 
 
-    public TreeNode getTreeNode(LoggedInUser loggedInUser, String values) throws Exception {
+    public TreeNode getTreeNode(LoggedInUser loggedInUser, String values, int maxSize) throws Exception {
 
-             return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).formatJstreeDataForOutput(loggedInUser.getDataAccessToken(), values);
+             return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).formatJstreeDataForOutput(loggedInUser.getDataAccessToken(), values, maxSize);
      }
 
 

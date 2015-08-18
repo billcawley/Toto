@@ -1100,13 +1100,13 @@ public class AzquoBook {
 
     // ok json rendering is in here now and via jackson which is much much better, wondering whether it should be pushed into the controller?
 
-    public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction) throws Exception {
+    public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction, int maxSize) throws Exception {
         RegionInfo regionInfo = getRegionInfo(row, col);
         if (regionInfo == null) return "";
         if (regionInfo.region.startsWith(dataRegionPrefix)) {
             String region = regionInfo.region.substring(dataRegionPrefix.length());
             Map<String, List<TreeNode>> provenanceForJackson = new HashMap<>();
-            provenanceForJackson.put("provenance", spreadsheetService.getTreeNode(loggedInUser, region, regionInfo.row, regionInfo.col));
+            provenanceForJackson.put("provenance", spreadsheetService.getTreeNode(loggedInUser, region, regionInfo.row, regionInfo.col, maxSize));
             return jsonFunction + "(" + jacksonMapper.writeValueAsString(provenanceForJackson) + ")";
         }
         return "";

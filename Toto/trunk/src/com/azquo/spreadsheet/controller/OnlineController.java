@@ -202,7 +202,7 @@ public class OnlineController {
                     }
                 }
                 if (opcode.equals("provenance")) {
-                    result = spreadsheetService.getProvenance(loggedInUser, row, Integer.parseInt(colStr), jsonFunction);
+                    result = spreadsheetService.getProvenance(loggedInUser, row, Integer.parseInt(colStr), jsonFunction, 40);
                     model.addAttribute("content", result);
                     return "utf8javascript";
                 }
