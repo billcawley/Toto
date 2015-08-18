@@ -566,15 +566,23 @@ public final class NameService {
         List<String> formulaStrings = new ArrayList<>();
         List<String> nameStrings = new ArrayList<>();
         List<String> attributeStrings = new ArrayList<>(); // attribute names is taken. Perhaps need to think about function parameter names
+        List<Name> toReturn = new ArrayList<>();
         Name possibleName = findByName(azquoMemoryDBConnection,setFormula);
         if (possibleName!=null){
-            List<Name> toReturn = new ArrayList<>();
-            toReturn.add(possibleName);
+             toReturn.add(possibleName);
             return toReturn;
         }
         //todo - find a better way of using 'parseQuery` for other operations
         if (setFormula.startsWith("deduplicate")){
             return deduplicate(azquoMemoryDBConnection,setFormula.substring(12));
+
+        }
+        if (setFormula.startsWith("zap ")){
+            List<Name> names = parseQuery(azquoMemoryDBConnection,setFormula.substring(4), attributeNames);
+            if (names!=null){
+                for (Name name:names)name.delete();
+                return toReturn;
+            }
         }
         setFormula = stringUtils.parseStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames;
@@ -666,7 +674,6 @@ public final class NameService {
             hasPermissions = true;
         }
         if (hasPermissions || azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB("CONFIDENTIAL")){ // then we need to check permissions etc
-            final List<Name> toReturn = new ArrayList<>();
             for (Name possible : nameStack.get(0)) {
                 if (possible == null || (possible.getAttribute("CONFIDENTIAL") == null && (!hasPermissions || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())))) {
                     toReturn.add(possible);
@@ -958,6 +965,7 @@ public final class NameService {
         }
         return namesFound;
     }
+
 
     // unused, commenting for the mo
     // return the intersection of the sets
