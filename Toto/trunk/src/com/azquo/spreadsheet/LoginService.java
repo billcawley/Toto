@@ -40,7 +40,7 @@ public class LoginService {
     // like the two above but for new object that does not reference the memory DB objects. Is the demo stuff still important??
     // very similar to top function, proxies through to a different one
 
-    public LoggedInUser loginLoggedInUser(final String databaseName, final String userEmail, final String password, boolean loggedIn) throws Exception {
+    public LoggedInUser loginLoggedInUser(final String sessionId, final String databaseName, final String userEmail, final String password, boolean loggedIn) throws Exception {
 
 /*            System.out.println("database name " + databaseName);
             System.out.println("usermeail " + userEmail);
@@ -63,12 +63,12 @@ public class LoginService {
         }
         //boolean temporary = false;
         if (user != null && (loggedIn || adminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword()))) {
-            return loginLoggedInUser(databaseName, user);
+            return loginLoggedInUser(sessionId, databaseName, user);
         }
         return null;
     }
 
-    private LoggedInUser loginLoggedInUser(final String databaseName, final User user) throws Exception {
+    private LoggedInUser loginLoggedInUser(final String sessionId, final String databaseName, final User user) throws Exception {
         // ok user should be ok :)
         final Map<String, Database> okDatabases = foundDatabases(user);
         logger.info("ok databases size " + okDatabases.size() + " user " + user.getEmail());
@@ -92,7 +92,7 @@ public class LoginService {
         if (database != null){
             databaseServer = databaseServerDao.findById(database.getDatabaseServerId());
         }
-        LoggedInUser loggedInUser = new LoggedInUser(user,databaseServer,database, permission != null ? permission.getReadList() : null, permission != null ? permission.getWriteList() : null);
+        LoggedInUser loggedInUser = new LoggedInUser(sessionId, user,databaseServer,database, permission != null ? permission.getReadList() : null, permission != null ? permission.getWriteList() : null);
         loginRecordDAO.store(new LoginRecord(0, user.getId(), database != null ? database.getId() : 0, new Date()));
         // I zapped something to do with anonymising here, don't know if it's still relevant
         return loggedInUser;

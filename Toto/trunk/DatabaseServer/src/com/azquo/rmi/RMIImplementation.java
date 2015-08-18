@@ -106,7 +106,7 @@ public class RMIImplementation implements RMIInterface {
     @Override
     public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames, String user) throws RemoteException {
         try {
-            dsImportService.readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames,user);
+            dsImportService.readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames, user);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -201,7 +201,7 @@ public class RMIImplementation implements RMIInterface {
     @Override
     public int getNameCount(String mysqlName) throws RemoteException {
         try {
-            return memoryDBManager.getAzquoMemoryDB(mysqlName).getNameCount();
+            return memoryDBManager.getAzquoMemoryDB(mysqlName, null).getNameCount();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -210,12 +210,20 @@ public class RMIImplementation implements RMIInterface {
     @Override
     public int getValueCount(String mysqlName) throws RemoteException {
         try {
-            return memoryDBManager.getAzquoMemoryDB(mysqlName).getValueCount();
+            return memoryDBManager.getAzquoMemoryDB(mysqlName, null).getValueCount();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
+    @Override
+    public String getSessionLog(DatabaseAccessToken databaseAccessToken) throws RemoteException {
+        try {
+            return dsSpreadsheetService.getSessionLog(databaseAccessToken);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
 
-       //memoryDBManager.getAzquoMemoryDB(databaseAccessT)
+    //memoryDBManager.getAzquoMemoryDB(databaseAccessT)
 }

@@ -13,6 +13,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Session;
 import org.zkoss.zk.ui.Sessions;
+import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
@@ -25,10 +26,7 @@ import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SName;
 import org.zkoss.zss.ui.Spreadsheet;
-import org.zkoss.zss.ui.event.CellAreaEvent;
-import org.zkoss.zss.ui.event.CellMouseEvent;
-import org.zkoss.zss.ui.event.SheetSelectEvent;
-import org.zkoss.zss.ui.event.StopEditingEvent;
+import org.zkoss.zss.ui.event.*;
 import org.zkoss.zssex.ui.widget.Ghost;
 import org.zkoss.zul.*;
 import com.azquo.memorydb.TreeNode;
@@ -130,11 +128,20 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     }
 
+    // Bit of an odd one this : on a cell click "wake" the log back up as there may be activity shortly
+
+    @Listen("onCellClick = #myzss")
+    public void onCellClick(Event event) {
+        Clients.evalJavaScript("window.skipSetting = 0;window.skipMarker = 0;");
+    }
+
+
     // In theory could just have on cellchange but this seems to have broken the dropdowns onchange stuff, ergh. Luckily it seems there's no need for code duplication
     // checking for save stuff in the onchange and the other stuff here
 
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
+        System.out.println("onStopEditing");
         final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO); // used in more than one place
         String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
@@ -197,6 +204,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (reload) {
             try {
                 // new book from same source
+//                Clients.evalJavaScript("zUtl.progressbox('test1', 'edd testing',true, '')"); // make another?
+//                Clients.evalJavaScript("zUtl.destroyProgressbox('test1')");
                 final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
                 for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
@@ -204,8 +213,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                 if (zkAzquoBookUtils.populateBook(newBook)) { // check if formulae made saveable data
                     Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
                 }
-//                Clients.evalJavaScript("zUtl.progressbox('test1', 'edd testing',true, '')"); // make another?
-//                Clients.evalJavaScript("zUtl.destroyProgressbox('test1')");
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
             } catch (Exception e) {
                 e.printStackTrace();
@@ -223,7 +230,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (row != event.getLastRow() || col != event.getLastColumn()) { // I believe we're only interested in single cells changing
             return;
         }
-        CellData cellData  =Ranges.range(event.getSheet(),row, col).getCellData();
+        CellData cellData = Ranges.range(event.getSheet(),row, col).getCellData();
         if (cellData == null){
               return;
         }

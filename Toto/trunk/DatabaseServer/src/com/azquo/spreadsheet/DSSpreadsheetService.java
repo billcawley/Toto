@@ -51,13 +51,15 @@ public class DSSpreadsheetService {
     @Autowired
     DSImportService importService;
 
-    // best way to do this? A bean?
     public final StringUtils stringUtils;
 
     static class UniqueName {
         Name name;
         String string;
     }
+
+    // todo, clean this up when sessions are expired
+    private final Map<String, StringBuffer> sessionLogs;
 
     public DSSpreadsheetService() {
         String thost = "";
@@ -68,16 +70,34 @@ public class DSSpreadsheetService {
         }
         System.out.println("host : " + thost);
         stringUtils = new StringUtils();
+        sessionLogs = new ConcurrentHashMap<>(); // may as well make concurrent to be safe.
     }
 
-    // after some thining trim this down to the basics. Would have just been a DB name for that server but need permissions too.
+    // after some thinking trim this down to the basics. Would have just been a DB name for that server but need permissions too.
     // may cache in future to save DB/Permission lookups. Depends on how consolidated client/server calls can be made . . .
 
     public AzquoMemoryDBConnection getConnectionFromAccessToken(DatabaseAccessToken databaseAccessToken) throws Exception {
         // todo - address opendb count (do we care?) and exceptions
-        AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(databaseAccessToken.getDatabaseMySQLName());
+        StringBuffer sessionLog = sessionLogs.get(databaseAccessToken.getUserSessionId());
+        if (sessionLog == null) {
+            final StringBuffer newSessionLog = new StringBuffer();
+            sessionLog = sessionLogs.putIfAbsent(databaseAccessToken.getUserSessionId(), newSessionLog);// in ConcurrentHashMap this is atomic, thanks Doug!
+            if (sessionLog == null) {// the new one went in, use it, otherwise use the one that "sneaked" in there in the mean time :)
+                sessionLog = newSessionLog;
+            }
+        }
+        AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(databaseAccessToken.getDatabaseMySQLName(), sessionLog);
         // we can't do the lookup for permissions out here as it requires the connection, hence pass things through
-        return new AzquoMemoryDBConnection(memoryDB, databaseAccessToken, nameService, databaseAccessToken.getLanguages());
+
+        return new AzquoMemoryDBConnection(memoryDB, databaseAccessToken, nameService, databaseAccessToken.getLanguages(), sessionLog);
+    }
+
+    public String getSessionLog(DatabaseAccessToken databaseAccessToken) throws Exception {
+        StringBuffer log = sessionLogs.get(databaseAccessToken.getUserSessionId());
+        if (log != null){
+            return log.toString();
+        }
+        return "";
     }
 
 /*    public void anonymise(DatabaseAccessToken databaseAccessToken) throws Exception {
@@ -166,9 +186,9 @@ seaports;children   container;children
                             // should strip off the function
                             sourceCell = sourceCell.substring(sourceCell.indexOf("(", NAMECOUNT.length()) + 1); // chop off the beginning
                             sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
-                            String selectionType = sourceCell.substring(0,sourceCell.indexOf(","));
+                            String selectionType = sourceCell.substring(0, sourceCell.indexOf(","));
                             Set<Name> typeSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, selectionType, attributeNames));
-                            if (typeSet.size() != 1){
+                            if (typeSet.size() != 1) {
                                 throw new Exception("selection types must be single cells = use 'as'");
                             }
                             String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1);
@@ -426,13 +446,13 @@ seaports;children   container;children
         int dotPos = query.indexOf(".");
         if (dotPos > 0) {//todo check that it's not part of a name
             Name possibleName = nameService.findByName(getConnectionFromAccessToken(databaseAccessToken), query.substring(0, dotPos));
-             if (possibleName!=null){
+            if (possibleName != null) {
                 String result = possibleName.getAttribute(query.substring(dotPos + 1));
-                 List<String> toReturn = new ArrayList<>();
-                 toReturn.add(result);
-                 return toReturn;
-             }
-       }
+                List<String> toReturn = new ArrayList<>();
+                toReturn.add(result);
+                return toReturn;
+            }
+        }
 
         return getIndividualNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages));
     }
@@ -556,9 +576,9 @@ seaports;children   container;children
             , String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, int highlightDays) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, databaseAccessToken.getLanguages(), highlightDays);
-       if (data.size()==0){
-           return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<>(),null,colHeadingsSource,null);
-       }
+        if (data.size() == 0) {
+            return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null);
+        }
         List<List<CellForDisplay>> displayData = new ArrayList<>();
         for (List<AzquoCell> sourceRow : data) {
             List<CellForDisplay> displayDataRow = new ArrayList<>();
@@ -582,7 +602,7 @@ seaports;children   container;children
         if (columnHeadings.size() == 0) {
             throw new Exception("no headings passed");
         }
-        if (rowHeadings.size()==0){
+        if (rowHeadings.size() == 0) {
             return new ArrayList<>();
         }
         final List<Name> contextNames = new ArrayList<>();
@@ -611,7 +631,7 @@ seaports;children   container;children
     }
 
 
-    private List<Name> getContextNames(AzquoMemoryDBConnection azquoMemoryDBConnection,List<List<String>> contextSource)throws Exception{
+    private List<Name> getContextNames(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource) throws Exception {
         final List<Name> contextNames = new ArrayList<>();
         for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell
             for (String contextItem : contextItems) {
@@ -646,7 +666,7 @@ seaports;children   container;children
             throw new Exception("no headings passed");
         }
         final List<Name> contextNames = getContextNames(azquoMemoryDBCOnnection, contextSource);
-         // now onto the bit to find the specific cell - the column headings were transposed then expanded so they're in the same format as the row headings
+        // now onto the bit to find the specific cell - the column headings were transposed then expanded so they're in the same format as the row headings
         // that is to say : the outside list's size is the number of columns or headings. So, do we have the row and col?
         if (unsortedRow < rowHeadings.size() && unsortedCol < columnHeadings.size()) {
             return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextNames, unsortedRow, unsortedCol, totalSetSize, languages);
@@ -829,7 +849,7 @@ seaports;children   container;children
 
         // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
         if (highlightDays > 0) {
-            for (List<AzquoCell> row:toReturn) {
+            for (List<AzquoCell> row : toReturn) {
                 for (AzquoCell azquoCell : row) {
                     long age = 10000; // about 30 years old as default
                     ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
@@ -908,7 +928,7 @@ seaports;children   container;children
                 //System.out.println("Filling " + startRow + " to " + endRow);
                 for (int rowNo = startRow; rowNo <= endRow; rowNo++) {
                     List<DataRegionHeading> rowHeadings = headingsForEachRow.get(rowNo);
-                    if (rowNo % 1000 == 0) System.out.print(".");
+                    if (rowNo % 1000 == 0) connection.addToUserLog(".", false);
                     List<AzquoCell> returnRow = new ArrayList<>();
                     int colNo = 0;
                     for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
@@ -934,8 +954,8 @@ seaports;children   container;children
         if (alreadyTested.contains(containsSet)) return 0;
         alreadyTested.add(containsSet);
         int count = 0;
-        for (Name child : containsSet.getChildren()){
-            if (selectionSet.contains(child)){
+        for (Name child : containsSet.getChildren()) {
+            if (selectionSet.contains(child)) {
                 count++;
             }
         }
@@ -943,8 +963,8 @@ seaports;children   container;children
             return count;
         } else {
             for (Name child : containsSet.getChildren()) {
-                if (!child.getChildren().isEmpty()){
-                    count += totalNameSet(child, selectionSet,alreadyTested, track);
+                if (!child.getChildren().isEmpty()) {
+                    count += totalNameSet(child, selectionSet, alreadyTested, track);
                 }
             }
         }
@@ -995,7 +1015,7 @@ seaports;children   container;children
         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
         //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
         for (DataRegionHeading heading : rowHeadings) {
-            if (heading != null  && (heading.getName()!=null || (heading.getAttribute()!= null && !heading.getAttribute().equals(".")) || heading.getNameCountSet()!=null)) {
+            if (heading != null && (heading.getName() != null || (heading.getAttribute() != null && !heading.getAttribute().equals(".")) || heading.getNameCountSet() != null)) {
                 headingsForThisCell.add(heading);
             }
         }
@@ -1003,7 +1023,7 @@ seaports;children   container;children
         boolean checked = true;
         if (hCount > 0) {
             for (DataRegionHeading heading : columnHeadings) {
-                if (heading != null  && (heading.getName()!=null ||(heading.getAttribute()!= null && !heading.getAttribute().equals(".")) || heading.getNameCountSet()!=null)) {
+                if (heading != null && (heading.getName() != null || (heading.getAttribute() != null && !heading.getAttribute().equals(".")) || heading.getNameCountSet() != null)) {
                     headingsForThisCell.add(heading);
                 }
             }
@@ -1037,8 +1057,8 @@ seaports;children   container;children
             }
             DataRegionHeading nameCountHeading = getHeadingWithNameCount(headingsForThisCell);
             if (nameCountHeading != null && headingsForThisCell.size() == 2) {//these functions only work if there's no context
-                if (nameCountHeading.getName() != null){
-                   //System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName());
+                if (nameCountHeading.getName() != null) {
+                    //System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName());
                     doubleValue = getTotalNameCount(headingsForThisCell);
                 } else {
                     Set<Name> nameCountSet = nameCountHeading.getNameCountSet();
@@ -1047,9 +1067,9 @@ seaports;children   container;children
                         if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null) { // should be fine
                             // we know this is a cached set internally, no need to create a new set - might be expensive
                             Collection<Name> nameCountSet2 = dataRegionHeading.getName().findAllChildren(false);
-                            if (nameCountSet.size() < nameCountSet2.size()){
+                            if (nameCountSet.size() < nameCountSet2.size()) {
                                 doubleValue = findOverlap(nameCountSet, nameCountSet2);
-                            }else{
+                            } else {
                                 doubleValue = findOverlap(nameCountSet2, nameCountSet);
                             }
                         }
@@ -1077,19 +1097,19 @@ seaports;children   container;children
                     } else {
                         stringValue = doubleValue + "";
                     }
-                }else{
+                } else {
                     stringValue = "";
-                    doubleValue  = 0;
+                    doubleValue = 0;
                 }
                 listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(values);
             } else {  // now, new logic for attributes
                 List<Name> names = new ArrayList<>();
                 List<String> attributes = new ArrayList<>();
-                for (DataRegionHeading heading:headingsForThisCell){
-                    if (heading.getName() != null){
+                for (DataRegionHeading heading : headingsForThisCell) {
+                    if (heading.getName() != null) {
                         names.add(heading.getName());
                     }
-                    if (heading.getAttribute()!=null){
+                    if (heading.getAttribute() != null) {
                         attributes.add(heading.getAttribute());
                     }
                 }
@@ -1115,9 +1135,9 @@ seaports;children   container;children
         return new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextNames, rowNo, colNo, stringValue, doubleValue, false);
     }
 
-    private int findOverlap(Collection<Name> set1, Collection<Name> set2){
+    private int findOverlap(Collection<Name> set1, Collection<Name> set2) {
         int count = 0;
-        for (Name name:set1){
+        for (Name name : set1) {
             if (set2.contains(name)) count++;
         }
         return count;
@@ -1134,7 +1154,7 @@ seaports;children   container;children
             toReturn.add(null);// null the rows, basically adding spaces to the return list
         }
         Map<Name, Integer> totalSetSize = new ConcurrentHashMap<>();// a cache to speed up cell calculation. Short hand of set sizes, we assume they won't change while creating this data.
-        System.out.println("data region size = " + totalRows + " * " + totalCols);
+        connection.addToUserLog("data region size = " + totalRows + " * " + totalCols);
         int maxRegionSize = 2000000;//random!  set by WFC 29/6/15
         if (totalRows * totalCols > maxRegionSize) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
@@ -1143,7 +1163,7 @@ seaports;children   container;children
         if (!tryMultiThreaded) {
             threads = 1;
         }
-        System.out.println("populating using " + threads + " threas(s)");
+        connection.addToUserLog("populating using " + threads + " threas(s)");
         ExecutorService executor = Executors.newFixedThreadPool(threads); // picking 10 based on an example I saw . . .
         StringBuffer errorTrack = new StringBuffer();// deliberately threadsafe, need to keep an eye on the report building . . .
         // tried multithreaded, abandoning big chunks
@@ -1163,7 +1183,7 @@ seaports;children   container;children
         }
         //valueService.printSumStats();
         //valueService.printFindForNamesIncludeChildrenStats();
-        logger.info("time to execute : " + (System.currentTimeMillis() - track));
+        connection.addToUserLog("time to execute : " + (System.currentTimeMillis() - track));
         return toReturn;
     }
 
@@ -1249,11 +1269,11 @@ seaports;children   container;children
     public TreeNode getDataList(Set<Name> names, int maxSize)throws Exception{
         List<Value> values = null;
         String heading = "";
-        for (Name name:names) {
+        for (Name name : names) {
             if (values == null) {
                 values = new ArrayList<>(valueService.findValuesForNameIncludeAllChildren(name, true));
 
-            } else{
+            } else {
                 values.retainAll(valueService.findValuesForNameIncludeAllChildren(name, true));
             }
             if (heading.length() > 0) heading += ", ";
@@ -1266,9 +1286,7 @@ seaports;children   container;children
         valueService.addNodeValues(toReturn);
 
         return toReturn;
-     }
-
-
+    }
 
 
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
@@ -1298,51 +1316,50 @@ seaports;children   container;children
         return toReturn;
     }
 
-    public void importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user)throws Exception{
+    public void importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
 
 
         //write the columnheadings and data to a temporary file, then import it
         String fileName = "temp_" + user;
-        File temp = File.createTempFile(fileName +".csv", "csv");
+        File temp = File.createTempFile(fileName + ".csv", "csv");
         String tempName = temp.getPath();
         temp.deleteOnExit();
         BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(temp), 1000);
         StringBuffer sb = new StringBuffer();
         List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(0);
         boolean firstCol = true;
-        for (String heading:colHeadings){
-            if (!firstCol){
+        for (String heading : colHeadings) {
+            if (!firstCol) {
                 sb.append("\t");
-            }else{
+            } else {
                 firstCol = false;
             }
             sb.append(heading);
 
         }
         sb.append("\n");
-        bout.write(String.valueOf(sb).getBytes(),0,sb.length());
+        bout.write(String.valueOf(sb).getBytes(), 0, sb.length());
         List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-        for (List<CellForDisplay> row:data){
+        for (List<CellForDisplay> row : data) {
             sb = new StringBuffer();
             firstCol = true;
-            for(CellForDisplay cellForDisplay:row){
+            for (CellForDisplay cellForDisplay : row) {
                 if (!firstCol) sb.append("\t");
-                else firstCol =false;
+                else firstCol = false;
                 String val = cellForDisplay.getStringValue();
-                if (val==null) val="";//for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
+                if (val == null)
+                    val = "";//for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
                 sb.append(val);
             }
             sb.append("\n");
-            bout.write(String.valueOf(sb).getBytes(),0,sb.length());
+            bout.write(String.valueOf(sb).getBytes(), 0, sb.length());
 
         }
         bout.flush();
         bout.close();
         List<String> languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        importService.readPreparedFile(azquoMemoryDBConnection,tempName,"csv", languages);
-
-
+        importService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", languages);
 
 
     }
@@ -1352,18 +1369,16 @@ seaports;children   container;children
 
 
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        azquoMemoryDBConnection.setProvenance(user,"in spreadsheet", reportName, context);
-        if (cellsAndHeadingsForDisplay.getRowHeadings()==null && cellsAndHeadingsForDisplay.getData().size() > 0){
-            importDataFromSpreadsheet(azquoMemoryDBConnection,cellsAndHeadingsForDisplay, user);
+        azquoMemoryDBConnection.setProvenance(user, "in spreadsheet", reportName, context);
+        if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
+            importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
             return;
         }
 
 
-
-
         int numberOfValuesModified = 0;
         Map<Name, Integer> totalSetSize = new HashMap<>();
-        List<Name> contextNames =getContextNames(azquoMemoryDBConnection,cellsAndHeadingsForDisplay.getContextSource());
+        List<Name> contextNames = getContextNames(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getContextSource());
         int rowCounter = 0;
         for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
             int columnCounter = 0;
@@ -1383,25 +1398,25 @@ seaports;children   container;children
                         final Set<DataRegionHeading> headingsForCell = new HashSet<>();
                         headingsForCell.addAll(azquoCell.getColumnHeadings());
                         headingsForCell.addAll(azquoCell.getRowHeadings());
-                         // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
+                        // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
                         // right, switch here to deal with attribute based cell values
 
                         //first align text and numbers where appropriate
-                        try{
-                            if (cell.getDoubleValue()!=0.0) {
+                        try {
+                            if (cell.getDoubleValue() != 0.0) {
                                 cell.setStringValue(cell.getDoubleValue() + "");
                             }
-                        }catch(Exception ignored){
+                        } catch (Exception ignored) {
                         }
-                        if (cell.getStringValue().endsWith("%")){
-                              String percent = cell.getStringValue().substring(0,cell.getStringValue().length() - 1);
-                              try {
-                                  double d = Double.parseDouble(percent) / 100;
-                                  cell.setStringValue(d + "");
-                              }catch(Exception e){
-                                  //do nothing
-                              }
-                         }
+                        if (cell.getStringValue().endsWith("%")) {
+                            String percent = cell.getStringValue().substring(0, cell.getStringValue().length() - 1);
+                            try {
+                                double d = Double.parseDouble(percent) / 100;
+                                cell.setStringValue(d + "");
+                            } catch (Exception e) {
+                                //do nothing
+                            }
+                        }
                         if (valuesForCell.getValues() != null) {
                             // this call to make the hash set seems rather unefficient
                             Set<Name> cellNames = new HashSet<>(namesFromDataRegionHeadings(headingsForCell));
@@ -1418,19 +1433,19 @@ seaports;children   container;children
                                 }
                             } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue().length() > 0) {
                                 logger.info("storing new value here . . .");
-                                  valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), cellNames);
+                                valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), cellNames);
                                 numberOfValuesModified++;
                             }
                         } else {
                             if (valuesForCell.getNames().size() == 1 && valuesForCell.getAttributeNames().size() == 1) { // allows a simple store
                                 Name toChange = valuesForCell.getNames().get(0);
                                 String attribute = valuesForCell.getAttributeNames().get(0).substring(1);//remove the initial '.'
-                                Name attSet = nameService.findByName(azquoMemoryDBConnection,attribute);
-                                if(attSet != null && attSet.getChildren().size() > 0 && !azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB(attribute)){
+                                Name attSet = nameService.findByName(azquoMemoryDBConnection, attribute);
+                                if (attSet != null && attSet.getChildren().size() > 0 && !azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB(attribute)) {
                                     logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getStringValue() + " within " + attribute);
                                     Name category = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getStringValue(), attSet, true);
                                     category.addChildWillBePersisted(toChange);
-                                }else {
+                                } else {
                                     logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
                                     toChange.setAttributeWillBePersisted(attribute, cell.getStringValue());
                                 }

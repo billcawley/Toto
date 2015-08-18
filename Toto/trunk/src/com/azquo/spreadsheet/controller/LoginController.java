@@ -59,7 +59,7 @@ public class LoginController {
         } else {
             if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
                 model.put("userEmail", userEmail);
-                LoggedInUser loggedInUser = loginService.loginLoggedInUser(null, userEmail, password, false);
+                LoggedInUser loggedInUser = loginService.loginLoggedInUser(request.getSession().getId(), null, userEmail, password, false);
                 if (loggedInUser != null) {
                     request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                     if (!loggedInUser.getUser().isAdministrator()) {

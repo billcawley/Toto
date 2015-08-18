@@ -415,6 +415,10 @@ public class SpreadsheetService {
         return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getDropDownListForQuery(databaseAccessToken, query, languages);
     }
 
+    public String getSessionLog(DatabaseAccessToken databaseAccessToken) throws Exception{
+        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getSessionLog(databaseAccessToken);
+    }
+
     // function that can be called by the front end to deliver the data and headings
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource

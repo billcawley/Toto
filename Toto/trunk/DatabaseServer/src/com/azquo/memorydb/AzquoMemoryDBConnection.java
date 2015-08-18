@@ -15,7 +15,9 @@ import java.util.*;
  * not necessary functionally, trying to enforce code structure
  * <p/>
  *
- * has been stripped right down to the db and permission,s I think that makes sense
+ * has been stripped right down to the db and permissions I think that makes sense
+ *
+ * Adding in a user session as this should make it easier to log stuff back to the user
  *
  */
 public class AzquoMemoryDBConnection {
@@ -28,9 +30,11 @@ public class AzquoMemoryDBConnection {
 
     private final List<Set<Name>> writePermissions;
 
+    private final StringBuffer userLog; // threadsafe, it probably needs to be
+
     // A bit involved but it makes this object immutable, think that's worth it - note
 
-    public AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, DatabaseAccessToken databaseAccessToken, NameService nameService, List<String> languages)  throws Exception {
+    public AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, DatabaseAccessToken databaseAccessToken, NameService nameService, List<String> languages, StringBuffer userLog)  throws Exception {
         this.azquoMemoryDB = azquoMemoryDB;
         if (databaseAccessToken.getWritePermissions() != null && !databaseAccessToken.getWritePermissions().isEmpty()) {
             writePermissions = nameService.decodeString(this, databaseAccessToken.getWritePermissions(), languages);
@@ -42,6 +46,7 @@ public class AzquoMemoryDBConnection {
         } else {
             readPermissions = new ArrayList<>();
         }
+        this.userLog = userLog;
     }
 
     public AzquoMemoryDB getAzquoMemoryDB() {
@@ -107,6 +112,24 @@ public class AzquoMemoryDBConnection {
         @Override
         public void run() {
             azquoMemoryDB.saveDataToMySQL();
+        }
+    }
+
+    public StringBuffer getUserLog() {
+        return userLog;
+    }
+
+    public void addToUserLog(String toAdd){
+        addToUserLog(toAdd, true);
+    }
+
+    public void addToUserLog(String toAdd, boolean newline){
+        if (newline){
+            System.out.println(toAdd);
+            userLog.append(toAdd + "\n");
+        } else {
+            System.out.print(toAdd);
+            userLog.append(toAdd);
         }
     }
 }

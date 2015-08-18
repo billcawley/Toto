@@ -7,6 +7,8 @@ import java.util.HashMap;
 /**
  * Oh-kay. While one can spin up a memory db from spring this is probably not the way to go, this will be the object that
  * reads the entries in the database table and spins up the memory databases according to that - it will need support for different servers.
+ *
+ * todo - use concurrent mashmap but use the right pattern for adding if not there
  */
 public final class MemoryDBManager {
 
@@ -19,17 +21,17 @@ public final class MemoryDBManager {
         memoryDatabaseMap = new HashMap<>(); // by mysql name. Will be unique.
     }
 
-    public synchronized AzquoMemoryDB getAzquoMemoryDB(String mySqlName) throws Exception {
+    public synchronized AzquoMemoryDB getAzquoMemoryDB(String mySqlName, StringBuffer sessionLog) throws Exception {
         AzquoMemoryDB loaded;
         if (mySqlName.equals("temp")) {
-            loaded = new AzquoMemoryDB(mySqlName, standardDAO);
+            loaded = new AzquoMemoryDB(mySqlName, standardDAO, sessionLog);
             return loaded;
         }
         loaded = memoryDatabaseMap.get(mySqlName);
         if (loaded != null) {
             return loaded;
         }
-        loaded = new AzquoMemoryDB(mySqlName, standardDAO);
+        loaded = new AzquoMemoryDB(mySqlName, standardDAO, sessionLog);
         memoryDatabaseMap.put(mySqlName, loaded);
         // todo, add back in client side?
 /*        final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new GregorianCalendar(1900, 0, 0).getTime());// should start to get away from date
@@ -49,7 +51,7 @@ public final class MemoryDBManager {
         if (memoryDatabaseMap.get(mysqlName) != null) {
             throw new Exception("cannot create new memory database one attached to that mysql database already exists");
         }
-        AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(mysqlName, standardDAO);
+        AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(mysqlName, standardDAO, null); // blank session log here unless we really care about telling this to the user?
         memoryDatabaseMap.put(mysqlName, azquoMemoryDB);
     }
 

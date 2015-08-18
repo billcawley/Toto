@@ -64,14 +64,18 @@ public final class AzquoMemoryDB {
         return rowFillerThreads;
     }
 
+    // for convenience while loading, null it at the end of the constuctor.
+    private StringBuffer sessionLog;
+
     // Initialising as concurrent hashmaps here, needs careful thought as to whether heavy concurrent access is actually a good idea, what could go wrong
-    protected AzquoMemoryDB(String mysqlName, StandardDAO standardDAO) throws Exception {
+    protected AzquoMemoryDB(String mysqlName, StandardDAO standardDAO, StringBuffer sessionLog) throws Exception {
+        this.sessionLog = sessionLog;
         azquoProperties.load(getClass().getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring
         // now where the default multi threading number is defined. Different number based on the task? Can decide later.
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         int possibleLoadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
-        if (possibleLoadingThreads > 4){ // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
-            possibleLoadingThreads = 4;
+        if (possibleLoadingThreads > 8){ // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
+            possibleLoadingThreads = 8;
         }
         loadingThreads = possibleLoadingThreads;
         rowFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report geenration
@@ -102,6 +106,7 @@ public final class AzquoMemoryDB {
         }
         needsLoading = false;
         nextId = maxIdAtLoad + 1;
+        this.sessionLog = null; // don't hang onto the reference here
     }
 
     // convenience
@@ -171,18 +176,25 @@ public final class AzquoMemoryDB {
                         new Value(memDB, dataRecord.id, dataRecord.json);
                     }
                 }
-                System.out.println(tableName + " loaded " + loadTracker.addAndGet(dataToLoad.size()));
+                logInSessionLogAndSystem("loaded " + loadTracker.addAndGet(dataToLoad.size()));
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
 
+    private void logInSessionLogAndSystem(String s){
+        if (sessionLog != null){
+            sessionLog.append(s).append("\n");
+        }
+        System.out.println(s);
+    }
+
     synchronized private void loadData() {
         boolean memoryTrack = "true".equals(azquoProperties.getProperty("memorytrack"));
         if (needsLoading) { // only allow it once!
             long startTime = System.currentTimeMillis();
-            System.out.println("loading data for " + getMySQLName());
+            logInSessionLogAndSystem("loading data for " + getMySQLName());
             // using system.gc before and after loading to get an idea of DB memory overhead
             long marker = System.currentTimeMillis();
             Runtime runtime = Runtime.getRuntime();
@@ -228,7 +240,7 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
-                System.out.println("Provenance loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
+                logInSessionLogAndSystem("Provenance loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
                 marker = System.currentTimeMillis();
                 executor = Executors.newFixedThreadPool(loadingThreads);
                 from = 0;
@@ -241,7 +253,7 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
-                System.out.println("Names loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
+                logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
                 marker = System.currentTimeMillis();
                 executor = Executors.newFixedThreadPool(loadingThreads);
                 from = 0;
@@ -254,7 +266,7 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
-                System.out.println("Values loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
+                logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
                 marker = System.currentTimeMillis();
                 // wait until all are loaded before linking
                 System.out.println(provenaceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded in " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
@@ -268,7 +280,7 @@ public final class AzquoMemoryDB {
                     System.out.println("Used Memory after init names :"
                             + (runtime.totalMemory() - runtime.freeMemory()) / mb);
                 }
-                System.out.println("Names init/linked in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
+                logInSessionLogAndSystem("Names init/linked in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
             } catch (Exception e) {
                 logger.error("could not load data for " + getMySQLName() + "!", e);
             }
@@ -285,7 +297,7 @@ public final class AzquoMemoryDB {
                 System.out.println("Total Memory:" + runtime.totalMemory() / mb);
                 System.out.println("Max Memory:" + runtime.maxMemory() / mb);
             }
-            System.out.println("Total load time for " + getMySQLName() + " "  + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
+            logInSessionLogAndSystem("Total load time for " + getMySQLName() + " " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
         }
     }
 
@@ -642,7 +654,7 @@ public final class AzquoMemoryDB {
                     break;
                 }
             }
-            System.out.println("Linked : " + loadTracker.addAndGet(batchToLink.size()));
+            logInSessionLogAndSystem("Linked : " + loadTracker.addAndGet(batchToLink.size()));
         }
     }
 

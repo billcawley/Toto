@@ -142,7 +142,7 @@
     response.setHeader("Pragma", "no-cache");
     response.setHeader("Cache-Control", "no-store, no-cache");
 %>
-<body>
+<body onload="postAjax('load');">
 
 <script type="text/javascript">
 
@@ -160,6 +160,9 @@
     */
     // example functions modified
     function postAjax(action) {
+        // on any of these we may want to see the log . . .
+        window.skipSetting = 0;
+        window.skipMarker = 0;
 //get the necessary zk ids form zssjsp[component_id]
 //'myzss' is the sparedhseet id that you gaved in sparedsheet tag
         var desktopId = zssjsp['myzss'].desktopId;
@@ -178,7 +181,6 @@
         if (result.message) {
             alert(result.message);
         }
-        ;
 //use your way handle your ajax action result
         if (result.action == "check" && result.valid) {
             if (result.form) {
@@ -216,21 +218,62 @@
     }
 
 
+var skipSetting = 0;
+var skipMarker = 0;
+    // how to stop this hammering? I reckon add a second every time between checks if the data hasn't changed.
+function updateStatus(){
+    if (window.skipMarker <= 0){
+        jq.post("/api/SpreadsheetStatus", function(data){
+            var objDiv = document.getElementById("serverStatus");
+            if (objDiv.innerHTML != data){ // it was updated
+                objDiv.innerHTML = data;
+                objDiv.scrollTop = objDiv.scrollHeight;
+                // assume there could be more stuff!
+                window.skipSetting = 0;
+                window.skipMarker = 0;
+            } else {
+                if (window.skipSetting == 0){
+                    window.skipSetting = 1;
+                } else {
+                    window.skipSetting *= 2;
+                }
+//                alert("same data, new skip setting : " + window.skipSetting);
+                window.skipMarker = window.skipSetting;
+            }
+        });
+    } else {
+        window.skipMarker--;
+    }
+}
+
+setInterval(function(){ updateStatus(); }, 1000);
 
 </script>
 
 <div id="wrapper" style="height: 100px;">
     <div class="banner" id="banner">
-        <a href="/api/Online?opcode=loadsheet&reportid=1"><img src="/images/azquo-logo2.png" alt="Azquo logo"/></a>
-        <a class="menubutton" href="#" onclick="openTopMenu();"><img src="/images/menu.png"></a>
         <div id="topmenubox" class="topmenubox">
             <ul  class="topmenu">
                 <li><a href="#" onclick="postAjax('XLS')">Download as XLSX</a></li>
                 <li><a href="#" onclick="postAjax('PDF');">Download as PDF</a></li>
                 <li><a href="#" onclick="inspectDatabase();">Inspect database</a></li>
                 <li><a href="#" onclick="uploadFile();">Upload file</a></li>
-               </ul>
+            </ul>
         </div>
+        <a class="menubutton" href="#" onclick="openTopMenu();"><img src="/images/menu.png"></a>
+        <table cellpadding="0" cellspacing="0">
+            <tr>
+                <td><a href="/api/Online?opcode=loadsheet&reportid=1"><img src="/images/azquo-logo2.png" alt="Azquo logo"/></a></td>
+                <td><button id="saveData" onclick="postAjax('Save')" style="display:none;">Save Data</button>
+                </td>
+                <td>        <c:forEach items="${pdfMerges}" var="pdfMerge">
+                    &nbsp;<button id="${pdfMerge}" onclick="postAjax('PDFMerge${pdfMerge}')">PDF : ${pdfMerge}</button>
+                </c:forEach>&nbsp;
+                </td>
+                <td width="600px"><div id="serverStatus" style="height:90px;width:100%;font:10px monospace;overflow:auto;"></div></td>
+            </tr>
+        </table>
+
 
 
 
@@ -240,10 +283,7 @@
         <button id="xlsButton">XLS</button>
         <button id="pdfButton">PDF</button>
         <button id="inspectButton" onclick="inspectDatabase()">Inspect</button> -->
-        <button id="saveData" onclick="postAjax('Save')" <c:if test="${showSave == false}"> style="display:none;" </c:if>>Save Data</button>
-        <c:forEach items="${pdfMerges}" var="pdfMerge">
-            &nbsp;<button id="${pdfMerge}" onclick="postAjax('PDFMerge${pdfMerge}')">PDF : ${pdfMerge}</button>
-        </c:forEach>
+
 
     </div>
 </div>

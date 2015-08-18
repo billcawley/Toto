@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.zkoss.json.JSONObject;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.Desktop;
+import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
@@ -157,6 +158,20 @@ public class ZKSpreadsheetCommandController {
                                 spreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport != null ? onlineReport.getReportName() : "");
                             }
                         }
+                    }
+                    // initial load moved to here, we want it to happen after showing the sheet. Same logic as reloading after changing a dropdown - todo factor?
+                    if ("load".equals(action)) {
+                        final Book book = ss.getBook();
+                        final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+                        for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
+                            newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                        }
+                        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService,userChoiceDAO,userRegionOptionsDAO);
+                        if (zkAzquoBookUtils.populateBook(newBook)) { // check if formulae made saveable data
+                            Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
+                        }
+                        ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
+
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

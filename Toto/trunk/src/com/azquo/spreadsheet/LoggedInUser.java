@@ -22,6 +22,7 @@ public class LoggedInUser {
 
     private static final Logger logger = Logger.getLogger(LoggedInUser.class);
 
+    private final String sessionId;
     private final User user;
     private int reportId;
 
@@ -42,7 +43,8 @@ public class LoggedInUser {
 
     private static final String defaultRegion = "default-region";
 
-    protected LoggedInUser(final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions) {
+    protected LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions) {
+        this.sessionId = sessionId;
         this.user = user;
         reportId = 0;
         sentCellsMaps = new HashMap<>();
@@ -56,7 +58,10 @@ public class LoggedInUser {
         this.readPermissions = readPermissions;
         this.writePermissions = writePermissions;
         this.context = null;
+    }
 
+    public String getSessionId() {
+        return sessionId;
     }
 
     public int getReportId() {
@@ -147,6 +152,6 @@ public class LoggedInUser {
     }
 
     public DatabaseAccessToken getDataAccessToken(){
-        return new DatabaseAccessToken(databaseServer.getIp(), database.getMySQLName(), readPermissions,writePermissions,languages);
+        return new DatabaseAccessToken(sessionId, databaseServer.getIp(), database.getMySQLName(), readPermissions,writePermissions,languages);
     }
 }
