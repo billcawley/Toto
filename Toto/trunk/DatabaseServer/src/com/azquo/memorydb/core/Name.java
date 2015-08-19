@@ -498,6 +498,10 @@ public final class Name extends AzquoMemoryDBEntity {
         for (Name child : children) {
             addChildWillBePersisted(child);
         }
+        clearChildrenCaches();
+    }
+
+    public void clearChildrenCaches(){
         findAllChildrenCache = null;
         findAllChildrenPayAttentionToAdditiveCache = null;
     }
@@ -556,7 +560,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
             if (changed) { // new logic, only do these things if something was changed
-                findAllChildrenCache = null;
+                clearChildrenCaches();
                 child.addToParents(this);//synchronized internally with this also so will not deadlock
                 setNeedsPersisting();
                 //and check that there are not indirect connections which should be deleted (e.g. if London exists in UK and Europe, and we are now
@@ -590,7 +594,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 } else {
                     children = nameArrayRemove(children, name); // note this will fail if it turns out children does not contain the name. SHould be ok.
                 }
-                findAllChildrenCache = null;
+                clearChildrenCaches();
                 setNeedsPersisting();
             }
         }
