@@ -716,7 +716,7 @@
         <p><img class="size-full wp-image-1959 alignright" src="https://www.azquo.com/wp-content/uploads/2013/12/image.png" alt="image" width="145" height="116" /></p>
         <p>All Azquo reports can be viewed online &#8211; use the same log on details as you use in your spreadsheets.</p>
         <p><div id="azquo_dc" style="min-height:350px">  <div id="az_LogonForm">
-        <form method="post" name="loginform" action="https://data.azquo.com/api/Login">
+        <form method="post" name="loginform" action="/api/Login">
           <input type="hidden" name="online" value="true">
           <p class="logon-form">Logon to Azquo</p>
           <table style="padding:3px"><tr><td>Logon</td><td><div class="input-search-holder" style="height:30px"><input type="text" id="az_Logon"  value="${userEmail}" name="user" style="width:300px"/></td></tr>
