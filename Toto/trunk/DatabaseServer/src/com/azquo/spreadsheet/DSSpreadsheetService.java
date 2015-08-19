@@ -29,8 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-// it seems that trying to configure the properties in spring is a problem
-// todo : see if upgrading spring to 4.2 makes this easier?
+// it seems that trying to configure the properties in spring is a problem - todo : see if upgrading spring to 4.2 makes this easier?
 // todo : try to address proper use of protected and private given how I've shifter lots of classes around. This could apply to all sorts in the system.
 
 public class DSSpreadsheetService {
@@ -58,7 +57,7 @@ public class DSSpreadsheetService {
         String string;
     }
 
-    // todo, clean this up when sessions are expired
+    // todo, clean this up when sessions are expired, maybe a last accessed time?
     private final Map<String, StringBuffer> sessionLogs;
 
     public DSSpreadsheetService() {
@@ -595,10 +594,19 @@ seaports;children   container;children
     private List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, List<String> languages, int highlightDays) throws Exception {
+        long track = System.currentTimeMillis();
         final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
+        azquoMemoryDBCOnnection.addToUserLog("Row headings parsed in " + (System.currentTimeMillis() - track) + "ms");
+        track = System.currentTimeMillis();
         final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists);
+        azquoMemoryDBCOnnection.addToUserLog("Row headings expanded in " + (System.currentTimeMillis() - track) + "ms");
+        track = System.currentTimeMillis();
         final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages);
+        azquoMemoryDBCOnnection.addToUserLog("Column headings parsed in " + (System.currentTimeMillis() - track) + "ms");
+        track = System.currentTimeMillis();
         final List<List<DataRegionHeading>> columnHeadings = expandHeadings(transpose2DList(columnHeadingLists));
+        azquoMemoryDBCOnnection.addToUserLog("Column headings expanded in " + (System.currentTimeMillis() - track) + "ms");
+        track = System.currentTimeMillis();
         if (columnHeadings.size() == 0) {
             throw new Exception("no headings passed");
         }
@@ -611,6 +619,8 @@ seaports;children   container;children
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
                 while (st.hasMoreTokens()) {
                     final List<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, st.nextToken().trim());
+                    azquoMemoryDBCOnnection.addToUserLog("Context parsed in " + (System.currentTimeMillis() - track) + "ms");
+                    track = System.currentTimeMillis();
                     if (thisContextNames.size() > 1) {
                         throw new Exception("error: context names must be individual - use 'as' to put sets in context");
                     }
@@ -625,8 +635,10 @@ seaports;children   container;children
         // ok going to try to use the new function
         List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings
                 , columnHeadings, contextNames, languages);
+        track = System.currentTimeMillis();
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
                 , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays);
+        azquoMemoryDBCOnnection.addToUserLog("Data sort/filter in " + (System.currentTimeMillis() - track) + "ms");
         return dataToShow;
     }
 
@@ -1369,6 +1381,9 @@ seaports;children   container;children
 
 
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+
+        azquoMemoryDBConnection.getAzquoMemoryDB().clearNameChildrenCaches(); // may need to optimise later
+
         azquoMemoryDBConnection.setProvenance(user, "in spreadsheet", reportName, context);
         if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
             importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
