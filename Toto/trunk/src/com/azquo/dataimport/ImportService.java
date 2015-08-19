@@ -291,7 +291,7 @@ public final class ImportService {
 
     // todo - directory location should be the database code!
 
-    private void uploadReport(LoggedInUser loggedInUser, AzquoBook azquoBook, String fileName, String reportName, String reportType) throws Exception {
+    private void uploadReport(LoggedInUser loggedInUser, AzquoBook azquoBook, String sourceName,String fileName, String reportName, String reportType) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = 0;
         String pathName = reportType;
@@ -302,7 +302,6 @@ public final class ImportService {
         int renderer = OnlineReport.AZQUO_BOOK;
         if (azquoBook.getRangeData("az_ZKSheet")!=null){
             renderer = OnlineReport.ZK_AZQUO_BOOK;
-
         }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         if (or == null) {
@@ -313,13 +312,15 @@ public final class ImportService {
         }
         or.setDateCreated(LocalDateTime.now());
         or.setId(0);
+        or.setRenderer(renderer);
         or.setActive(true);
         String fullPath = spreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
 
         FileOutputStream out = new FileOutputStream(fullPath);
-        azquoBook.saveBook(fullPath);
+//        azquoBook.saveBook(fullPath); no, aspose could have changed the sheet, especially if the license is not set . . .
+        org.apache.commons.io.FileUtils.copyFile(new File(sourceName), out);// straight copy of the source
         out.close();
         onlineReportDAO.store(or);
     }
@@ -333,7 +334,7 @@ public final class ImportService {
             if (useType) {
                 reportType = loggedInUser.getDatabaseType();
             }
-            uploadReport(loggedInUser, azquoBook, fileName, reportName, reportType);
+            uploadReport(loggedInUser, azquoBook, tempName, fileName, reportName, reportType);
             return;
         }
         if (loggedInUser.getDatabase() == null) {
