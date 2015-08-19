@@ -227,11 +227,13 @@ function updateStatus(){
             var objDiv = document.getElementById("serverStatus");
             if (objDiv.innerHTML != data){ // it was updated
                 objDiv.innerHTML = data;
+                objDiv.style.backgroundColor = '#EEFFEE'; // highlight the change
                 objDiv.scrollTop = objDiv.scrollHeight;
                 // assume there could be more stuff!
                 window.skipSetting = 0;
                 window.skipMarker = 0;
             } else {
+                objDiv.style.backgroundColor = 'white';
                 if (window.skipSetting == 0){
                     window.skipSetting = 1;
                 } else {
