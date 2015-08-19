@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * Time: 10:33
  * created after it became apparent that Mysql in the way I'd arranged the objects didn't have a hope in hell of
  * delivering data fast enough. Leverage collections to implement Azquo spec.
- * <p/>
+ * <p>
  * I'm using intern when adding strings to objects, it should be used wherever that string is going to hang around.
  */
 
@@ -55,8 +55,9 @@ public final class AzquoMemoryDB {
     private final int loadingThreads;
     // how many threads when creating a report
     private final int rowFillerThreads;
+
     // available to StandardDAO
-    public int getLoadingThreads(){
+    public int getLoadingThreads() {
         return loadingThreads;
     }
 
@@ -74,7 +75,7 @@ public final class AzquoMemoryDB {
         // now where the default multi threading number is defined. Different number based on the task? Can decide later.
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         int possibleLoadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
-        if (possibleLoadingThreads > 8){ // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
+        if (possibleLoadingThreads > 8) { // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
             possibleLoadingThreads = 8;
         }
         loadingThreads = possibleLoadingThreads;
@@ -183,8 +184,8 @@ public final class AzquoMemoryDB {
         }
     }
 
-    private void logInSessionLogAndSystem(String s){
-        if (sessionLog != null){
+    private void logInSessionLogAndSystem(String s) {
+        if (sessionLog != null) {
             sessionLog.append(s).append("\n");
         }
         System.out.println(s);
@@ -233,7 +234,7 @@ public final class AzquoMemoryDB {
                 int from = 0;
                 int maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.provenance.name());
                 while (from < maxIdForTable) {
-                    executor.execute(new SQLBatchLoader(standardDAO,PROVENANCE_MODE, from,from + step,this,provenaceLoaded));
+                    executor.execute(new SQLBatchLoader(standardDAO, PROVENANCE_MODE, from, from + step, this, provenaceLoaded));
                     from += step;
                 }
                 executor.shutdown();
@@ -246,7 +247,7 @@ public final class AzquoMemoryDB {
                 from = 0;
                 maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.name.name());
                 while (from < maxIdForTable) {
-                    executor.execute(new SQLBatchLoader(standardDAO,NAME_MODE, from,from + step,this,namesLoaded));
+                    executor.execute(new SQLBatchLoader(standardDAO, NAME_MODE, from, from + step, this, namesLoaded));
                     from += step;
                 }
                 executor.shutdown();
@@ -259,7 +260,7 @@ public final class AzquoMemoryDB {
                 from = 0;
                 maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.value.name());
                 while (from < maxIdForTable) {
-                    executor.execute(new SQLBatchLoader(standardDAO,VALUE_MODE, from,from + step,this,valuesLoaded));
+                    executor.execute(new SQLBatchLoader(standardDAO, VALUE_MODE, from, from + step, this, valuesLoaded));
                     from += step;
                 }
                 executor.shutdown();
@@ -368,7 +369,7 @@ public final class AzquoMemoryDB {
     // TODO address whether wrapping in a hash set here is the best plan. Memory of that object not such of an issue since it should be small and disposable
     // The iterator from CopyOnWriteArray does NOT support changes e.g. remove. A point.
 
-    public List<String> getAttributes(){
+    public List<String> getAttributes() {
         return Collections.unmodifiableList(new ArrayList<>(nameByAttributeMap.keySet()));
     }
 
@@ -465,10 +466,10 @@ public final class AzquoMemoryDB {
 
     private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
         final Set<Name> names = new HashSet<>();
-        if (attributeName.length() == 0){
-            for (String attName:nameByAttributeMap.keySet()){
-                names.addAll(getNamesByAttributeValueWildcards(attName,attributeValueSearch,startsWith, endsWith));
-                if (names.size() > 0){
+        if (attributeName.length() == 0) {
+            for (String attName : nameByAttributeMap.keySet()) {
+                names.addAll(getNamesByAttributeValueWildcards(attName, attributeValueSearch, startsWith, endsWith));
+                if (names.size() > 0) {
                     return names;
                 }
             }
@@ -517,14 +518,14 @@ public final class AzquoMemoryDB {
     }
 
     public List<Name> findTopNames(String language) {
-        Map <String, List<Name>>thisMap = nameByAttributeMap.get(language);
+        Map<String, List<Name>> thisMap = nameByAttributeMap.get(language);
 
         final List<Name> toReturn = new ArrayList<>();
         for (List<Name> names : thisMap.values()) {
-            for (Name name:names) {
+            for (Name name : names) {
                 if (name.getParents().size() == 0) {
                     toReturn.add(name);
-                }else {
+                } else {
                     boolean include = true;
                     for (Name parent : name.getParents()) {
                         if (parent.getAttribute(language) != null) {
@@ -543,9 +544,15 @@ public final class AzquoMemoryDB {
     }
 
     // trying new collect call java 8 syntax, should be exactly the same as old code - run through the values collecting thosw with no parents and adding them to a list to return.
-    // Collectors.toList uses an arraylist. What heppens if the map is modified? If a problem would have been before.
+    // Collectors.toList uses an arraylist. THe iterator off a concurrent hash map should be safe though it may not reflect the latest additions.
     public List<Name> findTopNames() {
         return nameByIdMap.values().stream().filter(name -> name.getParents().size() == 0).collect(Collectors.toList());
+    }
+
+    // this could be expensive on big databases
+
+    public void clearNameChildrenCaches() {
+        nameByIdMap.values().forEach(com.azquo.memorydb.core.Name::clearChildrenCaches);
     }
 
     public Provenance getProvenanceById(final int id) {
@@ -607,10 +614,10 @@ public final class AzquoMemoryDB {
         // same pattern but for the lists. Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
 
         List<Name> names = namesForThisAttribute.get(lcAttributeValue);
-        if (names == null){
+        if (names == null) {
             final List<Name> newNames = new CopyOnWriteArrayList<>();// cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
             names = namesForThisAttribute.putIfAbsent(lcAttributeValue, newNames);
-            if (names == null){
+            if (names == null) {
                 names = newNames;
             }
         }
@@ -645,7 +652,7 @@ public final class AzquoMemoryDB {
 
         @Override
         public void run() { // well this is what's going to truly test concurrent modification of a database
-            for (Name name : batchToLink){
+            for (Name name : batchToLink) {
                 try { // I think the only exception is the db not matching one.
                     name.populateFromJson();
                     addNameToAttributeNameMap(name);
@@ -660,9 +667,9 @@ public final class AzquoMemoryDB {
 
     // to be called after loading moves the json and extracts attributes to useful maps here
     // called after loading as the names reference themselves
-    // going to try a basic multi-thread with batches of 100000 names. It's linking millions of names that's the issue not thousands.
+    // going to try a basic multi-thread - it was 100,000 but I wonder if this is as efficient as it could be given that at the end leftover threads can hang around. Trying for 50,000
 
-    int batchLinkSize = 100000;
+    int batchLinkSize = 50000;
 
     private synchronized void initNames() throws Exception {
 
@@ -672,7 +679,7 @@ public final class AzquoMemoryDB {
         ArrayList<Name> batchLink = new ArrayList<>(batchLinkSize);
         for (Name name : nameByIdMap.values()) {
             batchLink.add(name);
-            if (batchLink.size() == batchLinkSize){
+            if (batchLink.size() == batchLinkSize) {
                 executor.execute(new BatchLinker(loadTracker, batchLink));
                 batchLink = new ArrayList<>(batchLinkSize);
             }
