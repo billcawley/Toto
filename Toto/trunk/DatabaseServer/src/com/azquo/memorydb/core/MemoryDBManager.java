@@ -8,7 +8,8 @@ import java.util.HashMap;
  * Oh-kay. While one can spin up a memory db from spring this is probably not the way to go, this will be the object that
  * reads the entries in the database table and spins up the memory databases according to that - it will need support for different servers.
  *
- * todo - use concurrent mashmap but use the right pattern for adding if not there
+ * I would like to use concurrent hashmap but the putifabsent pattern does not lend itself as well as it might - the catch being the long instantiation time of the memory db as it loads
+ * park for the mo unless it's a performance issue, since this is the only place that instantiates and hence loads the db could move the managing of that to here.
  */
 public final class MemoryDBManager {
 
