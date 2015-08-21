@@ -148,10 +148,10 @@ seaports;children   container;children
      */
 
     private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames) throws Exception {
-        List<List<List<DataRegionHeading>>> nameLists = new ArrayList<>();
+        List<List<List<DataRegionHeading>>> nameLists = new ArrayList<>(headingRegion.size());
         for (List<String> sourceRow : headingRegion) { // we're stepping through the cells that describe headings
             // ok here's the thing, before it was just names here, now it could be other things, attribute names formulae etc.
-            List<List<DataRegionHeading>> row = new ArrayList<>();
+            List<List<DataRegionHeading>> row = new ArrayList<>(sourceRow.size());
             nameLists.add(row);
             for (String sourceCell : sourceRow) {
                 if (sourceCell == null || sourceCell.length() == 0) {
@@ -238,6 +238,9 @@ seaports;children   container;children
 
     Row/column reference below is based off the above example - in toReturn the index of the outside list is y and the the inside list x
 
+    given what we now know about arraylists can this be optimized? Very probably. TODO.
+    todo Also other collection size initialisation on the database server - I've done a pass on arraylist, now need hash sets, hash mapt and concurrent hash maps I think
+
     */
 
     private <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
@@ -248,7 +251,7 @@ seaports;children   container;children
                 permutationDimension.add(null);
             }
             if (toReturn == null) { // first one, just assign the single column
-                toReturn = new ArrayList<>();
+                toReturn = new ArrayList<>(permutationDimension.size());
                 for (T item : permutationDimension) {
                     List<T> createdRow = new ArrayList<>();
                     createdRow.add(item);
@@ -284,7 +287,7 @@ seaports;children   container;children
 
 
     private <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
-        List<List<T>> toReturn = new ArrayList<>();
+        List<List<T>> toReturn = new ArrayList<>(existing2DArray.size() * permutationWeWantToAdd.size());// think that's right
         for (List<T> existingRow : existing2DArray) {
             for (T elementWeWantToAdd : permutationWeWantToAdd) { // for each new element
                 List<T> newRow = new ArrayList<>(existingRow); // copy the existing row
@@ -319,16 +322,17 @@ seaports;children   container;children
 
 
     private List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists) {
-        List<List<DataRegionHeading>> output = new ArrayList<>();
         final int noOfHeadingDefinitionRows = headingLists.size();
         if (noOfHeadingDefinitionRows == 0) {
-            return output;
+            return new ArrayList<>();
         }
         final int lastHeadingDefinitionCellIndex = headingLists.get(0).size() - 1; // the headingLists will be square, that is to say all row lists the same length as prepared by createHeadingArraysFromSpreadsheetRegion
         // ok here's the logic, what's passed is a 2d array of lists, as created from createHeadingArraysFromSpreadsheetRegion
         // we would just run through the rows running a 2d permutation on each row BUT there's a rule that if there's
         // a row below blank except the right most one then add that right most one to the one above
         boolean starting = true;
+        // ok the reason I'm doing this is to avoid unncessary array copying and resizing. If the size is 1 can just return that otherwise create an arraylist of the right size and copy in
+        ArrayList<List<List<DataRegionHeading>>> permutedLists = new ArrayList<>(noOfHeadingDefinitionRows); // could be slightly less elemnts than this but it's unlikely to be a biggy.
         for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) {
             List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
             if (lastHeadingDefinitionCellIndex > 0 && !headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex)))
@@ -341,6 +345,18 @@ seaports;children   container;children
                 headingDefinitionRowIndex++;
             }
             List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
+            permutedLists.add(permuted);
+        }
+        if (permutedLists.size() == 1){ // it may often be
+            return permutedLists.get(0);
+        }
+        // the point is I only want to make a new arraylist if there are lists to be combined and then I want it to be the right size. Some reports have had millions in here . . .
+        int size = 0;
+        for (List<List<DataRegionHeading>> permuted : permutedLists){
+            size += permuted.size();
+        }
+        List<List<DataRegionHeading>> output = new ArrayList<>(size);
+        for (List<List<DataRegionHeading>> permuted : permutedLists){
             output.addAll(permuted);
         }
         return output;
@@ -457,7 +473,7 @@ seaports;children   container;children
     }
 
     private List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
-        final List<Integer> sortedValues = new ArrayList<>();
+        final List<Integer> sortedValues = new ArrayList<>(sortTotals.size());
         List<Map.Entry<Integer, Double>> list = new ArrayList<>(sortTotals.entrySet());
         // sort list based on
         Collections.sort(list, (o1, o2) -> sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue()));
@@ -470,7 +486,7 @@ seaports;children   container;children
     // same thing for strings, I prefer stronger typing
 
     private List<Integer> sortStringValues(Map<Integer, String> sortTotals, final boolean sortRowsUp) {
-        final List<Integer> sortedValues = new ArrayList<>();
+        final List<Integer> sortedValues = new ArrayList<>(sortTotals.size());
         List<Map.Entry<Integer, String>> list = new ArrayList<>(sortTotals.entrySet());
         // sort list based on string now
         Collections.sort(list, (o1, o2) -> sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue()));
@@ -501,13 +517,13 @@ seaports;children   container;children
     */
 
     private <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
-        final List<List<T>> flipped = new ArrayList<>();
         if (source2Dlist.size() == 0) {
-            return flipped;
+            return new ArrayList<>();
         }
         final int oldXMax = source2Dlist.get(0).size(); // size of nested list, as described above (that is to say get the length of one row)
+        final List<List<T>> flipped = new ArrayList<>(oldXMax);
         for (int newY = 0; newY < oldXMax; newY++) {
-            List<T> newRow = new ArrayList<>(); // make a new row
+            List<T> newRow = new ArrayList<>(source2Dlist.size()); // make a new row
             for (List<T> oldRow : source2Dlist) { // and step down each of the old rows
                 newRow.add(oldRow.get(newY));//so as we're moving across the new row we're moving down the old rows on a fixed column
                 // the transposing is happening as a list which represents a row would typically be accessed by an x value but instead it's being accessed by an y value
@@ -540,9 +556,9 @@ seaports;children   container;children
     // return headings as strings for display, I'm going to put blanks in here if null.
 
     public List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languages) {
-        List<List<String>> toReturn = new ArrayList<>();
+        List<List<String>> toReturn = new ArrayList<>(source.size());
         for (List<DataRegionHeading> row : source) {
-            List<String> returnRow = new ArrayList<>();
+            List<String> returnRow = new ArrayList<>(row.size());
             toReturn.add(returnRow);
             for (DataRegionHeading heading : row) {
                 String cellValue = null;
@@ -578,9 +594,9 @@ seaports;children   container;children
         if (data.size() == 0) {
             return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null);
         }
-        List<List<CellForDisplay>> displayData = new ArrayList<>();
+        List<List<CellForDisplay>> displayData = new ArrayList<>(data.size());
         for (List<AzquoCell> sourceRow : data) {
-            List<CellForDisplay> displayDataRow = new ArrayList<>();
+            List<CellForDisplay> displayDataRow = new ArrayList<>(sourceRow.size());
             displayData.add(displayDataRow);
             for (AzquoCell sourceCell : sourceRow) {
                 displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol()));
@@ -614,7 +630,7 @@ seaports;children   container;children
             return new ArrayList<>();
         }
         final List<Name> contextNames = new ArrayList<>();
-        for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell
+        for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell. Rather arbitrary, remove at some point?
             for (String contextItem : contextItems) {
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
                 while (st.hasMoreTokens()) {
@@ -754,9 +770,9 @@ seaports;children   container;children
         maxCols = Math.abs(maxCols);
         if (sortOnColIndex != -1 || sortOnRowIndex != -1 || sortOnColTotals || sortOnRowTotals) { // then there's no sorting to do!
             // was a null check on sortRow and sortCol but it can't be null, it will be negative if none found
-            final Map<Integer, Double> sortRowTotals = new HashMap<>();
-            final Map<Integer, String> sortRowStrings = new HashMap<>();
-            final Map<Integer, Double> sortColumnTotals = new HashMap<>();
+            final Map<Integer, Double> sortRowTotals = new HashMap<>(sourceData.size());
+            final Map<Integer, String> sortRowStrings = new HashMap<>(sourceData.size());
+            final Map<Integer, Double> sortColumnTotals = new HashMap<>(totalCols);
             for (int colNo = 0; colNo < totalCols; colNo++) {
                 sortColumnTotals.put(colNo, 0.00);
             }
@@ -803,7 +819,6 @@ seaports;children   container;children
             }
             // OK pasting and changing what was in format data region, it's only called by this
             int blockRowCount = 0;
-            List<List<AzquoCell>> sortedCells = new ArrayList<>();
             // zero passed or set above means don't limit, this feels a little hacky but we need a less than condition on the for loop. Both for limiting and we need this type of loop as the index looks up on the sort
             if (maxRows == 0) {
                 maxRows = totalRows;
@@ -811,10 +826,12 @@ seaports;children   container;children
             if (maxCols == 0) {
                 maxCols = totalCols;
             }
+            List<List<AzquoCell>> sortedCells = new ArrayList<>(maxRows); // could be less due to blanked cells but I don't see a huge harm
             for (rowNo = 0; rowNo < maxRows; rowNo++) {
                 List<AzquoCell> rowCells = sourceData.get(sortedRows != null ? sortedRows.get(rowNo) : rowNo); // if a sort happened use the row number according to it
-                List<AzquoCell> newRow = new ArrayList<>();
+                List<AzquoCell> newRow;
                 if (sortedCols != null) {
+                    newRow = new ArrayList<>(maxCols);
                     for (int colNo = 0; colNo < maxCols; colNo++) {
                         newRow.add(rowCells.get(sortedCols.get(colNo)));
                     }
@@ -941,7 +958,7 @@ seaports;children   container;children
                 for (int rowNo = startRow; rowNo <= endRow; rowNo++) {
                     List<DataRegionHeading> rowHeadings = headingsForEachRow.get(rowNo);
                     if (rowNo % 1000 == 0) connection.addToUserLog(".", false);
-                    List<AzquoCell> returnRow = new ArrayList<>();
+                    List<AzquoCell> returnRow = new ArrayList<>(headingsForEachColumn.size());
                     int colNo = 0;
                     for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                         // values I need to build the CellUI
@@ -1022,7 +1039,7 @@ seaports;children   container;children
             , List<Name> contextNames, int rowNo, int colNo, Map<Name, Integer> totalSetSize, List<String> languages) throws Exception {
         String stringValue;
         double doubleValue = 0;
-        Set<DataRegionHeading> headingsForThisCell = new HashSet<>();
+        Set<DataRegionHeading> headingsForThisCell = new HashSet<>(rowHeadings.size());
         Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
         //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
@@ -1201,7 +1218,7 @@ seaports;children   container;children
 
     // new logic, derive the headings from the data, no need to resort to resorting etc.
     private List<List<DataRegionHeading>> getColumnHeadingsAsArray(List<List<AzquoCell>> cellArray) {
-        List<List<DataRegionHeading>> toReturn = new ArrayList<>();
+        List<List<DataRegionHeading>> toReturn = new ArrayList<>(cellArray.get(0).size());
         for (AzquoCell cell : cellArray.get(0)) {
             toReturn.add(cell.getColumnHeadings());
         }
@@ -1210,10 +1227,10 @@ seaports;children   container;children
 
     // new logic, derive the headings from the data, no need to resort to resorting etc.
     private List<List<DataRegionHeading>> getRowHeadingsAsArray(List<List<AzquoCell>> cellArray) {
-        List<List<DataRegionHeading>> toReturn = new ArrayList<>();
-        for (List<AzquoCell> cell : cellArray) {
-            if (!cell.isEmpty()) {
-                toReturn.add(cell.get(0).getRowHeadings());
+        List<List<DataRegionHeading>> toReturn = new ArrayList<>(cellArray.size()); // might not use all of it but I'm a little confused as to why the row would be empty?
+        for (List<AzquoCell> row : cellArray) {
+            if (!row.isEmpty()) { // this check . . think for some unusual situations
+                toReturn.add(row.get(0).getRowHeadings());
             }
         }
         return toReturn;
@@ -1410,7 +1427,7 @@ seaports;children   container;children
 
                     if (azquoCell != null) {
                         final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-                        final Set<DataRegionHeading> headingsForCell = new HashSet<>();
+                        final Set<DataRegionHeading> headingsForCell = new HashSet<>(azquoCell.getColumnHeadings().size() + azquoCell.getRowHeadings().size());
                         headingsForCell.addAll(azquoCell.getColumnHeadings());
                         headingsForCell.addAll(azquoCell.getRowHeadings());
                         // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
@@ -1434,7 +1451,7 @@ seaports;children   container;children
                         }
                         if (valuesForCell.getValues() != null) {
                             // this call to make the hash set seems rather unefficient
-                            Set<Name> cellNames = new HashSet<>(namesFromDataRegionHeadings(headingsForCell));
+                            Set<Name> cellNames = namesFromDataRegionHeadings(headingsForCell);
                             cellNames.addAll(contextNames);
                             if (valuesForCell.getValues().size() == 1) {
                                 final Value theValue = valuesForCell.getValues().get(0);
@@ -1478,16 +1495,24 @@ seaports;children   container;children
     // Four little utility functions added by Edd, required now headings are not names
 
     public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) {
-        List<DataRegionHeading> dataRegionHeadings = new ArrayList<>();
-        for (Name name : names) {
-            // will the new write permissions cause an overhead?
-            dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null));
+        List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
+        if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()){
+            // then check permissions
+            for (Name name : names) {
+                // will the new write permissions cause an overhead?
+                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null));
+            }
+        } else { // don't bother checking permissions, write permissions to true
+            for (Name name : names) {
+                dataRegionHeadings.add(new DataRegionHeading(name, true, function, null));
+            }
         }
         return dataRegionHeadings;
     }
 
     public Set<Name> namesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
-        Set<Name> names = new HashSet<>();
+        // ok some of the data region headings may be attribute, no real harm I don't think VS a whacking great set which would always be names
+        Set<Name> names = new HashSet<>(dataRegionHeadings.size());
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
             if (dataRegionHeading.getName() != null) {
                 names.add(dataRegionHeading.getName());
@@ -1497,7 +1522,7 @@ seaports;children   container;children
     }
 
     public Set<String> attributesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
-        Set<String> names = new HashSet<>();
+        Set<String> names = new HashSet<>(); // attributes won't ever be big as they're manually defined, leave this to default (16 size table internally?)
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
             if (dataRegionHeading.getAttribute() != null) {
                 names.add(dataRegionHeading.getAttribute().substring(1)); // at the mo I assume attributes begin with .
