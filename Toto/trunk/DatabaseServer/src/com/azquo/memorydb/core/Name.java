@@ -107,7 +107,7 @@ public final class Name extends AzquoMemoryDBEntity {
         }
 
         public Map<String, String> getAsMap(){
-            Map<String, String> attributesAsMap = new HashMap<>();
+            Map<String, String> attributesAsMap = new HashMap<>(attributeKeys.length);
             int count = 0;
             for (String key : attributeKeys) { // hmm, can still access and foreach on the internal array. Np I suppose!
                 attributesAsMap.put(key, attributeValues[count]);
@@ -121,7 +121,7 @@ public final class Name extends AzquoMemoryDBEntity {
     private NameAttributes nameAttributes;
 
     // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
-    // these 3 (values, parents, peerparents) are for quick lookup, must be modified appropriately e.g.add a peer add to that peer's peer parents
+    // these (values, parent) are for quick lookup, must be modified appropriately
     // to be clear, these are not used when persisting, they are derived from the name sets in values and the two below
     // Sets are expensive in terms of memory, will use arrays instead unless they get big (above threshold 512 at the mo) make a new array and switch on changing to make atomic and always wrap them unmodifiable on get
     // I'm not going to make these volatile as the ony time it really matters is on writes which are synchronized and I understand this deals with memory barriers
@@ -129,13 +129,9 @@ public final class Name extends AzquoMemoryDBEntity {
     private Value[] values;
     private Set<Name> parentsAsSet;
     private Name[] parents;
-    private Name[] peerParents;
-
     // we want thread safe != null test on changes but this should be done by synchronized
     private Set<Name> childrenAsSet;
     private Name[] children;
-    // how often is peers used?? - gonna make null by default
-    private Map<Name, Boolean> peers;
 
     // for the code to make new names
 
@@ -157,10 +153,8 @@ public final class Name extends AzquoMemoryDBEntity {
         values = new Value[0]; // Utrning these 3 lists to arrays, memory a priority
         parentsAsSet = null;
         parents = new Name[0];
-        peerParents = null;
         childrenAsSet = null;
         children = new Name[0];
-        peers = null; // keep overhead really low! I'm assuming this won't be used often - gets over the problem of linked hash map being expensive
         nameAttributes = new NameAttributes(); // attributes will nearly always be written over, this is just a placeholder
         getAzquoMemoryDB().addNameToDb(this);
     }
@@ -251,7 +245,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 if (!valuesList.contains(value)) { // it's this contains expense that means we should stop using arraylists over a certain size
                     // OK, here it may get interesting, what about size???
                     if (valuesList.size() >= ARRAYTHRESHOLD) { // we need to convert. copy the array to a new concurrent hashset then set it
-                        valuesAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>());// the way to get a thread safe set!
+                        valuesAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
                         valuesAsSet.addAll(valuesList); // add the existing ones
                         valuesAsSet.add(value);
                         //values = new ArrayList<Value>(); // to save memory, leaving commented as the saving probably isn't that much and I'm a little worried about concurrency.
@@ -363,7 +357,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 List<Name> parentsList = Arrays.asList(parents);
                 if (!parentsList.contains(name)) {
                     if (parentsList.size() >= ARRAYTHRESHOLD) {
-                        parentsAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
+                        parentsAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
                         parentsAsSet.addAll(parentsList);
                         parentsAsSet.add(name);
                         // parents  new arraylist?
@@ -384,28 +378,6 @@ public final class Name extends AzquoMemoryDBEntity {
             }
         }
     }
-
-    // ok for thread safety I need a few functions to manage peer parents. Just a plain sync should be fine for the mo
-    // since peerparents is private and only accesed in here synchronized it is safe to change the lists here rather than assign new ones
-
-    private synchronized void addToPeerParents(final Name name) {
-        if (peerParents == null) {
-            peerParents = new Name[1];
-            peerParents[0] = name;
-        } else {
-            List<Name> peerParentsList = Arrays.asList(peerParents);
-            if (!peerParentsList.contains(name)) {
-                peerParents = nameArrayAppend(peerParents, name);
-            }
-        }
-    }
-
-    private synchronized void removeFromPeerParents(final Name name) {
-        if (peerParents != null) {
-            peerParents = nameArrayRemoveIfExists(peerParents, name);
-        }
-    }
-
 
     // returns a collection, I think this is just iterated over to check stuff
     // todo - check use of this and then whether we use sets internally or not
@@ -506,19 +478,6 @@ public final class Name extends AzquoMemoryDBEntity {
         findAllChildrenPayAttentionToAdditiveCache = null;
     }
 
-    // no checks on persistence and parents
-
-    private synchronized void setChildrenNoChecks(LinkedHashSet<Name> children) {
-        if (childrenAsSet != null || children.size() > ARRAYTHRESHOLD) { // then overwrite the map . . I just noticed how this could be dangerous in terms of external references. Make a copy.
-            this.childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>()); // NOTE! now we're not using linked, position and ordering will be ignored for large sets of children!!
-            this.childrenAsSet.addAll(children);
-        } else {
-            Name[] newChildren = new Name[children.size()];
-            children.toArray(newChildren);
-            this.children = newChildren;
-        }
-    }
-
     public void addChildWillBePersisted(Name child) throws Exception {
         addChildWillBePersisted(child, 0);
     }
@@ -546,7 +505,7 @@ public final class Name extends AzquoMemoryDBEntity {
                     changed = true;
                     // like parents, hope the logic is sound
                     if (childrenList.size() >= ARRAYTHRESHOLD) { // we need to convert. copy the array to a new hashset then set it
-                        childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
+                        childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
                         childrenAsSet.addAll(childrenList);
                         childrenAsSet.add(child);
                         // children new arraylist?;
@@ -600,61 +559,8 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
-    public Map<Name, Boolean> getPeers() {
-        if (peers != null) {
-            return Collections.unmodifiableMap(peers);
-        }
-        Collection<Name> parents = findAllParents();
-        for (Name parent : parents) {
-            if (parent.peers != null) {
-                return Collections.unmodifiableMap(parent.peers);
-            }
-        }
-        return new HashMap<>();
-    }
-
     public Map<String, String> getAttributes() {
         return Collections.unmodifiableMap(nameAttributes.getAsMap());
-    }
-
-    public void setPeersWillBePersisted(LinkedHashMap<Name, Boolean> peers) throws Exception {
-        // synchronize on the block that affects this object not the whole function or we might have a deadlock (two names setting peers on each other!)
-        // I get the existing outside so I can reassign peers in the synchronized block then do other object stuff outside
-        Map<Name, Boolean> oldPeers = this.peers;
-        synchronized (this) {
-            //check if identical to existing
-            if (this.peers != null && this.getPeers().size() == peers.size()) { // not null check as it will be on init
-                boolean identical = true;
-                for (Name peer : this.getPeers().keySet()) {
-                    Boolean newAdditive = peers.get(peer);
-                    if (newAdditive == null || newAdditive != this.getPeers().get(peer)) {
-                        identical = false;
-                    }
-                }
-                if (identical) {
-                    return;
-                }
-            }
-            checkDatabaseForSet(peers.keySet());
-            for (Name peer : peers.keySet()) {
-                if (peer.equals(this)) {
-                    throw new Exception("error name cannot be a peer of itself " + this);
-                }
-            }
-            setNeedsPersisting();
-            this.peers = peers;
-        }
-
-        // now change the references to peer parents, just used for delete really.
-        if (oldPeers != null) { // added not null check as it will be on init
-            for (Name existingPeer : oldPeers.keySet()) {
-                existingPeer.removeFromPeerParents(this);
-            }
-        }
-        // add the adjusted back in back in to the peer parents of the peers
-        for (Name existingPeer : this.peers.keySet()) {
-            existingPeer.addToPeerParents(this);
-        }
     }
 
 /*    // Not entirely clear on usage here, basic thread safety should be ok I think
@@ -797,45 +703,23 @@ public final class Name extends AzquoMemoryDBEntity {
         return false;
     }*/
 
-/*  peers needs to be as values children etc, reassigned as a new LinkedHashMap in a synchronized block. Deal with the other objects out side of this block to avoid deadlocks
-            of course the state of this object and its external ones will not be atomic
-            To clarify - since peers is returned I either need to copy on set or get. I choose on set and make it unmodifiable
-            */
-
-
-    public void removeFromPeersWillBePersisted(Name name) throws Exception {
-        synchronized (this) {
-            if (peers != null) {
-                checkDatabaseMatches(name);// even if not needed throw the damn exception!
-                LinkedHashMap<Name, Boolean> newPeers = new LinkedHashMap<>(peers);
-                newPeers.remove(name);
-                peers = Collections.unmodifiableMap(newPeers);
-                setNeedsPersisting();
-            }
-        }
-        name.removeFromPeerParents(this);
-    }
-
-
     // for Jackson mapping, trying to attach to actual fields would be dangerous in terms of allowing unsafe access
-    // think important to use a linked hash map to preserve order.
     private static class JsonTransport {
         public int provenanceId;
         public boolean additive;
         public Map<String, String> attributes;
-        public LinkedHashMap<Integer, Boolean> peerIds;
-        public LinkedHashSet<Integer> childrenIds;
+        // I'm changing this to a list - the transport should preserve order in case that's required but it shouldn't be responsible for
+        // detecting duplicates (shouldn't be a set). If it actually did eliminate duplicates we've got bigger problems.
+        public List<Integer> childrenIds;
 
         @JsonCreator
         public JsonTransport(@JsonProperty("provenanceId") int provenanceId
                 , @JsonProperty("additive") boolean additive
                 , @JsonProperty("attributes") Map<String, String> attributes
-                , @JsonProperty("peerIds") LinkedHashMap<Integer, Boolean> peerIds
-                , @JsonProperty("childrenIds") LinkedHashSet<Integer> childrenIds) {
+                , @JsonProperty("childrenIds") List<Integer> childrenIds) {
             this.provenanceId = provenanceId;
             this.additive = additive;
             this.attributes = attributes;
-            this.peerIds = peerIds;
             this.childrenIds = childrenIds;
         }
     }
@@ -847,16 +731,13 @@ public final class Name extends AzquoMemoryDBEntity {
 
     @Override
     public String getAsJson() {
-        LinkedHashMap<Integer, Boolean> peerIds = new LinkedHashMap<>();
-        if (peers != null) {
-            for (Name peer : peers.keySet()) {
-                peerIds.put(peer.getId(), peers.get(peer));
-            }
-        }
-        // yes could probably use list but lets match collection types, that is to say unique members in the transport though this may have performance implications
-        LinkedHashSet<Integer> childrenIds = getChildren().stream().map(Name::getId).collect(Collectors.toCollection(LinkedHashSet::new));
+        // Going against my previous comment we're vonverting to lists - transport should be "dumb" I think. Plus overhead.
+        Collection<Name> children = getChildren();
+        // the only thing that bothers me slightly about this is initial list size. Don't want unnecessary copying (resizing . . .)
+        // todo - test it, only way to be sure.
+        List<Integer> childrenIds = children.stream().map(Name::getId).collect(Collectors.toList());
         try {
-            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(), additive, getAttributes(), peerIds, childrenIds));
+            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(), additive, getAttributes(), childrenIds));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -893,11 +774,14 @@ public final class Name extends AzquoMemoryDBEntity {
     // note : this function is absolutely hammered while "linking" so optimiseations here are helpful
 
     protected void populateFromJson() throws Exception {
-        if (getAzquoMemoryDB().getNeedsLoading() || jsonCache != null) { // only acceptable if we have json and it's during the loading process
+        if (getAzquoMemoryDB().getNeedsLoading() && jsonCache != null) { // only acceptable if we have json and it's during the loading process
             try {
-                // if I define this inside the synchronized block then it won't be visible outside, the add to parents will act on the sometimes empty choldren class variable
-                // need to think clearly about what needs synchronization. Given how it is used need it be synchronized at all? Does it matter that much to performance?
-                LinkedHashSet<Name> children = new LinkedHashSet<>();
+                /* Must make sure I set initial collection sizes when loading, resizing is not cheap generally.
+                I had children outside here a reference to use to set the parents but I now see no reason not to use getChildren outside . . . the DB should not be being modified while loading surely?
+                could have a reference to the array and set right after loading if paranoid
+                need to think clearly about what needs synchronization. Given how it is used need it be synchronized at all? Does it matter that much to performance?
+                I think the principle is that anything that modifies the state of the object is synchronized. Not a bad one.
+                */
                 synchronized (this) {
                     JsonTransport transport = jacksonMapper.readValue(jsonCache, JsonTransport.class);
                     jsonCache = null;// free the memory
@@ -912,25 +796,31 @@ public final class Name extends AzquoMemoryDBEntity {
                         attributeValues.add(transport.attributes.get(key).intern());
                     }
                     nameAttributes = new NameAttributes(attributeKeys, attributeValues);
-                    LinkedHashMap<Integer, Boolean> peerIds = transport.peerIds;
-                    if (!peerIds.isEmpty()) {
-                        peers = new LinkedHashMap<>();
-                    }
-                    for (Integer peerId : peerIds.keySet()) {
-                        peers.put(getAzquoMemoryDB().getNameById(peerId), peerIds.get(peerId));
-                    }
-                    LinkedHashSet<Integer> childrenIds = transport.childrenIds;
-                    for (Integer childId : childrenIds) {
-                        children.add(getAzquoMemoryDB().getNameById(childId));
-                    }
 
-                    // what we're doign here is the same as setchildrenwillbepersisted but without checks as during loading conditions may not be met
-                    // now a low level function that just checks the size for where to put the data
-                    setChildrenNoChecks(children);
+                    // I had a function here I passed a collection of names to to set the children, I'm putting that inline now
+                    // no need for the intermediate collection - notable if dealing with millions
+
+                    if (transport.childrenIds.size() > ARRAYTHRESHOLD) {
+                        // set the size! Could be quite significant for loading times.
+                        this.childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(transport.childrenIds.size())); // NOTE! now we're not using linked, position and ordering will be ignored for large sets of children!!
+                        // hesitant to use collect call, seems a way to make another collection. I want to avoid this.
+                        for (Integer childId : transport.childrenIds) {
+                            this.childrenAsSet.add(getAzquoMemoryDB().getNameById(childId));
+                        }
+                    } else {
+                        Name[] newChildren = new Name[transport.childrenIds.size()];
+                        int index = 0;
+                        for (Integer childId : transport.childrenIds) {
+                            newChildren[index] = getAzquoMemoryDB().getNameById(childId);
+                            index++;
+                        }
+                        this.children = newChildren;
+                    }
                 }
-                // need to sort out the parents - I deliberately excluded this from synchronizeation or one could theroetically hit a deadlock
-                // addToParents can be synchronized on the child
-                for (Name newChild : children) {
+                // should parents be stored as ids? Or maybe the size would help, could init the map or array effectively
+                // need to sort out the parents - I deliberately excluded this from synchronisation or one could theoretically hit a deadlock
+                // addToParents can be synchronized on the child.
+                for (Name newChild : getChildren()) { // used to use a list set in the synchronized block. Not quite sure why now . . .
                     newChild.addToParents(this);
                 }
             } catch (IOException e) {
@@ -946,14 +836,11 @@ public final class Name extends AzquoMemoryDBEntity {
     public void delete() throws Exception {
         Collection<Value> values;
         Collection<Name> parents;
-        List<Name> peerParents;
 
         // ok we want a thread safe snapshot really of things that are synchronized on other objects
-        // peer parents is a bit different in that it can be null and is modified internally so to have a safe iterator I need a copy
         synchronized (this) {
             values = getValues();
             parents = getParents();
-            peerParents = this.peerParents == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(this.peerParents));
             // the basics are done here in the synchronized block
             getAzquoMemoryDB().removeNameFromDb(this);
             needsDeleting = true;
@@ -973,10 +860,6 @@ public final class Name extends AzquoMemoryDBEntity {
         // remove from parents
         for (Name parent : parents) {
             parent.removeFromChildrenWillBePersisted(this);
-        }
-        // peers - new lookup to use
-        for (Name peerParent : peerParents) {
-            peerParent.removeFromPeersWillBePersisted(this);
         }
     }
 }
