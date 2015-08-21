@@ -15,6 +15,7 @@ import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -57,7 +58,7 @@ public final class ValueService {
         return new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, text, null);
     }
 
-    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<>();
+    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
 
  /*   private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd) {
         long current = 0;
