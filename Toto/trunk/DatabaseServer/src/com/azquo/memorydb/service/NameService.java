@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
 //dataimport java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -101,7 +102,7 @@ public final class NameService {
     // we replace the names with markers for parsing. Then we need to resolve them later, here is where the exception will be thrown. Should be NameNotFoundException?
 
     public List<Name> getNameListFromStringList(List<String> nameStrings, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames) throws Exception {
-        List<Name> referencedNames = new ArrayList<>();
+        List<Name> referencedNames = new ArrayList<>(nameStrings.size());
         for (String nameString : nameStrings) {
             Name toAdd = findByName(azquoMemoryDBConnection, nameString, attributeNames);
             if (toAdd == null) {
@@ -292,7 +293,8 @@ public final class NameService {
         return findOrCreateNameInParent(azquoMemoryDBConnection, name, newParent, local, null);
     }
 
-    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new HashMap<>();
+    // um I think that should be concurrent
+    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
 
     private long addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long marker) {
         long now = System.currentTimeMillis();
@@ -303,7 +305,7 @@ public final class NameService {
                 current = timeTrack.get(azquoMemoryDBConnection).get(trackName);
             }
         } else {
-            timeTrack.put(azquoMemoryDBConnection, new HashMap<>());
+            timeTrack.put(azquoMemoryDBConnection, new ConcurrentHashMap<>());
         }
         timeTrack.get(azquoMemoryDBConnection).put(trackName, current + toAdd);
         return now;
@@ -376,17 +378,7 @@ public final class NameService {
             }
             newName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, storeName); // and set the default regardless
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent6", marker);
-            //if the parent already has peers, provisionally set the child peers to be the same.
             if (parent != null) {
-                Map<Name, Boolean> newPeers = parent.getPeers();
-                if (newPeers != null && !newPeers.isEmpty()) {
-                    LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<>();
-                    for (Name peer : newPeers.keySet()) {
-                        peers2.put(peer, parent.getPeers().get(peer));
-
-                    }
-                    newName.setPeersWillBePersisted(peers2);
-                }
                 // and add the new name to the parent of course :)
                 parent.addChildWillBePersisted(newName);
             }
@@ -790,7 +782,7 @@ public final class NameService {
     }
 
     public boolean isAllowed(Name name, List<Set<Name>> names) {
-        if (name == null || names == null) {
+        if (name == null || names == null || names.isEmpty()) { // empty the same as null
             return true;
         }
          /*
