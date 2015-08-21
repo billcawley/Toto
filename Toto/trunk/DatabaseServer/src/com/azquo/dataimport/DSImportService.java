@@ -84,7 +84,9 @@ public class DSImportService {
         String heading = null;
         // the Azquo Name that might be set on the heading, certainly used if there are peers but otherwise may not be set if the heading is referenced by other headings
         Name name = null;
-        // parent of is an internal reference - to otehr headings. Child of and remove from refer to names in the database. Maybe make this less ambiguous.
+        // this class used to use the now removed peers against the name object, in it's absence just put a set here.
+        Set<Name> peerNames = new HashSet<>(); // empty is fine
+        // parent of is an internal reference - to other headings. Child of and remove from refer to names in the database. Maybe make this less ambiguous.
         String parentOf = null, childOfString = null, removeFromString = null;
         /* the index of the heading that an attribute refers to so if the heading is Customer.Address1 then this is the index of customer.
         Seems only to be used with attribute, could maybe have a better name? Also could just be a reference to teh ehading itself?*/
@@ -129,6 +131,7 @@ public class DSImportService {
         final int column;
         final String heading;
         final Name name;
+        final Set<Name> peerNames;
         final String parentOf, childOfString, removeFromString;
         final int identityHeading;
         final int childHeading;
@@ -150,6 +153,7 @@ public class DSImportService {
             this.column = mutableImportHeading.column;
             this.heading = mutableImportHeading.heading;
             this.name = mutableImportHeading.name;
+            this.peerNames = mutableImportHeading.peerNames;
             this.parentOf = mutableImportHeading.parentOf;
             this.childOfString = mutableImportHeading.childOfString;
             this.removeFromString = mutableImportHeading.removeFromString;
@@ -331,7 +335,7 @@ public class DSImportService {
                     final StringTokenizer st = new StringTokenizer(peersString, ",");
                     //final List<String> peersToAdd = new ArrayList<String>();
                     String notFoundError = "";
-                    final LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<>(st.countTokens());
+                    final Set<Name> peers = new HashSet<>(st.countTokens());
                     while (st.hasMoreTokens()) {
                         String peerName = st.nextToken().trim();
                         if (peerName.indexOf(Name.QUOTE) == 0) {
@@ -345,10 +349,10 @@ public class DSImportService {
                                 notFoundError += (",`" + peerName + "`");
                             }
                         }
-                        peers.put(peer, true);
+                        peers.add(peer);
                     }
                     if (notFoundError.isEmpty()) {
-                        heading.name.setPeersWillBePersisted(peers);
+                        heading.peerNames = peers;
                     } else {
                         throw new Exception("name not found:`" + notFoundError + "`");
                     }
@@ -785,7 +789,7 @@ public class DSImportService {
              */
             if (cell.immutableImportHeading.contextItem) {
                 contextNames.add(cell.immutableImportHeading.name);
-                if (cell.immutableImportHeading.name.getPeers().size() > 0) {
+                if (cell.immutableImportHeading.peerNames.size() > 0) {
                     contextPeersItem = cell; // so skip this heading but now contextPeersItem is set? I assume one name with peers allowed. Or the most recent one.
                 }
             } else {
@@ -795,7 +799,7 @@ public class DSImportService {
                         final Set<Name> namesForValue = new HashSet<>(); // the names we're going to look for for this value
                         namesForValue.add(contextPeersItem.immutableImportHeading.name);// ok the "defining" name with the peers. Are we only using peers on importing?
                         boolean foundAll = true;
-                        for (Name peer : contextPeersItem.immutableImportHeading.name.getPeers().keySet()) { // ok so a value with peers
+                        for (Name peer : contextPeersItem.immutableImportHeading.peerNames) { // ok so a value with peers
                             //is this peer in the contexts?
                             Name possiblePeer = null;
                             for (Name contextPeer : contextNames) {
@@ -910,8 +914,8 @@ public class DSImportService {
         for (MutableImportHeading mutableImportHeading : headings) {
             if (mutableImportHeading.heading != null) {
                 // ok find the indexes of peers and get shirty if you can't find them
-                if (mutableImportHeading.name != null && mutableImportHeading.name.getPeers().size() > 0 && !mutableImportHeading.contextItem) {
-                    for (Name peer : mutableImportHeading.name.getPeers().keySet()) {
+                if (mutableImportHeading.name != null && mutableImportHeading.peerNames.size() > 0 && !mutableImportHeading.contextItem) {
+                    for (Name peer : mutableImportHeading.peerNames) {
                         //three possibilities to find the peer:
                         int peerHeading = findMutableHeading(peer.getDefaultDisplayName(), headings);
                         if (peerHeading == -1) {
