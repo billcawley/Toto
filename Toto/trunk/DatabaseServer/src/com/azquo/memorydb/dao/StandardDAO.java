@@ -156,10 +156,10 @@ WHERE id IN (1,2,3)
     }
 
     public void persistJsonRecords(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws Exception {
-        // currently only the inserter is multithreaded, adding the others shoudl not be difficult
+        // currently only the inserter is multithreaded, adding the others should not be difficult - todo, perhaps for update and possible list optimisation there?
         ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDB.getLoadingThreads());
         List<JsonRecordTransport> toDelete = new ArrayList<>();
-        List<JsonRecordTransport> toInsert = new ArrayList<>();
+        List<JsonRecordTransport> toInsert = new ArrayList<>(UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
         List<JsonRecordTransport> toUpdate = new ArrayList<>();
         for (JsonRecordTransport record : records) {
             if (record.state == JsonRecordTransport.State.DELETE) {
@@ -173,7 +173,7 @@ WHERE id IN (1,2,3)
                 toInsert.add(record);
                 if (toInsert.size() == UPDATELIMIT) {
                     executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert));
-                    toInsert = new ArrayList<>();
+                    toInsert = new ArrayList<>(UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
                 }
             }
             if (record.state == JsonRecordTransport.State.UPDATE) {
