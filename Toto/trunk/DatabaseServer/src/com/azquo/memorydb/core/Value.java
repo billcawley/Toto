@@ -52,8 +52,8 @@ public final class Value extends AzquoMemoryDBEntity {
             this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
             // tested, .intern here saves memory
             this.text = transport.text.intern();
-            this.deletedInfo = transport.deletedInfo;
-            Set<Name> newNames = new HashSet<>();
+            this.deletedInfo =  transport.deletedInfo != null ? transport.deletedInfo.intern() : null; // don't intern a null
+            Set<Name> newNames = new HashSet<>(transport.nameIds.size());
             //System.out.println("name ids" + transport.nameIds);
             for (Integer nameId : transport.nameIds) {
                 Name name = getAzquoMemoryDB().getNameById(nameId);
