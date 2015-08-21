@@ -502,11 +502,6 @@ public class DSDataLoadService {
         Name allOrdersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All orders", ordersName, false);
         Name allCurrenciesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All currencies", ordersName, false);
         Name allHours = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All hours, date", null, false);
-        final LinkedHashMap<Name, Boolean> peers = new LinkedHashMap<>(2);
-        peers.put(allOrdersName, true);
-        priceName.setPeersWillBePersisted(peers);
-        qtyName.setPeersWillBePersisted(peers);
-        shippingName.setPeersWillBePersisted(peers);
         languages.clear();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
 
