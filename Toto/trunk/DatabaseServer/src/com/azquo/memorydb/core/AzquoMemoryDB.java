@@ -91,6 +91,7 @@ public final class AzquoMemoryDB {
 /*        nameByIdMap = HashIntObjMaps.newMutableMap();
         valueByIdMap = HashIntObjMaps.newMutableMap();
         provenanceByIdMap = HashIntObjMaps.newMutableMap();*/
+        // todo - get id counts from the tables and init thid maps to a proper size?
         nameByIdMap = new ConcurrentHashMap<>();
         valueByIdMap = new ConcurrentHashMap<>();
         provenanceByIdMap = new ConcurrentHashMap<>();
@@ -241,7 +242,7 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
-                logInSessionLogAndSystem("Provenance loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
+                logInSessionLogAndSystem("Provenance loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
                 marker = System.currentTimeMillis();
                 executor = Executors.newFixedThreadPool(loadingThreads);
                 from = 0;
@@ -254,7 +255,7 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
-                logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
+                logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
                 marker = System.currentTimeMillis();
                 executor = Executors.newFixedThreadPool(loadingThreads);
                 from = 0;
@@ -267,7 +268,7 @@ public final class AzquoMemoryDB {
                 if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
                     throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
                 }
-                logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
+                logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
                 marker = System.currentTimeMillis();
                 // wait until all are loaded before linking
                 System.out.println(provenaceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded in " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
@@ -281,7 +282,7 @@ public final class AzquoMemoryDB {
                     System.out.println("Used Memory after init names :"
                             + (runtime.totalMemory() - runtime.freeMemory()) / mb);
                 }
-                logInSessionLogAndSystem("Names init/linked in " + (System.currentTimeMillis() - marker) / 1000 + " second(s)");
+                logInSessionLogAndSystem("Names init/linked in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
             } catch (Exception e) {
                 logger.error("could not load data for " + getMySQLName() + "!", e);
             }
@@ -312,12 +313,12 @@ public final class AzquoMemoryDB {
         // map of sets to persist means that should we add another object type then this code should not need to change
         for (String tableToStoreIn : entitiesToPersist.keySet()) { // could go back to an enum of persist table names? Only implemented like this due to the old app tables
             Set<AzquoMemoryDBEntity> entities = entitiesToPersist.get(tableToStoreIn);
-            if (!entitiesToPersist.isEmpty()) {
+            if (!entities.isEmpty()) {
                 System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
-                List<JsonRecordTransport> recordsToStore = new ArrayList<>();
+                List<JsonRecordTransport> recordsToStore = new ArrayList<>(entities.size()); // it's now bothering me a fair bit that I didn't used to initialise such lists!
                 // todo : write locking the db probably should start here
                 // multi thread this chunk? It can slow things down a little . . .
-                for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it.
+                for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it. Copy perhaps expensive but consistency is important
                     JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
                     if (entity.getNeedsDeleting()) {
                         state = JsonRecordTransport.State.DELETE;
@@ -700,6 +701,7 @@ public final class AzquoMemoryDB {
 
     // trying for new more simplified persistence - make functions not linked to classes
     // maps will be set up in the constructor. Think about any concurrency issues here???
+    // throw exception if loading?
 
     protected void setEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
         if (!needsLoading && entitiesToPersist.size() > 0) {
