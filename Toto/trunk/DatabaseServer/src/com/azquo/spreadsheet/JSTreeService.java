@@ -102,7 +102,7 @@ public class JSTreeService {
         // trying for the tree id here, hope that will work
         Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(databaseAccessToken.toString()); // todo, sort this hack later, it's called in
         if (lookup == null) {
-            lookup = new HashMap<>();
+            lookup = new ConcurrentHashMap<>();
             lookupMap.put(databaseAccessToken.toString(), lookup);
         }
         if (json != null && json.length() > 0) {
@@ -256,31 +256,6 @@ public class JSTreeService {
                                 }
                             }
 
-                            // ok need to to see if what was passed was different
-
-                            if (peers.keySet().size() != name.getPeers().keySet().size()) {
-                                editingPeers = true;
-                            } else { // same size, check the elements . . .
-                                for (Name peer : name.getPeers().keySet()) {
-                                    if (peers.get(peer) == null) { // mismatch, old peers has something the new one does not
-                                        editingPeers = true;
-                                    }
-                                }
-                            }
-
-                            if (editingPeers) {
-                                if (name.getParents().size() == 0) { // top level, we can edit
-                                    name.setPeersWillBePersisted(peers);
-                                } else {
-                                    if (name.getPeers().size() == 0) { // no peers on the aprent
-                                        return "error: cannot edit peers, this is not a top level name and there is no peer set for  this name or it's parents, name id " + nameJsonRequest.id;
-                                    }
-                                    if (name.getValues().size() > 0) {
-                                        return "error: cannot edit peers, this is not a top level name and there is data assigned to this name " + nameJsonRequest.id;
-                                    }
-                                    name.setPeersWillBePersisted(peers);
-                                }
-                            }
                         }
                     }
                 }
@@ -321,13 +296,6 @@ public class JSTreeService {
     private String getChildStructureFormattedForOutput(final Name name) throws JsonProcessingException {
         //puts the peer list as an attribute  - CURRENTLY MARKING SINGULAR PEERS WITH A '--'
         Map<String, Object> attributesForJackson = new HashMap<>();
-        List<String> peers = new ArrayList<>();
-        if (name.getPeers().size() > 0) {
-            for (Name peer : name.getPeers().keySet()) {
-                peers.add(peer.getDefaultDisplayName() + (name.getPeers().get(peer) ? "" : "--")); // add the -- if not additive
-            }
-            attributesForJackson.put("peers", peers);
-        }
         attributesForJackson.putAll(name.getAttributes());
         JsonChildStructure childStructureForJackson = new JsonChildStructure(name.getDefaultDisplayName()
                 , name.getId(), getTotalValues(name), name.getValues().size(), attributesForJackson, name.getChildren().size());
