@@ -17,7 +17,6 @@ import java.util.*;
  * Currently fairly simple login functions
  */
 
-
 public class LoginService {
 
     private static final Logger logger = Logger.getLogger(LoginService.class);
@@ -97,7 +96,6 @@ public class LoginService {
         // I zapped something to do with anonymising here, don't know if it's still relevant
         return loggedInUser;
     }
-
 
     public Map<String, Database> foundDatabases(User user) {
         final List<Permission> userAcceses = permissionDao.findForUserId(user.getId());
