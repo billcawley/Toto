@@ -129,6 +129,7 @@ public class MagentoController {
                     if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1")) { // if it's from us don't email us :)
                         String title = "Magento file upload " + logon + " from " + request.getRemoteAddr() + " elapsed time " + elapsed + " millisec";
                         azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
+                        azquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
                         azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
                         azquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                     }

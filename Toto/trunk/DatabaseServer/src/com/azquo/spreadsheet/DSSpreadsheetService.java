@@ -239,8 +239,6 @@ seaports;children   container;children
     Row/column reference below is based off the above example - in toReturn the index of the outside list is y and the the inside list x
 
     given what we now know about arraylists can this be optimized? Very probably. TODO.
-    todo Also other collection size initialisation on the database server - I've done a pass on arraylist, now need hash sets, hash mapt and concurrent hash maps I think
-
     */
 
     private <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
@@ -263,6 +261,40 @@ seaports;children   container;children
             }
         }
         return toReturn;
+
+        /* second attempt, want it all in one function, benchmarking makes this slow, leave here commented for the moment
+        // It would be nice to just return the list if there's onlly one of them but I can't do that I don't think, it would be one long row.
+        // stop null pointers and calculate the size (what I'm after to use a single arraylist of the right size)
+        int returnSize = 1;
+        for (List<T> permutationDimension : listsToPermute) {
+            if (permutationDimension == null) {
+                permutationDimension = new ArrayList<>();
+                permutationDimension.add(null);
+            }
+            returnSize *= permutationDimension.size();
+        }
+        List<List<T>> toReturn2 = new ArrayList<>(returnSize);
+        boolean moreData = true;
+        int[] indexes = new int[listsToPermute.size()]; // bunch of zeroes
+        while (moreData){
+            List<T> row = new ArrayList<>(listsToPermute.size());
+            for (int i = 0; i < indexes.length; i++){
+                row.add(listsToPermute.get(i).get(indexes[i]));
+            }
+            toReturn2.add(row);
+                for (int i = indexes.length - 1; i >=0; i--){ // and go back increneting as they "roll over"
+                    indexes[i]++;
+                    if (indexes[i] >= listsToPermute.get(i).size()){ // it needs to roll over
+                        indexes[i] = 0;
+                        if (i == 0){ // we tried to roll over on the first list, should be all done!
+                            moreData = false;  // stop the big loop.
+                        }
+                    } else { // don't carry on back
+                        break;
+                    }
+                }
+        }*/
+
     }
 
     /* so say we already have
@@ -602,7 +634,7 @@ seaports;children   container;children
                 displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol()));
             }
         }
-
+        // this is single threaded as I assume not much data should be returned. Need to think about this.
         return new CellsAndHeadingsForDisplay(convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), databaseAccessToken.getLanguages())
                 , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource);
     }
