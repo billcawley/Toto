@@ -290,8 +290,9 @@ public final class ImportService {
     }
 
     // todo - directory location should be the database code!
+    //
 
-    private void uploadReport(LoggedInUser loggedInUser, AzquoBook azquoBook, String sourceName,String fileName, String reportName, String reportType) throws Exception {
+    private void uploadReport(LoggedInUser loggedInUser, String sourceName,String fileName, String reportName, String reportType) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = 0;
         String pathName = reportType;
@@ -299,20 +300,16 @@ public final class ImportService {
             databaseId = loggedInUser.getDatabase().getId();
             pathName = loggedInUser.getDatabase().getMySQLName();
         }
-        int renderer = OnlineReport.AZQUO_BOOK;
-        if (azquoBook.getRangeData("az_ZKSheet")!=null){
-            renderer = OnlineReport.ZK_AZQUO_BOOK;
-        }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         if (or == null) {
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName,"","", "", fileName, "", "", renderer,  true); // default to old for the moment
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName,"","", "", fileName, "", "", 1,  true); // default to old for the moment
         } else {
             or.setActive(false);
             onlineReportDAO.store(or);
         }
         or.setDateCreated(LocalDateTime.now());
         or.setId(0);
-        or.setRenderer(renderer);
+        or.setRenderer(1);
         or.setActive(true);
         String fullPath = spreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
         File file = new File(fullPath);
@@ -334,7 +331,7 @@ public final class ImportService {
             if (useType) {
                 reportType = loggedInUser.getDatabaseType();
             }
-            uploadReport(loggedInUser, azquoBook, tempName, fileName, reportName, reportType);
+            uploadReport(loggedInUser, tempName, fileName, reportName, reportType);
             return;
         }
         if (loggedInUser.getDatabase() == null) {
