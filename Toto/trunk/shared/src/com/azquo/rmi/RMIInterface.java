@@ -57,4 +57,6 @@ public interface RMIInterface extends Remote {
     void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws RemoteException;
 
     String getSessionLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
+
+    void clearSessionLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 }

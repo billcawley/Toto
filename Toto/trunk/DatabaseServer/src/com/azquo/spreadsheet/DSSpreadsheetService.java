@@ -616,6 +616,13 @@ seaports;children   container;children
         return toReturn;
     }
 
+    // should be called before each report request
+
+    public void clearLog(DatabaseAccessToken databaseAccessToken) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+        azquoMemoryDBConnection.getUserLog().setLength(0); // clear I guess?
+    }
+
     // function that can be called by the front end to deliver the data and headings
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource

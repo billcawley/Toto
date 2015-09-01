@@ -44,6 +44,7 @@ public class ZKAzquoBookUtils {
         boolean showSave = false;
         //book.getInternalBook().getAttribute(ZKAzquoBookProvider.BOOK_PATH);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+        spreadsheetService.clearSessionLog(loggedInUser.getDataAccessToken());
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
 
         Map<String, String> userChoices = new HashMap<>();
@@ -260,7 +261,6 @@ public class ZKAzquoBookUtils {
                         }
                     }
                 }
-
             }
         }
     }

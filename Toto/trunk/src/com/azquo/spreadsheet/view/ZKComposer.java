@@ -84,7 +84,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         provenancePopup.setDraggable("true");
         provenancePopup.setDroppable("true");
         provenancePopup.setStyle("background:#ffffcc");
-         item1.setPopup(provenancePopup); // I think that will automatically work??
+        item1.setPopup(provenancePopup); // I think that will automatically work??
 
 
         Popup instructionsPopup = new Popup();
@@ -157,7 +157,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 List<String> changedChoice = new ArrayList<>();
                 changedChoice.add(choice);
                 // hopefully self explanatory :)
-                zkAzquoBookUtils.blankDependantChoices(loggedInUser,changedChoice,event.getSheet());
+                zkAzquoBookUtils.blankDependantChoices(loggedInUser, changedChoice, event.getSheet());
                 reload = true;
             }
             // todo, add row heading later if required
@@ -229,39 +229,39 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (row != event.getLastRow() || col != event.getLastColumn()) { // I believe we're only interested in single cells changing
             return;
         }
-        CellData cellData = Ranges.range(event.getSheet(),row, col).getCellData();
-        if (cellData == null){
-              return;
+        CellData cellData = Ranges.range(event.getSheet(), row, col).getCellData();
+        if (cellData == null) {
+            return;
         }
         String chosen;
         boolean isDouble = false;
         double doubleValue = 0.0;
         try {
-             chosen = cellData.getStringValue();
-        }catch(Exception e){
-            try{
+            chosen = cellData.getStringValue();
+        } catch (Exception e) {
+            try {
 
                 doubleValue = cellData.getDoubleValue();
                 isDouble = true;
                 chosen = doubleValue + "";
 
-            }catch(Exception e2){
-                chosen="";
+            } catch (Exception e2) {
+                chosen = "";
             }
-         }
-        String dataFormat = Ranges.range(event.getSheet(),row, col).getCellStyle().getDataFormat();
-        if (dataFormat.toLowerCase().contains("mm")){
+        }
+        String dataFormat = Ranges.range(event.getSheet(), row, col).getCellStyle().getDataFormat();
+        if (dataFormat.toLowerCase().contains("mm")) {
 
             //it's a date
             isDouble = false;
             chosen = cellData.getFormatText();
-         }
-          System.out.println("after cell change : " + row + " col " + col + " chosen");
+        }
+        System.out.println("after cell change : " + row + " col " + col + " chosen");
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
         List<SName> names = getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
         if (names == null) return;
-        for (SName name:names)        { // regions may overlap - update all!
+        for (SName name : names) { // regions may overlap - update all!
             LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
             String region = name.getName().substring("az_DataRegion".length());
             final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
@@ -302,7 +302,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
         // roght now a right click gets provenance ready, dunno if I need to do this
         List<SName> names = getNamedDataRegionForRowAndColumnSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
-        for (SName name:names) {
+        for (SName name : names) {
             if (ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_rowheadings" + name.getName().substring(13)) != null) {
 
                 Component popupChild = provenancePopup.getFirstChild();
@@ -434,22 +434,22 @@ public class ZKComposer extends SelectorComposer<Component> {
     private void showProvenance(String provline) {
         final Book book = myzss.getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        String reportName = spreadsheetService.setChoices(loggedInUser,provline);
+        String reportName = spreadsheetService.setChoices(loggedInUser, provline);
         OnlineReport or = null;
-        if (reportName !=null) {
-        Session session = Sessions.getCurrent();
-        int databaseId = loggedInUser.getDatabase().getId();
-        ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
-        onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
+        if (reportName != null) {
+            Session session = Sessions.getCurrent();
+            int databaseId = loggedInUser.getDatabase().getId();
+            ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
+            onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
             or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
-        if (or == null) {
-            or = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
-        }
-        }else{
+            if (or == null) {
+                or = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
+            }
+        } else {
             reportName = "unspecified";
         }
         if (or != null) {
-            Clients.evalJavaScript("window.open(\"/api/Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName()+ "\")");
+            Clients.evalJavaScript("window.open(\"/api/Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + "\")");
 
         } else {
             Clients.evalJavaScript("alert(\"the report '" + reportName + "` is no longer available\")");
@@ -482,7 +482,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
                     && col >= name.getRefersToCellRegion().getColumn() && col <= name.getRefersToCellRegion().getLastColumn()) {
                 //check that there are some row headings
-               found.add(name);
+                found.add(name);
 
             }
         }
@@ -506,8 +506,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (treeNode.getName() != null) {
             stringBuilder.append(treeNode.getName());
             String value = treeNode.getValue();
-            if (value!= null) {
-            stringBuilder.append("\t");
+            if (value != null) {
+                stringBuilder.append("\t");
 
                 stringBuilder.append(treeNode.getValue());
             }
