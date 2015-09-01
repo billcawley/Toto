@@ -28,11 +28,18 @@ public class SpreadsheetStatusController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "action", required = false) String action, HttpServletRequest request) throws Exception {
-        LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-        // todo - limit the maount returned?
-        if (loggedInUser != null) {
-            return spreadsheetService.getSessionLog(loggedInUser.getDataAccessToken()).replace("\n","<br>"); // note - I am deliberately not doing <br/>, it seems javascript messes with it and then I can't detect changes
+    public String handleRequest(@RequestParam(value = "action", required = false) String action,@RequestParam(value = "reportid", required = false) String reportid, HttpServletRequest request) throws Exception {
+        if ("sheetReady".equals(action) && reportid != null){
+            if (request.getSession().getAttribute(reportid) != null){
+                return "true";
+            }
+        }
+        if ("log".equals(action)){
+            LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+            // todo - limit the maount returned?
+            if (loggedInUser != null) {
+                return spreadsheetService.getSessionLog(loggedInUser.getDataAccessToken()).replace("\n","<br>"); // note - I am deliberately not doing <br/>, it seems javascript messes with it and then I can't detect changes
+            }
         }
         return "session lost";
     }

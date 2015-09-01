@@ -355,8 +355,7 @@ public class ZKAzquoBookUtils {
                             row++;
                         }
                     }
-
-                    //← → ↑ ↓ ↔ ↕// ah I can just paste it here, thanks IntelliJ :)
+                    //← → ↑ ↓ ↔ ↕ ah I can just paste it here, thanks IntelliJ :)
                     if (displayColumnHeadings != null) {
                         row = displayColumnHeadings.getRow();
                         for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
@@ -412,8 +411,6 @@ public class ZKAzquoBookUtils {
                                     SCell cell = sheet.getInternalSheet().getCell(row, col);
                                     // logic I didn't initially implement : don't overwrite if there's a formulae in there
                                     boolean hasValue = false;
-
-
                                     if (cell.getType() != SCell.CellType.FORMULA) {
                                         if (cell.getCellStyle().getDataFormat().toLowerCase().contains("mm")){//allow users to format their own dates.  All dates on file are yyyy-MM-dd
                                             try {

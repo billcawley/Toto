@@ -142,7 +142,7 @@
     response.setHeader("Pragma", "no-cache");
     response.setHeader("Cache-Control", "no-store, no-cache");
 %>
-<body onload="postAjax('load');">
+<body>
 
 <script type="text/javascript">
 
@@ -223,7 +223,7 @@ var skipMarker = 0;
     // how to stop this hammering? I reckon add a second every time between checks if the data hasn't changed.
 function updateStatus(){
     if (window.skipMarker <= 0){
-        jq.post("/api/SpreadsheetStatus", function(data){
+        jq.post("/api/SpreadsheetStatus?action=log", function(data){
             var objDiv = document.getElementById("serverStatus");
             if (objDiv.innerHTML != data){ // it was updated
                 objDiv.innerHTML = data;

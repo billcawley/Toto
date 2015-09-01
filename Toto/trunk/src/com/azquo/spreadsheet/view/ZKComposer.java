@@ -10,10 +10,9 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
-import org.zkoss.zk.ui.Component;
-import org.zkoss.zk.ui.Session;
-import org.zkoss.zk.ui.Sessions;
+import org.zkoss.zk.ui.*;
 import org.zkoss.zk.ui.event.Event;
+import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
@@ -32,6 +31,7 @@ import org.zkoss.zul.*;
 import com.azquo.memorydb.TreeNode;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -124,8 +124,6 @@ public class ZKComposer extends SelectorComposer<Component> {
 
         myzss.getFirstChild().appendChild(button);*/
 //        myzss.getPage().getFirstRoot().appendChild(editPopup);
-        System.out.println("init myzss : " + myzss);
-
     }
 
     // Bit of an odd one this : on a cell click "wake" the log back up as there may be activity shortly
@@ -135,13 +133,14 @@ public class ZKComposer extends SelectorComposer<Component> {
         Clients.evalJavaScript("window.skipSetting = 0;window.skipMarker = 0;");
     }
 
+//org.zkoss.zss.ui.event.Events
+
 
     // In theory could just have on cellchange but this seems to have broken the dropdowns onchange stuff, ergh. Luckily it seems there's no need for code duplication
     // checking for save stuff in the onchange and the other stuff here
 
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
-        System.out.println("onStopEditing");
         final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO); // used in more than one place
         String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.

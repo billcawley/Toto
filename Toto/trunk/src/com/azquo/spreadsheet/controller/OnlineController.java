@@ -23,13 +23,14 @@ import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.model.SName;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by bill on 22/04/14.
- * <p/>
+ * <p>
  * Currently deals with a fair bit for AzquoBook, this may shrink in time.
  */
 
@@ -151,7 +152,7 @@ public class OnlineController {
                             userRegionOptionsDAO.removeById(userRegionOptions);
                         } else {
                             UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), onlineReport.getId(), region);
-                            if (userRegionOptions == null){
+                            if (userRegionOptions == null) {
                                 userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), onlineReport.getId(), region, loggedInUser.getAzquoBook().getSheetDefinedOptionsStringForRegion(region));
                             }
                             // set under the new method and store
@@ -161,15 +162,15 @@ public class OnlineController {
                             userRegionOptions.setSortable(request.getParameter("sortable" + region) != null && request.getParameter("sortable" + region).length() > 0);
                             userRegionOptionsDAO.store(userRegionOptions);
                         }
-                    } else if (choiceName.startsWith("sort ")){ // the syntax passed is "sort " + region + " by column"; todo - fix this?? or wait for AB to be disabled
+                    } else if (choiceName.startsWith("sort ")) { // the syntax passed is "sort " + region + " by column"; todo - fix this?? or wait for AB to be disabled
                         String region = choiceName.substring("sort ".length(), choiceName.length() - " by column".length());
                         // currently just support columns
                         UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), onlineReport.getId(), region);
-                        if (userRegionOptions == null){
+                        if (userRegionOptions == null) {
                             userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), onlineReport.getId(), region, loggedInUser.getAzquoBook().getSheetDefinedOptionsStringForRegion(region));
                         }
                         boolean asc = true;
-                        if (choiceValue.endsWith("-desc")){
+                        if (choiceValue.endsWith("-desc")) {
                             asc = false;
                             choiceValue = choiceValue.substring(0, choiceValue.length() - "-desc".length());
                         }
@@ -183,7 +184,7 @@ public class OnlineController {
                     opcode = "loadsheet";
                 }
                 if (opcode.equals("upload")) {
-                    reportId="";
+                    reportId = "";
                     if (submit.length() > 0) {
                         if (database.length() > 0) {
                             loginService.switchDatabase(loggedInUser, database);
@@ -206,7 +207,7 @@ public class OnlineController {
                     model.addAttribute("content", result);
                     return "utf8javascript";
                 }
-                if (reportId != null && reportId.equals("1")){
+                if (reportId != null && reportId.equals("1")) {
                     if (!loggedInUser.getUser().isAdministrator()) {
                         spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
                         return "azquoReports";
@@ -217,7 +218,7 @@ public class OnlineController {
                 }
                 if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
                     // logic here is going to change to support the different renderers
-                         loggedInUser.setReportId(onlineReport.getId());// that was below, whoops!
+                    loggedInUser.setReportId(onlineReport.getId());// that was below, whoops!
                     if (onlineReport.getDatabaseId() > 0) {
                         db = databaseDAO.findById(onlineReport.getDatabaseId());
                         loginService.switchDatabase(loggedInUser, db);
@@ -235,37 +236,56 @@ public class OnlineController {
                     if (db != null) {
                         onlineReport.setDatabase(db.getName());
                     }
-                    if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK){
-                            long time = System.currentTimeMillis();
-
-
-                            String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
-                            final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                            // the first two make sense. Little funny about the second two but we need a reference to these
-                            book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
-                            book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
-                            // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
-                            book.getInternalBook().setAttribute(REPORT_ID, loggedInUser.getReportId());
-                            final List<SName> names = book.getInternalBook().getNames();
-                            List<String> pdfMerges = new ArrayList<>();
-                            for (SName name : names){
-                                if (name.getName().startsWith("az_PDF")){
-                                    pdfMerges.add(name.getName().substring("az_PDF".length()).replace("_", " "));
-                                }
-                            }
-                            model.addAttribute("pdfMerges", pdfMerges);
-                        model.put("showSave", false);
-                            request.setAttribute(BOOK, book);
-                            if (loggedInUser.getDatabase() != null) {
-                                model.addAttribute("databaseChosen", loggedInUser.getDatabase().getName());
-                            }
-                            System.out.println("time to prepare the book : " + (System.currentTimeMillis() - time));
-                            return "zstest";
+                    if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK) {
+                        HttpSession session = request.getSession();
+                        if (session.getAttribute(reportId) != null) {
+                            request.setAttribute(OnlineController.BOOK, session.getAttribute(reportId)); // push the rendered book into the request to be sent to the user
+                            session.removeAttribute(reportId);// get rid of it from the session
+                            return "zsshowsheet";// show the sheet
                         }
-                        // default to old one. THis does a fair bit of work adding info for velocity so I passed the model through. Perhaps not best practice.
-                        spreadsheetService.readExcel(model, loggedInUser, onlineReport, spreadsheetName);
-                        return "onlineReport";
-                        // was provenance setting here,
+                        // ok now I need to set the sheet loading but on a new thread
+                        // hmm, how to stop multiple loadings?
+                        if (session.getAttribute(reportId + "loading") == null) { // don't wanna load it twice! THis could be hit if the user refreshes while generating the report.
+                            // yes there's a chance a user could cause a double load if they were really quick but I'm not that bothered about this
+                            session.setAttribute(reportId + "loading", Boolean.TRUE);
+                            // this is a bit hacky, the new thread doesn't want them reassigned, fair enough
+                            final String finalReportId = reportId;
+                            final OnlineReport finalOnlineReport = onlineReport;
+                            final LoggedInUser finalLoggedInUser = loggedInUser;
+                            new Thread(() -> {
+                                // so in here the new thread we set up the loading as it was originally before
+                                try {
+                                    String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + finalOnlineReport.getPathname() + "/onlinereports/" + finalOnlineReport.getFilename();
+                                    final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                                    // the first two make sense. Little funny about the second two but we need a reference to these
+                                    book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
+                                    book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);
+                                    // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
+                                    book.getInternalBook().setAttribute(REPORT_ID, finalLoggedInUser.getReportId());
+                                    ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
+                                    model.put("showSave", bookUtils.populateBook(book));
+                                    final List<SName> names = book.getInternalBook().getNames();
+                                    List<String> pdfMerges = new ArrayList<>();
+                                    for (SName name : names) {
+                                        if (name.getName().startsWith("az_PDF")) {
+                                            pdfMerges.add(name.getName().substring("az_PDF".length()).replace("_", " "));
+                                        }
+                                    }
+                                    model.addAttribute("pdfMerges", pdfMerges);
+                                    session.setAttribute(finalReportId, book);
+                                } catch (Exception e) {
+                                    model.addAttribute("content", "error:" + e.getMessage());// think that works!
+                                }
+                            }).start();
+                            session.removeAttribute(reportId + "loading");
+                        }
+                        model.addAttribute("reportid", reportId); // why not? should block on refreshes then
+                        return "zsloading";
+                    }
+                    // default to old one. THis does a fair bit of work adding info for velocity so I passed the model through. Perhaps not best practice.
+                    spreadsheetService.readExcel(model, loggedInUser, onlineReport, spreadsheetName);
+                    return "onlineReport";
+                    // was provenance setting here,
                 }
 
 
@@ -280,7 +300,6 @@ public class OnlineController {
             return e.getMessage();
         }
     }
-
 
 
     // when not multipart - this is a bit annoying, hopefully can find a way around it later
