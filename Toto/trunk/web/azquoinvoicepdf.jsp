@@ -64,9 +64,7 @@
     StringBuffer template = new StringBuffer();
     String inputLine = null;
     try {
-
-
-        FileInputStream fstream = new FileInputStream("/home/cawley/ideaprojects/Toto/web/azquoinvoice.fop");
+        FileInputStream fstream = new FileInputStream("/usr/share/apache-tomcat-8.0.24/webapps/ROOT/azquoinvoice.fop");
         //FileInputStream fstream = new FileInputStream("/usr/share/apache-tomcat-8.0.21/webapps/ROOT/azquoinvoice.fop");
         DataInputStream in = new DataInputStream(fstream);
         BufferedReader br = new BufferedReader(new InputStreamReader(in));

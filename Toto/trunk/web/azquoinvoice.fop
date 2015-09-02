@@ -36,7 +36,7 @@
         <fo:flow flow-name="xsl-region-body">
             <fo:block-container height="1cm" width="18cm" top="0.55cm" left="0.5cm" position="absolute">
                 <fo:block>
-                    <fo:external-graphic src="url('/home/cawley/Downloads/azquo-logo2.png')"  content-width="4cm"/>
+                    <fo:external-graphic src="url('/usr/share/apache-tomcat-8.0.24/webapps/ROOT/azquo-logo2.png')"  content-width="4cm"/>
                 </fo:block>
             </fo:block-container>
 
