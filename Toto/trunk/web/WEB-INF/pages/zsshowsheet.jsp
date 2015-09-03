@@ -205,20 +205,56 @@
          window.open("/api/Online?opcode=upload", "_blank", "toolbar=no, status=no,scrollbars=no, resizable=no, top=150, left=200, width=300, height=300")
     }
 
+    var topMenuOpening = false;
 
-
+    // menu stuff from onlinereport.vm
     function openTopMenu(){
-        var topmenu = document.getElementById("topmenubox");
-        if (topmenu.style.display == "block"){
-            topmenu.stype.display="none";
+        document.getElementById("topmenubox").style.display="block";
+        topMenuOpening = true;
+    }
 
-        }else {
-            topmenu.style.display = "block";
+    function onClick(e){
+        if (!topMenuOpening){
+            hideMenu("topmenubox", e);
         }
+        topMenuOpening = false;
+    }
+
+    function hideMenu(control, e) {
+        var element = document.getElementById(control);
+        if (element == null || mouseIn(element, e) || document.getElementById(control).style.display=="none") {
+            return false;
+        }
+        document.getElementById(control).style.display = "none";
+        return true;
+    }
+
+    function mouseIn(elementChosen, e){
+        if (e==null) return false;
+        var IE = document.all?true:false;
+        if (IE) { // grab the x-y pos.s if browser is IE
+            var mouseX = e.clientX + document.body.scrollLeft
+            var mouseY = e.clientY + document.body.scrollTop
+        } else {  // grab the x-y pos.s if browser is NS
+            mouseX = e.pageX
+            mouseY = e.pageY
+        }
+
+        var el=elementChosen;
+        for (var lx=0, ly=0;
+             el != null;
+             lx += el.offsetLeft-el.scrollLeft, ly += el.offsetTop-el.scrollTop, el = el.offsetParent);
+        if (mouseX >= lx && mouseY >= ly && mouseX <= lx + elementChosen.offsetWidth && mouseY <= ly + elementChosen.offsetHeight){
+            return true;
+        }
+        return false;
     }
 
 
-var skipSetting = 0;
+    document.onclick = onClick;
+
+
+    var skipSetting = 0;
 var skipMarker = 0;
     // how to stop this hammering? I reckon add a second every time between checks if the data hasn't changed.
 function updateStatus(){
@@ -294,7 +330,7 @@ setInterval(function(){ updateStatus(); }, 1000);
                         bookProvider="com.azquo.spreadsheet.view.ZKAzquoBookProvider"
                         apply="com.azquo.spreadsheet.view.ZKComposer"
                         width="100%" height="100%"
-                        maxrows="200" maxcolumns="80"
+                        maxrows="300" maxcolumns="300"
                         showSheetbar="true" showToolbar="true" showFormulabar="true" showContextMenu="true"/>
     <!--    zssjsp:spreadsheet id="myzss"
                             bookProvider="com.azquo.spreadsheet.view.ZKAzquoBookProvider"
