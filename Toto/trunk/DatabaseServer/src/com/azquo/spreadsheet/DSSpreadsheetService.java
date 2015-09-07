@@ -846,15 +846,15 @@ seaports;children   container;children
             List<Integer> sortedRows = null;
             if (sortOnColIndex != -1 || sortOnRowTotals) { // then we need to sort the rows
                 if (rowNumbers) {
-                    sortedRows = sortDoubleValues(sortRowTotals, sortRowAsc);
+                    sortedRows = sortDoubleValues(sortRowTotals, sortColAsc);
                 } else {
-                    sortedRows = sortStringValues(sortRowStrings, sortRowAsc);
+                    sortedRows = sortStringValues(sortRowStrings, sortColAsc);
                 }
             }
 
             List<Integer> sortedCols = null;
             if (sortOnRowIndex != -1 || sortOnColTotals) { // then we need to sort the cols
-                sortedCols = sortDoubleValues(sortColumnTotals, sortColAsc);
+                sortedCols = sortDoubleValues(sortColumnTotals, sortRowAsc);
             }
             // OK pasting and changing what was in format data region, it's only called by this
             int blockRowCount = 0;

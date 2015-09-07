@@ -14,6 +14,7 @@ import java.io.FileReader;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by cawley on 20/05/15.
@@ -21,6 +22,12 @@ import java.util.*;
  * The new home of Magento loading logic. Much of this was in DataLoadService.
  * <p/>
  * Really the logic in here is defined by the data as dumped from Magento.
+ *
+ * To elaborate a little : in principle importing is done via the importing service but for cases like Magento there's nothing wring with custom code (it may be necessary)
+ * just make sure it's in the app package. Maybe move this to Groovy? Certainly I want to experiment with that for per business importing.
+ *
+ * Note : given that this is what one might call "dynamic" or script like I'm not going to get so worked up pouring over every line or getting a green light.
+ *
  */
 public class DSDataLoadService {
 
@@ -362,11 +369,9 @@ public class DSDataLoadService {
         }
         tableMap.remove("catalog_category_product");
         //now find the attributes that matter
-        Set<String> attributes = new HashSet<>();
-        for (Map<String, String> attributeRow : tableMap.get("catalog_product_super_attribute")) {
-            //only interested in the attribute_id
-            attributes.add(attributeRow.get("attribute_id"));
-        }
+        // java 8 syntax, push the attribute ids into an attributes set
+        final Set<String> attributes = tableMap.get("catalog_product_super_attribute").stream().map(attributeRow -> attributeRow.get("attribute_id")).collect(Collectors.toSet());
+        //only interested in the attribute_id
         //name the attributes that matter
         Map<String, String> attributeNames = new HashMap<>();
         for (Map<String, String> attribute : tableMap.get("eav_attribute")) {
