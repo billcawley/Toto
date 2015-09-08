@@ -78,7 +78,7 @@ public class DSImportService {
     Notably there are things calculated on every line that could perhaps be moved. Plus things like peer headings could hold the references to the other headings rather than indexes.
     */
     private class MutableImportHeading {
-        // column index
+        // column index - used to find data off each data line and also to see if a column is derived - not present in the source file hence would ahve column -1
         int column = -1;
         // the name of the heading - often references by other headings e.g. parent of
         String heading = null;
@@ -86,14 +86,15 @@ public class DSImportService {
         Name name = null;
         // this class used to use the now removed peers against the name object, in it's absence just put a set here.
         Set<Name> peerNames = new HashSet<>(); // empty is fine
-        // parent of is an internal reference - to other headings. Child of and remove from refer to names in the database. Maybe make this less ambiguous.
-        String parentOf = null, childOfString = null, removeFromString = null;
+        // parent of is an internal reference - to other headings - need to have it here to resolve later when we have a complete headings list - it will
+        String parentOf = null;
         /* the index of the heading that an attribute refers to so if the heading is Customer.Address1 then this is the index of customer.
-        Seems only to be used with attribute, could maybe have a better name? Also could just be a reference to teh ehading itself?*/
+        Seems only to be used with attribute, could change to a reference to the heading but it is used for data look up. I suppose that would then be identityHeading.column . . .*/
         int identityHeading = -1;
-        // used in conjunction with parent of - this is the column it is the parent of, This can only be parent of one column. Name of this could be better?
-        int childHeading = -1;
-        // child of string is a comma separated list, Here are the names from that list. Do we need a childof string then? Also concerned about the naming again!
+        // derived from parent of - this is the column it is the parent of, This can only be parent of one column.
+        // stored as an index as it's used when accessing data lines which are an array
+        int childOfThisHeading = -1;
+        // child of string is a comma separated list, Here are the names from that list. Do we need a child of string then? Also concerned about the naming again!
         Set<Name> childOf = null;
         // same format or logic as childof
         Set<Name> removeFrom = null;
@@ -132,9 +133,8 @@ public class DSImportService {
         final String heading;
         final Name name;
         final Set<Name> peerNames;
-        final String parentOf, childOfString, removeFromString;
         final int identityHeading;
-        final int childHeading;
+        final int childOfThisHeading;
         // ok the set will be fixed, I suppose names can be modified but they should be thread safe. Well that's the plan.
         final Set<Name> childOf;
         final Set<Name> removeFrom;
@@ -154,11 +154,8 @@ public class DSImportService {
             this.heading = mutableImportHeading.heading;
             this.name = mutableImportHeading.name;
             this.peerNames = mutableImportHeading.peerNames;
-            this.parentOf = mutableImportHeading.parentOf;
-            this.childOfString = mutableImportHeading.childOfString;
-            this.removeFromString = mutableImportHeading.removeFromString;
             this.identityHeading = mutableImportHeading.identityHeading;
-            this.childHeading = mutableImportHeading.childHeading;
+            this.childOfThisHeading = mutableImportHeading.childOfThisHeading;
             this.childOf = mutableImportHeading.childOf != null ? Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.childOf)) : null;
             this.removeFrom = mutableImportHeading.removeFrom != null ? Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.removeFrom)) : null;
             this.attribute = mutableImportHeading.attribute;
@@ -266,18 +263,31 @@ public class DSImportService {
             if (heading.parentOf.length() == 0) {
                 throw new Exception(clause + notUnderstood);
             }
-            // e.g. child of all orders
+            // e.g. child of all orders, unlike above this references data in the DB
         } else if (CHILDOF.startsWith(firstWord)) {        // e.g. child of all orders
-            heading.childOfString = readClause(CHILDOF, clause).replace(Name.QUOTE + "", "");
-            if (heading.childOfString.length() == 0) {
+            String childOfString = readClause(CHILDOF, clause).replace(Name.QUOTE + "", "");
+            if (childOfString.length() == 0) {
                 throw new Exception(clause + notUnderstood);
+            } else {
+                // used to store the shild of string here and interpret it later, I see no reason not to do it here.
+                heading.childOf = new HashSet<>();
+                String[] parents = childOfString.split(",");//TODO this does not take into account names with commas inside.......
+                for (String parent : parents) {
+                    heading.childOf.add(nameService.findOrCreateNameInParent(azquoMemoryDBConnection, parent, null, false));
+                }
             }
             // e.g. opposite of above
         } else if (REMOVEFROM.startsWith(firstWord)) {
             // e.g. opposite of above
-            heading.removeFromString = readClause(REMOVEFROM, clause).replace(Name.QUOTE + "", "");// child of relates to a name in the database - the hook to existing data
-            if (heading.removeFromString.length() == 0) {
+            String removeFromString = readClause(REMOVEFROM, clause).replace(Name.QUOTE + "", "");// child of relates to a name in the database - the hook to existing data
+            if (removeFromString.length() == 0) {
                 throw new Exception(clause + notUnderstood);
+            } else {
+                heading.removeFrom = new HashSet<>();
+                String[] removes = removeFromString.split(",");//TODO this does not take into account names with commas inside.......
+                for (String remove : removes) {// also not language specific. THis is a simple lookup, don't want a find or create
+                    heading.removeFrom.add(nameService.findByName(azquoMemoryDBConnection, remove));
+                }
             }
             // language being attribute
         } else if (firstWord.equals(LANGUAGE)) {
@@ -771,7 +781,7 @@ public class DSImportService {
             }
             // prepare the local parent of columns. Customer is in all customers local
             // ok local is done up here and not local below (handle parent being called twice)? Plus the name attached to the cell (not heading!) will be set below . . . perhaps how local is dealt with. Hmmmmmmmm
-            if (importCellWithHeading.immutableImportHeading.local && importCellWithHeading.immutableImportHeading.parentOf != null) { // local and it is a parentof, inside this function it will use the childheading set up - should maybe check for that instead??
+            if (importCellWithHeading.immutableImportHeading.local && importCellWithHeading.immutableImportHeading.childOfThisHeading != -1) { // local and it is a parent of another heading (has child heading), inside this function it will use the child heading set up
                 handleParent(azquoMemoryDBConnection, namesFound, importCellWithHeading, cells, attributeNames, lineNo);
             }
         }
@@ -872,7 +882,7 @@ public class DSImportService {
                     handleAttribute(azquoMemoryDBConnection, namesFound, cell, cells);
                 }
                 // not local this time - handle attribute and find peers might have set the cell name?
-                if (cell.immutableImportHeading.parentOf != null && !cell.immutableImportHeading.local) {
+                if (cell.immutableImportHeading.childOfThisHeading != -1 && !cell.immutableImportHeading.local) {
                     handleParent(azquoMemoryDBConnection, namesFound, cell, cells, attributeNames, lineNo);
                 }
                 if (cell.immutableImportHeading.childOf != null) {
@@ -955,26 +965,10 @@ public class DSImportService {
                         }
                     }
                 }
-                // child of being in Azquo context
-                if (mutableImportHeading.childOfString != null) {
-                    mutableImportHeading.childOf = new HashSet<>();
-                    String[] parents = mutableImportHeading.childOfString.split(",");//TODO this does not take into account names with commas inside.......
-                    for (String parent : parents) {
-                        mutableImportHeading.childOf.add(nameService.findOrCreateNameInParent(azquoMemoryDBConnection, parent, null, false));
-                    }
-                }
-                // reverse
-                if (mutableImportHeading.removeFromString != null) {
-                    mutableImportHeading.removeFrom = new HashSet<>();
-                    String[] removes = mutableImportHeading.removeFromString.split(",");//TODO this does not take into account names with commas inside.......
-                    for (String remove : removes) {// also not language specific. THis is a simple lookup, don't want a find or create
-                        mutableImportHeading.removeFrom.add(nameService.findByName(azquoMemoryDBConnection, remove));
-                    }
-                }
                 // parent of being in context of this upload, if you can't find the heading throw an exception
                 if (mutableImportHeading.parentOf != null) {
-                    mutableImportHeading.childHeading = findMutableHeading(mutableImportHeading.parentOf, headings);
-                    if (mutableImportHeading.childHeading < 0) {
+                    mutableImportHeading.childOfThisHeading = findMutableHeading(mutableImportHeading.parentOf, headings);
+                    if (mutableImportHeading.childOfThisHeading < 0) {
                         throw new Exception("error: cannot find column " + mutableImportHeading.parentOf + " for child of " + mutableImportHeading.heading);
                     }
                     //error = findTopParent(azquoMemoryDBConnection, importHeading, headings, attributeNames);
@@ -1009,7 +1003,7 @@ public class DSImportService {
             cellWithHeading.lineName = includeInParents(azquoMemoryDBConnection, namesFound, cellWithHeading.lineValue
                     , cellWithHeading.immutableImportHeading.childOf, cellWithHeading.immutableImportHeading.local, setLocalLanguage(cellWithHeading.immutableImportHeading, attributeNames));
         }
-        ImportCellWithHeading childCell = cells.get(cellWithHeading.immutableImportHeading.childHeading);
+        ImportCellWithHeading childCell = cells.get(cellWithHeading.immutableImportHeading.childOfThisHeading);
         if (childCell.lineValue.length() == 0) {
             throw new Exception("Line " + lineNo + ": blank value for child of " + cellWithHeading.lineValue);
         }
@@ -1024,7 +1018,7 @@ public class DSImportService {
 
     public void handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, ImportCellWithHeading cell, List<ImportCellWithHeading> cells) throws Exception {
         ImportCellWithHeading identityCell = cells.get(cell.immutableImportHeading.identityHeading); // get our source cell
-        if (identityCell.lineName == null) { // no name on the cell I want to set the attribute on
+        if (identityCell.lineName == null) { // no name on the cell I want to set the attribute on - need to create the name. Can this happen? I mean the name being null? I guess so.
             if (identityCell.lineValue.length() == 0) { // and no line value for the line I want to set the attribute on, can't find the name, nothing to do!
                 return;
             }
@@ -1035,11 +1029,6 @@ public class DSImportService {
         } else { // the basic requirement, set the attribute from the line value on the identity cell's line name.
             identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue);
         }
-        // EFC commenting, based on how this is used it can never be null!
-        /*String attribute = cell.immutableImportHeading.attribute;
-        if (attribute == null) {
-            attribute = Constants.DEFAULT_DISPLAY_NAME;
-        }*/
     }
 
     // ok what's notable here is that this will create names to complete the peers if it can't find them
