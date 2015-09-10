@@ -373,7 +373,11 @@ seaports;children   container;children
                     && headingLists.get(headingDefinitionRowIndex + 1).size() > 1 // the next row is not a single cell (will all rows be the same length?)
                     && headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex + 1)) // and the last cell is the only not null one
                     ) {
-                headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
+                if (headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex)== null){
+                    headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
+                }else{
+                    headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
+                }
                 headingDefinitionRowIndex++;
             }
             List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
@@ -404,7 +408,7 @@ seaports;children   container;children
             }
 
         }
-        return false; // it was ALL null, error time?
+        return true; // All null - treat as last cell populated
     }
 
     private void nameAndParent(UniqueName uName) {
@@ -700,6 +704,7 @@ seaports;children   container;children
 
     private List<Name> getContextNames(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource) throws Exception {
         final List<Name> contextNames = new ArrayList<>();
+        if (contextSource==null) return contextNames;
         for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell
             for (String contextItem : contextItems) {
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
