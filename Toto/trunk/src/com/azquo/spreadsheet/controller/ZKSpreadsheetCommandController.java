@@ -159,6 +159,18 @@ public class ZKSpreadsheetCommandController {
                             }
                         }
                     }
+
+                    if ("RestoreSavedValues".equals(action)) {
+                        final Book book = ss.getBook();
+                        final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+                        for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
+                            newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                        }
+                        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService,userChoiceDAO,userRegionOptionsDAO);
+                        zkAzquoBookUtils.populateBook(newBook, true);
+                        ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
+                        Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"none\";");
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

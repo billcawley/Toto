@@ -794,7 +794,7 @@ seaports;children   container;children
             if (Math.abs(maxRows) < totalRows) {
                 if (sortOnColIndex == -1) { // only cause total sorting if a column hasn't been passed
                     sortOnRowTotals = true;
-                    sortRowAsc = maxRows < 0;
+                    sortColAsc = maxRows < 0;
                 }
             } else {
                 maxRows = 0; // zero it as it's a moot point

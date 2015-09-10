@@ -38,9 +38,12 @@ public class ZKAzquoBookUtils {
         this.userRegionOptionsDAO = userRegionOptionsDAO;
     }
 
+    public boolean populateBook(Book book) throws Exception {
+        return populateBook(book, false);
+    }
     // kind of like azquo book prepare sheet, load data bits, will aim to replicate the basics from there
 
-    public boolean populateBook(Book book) throws Exception {
+    public boolean populateBook(Book book, boolean useSavedValuesOnFormulae) throws Exception {
         boolean showSave = false;
         //book.getInternalBook().getAttribute(ZKAzquoBookProvider.BOOK_PATH);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
@@ -127,7 +130,7 @@ public class ZKAzquoBookUtils {
                 }
             }
             // now formulae should have been calculated check if anything might need to be saved
-            // so similar loop to above
+            // so similar loop to above - also we want to check for the logic of using the loaded values
             for (SName name : namesForSheet) {
                 if (name.getName().startsWith(azDataRegion)) {
                     String region = name.getName().substring(azDataRegion.length());
@@ -147,13 +150,21 @@ public class ZKAzquoBookUtils {
                                         CellForDisplay cellForDisplay = sentCells.getData().get(row - startRow).get(col - startCol);
                                         if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
                                             if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
-                                                cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
-                                                showSave = true;
+                                                if (useSavedValuesOnFormulae){ // override formula from DB
+                                                    sCell.setNumberValue(cellForDisplay.getDoubleValue());
+                                                } else { // the formula overrode the DB, get the value ready of saving if the user wants that
+                                                    cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                    showSave = true;
+                                                }
                                             }
                                         } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
                                             if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
-                                                cellForDisplay.setStringValue(sCell.getStringValue());
-                                                showSave = true;
+                                                if (useSavedValuesOnFormulae) { // override formula from DB
+                                                    sCell.setStringValue(cellForDisplay.getStringValue());
+                                                } else { // the formula overrode the DB, get the value ready of saving if the user wants that
+                                                    cellForDisplay.setStringValue(sCell.getStringValue());
+                                                    showSave = true;
+                                                }
                                             }
                                         }
                                     }
@@ -226,9 +237,8 @@ public class ZKAzquoBookUtils {
                 try{
                     toShow = cell.getStringValue();
                 } catch (Exception ignored){
-
                 }
-                  row.add(toShow);
+                row.add(toShow);
             }
         }
         return toReturn;

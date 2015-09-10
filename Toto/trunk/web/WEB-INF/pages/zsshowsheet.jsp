@@ -302,7 +302,7 @@ setInterval(function(){ updateStatus(); }, 1000);
         <table cellpadding="0" cellspacing="0">
             <tr>
                 <td><a href="/api/Online?opcode=loadsheet&reportid=1"><img src="/images/azquo-logo2.png" alt="Azquo logo"/></a></td>
-                <td><button id="saveData" onclick="postAjax('Save')" style="display:none;">Save Data</button>
+                <td><div id="saveData" style="display:none;"> <button onclick="postAjax('Save')">Save Data</button>&nbsp;<button onclick="postAjax('RestoreSavedValues')">Restore Saved Values</button></div>
                 </td>
                 <td>        <c:forEach items="${pdfMerges}" var="pdfMerge">
                     &nbsp;<button id="${pdfMerge}" onclick="postAjax('PDFMerge${pdfMerge}')">PDF : ${pdfMerge}</button>
