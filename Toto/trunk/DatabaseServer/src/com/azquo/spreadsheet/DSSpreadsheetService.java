@@ -1410,7 +1410,7 @@ seaports;children   container;children
             sb.append(heading);
 
         }
-        sb.append("\n");
+        sb.append("\r\n");
         bout.write(String.valueOf(sb).getBytes(), 0, sb.length());
         List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
         for (List<CellForDisplay> row : data) {
@@ -1419,7 +1419,8 @@ seaports;children   container;children
             for (CellForDisplay cellForDisplay : row) {
                 if (!firstCol) sb.append("\t");
                 else firstCol = false;
-                String val = cellForDisplay.getStringValue();
+                // use string if we have it,otherwise double if it's not 0 or explicitly changed (0 allowed if manually entered). Otherwise blank.
+                String val = cellForDisplay.getStringValue().length() > 0 ? cellForDisplay.getStringValue() : cellForDisplay.getDoubleValue() != 0 || cellForDisplay.isChanged() ? cellForDisplay.getDoubleValue() + "" : "";
                 if (val == null)
                     val = "";//for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
                 sb.append(val);

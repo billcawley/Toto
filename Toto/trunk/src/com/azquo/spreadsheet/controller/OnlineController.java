@@ -64,6 +64,7 @@ public class OnlineController {
 
     public static final String BOOK = "BOOK";
     public static final String BOOK_PATH = "BOOK_PATH";
+    public static final String SAVE_FLAG = "SAVE_FLAG";
     public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
     public static final String REPORT_ID = "REPORT_ID";
 
@@ -239,8 +240,20 @@ public class OnlineController {
                     if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK) {
                         HttpSession session = request.getSession();
                         if (session.getAttribute(reportId) != null) {
-                            request.setAttribute(OnlineController.BOOK, session.getAttribute(reportId)); // push the rendered book into the request to be sent to the user
+                            Book book = (Book) session.getAttribute(reportId);
+                            request.setAttribute(OnlineController.BOOK, book); // push the rendered book into the request to be sent to the user
                             session.removeAttribute(reportId);// get rid of it from the session
+                            model.put("showSave", session.getAttribute(reportId + SAVE_FLAG));
+                            session.removeAttribute(reportId + SAVE_FLAG);// get rid of it from the session
+                            // sort the pdf merges, had forgotten this . . .
+                            final List<SName> names = book.getInternalBook().getNames();
+                            List<String> pdfMerges = new ArrayList<>();
+                            for (SName name : names) {
+                                if (name.getName().startsWith("az_PDF")) {
+                                    pdfMerges.add(name.getName().substring("az_PDF".length()).replace("_", " "));
+                                }
+                            }
+                            model.addAttribute("pdfMerges", pdfMerges);
                             return "zsshowsheet";// show the sheet
                         }
                         // ok now I need to set the sheet loading but on a new thread
@@ -263,15 +276,7 @@ public class OnlineController {
                                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                                     book.getInternalBook().setAttribute(REPORT_ID, finalLoggedInUser.getReportId());
                                     ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
-                                    model.put("showSave", bookUtils.populateBook(book));
-                                    final List<SName> names = book.getInternalBook().getNames();
-                                    List<String> pdfMerges = new ArrayList<>();
-                                    for (SName name : names) {
-                                        if (name.getName().startsWith("az_PDF")) {
-                                            pdfMerges.add(name.getName().substring("az_PDF".length()).replace("_", " "));
-                                        }
-                                    }
-                                    model.addAttribute("pdfMerges", pdfMerges);
+                                    session.setAttribute(finalReportId + SAVE_FLAG, bookUtils.populateBook(book));
                                     session.setAttribute(finalReportId, book);
                                 } catch (Exception e) {
                                     model.addAttribute("content", "error:" + e.getMessage());// think that works!
