@@ -433,6 +433,7 @@ public class DSImportService {
 
     private int findMutableHeading(String nameToFind, List<MutableImportHeading> headings) {
         //look for a column with identifier, or, if not found, a column that does not specify an attribute
+        nameToFind = nameToFind.trim();
         int headingFound = -1;
         for (int headingNo = 0; headingNo < headings.size(); headingNo++) {
             MutableImportHeading heading = headings.get(headingNo);
@@ -993,6 +994,9 @@ public class DSImportService {
         if (cellWithHeading.lineValue.length() == 0) { // so nothing to do
             return;
         }
+        if (cellWithHeading.lineValue.contains(",") && !cellWithHeading.lineValue.contains(Name.QUOTE + "")){//beware of treating commas in cells as set delimiters....
+            cellWithHeading.lineValue = Name.QUOTE + cellWithHeading.lineValue + Name.QUOTE;
+        }
         if (cellWithHeading.lineName != null) { // This function is called in two places in interpret line, the first time this will be null the second time not
             if (cellWithHeading.immutableImportHeading.childOf != null) {
                 for (Name parent : cellWithHeading.immutableImportHeading.childOf) { // apparently there can be multiple childofs, put the name for the line in th appropriate sets.
@@ -1026,9 +1030,8 @@ public class DSImportService {
             localAttributes.add(identityCell.immutableImportHeading.attribute);
             // here's a thing - this either finds a name with the attribute/value combo already or it creates it, so we're done? I'm adding an else below
             identityCell.lineName = includeInParents(azquoMemoryDBConnection, namesFound, identityCell.lineValue, identityCell.immutableImportHeading.childOf, false, localAttributes);
-        } else { // the basic requirement, set the attribute from the line value on the identity cell's line name.
-            identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue);
         }
+        identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue);
     }
 
     // ok what's notable here is that this will create names to complete the peers if it can't find them
