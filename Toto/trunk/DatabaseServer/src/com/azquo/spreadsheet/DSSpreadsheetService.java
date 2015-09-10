@@ -16,9 +16,7 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.servlet.ServletContext;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -1397,7 +1395,7 @@ seaports;children   container;children
         File temp = File.createTempFile(fileName + ".csv", "csv");
         String tempName = temp.getPath();
         temp.deleteOnExit();
-        BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(temp), 1000);
+        BufferedWriter bw = new BufferedWriter(new FileWriter(temp));
         StringBuffer sb = new StringBuffer();
         List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(0);
         boolean firstCol = true;
@@ -1410,8 +1408,8 @@ seaports;children   container;children
             sb.append(heading);
 
         }
-        sb.append("\r\n");
-        bout.write(String.valueOf(sb).getBytes(), 0, sb.length());
+        bw.write(sb.toString());
+        bw.newLine();
         List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
         for (List<CellForDisplay> row : data) {
             sb = new StringBuffer();
@@ -1421,21 +1419,18 @@ seaports;children   container;children
                 else firstCol = false;
                 // use string if we have it,otherwise double if it's not 0 or explicitly changed (0 allowed if manually entered). Otherwise blank.
                 String val = cellForDisplay.getStringValue().length() > 0 ? cellForDisplay.getStringValue() : cellForDisplay.getDoubleValue() != 0 || cellForDisplay.isChanged() ? cellForDisplay.getDoubleValue() + "" : "";
-                if (val == null)
-                    val = "";//for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
+                //for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
                 sb.append(val);
             }
-            sb.append("\n");
-            bout.write(String.valueOf(sb).getBytes(), 0, sb.length());
+            bw.write(sb.toString());
+            bw.newLine();
 
         }
-        bout.flush();
-        bout.close();
+        bw.flush();
+        bw.close();
         List<String> languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         importService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", languages);
-
-
     }
 
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
