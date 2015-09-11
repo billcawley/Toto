@@ -229,6 +229,8 @@ public class DSImportService {
 
 
     public void readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
+        azquoMemoryDBConnection.getAzquoMemoryDB().clearNameChildrenCaches();
+        azquoMemoryDBConnection.getAzquoMemoryDB().clearCountCache();
         if (fileType.toLowerCase().startsWith("sets")) {
             setsImport(azquoMemoryDBConnection, new FileInputStream(filePath), attributeNames, fileType);
         } else {

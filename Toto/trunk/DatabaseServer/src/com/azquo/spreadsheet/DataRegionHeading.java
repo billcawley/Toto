@@ -15,7 +15,6 @@ import java.util.Set;
  * <p/>
  * See no reason not to make this simple and immutable. Bottom line is that this can be either an attribute or a name
  *
- * OK, in preparation for splitting the the UI/Rendering I need to get name out of here
  */
 public class DataRegionHeading {
 
@@ -26,13 +25,16 @@ public class DataRegionHeading {
     private final boolean writeAllowed;
     private final BASIC_RESOLVE_FUNCTION function;
     private final Set<Name> nameCountSet;
+    // an identifier,
+    private final String description;
 
-    public DataRegionHeading(Name name, boolean writeAllowed, BASIC_RESOLVE_FUNCTION function, Set<Name> nameCountSet) {
+    public DataRegionHeading(Name name, boolean writeAllowed, BASIC_RESOLVE_FUNCTION function, Set<Name> nameCountSet, String description) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
         this.function = function;
         this.nameCountSet =  nameCountSet != null ? Collections.unmodifiableSet(nameCountSet) : null;
+        this.description = description;
     }
 
     // no functions with attributes for the moment
@@ -42,6 +44,7 @@ public class DataRegionHeading {
         this.writeAllowed = writeAllowed;
         this.function = null;
         this.nameCountSet = null;
+        this.description = null;
     }
 
     public Name getName() {
@@ -74,5 +77,9 @@ public class DataRegionHeading {
                 ", function=" + function +
                 ", nameCountSetSize=" + (nameCountSet != null ? nameCountSet.size() : "") +
                 '}';
+    }
+
+    public String getDescription() {
+        return description;
     }
 }

@@ -556,6 +556,22 @@ public final class AzquoMemoryDB {
         nameByIdMap.values().forEach(com.azquo.memorydb.core.Name::clearChildrenCaches);
     }
 
+    // trying for a basic count cache
+
+    private final Map<Object, Integer> countCache = new ConcurrentHashMap<>();
+
+    public void setCountInCache(Object key, Integer count){
+        countCache.put(key, count);
+    }
+
+    public Integer getCountFromCache(Object key){
+        return countCache.get(key);
+    }
+
+    public void clearCountCache(){
+        countCache.clear();
+    }
+
     public Provenance getProvenanceById(final int id) {
         return provenanceByIdMap.get(id);
     }
