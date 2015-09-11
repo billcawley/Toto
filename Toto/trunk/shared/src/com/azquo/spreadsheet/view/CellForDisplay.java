@@ -18,8 +18,10 @@ public class CellForDisplay implements Serializable {
     // for looking stuff up later (can do a fast lookup based on the unsorted position)
     private final int unsortedRow;
     private final int unsortedCol;
+    // as in a . on row or col heading. The restore saved values function would like to know to ignore these
+    private boolean ignored;
 
-    public CellForDisplay(boolean locked, String stringValue, double doubleValue, boolean highlighted, int unsortedRow, int unsortedCol) {
+    public CellForDisplay(boolean locked, String stringValue, double doubleValue, boolean highlighted, int unsortedRow, int unsortedCol, boolean ignored) {
         this.locked = locked;
         this.stringValue = stringValue;
         this.doubleValue = doubleValue;
@@ -27,6 +29,7 @@ public class CellForDisplay implements Serializable {
         changed = false;
         this.unsortedRow = unsortedRow;
         this.unsortedCol = unsortedCol;
+        this.ignored = ignored;
     }
 
     public boolean isLocked() {
@@ -75,6 +78,14 @@ public class CellForDisplay implements Serializable {
         return unsortedCol;
     }
 
+    public boolean getIgnored() {
+        return ignored;
+    }
+
+    public void setIgnored(boolean ignored) {
+        this.ignored = ignored;
+    }
+
     @Override
     public String toString() {
         return "CellForDisplay{" +
@@ -85,6 +96,7 @@ public class CellForDisplay implements Serializable {
                 ", changed=" + changed +
                 ", unsortedRow=" + unsortedRow +
                 ", unsortedCol=" + unsortedCol +
+                ", ignored=" + ignored +
                 '}';
     }
 }

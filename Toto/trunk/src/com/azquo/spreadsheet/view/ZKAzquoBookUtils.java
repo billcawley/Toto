@@ -97,8 +97,12 @@ public class ZKAzquoBookUtils {
             // and now we want to run through all regions for this sheet, will look at the old code for this, I think it's fill region that we take cues from
             // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
             List<SName> namesForSheet = getNamesForSheet(sheet);
+            boolean fastLoad = false; // skip some checks, initially related to saving
             for (SName name : namesForSheet) {
                 // Old one was case insensitive - not so happy about this. Will allow it on the prefix
+                if (name.getName().equalsIgnoreCase("az_FastLoad")){
+                    fastLoad = true;
+                }
                 if (name.getName().startsWith(azDataRegion)) { // then we have a data region to deal with here
                     String region = name.getName().substring(azDataRegion.length()); // might well be an empty string
                     UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
@@ -133,58 +137,61 @@ public class ZKAzquoBookUtils {
             I'd avoided doing this but now I am it's useful for restoring values and checking for overlapping data regions.
             so similar loop to above - also we want to check for the logic of using the loaded values
             */
-            for (SName name : namesForSheet) {
-                if (name.getName().startsWith(azDataRegion)) {
-                    String region = name.getName().substring(azDataRegion.length());
-                    CellRegion displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
-                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
-                    if (displayDataRegion != null && sentCells != null) {
-                        int startRow = displayDataRegion.getRow();
-                        int endRow = displayDataRegion.getLastRow();
-                        int startCol = displayDataRegion.getColumn();
-                        int endCol = displayDataRegion.getLastColumn();
-                        for (int row = startRow; row <= endRow; row++) {
-                            for (int col = startCol; col <= endCol; col++) {
-                                SCell sCell = sheet.getInternalSheet().getCell(row, col);
-                                if (sentCells.getData() != null && sentCells.getData().size() > row - name.getRefersToCellRegion().getRow() // as ever check ranges of the data region vs actual data sent.
-                                        && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
-                                    CellForDisplay cellForDisplay = sentCells.getData().get(row - startRow).get(col - startCol);
-                                    if (sCell.getType() == SCell.CellType.FORMULA) {
-                                        if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
-                                            if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
-                                                if (useSavedValuesOnFormulae){ // override formula from DB
-                                                    sCell.setNumberValue(cellForDisplay.getDoubleValue());
-                                                } else { // the formula overrode the DB, get the value ready of saving if the user wants that
-                                                    cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
-                                                    showSave = true;
+            if (!fastLoad){
+                for (SName name : namesForSheet) {
+                    if (name.getName().startsWith(azDataRegion)) {
+                        String region = name.getName().substring(azDataRegion.length());
+                        CellRegion displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
+                        final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
+                        if (displayDataRegion != null && sentCells != null) {
+                            int startRow = displayDataRegion.getRow();
+                            int endRow = displayDataRegion.getLastRow();
+                            int startCol = displayDataRegion.getColumn();
+                            int endCol = displayDataRegion.getLastColumn();
+                            for (int row = startRow; row <= endRow; row++) {
+                                for (int col = startCol; col <= endCol; col++) {
+                                    SCell sCell = sheet.getInternalSheet().getCell(row, col);
+                                    if (sentCells.getData() != null && sentCells.getData().size() > row - name.getRefersToCellRegion().getRow() // as ever check ranges of the data region vs actual data sent.
+                                            && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
+                                        CellForDisplay cellForDisplay = sentCells.getData().get(row - startRow).get(col - startCol);
+                                        if (!cellForDisplay.getIgnored()){ // we don't want to restore from the DB on cells we don't care about  . . .
+                                            if (sCell.getType() == SCell.CellType.FORMULA) {
+                                                if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
+                                                    if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
+                                                        if (useSavedValuesOnFormulae){ // override formula from DB
+                                                            sCell.setNumberValue(cellForDisplay.getDoubleValue());
+                                                        } else { // the formula overrode the DB, get the value ready of saving if the user wants that
+                                                            cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                            showSave = true;
+                                                        }
+                                                    }
+                                                } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
+                                                    if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
+                                                        if (useSavedValuesOnFormulae) { // override formula from DB
+                                                            sCell.setStringValue(cellForDisplay.getStringValue());
+                                                        } else { // the formula overrode the DB, get the value ready of saving if the user wants that
+                                                            cellForDisplay.setStringValue(sCell.getStringValue());
+                                                            showSave = true;
+                                                        }
+                                                    }
                                                 }
-                                            }
-                                        } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
-                                            if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
-                                                if (useSavedValuesOnFormulae) { // override formula from DB
-                                                    sCell.setStringValue(cellForDisplay.getStringValue());
-                                                } else { // the formula overrode the DB, get the value ready of saving if the user wants that
-                                                    cellForDisplay.setStringValue(sCell.getStringValue());
-                                                    showSave = true;
+                                            } else {
+                                                // we now want to compare in the case of non formulae changes - a value from one data region importing into another,
+                                                // the other typically being of the "ad hoc" no row headings type
+                                                // notably this will hit a lot of cells (all the rest)
+                                                if (sCell.getType() == SCell.CellType.NUMBER) {
+                                                    if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
+                                                        cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                        showSave = true;
+                                                    }
+                                                } else if (sCell.getType() == SCell.CellType.STRING) {
+                                                    if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
+                                                        cellForDisplay.setStringValue(sCell.getStringValue());
+                                                        showSave = true;
+                                                    }
                                                 }
                                             }
                                         }
-                                    } else {
-                                    // we now want to compare in the case of non formulae changes - a value from one data region importing into another,
-                                    // the other typically being of the "ad hoc" no row headings type
-                                        // notably this will hit a lot of cells (all the rest)
-                                        if (sCell.getType() == SCell.CellType.NUMBER) {
-                                            if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
-                                                cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
-                                                showSave = true;
-                                            }
-                                        } else if (sCell.getType() == SCell.CellType.STRING) {
-                                            if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
-                                                cellForDisplay.setStringValue(sCell.getStringValue());
-                                                    showSave = true;
-                                            }
-                                        }
-
                                     }
                                 }
                             }
@@ -310,7 +317,7 @@ public class ZKAzquoBookUtils {
                 for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
                     List<CellForDisplay> oneRow = new ArrayList<>();
                     for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
-                        oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo));
+                        oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true)); // make these ignored. Edd note : I'm not praticularly happy about this, sent data should be sent data, this is just made up . . .
                     }
                     dataRegionCells.add(oneRow);
                 }

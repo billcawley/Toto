@@ -640,7 +640,19 @@ seaports;children   container;children
             List<CellForDisplay> displayDataRow = new ArrayList<>(sourceRow.size());
             displayData.add(displayDataRow);
             for (AzquoCell sourceCell : sourceRow) {
-                displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol()));
+                // I suppose a little overhead from this - if it's a big problem can store lists of ignored rows and cols above and use that
+                boolean ignored = false;
+                for (DataRegionHeading dataRegionHeading : sourceCell.getColumnHeadings()){
+                    if (".".equals(dataRegionHeading.getAttribute())){
+                        ignored = true;
+                    }
+                }
+                for (DataRegionHeading dataRegionHeading : sourceCell.getRowHeadings()){
+                    if (".".equals(dataRegionHeading.getAttribute())){
+                        ignored = true;
+                    }
+                }
+                displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored));
             }
         }
         // this is single threaded as I assume not much data should be returned. Need to think about this.
