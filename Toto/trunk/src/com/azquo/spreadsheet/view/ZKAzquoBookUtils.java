@@ -154,41 +154,39 @@ public class ZKAzquoBookUtils {
                                     if (sentCells.getData() != null && sentCells.getData().size() > row - name.getRefersToCellRegion().getRow() // as ever check ranges of the data region vs actual data sent.
                                             && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
                                         CellForDisplay cellForDisplay = sentCells.getData().get(row - startRow).get(col - startCol);
-                                        if (!cellForDisplay.getIgnored()){ // we don't want to restore from the DB on cells we don't care about  . . .
-                                            if (sCell.getType() == SCell.CellType.FORMULA) {
-                                                if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
-                                                    if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
-                                                        if (useSavedValuesOnFormulae){ // override formula from DB
-                                                            sCell.setNumberValue(cellForDisplay.getDoubleValue());
-                                                        } else { // the formula overrode the DB, get the value ready of saving if the user wants that
-                                                            cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
-                                                            showSave = true;
-                                                        }
-                                                    }
-                                                } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
-                                                    if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
-                                                        if (useSavedValuesOnFormulae) { // override formula from DB
-                                                            sCell.setStringValue(cellForDisplay.getStringValue());
-                                                        } else { // the formula overrode the DB, get the value ready of saving if the user wants that
-                                                            cellForDisplay.setStringValue(sCell.getStringValue());
-                                                            showSave = true;
-                                                        }
-                                                    }
-                                                }
-                                            } else {
-                                                // we now want to compare in the case of non formulae changes - a value from one data region importing into another,
-                                                // the other typically being of the "ad hoc" no row headings type
-                                                // notably this will hit a lot of cells (all the rest)
-                                                if (sCell.getType() == SCell.CellType.NUMBER) {
-                                                    if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
+                                        if (sCell.getType() == SCell.CellType.FORMULA) {
+                                            if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
+                                                if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
+                                                    if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()){ // override formula from DB, only if not ignored
+                                                        sCell.setNumberValue(cellForDisplay.getDoubleValue());
+                                                    } else { // the formula overrode the DB, get the value ready of saving if the user wants that
                                                         cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
                                                         showSave = true;
                                                     }
-                                                } else if (sCell.getType() == SCell.CellType.STRING) {
-                                                    if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
+                                                }
+                                            } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
+                                                if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
+                                                    if (useSavedValuesOnFormulae  && !cellForDisplay.getIgnored()) { // override formula from DB
+                                                        sCell.setStringValue(cellForDisplay.getStringValue());
+                                                    } else { // the formula overrode the DB, get the value ready of saving if the user wants that
                                                         cellForDisplay.setStringValue(sCell.getStringValue());
                                                         showSave = true;
                                                     }
+                                                }
+                                            }
+                                        } else {
+                                            // we now want to compare in the case of non formulae changes - a value from one data region importing into another,
+                                            // the other typically being of the "ad hoc" no row headings type
+                                            // notably this will hit a lot of cells (all the rest)
+                                            if (sCell.getType() == SCell.CellType.NUMBER) {
+                                                if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
+                                                    cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                    showSave = true;
+                                                }
+                                            } else if (sCell.getType() == SCell.CellType.STRING) {
+                                                if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
+                                                    cellForDisplay.setStringValue(sCell.getStringValue());
+                                                    showSave = true;
                                                 }
                                             }
                                         }
@@ -317,7 +315,7 @@ public class ZKAzquoBookUtils {
                 for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
                     List<CellForDisplay> oneRow = new ArrayList<>();
                     for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
-                        oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, false)); // don't want these ignored, so any different data in there is set
+                        oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true)); // make these ignored. Edd note : I'm not praticularly happy about this, sent data should be sent data, this is just made up . . .
                     }
                     dataRegionCells.add(oneRow);
                 }
