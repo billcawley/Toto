@@ -330,7 +330,7 @@ setInterval(function(){ updateStatus(); }, 1000);
                         bookProvider="com.azquo.spreadsheet.view.ZKAzquoBookProvider"
                         apply="com.azquo.spreadsheet.view.ZKComposer"
                         width="100%" height="100%"
-                        maxrows="300" maxcolumns="300"
+                        maxrows="500" maxcolumns="200"
                         showSheetbar="true" showToolbar="true" showFormulabar="true" showContextMenu="true"/>
     <!--    zssjsp:spreadsheet id="myzss"
                             bookProvider="com.azquo.spreadsheet.view.ZKAzquoBookProvider"
