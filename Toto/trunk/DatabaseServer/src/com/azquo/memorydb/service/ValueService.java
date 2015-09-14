@@ -199,7 +199,7 @@ public final class ValueService {
     // it is requires as we enumerate though the set a lot. A question : should a set record something like "numvaluesincludingchildren"
     // a possible TODO
 
-    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive, Map<Name, Integer> setSizeCache) {
+    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
         long start = System.nanoTime();
 
         final List<Value> values = new ArrayList<>();
@@ -207,20 +207,7 @@ public final class ValueService {
         int smallestNameSetSize = -1;
         Name smallestName = null;
         for (Name name : names) {
-            Integer setSizeIncludingChildren = null;
-            if (setSizeCache != null) {
-                setSizeIncludingChildren = setSizeCache.get(name);
-            }
-            if (setSizeIncludingChildren == null) {
-                setSizeIncludingChildren = name.getValues().size();
-                for (Name child : name.findAllChildren(payAttentionToAdditive)) {
-                    setSizeIncludingChildren += child.getValues().size();
-                }
-                if (setSizeCache != null) {
-                    setSizeCache.put(name, setSizeIncludingChildren);
-                }
-            }
-
+            int setSizeIncludingChildren = name.findNumberOfValuesIncludingChildren(payAttentionToAdditive);
             if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
                 smallestNameSetSize = setSizeIncludingChildren;
                 if (smallestNameSetSize == 0) {//no values
@@ -236,20 +223,33 @@ public final class ValueService {
         final List<Value> valueList = findValuesForNameIncludeAllChildren(smallestName, payAttentionToAdditive);
         part2NanoCallTime1 += (System.nanoTime() - point);
         point = System.nanoTime();
+        Set<Name> namesWithoutSmallest = new HashSet<>(names);
+        namesWithoutSmallest.remove(smallestName);// ignore the one we started with
         for (Value value : valueList) {
             boolean theValueIsOk = true;
-            for (Name name : names) {
-                if (!name.equals(smallestName)) { // ignore the one we started with
+            for (Name name : namesWithoutSmallest) {
                     if (!value.getNames().contains(name)) { // top name not in there check children also
-                        Set<Name> copy = new HashSet<>(value.getNames());
+/*                        Set<Name> copy = new HashSet<>(value.getNames());
                         copy.retainAll(name.findAllChildren(payAttentionToAdditive));
                         if (copy.size() == 0) {
                             //                        count++;
                             theValueIsOk = false;
                             break;
+                        }*/
+                        // going to try for new logic - what we're saying is : are there any matches between the child names and value names at all? I think the retain all code above is not as efficient as it might be
+                        Collection<Name> allChildrenOfName = name.findAllChildren(payAttentionToAdditive);
+                        boolean found = false;
+                        for (Name tocheck : value.getNames()){
+                            if (allChildrenOfName.contains(tocheck)){
+                                found = true;
+                                break;
+                            }
+                        }
+                        if(!found){
+                            theValueIsOk = false;
+                            break;
                         }
                     }
-                }
             }
             if (theValueIsOk) { // it was in all the names :)
                 values.add(value);
@@ -326,7 +326,7 @@ public final class ValueService {
 
     // the function that populates each cell.
     public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MutableBoolean locked
-            , final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, List<String> attributeNames, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) throws Exception {
+            , final boolean payAttentionToAdditive, List<Value> valuesFound, List<String> attributeNames, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) throws Exception {
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
         String calcString = null;
@@ -366,7 +366,7 @@ public final class ValueService {
 
         // no reverse polish converted formula, just sum
         if (!hasCalc) {
-            return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, totalSetSize, function, locked);
+            return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, function, locked);
         } else {
             // this is where the work done by the shunting yard algorithm is used
             // ok I think I know why an array was used, to easily reference the entry before
@@ -406,7 +406,7 @@ public final class ValueService {
                         //}
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
-                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound, totalSetSize, attributeNames, function);
+                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound, attributeNames, function);
                     }
                 }
             }
@@ -466,11 +466,11 @@ public final class ValueService {
 
     // on a standard non-calc cell this will give the result
 
-    public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, Map<Name, Integer> totalSetSize, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, MutableBoolean locked) {
+    public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, MutableBoolean locked) {
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
 
-        List<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive, totalSetSize);
+        List<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive);
 
         double max = 0;
         double min = 0;
@@ -538,7 +538,7 @@ public final class ValueService {
     }
 
     public List<Value> findValuesForNameIncludeAllChildren(final Name name, boolean payAttentionToAdditive) {
-        List<Value> toReturn = new ArrayList<>();
+        List<Value> toReturn = new ArrayList<>(name.findNumberOfValuesIncludingChildren(payAttentionToAdditive)); // should speed that up a fair bit, no more resizing, I don't think.
         toReturn.addAll(name.getValues());
         for (Name child : name.findAllChildren(payAttentionToAdditive)) {
             toReturn.addAll(child.getValues());

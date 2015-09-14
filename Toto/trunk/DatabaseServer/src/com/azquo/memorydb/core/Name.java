@@ -420,7 +420,7 @@ public final class Name extends AzquoMemoryDBEntity {
     // also we have the option to use additive or not
 
     // leaving as sets for the mo. Arrays would be cheaper on the memory I suppose, conversion can be expensive though
-    private Set<Name> findAllChildrenCache = null;
+    private Set<Name> findAllChildrenCache = null;// is this ever used?? COuld save a few bytes
     private Set<Name> findAllChildrenPayAttentionToAdditiveCache = null;
 
     private void findAllChildren(Name name, boolean payAttentionToAdditive, final Set<Name> allChildren) {
@@ -457,6 +457,32 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
+    private int numberOfValuesIncludingChildrenCache = -1; // this was in the "set size" cache, I want this here now, slight memory overhead but it could cause a massive speed increase.
+    private int numberOfValuesIncludingChildrenPayAttentionToAdditiveCache = -1; // this was in the "set size" cache, I want this here now, slight memory overhead but it could cause a massive speed increase.
+    // Tie its invalidation to the find all children invalidation
+
+    public int findNumberOfValuesIncludingChildren(boolean payAttentionToAdditive){
+        if (payAttentionToAdditive){
+            if (numberOfValuesIncludingChildrenPayAttentionToAdditiveCache == -1) {
+                int calcValue = getValues().size(); // don't prod the value itself in case two run at the same time
+                for (Name child : findAllChildren(true)) {
+                    calcValue += child.getValues().size();
+                }
+                numberOfValuesIncludingChildrenPayAttentionToAdditiveCache = calcValue;
+            }
+            return numberOfValuesIncludingChildrenPayAttentionToAdditiveCache;
+        } else {
+            if (numberOfValuesIncludingChildrenCache == -1) {
+                int calcValue = getValues().size(); // don't prod the value itself in case two run at the same time
+                for (Name child : findAllChildren(false)) {
+                    calcValue += child.getValues().size();
+                }
+                numberOfValuesIncludingChildrenCache = calcValue;
+            }
+            return numberOfValuesIncludingChildrenCache;
+        }
+    }
+
     public Collection<Name> getChildren() {
         return childrenAsSet != null ? Collections.unmodifiableCollection(childrenAsSet) : Collections.unmodifiableCollection(Arrays.asList(children));
     }
@@ -464,18 +490,26 @@ public final class Name extends AzquoMemoryDBEntity {
     // might seem inefficient but the adds and removes deal with parents and things. Might reconsider code if used more heavily
     // each add/remove is safe but for predictability best to synchronize the lot here I think
     public synchronized void setChildrenWillBePersisted(Collection<Name> children) throws Exception {
-        for (Name oldChild : this.getChildren()) {
-            removeFromChildrenWillBePersisted(oldChild);
+        Collection<Name> existingChildren = getChildren();
+        // like an equals but the standard equals might trip up on different collection types
+        // at the moment the passed should always be a hashset so run contains all against that I think
+        // notably ignores ordering!
+        if (children.size() != existingChildren.size() || !children.containsAll(existingChildren)){ // this could provide a major speed increase where this function is "recklessly" called (e.g. in the "as" bit in parseQuery in NameService)
+            for (Name oldChild : this.getChildren()) {
+                removeFromChildrenWillBePersisted(oldChild);
+            }
+            for (Name child : children) {
+                addChildWillBePersisted(child);
+            }
+            clearChildrenCaches();
         }
-        for (Name child : children) {
-            addChildWillBePersisted(child);
-        }
-        clearChildrenCaches();
     }
 
     public void clearChildrenCaches(){
         findAllChildrenCache = null;
         findAllChildrenPayAttentionToAdditiveCache = null;
+        numberOfValuesIncludingChildrenCache = -1;
+        numberOfValuesIncludingChildrenPayAttentionToAdditiveCache = -1;
     }
 
     public void addChildWillBePersisted(Name child) throws Exception {

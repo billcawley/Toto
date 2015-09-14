@@ -725,6 +725,8 @@ seaports;children   container;children
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
                 , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays);
         azquoMemoryDBCOnnection.addToUserLog("Data sort/filter in " + (System.currentTimeMillis() - track) + "ms");
+        valueService.printSumStats();
+        valueService.printFindForNamesIncludeChildrenStats();
         return dataToShow;
     }
 
@@ -755,7 +757,7 @@ seaports;children   container;children
 
     private AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int unsortedRow, int unsortedCol, Map<Name, Integer> totalSetSize, List<String> languages) throws Exception {
+            , int unsortedRow, int unsortedCol, List<String> languages) throws Exception {
         // these 25 lines or so are used elsewhere, maybe normalise?
         final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
         final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists);
@@ -768,7 +770,7 @@ seaports;children   container;children
         // now onto the bit to find the specific cell - the column headings were transposed then expanded so they're in the same format as the row headings
         // that is to say : the outside list's size is the number of columns or headings. So, do we have the row and col?
         if (unsortedRow < rowHeadings.size() && unsortedCol < columnHeadings.size()) {
-            return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextNames, unsortedRow, unsortedCol, totalSetSize, languages);
+            return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextNames, unsortedRow, unsortedCol, languages);
         }
         return null; // couldn't find it . . .
     }
@@ -974,10 +976,6 @@ seaports;children   container;children
                 }
             }
         }
-
-        valueService.printSumStats();
-        valueService.printFindForNamesIncludeChildrenStats();
-        logger.info("time to execute : " + (System.currentTimeMillis() - track));
         return toReturn;
     }
 
@@ -1006,10 +1004,9 @@ seaports;children   container;children
         private final List<Name> contextNames;
         private final List<String> languages;
         private final AzquoMemoryDBConnection connection;
-        private final Map<Name, Integer> totalSetSize;
         private final StringBuffer errorTrack;
 
-        public RowFiller(int startRow, int endRow, List<List<AzquoCell>> targetArray, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow, List<Name> contextNames, List<String> languages, AzquoMemoryDBConnection connection, Map<Name, Integer> totalSetSize, StringBuffer errorTrack) {
+        public RowFiller(int startRow, int endRow, List<List<AzquoCell>> targetArray, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow, List<Name> contextNames, List<String> languages, AzquoMemoryDBConnection connection, StringBuffer errorTrack) {
             this.startRow = startRow;
             this.endRow = endRow;
             this.targetArray = targetArray;
@@ -1018,7 +1015,6 @@ seaports;children   container;children
             this.contextNames = contextNames;
             this.languages = languages;
             this.connection = connection;
-            this.totalSetSize = totalSetSize;
             this.errorTrack = errorTrack;
         }
 
@@ -1033,7 +1029,7 @@ seaports;children   container;children
                     int colNo = 0;
                     for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                         // values I need to build the CellUI
-                        returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextNames, rowNo, colNo, totalSetSize, languages));
+                        returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextNames, rowNo, colNo, languages));
                         // for some reason this was before, it buggered up the ability to find the right column!
                         colNo++;
                     }
@@ -1112,7 +1108,7 @@ seaports;children   container;children
     // factored this off to enable getting a single cell, also useful to be called from the multi threading
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
-            , List<Name> contextNames, int rowNo, int colNo, Map<Name, Integer> totalSetSize, List<String> languages) throws Exception {
+            , List<Name> contextNames, int rowNo, int colNo, List<String> languages) throws Exception {
         String stringValue;
         double doubleValue = 0;
         Set<DataRegionHeading> headingsForThisCell = new HashSet<>(rowHeadings.size());
@@ -1198,7 +1194,7 @@ seaports;children   container;children
                     locked.isTrue = true;
                 }
                 if (headingsForThisCell.size() > 0) {
-                    doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, totalSetSize, languages, function); // true = pay attention to names additive flag
+                    doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, languages, function); // true = pay attention to names additive flag
                     //if there's only one value, treat it as text (it may be text, or may include £,$,%)
                     if (values.size() == 1 && !locked.isTrue) {
 
@@ -1267,7 +1263,6 @@ seaports;children   container;children
         for (int i = 0; i < totalRows; i++) {
             toReturn.add(null);// null the rows, basically adding spaces to the return list
         }
-        Map<Name, Integer> totalSetSize = new ConcurrentHashMap<>();// a cache to speed up cell calculation. Short hand of set sizes, we assume they won't change while creating this data.
         connection.addToUserLog("data region size = " + totalRows + " * " + totalCols);
         int maxRegionSize = 2000000;//random!  set by WFC 29/6/15
         if (totalRows * totalCols > maxRegionSize) {
@@ -1283,7 +1278,7 @@ seaports;children   container;children
         // tried multithreaded, abandoning big chunks
         // different style, just chuck every row in the queue
         for (int i = 0; i < totalRows; i++) {
-            executor.execute(new RowFiller(i, i, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, totalSetSize, errorTrack));
+            executor.execute(new RowFiller(i, i, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, errorTrack));
         }
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());
@@ -1368,7 +1363,7 @@ seaports;children   container;children
     public List<TreeNode> getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, null, databaseAccessToken.getLanguages());
+        AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, databaseAccessToken.getLanguages());
         if (azquoCell != null) {
             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
             //Set<Name> specialForProvenance = new HashSet<Name>();
@@ -1492,7 +1487,6 @@ seaports;children   container;children
 
 
         int numberOfValuesModified = 0;
-        Map<Name, Integer> totalSetSize = new HashMap<>();
         List<Name> contextNames = getContextNames(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getContextSource());
         int rowCounter = 0;
         for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
@@ -1506,7 +1500,7 @@ seaports;children   container;children
                     // note, if there are many cells being edited this becomes inefficient as headings are being repeatedly looked up
                     AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRowHeadingsSource()
                             , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
-                            , cell.getUnsortedRow(), cell.getUnsortedCol(), totalSetSize, databaseAccessToken.getLanguages());
+                            , cell.getUnsortedRow(), cell.getUnsortedCol(), databaseAccessToken.getLanguages());
 
                     if (azquoCell != null) {
                         final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
