@@ -176,7 +176,12 @@ seaports;children   container;children
                             // should strip off the function
                             sourceCell = sourceCell.substring(sourceCell.indexOf("(", NAMECOUNT.length()) + 1); // chop off the beginning
                             sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
-                            Set<Name> nameCountSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames)); // put what would have caused multiple headings into namecount
+                            // ok these could be heavy so let's cache them, feels a bit dodgy but we'll see how it goes.
+                            Set<Name> nameCountSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(sourceCell);
+                            if (nameCountSet == null){
+                                nameCountSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames)); // put what would have caused multiple headings into namecount
+                                azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(sourceCell, nameCountSet);
+                            }
                             List<DataRegionHeading> forNameCount = new ArrayList<>();
                             forNameCount.add(new DataRegionHeading(null, false, function, nameCountSet, sourceCell));
                             row.add(forNameCount);
@@ -185,12 +190,26 @@ seaports;children   container;children
                             sourceCell = sourceCell.substring(sourceCell.indexOf("(", NAMECOUNT.length()) + 1); // chop off the beginning
                             sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
                             String selectionType = sourceCell.substring(0, sourceCell.indexOf(","));
-                            Set<Name> typeSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, selectionType, attributeNames));
+
+                            // edd trying some caching
+
+                            Set<Name> typeSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(selectionType);
+                            if (typeSet == null){
+                                typeSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, selectionType, attributeNames));
+                                azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(sourceCell, typeSet);
+                            }
+
                             if (typeSet.size() != 1) {
                                 throw new Exception("selection types must be single cells = use 'as'");
                             }
                             String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1);
-                            Set<Name> selectionSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames));
+
+                            Set<Name> selectionSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(secondSet);
+                            if (selectionSet == null){
+                                selectionSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames));
+                                azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(secondSet, selectionSet);
+                            }
+
                             List<DataRegionHeading> forNameCount = new ArrayList<>();
                             forNameCount.add(new DataRegionHeading(typeSet.iterator().next(), false, function, selectionSet, sourceCell));
                             row.add(forNameCount);

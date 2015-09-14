@@ -124,7 +124,7 @@ public class DSDataLoadService {
     public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.getAzquoMemoryDB().clearNameChildrenCaches();
-        azquoMemoryDBConnection.getAzquoMemoryDB().clearCountCache();
+        azquoMemoryDBConnection.getAzquoMemoryDB().clearSetAndCountCache();
         Map<String, List<Map<String, String>>> tableMap = new HashMap<>();
         BufferedReader br = new BufferedReader(new FileReader(filePath));
         long marker = System.currentTimeMillis();
