@@ -79,7 +79,7 @@ public final class AzquoMemoryDB {
             possibleLoadingThreads = 8;
         }
         loadingThreads = possibleLoadingThreads;
-        rowFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report geenration
+        rowFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report generation, 2/3
         System.out.println("memory db transport threads : " + loadingThreads);
         System.out.println("row filler threads : " + rowFillerThreads);
         this.mysqlName = mysqlName;

@@ -1380,10 +1380,11 @@ seaports;children   container;children
         String heading = "";
         for (Name name : names) {
             if (values == null) {
-                values = new ArrayList<>(valueService.findValuesForNameIncludeAllChildren(name, true));
+//                values = new ArrayList<>(valueService.findValuesForNameIncludeAllChildren(name, true));
+                values = new ArrayList<>(name.findValuesIncludingChildren(true));
 
             } else {
-                values.retainAll(valueService.findValuesForNameIncludeAllChildren(name, true));
+                values.retainAll(name.findValuesIncludingChildren(true));
             }
             if (heading.length() > 0) heading += ", ";
             heading += name.getDefaultDisplayName();

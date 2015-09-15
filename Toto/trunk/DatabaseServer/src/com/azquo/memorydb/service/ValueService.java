@@ -202,16 +202,15 @@ public final class ValueService {
     public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
         long start = System.nanoTime();
 
-        final List<Value> values = new ArrayList<>();
         // first get the shortest value list taking into account children
         int smallestNameSetSize = -1;
         Name smallestName = null;
         for (Name name : names) {
-            int setSizeIncludingChildren = name.findNumberOfValuesIncludingChildren(payAttentionToAdditive);
+            int setSizeIncludingChildren = name.findValuesIncludingChildren(payAttentionToAdditive).size();
             if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
                 smallestNameSetSize = setSizeIncludingChildren;
                 if (smallestNameSetSize == 0) {//no values
-                    return values;
+                    return new ArrayList<>();
                 }
                 smallestName = name;
             }
@@ -220,15 +219,36 @@ public final class ValueService {
         part1NanoCallTime1 += (System.nanoTime() - start);
         long point = System.nanoTime();
         assert smallestName != null; // make intellij happy :P
-        final List<Value> valueList = findValuesForNameIncludeAllChildren(smallestName, payAttentionToAdditive);
+//        final List<Value> valueList = findValuesForNameIncludeAllChildren(smallestName, payAttentionToAdditive);
+        final Set<Value> smallestValuesSet = smallestName.findValuesIncludingChildren(payAttentionToAdditive);
         part2NanoCallTime1 += (System.nanoTime() - point);
         point = System.nanoTime();
+
+
         Set<Name> namesWithoutSmallest = new HashSet<>(names);
         namesWithoutSmallest.remove(smallestName);// ignore the one we started with
-        for (Value value : valueList) {
-            boolean theValueIsOk = true;
-            for (Name name : namesWithoutSmallest) {
-                    if (!value.getNames().contains(name)) { // top name not in there check children also
+
+        // trying for a new style - testing implies the streams parallel is best, if single threaded the retain all has an edge I think
+        // could test more
+        /*
+        List<Value> values = new ArrayList<>();
+        HashSet<Value> valuesSet = new HashSet<>(smallestValuesSet);
+        for (Name name : namesWithoutSmallest){
+            valuesSet.retainAll(name.findValuesIncludingChildren(payAttentionToAdditive));
+        }
+        values.addAll(valuesSet);
+        */
+        // from testing parallel does help a lot!
+        List<Value> values = smallestValuesSet.parallelStream().filter(value -> valueIsOk(value, namesWithoutSmallest, payAttentionToAdditive)).collect(Collectors.toList());
+        part3NanoCallTime1 += (System.nanoTime() - point);
+        numberOfTimesCalled1++;
+        return values;
+    }
+
+    private static boolean valueIsOk(Value value, Collection<Name> namesWithoutSmallest, boolean payAttentionToAdditive){
+        boolean theValueIsOk = true;
+        for (Name name : namesWithoutSmallest) {
+            if (!value.getNames().contains(name)) { // top name not in there check children also
 /*                        Set<Name> copy = new HashSet<>(value.getNames());
                         copy.retainAll(name.findAllChildren(payAttentionToAdditive));
                         if (copy.size() == 0) {
@@ -236,31 +256,22 @@ public final class ValueService {
                             theValueIsOk = false;
                             break;
                         }*/
-                        // going to try for new logic - what we're saying is : are there any matches between the child names and value names at all? I think the retain all code above is not as efficient as it might be
-                        Collection<Name> allChildrenOfName = name.findAllChildren(payAttentionToAdditive);
-                        boolean found = false;
-                        for (Name tocheck : value.getNames()){
-                            if (allChildrenOfName.contains(tocheck)){
-                                found = true;
-                                break;
-                            }
-                        }
-                        if(!found){
-                            theValueIsOk = false;
-                            break;
-                        }
+                // going to try for new logic - what we're saying is : are there any matches between the child names and value names at all? I think the retain all code above is not as efficient as it might be
+                Collection<Name> allChildrenOfName = name.findAllChildren(payAttentionToAdditive);
+                boolean found = false;
+                for (Name tocheck : value.getNames()){
+                    if (allChildrenOfName.contains(tocheck)){
+                        found = true;
+                        break;
                     }
-            }
-            if (theValueIsOk) { // it was in all the names :)
-                values.add(value);
+                }
+                if(!found){
+                    theValueIsOk = false;
+                    break;
+                }
             }
         }
-        part3NanoCallTime1 += (System.nanoTime() - point);
-        numberOfTimesCalled1++;
-        //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
-        //track = System.nanoTime();
-
-        return values;
+        return theValueIsOk;
     }
 
     /* unused commenting
@@ -537,14 +548,14 @@ public final class ValueService {
         }
     }
 
-    public List<Value> findValuesForNameIncludeAllChildren(final Name name, boolean payAttentionToAdditive) {
+/*    public List<Value> findValuesForNameIncludeAllChildren(final Name name, boolean payAttentionToAdditive) {
         List<Value> toReturn = new ArrayList<>(name.findNumberOfValuesIncludingChildren(payAttentionToAdditive)); // should speed that up a fair bit, no more resizing, I don't think.
         toReturn.addAll(name.getValues());
         for (Name child : name.findAllChildren(payAttentionToAdditive)) {
             toReturn.addAll(child.getValues());
         }
         return toReturn;
-    }
+    }*/
 
     /* again unused commenting
 

@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by cawley on 02/03/15
@@ -293,8 +294,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
         Book book = sheetSelectEvent.getSheet().getBook();
-        zkAzquoBookUtils.addValidation(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),
-                (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
+        final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptionsQueries(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
+        zkAzquoBookUtils.addValidation(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),choiceOptions);
     }
 
     // to deal with provenance

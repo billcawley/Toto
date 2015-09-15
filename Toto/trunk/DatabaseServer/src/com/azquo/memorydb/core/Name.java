@@ -435,51 +435,59 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public Collection<Name> findAllChildren(boolean payAttentionToAdditive) {
         if (payAttentionToAdditive) {
-            if (findAllChildrenPayAttentionToAdditiveCache != null) {
-                return Collections.unmodifiableCollection(findAllChildrenPayAttentionToAdditiveCache);
+            Set<Name> threadProtect = findAllChildrenPayAttentionToAdditiveCache;
+            if (threadProtect == null) {
+                threadProtect = new HashSet<>();
+                findAllChildren(this, true, threadProtect);
+                if (!threadProtect.isEmpty()) {
+                    findAllChildrenPayAttentionToAdditiveCache = threadProtect;
+                }
             }
-            Set<Name> allChildrenPayAttentionToAdditive = new HashSet<>();
-            findAllChildren(this, true, allChildrenPayAttentionToAdditive);
-            if (!allChildrenPayAttentionToAdditive.isEmpty()) {
-                findAllChildrenPayAttentionToAdditiveCache = allChildrenPayAttentionToAdditive;
-            }
-            return Collections.unmodifiableCollection(allChildrenPayAttentionToAdditive);
+            return Collections.unmodifiableCollection(threadProtect);
         } else {
-            if (findAllChildrenCache != null) {
-                return Collections.unmodifiableCollection(findAllChildrenCache);
+            Set<Name> threadProtect = findAllChildrenCache;
+            if (threadProtect == null) {
+                threadProtect = new HashSet<>();
+                findAllChildren(this, false, threadProtect);
+                if (!threadProtect.isEmpty()) {
+                    findAllChildrenCache = threadProtect;
+                }
             }
-            Set<Name> allChildren = new HashSet<>();
-            findAllChildren(this, false, allChildren);
-            if (!allChildren.isEmpty()) {
-                findAllChildrenCache = allChildren;
-            }
-            return Collections.unmodifiableCollection(allChildren);
+            return Collections.unmodifiableCollection(threadProtect);
         }
     }
 
-    private int numberOfValuesIncludingChildrenCache = -1; // this was in the "set size" cache, I want this here now, slight memory overhead but it could cause a massive speed increase.
-    private int numberOfValuesIncludingChildrenPayAttentionToAdditiveCache = -1; // this was in the "set size" cache, I want this here now, slight memory overhead but it could cause a massive speed increase.
+    private Set<Value> valuesIncludingChildrenCache = null; // I had a value set size cache but then I thought why not store the values? Could add some overhead to build but after might be very useful
+    // plus I can check some alternative set intersection stuff
+    private Set<Value> valuesIncludingChildrenPayAttentionToAdditiveCache = null;
     // Tie its invalidation to the find all children invalidation
 
-    public int findNumberOfValuesIncludingChildren(boolean payAttentionToAdditive){
+    public Set<Value> findValuesIncludingChildren(boolean payAttentionToAdditive){
         if (payAttentionToAdditive){
-            if (numberOfValuesIncludingChildrenPayAttentionToAdditiveCache == -1) {
-                int calcValue = getValues().size(); // don't prod the value itself in case two run at the same time
+            Set<Value> threadProtect = valuesIncludingChildrenPayAttentionToAdditiveCache; // in case the cache is nulled before we try to return it
+            if (threadProtect == null) {
+                threadProtect = new HashSet<>(getValues());
                 for (Name child : findAllChildren(true)) {
-                    calcValue += child.getValues().size();
+                    threadProtect.addAll(child.getValues());
                 }
-                numberOfValuesIncludingChildrenPayAttentionToAdditiveCache = calcValue;
+                if (!threadProtect.isEmpty()){ // don't cache empty stuff
+                    valuesIncludingChildrenPayAttentionToAdditiveCache = threadProtect;
+                }
             }
-            return numberOfValuesIncludingChildrenPayAttentionToAdditiveCache;
+            //System.out.println("findValuesIncludingChildren " + getDefaultDisplayName() + " size : " + threadProtect.size());
+            return Collections.unmodifiableSet(threadProtect);
         } else {
-            if (numberOfValuesIncludingChildrenCache == -1) {
-                int calcValue = getValues().size(); // don't prod the value itself in case two run at the same time
+            Set<Value> threadProtect = valuesIncludingChildrenCache;
+            if (threadProtect == null) {
+                threadProtect = new HashSet<>(getValues());
                 for (Name child : findAllChildren(false)) {
-                    calcValue += child.getValues().size();
+                    threadProtect.addAll(child.getValues());
                 }
-                numberOfValuesIncludingChildrenCache = calcValue;
+                if (!threadProtect.isEmpty()){
+                    valuesIncludingChildrenCache = threadProtect;
+                }
             }
-            return numberOfValuesIncludingChildrenCache;
+            return Collections.unmodifiableSet(threadProtect);
         }
     }
 
@@ -508,8 +516,8 @@ public final class Name extends AzquoMemoryDBEntity {
     public void clearChildrenCaches(){
         findAllChildrenCache = null;
         findAllChildrenPayAttentionToAdditiveCache = null;
-        numberOfValuesIncludingChildrenCache = -1;
-        numberOfValuesIncludingChildrenPayAttentionToAdditiveCache = -1;
+        valuesIncludingChildrenCache = null;
+        valuesIncludingChildrenPayAttentionToAdditiveCache = null;
     }
 
     public void addChildWillBePersisted(Name child) throws Exception {
