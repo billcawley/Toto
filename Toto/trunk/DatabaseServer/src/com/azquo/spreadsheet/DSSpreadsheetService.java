@@ -993,8 +993,6 @@ seaports;children   container;children
 
     */
 
-    boolean tryMultiThreaded = true;
-
     public class RowFiller implements Runnable {
         private final int startRow;
         private final int endRow;
@@ -1039,6 +1037,46 @@ seaports;children   container;children
                 errorTrack.append("RowFiller : ").append(e.getMessage()).append("\n");
                 for (StackTraceElement ste : e.getStackTrace()) {
                     errorTrack.append("RowFiller : ").append(ste).append("\n");
+                }
+            }
+        }
+    }
+
+    // for less than 1000 rows, probably typical use. On damart for example we had 26*9 taking a while and it was reasonable to assume that rows were not even in terms of processing required
+    public class CellFiller implements Runnable {
+        private final int row;
+        private final int col;
+        private final List<AzquoCell> targetRow;
+        private final List<DataRegionHeading> headingsForColumn;
+        private final List<DataRegionHeading> headingsForRow;
+        private final List<Name> contextNames;
+        private final List<String> languages;
+        private final AzquoMemoryDBConnection connection;
+        private final StringBuffer errorTrack;
+
+        public CellFiller(int row, int col, List<AzquoCell> targetRow, List<DataRegionHeading> headingsForColumn, List<DataRegionHeading> headingsForRow, List<Name> contextNames, List<String> languages, AzquoMemoryDBConnection connection, StringBuffer errorTrack) {
+            this.row = row;
+            this.col = col;
+            this.targetRow = targetRow;
+            this.headingsForColumn = headingsForColumn;
+            this.headingsForRow = headingsForRow;
+            this.contextNames = contextNames;
+            this.languages = languages;
+            this.connection = connection;
+            this.errorTrack = errorTrack;
+        }
+
+        @Override
+        public void run() {
+            try {
+                if (row % 1000 == 0 && col == 0) connection.addToUserLog(".", false);
+                // connection.addToUserLog(".", false);
+                // for some reason this was before, it buggered up the ability to find the right column!
+                targetRow.set(col, getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextNames, row, col, languages));
+            } catch (Exception e) {
+                errorTrack.append("CellFiller : ").append(e.getMessage()).append("\n");
+                for (StackTraceElement ste : e.getStackTrace()) {
+                    errorTrack.append("CellFiller : ").append(ste).append("\n");
                 }
             }
         }
@@ -1268,17 +1306,33 @@ seaports;children   container;children
         if (totalRows * totalCols > maxRegionSize) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }
-        int threads = connection.getAzquoMemoryDB().getRowFillerThreads();
-        if (!tryMultiThreaded) {
-            threads = 1;
-        }
+        int threads = connection.getAzquoMemoryDB().getReportFillerThreads();
         connection.addToUserLog("populating using " + threads + " threas(s)");
         ExecutorService executor = Executors.newFixedThreadPool(threads); // picking 10 based on an example I saw . . .
         StringBuffer errorTrack = new StringBuffer();// deliberately threadsafe, need to keep an eye on the report building . . .
         // tried multithreaded, abandoning big chunks
         // different style, just chuck every row in the queue
-        for (int i = 0; i < totalRows; i++) {
-            executor.execute(new RowFiller(i, i, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, errorTrack));
+        if (totalRows < 1000){ // arbitrary cut off for the moment
+            System.out.println("--------------------Cell filler!");
+            for (int row = 0; row < totalRows; row++) {
+                List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
+                List<AzquoCell> returnRow = new ArrayList<>(headingsForEachColumn.size());
+                for (int i = 0; i < headingsForEachColumn.size(); i++){
+                    returnRow.add(null);// yes a bit hacky, want to make the space that will be used by cellfiller
+                }
+                int colNo = 0;
+                for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
+                    // inconsistent parameter ordering
+                    executor.execute(new CellFiller(row, colNo, returnRow, columnHeadings, rowHeadings, contextNames, languages, connection, errorTrack));
+                    colNo++;
+                }
+                toReturn.set(row, returnRow);
+            }
+        } else {
+            for (int row = 0; row < totalRows; row++) {
+                // row passed twice as
+                executor.execute(new RowFiller(row, row, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, errorTrack));
+            }
         }
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());

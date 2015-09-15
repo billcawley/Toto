@@ -232,7 +232,7 @@ public final class ValueService {
         // could test more
         /*
         List<Value> values = new ArrayList<>();
-        HashSet<Value> valuesSet = new HashSet<>(smallestValuesSet);
+        HashSet<Value> valuesSet = new HashSet<>(smallestValuesSet); // if I do go down this route then maybe consider clone here.
         for (Name name : namesWithoutSmallest){
             valuesSet.retainAll(name.findValuesIncludingChildren(payAttentionToAdditive));
         }

@@ -54,15 +54,15 @@ public final class AzquoMemoryDB {
     // how many threads when loading from and saving to MySQL
     private final int loadingThreads;
     // how many threads when creating a report
-    private final int rowFillerThreads;
+    private final int reportFillerThreads;
 
     // available to StandardDAO
     public int getLoadingThreads() {
         return loadingThreads;
     }
 
-    public int getRowFillerThreads() {
-        return rowFillerThreads;
+    public int getReportFillerThreads() {
+        return reportFillerThreads;
     }
 
     // for convenience while loading, null it at the end of the constuctor.
@@ -79,9 +79,9 @@ public final class AzquoMemoryDB {
             possibleLoadingThreads = 8;
         }
         loadingThreads = possibleLoadingThreads;
-        rowFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report generation, 2/3
+        reportFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report generation, 2/3
         System.out.println("memory db transport threads : " + loadingThreads);
-        System.out.println("row filler threads : " + rowFillerThreads);
+        System.out.println("reportFillerThreads : " + reportFillerThreads);
         this.mysqlName = mysqlName;
         this.standardDAO = standardDAO;
         needsLoading = true;
