@@ -395,6 +395,13 @@ public final class AzquoMemoryDB {
 
     private Set<Name> getNamesForAttributeAndParent(final String attributeName, final String attributeValue, Name parent) {
         Set<Name> possibles = getNamesForAttribute(attributeName, attributeValue);
+        for (Name possible:possibles){
+            if (possible.getParents().contains(parent)){//trying for immediate parent first
+                Set<Name> found = new HashSet<>();
+                found.add(possible);
+                return found;
+            }
+        }
         Iterator<Name> iterator = possibles.iterator();
         while (iterator.hasNext()) {
             Name possible = iterator.next();
