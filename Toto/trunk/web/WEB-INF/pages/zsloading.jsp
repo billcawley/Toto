@@ -66,7 +66,7 @@
         <td><a href="/api/Online?opcode=loadsheet&reportid=1"><img src="/images/azquo-logo2.png" alt="Azquo logo"/></a></td>
         <td><h1>Loading&nbsp;&nbsp;</h1>
         </td>
-        <td width="600px"><div id="serverStatus" style="height:90px;width:100%;font:10px monospace;overflow:auto;"></div></td>
+        <td width="600px"><div id="serverStatus" style="height:45px;width:100%;font:10px monospace;overflow:auto;"></div></td>
       </tr>
     </table>
   </div>

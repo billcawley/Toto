@@ -1,6 +1,7 @@
 <%@page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@taglib prefix="zssjsp" uri="http://www.zkoss.org/jsp/zss" %>
+<%@ taglib uri="http://www.zkoss.org/dsp/web/core" prefix="zc"%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
@@ -308,7 +309,7 @@ setInterval(function(){ updateStatus(); }, 1000);
                     &nbsp;<button id="${pdfMerge}" onclick="postAjax('PDFMerge${pdfMerge}')">PDF : ${pdfMerge}</button>
                 </c:forEach>&nbsp;
                 </td>
-                <td width="600px"><div id="serverStatus" style="height:90px;width:100%;font:10px monospace;overflow:auto;"></div></td>
+                <td width="600px"><div id="serverStatus" style="height:45px;width:100%;font:10px monospace;overflow:auto;"></div></td>
             </tr>
         </table>
 
@@ -327,6 +328,7 @@ setInterval(function(){ updateStatus(); }, 1000);
 </div>
 <div style="height: calc(100% - 100px);">
     <zssjsp:spreadsheet id="myzss"
+                        importer="${zc:new('support.importer.PatchedImporterImpl')}"
                         bookProvider="com.azquo.spreadsheet.view.ZKAzquoBookProvider"
                         apply="com.azquo.spreadsheet.view.ZKComposer"
                         width="100%" height="100%"
