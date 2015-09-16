@@ -1014,7 +1014,7 @@ seaports;children   container;children
             this.languages = languages;
             this.connection = connection;
             this.errorTrack = errorTrack;
-        }
+         }
 
         @Override
         public void run() {
@@ -1022,7 +1022,6 @@ seaports;children   container;children
                 //System.out.println("Filling " + startRow + " to " + endRow);
                 for (int rowNo = startRow; rowNo <= endRow; rowNo++) {
                     List<DataRegionHeading> rowHeadings = headingsForEachRow.get(rowNo);
-                    if (rowNo % 1000 == 0) connection.addToUserLog(".", false);
                     List<AzquoCell> returnRow = new ArrayList<>(headingsForEachColumn.size());
                     int colNo = 0;
                     for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
@@ -1069,8 +1068,8 @@ seaports;children   container;children
         @Override
         public void run() {
             try {
-                if (row % 1000 == 0 && col == 0) connection.addToUserLog(".", false);
-                // connection.addToUserLog(".", false);
+
+                 // connection.addToUserLog(".", false);
                 // for some reason this was before, it buggered up the ability to find the right column!
                 targetRow.set(col, getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextNames, row, col, languages));
             } catch (Exception e) {
@@ -1312,8 +1311,13 @@ seaports;children   container;children
         StringBuffer errorTrack = new StringBuffer();// deliberately threadsafe, need to keep an eye on the report building . . .
         // tried multithreaded, abandoning big chunks
         // different style, just chuck every row in the queue
+        int logInterval = totalRows / 100;
+        if (logInterval == 0) logInterval = 1;
+
         if (totalRows < 1000){ // arbitrary cut off for the moment
             System.out.println("--------------------Cell filler!");
+            logInterval = totalRows * totalCols / 100 + 1;
+            int cellCount = 0;
             for (int row = 0; row < totalRows; row++) {
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
                 List<AzquoCell> returnRow = new ArrayList<>(headingsForEachColumn.size());
@@ -1321,9 +1325,12 @@ seaports;children   container;children
                     returnRow.add(null);// yes a bit hacky, want to make the space that will be used by cellfiller
                 }
                 int colNo = 0;
-                for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
+                 for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
+                      cellCount++;
                     // inconsistent parameter ordering
                     executor.execute(new CellFiller(row, colNo, returnRow, columnHeadings, rowHeadings, contextNames, languages, connection, errorTrack));
+                    if (cellCount % logInterval == 0) connection.addToUserLog(".", false);
+
                     colNo++;
                 }
                 toReturn.set(row, returnRow);
@@ -1331,8 +1338,9 @@ seaports;children   container;children
         } else {
             for (int row = 0; row < totalRows; row++) {
                 // row passed twice as
+                if (row % logInterval == 0) connection.addToUserLog(".", false);
                 executor.execute(new RowFiller(row, row, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, errorTrack));
-            }
+             }
         }
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());
