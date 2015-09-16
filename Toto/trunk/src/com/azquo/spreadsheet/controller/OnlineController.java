@@ -269,7 +269,8 @@ public class OnlineController {
                                 // so in here the new thread we set up the loading as it was originally before
                                 try {
                                     String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + finalOnlineReport.getPathname() + "/onlinereports/" + finalOnlineReport.getFilename();
-                                    final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                                    //Importers.getImporter().imports
+                                    final Book book = new support.importer.PatchedImporterImpl().imports(new File(bookPath), "Report name");
                                     // the first two make sense. Little funny about the second two but we need a reference to these
                                     book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                                     book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);

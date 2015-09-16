@@ -162,7 +162,7 @@ public class ZKSpreadsheetCommandController {
 
                     if ("RestoreSavedValues".equals(action)) {
                         final Book book = ss.getBook();
-                        final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+                        final Book newBook = new support.importer.PatchedImporterImpl().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
                         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                         }
@@ -201,7 +201,7 @@ public class ZKSpreadsheetCommandController {
             index++;
         }
         // ok the options are set, run the book to find our choices
-        Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+        Book newBook = new support.importer.PatchedImporterImpl().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
         }
@@ -217,7 +217,7 @@ public class ZKSpreadsheetCommandController {
                     // previous choices will have been set, just do this last one
                     spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choices.get(choices.size() - 1), selectedChoice);
                     // ok ALL the choices are set, run the book
-                    newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+                    newBook = new support.importer.PatchedImporterImpl().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
                     for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                         newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                     }

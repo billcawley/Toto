@@ -206,7 +206,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 // new book from same source
 //                Clients.evalJavaScript("zUtl.progressbox('test1', 'edd testing',true, '')"); // make another?
 //                Clients.evalJavaScript("zUtl.destroyProgressbox('test1')");
-                final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+                final Book newBook = new support.importer.PatchedImporterImpl().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
                 for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
@@ -564,7 +564,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (!reload) return;
         try {
             // new book from same source
-            final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+            final Book newBook = new support.importer.PatchedImporterImpl().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                 newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
             }

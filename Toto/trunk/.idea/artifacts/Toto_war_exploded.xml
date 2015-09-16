@@ -33,7 +33,6 @@
           <element id="library" level="project" name="org.apache.pdfbox:pdfbox:1.8.10" />
           <element id="library" level="project" name="org.apache.commons:commons-vfs2:2.0" />
           <element id="library" level="project" name="com.jcraft:jsch:0.1.50" />
-          <element id="library" level="project" name="org.zkoss.zk:zuljsp:1.6" />
         </element>
       </element>
     </root>
