@@ -395,8 +395,8 @@ public final class AzquoMemoryDB {
 
     private Set<Name> getNamesForAttributeAndParent(final String attributeName, final String attributeValue, Name parent) {
         Set<Name> possibles = getNamesForAttribute(attributeName, attributeValue);
-        for (Name possible:possibles){
-            if (possible.getParents().contains(parent)){//trying for immediate parent first
+        for (Name possible : possibles) {
+            if (possible.getParents().contains(parent)) {//trying for immediate parent first
                 Set<Name> found = new HashSet<>();
                 found.add(possible);
                 return found;
@@ -559,35 +559,56 @@ public final class AzquoMemoryDB {
 
     // this could be expensive on big databases
 
-    public void clearNameChildrenCaches() {
+    public void clearCaches() {
         nameByIdMap.values().forEach(com.azquo.memorydb.core.Name::clearChildrenCaches);
+        countCache.clear();
+        setCache.clear();
     }
 
     // trying for a basic count and set cache
 
     private final Map<String, Integer> countCache = new ConcurrentHashMap<>();
 
-    public void setCountInCache(String key, Integer count){
+    public void setCountInCache(String key, Integer count) {
         countCache.put(key, count);
     }
 
-    public Integer getCountFromCache(String key){
+    public Integer getCountFromCache(String key) {
         return countCache.get(key);
     }
 
     private final Map<String, Set<Name>> setCache = new ConcurrentHashMap<>();
 
-    public void setSetInCache(String key, Set<Name> set){
+    public void setSetInCache(String key, Set<Name> set) {
         setCache.put(key, set);
     }
 
-    public Set<Name> getSetFromCache(String key){
+    public Set<Name> getSetFromCache(String key) {
         return setCache.get(key);
     }
 
-    public void clearSetAndCountCache(){
-        countCache.clear();
-        setCache.clear();
+    // should do the trick though I worry a little about concurrency, that is to say how fast does the cache invalidation need to become visible
+    // headings should be sorted after the options so hopefully ok? Watch for this
+    public void clearSetAndCountCacheForName(Name name) {
+        for (Name parent : name.findAllParents()){ // I hope this isn't too expensive
+            clearSetAndCountCacheForString(name.getDefaultDisplayName()); // in another language could cause a problem. If we could get the ids this would be more reliable.
+            // Of course the ids means we could get a name list from parse query. A thought.
+        }
+    }
+
+    private void clearSetAndCountCacheForString(String s) {
+        for (Iterator<Map.Entry<String, Integer>> it = countCache.entrySet().iterator(); it.hasNext();) {
+            Map.Entry<String, Integer> entry = it.next();
+            if (entry.getKey().contains(s)) {
+                it.remove();
+            }
+        }
+        for (Iterator<Map.Entry<String, Set<Name>>> it = setCache.entrySet().iterator(); it.hasNext();) {
+            Map.Entry<String, Set<Name>> entry = it.next();
+            if (entry.getKey().contains(s)) {
+                it.remove();
+            }
+        }
     }
 
     public Provenance getProvenanceById(final int id) {

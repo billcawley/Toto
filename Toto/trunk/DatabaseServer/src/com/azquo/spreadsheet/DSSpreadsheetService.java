@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 // it seems that trying to configure the properties in spring is a problem - todo : see if upgrading spring to 4.2 makes this easier?
 // todo : try to address proper use of protected and private given how I've shifter lots of classes around. This could apply to all sorts in the system.
@@ -643,11 +644,11 @@ seaports;children   container;children
 
     // function that can be called by the front end to deliver the data and headings
 
-    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int filterCount, int maxRows, int maxCols
             , String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, int highlightDays) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, databaseAccessToken.getLanguages(), highlightDays);
+        List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, databaseAccessToken.getLanguages(), highlightDays);
         if (data.size() == 0) {
             return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null);
         }
@@ -677,21 +678,29 @@ seaports;children   container;children
                 , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource);
     }
 
-    private List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
+    long threshold = 1000;// we log if a section takes longer
+
+    private List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, List<String> languages, int highlightDays) throws Exception {
+        azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
         long track = System.currentTimeMillis();
+        long start = track;
         final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
-        azquoMemoryDBCOnnection.addToUserLog("Row headings parsed in " + (System.currentTimeMillis() - track) + "ms");
+        long time = (System.currentTimeMillis() - track);
+        if (time > threshold) System.out.println("Row headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
         final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists);
-        azquoMemoryDBCOnnection.addToUserLog("Row headings expanded in " + (System.currentTimeMillis() - track) + "ms");
+        time = (System.currentTimeMillis() - track);
+        if (time > threshold) System.out.println("Row headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
         final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages);
-        azquoMemoryDBCOnnection.addToUserLog("Column headings parsed in " + (System.currentTimeMillis() - track) + "ms");
+        time = (System.currentTimeMillis() - track);
+        if (time > threshold) System.out.println("Column headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
         final List<List<DataRegionHeading>> columnHeadings = expandHeadings(transpose2DList(columnHeadingLists));
-        azquoMemoryDBCOnnection.addToUserLog("Column headings expanded in " + (System.currentTimeMillis() - track) + "ms");
+        time = (System.currentTimeMillis() - track);
+        if (time > threshold) System.out.println("Column headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
         if (columnHeadings.size() == 0) {
             throw new Exception("no headings passed");
@@ -705,7 +714,8 @@ seaports;children   container;children
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
                 while (st.hasMoreTokens()) {
                     final List<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, st.nextToken().trim());
-                    azquoMemoryDBCOnnection.addToUserLog("Context parsed in " + (System.currentTimeMillis() - track) + "ms");
+                    time = (System.currentTimeMillis() - track);
+                    if (time > threshold) System.out.println("Context parsed in " + time + "ms");
                     track = System.currentTimeMillis();
                     if (thisContextNames.size() > 1) {
                         throw new Exception("error: context names must be individual - use 'as' to put sets in context");
@@ -721,12 +731,18 @@ seaports;children   container;children
         // ok going to try to use the new function
         List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings
                 , columnHeadings, contextNames, languages);
+        time = (System.currentTimeMillis() - track);
+        if (time > threshold) System.out.println("data populated in " + time + "ms");
+        if (time > 5000){ // a bit arbitrary
+            valueService.printSumStats();
+            valueService.printFindForNamesIncludeChildrenStats();
+        }
         track = System.currentTimeMillis();
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
                 , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays);
-        azquoMemoryDBCOnnection.addToUserLog("Data sort/filter in " + (System.currentTimeMillis() - track) + "ms");
-        valueService.printSumStats();
-        valueService.printFindForNamesIncludeChildrenStats();
+        time = (System.currentTimeMillis() - track);
+        if (time > threshold) System.out.println("data sort/filter in " + time + "ms");
+        System.out.println("region delivered in " + (System.currentTimeMillis() - start) + "ms");
         return dataToShow;
     }
 
@@ -1003,8 +1019,11 @@ seaports;children   container;children
         private final List<String> languages;
         private final AzquoMemoryDBConnection connection;
         private final StringBuffer errorTrack;
+        private final AtomicInteger counter;
+        private final int progressBarStep;
 
-        public RowFiller(int startRow, int endRow, List<List<AzquoCell>> targetArray, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow, List<Name> contextNames, List<String> languages, AzquoMemoryDBConnection connection, StringBuffer errorTrack) {
+        public RowFiller(int startRow, int endRow, List<List<AzquoCell>> targetArray, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow
+                , List<Name> contextNames, List<String> languages, AzquoMemoryDBConnection connection, StringBuffer errorTrack, AtomicInteger counter, int progressBarStep) {
             this.startRow = startRow;
             this.endRow = endRow;
             this.targetArray = targetArray;
@@ -1014,7 +1033,9 @@ seaports;children   container;children
             this.languages = languages;
             this.connection = connection;
             this.errorTrack = errorTrack;
-         }
+            this.counter = counter;
+            this.progressBarStep = progressBarStep;
+        }
 
         @Override
         public void run() {
@@ -1029,6 +1050,9 @@ seaports;children   container;children
                         returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextNames, rowNo, colNo, languages));
                         // for some reason this was before, it buggered up the ability to find the right column!
                         colNo++;
+                        if (counter.incrementAndGet() % progressBarStep == 0){
+                            connection.addToUserLog("=", false);
+                        }
                     }
                     targetArray.set(rowNo, returnRow);
                 }
@@ -1052,8 +1076,11 @@ seaports;children   container;children
         private final List<String> languages;
         private final AzquoMemoryDBConnection connection;
         private final StringBuffer errorTrack;
+        private final AtomicInteger counter;
+        private final int progressBarStep;
 
-        public CellFiller(int row, int col, List<AzquoCell> targetRow, List<DataRegionHeading> headingsForColumn, List<DataRegionHeading> headingsForRow, List<Name> contextNames, List<String> languages, AzquoMemoryDBConnection connection, StringBuffer errorTrack) {
+        public CellFiller(int row, int col, List<AzquoCell> targetRow, List<DataRegionHeading> headingsForColumn, List<DataRegionHeading> headingsForRow,
+                          List<Name> contextNames, List<String> languages, AzquoMemoryDBConnection connection, StringBuffer errorTrack, AtomicInteger counter, int progressBarStep) {
             this.row = row;
             this.col = col;
             this.targetRow = targetRow;
@@ -1063,15 +1090,19 @@ seaports;children   container;children
             this.languages = languages;
             this.connection = connection;
             this.errorTrack = errorTrack;
+            this.counter = counter;
+            this.progressBarStep = progressBarStep;
         }
 
         @Override
         public void run() {
             try {
-
-                 // connection.addToUserLog(".", false);
+                // connection.addToUserLog(".", false);
                 // for some reason this was before, it buggered up the ability to find the right column!
                 targetRow.set(col, getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextNames, row, col, languages));
+                if (counter.incrementAndGet() % progressBarStep == 0){
+                    connection.addToUserLog("=", false);
+                }
             } catch (Exception e) {
                 errorTrack.append("CellFiller : ").append(e.getMessage()).append("\n");
                 for (StackTraceElement ste : e.getStackTrace()) {
@@ -1105,7 +1136,7 @@ seaports;children   container;children
     }
 
     private int getTotalNameCount(AzquoMemoryDBConnection connection, Set<DataRegionHeading> headings) {
-        String cacheKey = new String();
+        String cacheKey = "";
         for (DataRegionHeading heading : headings) {
             if (heading.getDescription() != null){
                 cacheKey += heading.getDescription();
@@ -1300,24 +1331,20 @@ seaports;children   container;children
         for (int i = 0; i < totalRows; i++) {
             toReturn.add(null);// null the rows, basically adding spaces to the return list
         }
-        connection.addToUserLog("data region size = " + totalRows + " * " + totalCols);
+        connection.addToUserLog("Size = " + totalRows + " * " + totalCols);
         int maxRegionSize = 2000000;//random!  set by WFC 29/6/15
         if (totalRows * totalCols > maxRegionSize) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }
         int threads = connection.getAzquoMemoryDB().getReportFillerThreads();
-        connection.addToUserLog("populating using " + threads + " threas(s)");
+        connection.addToUserLog("Populating using " + threads + " thread(s)");
         ExecutorService executor = Executors.newFixedThreadPool(threads); // picking 10 based on an example I saw . . .
         StringBuffer errorTrack = new StringBuffer();// deliberately threadsafe, need to keep an eye on the report building . . .
         // tried multithreaded, abandoning big chunks
         // different style, just chuck every row in the queue
-        int logInterval = totalRows / 100;
-        if (logInterval == 0) logInterval = 1;
-
+        int progressBarStep = (totalCols * totalRows) / 50;
+        AtomicInteger counter = new AtomicInteger();
         if (totalRows < 1000){ // arbitrary cut off for the moment
-            System.out.println("--------------------Cell filler!");
-            logInterval = totalRows * totalCols / 100 + 1;
-            int cellCount = 0;
             for (int row = 0; row < totalRows; row++) {
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
                 List<AzquoCell> returnRow = new ArrayList<>(headingsForEachColumn.size());
@@ -1325,12 +1352,9 @@ seaports;children   container;children
                     returnRow.add(null);// yes a bit hacky, want to make the space that will be used by cellfiller
                 }
                 int colNo = 0;
-                 for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
-                      cellCount++;
+                for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                     // inconsistent parameter ordering
-                    executor.execute(new CellFiller(row, colNo, returnRow, columnHeadings, rowHeadings, contextNames, languages, connection, errorTrack));
-                    if (cellCount % logInterval == 0) connection.addToUserLog(".", false);
-
+                    executor.execute(new CellFiller(row, colNo, returnRow, columnHeadings, rowHeadings, contextNames, languages, connection, errorTrack, counter, progressBarStep));
                     colNo++;
                 }
                 toReturn.set(row, returnRow);
@@ -1338,9 +1362,8 @@ seaports;children   container;children
         } else {
             for (int row = 0; row < totalRows; row++) {
                 // row passed twice as
-                if (row % logInterval == 0) connection.addToUserLog(".", false);
-                executor.execute(new RowFiller(row, row, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, errorTrack));
-             }
+                executor.execute(new RowFiller(row, row, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, connection, errorTrack, counter, progressBarStep));
+            }
         }
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());
@@ -1352,9 +1375,7 @@ seaports;children   container;children
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());
         }
-        //valueService.printSumStats();
-        //valueService.printFindForNamesIncludeChildrenStats();
-        connection.addToUserLog("time to execute : " + (System.currentTimeMillis() - track));
+        connection.addToUserLog(" time : " + (System.currentTimeMillis() - track) + "ms");
         return toReturn;
     }
 
@@ -1540,7 +1561,7 @@ seaports;children   container;children
 
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
 
-        azquoMemoryDBConnection.getAzquoMemoryDB().clearNameChildrenCaches(); // may need to optimise later, clear the name counts also?
+        azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches(); // may need to optimise later, clear the name counts also?
 
         azquoMemoryDBConnection.setProvenance(user, "in spreadsheet", reportName, context);
         if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {

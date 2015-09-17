@@ -390,7 +390,7 @@ public class AzquoBook {
         if (context == null) {
             throw new Exception("no range az_Context" + region);
         }
-        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
+        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
                 rangeToStringLists(context), userRegionOptions);
         loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
         // think this language detection is sound

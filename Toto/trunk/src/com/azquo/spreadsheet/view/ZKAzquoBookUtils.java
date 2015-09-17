@@ -328,7 +328,7 @@ public class ZKAzquoBookUtils {
 
         if (columnHeadingsDescription != null) {
             try {
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
                         regionToStringLists(contextDescription, sheet), userRegionOptions);
                 loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!

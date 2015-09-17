@@ -435,25 +435,46 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public Collection<Name> findAllChildren(boolean payAttentionToAdditive) {
         if (payAttentionToAdditive) {
-            Set<Name> threadProtect = findAllChildrenPayAttentionToAdditiveCache;
-            if (threadProtect == null) {
-                threadProtect = new HashSet<>();
-                findAllChildren(this, true, threadProtect);
-                if (!threadProtect.isEmpty()) {
-                    findAllChildrenPayAttentionToAdditiveCache = threadProtect;
+            // I think this a worthwhile variable in case the cache is zapped in the mean time, it's about thread safety
+            Set<Name> localReference = findAllChildrenPayAttentionToAdditiveCache;
+            if (localReference == null) {
+                // ok I don't want to be building two at a time, hence I want to synchronize this bit,
+                synchronized (this){ // ideally I wouldn't synchronize on this, it would be on findAllChildrenPayAttentionToAdditiveCache but it's not final and I don't want it to be for the moment
+                    localReference = findAllChildrenPayAttentionToAdditiveCache; // check again after synchronized, it may have been sorted in the mean time
+                    if (localReference == null) {
+                        localReference = new HashSet<>();
+                        findAllChildren(this, true, localReference);
+                        if (localReference.isEmpty()){
+                            findAllChildrenPayAttentionToAdditiveCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
+                        } else {
+                            findAllChildrenPayAttentionToAdditiveCache = localReference;
+                        }
+                    }/* else {
+                        System.out.println("skipped a simultaneous findAllChildren cache populate, good stuff");
+                    }*/
                 }
             }
-            return Collections.unmodifiableCollection(threadProtect);
+            return Collections.unmodifiableCollection(localReference);
         } else {
-            Set<Name> threadProtect = findAllChildrenCache;
-            if (threadProtect == null) {
-                threadProtect = new HashSet<>();
-                findAllChildren(this, false, threadProtect);
-                if (!threadProtect.isEmpty()) {
-                    findAllChildrenCache = threadProtect;
+            Set<Name> localReference = findAllChildrenCache;
+            if (localReference == null) {
+                // ok I don't want to be building two at a time, hence I want to synchronize this bit
+                synchronized (this){ // ideally I wouldn't synchronize on this, it would be on findAllChildrenCache but it's not final and I don't want it to be for the moment
+                    localReference = findAllChildrenCache; // check again after synchronized, it may have been sorted in the mean time
+                    if (localReference == null) {
+                        localReference = new HashSet<>();
+                        findAllChildren(this, false, localReference);
+                        if (localReference.isEmpty()){
+                            findAllChildrenCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
+                        } else {
+                            findAllChildrenCache = localReference;
+                        }
+                    }/* else {
+                        System.out.println("skipped a simultaneous findAllChildren cache populate, good stuff");
+                    }*/
                 }
             }
-            return Collections.unmodifiableCollection(threadProtect);
+            return Collections.unmodifiableCollection(localReference);
         }
     }
 
@@ -464,31 +485,58 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public Set<Value> findValuesIncludingChildren(boolean payAttentionToAdditive){
         if (payAttentionToAdditive){
-            Set<Value> threadProtect = valuesIncludingChildrenPayAttentionToAdditiveCache; // in case the cache is nulled before we try to return it
-            if (threadProtect == null) {
-                threadProtect = new HashSet<>(getValues());
-                for (Name child : findAllChildren(true)) {
-                    threadProtect.addAll(child.getValues());
-                }
-                if (!threadProtect.isEmpty()){ // don't cache empty stuff
-                    valuesIncludingChildrenPayAttentionToAdditiveCache = threadProtect;
+            Set<Value> localReference = valuesIncludingChildrenPayAttentionToAdditiveCache; // in case the cache is nulled before we try to return it
+            if (localReference == null) {
+                // ok I don't want to be building two at a time, hence I want to synchronize this bit,
+                synchronized (this){
+                    localReference = valuesIncludingChildrenPayAttentionToAdditiveCache; // check again after synchronized, it may have been sorted in the mean time
+                    if (localReference == null) {
+                        localReference = new HashSet<>(getValues());
+                        for (Name child : findAllChildren(true)) {
+                            localReference.addAll(child.getValues());
+                        }
+                        if (localReference.isEmpty()){
+                            valuesIncludingChildrenPayAttentionToAdditiveCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
+                        } else {
+                            valuesIncludingChildrenPayAttentionToAdditiveCache = localReference;
+                        }
+                    }/* else {
+                        System.out.println("skipped a simultaneous findValuesIncludingChildren cache populate, good stuff");
+                    }*/
                 }
             }
-            //System.out.println("findValuesIncludingChildren " + getDefaultDisplayName() + " size : " + threadProtect.size());
-            return Collections.unmodifiableSet(threadProtect);
+            return Collections.unmodifiableSet(localReference);
         } else {
-            Set<Value> threadProtect = valuesIncludingChildrenCache;
-            if (threadProtect == null) {
-                threadProtect = new HashSet<>(getValues());
-                for (Name child : findAllChildren(false)) {
-                    threadProtect.addAll(child.getValues());
-                }
-                if (!threadProtect.isEmpty()){
-                    valuesIncludingChildrenCache = threadProtect;
+            Set<Value> localReference = valuesIncludingChildrenCache; // in case the cache is nulled before we try to return it
+            if (localReference == null) {
+                // ok I don't want to be building two at a time, hence I want to synchronize this bit,
+                synchronized (this){
+                    localReference = valuesIncludingChildrenCache; // check again after synchronized, it may have been sorted in the mean time
+                    if (localReference == null) {
+                        localReference = new HashSet<>(getValues());
+                        for (Name child : findAllChildren(false)) {
+                            localReference.addAll(child.getValues());
+                        }
+                        if (localReference.isEmpty()){
+                            valuesIncludingChildrenCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
+                        } else {
+                            valuesIncludingChildrenCache = localReference;
+                        }
+                    }/* else {
+                        System.out.println("skipped a simultaneous findValuesIncludingChildren cache populate, good stuff");
+                    }*/
                 }
             }
-            return Collections.unmodifiableSet(threadProtect);
+            return Collections.unmodifiableSet(localReference);
         }
+    }
+    // synchronized? Not sure if it matters, dn't need immediate visibility and the cache read should (!) be thread safe.
+    // The read uses synchronized to stop creating the cache more than necessary rather than to be totally up to date
+    public void clearChildrenCaches(){
+        findAllChildrenCache = null;
+        findAllChildrenPayAttentionToAdditiveCache = null;
+        valuesIncludingChildrenCache = null;
+        valuesIncludingChildrenPayAttentionToAdditiveCache = null;
     }
 
     public Collection<Name> getChildren() {
@@ -510,14 +558,8 @@ public final class Name extends AzquoMemoryDBEntity {
                 addChildWillBePersisted(child);
             }
             clearChildrenCaches();
+            getAzquoMemoryDB().clearSetAndCountCacheForName(this);
         }
-    }
-
-    public void clearChildrenCaches(){
-        findAllChildrenCache = null;
-        findAllChildrenPayAttentionToAdditiveCache = null;
-        valuesIncludingChildrenCache = null;
-        valuesIncludingChildrenPayAttentionToAdditiveCache = null;
     }
 
     public void addChildWillBePersisted(Name child) throws Exception {
@@ -562,6 +604,7 @@ public final class Name extends AzquoMemoryDBEntity {
             }
             if (changed) { // new logic, only do these things if something was changed
                 clearChildrenCaches();
+                getAzquoMemoryDB().clearSetAndCountCacheForName(this);
                 child.addToParents(this);//synchronized internally with this also so will not deadlock
                 setNeedsPersisting();
                 //and check that there are not indirect connections which should be deleted (e.g. if London exists in UK and Europe, and we are now
@@ -596,6 +639,7 @@ public final class Name extends AzquoMemoryDBEntity {
                     children = nameArrayRemove(children, name); // note this will fail if it turns out children does not contain the name. SHould be ok.
                 }
                 clearChildrenCaches();
+                getAzquoMemoryDB().clearSetAndCountCacheForName(this);
                 setNeedsPersisting();
             }
         }
