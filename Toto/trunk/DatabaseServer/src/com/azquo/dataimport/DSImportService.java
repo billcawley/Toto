@@ -787,7 +787,7 @@ public class DSImportService {
                 handleParent(azquoMemoryDBConnection, namesFound, importCellWithHeading, cells, attributeNames, lineNo);
             }
         }
-        long toolong = 1000000;
+        long toolong = 2000000;
         long time = System.nanoTime();
         ImportCellWithHeading contextPeersItem = null;
         List<Name> contextNames = new ArrayList<>(); // stacks cumulatively across the line
