@@ -1,7 +1,13 @@
 package com.azquo.util;
 
+import com.sun.mail.imap.IMAPFolder;
 import org.apache.commons.mail.DefaultAuthenticator;
 import org.apache.commons.mail.HtmlEmail;
+
+import javax.mail.*;
+import javax.mail.internet.MimeBodyPart;
+import java.io.IOException;
+import java.util.Properties;
 
 
 /**
@@ -33,6 +39,81 @@ public class AzquoMailer {
         } catch (Exception e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    // yoinked from tinternet and modified
+
+    public void readGoogleAnalyticsEmail() {
+
+        Store store = null;
+        IMAPFolder folder = null;
+        try {
+            Properties props = System.getProperties();
+            props.setProperty("mail.store.protocol", "imaps");
+
+            Session session = Session.getDefaultInstance(props, null);
+
+            store = session.getStore("imaps");
+            store.connect("logichound.servers.eqx.misp.co.uk", "edd@azquo.com", "qPF34d95zzZq");
+
+            folder = (IMAPFolder) store.getFolder("inbox");
+
+
+            if (!folder.isOpen())
+                folder.open(Folder.READ_WRITE);
+            Message[] messages = folder.getMessages(folder.getMessageCount() - 20, folder.getMessageCount());
+            System.out.println("No of Messages : " + folder.getMessageCount());
+            System.out.println("No of Unread Messages : " + folder.getUnreadMessageCount());
+            System.out.println(messages.length);
+            for (int i = 0; i < messages.length; i++) {
+
+                Message msg = messages[i];
+                //System.out.println(msg.getMessageNumber());
+                //Object String;
+                //System.out.println(folder.getUID(msg)
+
+                String subject = msg.getSubject();
+                if (subject != null && subject.startsWith("Google Analytics")) {
+                    String contentType = msg.getContentType();
+/*                    System.out.println("MESSAGE " + (i + 1) + ":");
+                    System.out.println("Subject: " + subject);
+                    System.out.println("From: " + msg.getFrom()[0]);
+                    System.out.println("To: "+msg.getAllRecipients()[0]);
+                    System.out.println("Date: "+msg.getReceivedDate());
+                    System.out.println("Size: "+msg.getSize());
+                    System.out.println(msg.getFlags());
+                    System.out.println("Body: \n"+ msg.getContent());
+                    System.out.println(contentType);*/
+                    if (contentType.contains("multipart")) {
+                        Multipart multiPart = (Multipart) msg.getContent();
+                        for (int partNo = 0; partNo < multiPart.getCount(); partNo++) {
+                            MimeBodyPart part = (MimeBodyPart) multiPart.getBodyPart(partNo);
+                            if (Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())) {
+                                part.saveFile("/home/edward/Downloads/" + part.getFileName());
+                            }
+                        }
+                    }
+
+                }
+            }
+        } catch (MessagingException | IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (folder != null && folder.isOpen()) {
+                try {
+                    folder.close(true);
+                } catch (MessagingException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (store != null) {
+                try {
+                    store.close();
+                } catch (MessagingException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 

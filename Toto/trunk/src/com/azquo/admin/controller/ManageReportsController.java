@@ -4,18 +4,23 @@ import com.azquo.admin.AdminService;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.sun.mail.imap.IMAPFolder;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import javax.mail.*;
+import javax.mail.internet.MimeBodyPart;
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * Created by cawley on 24/04/15.
- *
+ * <p>
  * recreating what was in the excel/azquo book as simple pages. Calls to get data initially will simply be what was in fillAdminData in AzquoBook.
  */
 
@@ -38,13 +43,13 @@ public class ManageReportsController {
             return "redirect:/api/Login";
         } else {
             final List<OnlineReport> reports = adminService.getReportList(loggedInUser);
-            for (OnlineReport report : reports){
+            for (OnlineReport report : reports) {
                 boolean store = false;
                 String explanation = request.getParameter("explanation" + report.getId());
                 String userStatus = request.getParameter("userStatus" + report.getId());
                 String businessType = request.getParameter("businessType" + report.getId());
                 String category = request.getParameter("reportCategory" + report.getId());
-                if (explanation != null && !explanation.equals(report.getExplanation())){
+                if (explanation != null && !explanation.equals(report.getExplanation())) {
                     report.setExplanation(explanation);
                     store = true;
                 }
@@ -52,15 +57,15 @@ public class ManageReportsController {
                     report.setUserStatus(request.getParameter("userStatus" + report.getId()));
                     store = true;
                 }
-                if (businessType!=null && !businessType.equals(report.getDatabaseType())){
+                if (businessType != null && !businessType.equals(report.getDatabaseType())) {
                     report.setDatabaseType(businessType);
-                    store=true;
+                    store = true;
                 }
-                if (category!=null && !category.equals(report.getReportCategory())){
+                if (category != null && !category.equals(report.getReportCategory())) {
                     report.setReportCategory(category);
-                    store=true;
+                    store = true;
                 }
-                if (store){
+                if (store) {
                     adminService.storeReport(report);
                 }
             }

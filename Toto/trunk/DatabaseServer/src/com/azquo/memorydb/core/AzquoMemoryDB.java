@@ -228,7 +228,7 @@ public final class AzquoMemoryDB {
                 AtomicInteger namesLoaded = new AtomicInteger();
                 AtomicInteger valuesLoaded = new AtomicInteger();
 
-                final int step = 500000; // not so much step now as id range given how we're now querying mysql
+                final int step = 500_000; // not so much step now as id range given how we're now querying mysql
                 marker = System.currentTimeMillis();
                 // create thread pool, rack up the loading tasks and wait for it to finish. Repeat for name and values.
                 ExecutorService executor = Executors.newFixedThreadPool(loadingThreads);
