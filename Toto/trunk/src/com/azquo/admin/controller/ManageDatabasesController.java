@@ -179,21 +179,27 @@ public class ManageDatabasesController {
             return "redirect:/api/Login";
         } else {
             if (database != null && uploadFile != null) {
-                try{
+                if (database.isEmpty()){
+                    model.put("error", "Please select a database");
+                } else if (uploadFile.isEmpty()){
+                    model.put("error", "Please select a file to upload");
+                } else {
+                    try{
                         loginService.switchDatabase(loggedInUser, database); // could be blank now
-                    String fileName = uploadFile.getOriginalFilename();
-                    // always move uplaoded files now, they'll need to be transferred to the DB server after code split
-                    File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
-                    uploadFile.transferTo(moved);
+                        String fileName = uploadFile.getOriginalFilename();
+                        // always move uplaoded files now, they'll need to be transferred to the DB server after code split
+                        File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
+                        uploadFile.transferTo(moved);
 
-                    importService.importTheFile(loggedInUser, fileName, useType, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
-                } catch (Exception e){
-                    String exceptionError = e.getMessage();
-                    e.printStackTrace();
-                    //trim off the javaspeak
-                    if (exceptionError != null && exceptionError.contains("error:"))
-                        exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
-                    model.put("error", exceptionError);
+                        importService.importTheFile(loggedInUser, fileName, useType, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
+                    } catch (Exception e){
+                        String exceptionError = e.getMessage();
+                        e.printStackTrace();
+                        //trim off the javaspeak
+                        if (exceptionError != null && exceptionError.contains("error:"))
+                            exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
+                        model.put("error", exceptionError);
+                    }
                 }
             }
             List<Database> databaseList = adminService.getDatabaseListForBusiness(loggedInUser);

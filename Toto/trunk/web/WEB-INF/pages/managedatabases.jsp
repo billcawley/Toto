@@ -14,7 +14,7 @@
 <body>
 <a href="/api/ManageReports">Manage Reports</a> &nbsp;<a href="/api/ManageDatabases">Manage Databases</a> &nbsp;<a href="/api/ManageUsers">Manage Users</a> &nbsp;<a href="/api/ManagePermissions">Manage Permissions</a> &nbsp;<br/>
 <h1>Manage Databases</h1><br/>
-<br/>${error}
+<br/><h1>${error}</h1>
 <table>
   <tr>
   <form action="/api/ManageDatabases" method="post"><td>New Database</td><td><input name="createDatabase"/></td><td><input name="databaseType"/></td><td>
