@@ -1089,9 +1089,39 @@ public class DSImportService {
                     while (headingMarker >= 0) {
                         int headingEnd = result.indexOf("`", headingMarker + 1);
                         if (headingEnd > 0) {
-                            int compItem = findHeading(result.substring(headingMarker + 1, headingEnd), cells);
+                            String expression = result.substring(headingMarker + 1, headingEnd);
+                            String function = null;
+                            int funcInt = 0;
+
+                            if (expression.contains("(")){
+                                int bracketpos = expression.indexOf("(");
+                                function = expression.substring(0,bracketpos);
+                                int commaPos = expression.indexOf(",", bracketpos + 1);
+                                if (commaPos > 0){
+                                    String countString = expression.substring(commaPos + 1,expression.length() - 1);
+                                     try{
+                                       funcInt = Integer.parseInt(countString.trim());
+                                    }catch(Exception e) {
+                                    }
+
+                                    expression = expression.substring(bracketpos + 1, commaPos);
+
+                                 }
+                              }
+                            int compItem = findHeading(expression, cells);
                             if (compItem >= 0) {
-                                result = result.replace(result.substring(headingMarker, headingEnd + 1), cells.get(compItem).lineValue);
+                                String sourceVal = cells.get(compItem).lineValue;
+                                if (function!=null && funcInt > 0 && sourceVal.length() > funcInt){
+                                    if (function.equalsIgnoreCase("left")){
+                                        sourceVal = sourceVal.substring(0,funcInt);
+                                    }
+                                    if (function.equalsIgnoreCase("right")){
+
+                                        sourceVal = sourceVal.substring(sourceVal.length() - funcInt );
+                                    }
+                                }
+
+                                result = result.replace(result.substring(headingMarker, headingEnd + 1), sourceVal);
                             }
                         }
                         headingMarker = result.indexOf("`", headingMarker + 1);
