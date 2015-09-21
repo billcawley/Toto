@@ -50,19 +50,21 @@ public class AzquoMailer {
         IMAPFolder folder = null;
         try {
             Properties props = System.getProperties();
-            props.setProperty("mail.store.protocol", "imaps");
+            props.setProperty("mail.store.protocol", "imap");
 
             Session session = Session.getDefaultInstance(props, null);
 
-            store = session.getStore("imaps");
-            store.connect("logichound.servers.eqx.misp.co.uk", "edd@azquo.com", "qPF34d95zzZq");
+            store = session.getStore("imap");
+//            store.connect("logichound.servers.eqx.misp.co.uk", "edd@azquo.com", "qPF34d95zzZq");
 
+            store.connect("192.168.1.10", "nic2", "salasana");
             folder = (IMAPFolder) store.getFolder("inbox");
 
 
             if (!folder.isOpen())
                 folder.open(Folder.READ_WRITE);
-            Message[] messages = folder.getMessages(folder.getMessageCount() - 20, folder.getMessageCount());
+//            Message[] messages = folder.getMessages(folder.getMessageCount() - 20, folder.getMessageCount());
+            Message[] messages = folder.getMessages();
             System.out.println("No of Messages : " + folder.getMessageCount());
             System.out.println("No of Unread Messages : " + folder.getUnreadMessageCount());
             System.out.println(messages.length);
@@ -72,8 +74,16 @@ public class AzquoMailer {
                 //System.out.println(msg.getMessageNumber());
                 //Object String;
                 //System.out.println(folder.getUID(msg)
-
                 String subject = msg.getSubject();
+                    System.out.println("MESSAGE " + (i + 1) + ":");
+                    System.out.println("Subject: " + subject);
+                    System.out.println("From: " + msg.getFrom()[0]);
+                    System.out.println("To: "+msg.getAllRecipients());
+                    System.out.println("Date: "+msg.getReceivedDate());
+                    System.out.println("Size: "+msg.getSize());
+                    System.out.println(msg.getFlags());
+                    System.out.println("Body: \n"+ msg.getContent());
+
                 if (subject != null && subject.startsWith("Google Analytics")) {
                     String contentType = msg.getContentType();
 /*                    System.out.println("MESSAGE " + (i + 1) + ":");

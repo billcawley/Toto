@@ -5,6 +5,8 @@ import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.onlinereport.ReportSchedule;
+import com.azquo.admin.onlinereport.ReportScheduleDAO;
 import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
@@ -48,6 +50,8 @@ public class AdminService {
     private UploadRecordDAO uploadRecordDAO;
     @Autowired
     private OnlineReportDAO onlineReportDAO;
+    @Autowired
+    private ReportScheduleDAO reportScheduleDAO;
     @Autowired
     private RMIClient rmiClient;
 
@@ -278,6 +282,17 @@ public class AdminService {
         return reportList;
     }
 
+    public List<ReportSchedule> getReportScheduleList(final LoggedInUser loggedInUser) {
+        List<ReportSchedule> toReturn = new ArrayList<>();
+        List<Database> databases = databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+        for (Database database:databases) {
+            List<ReportSchedule> reportSchedules = reportScheduleDAO.findForDatabaseId(database.getId());
+            toReturn.addAll(reportSchedules);
+
+        }
+        return toReturn;
+    }
+
     public List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
             List<UploadRecord> uploadRecords = uploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
@@ -374,6 +389,19 @@ public class AdminService {
             return database;
         }
         return null;
+    }
+
+    public OnlineReport getReportById(int reportId, LoggedInUser loggedInUser) {
+        OnlineReport onlineReport = onlineReportDAO.findById(reportId);
+        if (onlineReport != null && loggedInUser.getUser().getBusinessId() == onlineReport.getBusinessId()){
+            return onlineReport;
+        }
+        return null;
+    }
+
+
+    public void storeReportSchedule(ReportSchedule reportSchedule) {
+        reportScheduleDAO.store(reportSchedule);
     }
 
     public void storeDatabase(Database database) {

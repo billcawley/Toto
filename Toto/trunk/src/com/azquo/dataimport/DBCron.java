@@ -1,4 +1,6 @@
-package com.azquo.memorydb.cron;
+package com.azquo.dataimport;
+
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.LocalDateTime;
 
@@ -8,10 +10,10 @@ import java.time.LocalDateTime;
  * Currently unused but it may be useful so I'm leaving it here
  */
 public class DBCron {
-/*    @Scheduled(cron="0 * * * * *")
+    @Scheduled(cron="0 * * * * *")
     public void demoServiceMethod()
     {
-        System.out.println("every minute?" + DateTime.getNow());
-    }*/
+//        System.out.println("every minute?" + LocalDateTime.now());
+    }
 
 }

@@ -68,9 +68,11 @@
     <bean name="spreadsheetService" class="com.azquo.spreadsheet.SpreadsheetService"/>
     <bean name="openDatabaseDao" class="com.azquo.admin.database.OpenDatabaseDAO"/>
     <bean name="onlineReportDao" class="com.azquo.admin.onlinereport.OnlineReportDAO"/>
+    <bean name="reportScheduleDao" class="com.azquo.admin.onlinereport.ReportScheduleDAO"/>
 
     <bean name="magentoService" class="com.azquo.app.magento.service.DataLoadService"/>
 
+    <bean id="dbCron" class="com.azquo.dataimport.DBCron"></bean>
 
 
     <!--    <util:list id="appServices" value-type="com.azquo.spreadsheetheet.AppEntityService">

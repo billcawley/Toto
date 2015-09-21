@@ -59,8 +59,6 @@
     <bean name="memoryDBManager" class="com.azquo.memorydb.core.MemoryDBManager">
         <constructor-arg type="com.azquo.memorydb.dao.StandardDAO" ref="standardDao"/>
     </bean>
-    <bean id="dbCron" class="com.azquo.memorydb.cron.DBCron"></bean>
-
     <bean name="rmiServer" class="com.azquo.rmi.RMIServer">
         <constructor-arg index="0" ref="dsSpreadsheetService"/>
         <constructor-arg index="1" ref="dsAdminService"/>
