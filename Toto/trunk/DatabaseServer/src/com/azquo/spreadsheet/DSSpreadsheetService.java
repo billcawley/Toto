@@ -1342,7 +1342,7 @@ seaports;children   container;children
         StringBuffer errorTrack = new StringBuffer();// deliberately threadsafe, need to keep an eye on the report building . . .
         // tried multithreaded, abandoning big chunks
         // different style, just chuck every row in the queue
-        int progressBarStep = (totalCols * totalRows) / 50;
+        int progressBarStep = (totalCols * totalRows) / 50 + 1;
         AtomicInteger counter = new AtomicInteger();
         if (totalRows < 1000){ // arbitrary cut off for the moment
             for (int row = 0; row < totalRows; row++) {
