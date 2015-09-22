@@ -7,7 +7,7 @@
   <title>Manage Reports</title>
 </head>
 <body>
-<a href="/api/ManageReports">Manage Reports</a> &nbsp;<a href="/api/ManageDatabases">Manage Databases</a> &nbsp;<a href="/api/ManageUsers">Manage Users</a> &nbsp;<a href="/api/ManagePermissions">Manage Permissions</a> &nbsp;<br/>
+<a href="/api/ManageReports">Manage Reports</a> &nbsp;<a href="/api/ManageReportSchedules">Manage Report Schedules</a> &nbsp;<a href="/api/ManageDatabases">Manage Databases</a> &nbsp;<a href="/api/ManageUsers">Manage Users</a> &nbsp;<a href="/api/ManagePermissions">Manage Permissions</a> &nbsp;<br/>
 <h1>Manage Report Schedules</h1><br/>
 <form action="/api/ManageReportSchedules" method="post">
   <table>
@@ -24,12 +24,34 @@
     </tr>
     <c:forEach items="${reportSchedules}" var="reportSchedule">
       <tr>
-        <td><input name="period${reportSchedule.id}" value="${reportSchedule.period}" size="10"/></td>
-        <td><input name="recipients${reportSchedule.id}" value="${reportSchedule.recipients}" size="100"/></td>
-        <td><input name="nextDue${reportSchedule.id}" value="${reportSchedule.nextDue}" size="16"/></td>
-        <td><input name="database${reportSchedule.id}" value="${reportSchedule.databaseId}" size="10"/></td>
-        <td><input name="report${reportSchedule.id}" value="${reportSchedule.reportId}" size="10"/></td>
-        <td><input name="type${reportSchedule.id}" value="${reportSchedule.type}" size="10"/></td>
+        <td>
+            <select name="period${reportSchedule.id}">
+                <option<c:if test="${reportSchedule.period == 'HOURLY'}"> selected</c:if>>HOURLY</option>
+                <option<c:if test="${reportSchedule.period == 'DAILY'}"> selected</c:if>>DAILY</option>
+                <option<c:if test="${reportSchedule.period == 'WEEKLY'}"> selected</c:if>>WEEKLY</option>
+                <option<c:if test="${reportSchedule.period == 'MONTHLY'}"> selected</c:if>>MONTHLY</option>
+            </select>
+        </td>
+        <td><input name="recipients${reportSchedule.id}" value="${reportSchedule.recipients}" size="60"/></td>
+        <td><input name="nextDue${reportSchedule.id}" value="${reportSchedule.nextDueFormatted}" size="16"/></td>
+        <td><select name="databaseId${reportSchedule.id}">
+            <c:forEach items="${databases}" var="database">
+            <option value="${database.id}"<c:if test="${database.id == reportSchedule.databaseId}"> selected</c:if>>${database.name}</option>
+        </c:forEach>
+        </select>
+        </td>
+        <td><select name="reportId${reportSchedule.id}">
+              <c:forEach items="${reports}" var="report">
+                  <option value="${report.id}"<c:if test="${report.id == reportSchedule.reportId}"> selected</c:if>>${report.reportName}</option>
+              </c:forEach>
+          </select>
+        </td>
+          <td>
+              <select name="type${reportSchedule.id}">
+                  <option<c:if test="${reportSchedule.type == 'PDF'}"> selected</c:if>>PDF</option>
+                  <option<c:if test="${reportSchedule.type == 'XLS'}"> selected</c:if>>XLS</option>
+              </select>
+          </td>
         <td><textarea name="parameters${reportSchedule.id}" cols="50" rows="3">${reportSchedule.parameters}</textarea></td>
       </tr>
     </c:forEach>

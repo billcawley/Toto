@@ -1,3 +1,21 @@
+-- phpMyAdmin SQL Dump
+-- version 4.2.10
+-- http://www.phpmyadmin.net
+--
+-- Host: localhost
+-- Generation Time: Sep 22, 2015 at 11:38 AM
+-- Server version: 5.6.25
+-- PHP Version: 5.6.1
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+SET time_zone = "+00:00";
+
+--
+-- Database: `master_db`
+--
+
+-- --------------------------------------------------------
+
 --
 -- Table structure for table `business`
 --
@@ -9,7 +27,7 @@ CREATE TABLE IF NOT EXISTS `business` (
   `business_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `parent_id` int(11) NOT NULL,
   `business_details` text COLLATE utf8_unicode_ci NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -26,8 +44,9 @@ CREATE TABLE IF NOT EXISTS `database` (
   `mysql_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `database_type` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `name_count` int(11) NOT NULL,
-  `value_count` int(11) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+  `value_count` int(11) NOT NULL,
+  `database_server_id` int(11) NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -53,7 +72,7 @@ CREATE TABLE IF NOT EXISTS `login_record` (
   `user_id` int(11) NOT NULL,
   `database_id` int(11) NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB AUTO_INCREMENT=594 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=190 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -74,7 +93,7 @@ CREATE TABLE IF NOT EXISTS `online_report` (
   `explanation` text COLLATE utf8_unicode_ci NOT NULL,
   `renderer` int(11) NOT NULL DEFAULT '0',
   `active` tinyint(1) NOT NULL DEFAULT '1'
-) ENGINE=InnoDB AUTO_INCREMENT=193 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=223 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -87,7 +106,7 @@ CREATE TABLE IF NOT EXISTS `open_database` (
   `database_id` int(11) NOT NULL,
   `open` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `close` datetime NOT NULL DEFAULT '0000-00-00 00:00:00'
-) ENGINE=InnoDB AUTO_INCREMENT=1180 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -108,6 +127,23 @@ CREATE TABLE IF NOT EXISTS `permission` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `report_schedule`
+--
+
+CREATE TABLE IF NOT EXISTS `report_schedule` (
+  `id` int(11) NOT NULL,
+  `period` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `recipients` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `next_due` datetime DEFAULT NULL,
+  `database_id` int(11) NOT NULL,
+  `report_id` int(11) NOT NULL,
+  `type` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `parameters` text COLLATE utf8mb4_unicode_ci
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `upload_record`
 --
 
@@ -120,7 +156,7 @@ CREATE TABLE IF NOT EXISTS `upload_record` (
   `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `file_type` text COLLATE utf8_unicode_ci NOT NULL,
   `comments` text COLLATE utf8_unicode_ci NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=92 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=207 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -138,7 +174,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `status` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `salt` varchar(255) COLLATE utf8_unicode_ci NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=100 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -152,7 +188,7 @@ CREATE TABLE IF NOT EXISTS `user_choice` (
   `choice_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `choice_value` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=82 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -174,7 +210,7 @@ CREATE TABLE IF NOT EXISTS `user_region_options` (
   `sort_column` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `sort_column_asc` tinyint(1) NOT NULL DEFAULT '0',
   `highlight_days` int(3) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Indexes for dumped tables
@@ -223,6 +259,12 @@ ALTER TABLE `permission`
 ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `report_schedule`
+--
+ALTER TABLE `report_schedule`
+ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `upload_record`
 --
 ALTER TABLE `upload_record`
@@ -245,3 +287,68 @@ ADD PRIMARY KEY (`id`), ADD UNIQUE KEY `duplicatechecker` (`user_id`,`choice_nam
 --
 ALTER TABLE `user_region_options`
 ADD PRIMARY KEY (`id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `business`
+--
+ALTER TABLE `business`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=19;
+--
+-- AUTO_INCREMENT for table `database`
+--
+ALTER TABLE `database`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=30;
+--
+-- AUTO_INCREMENT for table `database_server`
+--
+ALTER TABLE `database_server`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `login_record`
+--
+ALTER TABLE `login_record`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=190;
+--
+-- AUTO_INCREMENT for table `online_report`
+--
+ALTER TABLE `online_report`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=223;
+--
+-- AUTO_INCREMENT for table `open_database`
+--
+ALTER TABLE `open_database`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `permission`
+--
+ALTER TABLE `permission`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;
+--
+-- AUTO_INCREMENT for table `report_schedule`
+--
+ALTER TABLE `report_schedule`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=2;
+--
+-- AUTO_INCREMENT for table `upload_record`
+--
+ALTER TABLE `upload_record`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=207;
+--
+-- AUTO_INCREMENT for table `user`
+--
+ALTER TABLE `user`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=101;
+--
+-- AUTO_INCREMENT for table `user_choice`
+--
+ALTER TABLE `user_choice`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=82;
+--
+-- AUTO_INCREMENT for table `user_region_options`
+--
+ALTER TABLE `user_region_options`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;

@@ -51,7 +51,6 @@ public class ManageReportSchedulesController {
             }
             final List<ReportSchedule> reportSchedules = adminService.getReportScheduleList(loggedInUser);
             StringBuilder error = new StringBuilder();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm");
             if (request.getParameter("submit") != null){
                 for (ReportSchedule reportSchedule : reportSchedules) {
                     boolean store = false;
@@ -67,8 +66,8 @@ public class ManageReportSchedulesController {
                     }
                     String nextDue = request.getParameter("nextDue" + reportSchedule.getId());
                     try{
-                        if (!formatter.format(reportSchedule.getNextDue()).equals(nextDue)){
-                            reportSchedule.setNextDue(LocalDateTime.parse(nextDue, formatter));
+                        if (!reportSchedule.getNextDueFormatted().equals(nextDue)){
+                            reportSchedule.setNextDue(LocalDateTime.parse(nextDue, ReportSchedule.dateFormatter));
                             store = true;
                         }
                     } catch (DateTimeParseException e) {
@@ -122,6 +121,8 @@ public class ManageReportSchedulesController {
             if (error.length() > 0){
                 model.put("error", error.toString());
             }
+            model.put("reports", adminService.getReportList(loggedInUser));
+            model.put("databases", adminService.getDatabaseListForBusiness(loggedInUser));
             return "managereportschedules";
         }
     }

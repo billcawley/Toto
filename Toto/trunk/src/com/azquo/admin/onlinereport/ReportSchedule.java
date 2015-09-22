@@ -3,12 +3,16 @@ package com.azquo.admin.onlinereport;
 import com.azquo.admin.StandardEntity;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Created by edward on 21/09/15.
  *
  */
 public class ReportSchedule extends StandardEntity{
+
+    public static DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm");
+
     private String period;
     private String recipients;
     private LocalDateTime nextDue;
@@ -46,6 +50,11 @@ public class ReportSchedule extends StandardEntity{
 
     public LocalDateTime getNextDue() {
         return nextDue;
+    }
+
+    // putting this in here is easier for the jsp to use it as a property
+    public String getNextDueFormatted() {
+        return dateFormatter.format(nextDue);
     }
 
     public void setNextDue(LocalDateTime nextDue) {
