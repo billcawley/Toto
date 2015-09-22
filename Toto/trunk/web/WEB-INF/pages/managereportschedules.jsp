@@ -10,6 +10,7 @@
 <a href="/api/ManageReports">Manage Reports</a> &nbsp;<a href="/api/ManageReportSchedules">Manage Report Schedules</a> &nbsp;<a href="/api/ManageDatabases">Manage Databases</a> &nbsp;<a href="/api/ManageUsers">Manage Users</a> &nbsp;<a href="/api/ManagePermissions">Manage Permissions</a> &nbsp;<br/>
 <h1>Manage Report Schedules</h1><br/>
 <form action="/api/ManageReportSchedules" method="post">
+    ${error}
   <table>
     <tr>
       <!--            <td>Report id</td>

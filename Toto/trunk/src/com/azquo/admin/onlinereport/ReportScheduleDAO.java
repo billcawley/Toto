@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
@@ -40,7 +41,7 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
         toReturn.put(RECIPIENTS,  reportSchedule.getRecipients());
         toReturn.put(NEXTDUE,  Date.from(reportSchedule.getNextDue().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(DATABASEID, reportSchedule.getDatabaseId());
-        toReturn.put(REPORTID, reportSchedule.getDatabaseId());
+        toReturn.put(REPORTID, reportSchedule.getReportId());
         toReturn.put(TYPE, reportSchedule.getType());
         toReturn.put(PARAMETERS, reportSchedule.getParameters());
         return toReturn;
@@ -75,6 +76,12 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
         return findListWithWhereSQLAndParameters("WHERE " + DATABASEID + " = :" + DATABASEID, namedParams, false);
+    }
+
+    public List<ReportSchedule> findWhereDueBefore(LocalDateTime due) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(NEXTDUE, Date.from(due.atZone(ZoneId.systemDefault()).toInstant()));
+        return findListWithWhereSQLAndParameters("WHERE " + NEXTDUE + " <= :" + NEXTDUE, namedParams, false);
     }
 
 }

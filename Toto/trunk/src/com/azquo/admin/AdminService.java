@@ -8,12 +8,19 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.onlinereport.ReportSchedule;
 import com.azquo.admin.onlinereport.ReportScheduleDAO;
 import com.azquo.admin.user.*;
+import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.controller.OnlineController;
+import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.zkoss.zss.api.model.Book;
 import sun.misc.BASE64Encoder;
 
+import java.io.File;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -54,6 +61,8 @@ public class AdminService {
     private ReportScheduleDAO reportScheduleDAO;
     @Autowired
     private RMIClient rmiClient;
+    @Autowired
+    private SpreadsheetService spreadsheetService;
 
     // after uncommenting to use it won't requite the activation email initially
 

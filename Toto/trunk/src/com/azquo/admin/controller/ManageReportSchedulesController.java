@@ -5,6 +5,7 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.ReportSchedule;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,8 @@ public class ManageReportSchedulesController {
 
     @Autowired
     private AdminService adminService;
+    @Autowired
+    private SpreadsheetService spreadsheetService;
     private static final Logger logger = Logger.getLogger(ManageReportsController.class);
 
     @RequestMapping
@@ -38,6 +41,13 @@ public class ManageReportSchedulesController {
     )
 
     {
+        if (request.getParameter("testsend") != null){
+            try {
+                spreadsheetService.runScheduledReports();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
 
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {

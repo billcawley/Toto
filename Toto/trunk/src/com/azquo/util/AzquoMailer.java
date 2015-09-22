@@ -6,6 +6,7 @@ import org.apache.commons.mail.HtmlEmail;
 
 import javax.mail.*;
 import javax.mail.internet.MimeBodyPart;
+import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
 
@@ -18,6 +19,11 @@ import java.util.Properties;
 public class AzquoMailer {
 
     public boolean sendEMail(String toEmail, String toName, String subject, String body) {
+        return sendEMail(toEmail,toName,subject,body,null);
+
+    }
+
+        public boolean sendEMail(String toEmail, String toName, String subject, String body, File attachment) {
         try {
             HtmlEmail email = new HtmlEmail();
             //email.setDebug(true); // useful stuff if things go wrong
@@ -25,7 +31,17 @@ public class AzquoMailer {
             email.setAuthenticator(new DefaultAuthenticator("app@azquo.com", "Yd44d8R4"));
             email.setHostName("logichound.servers.eqx.misp.co.uk");
             email.setSmtpPort(465);
-            email.addTo(toEmail, toName);
+            if (toEmail.contains(",")){// ignore name
+                for (String to : toEmail.split(",")){
+                    email.addTo(to, to);
+                }
+            } else if(toEmail.contains(";")){
+                for (String to : toEmail.split(";")){
+                    email.addTo(to, to);
+                }
+            } else {
+                email.addTo(toEmail, toName != null ? toName : toEmail);
+            }
             email.setFrom("info@azquo.com", "Azquo Support");
             email.setSubject(subject);
             // embed the image and get the content id
@@ -34,6 +50,9 @@ public class AzquoMailer {
             email.setHtmlMsg(body);
             // set the plain text message - so simple compared to the arse before!
             email.setTextMsg("Your email client does not support HTML messages");
+            if (attachment != null){
+                email.attach(attachment);
+            }
             email.send();
             return true;
         } catch (Exception e) {

@@ -1,10 +1,9 @@
 package com.azquo.spreadsheet;
 
 import com.azquo.admin.AdminService;
-import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseDAO;
-import com.azquo.admin.database.OpenDatabaseDAO;
-import com.azquo.admin.database.UploadRecordDAO;
+import com.azquo.admin.database.*;
+import com.azquo.admin.onlinereport.ReportSchedule;
+import com.azquo.admin.onlinereport.ReportScheduleDAO;
 import com.azquo.admin.user.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
@@ -12,9 +11,12 @@ import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
+import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
+import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,11 +24,17 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.ui.ModelMap;
+import org.zkoss.util.media.AMedia;
+import org.zkoss.zss.api.Exporter;
+import org.zkoss.zss.api.Exporters;
+import org.zkoss.zss.api.model.Book;
+import org.zkoss.zul.Filedownload;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.InetAddress;
+import java.time.LocalDateTime;
 import java.util.*;
 
 // it seems that trying to configure the properties in spring is a problem
@@ -57,10 +65,16 @@ public class SpreadsheetService {
     DatabaseDAO databaseDAO;
 
     @Autowired
+    DatabaseServerDAO databaseServerDAO;
+
+    @Autowired
     OnlineReportDAO onlineReportDAO;
 
     @Autowired
     LoginRecordDAO loginRecordDAO;
+
+    @Autowired
+    ReportScheduleDAO reportScheduleDAO;
 
     @Autowired
     UploadRecordDAO uploadRecordDAO;
@@ -578,5 +592,93 @@ public class SpreadsheetService {
         toReturn.append("+"); // end marker
         return toReturn.toString();
     }
+
+    // should this be in here?
+
+    public void runScheduledReports() throws Exception {
+        for (ReportSchedule reportSchedule : reportScheduleDAO.findWhereDueBefore(LocalDateTime.now())){
+            OnlineReport onlineReport = onlineReportDAO.findById(reportSchedule.getReportId());
+            Database database = databaseDAO.findById(reportSchedule.getDatabaseId());
+            if (onlineReport != null && database != null){
+                onlineReport.setPathname(database.getMySQLName());
+                List<User> users = userDAO.findForBusinessId(database.getBusinessId());
+                User user = null;
+                for (User possible : users){
+                    if (user == null || possible.isAdministrator()){ // default to admin or the first we can find
+                        user = possible;
+                    }
+                }
+                // similar to normal loading
+                String bookPath = getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
+                //Importers.getImporter().imports
+                final Book book = new support.importer.PatchedImporterImpl().imports(new File(bookPath), "Report name");
+                // the first two make sense. Little funny about the second two but we need a reference to these
+                book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
+                // ok what user? I think we'll call it an admin one.
+                DatabaseServer databaseServer = null;
+                if (database != null){
+                    databaseServer = databaseServerDAO.findById(database.getDatabaseServerId());
+                }
+                // assuming no read permissions?
+                LoggedInUser loggedInUser = new LoggedInUser("", user,databaseServer,database, null, null);
+                book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
+                // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
+                book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());
+                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(this, userChoiceDAO, userRegionOptionsDAO);
+                bookUtils.populateBook(book);
+                AzquoMailer azquoMailer = new AzquoMailer();
+                // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
+                if ("PDF".equals(reportSchedule.getType())){
+                    Exporter exporter = Exporters.getExporter("pdf");
+                    File file = File.createTempFile(onlineReport.getReportName(), ".pdf");
+                    FileOutputStream fos = null;
+                    try {
+                        fos = new FileOutputStream(file);
+                        exporter.export(book, file);
+                    } finally {
+                        if (fos != null) {
+                            fos.close();
+                        }
+                    }
+                    // now send?
+                    azquoMailer.sendEMail(reportSchedule.getRecipients(), null, onlineReport.getReportName(), "Attached", file);
+                }
+                // again copied and only modified slightly - todo, factor these?
+                if ("XLS".equals(reportSchedule.getType())){
+                    Exporter exporter = Exporters.getExporter();
+                    File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
+                    FileOutputStream fos = null;
+                    try {
+                        fos = new FileOutputStream(file);
+                        exporter.export(book, fos);
+                    } finally {
+                        if (fos != null) {
+                            fos.close();
+                        }
+                    }
+                    azquoMailer.sendEMail(reportSchedule.getRecipients(), null, onlineReport.getReportName(), "Attached", file);
+                }
+                // adjust the schedule but wait a mo . . .
+                switch (reportSchedule.getPeriod()){
+                    case "HOURLY" :
+                        reportSchedule.setNextDue(reportSchedule.getNextDue().plusHours(1));
+                        break;
+                    case "DAILY" :
+                        reportSchedule.setNextDue(reportSchedule.getNextDue().plusDays(1));
+                        break;
+                    case "WEEKLY" :
+                        reportSchedule.setNextDue(reportSchedule.getNextDue().plusWeeks(1));
+                        break;
+                    case "MONTHLY" :
+                        reportSchedule.setNextDue(reportSchedule.getNextDue().plusMonths(1));
+                        break;
+                }
+                reportScheduleDAO.store(reportSchedule);
+            }
+
+        }
+    }
+
+
 
 }
