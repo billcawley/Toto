@@ -1149,7 +1149,7 @@ public class DSImportService {
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
         String sheetSetName = "";
         Name sheetSet = null;
-        if (fileName.charAt(4) == '-') {
+        if (fileName.length() > 4 && fileName.charAt(4) == '-') {
             sheetSetName = fileName.substring(5);
             sheetSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, sheetSetName, null, false, attributeNames);
         }
