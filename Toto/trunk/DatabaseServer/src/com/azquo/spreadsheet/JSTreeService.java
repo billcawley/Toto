@@ -281,14 +281,16 @@ public class JSTreeService {
         public final int mydataitems;
         public final Map<String, Object> attributes; // peers are jammed in here as a list, perhaps not so good, todo - move peers outside?
         public final int elements;
+        public final String provenance;
 
-        public JsonChildStructure(String name, int id, int dataitems, int mydataitems, Map<String, Object> attributes, int elements) {
+        public JsonChildStructure(String name, int id, int dataitems, int mydataitems, Map<String, Object> attributes, int elements, String provenance) {
             this.name = name;
             this.id = id;
             this.dataitems = dataitems;
             this.mydataitems = mydataitems;
             this.attributes = attributes;
             this.elements = elements;
+            this.provenance = provenance;
         }
     }
 
@@ -298,7 +300,12 @@ public class JSTreeService {
         Map<String, Object> attributesForJackson = new HashMap<>();
         attributesForJackson.putAll(name.getAttributes());
         JsonChildStructure childStructureForJackson = new JsonChildStructure(name.getDefaultDisplayName()
-                , name.getId(), getTotalValues(name), name.getValues().size(), attributesForJackson, name.getChildren().size());
+                , name.getId(), getTotalValues(name), name.getValues().size(), attributesForJackson, name.getChildren().size(), "User : " + name.getProvenance().getUser() + "<br/>"
+                + "Timestamp : " + name.getProvenance().getTimeStamp() + "<br/>"
+                + "Method : " + name.getProvenance().getMethod() + "<br/>"
+                + "Name : " + name.getProvenance().getName() + "<br/>"
+                + "Context : " + name.getProvenance().getContext()
+        );
         return jacksonMapper.writeValueAsString(childStructureForJackson);
     }
 

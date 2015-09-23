@@ -18,7 +18,7 @@
             top: 100px;
             left: 100px;
             width: 390px;
-            height: 200px;
+            height: 400px;
             display: none;
             background-color: #eeeeee;
             z-index: 12;
@@ -109,6 +109,8 @@
         <p>Attributes:</p>
         <div id="htmlatts"></div>
         <div class="datacount"> Direct data count <span id="mydatacount"></span> Total Data Count <span id="totaldatacount"></span></div>
+        <p>Provenance:</p>
+        <div id="provenance"></div>
         <div class="namedetailssubmit"><p><a href="#" onclick="submitNameDetails()">Submit</a></p></div>
     </div>
 
@@ -260,6 +262,7 @@
             var keys = Object.keys(nameDetails.attributes);
             document.getElementById("mydatacount").innerHTML = nameDetails.mydataitems;
             document.getElementById("totaldatacount").innerHTML = nameDetails.dataitems;
+            document.getElementById("provenance").innerHTML = nameDetails.provenance;
             for (var i=0;i < keys.length;i++){
                 var attname = keys[i];
                 var attvalue =  decodeURIComponent((nameDetails.attributes[attname]+'').replace("%","%25").replace(/\+/g, '%20'));
