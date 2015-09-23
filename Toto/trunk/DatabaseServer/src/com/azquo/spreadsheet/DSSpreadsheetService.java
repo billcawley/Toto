@@ -702,11 +702,15 @@ seaports;children   container;children
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Column headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
+
         if (columnHeadings.size() == 0) {
             throw new Exception("no headings passed");
         }
         if (rowHeadings.size() == 0) {
-            return new ArrayList<>();
+            //create a single row heading
+            rowHeadings.add(new ArrayList<DataRegionHeading>());
+            rowHeadings.get(0).add(new DataRegionHeading(null,false));
+            //return new ArrayList<>();
         }
         final List<Name> contextNames = new ArrayList<>();
         for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell. Rather arbitrary, remove at some point?
@@ -780,7 +784,7 @@ seaports;children   container;children
         final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages);
         final List<List<DataRegionHeading>> columnHeadings = expandHeadings(transpose2DList(columnHeadingLists));
         if (columnHeadings.size() == 0 || rowHeadings.size() == 0) {
-            throw new Exception("no headings passed");
+            return null;
         }
         final List<Name> contextNames = getContextNames(azquoMemoryDBCOnnection, contextSource);
         // now onto the bit to find the specific cell - the column headings were transposed then expanded so they're in the same format as the row headings
@@ -1577,16 +1581,16 @@ seaports;children   container;children
             int columnCounter = 0;
             for (CellForDisplay cell : row) {
                 if (!cell.isLocked() && cell.isChanged()) {
-                    numberOfValuesModified++;
-                    // this save logic is the same as before but getting necessary info from the AzquoCell
-                    logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                     //logger.info(orig + "|" + edited + "|"); // we no longet know the original value unless we jam it in AzquoCell
                     // note, if there are many cells being edited this becomes inefficient as headings are being repeatedly looked up
-                    AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRowHeadingsSource()
+                     AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRowHeadingsSource()
                             , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                             , cell.getUnsortedRow(), cell.getUnsortedCol(), databaseAccessToken.getLanguages());
 
                     if (azquoCell != null) {
+                        numberOfValuesModified++;
+                        // this save logic is the same as before but getting necessary info from the AzquoCell
+                        logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                         final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
                         final Set<DataRegionHeading> headingsForCell = new HashSet<>(azquoCell.getColumnHeadings().size() + azquoCell.getRowHeadings().size());
                         headingsForCell.addAll(azquoCell.getColumnHeadings());
