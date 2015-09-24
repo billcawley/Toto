@@ -936,12 +936,9 @@ public final class Name extends AzquoMemoryDBEntity {
                 removeFromChildrenWillBePersisted(child);
             }
         }
-        // then the actions on other objects
-        // remove from values - this will change when value is changed to make more safe
+        // then the actions on other objects - we now delete such values
         for (Value v : values) {
-            Set<Name> namesForValue = new HashSet<>(v.getNames());
-            namesForValue.remove(this);
-            v.setNamesWillBePersisted(namesForValue);
+            v.delete();
         }
         // remove from parents
         for (Name parent : parents) {

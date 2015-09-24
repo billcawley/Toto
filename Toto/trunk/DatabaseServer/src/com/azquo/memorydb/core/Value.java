@@ -25,7 +25,6 @@ public final class Value extends AzquoMemoryDBEntity {
     // issue of final here and bits of the init being in a try block. Need to have a little think about that
     private Provenance provenance;
     private String text;//no longer final.   May be adjusted during imports (if duplicate lines are found will sum...)
-    private String deletedInfo;
 
     // changing to array to save memory
     private Name[] names;
@@ -33,11 +32,10 @@ public final class Value extends AzquoMemoryDBEntity {
     // to be used by the code when creating a new value
     // add the names after
 
-    public Value(final AzquoMemoryDB azquoMemoryDB, final Provenance provenance, final String text, final String deletedInfo) throws Exception {
+    public Value(final AzquoMemoryDB azquoMemoryDB, final Provenance provenance, final String text) throws Exception {
         super(azquoMemoryDB, 0);
         this.provenance = provenance;
         this.text = text;
-        this.deletedInfo = deletedInfo;
         names = new Name[0];
         // added 10/12/2014, wasn't there before, why??? I suppose it just worked. Inconsistent though!
         getAzquoMemoryDB().addValueToDb(this);
@@ -52,7 +50,6 @@ public final class Value extends AzquoMemoryDBEntity {
             this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
             // tested, .intern here saves memory
             this.text = transport.text.intern();
-            this.deletedInfo =  transport.deletedInfo != null ? transport.deletedInfo.intern() : null; // don't intern a null
             Set<Name> newNames = new HashSet<>(transport.nameIds.size());
             //System.out.println("name ids" + transport.nameIds);
             for (Integer nameId : transport.nameIds) {
@@ -90,20 +87,12 @@ public final class Value extends AzquoMemoryDBEntity {
         return deletedInfo;
     }*/
 
-    public synchronized void setDeletedInfoWillBePersisted(final String deletedInfo) throws Exception {
-        if (!deletedInfo.equals(this.deletedInfo)) {
-            this.deletedInfo = deletedInfo;
-            setNeedsPersisting();
-        }
-    }
-
     @Override
     public String toString() {
         return "Value{" +
                 "id=" + getId() +
                 ", provenance=" + provenance +
                 ", text='" + text + '\'' +
-                ", deleted=" + deletedInfo +
                 '}';
     }
 
@@ -139,20 +128,25 @@ public final class Value extends AzquoMemoryDBEntity {
         setNeedsPersisting();
     }
 
+    // I think that's all that's needed now we're not saving deleted info?
+    public void delete() throws Exception {
+        needsDeleting = true;
+        setNeedsPersisting();
+    }
+
+
     // for Jackson mapping, trying to attach to actual fields would be dangerous in terms of allowing unsafe access
     // think important to use a linked hash map to preserve order.
     private static class JsonTransport {
         public int provenanceId;
         public String text;
-        public String deletedInfo;
         public Set<Integer> nameIds;
 
         @JsonCreator
         private JsonTransport(@JsonProperty("provenanceId") int provenanceId, @JsonProperty("text") String text
-                , @JsonProperty("deletedInfo") String deletedInfo, @JsonProperty("nameIds") Set<Integer> nameIds) {
+                , @JsonProperty("nameIds") Set<Integer> nameIds) {
             this.provenanceId = provenanceId;
             this.text = text;
-            this.deletedInfo = deletedInfo;
             this.nameIds = nameIds;
         }
     }
@@ -170,7 +164,7 @@ public final class Value extends AzquoMemoryDBEntity {
             nameIds.add(name.getId());
         }
         try {
-            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(), text, deletedInfo, nameIds));
+            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(), text, nameIds));
         } catch (Exception e) {
             e.printStackTrace();
         }

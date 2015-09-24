@@ -37,25 +37,10 @@ public final class ValueService {
 
     private StringUtils stringUtils = new StringUtils();
 
-    // set the names in delete info and unlink - best I can come up with at the moment
-    // unlike Name I don't think we're actually going to delete it - though whether the current name behavior is correct is another thing
-    // todo : make delete mean delete, rollback without names rollback is pointless
-    public void deleteValue(final Value value) throws Exception {
-        String names = "";
-        for (Name n : value.getNames()) {
-            names += ", `" + n.getDefaultDisplayName() + "`";
-        }
-        if (names.length() > 0) {
-            names = names.substring(2);
-        }
-        value.setDeletedInfoWillBePersisted(names);
-        value.setNamesWillBePersisted(new HashSet<>());
-    }
-
     // one line function, much point??
 
     public Value createValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Provenance provenance, final String text) throws Exception {
-        return new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, text, null);
+        return new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, text);
     }
 
     Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
@@ -110,7 +95,7 @@ public final class ValueService {
                 toReturn += "  that value already exists, skipping";
                 alreadyInDatabase = true;
             } else {
-                deleteValue(existingValue);
+                existingValue.delete();
                 // provenance table : person, time, method, name
                 toReturn += "  deleting old value entered on put old timestamp here, need provenance table";
             }
@@ -133,9 +118,9 @@ public final class ValueService {
 
 
     public boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, final String newValueString) throws Exception {
-        Value newValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), newValueString, null);
+        Value newValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), newValueString);
         newValue.setNamesWillBePersisted(new HashSet<>(existingValue.getNames())); // a bit crappy but I'm trying to make it a list internally but interfaced by sets
-        deleteValue(existingValue);
+        existingValue.delete();
         return true;
     }
 

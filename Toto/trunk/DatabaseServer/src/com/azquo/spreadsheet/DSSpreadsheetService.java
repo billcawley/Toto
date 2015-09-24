@@ -1626,7 +1626,7 @@ seaports;children   container;children
                                     valueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getStringValue());
                                     numberOfValuesModified++;
                                 } else {
-                                    valueService.deleteValue(theValue);
+                                    theValue.delete();
                                 }
                             } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue().length() > 0) {
                                 logger.info("storing new value here . . .");
