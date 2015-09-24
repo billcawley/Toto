@@ -17,7 +17,7 @@
 <script type="text/javascript">
 
   var skipSetting = 0;
-  var skipMarker = 0;
+  var skipMarker = 5;
   // how to stop this hammering? I reckon add a second every time between checks if the data hasn't changed.
   function updateStatus(){
     jq.post("/api/SpreadsheetStatus?action=sheetReady&reportid=${reportid}", function(data){

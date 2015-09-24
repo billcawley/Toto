@@ -48,7 +48,6 @@ public class ZKAzquoBookUtils {
         boolean showSave = false;
         //book.getInternalBook().getAttribute(ZKAzquoBookProvider.BOOK_PATH);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        spreadsheetService.clearSessionLog(loggedInUser.getDataAccessToken());
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
 
         Map<String, String> userChoices = new HashMap<>();
@@ -237,6 +236,7 @@ public class ZKAzquoBookUtils {
             addValidation(namesForSheet, sheet, choiceOptions);
         }
         loggedInUser.setContext(context);
+        spreadsheetService.clearSessionLog(loggedInUser.getDataAccessToken()); // clear after . . .
 
         return showSave;
     }
@@ -609,19 +609,23 @@ public class ZKAzquoBookUtils {
                             row++;// like starting at 1
                             validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded).setStringValue(choiceOption);
                         }
-                        Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
-                        //validationValues.createName("az_Validation" + numberOfValidationsAdded);
-                        for (int rowNo = chosen.getRow(); rowNo < chosen.getRow() + chosen.getRowCount(); rowNo++) {
-                            for (int colNo = chosen.getColumn(); colNo < chosen.getColumn() + chosen.getColumnCount(); colNo++) {
-                                Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
-                                //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
-                                chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
-                                        true, "title", "msg",
-                                        false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+                        if (row > 0){ // if choice options is empty this will not work
+                            Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
+                            //validationValues.createName("az_Validation" + numberOfValidationsAdded);
+                            for (int rowNo = chosen.getRow(); rowNo < chosen.getRow() + chosen.getRowCount(); rowNo++) {
+                                for (int colNo = chosen.getColumn(); colNo < chosen.getColumn() + chosen.getColumnCount(); colNo++) {
+                                    Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
+                                    //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
+                                    chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
+                                            true, "title", "msg",
+                                            false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
 
+                                }
                             }
+                            numberOfValidationsAdded++;
+                        } else {
+                            System.out.println("no choices for : " + query);
                         }
-                        numberOfValidationsAdded++;
                     }
                 }
             }
