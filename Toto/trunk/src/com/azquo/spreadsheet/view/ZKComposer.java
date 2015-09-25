@@ -12,13 +12,11 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.zk.ui.*;
 import org.zkoss.zk.ui.event.Event;
-import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.CellOperationUtil;
-import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
@@ -31,7 +29,6 @@ import org.zkoss.zul.*;
 import com.azquo.memorydb.TreeNode;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -294,7 +291,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
         Book book = sheetSelectEvent.getSheet().getBook();
-        final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptionsQueries(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
+        final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptionsAndQueries(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
         zkAzquoBookUtils.addValidation(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),choiceOptions);
     }
 

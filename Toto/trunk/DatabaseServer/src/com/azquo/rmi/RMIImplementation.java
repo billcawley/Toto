@@ -151,6 +151,14 @@ public class RMIImplementation implements RMIInterface {
         }
     }
 
+    @Override
+    public void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
+        try {
+            dsSpreadsheetService.resolveQuery(databaseAccessToken,query,languages);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
 
     public TreeNode formatJstreeDataForOutput(DatabaseAccessToken databaseAccessToken, String jsTreeString, int maxSize) throws RemoteException {
         try {

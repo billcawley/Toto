@@ -523,6 +523,10 @@ seaports;children   container;children
         return getIndividualNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages));
     }
 
+    public void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
+        nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages);
+    }
+
     private List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
         final List<Integer> sortedValues = new ArrayList<>(sortTotals.size());
         List<Map.Entry<Integer, Double>> list = new ArrayList<>(sortTotals.entrySet());

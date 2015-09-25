@@ -178,7 +178,9 @@ public final class AzquoMemoryDB {
                         new Value(memDB, dataRecord.id, dataRecord.json);
                     }
                 }
-                logInSessionLogAndSystem("loaded " + loadTracker.addAndGet(dataToLoad.size()));
+                if (minId%1_000_000 == 0){
+                    logInSessionLogAndSystem("loaded " + loadTracker.addAndGet(dataToLoad.size()));
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -228,7 +230,7 @@ public final class AzquoMemoryDB {
                 AtomicInteger namesLoaded = new AtomicInteger();
                 AtomicInteger valuesLoaded = new AtomicInteger();
 
-                final int step = 500_000; // not so much step now as id range given how we're now querying mysql
+                final int step = 100_000; // not so much step now as id range given how we're now querying mysql. CUtting down to 100,000 to reduce the chance of SQL errors
                 marker = System.currentTimeMillis();
                 // create thread pool, rack up the loading tasks and wait for it to finish. Repeat for name and values.
                 ExecutorService executor = Executors.newFixedThreadPool(loadingThreads);

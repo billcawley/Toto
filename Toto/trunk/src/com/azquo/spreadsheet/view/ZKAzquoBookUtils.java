@@ -97,7 +97,7 @@ public class ZKAzquoBookUtils {
             // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
             List<SName> namesForSheet = getNamesForSheet(sheet);
             // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
-            Map<String, List<String>> choiceOptions = resolveChoiceOptionsQueries(namesForSheet,sheet,loggedInUser);
+            Map<String, List<String>> choiceOptions = resolveChoiceOptionsAndQueries(namesForSheet, sheet, loggedInUser);
             boolean fastLoad = false; // skip some checks, initially related to saving
             for (SName name : namesForSheet) {
                 // Old one was case insensitive - not so happy about this. Will allow it on the prefix
@@ -529,7 +529,7 @@ public class ZKAzquoBookUtils {
                 names.add(name);
             }
         }
-        Collections.sort(names, (o1, o2) -> (o1.getName().compareTo(o2.getName())));
+        Collections.sort(names, (o1, o2) -> (o1.getName().toUpperCase().compareTo(o2.getName().toUpperCase())));
         return names;
     }
 
@@ -550,10 +550,11 @@ public class ZKAzquoBookUtils {
     public static final String VALIDATION_SHEET = "VALIDATION_SHEET";
 
     // Had to split one function into two, need to evaluate choices server side before loading the regions due to names being populated by "As" clauses
-    // some duplication between the two funcitons but not that bad I don't think
+    // some duplication between the two functions but not that bad I don't think
 
-    public Map<String, List<String>> resolveChoiceOptionsQueries(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
+    public Map<String, List<String>> resolveChoiceOptionsAndQueries(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
         Map<String, List<String>> toReturn = new HashMap<>();
+        // I assume
         for (SName name : namesForSheet) {
             if (name.getRefersToSheetName().equals(sheet.getSheetName())) { // why am I checking this again? A little confused
                 if (name.getName().endsWith("Choice")) {
@@ -579,6 +580,14 @@ public class ZKAzquoBookUtils {
                             choiceOptions.add(e.getMessage());
                         }
                         toReturn.put(originalQuery, choiceOptions);
+                    }
+                } else if (name.getName().endsWith("Query")) {
+                    CellRegion query = getCellRegionForSheetAndName(sheet, name.getName());
+                    String queryString = getRegionValue(sheet, query);
+                    try {
+                        spreadsheetService.resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages()); // sending the same as choice but the goal here is execute server side. Generally to set an "As"
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
             }

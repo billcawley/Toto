@@ -429,6 +429,10 @@ public class SpreadsheetService {
         return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getDropDownListForQuery(databaseAccessToken, query, languages);
     }
 
+    public void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception{
+        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).resolveQuery(databaseAccessToken, query, languages);
+    }
+
     public String getSessionLog(DatabaseAccessToken databaseAccessToken) throws Exception{
         return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getSessionLog(databaseAccessToken);
     }
