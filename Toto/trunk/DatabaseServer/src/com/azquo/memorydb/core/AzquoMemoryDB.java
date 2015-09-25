@@ -597,15 +597,16 @@ public final class AzquoMemoryDB {
     }
 
     private void clearSetAndCountCacheForString(String s) {
+        s = s.toUpperCase();
         for (Iterator<Map.Entry<String, Integer>> it = countCache.entrySet().iterator(); it.hasNext();) {
             Map.Entry<String, Integer> entry = it.next();
-            if (entry.getKey().contains(s)) {
+            if (entry.getKey().toUpperCase().contains(s)) {
                 it.remove();
             }
         }
         for (Iterator<Map.Entry<String, Set<Name>>> it = setCache.entrySet().iterator(); it.hasNext();) {
             Map.Entry<String, Set<Name>> entry = it.next();
-            if (entry.getKey().contains(s)) {
+            if (entry.getKey().toUpperCase().contains(s)) {
                 it.remove();
             }
         }

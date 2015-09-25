@@ -552,10 +552,10 @@ public final class Name extends AzquoMemoryDBEntity {
         // notably ignores ordering!
         if (children.size() != existingChildren.size() || !children.containsAll(existingChildren)){ // this could provide a major speed increase where this function is "recklessly" called (e.g. in the "as" bit in parseQuery in NameService)
             for (Name oldChild : this.getChildren()) {
-                removeFromChildrenWillBePersisted(oldChild);
+                removeFromChildrenWillBePersisted(oldChild, false); // no cache clear, will do it in a mo!
             }
             for (Name child : children) {
-                addChildWillBePersisted(child);
+                addChildWillBePersisted(child,0,false); // no cache clear, will do it in a mo!
             }
             clearChildrenCaches();
             getAzquoMemoryDB().clearSetAndCountCacheForName(this);
@@ -563,13 +563,17 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     public void addChildWillBePersisted(Name child) throws Exception {
-        addChildWillBePersisted(child, 0);
+        addChildWillBePersisted(child, 0, true);
+    }
+
+    public void addChildWillBePersisted(Name child, int position) throws Exception {
+        addChildWillBePersisted(child, position, true);
     }
 
     // with position, will just add if none passed note : this sees position as starting at 1!
     // note : modified to do nothing if the name is in the set. No changing of position.
 
-    public void addChildWillBePersisted(Name child, int position) throws Exception {
+    private void addChildWillBePersisted(Name child, int position, boolean clearCache) throws Exception {
         checkDatabaseMatches(child);
         if (child.equals(this)) return;//don't put child into itself
         /*removing this check - it takes far too long - maybe should make it optional
@@ -579,8 +583,8 @@ public final class Name extends AzquoMemoryDBEntity {
         */
         // NOTE!! for the set version we're now just using a set backed by a concurrent hash map NOT liked hashset, for large child sets ordering will be ignored!
         // while childrenasaset is thread safe I think I'm going to need to synchronize the lot to make make state more consistent
+        boolean changed = false; // only do the after stuff if something changed
         synchronized (this) {
-            boolean changed = false; // only do the after stuff if something changed
             if (childrenAsSet != null) {
                 changed = childrenAsSet.add(child);
             } else {
@@ -603,8 +607,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
             if (changed) { // new logic, only do these things if something was changed
-                clearChildrenCaches();
-                getAzquoMemoryDB().clearSetAndCountCacheForName(this);
                 child.addToParents(this);//synchronized internally with this also so will not deadlock
                 setNeedsPersisting();
                 //and check that there are not indirect connections which should be deleted (e.g. if London exists in UK and Europe, and we are now
@@ -617,9 +619,17 @@ public final class Name extends AzquoMemoryDBEntity {
                 }*/
             }
         }
+        if (changed && clearCache){
+            clearChildrenCaches();
+            getAzquoMemoryDB().clearSetAndCountCacheForName(this);
+        }
     }
 
     public void removeFromChildrenWillBePersisted(Name name) throws Exception {
+        removeFromChildrenWillBePersisted(name, true);
+    }
+
+    private void removeFromChildrenWillBePersisted(Name name, boolean clearCache) throws Exception {
         checkDatabaseMatches(name);// even if not needed throw the exception!
         // maybe could narrow this a little?
         synchronized (this) {
@@ -638,10 +648,12 @@ public final class Name extends AzquoMemoryDBEntity {
                 } else {
                     children = nameArrayRemove(children, name); // note this will fail if it turns out children does not contain the name. SHould be ok.
                 }
-                clearChildrenCaches();
-                getAzquoMemoryDB().clearSetAndCountCacheForName(this);
                 setNeedsPersisting();
             }
+        }
+        if (clearCache){
+            getAzquoMemoryDB().clearSetAndCountCacheForName(this);
+            clearChildrenCaches();
         }
     }
 
