@@ -49,6 +49,9 @@ public class ManageReportsController {
                 String userStatus = request.getParameter("userStatus" + report.getId());
                 String businessType = request.getParameter("businessType" + report.getId());
                 String category = request.getParameter("reportCategory" + report.getId());
+                if (explanation !=null && explanation.equalsIgnoreCase("delete")){
+                    report.setActive(false);
+                }
                 if (explanation != null && !explanation.equals(report.getExplanation())) {
                     report.setExplanation(explanation);
                     store = true;
