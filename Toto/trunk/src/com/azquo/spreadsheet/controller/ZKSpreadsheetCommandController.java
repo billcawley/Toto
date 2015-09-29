@@ -134,11 +134,21 @@ public class ZKSpreadsheetCommandController {
                     if ("PDF".equals(action) || pdfDefault) {
                         Exporter exporter = Exporters.getExporter("pdf");
                         Book book = ss.getBook();
+/*                        // todo address whether this breaks the validation?
+                        Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
+                        if (validationSheet != null) {
+                            try{
+                                book.getInternalBook().deleteSheet(validationSheet.getInternalSheet());
+                            } catch (Exception ignored){
+                                // todo - bring this up with ZK?
+                            }
+                        }*/
                         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
                         FileOutputStream fos = null;
                         try {
                             fos = new FileOutputStream(file);
-                            exporter.export(book, file);
+//                            exporter.export(book, file);
+                            exporter.export(book.getSheetAt(0), fos);
                         } finally {
                             if (fos != null) {
                                 fos.close();

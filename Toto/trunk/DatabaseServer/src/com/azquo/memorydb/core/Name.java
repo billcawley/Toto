@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  * <p/>
  * <p/>
  * Of course we care about thread safety even if crude but we have another concern now : this object was weighing in at over 2k average in an example magento db
- * the goal is to bring it to sub 500 bytes. THis means in some cases variables being null until used and using arraylists instead of sets switching for performance
+ * the goal is to bring it to sub 500 bytes. THis means in some cases variables being null until used and using arrays instead of sets switching for performance
  * when the list gets too big.
  * <p/>
  * Update on memory : got it to about 850 bytes (magento example DB). Will park for the mo, further change would probably involve changes to attributes,
@@ -32,8 +32,6 @@ import java.util.stream.Collectors;
  * attributes case insensitive . . .not entirely happy about this
  * <p/>
  * was comparable but this resulted in a code warning I've moved the comparator to NameService
- * <p/>
- * Having considered CopyOnWriteArrayLists and storing as UnmodifiableList I'm now considering plain arrays internally.
  */
 public final class Name extends AzquoMemoryDBEntity {
 
@@ -46,6 +44,10 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // name needs this as it links to itself hence have to load all names THEN parse the json, other objects do not hence it's in here not the memory db entity
     // as mentioned just a cache while the names by id map is being populated
+
+    // if we're going to speed up loading e.g. with blobs then this json cache can change to a loading cache that will have a json cache among others
+    // this way there will be no extra overhead during normal running, sill one null reference
+    // note : for full speed we'd have values in here too, has implications for how value is initialised
 
     private String jsonCache;
 
@@ -150,7 +152,7 @@ public final class Name extends AzquoMemoryDBEntity {
         jsonCache = jsonFromDB;
         additive = true; // by default
         valuesAsSet = null;
-        values = new Value[0]; // Utrning these 3 lists to arrays, memory a priority
+        values = new Value[0]; // Turning these 3 lists to arrays, memory a priority
         parentsAsSet = null;
         parents = new Name[0];
         childrenAsSet = null;
