@@ -145,10 +145,9 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-        SName name = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
+        List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
         boolean reload = false;
-        if (name != null) { // as it stands regions should not overlap, we find a name that means we know what to (try) to do
-            // ok it matches a name
+        for (SName name:names){
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// would have been a one cell name
                 String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                 spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
@@ -157,6 +156,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 // hopefully self explanatory :)
                 zkAzquoBookUtils.blankDependantChoices(loggedInUser, changedChoice, event.getSheet());
                 reload = true;
+                break;
             }
             // todo, add row heading later if required
             if (name.getName().startsWith("az_DisplayColumnHeadings")) { // ok going to try for a sorting detect
@@ -454,18 +454,19 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-    private SName getNamedRegionForRowAndColumnSelectedSheet(int row, int col) {
+    private List<SName> getNamedRegionForRowAndColumnSelectedSheet(int row, int col) {
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = myzss.getBook();
+        List<SName> found = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) { // seems best to loop through names checking which matches I think
             if (name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
                     && name.getRefersToCellRegion() != null
                     && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
                     && col >= name.getRefersToCellRegion().getColumn() && col <= name.getRefersToCellRegion().getLastColumn()) {
-                return name;
+                found.add(name);
             }
         }
-        return null;
+        return found;
     }
 
 
