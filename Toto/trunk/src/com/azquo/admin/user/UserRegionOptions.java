@@ -62,16 +62,23 @@ public class UserRegionOptions extends StandardEntity{
         if (hideRows == 0){
             hideRows = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
         }
-        this.sortable = spreadsheetSource.contains("sortable"); // the get option thing is no good for just an "exists with no value" check, this is the same
-        this.rowLimit = asNumber(getOptionFromSpreadsheetOptions(ROWLIMIT, spreadsheetSource));
-        this.columnLimit = asNumber(getOptionFromSpreadsheetOptions(COLUMNLIMIT, spreadsheetSource));
+        if (spreadsheetSource!=null) {
+            this.sortable = spreadsheetSource.contains("sortable"); // the get option thing is no good for just an "exists with no value" check, this is the same
+            this.rowLimit = asNumber(getOptionFromSpreadsheetOptions(ROWLIMIT, spreadsheetSource));
+            this.columnLimit = asNumber(getOptionFromSpreadsheetOptions(COLUMNLIMIT, spreadsheetSource));
+            this.highlightDays = asNumber(getOptionFromSpreadsheetOptions(HIGHLIGHT, spreadsheetSource));
+        }else{
+            this.sortable = false;
+            this.rowLimit = 0;
+            this.columnLimit = 0;
+            this.highlightDays = 0;
+        }
         // currently sort columns and rows are not supported in this way
         this.sortRow = null;
         this.sortRowAsc = false;
         this.sortColumn = null;
         this.sortColumnAsc = false;
-        this.highlightDays = asNumber(getOptionFromSpreadsheetOptions(HIGHLIGHT, spreadsheetSource));
-    }
+     }
 
 
     private static int asNumber(String string) {
