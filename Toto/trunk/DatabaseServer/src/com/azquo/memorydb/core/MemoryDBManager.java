@@ -1,6 +1,8 @@
 package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.dao.StandardDAO;
+import com.azquo.spreadsheet.JSTreeService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 
@@ -16,6 +18,9 @@ public final class MemoryDBManager {
     private final HashMap<String, AzquoMemoryDB> memoryDatabaseMap;
 
     private StandardDAO standardDAO;
+
+    @Autowired
+    private JSTreeService jsTreeService;
 
     public MemoryDBManager(StandardDAO standardDAO) throws Exception {
         this.standardDAO = standardDAO;
@@ -46,6 +51,8 @@ public final class MemoryDBManager {
         if (memoryDatabaseMap.get(mysqlName) != null){
             memoryDatabaseMap.remove(mysqlName);
         }
+        // a pain, nevessary as references may be in here
+        jsTreeService.unloadingDatabase(mysqlName);
     }
 
     public synchronized void addNewToDBMap(String mysqlName) throws Exception {

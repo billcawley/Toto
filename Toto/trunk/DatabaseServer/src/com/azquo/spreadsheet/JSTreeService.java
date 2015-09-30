@@ -50,9 +50,17 @@ public class JSTreeService {
     }
 
     // todo - stop these being looked up by a dataaccesstoken to string, for the moment it's the nearest I can get to the old logged in connection, need to understand the logic
-
     Map<String, Map<String, JSTreeService.JsTreeNode>> lookupMap = new ConcurrentHashMap<>();
     Map<String, Integer> lastJSTreeIdMap = new ConcurrentHashMap<>();
+
+    // ok, the cache was causing a big problem preserving references to unloaded databases, this is a hack to stop that, really names etc should NOT be held outside of a memory DB
+    public void unloadingDatabase(String mysqlName){
+        for (String cacheKey : lookupMap.keySet()){
+            if (cacheKey.contains(mysqlName)){ // yes a bit overkill but will get the job done
+                lookupMap.remove(cacheKey);
+            }
+        }
+    }
 
     // from the controller, as I say in many comments need to move some of the code back to the controller but for the moment it's forced DB side
     // ok annoyingly the lookup needs to be persisted across calls, so I'll need a map in here of the lookups.
@@ -70,16 +78,13 @@ public class JSTreeService {
                 if (currentNode.child.name != null){
                     names.add(currentNode.child.name);
                 }
-
             }
             return names;
-
-        }else{
+        } else {
             AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
             for (String nString:namesString){
                 Name name = nameService.findByName(azquoMemoryDBConnection, nString);
                 if (name!=null) names.add(name);
-
             }
         }
         return names;

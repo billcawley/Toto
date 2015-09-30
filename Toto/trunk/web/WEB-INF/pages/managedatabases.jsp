@@ -15,6 +15,10 @@
 <a href="/api/ManageReports">Manage Reports</a> &nbsp;<a href="/api/ManageReportSchedules">Manage Report Schedules</a> &nbsp;<a href="/api/ManageDatabases">Manage Databases</a> &nbsp;<a href="/api/ManageUsers">Manage Users</a> &nbsp;<a href="/api/ManagePermissions">Manage Permissions</a> &nbsp;<br/>
 <h1>Manage Databases</h1><br/>
 <br/><h1>${error}</h1>
+Memory report for servers<br/>
+<c:forEach items="${databaseServers}" var="databaseServer">
+    <a href="/api/MemoryReport?serverIp=${databaseServer.ip}" target="new">${databaseServer.name}</a>
+</c:forEach>
 <table>
   <tr>
   <form action="/api/ManageDatabases" method="post"><td>New Database</td><td><input name="createDatabase"/></td><td><input name="databaseType"/></td><td>

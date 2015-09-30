@@ -134,8 +134,8 @@ public class ZKSpreadsheetCommandController {
                     if ("PDF".equals(action) || pdfDefault) {
                         Exporter exporter = Exporters.getExporter("pdf");
                         Book book = ss.getBook();
-/*                        // todo address whether this breaks the validation?
-                        Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
+                        // zapping validation in this way throws an arror, it is annoying
+/*                        Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
                         if (validationSheet != null) {
                             try{
                                 book.getInternalBook().deleteSheet(validationSheet.getInternalSheet());
@@ -148,7 +148,8 @@ public class ZKSpreadsheetCommandController {
                         try {
                             fos = new FileOutputStream(file);
 //                            exporter.export(book, file);
-                            exporter.export(book.getSheetAt(0), fos);
+                            // depreciated, why?
+                            exporter.export(ss.getSelectedSheet(), fos);
                         } finally {
                             if (fos != null) {
                                 fos.close();

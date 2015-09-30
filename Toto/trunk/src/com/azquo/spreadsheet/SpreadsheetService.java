@@ -474,8 +474,7 @@ public class SpreadsheetService {
 
 
     public TreeNode getTreeNode(LoggedInUser loggedInUser, String values, int maxSize) throws Exception {
-
-             return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).formatJstreeDataForOutput(loggedInUser.getDataAccessToken(), values, maxSize);
+        return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).formatJstreeDataForOutput(loggedInUser.getDataAccessToken(), values, maxSize);
      }
 
 

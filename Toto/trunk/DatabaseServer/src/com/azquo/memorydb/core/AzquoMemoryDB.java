@@ -75,8 +75,9 @@ public final class AzquoMemoryDB {
         // now where the default multi threading number is defined. Different number based on the task? Can decide later.
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         int possibleLoadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
-        if (possibleLoadingThreads > 8) { // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
-            possibleLoadingThreads = 8;
+        if (possibleLoadingThreads > 4) { // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
+            // limiting to 4 after persistence problems
+            possibleLoadingThreads = 4;
         }
         loadingThreads = possibleLoadingThreads;
         reportFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report generation, 2/3
@@ -91,7 +92,7 @@ public final class AzquoMemoryDB {
 /*        nameByIdMap = HashIntObjMaps.newMutableMap();
         valueByIdMap = HashIntObjMaps.newMutableMap();
         provenanceByIdMap = HashIntObjMaps.newMutableMap();*/
-        // todo - get id counts from the tables and init thid maps to a proper size?
+        // todo - get id counts from the tables and init the id maps to a proper size?
         nameByIdMap = new ConcurrentHashMap<>();
         valueByIdMap = new ConcurrentHashMap<>();
         provenanceByIdMap = new ConcurrentHashMap<>();
@@ -593,7 +594,7 @@ public final class AzquoMemoryDB {
     // headings should be sorted after the options so hopefully ok? Watch for this
     public void clearSetAndCountCacheForName(Name name) {
         for (Name parent : name.findAllParents()){ // I hope this isn't too expensive
-            clearSetAndCountCacheForString(name.getDefaultDisplayName()); // in another language could cause a problem. If we could get the ids this would be more reliable.
+            clearSetAndCountCacheForString(parent.getDefaultDisplayName()); // in another language could cause a problem. If we could get the ids this would be more reliable.
             // Of course the ids means we could get a name list from parse query. A thought.
         }
     }

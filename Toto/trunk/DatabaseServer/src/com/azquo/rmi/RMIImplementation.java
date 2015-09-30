@@ -182,7 +182,7 @@ public class RMIImplementation implements RMIInterface {
     @Override
     public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws RemoteException {
         try {
-            dsSpreadsheetService.saveData(databaseAccessToken,cellsAndHeadingsForDisplay, user, reportName, context);
+            dsSpreadsheetService.saveData(databaseAccessToken, cellsAndHeadingsForDisplay, user, reportName, context);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -213,6 +213,25 @@ public class RMIImplementation implements RMIInterface {
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
+    }
+
+    @Override
+    public String getMemoryReport(boolean suggestGc) throws RemoteException {
+        if (suggestGc){
+            System.gc();
+        }
+        StringBuilder toReturn = new StringBuilder();
+        final Runtime runtime = Runtime.getRuntime();
+        final int mb = 1024 * 1024;
+        if (suggestGc){
+            toReturn.append("##### Garbage Collection Suggested #####<br/>");
+        }
+        toReturn.append("##### Heap utilization statistics [MB] #####<br/>");
+        toReturn.append("Used Memory:" + (runtime.totalMemory() - runtime.freeMemory()) / mb + "<br/>");
+        toReturn.append("Free Memory:" + runtime.freeMemory() / mb + "<br/>");
+        toReturn.append("Total Memory:" + runtime.totalMemory() / mb + "<br/>");
+        toReturn.append("Max Memory:" + runtime.maxMemory() / mb + "<br/>");
+        return toReturn.toString();
     }
 
     @Override

@@ -54,6 +54,8 @@ public interface RMIInterface extends Remote {
 
     int getValueCount(String mysqlName) throws RemoteException;
 
+    String getMemoryReport(boolean suggestGc) throws RemoteException;
+
     void unloadDatabase(String mysqlName) throws RemoteException;
 
     void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws RemoteException;

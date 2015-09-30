@@ -468,4 +468,7 @@ public class AdminService {
         return 0;
     }
 
+    public String getMemoryReport(String serverIp, boolean suggestGc) throws Exception {
+        return rmiClient.getServerInterface(serverIp).getMemoryReport(suggestGc);
+    }
 }
