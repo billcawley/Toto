@@ -8,7 +8,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * Created with IntelliJ IDEA.
@@ -833,9 +832,10 @@ public final class Name extends AzquoMemoryDBEntity {
     public String getAsJson() {
         // Going against my previous comment we're vonverting to lists - transport should be "dumb" I think. Plus overhead.
         Collection<Name> children = getChildren();
-        // the only thing that bothers me slightly about this is initial list size. Don't want unnecessary copying (resizing . . .)
-        // todo - test it, only way to be sure.
-        List<Integer> childrenIds = children.stream().map(Name::getId).collect(Collectors.toList());
+        List<Integer> childrenIds = new ArrayList<>(children.size());
+        for (Name child : getChildren()) {
+            childrenIds.add(child.getId());
+        }
         try {
             return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(), additive, getAttributes(), childrenIds));
         } catch (Exception e) {

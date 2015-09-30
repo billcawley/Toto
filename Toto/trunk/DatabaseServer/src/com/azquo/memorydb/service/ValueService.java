@@ -180,13 +180,8 @@ public final class ValueService {
     long part3NanoCallTime1 = 0;
     int numberOfTimesCalled1 = 0;
 
-    // setsize cache is a temporary cache of set sizes. Passed through as typically it would only be used for the scope of an operation
-    // it is requires as we enumerate though the set a lot. A question : should a set record something like "numvaluesincludingchildren"
-    // a possible TODO
-
-    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
+    public Collection<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
         long start = System.nanoTime();
-
         // first get the shortest value list taking into account children
         int smallestNameSetSize = -1;
         Name smallestName = null;
@@ -204,43 +199,35 @@ public final class ValueService {
         part1NanoCallTime1 += (System.nanoTime() - start);
         long point = System.nanoTime();
         assert smallestName != null; // make intellij happy :P
-//        final List<Value> valueList = findValuesForNameIncludeAllChildren(smallestName, payAttentionToAdditive);
         final Set<Value> smallestValuesSet = smallestName.findValuesIncludingChildren(payAttentionToAdditive);
         part2NanoCallTime1 += (System.nanoTime() - point);
         point = System.nanoTime();
-
-
-        Set<Name> namesWithoutSmallest = new HashSet<>(names);
-        namesWithoutSmallest.remove(smallestName);// ignore the one we started with
-
-        // trying for a new style - testing implies the streams parallel is best, if single threaded the retain all has an edge I think
-        // could test more
-        /*
-        List<Value> values = new ArrayList<>();
-        HashSet<Value> valuesSet = new HashSet<>(smallestValuesSet); // if I do go down this route then maybe consider clone here.
-        for (Name name : namesWithoutSmallest){
-            valuesSet.retainAll(name.findValuesIncludingChildren(payAttentionToAdditive));
+        // parallel stream is out, given this retain is best I think
+        // I don't really like creating the new set object here but not sure of an alternative, this is no worse than clone having dug around in the code
+        HashSet<Value> values = new HashSet<>(smallestValuesSet);
+        for (Name name : names){
+            if (name != smallestName){ // a little cheaper than making a new name set and knocking this one off I think
+                values.retainAll(name.findValuesIncludingChildren(payAttentionToAdditive));
+            }
         }
-        values.addAll(valuesSet);
-        */
-        // from testing parallel does help a lot!
-        List<Value> values = smallestValuesSet.parallelStream().filter(value -> valueIsOk(value, namesWithoutSmallest, payAttentionToAdditive)).collect(Collectors.toList());
+        // from testing parallel is speedy but creates LOTS of garbage
+        //List<Value> values = smallestValuesSet.stream().filter(value -> valueIsOk(value, namesWithoutSmallest, payAttentionToAdditive)).collect(Collectors.toList());
         part3NanoCallTime1 += (System.nanoTime() - point);
         numberOfTimesCalled1++;
         return values;
     }
 
-    private static boolean valueIsOk(Value value, Collection<Name> namesWithoutSmallest, boolean payAttentionToAdditive){
+/*    private static boolean valueIsOk(Value value, Collection<Name> namesWithoutSmallest, boolean payAttentionToAdditive){
         boolean theValueIsOk = true;
         for (Name name : namesWithoutSmallest) {
             if (!value.getNames().contains(name)) { // top name not in there check children also
-/*                        Set<Name> copy = new HashSet<>(value.getNames());
-                        copy.retainAll(name.findAllChildren(payAttentionToAdditive));
-                        if (copy.size() == 0) {
+                        //Set<Name> copy = new HashSet<>(value.getNames());
+                        //copy.retainAll(name.findAllChildren(payAttentionToAdditive));
+                        //if (copy.size() == 0) {
                             //                        count++;
-                            theValueIsOk = false;
-                            break;
-                        }*/
+                          //  theValueIsOk = false;
+                          //  break;
+                        //}
                 // going to try for new logic - what we're saying is : are there any matches between the child names and value names at all? I think the retain all code above is not as efficient as it might be
                 Collection<Name> allChildrenOfName = name.findAllChildren(payAttentionToAdditive);
                 boolean found = false;
@@ -257,7 +244,7 @@ public final class ValueService {
             }
         }
         return theValueIsOk;
-    }
+    }*/
 
     /* unused commenting
         // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
@@ -466,7 +453,7 @@ public final class ValueService {
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
 
-        List<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive);
+        Collection<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive);
 
         double max = 0;
         double min = 0;
@@ -674,7 +661,10 @@ public final class ValueService {
       */
 
     private List<TreeNode> getTreeNodesFromValues(Set<Value> values, int maxSize) {
-        Set<DummyValue> convertedToDummy = values.stream().map(value -> new DummyValue(value.getText(), value.getNames())).collect(Collectors.toSet());
+        Set<DummyValue> convertedToDummy = new HashSet<>(values.size());
+        for (Value value : values) {
+            convertedToDummy.add(new DummyValue(value.getText(), value.getNames()));
+        }
         return getTreeNodesFromDummyValues(convertedToDummy, maxSize);
     }
 

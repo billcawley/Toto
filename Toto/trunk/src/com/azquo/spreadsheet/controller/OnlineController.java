@@ -18,7 +18,6 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.model.SName;
 
@@ -37,7 +36,8 @@ import java.util.List;
 @Controller
 @RequestMapping("/Online")
 public class OnlineController {
-
+    final Runtime runtime = Runtime.getRuntime();
+    final int mb = 1024 * 1024;
     // todo get rid of dao objects in controllers
 
     @Autowired
@@ -268,9 +268,16 @@ public class OnlineController {
                             new Thread(() -> {
                                 // so in here the new thread we set up the loading as it was originally before
                                 try {
+                                    long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+                                    long newHeapMarker = oldHeapMarker;
                                     String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + finalOnlineReport.getPathname() + "/onlinereports/" + finalOnlineReport.getFilename();
                                     //final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                                     final Book book = new support.importer.PatchedImporterImpl().imports(new File(bookPath), "Report name");
+                                    /*newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+                                    System.out.println();
+                                    System.out.println("Heap cost to load a ZK book : " + (newHeapMarker - oldHeapMarker) / mb);
+                                    System.out.println();
+                                    oldHeapMarker = newHeapMarker;*/
                                     // the first two make sense. Little funny about the second two but we need a reference to these
                                     book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                                     book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);
@@ -278,6 +285,11 @@ public class OnlineController {
                                     book.getInternalBook().setAttribute(REPORT_ID, finalLoggedInUser.getReportId());
                                     ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
                                     session.setAttribute(finalReportId + SAVE_FLAG, bookUtils.populateBook(book));
+                                    newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+                                    System.out.println();
+                                    System.out.println("Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
+                                    System.out.println();
+                                    oldHeapMarker = newHeapMarker;
                                     session.setAttribute(finalReportId, book);
                                 } catch (Exception e) {
                                     model.addAttribute("content", "error:" + e.getMessage());// think that works!

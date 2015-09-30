@@ -370,9 +370,11 @@ public class DSDataLoadService {
         }
         tableMap.remove("catalog_category_product");
         //now find the attributes that matter
-        // java 8 syntax, push the attribute ids into an attributes set
-        final Set<String> attributes = tableMap.get("catalog_product_super_attribute").stream().map(attributeRow -> attributeRow.get("attribute_id")).collect(Collectors.toSet());
-        //only interested in the attribute_id
+        Set<String> attributes = new HashSet<>(tableMap.get("catalog_product_super_attribute").size());
+        for (Map<String, String> attributeRow : tableMap.get("catalog_product_super_attribute")) {
+            //only interested in the attribute_id
+            attributes.add(attributeRow.get("attribute_id"));
+        }        //only interested in the attribute_id
         //name the attributes that matter
         Map<String, String> attributeNames = new HashMap<>();
         for (Map<String, String> attribute : tableMap.get("eav_attribute")) {

@@ -179,8 +179,11 @@ public final class AzquoMemoryDB {
                         new Value(memDB, dataRecord.id, dataRecord.json);
                     }
                 }
+                if (minId%100_000 == 0){
+                    loadTracker.addAndGet(dataToLoad.size());
+                }
                 if (minId%1_000_000 == 0){
-                    logInSessionLogAndSystem("loaded " + loadTracker.addAndGet(dataToLoad.size()));
+                    logInSessionLogAndSystem("loaded " + loadTracker.get());
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -554,12 +557,15 @@ public final class AzquoMemoryDB {
         return toReturn;
     }
 
-    // trying new collect call java 8 syntax, should be exactly the same as old code - run through the values collecting thosw with no parents and adding them to a list to return.
-    // Collectors.toList uses an arraylist. THe iterator off a concurrent hash map should be safe though it may not reflect the latest additions.
     public List<Name> findTopNames() {
-        return nameByIdMap.values().stream().filter(name -> name.getParents().size() == 0).collect(Collectors.toList());
+        final List<Name> toReturn = new ArrayList<Name>();
+        for (Name name : nameByIdMap.values()) {
+            if (name.getParents().size() == 0) {
+                toReturn.add(name);
+            }
+        }
+        return toReturn;
     }
-
     // this could be expensive on big databases
 
     public void clearCaches() {

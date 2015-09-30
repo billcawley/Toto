@@ -33,6 +33,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DSSpreadsheetService {
 
+    final Runtime runtime = Runtime.getRuntime();
+    final int mb = 1024 * 1024;
+    final int kb = 1024;
+
+
     private static final Logger logger = Logger.getLogger(DSSpreadsheetService.class);
 
     @Autowired
@@ -687,6 +692,8 @@ seaports;children   container;children
     private List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, List<String> languages, int highlightDays) throws Exception {
+        long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+        long newHeapMarker = oldHeapMarker;
         azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
         long track = System.currentTimeMillis();
         long start = track;
@@ -706,7 +713,6 @@ seaports;children   container;children
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Column headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
-
         if (columnHeadings.size() == 0) {
             throw new Exception("no headings passed");
         }
@@ -735,10 +741,20 @@ seaports;children   container;children
                 }
             }
         }
+        newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+/*        System.out.println();
+        System.out.println("Heap cost for headings/context : " + (newHeapMarker - oldHeapMarker) / mb);
+        System.out.println();*/
+        oldHeapMarker = newHeapMarker;
         // note, didn't se the context against the logged in connection, should I?
         // ok going to try to use the new function
         List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings
                 , columnHeadings, contextNames, languages);
+        newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+/*        System.out.println();
+        System.out.println("Heap cost for raw data : " + (newHeapMarker - oldHeapMarker) / mb);
+        System.out.println();*/
+        oldHeapMarker = newHeapMarker;
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data populated in " + time + "ms");
         if (time > 5000){ // a bit arbitrary
@@ -748,6 +764,11 @@ seaports;children   container;children
         track = System.currentTimeMillis();
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
                 , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays);
+        newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+/*        System.out.println();
+        System.out.println("Heap cost for sorting : " + (newHeapMarker - oldHeapMarker) / mb);
+        System.out.println();*/
+        oldHeapMarker = newHeapMarker;
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data sort/filter in " + time + "ms");
         System.out.println("region delivered in " + (System.currentTimeMillis() - start) + "ms");
@@ -1185,6 +1206,9 @@ seaports;children   container;children
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<Name> contextNames, int rowNo, int colNo, List<String> languages) throws Exception {
+        long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+        long newHeapMarker = oldHeapMarker;
+
         String stringValue;
         double doubleValue = 0;
         Set<DataRegionHeading> headingsForThisCell = new HashSet<>(rowHeadings.size());
@@ -1332,6 +1356,8 @@ seaports;children   container;children
     private List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
             , final List<List<DataRegionHeading>> headingsForEachColumn
             , final List<Name> contextNames, List<String> languages) throws Exception {
+        long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+        long newHeapMarker = oldHeapMarker;
         long track = System.currentTimeMillis();
         int totalRows = headingsForEachRow.size();
         int totalCols = headingsForEachColumn.size();
@@ -1352,6 +1378,11 @@ seaports;children   container;children
         // different style, just chuck every row in the queue
         int progressBarStep = (totalCols * totalRows) / 50 + 1;
         AtomicInteger counter = new AtomicInteger();
+        newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+        System.out.println();
+        System.out.println("Heap cost to prepare data space : " + (newHeapMarker - oldHeapMarker) / mb);
+        System.out.println();
+        oldHeapMarker = newHeapMarker;
         if (totalRows < 1000){ // arbitrary cut off for the moment
             for (int row = 0; row < totalRows; row++) {
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
@@ -1380,6 +1411,11 @@ seaports;children   container;children
         if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
             throw new Exception("Data region took longer than an hour to load");
         }
+        newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+        System.out.println();
+        System.out.println("Heap cost to make on multi thread : " + (newHeapMarker - oldHeapMarker) / mb);
+        System.out.println();
+        oldHeapMarker = newHeapMarker;
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());
         }
@@ -1473,7 +1509,6 @@ seaports;children   container;children
             if (values == null) {
 //                values = new ArrayList<>(valueService.findValuesForNameIncludeAllChildren(name, true));
                 values = new ArrayList<>(name.findValuesIncludingChildren(true));
-
             } else {
                 values.retainAll(name.findValuesIncludingChildren(true));
             }

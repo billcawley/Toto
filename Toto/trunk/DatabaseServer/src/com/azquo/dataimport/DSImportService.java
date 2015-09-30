@@ -652,8 +652,11 @@ public class DSImportService {
         // further information put into the ImportHeadings based off the initial info
         // I could put more in here - there's stuff going on in the values import that is header only stuff (context?)
         fillInHeaderInformation(azquoMemoryDBConnection, mutableImportHeadings);
-        // convert to immutable. Not strictly necessary, as much for my sanity as anything (EFC) - new java 8 notation, not completely comfortable with this but what is happening here is simple
-        final List<ImmutableImportHeading> immutableImportHeadings = mutableImportHeadings.stream().map(ImmutableImportHeading::new).collect(Collectors.toList());
+        // convert to immutable. Not strictly necessary, as much for my sanity as anything (EFC)
+        final List<ImmutableImportHeading> immutableImportHeadings = new ArrayList<>(mutableImportHeadings.size());
+        for (MutableImportHeading mutableImportHeading : mutableImportHeadings){
+            immutableImportHeadings.add(new ImmutableImportHeading(mutableImportHeading));
+        }
         // having read the headers go through each record
         // now, since this will be multi threaded need to make line objects, Cannot be completely immutable due to the current logic, I may be able to change this, not sure
         int lineNo = 1; // start at 1, we think of the first line being 1 not 0.
