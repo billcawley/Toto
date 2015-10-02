@@ -131,6 +131,9 @@ public final class Value extends AzquoMemoryDBEntity {
     // I think that's all that's needed now we're not saving deleted info?
     public void delete() throws Exception {
         needsDeleting = true;
+        for (Name newName : this.names) {
+            newName.removeFromValues(this);
+        }
         setNeedsPersisting();
     }
 
