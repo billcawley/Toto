@@ -1209,7 +1209,7 @@ seaports;children   container;children
         long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
         long newHeapMarker = oldHeapMarker;
 
-        String stringValue;
+        String stringValue = "";
         double doubleValue = 0;
         Set<DataRegionHeading> headingsForThisCell = new HashSet<>(rowHeadings.size());
         Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
@@ -1247,8 +1247,7 @@ seaports;children   container;children
         }
         if (!checked) { // not a valid peer set? Lock and no values set (blank)
             locked.isTrue = true;
-            stringValue = "";
-        } else {
+         } else {
             // ok new logic here, we need to know if we're going to use attributes or values or namecount!
             DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;
             for (DataRegionHeading heading : headingsForThisCell) {
@@ -1304,9 +1303,9 @@ seaports;children   container;children
                             stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
                         }
                         // was isnumber test here to add a double to the
-                    } else {
-                        stringValue = doubleValue + "";
-                    }
+                    } else if (values.size() > 0) {
+                            stringValue = doubleValue + "";
+                     }
                 } else {
                     stringValue = "";
                     doubleValue = 0;
@@ -1583,9 +1582,11 @@ seaports;children   container;children
                 if (!firstCol) sb.append("\t");
                 else firstCol = false;
                 // use string if we have it,otherwise double if it's not 0 or explicitly changed (0 allowed if manually entered). Otherwise blank.
-                String val = cellForDisplay.getStringValue().length() > 0 ? cellForDisplay.getStringValue() : cellForDisplay.getDoubleValue() != 0 || cellForDisplay.isChanged() ? cellForDisplay.getDoubleValue() + "" : "";
-                //for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
-                sb.append(val);
+                if (cellForDisplay.getStringValue()!=null){
+                    String val = cellForDisplay.getStringValue().length() > 0 ? cellForDisplay.getStringValue() : cellForDisplay.getDoubleValue() != 0 || cellForDisplay.isChanged() ? cellForDisplay.getDoubleValue() + "" : "";
+                    //for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
+                    sb.append(val);
+                }
             }
             bw.write(sb.toString());
             bw.newLine();
@@ -1644,7 +1645,7 @@ seaports;children   container;children
                             }
                         } catch (Exception ignored) {
                         }
-                        if (cell.getStringValue().endsWith("%")) {
+                        if (cell.getStringValue()!=null && cell.getStringValue().endsWith("%")) {
                             String percent = cell.getStringValue().substring(0, cell.getStringValue().length() - 1);
                             try {
                                 double d = Double.parseDouble(percent) / 100;
@@ -1660,14 +1661,14 @@ seaports;children   container;children
                             if (valuesForCell.getValues().size() == 1) {
                                 final Value theValue = valuesForCell.getValues().get(0);
                                 logger.info("trying to overwrite");
-                                if (cell.getStringValue().length() > 0) {
+                                if (cell.getStringValue()!=null && cell.getStringValue().length() > 0) {
                                     //sometimes non-existant original values are stored as '0'
                                     valueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getStringValue());
                                     numberOfValuesModified++;
                                 } else {
                                     theValue.delete();
                                 }
-                            } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue().length() > 0) {
+                            } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue() != null && cell.getStringValue().length() > 0) {
                                 logger.info("storing new value here . . .");
                                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), cellNames);
                                 numberOfValuesModified++;
