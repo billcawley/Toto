@@ -458,7 +458,7 @@ public class DSImportService {
 
     public Name includeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, String name, Set<Name> parents, boolean local, List<String> attributeNames) throws Exception {
         Name child = null;
-        if (parents == null) {
+        if (parents == null || parents.size()==0) {
             child = includeInSet(azquoMemoryDBConnection, namesFound, name, null, local, attributeNames);
         } else {
             for (Name parent : parents) {
@@ -1058,7 +1058,7 @@ public class DSImportService {
                 return;
             }
             List<String> localAttributes = new ArrayList<>();
-            if (identityCell.immutableImportHeading.attribute != null){
+            if (identityCell.immutableImportHeading.attribute != null && !identityCell.immutableImportHeading.attribute.equals(dateLang)){
                 localAttributes.add(identityCell.immutableImportHeading.attribute);
             }else{
                 localAttributes.add(Constants.DEFAULT_DISPLAY_NAME);
@@ -1067,6 +1067,7 @@ public class DSImportService {
         }
         // what if linevalue is empty here? Shouldn't it check that first thing?
         identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue);
+
     }
 
     // ok what's notable here is that this will create names to complete the peers if it can't find them
