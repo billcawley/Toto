@@ -1058,8 +1058,11 @@ public class DSImportService {
                 return;
             }
             List<String> localAttributes = new ArrayList<>();
-            localAttributes.add(identityCell.immutableImportHeading.attribute);
-            // here's a thing - this either finds a name with the attribute/value combo already or it creates it, so we're done? I'm adding an else below
+            if (identityCell.immutableImportHeading.attribute != null){
+                localAttributes.add(identityCell.immutableImportHeading.attribute);
+            }else{
+                localAttributes.add(Constants.DEFAULT_DISPLAY_NAME);
+            }
             identityCell.lineName = includeInParents(azquoMemoryDBConnection, namesFound, identityCell.lineValue, identityCell.immutableImportHeading.parentNames, false, localAttributes);
         }
         // what if linevalue is empty here? Shouldn't it check that first thing?
