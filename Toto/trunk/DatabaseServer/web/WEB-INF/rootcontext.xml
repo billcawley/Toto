@@ -48,6 +48,8 @@
     <bean name="nameService" class="com.azquo.memorydb.service.NameService"/>
     <bean name="valueService" class="com.azquo.memorydb.service.ValueService"/>
     <bean name="standardDao" class="com.azquo.memorydb.dao.StandardDAO"/>
+    <bean name="nameDAO" class="com.azquo.memorydb.dao.NameDAO"/>
+    <bean name="valueDAO" class="com.azquo.memorydb.dao.ValueDAO"/>
     <bean name="provenanceService" class="com.azquo.memorydb.service.ProvenanceService"/>
     <bean name="dsAdminService" class="com.azquo.memorydb.service.DSAdminService"/>
     <bean name="dsImportService" class="com.azquo.dataimport.DSImportService"/>
@@ -58,6 +60,8 @@
     <bean name="magentoService" class="com.azquo.app.magento.DSDataLoadService"/>
     <bean name="memoryDBManager" class="com.azquo.memorydb.core.MemoryDBManager">
         <constructor-arg type="com.azquo.memorydb.dao.StandardDAO" ref="standardDao"/>
+        <constructor-arg type="com.azquo.memorydb.dao.NameDAO" ref="nameDAO"/>
+        <constructor-arg type="com.azquo.memorydb.dao.ValueDAO" ref="valueDAO"/>
     </bean>
     <bean name="rmiServer" class="com.azquo.rmi.RMIServer">
         <constructor-arg index="0" ref="dsSpreadsheetService"/>

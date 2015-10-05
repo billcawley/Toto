@@ -71,7 +71,10 @@ Memory report for servers<br/>
         <td>
             <c:if test="${database.loaded}">
                 <a href="/api/ManageDatabases?unloadId=${database.id}">Unload</a>
-                    </c:if>
+            </c:if>
+            <c:if test="${database.canConvert}">
+                <a href="/api/ManageDatabases?convertId=${database.id}">Convert</a>
+            </c:if>
 
         </td>
     </tr>

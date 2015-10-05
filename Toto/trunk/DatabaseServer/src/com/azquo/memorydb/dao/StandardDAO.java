@@ -44,6 +44,8 @@ public class StandardDAO {
     private static final String ID = "id";
     private static final String JSON = "json";
 
+    public static final Map<String,?> EMPTY_PARAMETERS_MAP = new HashMap<>();
+
     // there will be others for app stuff, their table names will live in the spreadsheet
     // given how wonderfully generic this class is I could take these out . . .no harm here I suppose
 

@@ -207,6 +207,24 @@ public class RMIImplementation implements RMIInterface {
     }
 
     @Override
+    public boolean wasFastLoaded(String mysqlName) throws RemoteException {
+        try {
+            return memoryDBManager.wasDBFastLoaded(mysqlName);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public void convertDatabase(String mysqlName) throws RemoteException {
+        try {
+            memoryDBManager.convertDatabase(mysqlName);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
     public int getNameCount(String mysqlName) throws RemoteException {
         try {
             return memoryDBManager.getAzquoMemoryDB(mysqlName, null).getNameCount();

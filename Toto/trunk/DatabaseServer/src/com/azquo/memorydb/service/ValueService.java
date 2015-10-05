@@ -207,7 +207,8 @@ public final class ValueService {
         point = System.nanoTime();
         // parallel stream is out, given this retain is best I think
         // I don't really like creating the new set object here but not sure of an alternative, this is no worse than clone having dug around in the code
-        HashSet<Value> values = new HashSet<>(smallestValuesSet);
+        // the alternative might be, depending on size, a retainall which created a new set
+        Set<Value> values =  new HashSet<>(smallestValuesSet);
         for (Name name : names){
             if (name != smallestName){ // a little cheaper than making a new name set and knocking this one off I think
                 values.retainAll(name.findValuesIncludingChildren(payAttentionToAdditive));
@@ -383,7 +384,7 @@ public final class ValueService {
                         //int id = Integer.parseInt(term.substring(1));
                         // so get the name and add it to the other names
                         Name name = nameService.getNameFromListAndMarker(term, formulaNames);
-                        Set<Name> seekSet = new HashSet<>(calcnames);
+                        Set<Name> seekSet =  new HashSet<>(calcnames);
                         //if (name.getPeers().size() == 0 || name.getPeers().size() == calcnames.size()) {
                         seekSet.add(name);
                         //} else {

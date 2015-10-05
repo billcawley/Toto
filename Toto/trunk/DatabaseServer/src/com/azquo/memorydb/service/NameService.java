@@ -6,6 +6,8 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.spreadsheet.StringUtils;
+import net.openhft.koloboke.collect.set.hash.HashObjSet;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -93,8 +95,8 @@ public final class NameService {
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            List<Name> nameList = interpretSetTerm(nameName, formulaStrings, referencedNames, attributeStrings);
-            toReturn.add(new HashSet<>(nameList));
+            Set<Name> nameSet = interpretSetTerm(nameName, formulaStrings, referencedNames, attributeStrings);
+            toReturn.add(nameSet);
         }
         return toReturn;
     }
@@ -413,10 +415,17 @@ public final class NameService {
     }
 
     public void addNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
-        if (currentLevel == level || level == ALL_LEVEL_INT) {
+        if (level == ALL_LEVEL_INT) {
+            // new logic! All names is the name find all children plus itself. A bit annoying to make a copy but there we go
+            namesFound.addAll(name.findAllChildren(false)); // don't pay attention to additive, it didn't before
             namesFound.add(name);
+            return; // and stop, now!
         }
+        /*if (currentLevel == level || level == ALL_LEVEL_INT) {
+            namesFound.add(name);
+        }*/
         if (currentLevel == level) {
+            namesFound.add(name);
             return;
         }
         if (name.getChildren().size() == 0) {
@@ -534,15 +543,19 @@ public final class NameService {
 
     // to find a set of names, a few bits that were part of the original set of functions
     // add the default display name since no attributes were specified.
-    public final List<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
+    public final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
         List<String> langs = new ArrayList<>();
         langs.add(Constants.DEFAULT_DISPLAY_NAME);
-        return parseQuery(azquoMemoryDBConnection, setFormula, langs);
+        return parseQuery(azquoMemoryDBConnection, setFormula, langs, new ArrayList<>());
     }
 
+    public final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
+        return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, null);
+    }
     // todo : sort exceptions? Move to another class? Also should the namestack be more generic
+    // todo - cache option in here
 
-    public final List<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
+    public final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn) throws Exception {
         /*
         * This routine now amended to allow for union (+) and intersection (*) of sets.
         *
@@ -551,17 +564,19 @@ public final class NameService {
         *
         * These will be replaced by !<id>   e.g. !1234
         * */
-        if (setFormula.length() == 0){
-            return new ArrayList<>();
+        if (toReturn == null){
+            toReturn = new ArrayList<>(); // default to this collection type
         }
-         List<Collection<Name>> nameStack = new ArrayList<>(); // make this more generic, the key is in the name marker bits, might use different collections depending on operator!
+        if (setFormula.length() == 0){
+            return toReturn;
+        }
+        List<Collection<Name>> nameStack = new ArrayList<>(); // make this more generic, the key is in the name marker bits, might use different collections depending on operator!
         List<String> formulaStrings = new ArrayList<>();
         List<String> nameStrings = new ArrayList<>();
         List<String> attributeStrings = new ArrayList<>(); // attribute names is taken. Perhaps need to think about function parameter names
-        List<Name> toReturn = new ArrayList<>();
         Name possibleName = findByName(azquoMemoryDBConnection,setFormula);
         if (possibleName!=null){
-             toReturn.add(possibleName);
+            toReturn.add(possibleName);
             return toReturn;
         }
         //todo - find a better way of using 'parseQuery` for other operations
@@ -570,8 +585,8 @@ public final class NameService {
 
         }
         if (setFormula.startsWith("zap ")){
-            List<Name> names = parseQuery(azquoMemoryDBConnection,setFormula.substring(4), attributeNames);
-            if (names!=null){
+            Collection<Name> names = parseQuery(azquoMemoryDBConnection,setFormula.substring(4), attributeNames); // defaulting to list here
+            if (names != null){
                 for (Name name:names)name.delete();
                 return toReturn;
             }
@@ -581,14 +596,13 @@ public final class NameService {
         try {
              referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
         }catch (Exception e){
-            if (setFormula.toLowerCase().equals("!00 children")) return new ArrayList<>();
+            if (setFormula.toLowerCase().equals("!00 children")) return new ArrayList<>();// what is this??
             throw e;
         }
         setFormula = setFormula.replace(AS, ASSYMBOL + "");
         setFormula = stringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*/" + NAMEMARKER + NameService.ASSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
 
-        logger.debug("Set formula after SYA " + setFormula);
         logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
         int stackCount = 0;
@@ -613,25 +627,47 @@ public final class NameService {
             }
             if (op == NAMEMARKER) {
                 stackCount++;
-                List<Name> nextNames = interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings);
+                Set<Name> nextNames = interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings);
                 // the collection implementation used here will affect performance, going to try a linked hash set. Some memory overhead but some functions like retain all should be much faster
-                nameStack.add(new LinkedHashSet<>(nextNames)); // order and set contains speed, should do it! Memory overhead but it gets chucked after
+                //nameStack.add(new LinkedHashSet<>(nextNames)); // order and set contains speed, should do it! Memory overhead but it gets chucked after -- no, I don't want wastage like that
+                nameStack.add(nextNames); // now not necessary as interpretsetterm behaves more, I think that will have saved a fair bit
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + setFormula);
             } else if (op == '*') { // * meaning intersection here . . .
                 //assume that the second term implies 'level all'
                 long start = System.currentTimeMillis();
-                System.out.println("starting * set sizes  nameStack(stackcount)" +  nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
-                Set<Name> allNames = new HashSet<>();
+                System.out.println("starting * set sizes  nameStack(stackcount)" + nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
+/*                Set<Name> allNames = HashObjSets.newMutableSet(); // testing shows no harm, should be a bit faster and better on memory
+                // ok make a set for every name and all their children, that's what allnames is. But we then do a retainall on the
                 for (Name name : nameStack.get(stackCount)) {
                     addNames(name, allNames, 0, ALL_LEVEL_INT);
                 }
                 long now = System.currentTimeMillis();
-                System.out.println("find all parents in parse query part 1 " + (now - start));
+                System.out.println("find all names in parse query part 1 " + (now - start) + "ms");
+                // reatainall makes an interator on nameStack.get(stackCount - 1) and if allnames doens't contain the  iterator.next it removes it.
+                // either of these sets can be massive, going to try for a manual crossover creating a new set
                 nameStack.get(stackCount - 1).retainAll(allNames);
-                System.out.println("after retainall " + (System.currentTimeMillis() - start));
+                System.out.println("after retainall " + (System.currentTimeMillis() - start) + "ms");*/
+                // reatainall makes an interator on nameStack.get(stackCount - 1) and if allnames doens't contain the  iterator.next it removes it.
+                // either of these sets can be massive, going to try for a manual crossover creating a new set
+                Collection<Name> previousSet = nameStack.get(stackCount - 1);
+                Set<Name> setIntersection = HashObjSets.newMutableSet(); // testing shows no harm, should be a bit faster and better on memory
+                for (Name name : nameStack.get(stackCount)) {
+                    if (previousSet.contains(name)){
+                        setIntersection.add(name);
+                    }
+                    for (Name child : name.findAllChildren(false)){
+                        if (previousSet.contains(child)){
+                            setIntersection.add(child);
+                        }
+                    }
+                }
+                nameStack.set(stackCount - 1, setIntersection); // replace the previous set
+                System.out.println("after new retainall " + (System.currentTimeMillis() - start) + "ms");
                 nameStack.remove(stackCount);
             } else if (op == '/') { // this can be slow : todo - speed up? Is it the retainall? Should I be using sets?
+                //new HashSet<>(nameStack.get(stackCount));
+                // do we have to make a new set?
                 Set<Name> parents = new HashSet<>(nameStack.get(stackCount));
                 long start = System.currentTimeMillis();
                 System.out.println("starting / set sizes  nameStack(stackcount)" +  nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
@@ -671,10 +707,10 @@ public final class NameService {
                     toReturn.add(possible);
                 }
             }
-            return toReturn;
         } else { // just make a copy as list and return. This colleciton copying all over the pace bothers me a bit.
-            return new ArrayList<>(nameStack.get(0));
+            toReturn.addAll(nameStack.get(0));
         }
+        return toReturn;
     }
 
     public List<String> attributeList(AzquoMemoryDBConnection azquoMemoryDBConnection){
@@ -802,7 +838,7 @@ public final class NameService {
         return confidential == null || !confidential.equalsIgnoreCase("true");
     }
 
-    private void filter(List<Name> names, String condition, List<String> strings, List<String> attributeNames) {
+    private void filter(Set<Name> names, String condition, List<String> strings, List<String> attributeNames) {
         //NOT HANDLING 'OR' AT PRESENT
         int andPos = condition.toLowerCase().indexOf(" and ");
         Set<Name> namesToRemove = new HashSet<>();
@@ -875,10 +911,10 @@ public final class NameService {
         }
     }
 
-    private List<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
-        //System.out.println("interpret set term . . ." + setTerm);
-        List<Name> namesFound = new ArrayList<>();
+    // In both cases this was being turned to a hashset so make it return one!
 
+    private Set<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
+        //System.out.println("interpret set term . . ." + setTerm);
         final String levelString = stringUtils.getInstruction(setTerm, LEVEL);
         String fromString = stringUtils.getInstruction(setTerm, FROM);
         String parentsString = stringUtils.getInstruction(setTerm, PARENTS);
@@ -891,6 +927,7 @@ public final class NameService {
         //String totalledAsString = stringUtils.getInstruction(setTerm, AS);
         String selectString = stringUtils.getInstruction(setTerm, SELECT);
         // removed totalled as
+        Set<Name> namesFound =  new HashSet<>();
 
         //final String associatedString = stringUtils.getInstruction(setTerm, ASSOCIATED);
         int wherePos = setTerm.toLowerCase().indexOf(WHERE.toLowerCase());
@@ -930,9 +967,10 @@ public final class NameService {
         if (whereString != null) {
             filter(namesFound, whereString, strings, attributeStrings);
         }
+        // could parents and select be more efficient?
         if (parentsString != null) {
             //remove the childless names
-            List<Name> filteredList = new ArrayList<>();
+            Set<Name> filteredList =  new HashSet<>();
             for (Name possibleName : namesFound) {
                 if (possibleName.getChildren().size() > 0) {
                     filteredList.add(possibleName);
@@ -943,7 +981,7 @@ public final class NameService {
         }
         if (selectString != null){
             String toFind = strings.get(Integer.parseInt(selectString.substring(1, 3))).toLowerCase();
-            List<Name> selectedNames = new ArrayList<>();
+            Set<Name> selectedNames =  new HashSet<>();
             for (Name sname : namesFound){
                 if (sname != null && sname.getDefaultDisplayName() != null // is this checking to make intellij happy that important, maybe I want an NPE?
                         && sname.getDefaultDisplayName().toLowerCase().contains(toFind)){
@@ -952,8 +990,11 @@ public final class NameService {
             }
             namesFound = selectedNames;
         }
+        // expensive in terms of memory/garbage, I assume it will only be one on small sets
         if (sorted != null) {
-            Collections.sort(namesFound, defaultLanguageCaseInsensitiveNameComparator);
+            List<Name> toSort = new ArrayList<>(namesFound);
+            Collections.sort(toSort, defaultLanguageCaseInsensitiveNameComparator);
+            namesFound = new LinkedHashSet<>(toSort);
         }
         return namesFound;
     }

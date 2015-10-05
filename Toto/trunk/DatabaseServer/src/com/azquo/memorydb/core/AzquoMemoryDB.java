@@ -1,13 +1,15 @@
 package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.dao.JsonRecordTransport;
+import com.azquo.memorydb.dao.NameDAO;
 import com.azquo.memorydb.dao.StandardDAO;
+import com.azquo.memorydb.dao.ValueDAO;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * Created with IntelliJ IDEA.
@@ -30,6 +32,10 @@ public final class AzquoMemoryDB {
     //I don't think I can auto wire this as I can't guarantee it will be ready for the constructor
 
     private final StandardDAO standardDAO;
+
+    private final NameDAO nameDAO;
+
+    private final ValueDAO valueDAO;
 
     private final Map<String, Map<String, List<Name>>> nameByAttributeMap; // a map of maps of lists of names. Fun! Moved back to lists to save memory, the lists are unlikely to be big
 
@@ -68,16 +74,17 @@ public final class AzquoMemoryDB {
     // for convenience while loading, null it at the end of the constuctor.
     private StringBuffer sessionLog;
 
+    private boolean fastLoaded = false;
+
     // Initialising as concurrent hashmaps here, needs careful thought as to whether heavy concurrent access is actually a good idea, what could go wrong
-    protected AzquoMemoryDB(String mysqlName, StandardDAO standardDAO, StringBuffer sessionLog) throws Exception {
+    protected AzquoMemoryDB(String mysqlName, StandardDAO standardDAO, NameDAO nameDAO, ValueDAO valeuDAO, StringBuffer sessionLog) throws Exception {
         this.sessionLog = sessionLog;
         azquoProperties.load(getClass().getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring
         // now where the default multi threading number is defined. Different number based on the task? Can decide later.
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         int possibleLoadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
-        if (possibleLoadingThreads > 4) { // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
-            // limiting to 4 after persistence problems
-            possibleLoadingThreads = 4;
+        if (possibleLoadingThreads > 8) { // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
+            possibleLoadingThreads = 8;
         }
         loadingThreads = possibleLoadingThreads;
         reportFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report generation, 2/3
@@ -85,6 +92,8 @@ public final class AzquoMemoryDB {
         System.out.println("reportFillerThreads : " + reportFillerThreads);
         this.mysqlName = mysqlName;
         this.standardDAO = standardDAO;
+        this.nameDAO = nameDAO;
+        this.valueDAO = valeuDAO;
         needsLoading = true;
         maxIdAtLoad = 0;
         nameByAttributeMap = new ConcurrentHashMap<>();
@@ -130,6 +139,7 @@ public final class AzquoMemoryDB {
     private static final int PROVENANCE_MODE = 0;
     private static final int NAME_MODE = 1;
     private static final int VALUE_MODE = 2;
+
 
     // task for multi threaded loading of a database
 
@@ -181,6 +191,82 @@ public final class AzquoMemoryDB {
                 }
                 if (minId%100_000 == 0){
                     loadTracker.addAndGet(dataToLoad.size());
+                }
+                if (minId%1_000_000 == 0){
+                    logInSessionLogAndSystem("loaded " + loadTracker.get());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // needs factoring, just testing for the moment
+
+    private class NameBatchLoader implements Runnable {
+        private final NameDAO nameDAO;
+        private final int minId;
+        private final int maxId;
+        private final AzquoMemoryDB memDB;
+        private final AtomicInteger loadTracker;
+
+        public NameBatchLoader(NameDAO nameDAO, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
+            this.nameDAO = nameDAO;
+            this.minId = minId;
+            this.maxId = maxId;
+            this.memDB = memDB;
+            this.loadTracker = loadTracker;
+        }
+
+        @Override
+        public void run() {
+            try {
+                List<Name> names = nameDAO.findForMinMaxId(memDB, minId, maxId);
+                for (Name name : names) {// bit of an overhead just to get the max id? I guess no concern.
+                    if (name.getId() > maxIdAtLoad) {
+                        maxIdAtLoad = name.getId();
+                    }
+                }
+                if (minId%100_000 == 0){
+                    loadTracker.addAndGet(names.size());
+                }
+                if (minId%1_000_000 == 0){
+                    logInSessionLogAndSystem("loaded " + loadTracker.get());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // needs factoring, just testing for the moment
+
+    private class ValueBatchLoader implements Runnable {
+        private final ValueDAO valueDAO;
+        private final int minId;
+        private final int maxId;
+        private final AzquoMemoryDB memDB;
+        private final AtomicInteger loadTracker;
+
+        public ValueBatchLoader(ValueDAO valueDAO, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
+            this.valueDAO = valueDAO;
+            this.minId = minId;
+            this.maxId = maxId;
+            this.memDB = memDB;
+            this.loadTracker = loadTracker;
+        }
+
+        @Override
+        public void run() {
+            try {
+                List<Value> values = valueDAO.findForMinMaxId(memDB, minId, maxId);
+                for (Value value : values) {// bit of an overhead just to get the max id? I guess no concern.
+                    if (value.getId() > maxIdAtLoad) {
+                        maxIdAtLoad = value.getId();
+                    }
+                }
+                if (minId%100_000 == 0){
+                    loadTracker.addAndGet(values.size());
                 }
                 if (minId%1_000_000 == 0){
                     logInSessionLogAndSystem("loaded " + loadTracker.get());
@@ -251,31 +337,64 @@ public final class AzquoMemoryDB {
                 logInSessionLogAndSystem("Provenance loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
                 marker = System.currentTimeMillis();
                 executor = Executors.newFixedThreadPool(loadingThreads);
-                from = 0;
-                maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.name.name());
-                while (from < maxIdForTable) {
-                    executor.execute(new SQLBatchLoader(standardDAO, NAME_MODE, from, from + step, this, namesLoaded));
-                    from += step;
+
+                // ok now need code to switch to the new ones
+                if (nameDAO.checkFastTableExists(this) && valueDAO.checkFastTableExists(this)){
+                    System.out.println();
+                    System.out.println("### Using new loading mechanism ###");
+                    System.out.println();
+                    from = 0;
+                    maxIdForTable = nameDAO.findMaxId(this);
+                    while (from < maxIdForTable) {
+                        executor.execute(new NameBatchLoader(nameDAO, from, from + step, this, namesLoaded));
+                        from += step;
+                    }
+                    executor.shutdown();
+                    if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+                        throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
+                    }
+                    logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
+                    marker = System.currentTimeMillis();
+                    executor = Executors.newFixedThreadPool(loadingThreads);
+                    from = 0;
+                    maxIdForTable = valueDAO.findMaxId(this);
+                    while (from < maxIdForTable) {
+                        executor.execute(new ValueBatchLoader(valueDAO, from, from + step, this, namesLoaded));
+                        from += step;
+                    }
+                    executor.shutdown();
+                    if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+                        throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
+                    }
+                    logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
+                    marker = System.currentTimeMillis();
+                } else {
+                    from = 0;
+                    maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.name.name());
+                    while (from < maxIdForTable) {
+                        executor.execute(new SQLBatchLoader(standardDAO, NAME_MODE, from, from + step, this, namesLoaded));
+                        from += step;
+                    }
+                    executor.shutdown();
+                    if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+                        throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
+                    }
+                    logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
+                    marker = System.currentTimeMillis();
+                    executor = Executors.newFixedThreadPool(loadingThreads);
+                    from = 0;
+                    maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.value.name());
+                    while (from < maxIdForTable) {
+                        executor.execute(new SQLBatchLoader(standardDAO, VALUE_MODE, from, from + step, this, valuesLoaded));
+                        from += step;
+                    }
+                    executor.shutdown();
+                    if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+                        throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
+                    }
+                    logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
+                    marker = System.currentTimeMillis();
                 }
-                executor.shutdown();
-                if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
-                    throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
-                }
-                logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
-                marker = System.currentTimeMillis();
-                executor = Executors.newFixedThreadPool(loadingThreads);
-                from = 0;
-                maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.value.name());
-                while (from < maxIdForTable) {
-                    executor.execute(new SQLBatchLoader(standardDAO, VALUE_MODE, from, from + step, this, valuesLoaded));
-                    from += step;
-                }
-                executor.shutdown();
-                if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
-                    throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
-                }
-                logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
-                marker = System.currentTimeMillis();
                 // wait until all are loaded before linking
                 System.out.println(provenaceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded in " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
                 if (memoryTrack) {
@@ -283,7 +402,7 @@ public final class AzquoMemoryDB {
                             + (runtime.totalMemory() - runtime.freeMemory()) / mb);
                 }
                 // note : after multi threading the loading this init names (linking) now takes longer, need to consider thread safety if planning on multi threading this.
-                initNames();
+                linkEntities();
                 if (memoryTrack) {
                     System.out.println("Used Memory after init names :"
                             + (runtime.totalMemory() - runtime.freeMemory()) / mb);
@@ -306,6 +425,90 @@ public final class AzquoMemoryDB {
                 System.out.println("Max Memory:" + runtime.maxMemory() / mb);
             }
             logInSessionLogAndSystem("Total load time for " + getMySQLName() + " " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
+
+            int testlimit = 10_000_000;
+/*            for (int i = 0; i < 5; i++){
+                long track = System.currentTimeMillis();
+                System.out.println("Set test " + testlimit * (i + 1));
+                int count = 0;
+                Set<Name> testSet = HashObjSets.newMutableSet();
+                for (Name test : nameByIdMap.values()){
+                    testSet.add(test);
+                    count++;
+                    if (count == testlimit * (i + 1)) break;
+                }
+                System.out.println("Koloboke Name    :   " + (System.currentTimeMillis() - track) + "ms");
+                track = System.currentTimeMillis();
+                count = 0;
+                Set<Value> testSetV = HashObjSets.newMutableSet();
+                for (Value test : valueByIdMap.values()){
+                    testSetV.add(test);
+                    count++;
+                    if (count == testlimit * (i + 1)) break;
+                }
+                System.out.println("Koloboke Value :     " + (System.currentTimeMillis() - track) + "ms");
+                track = System.currentTimeMillis();
+                count = 0;
+                testSet = new HashSet<>();
+                for (Name test : nameByIdMap.values()){
+                    testSet.add(test);
+                    count++;
+                    if (count == testlimit * (i + 1)) break;
+                }
+                System.out.println("Java Name :               " + (System.currentTimeMillis() - track) + "ms");
+                track = System.currentTimeMillis();
+                count = 0;
+                testSetV = new HashSet<>();
+                for (Value test : valueByIdMap.values()){
+                    testSetV.add(test);
+                    count++;
+                    if (count == testlimit * (i + 1)) break;
+                }
+                System.out.println("Java Value :     " + (System.currentTimeMillis() - track) + "ms");
+                track = System.currentTimeMillis();
+                count = 0;
+                testSetV = HashObjSets.newMutableSet();
+                for (Value test : valueByIdMap.values()){
+                    testSetV.contains(test);
+                    testSetV.add(test);
+                    testSetV.contains(test);
+                    count++;
+                    if (count == testlimit) break;
+                }
+                System.out.println("Koloboke Value contains :     " + (System.currentTimeMillis() - track) + "ms");
+                track = System.currentTimeMillis();
+                count = 0;
+                testSetV = new HashSet<>();
+                for (Value test : valueByIdMap.values()){
+                    testSetV.contains(test);
+                    testSetV.add(test);
+                    testSetV.contains(test);
+                    count++;
+                    if (count == testlimit) break;
+                }
+                System.out.println("Java Value contains :               " + (System.currentTimeMillis() - track) + "ms");*/
+//            }
+/*            System.out.println("=====================  Integers");
+            for (int i =0; i < 5; i++){
+                long track = System.currentTimeMillis();
+                int count = 0;
+                Set<Integer> iTestSet = HashObjSets.newUpdatableSet(testlimit);
+                while (true){
+                    iTestSet.add(count);
+                    count++;
+                    if (count == testlimit) break;
+                }
+                System.out.println("Koloboke : " + (System.currentTimeMillis() - track) + "ms");
+                track = System.currentTimeMillis();
+                count = 0;
+                iTestSet = new HashSet<>(testlimit);
+                while (true){
+                    iTestSet.add(count);
+                    count++;
+                    if (count == testlimit) break;
+                }
+                System.out.println("Java : " + (System.currentTimeMillis() - track) + "ms");
+            }*/
         }
     }
 
@@ -347,6 +550,16 @@ public final class AzquoMemoryDB {
         System.out.println("persist done.");
     }
 
+    // move name and value to the new tables
+    public void saveToNewTables() throws Exception {
+        nameDAO.createFastTableIfItDoesntExist(this);
+        nameDAO.clearFastNameTable(this);
+        valueDAO.createFastTableIfItDoesntExist(this);
+        valueDAO.clearFastValueTable(this);
+        nameDAO.persistNames(this, nameByIdMap.values(), true);
+        valueDAO.persistValues(this, valueByIdMap.values(), true);
+    }
+
     // will block currently! - a concern due to the writing synchronized above?
 
     protected synchronized int getNextId() {
@@ -366,6 +579,10 @@ public final class AzquoMemoryDB {
 
     public int getNameCount() {
         return nameByIdMap.size();
+    }
+
+    public Value getValueById(final int id) {
+        return valueByIdMap.get(id);
     }
 
     public int getValueCount() {
@@ -720,7 +937,7 @@ public final class AzquoMemoryDB {
         public void run() { // well this is what's going to truly test concurrent modification of a database
             for (Name name : batchToLink) {
                 try { // I think the only exception is the db not matching one.
-                    name.populateFromJson();
+                    name.link();
                     addNameToAttributeNameMap(name);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -737,10 +954,10 @@ public final class AzquoMemoryDB {
 
     int batchLinkSize = 50000;
 
-    private synchronized void initNames() throws Exception {
+    private synchronized void linkEntities() throws Exception {
 
         // there may be a certain overhead to building the batches but otherwise it's dealing with millions of threads. My gut says this will be more of an overhead.
-        ExecutorService executor = Executors.newFixedThreadPool(loadingThreads);
+        ExecutorService executor = Executors.newFixedThreadPool(reportFillerThreads); // this is pure java, use the report filler criteria
         AtomicInteger loadTracker = new AtomicInteger(0);
         ArrayList<Name> batchLink = new ArrayList<>(batchLinkSize);
         for (Name name : nameByIdMap.values()) {
@@ -849,4 +1066,12 @@ public final class AzquoMemoryDB {
             e.printStackTrace();
         }
     }*/
+
+    public boolean getFastLoaded() {
+        return fastLoaded;
+    }
+
+    public void saveInFastTables(){
+
+    }
 }

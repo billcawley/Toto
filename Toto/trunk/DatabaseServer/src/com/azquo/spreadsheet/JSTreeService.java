@@ -349,14 +349,14 @@ public class JSTreeService {
         Map<String,Boolean> state = new HashMap<>();
         state.put("opened", true);
         String text = "";
-        List<Name> children = new ArrayList<>();
+        Collection<Name> children = new ArrayList<>();
         if (jsTreeId == 0 && name == null) {
             text = "root";
             if (searchTerm == null || searchTerm.length() == 0) {
                 children = nameService.findTopNames(loggedInConnection, language);
             } else {
                 try {
-                    children = nameService.parseQuery(loggedInConnection, searchTerm);
+                    children = nameService.parseQuery(loggedInConnection, searchTerm); // this will be an ArrayList internally. I think.
                 } catch (Exception e) {//carry on
                 }
                 if (children == null || children.size() == 0) {

@@ -11,6 +11,7 @@ import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -185,7 +186,8 @@ seaports;children   container;children
                             // ok these could be heavy so let's cache them, feels a bit dodgy but we'll see how it goes.
                             Set<Name> nameCountSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(sourceCell);
                             if (nameCountSet == null){
-                                nameCountSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames)); // put what would have caused multiple headings into namecount
+                                nameCountSet = HashObjSets.newMutableSet();
+                                nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames, nameCountSet); // namecount set will be populated internally. I'm not sure if this is clear as it might be, or comprehensive
                                 azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(sourceCell, nameCountSet);
                             }
                             List<DataRegionHeading> forNameCount = new ArrayList<>();
@@ -201,7 +203,8 @@ seaports;children   container;children
 
                             Set<Name> typeSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(selectionType);
                             if (typeSet == null){
-                                typeSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, selectionType, attributeNames));
+                                typeSet = HashObjSets.newMutableSet();
+                                nameService.parseQuery(azquoMemoryDBConnection, selectionType, attributeNames, typeSet); // namecount set will be populated internally. I'm not sure if this is clear as it might be, or comprehensive
                                 azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(sourceCell, typeSet);
                             }
 
@@ -209,10 +212,10 @@ seaports;children   container;children
                                 throw new Exception("selection types must be single cells = use 'as'");
                             }
                             String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1);
-
                             Set<Name> selectionSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(secondSet);
                             if (selectionSet == null){
-                                selectionSet = new HashSet<>(nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames));
+                                selectionSet = HashObjSets.newMutableSet();
+                                nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames, selectionSet); // namecount set will be populated internally. I'm not sure if this is clear as it might be, or comprehensive
                                 azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(secondSet, selectionSet);
                             }
 
@@ -488,7 +491,7 @@ seaports;children   container;children
         return output;
     }
 
-    private List<String> getIndividualNames(List<Name> sortedNames) {
+    private List<String> getIndividualNames(Collection<Name> sortedNames) {
         //this routine to output a list of names without duplicates by including parent names on duplicates
         List<String> output = new ArrayList<>();
         String lastName = null;
@@ -727,7 +730,7 @@ seaports;children   container;children
             for (String contextItem : contextItems) {
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
                 while (st.hasMoreTokens()) {
-                    final List<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, st.nextToken().trim());
+                    final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, st.nextToken().trim());
                     time = (System.currentTimeMillis() - track);
                     if (time > threshold) System.out.println("Context parsed in " + time + "ms");
                     track = System.currentTimeMillis();
@@ -736,7 +739,7 @@ seaports;children   container;children
                     }
                     if (thisContextNames.size() > 0) {
                         //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
-                        contextNames.add(thisContextNames.get(0));
+                        contextNames.add(thisContextNames.iterator().next());
                     }
                 }
             }
@@ -783,13 +786,13 @@ seaports;children   container;children
             for (String contextItem : contextItems) {
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
                 while (st.hasMoreTokens()) {
-                    final List<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBConnection, st.nextToken().trim());
+                    final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBConnection, st.nextToken().trim());
                     if (thisContextNames.size() > 1) {
                         throw new Exception("error: context names must be individual - use 'as' to put sets in context");
                     }
                     if (thisContextNames.size() > 0) {
                         //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
-                        contextNames.add(thisContextNames.get(0));
+                        contextNames.add(thisContextNames.iterator().next());
                     }
                 }
             }
@@ -891,6 +894,11 @@ seaports;children   container;children
             final Map<Integer, Double> sortRowTotals = new HashMap<>(sourceData.size());
             final Map<Integer, String> sortRowStrings = new HashMap<>(sourceData.size());
             final Map<Integer, Double> sortColumnTotals = new HashMap<>(totalCols);
+
+/*            final Map<Integer, Double> sortRowTotals = HashIntDoubleMaps.newMutableMap(sourceData.size());
+            final Map<Integer, String> sortRowStrings = HashIntObjMaps.newMutableMap(sourceData.size());
+            final Map<Integer, Double> sortColumnTotals = HashIntDoubleMaps.newMutableMap(totalCols);*/
+
             for (int colNo = 0; colNo < totalCols; colNo++) {
                 sortColumnTotals.put(colNo, 0.00);
             }
@@ -1193,6 +1201,7 @@ seaports;children   container;children
         int toReturn = 0;
         Set<Name> alreadyTested = new HashSet<>();
         // Edd reinstating code here - about a month ago it stopped paying attention to member set
+        // todo - alternative to retainall again? Creation of new set?
         if (containsSet != null && memberSet != null) {
             Set<Name> remainder = new HashSet<>(selectionSet);
             remainder.retainAll(memberSet.findAllChildren(false));
@@ -1377,11 +1386,6 @@ seaports;children   container;children
         // different style, just chuck every row in the queue
         int progressBarStep = (totalCols * totalRows) / 50 + 1;
         AtomicInteger counter = new AtomicInteger();
-        newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-        System.out.println();
-        System.out.println("Heap cost to prepare data space : " + (newHeapMarker - oldHeapMarker) / mb);
-        System.out.println();
-        oldHeapMarker = newHeapMarker;
         if (totalRows < 1000){ // arbitrary cut off for the moment
             for (int row = 0; row < totalRows; row++) {
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);

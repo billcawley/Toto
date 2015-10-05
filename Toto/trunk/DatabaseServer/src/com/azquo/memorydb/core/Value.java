@@ -5,7 +5,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.log4j.Logger;
 
+import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created with IntelliJ IDEA.
@@ -17,6 +19,8 @@ import java.util.*;
  * Can worry about how to restore later.
  * Notable that the names list object here is what defines the relationship between values and names, value sets against each name is just a lookup
  * I'm using an array internally to save memory,
+ * <p>
+ * todo - should store a double value also? Will it save loads of parsing?
  */
 public final class Value extends AzquoMemoryDBEntity {
 
@@ -31,7 +35,6 @@ public final class Value extends AzquoMemoryDBEntity {
 
     // to be used by the code when creating a new value
     // add the names after
-
     public Value(final AzquoMemoryDB azquoMemoryDB, final Provenance provenance, final String text) throws Exception {
         super(azquoMemoryDB, 0);
         this.provenance = provenance;
@@ -70,6 +73,28 @@ public final class Value extends AzquoMemoryDBEntity {
         }
     }
 
+    // todo address this new fastloader one being public
+
+    public Value(final AzquoMemoryDB azquoMemoryDB, final int id, final int provenanceId, String text, byte[] namesCache) throws Exception {
+        super(azquoMemoryDB, id);
+        this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId);
+        this.text = text.intern();
+        // ok populate the names here but unlike before we're not doing any managing of the names themselves (as in adding this value to them), this just sets the names straight in there so to speak
+        int noNames = namesCache.length / 4;
+        ByteBuffer byteBuffer = ByteBuffer.wrap(namesCache);
+        // we assume the names are loaded (though they may not be linked yet)
+        Name[] newNames = new Name[noNames];
+        for (int i = 0; i < noNames; i++) {
+            newNames[i] = getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4));
+        }
+        this.names = newNames;
+        // this should be fine being handled here while loading a db - was storing this against the name but too much space
+        for (Name newName : this.names) {
+            newName.addToValues(this);
+        }
+        getAzquoMemoryDB().addValueToDb(this);
+    }
+
     public Provenance getProvenance() {
         return provenance;
     }
@@ -98,13 +123,6 @@ public final class Value extends AzquoMemoryDBEntity {
 
     public Collection<Name> getNames() {
         return Collections.unmodifiableList(Arrays.asList(names)); // should be ok?
-    }
-    // switch to list internally, hope overhead won't be too much, want the memory saving
-
-    public void setNames(final Set<Name> names) {
-        Name[] newNames = new Name[names.size()];
-        names.toArray(newNames);
-        this.names = newNames; // keep it atomic - don't throw the array from here into toArray where there will be an array copy
     }
 
     // make sure to adjust the values lists on the name objects :)
@@ -173,4 +191,14 @@ public final class Value extends AzquoMemoryDBEntity {
         }
         return "";
     }
+
+    public byte[] getNameIdsAsBytes() {
+        ByteBuffer buffer = ByteBuffer.allocate(names.length * 4);
+        for (Name name : names) {
+            buffer.putInt(name.getId());
+        }
+        return buffer.array();
+    }
+
+
 }

@@ -75,25 +75,32 @@ public abstract class AzquoMemoryDBEntity {
         return id;
     }
 
-    /* part of why I'm so funny about the ids, these two functions!
+    /*
+     NOTE!!
+
+     Edd commenting - the hash was messing with koloboke sets and I'm now strongly thinking that the defaults are correct.
+
+     I mean there should only ever be one instance of a given name or value, hence equals is that instance, no need for any other checks???
+
+     part of why I'm so funny about the ids, these two functions!
      might be unorthodox but these entities are part of the memory DB, their interaction with collections sets etc is crucial
      for speed and data integrity, since id should NOT change over an objects life this should be ok and fast
      */
 
-    @Override
+/*    @Override
     public final int hashCode() {
         return getId();
     }
 
     @Override
-    public final boolean equals(Object o) {
+    public boolean equals(Object o) {
         if (this == o) return true; // this should do the job for much of the memory db matching
 
         if (o == null || getClass() != o.getClass()) return false;
 
         AzquoMemoryDBEntity azquoMemoryDBEntity = (AzquoMemoryDBEntity) o;
         return getId() == azquoMemoryDBEntity.getId();
-    }
+    }*/
 
     // should be called pretty much wherever objects are going to be added to each others maps/sets/lists
 
