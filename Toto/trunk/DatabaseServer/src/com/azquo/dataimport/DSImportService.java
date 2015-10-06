@@ -861,7 +861,10 @@ public class DSImportService {
                         }else{
                             peerHeadingIndex = findMutableHeadingIndex(peer, headings);
                         }
-                        if (peerHeadingIndex == -1) {
+                        if (peerHeadingIndex >=0) {
+                            mutableImportHeading.peerCellIndexes.add(peerHeadingIndex);
+                        }else{
+
                             // when dealing with populating peer headings first look for the headings then look at the context headings, that's what this does - now putting the context names in their own field
                             // note : before all contexts were scanned, this is not correct!
                             int lookForContextIndex = currentHeadingIndex;
@@ -872,6 +875,7 @@ public class DSImportService {
                                     for (MutableImportHeading contextCheck : check.contextHeadings) {
                                         if (contextCheck.name.getDefaultDisplayName().equalsIgnoreCase(peer)) {//WFC: this used to look in the parents of the context name.  Now only looks at the name itself.
                                             mutableImportHeading.peersFromContext.add(contextCheck.name);
+                                            peerHeadingIndex = 0;
                                             break;
                                         }
                                     }
@@ -902,8 +906,7 @@ public class DSImportService {
                         if (peerHeadingIndex == -1) {
                             throw new Exception("error: cannot find peer " + peer + " for " + mutableImportHeading.name.getDefaultDisplayName());
                         }
-                        mutableImportHeading.peerCellIndexes.add(peerHeadingIndex);
-                    }
+                      }
                 }
                 // having an attribute means the content of this column relates to a name in another column, need to find that name
                 fillAttributeAndParentOfForHeading(mutableImportHeading, headings);
