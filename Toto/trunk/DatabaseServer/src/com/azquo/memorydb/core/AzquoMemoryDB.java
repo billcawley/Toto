@@ -4,6 +4,8 @@ import com.azquo.memorydb.dao.JsonRecordTransport;
 import com.azquo.memorydb.dao.NameDAO;
 import com.azquo.memorydb.dao.StandardDAO;
 import com.azquo.memorydb.dao.ValueDAO;
+import com.azquo.memorydb.service.NameService;
+import com.azquo.memorydb.service.ValueService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
@@ -425,7 +427,14 @@ public final class AzquoMemoryDB {
                 System.out.println("Max Memory:" + runtime.maxMemory() / mb);
             }
             logInSessionLogAndSystem("Total load time for " + getMySQLName() + " " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
-
+/*            Name.printFunctionCountStats();
+            Name.clearFunctionCountStats();
+            Value.printFunctionCountStats();
+            Value.clearFunctionCountStats();
+            NameService.printFunctionCountStats();
+            NameService.clearFunctionCountStats();
+            ValueService.printFunctionCountStats();
+            ValueService.clearFunctionCountStats();*/
             int testlimit = 10_000_000;
 /*            for (int i = 0; i < 5; i++){
                 long track = System.currentTimeMillis();
@@ -865,10 +874,12 @@ public final class AzquoMemoryDB {
 
     protected void addNameToAttributeNameMap(final Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
-        final Map<String, String> attributes = newName.getAttributes();
-
-        for (String attributeName : attributes.keySet()) {
-            setAttributeForNameInAttributeNameMap(attributeName, attributes.get(attributeName), newName);
+        // skip the map to save the memory
+        int i = 0;
+        List<String> attributeValues = newName.getAttributeValues();
+        for (String attributeName : newName.getAttributeKeys()) {
+            setAttributeForNameInAttributeNameMap(attributeName, attributeValues.get(i), newName);
+            i++;
         }
     }
 

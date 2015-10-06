@@ -6,14 +6,13 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.spreadsheet.StringUtils;
-import net.openhft.koloboke.collect.set.hash.HashObjSet;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
-//dataimport java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -65,7 +64,9 @@ public final class NameService {
     public static final String WHERE = "where";
 
     // hopefully thread safe??
+    private static AtomicInteger nameCompareCounter = new AtomicInteger(0);
     public final Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = (n1, n2) -> {
+        nameCompareCounter.incrementAndGet();
         // null checks to keep intellij happy, probably not a bad thing
         boolean n1Null = n1 == null || n1.getDefaultDisplayName() == null;
         boolean n2Null = n2 == null || n2.getDefaultDisplayName() == null;
@@ -84,7 +85,9 @@ public final class NameService {
 
     // get names from a comma separated list. Well expressions describing names.
 
+    private static AtomicInteger decodeStringCounter = new AtomicInteger(0);
     public final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
+        decodeStringCounter.incrementAndGet();
         final List<Set<Name>> toReturn = new ArrayList<>();
         List<String> formulaStrings = new ArrayList<>();
         List<String> nameStrings = new ArrayList<>();
@@ -103,7 +106,9 @@ public final class NameService {
 
     // we replace the names with markers for parsing. Then we need to resolve them later, here is where the exception will be thrown. Should be NameNotFoundException?
 
+    private static AtomicInteger getNameListFromStringListCounter = new AtomicInteger(0);
     public List<Name> getNameListFromStringList(List<String> nameStrings, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames) throws Exception {
+        getNameListFromStringListCounter.incrementAndGet();
         List<Name> referencedNames = new ArrayList<>(nameStrings.size());
         for (String nameString : nameStrings) {
             Name toAdd = findByName(azquoMemoryDBConnection, nameString, attributeNames);
@@ -122,7 +127,9 @@ public final class NameService {
 
     // the parameter is called name as the get attribute function will look up and derive attributes it can't find from parent/combinations
 
+    private static AtomicInteger findContainingNameCounter = new AtomicInteger(0);
     public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, String attribute) {
+        findContainingNameCounter.incrementAndGet();
         ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name));
         if (namesList.size() == 0 && attribute.length() > 0){
             namesList = findContainingName(azquoMemoryDBConnection,name,"");//try all the attributes
@@ -131,27 +138,33 @@ public final class NameService {
         return namesList;
     }
 
+    private static AtomicInteger findByIdCounter = new AtomicInteger(0);
     public Name findById(final AzquoMemoryDBConnection azquoMemoryDBConnection, int id) {
+        findByIdCounter.incrementAndGet();
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(id);
     }
 
-
+    private static AtomicInteger getNameByAttributeCounter = new AtomicInteger(0);
     public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent, final List<String> attributeNames) throws Exception {
+        getNameByAttributeCounter.incrementAndGet();
         if (attributeValue.charAt(0) == NAMEMARKER) {
             throw new Exception("error: getNameByAttribute should no longer have name marker passed to it!");
         }
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, attributeValue.replace(Name.QUOTE, ' ').trim(), parent);
     }
 
+    private static AtomicInteger findByNameCounter = new AtomicInteger(0);
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) throws Exception {
+        findByNameCounter.incrementAndGet();
         // aha, not null passed here now, jam in a default display name I think
         List<String> attNames = new ArrayList<>();
         attNames.add(Constants.DEFAULT_DISPLAY_NAME);
         return findByName(azquoMemoryDBConnection, name, attNames);
     }
 
+    private static AtomicInteger findByNameCounter1 = new AtomicInteger(0);
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final List<String> attributeNames) throws Exception {
-
+        findByNameCounter1.incrementAndGet();
      /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
         This may not be an immediate hierarchy.
         e.g.  if 'London, place' is sent, then the system will look for any 'London' that is ultimately in the set 'Place', whether through direct parent, or parent of parents.
@@ -210,14 +223,18 @@ public final class NameService {
         return null;
     }
 
+    private static AtomicInteger clearChildrenCounter = new AtomicInteger(0);
     public void clearChildren(Name name) throws Exception {
+        clearChildrenCounter.incrementAndGet();
         for (Name child : name.getChildren()) {
             name.removeFromChildrenWillBePersisted(child);
         }
 
     }
 
+    private static AtomicInteger findTopNamesCounter = new AtomicInteger(0);
     public List<Name> findTopNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String language) {
+        findTopNamesCounter.incrementAndGet();
         if (language.equals(Constants.DEFAULT_DISPLAY_NAME)){
             return azquoMemoryDBConnection.getAzquoMemoryDB().findTopNames();
         }else{
@@ -226,12 +243,15 @@ public final class NameService {
     }
 
 
+    private static AtomicInteger findOrCreateNameStructure = new AtomicInteger(0);
     public Name findOrCreateNameStructure(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, Name topParent, boolean local) throws Exception {
+        findOrCreateNameStructure.incrementAndGet();
         return findOrCreateNameStructure(azquoMemoryDBConnection, name, topParent, local, null);
     }
 
+    private static AtomicInteger findOrCreateNameStructure1 = new AtomicInteger(0);
     public Name findOrCreateNameStructure(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, Name topParent, boolean local, List<String> attributeNames) throws Exception {
-
+        findOrCreateNameStructure1.incrementAndGet();
         /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
         This may not be an immediate hierarchy.
 
@@ -278,7 +298,9 @@ public final class NameService {
 
     }
 
+    private static AtomicInteger includeInSetCount = new AtomicInteger(0);
     public void includeInSet(Name name, Name set) throws Exception {
+        includeInSetCount.incrementAndGet();
         set.addChildWillBePersisted(name);//ok add as asked
         Collection<Name> setParents = set.findAllParents();
         for (Name parent : name.getParents()) { // now check the direct parents and see that none are in the parents of the set we just put it in.
@@ -291,7 +313,9 @@ public final class NameService {
         }
     }
 
+    private static AtomicInteger findOrCreateNameInParentCount = new AtomicInteger(0);
     public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name newParent, boolean local) throws Exception {
+        findOrCreateNameInParentCount.incrementAndGet();
         return findOrCreateNameInParent(azquoMemoryDBConnection, name, newParent, local, null);
     }
 
@@ -321,8 +345,9 @@ public final class NameService {
 
     // todo - permissions here or at a higher level?
 
+    private static AtomicInteger findOrCreateNameInParentCount1 = new AtomicInteger(0);
     public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name parent, boolean local, List<String> attributeNames) throws Exception {
-
+        findOrCreateNameInParentCount1.incrementAndGet();
         long marker = System.currentTimeMillis();
         if (name.length() == 0) {
             return null;
@@ -394,7 +419,9 @@ public final class NameService {
 
     // needs to be a list to preserve order when adding. Or could use a linked set, don't see much advantage
 
+    private static AtomicInteger findChildrenAtLevelCount = new AtomicInteger(0);
     public List<Name> findChildrenAtLevel(final Name name, final String levelString) throws Exception {
+        findChildrenAtLevelCount.incrementAndGet();
         // level 100 means get me the lowest
         // level 101 means 'ALL' (including the top level
         // notable that with current logic asking for a level with no data returns no data not the nearest it can get. Would be simple to change this
@@ -414,7 +441,9 @@ public final class NameService {
         return namesFound;
     }
 
+    private static AtomicInteger addNamesCount = new AtomicInteger(0);
     public void addNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
+        addNamesCount.incrementAndGet();
         if (level == ALL_LEVEL_INT) {
             // new logic! All names is the name find all children plus itself. A bit annoying to make a copy but there we go
             namesFound.addAll(name.findAllChildren(false)); // don't pay attention to additive, it didn't before
@@ -452,7 +481,9 @@ public final class NameService {
 
     // when parsing expressions we replace names with markers and jam them on a list. The expression is manipulated before being executed. On execution the referenced names need to be read from a list.
 
+    private static AtomicInteger getNameFromListAndMarkerCount = new AtomicInteger(0);
     public Name getNameFromListAndMarker(String nameMarker, List<Name> nameList) throws Exception {
+        getNameFromListAndMarkerCount.incrementAndGet();
         if (nameMarker.charAt(0) == NAMEMARKER) {
             try {
                 int nameNumber = Integer.parseInt(nameMarker.substring(1).trim());
@@ -469,7 +500,9 @@ public final class NameService {
     // since we need different from the standard set ordering use a list, I see no real harm in that in these functions
     // note : in default language!
 
+    private static AtomicInteger findChildrenFromToCount = new AtomicInteger(0);
     public List<Name> findChildrenFromToCount(final List<Name> names, String fromString, String toString, final String countString, final String countbackString, final String compareWithString, List<Name> referencedNames) throws Exception {
+        findChildrenFromToCount.incrementAndGet();
         final ArrayList<Name> toReturn = new ArrayList<>();
         int to = -10000;
         int from = 1;
@@ -543,19 +576,25 @@ public final class NameService {
 
     // to find a set of names, a few bits that were part of the original set of functions
     // add the default display name since no attributes were specified.
+    private static AtomicInteger parseQueryCount = new AtomicInteger(0);
     public final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
+        parseQueryCount.incrementAndGet();
         List<String> langs = new ArrayList<>();
         langs.add(Constants.DEFAULT_DISPLAY_NAME);
         return parseQuery(azquoMemoryDBConnection, setFormula, langs, new ArrayList<>());
     }
 
+    private static AtomicInteger parseQueryCount1 = new AtomicInteger(0);
     public final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
+        parseQueryCount1.incrementAndGet();
         return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, null);
     }
     // todo : sort exceptions? Move to another class? Also should the namestack be more generic
     // todo - cache option in here
 
+    private static AtomicInteger parseQueryCount2 = new AtomicInteger(0);
     public final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn) throws Exception {
+        parseQueryCount2.incrementAndGet();
         /*
         * This routine now amended to allow for union (+) and intersection (*) of sets.
         *
@@ -713,12 +752,15 @@ public final class NameService {
         return toReturn;
     }
 
+    private static AtomicInteger attributeListCount = new AtomicInteger(0);
     public List<String> attributeList(AzquoMemoryDBConnection azquoMemoryDBConnection){
+        attributeListCount.incrementAndGet();
         return azquoMemoryDBConnection.getAzquoMemoryDB().getAttributes();
     }
 
+    private static AtomicInteger findAllParentsCount = new AtomicInteger(0);
     private void findAllParents(Name name, final Set<Name> allParents) {
-
+        findAllParentsCount.incrementAndGet();
         for (Name parent : name.getParents()) {
             if (!allParents.contains(parent)) {
                 allParents.add(parent);
@@ -727,9 +769,9 @@ public final class NameService {
         }
     }
 
-
+    private static AtomicInteger dedupeOneCount = new AtomicInteger(0);
     private void dedupeOne(Name name, Set<Name> possibles, Name rubbishBin)throws Exception{
-
+        dedupeOneCount.incrementAndGet();
         for (Name child2 : possibles) {
             if (child2.getId() != name.getId()) {
                 Set<Name> existingChildren = new HashSet<>(child2.getChildren());
@@ -752,7 +794,9 @@ public final class NameService {
 
     }
 
+    private static AtomicInteger deduplicateCount = new AtomicInteger(0);
     private List<Name> deduplicate(AzquoMemoryDBConnection azquoMemoryDBConnection, String formula)throws Exception{
+        deduplicateCount.incrementAndGet();
         List<Name> toReturn = new ArrayList<>();
         int toPos = formula.indexOf(" to ");
         if (toPos < 0) return toReturn;
@@ -778,7 +822,6 @@ public final class NameService {
             }
             toReturn.add(rubbishBin);
             return toReturn;
-
         }
         Name name = names.iterator().next();
         List<String> languages = new ArrayList<>();
@@ -786,25 +829,19 @@ public final class NameService {
         for (Name child:name.findAllChildren(false)){
             if (!rubbishBin.getChildren().contains(child)) {
                 Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(languages, child.getDefaultDisplayName(), name);
-
                 if (possibles.size() > 1) {
                     dedupeOne(child, possibles, rubbishBin);
-
                 }
             }
-
         }
         toReturn.add(rubbishBin);
         azquoMemoryDBConnection.persist();
         return toReturn;
-
-
-
-
     }
 
-
+    private static AtomicInteger inParentSetCount = new AtomicInteger(0);
     public Name inParentSet(Name name, Collection<Name> maybeParents) {
+        inParentSetCount.incrementAndGet();
         if (maybeParents.contains(name)) {
             return name;
         }
@@ -817,7 +854,9 @@ public final class NameService {
         return null;
     }
 
+    private static AtomicInteger isAllowedCount = new AtomicInteger(0);
     public boolean isAllowed(Name name, List<Set<Name>> names) {
+        isAllowedCount.incrementAndGet();
         if (name == null || names == null || names.isEmpty()) { // empty the same as null
             return true;
         }
@@ -838,7 +877,9 @@ public final class NameService {
         return confidential == null || !confidential.equalsIgnoreCase("true");
     }
 
+    private static AtomicInteger filterCount = new AtomicInteger(0);
     private void filter(Set<Name> names, String condition, List<String> strings, List<String> attributeNames) {
+        filterCount.incrementAndGet();
         //NOT HANDLING 'OR' AT PRESENT
         int andPos = condition.toLowerCase().indexOf(" and ");
         Set<Name> namesToRemove = new HashSet<>();
@@ -913,7 +954,9 @@ public final class NameService {
 
     // In both cases this was being turned to a hashset so make it return one!
 
+    private static AtomicInteger interpretSetTermCount = new AtomicInteger(0);
     private Set<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
+        interpretSetTermCount.incrementAndGet();
         //System.out.println("interpret set term . . ." + setTerm);
         final String levelString = stringUtils.getInstruction(setTerm, LEVEL);
         String fromString = stringUtils.getInstruction(setTerm, FROM);
@@ -1061,4 +1104,73 @@ public final class NameService {
         }
         return applicableNames;
     }*/
+
+    public static void printFunctionCountStats(){
+        System.out.println("######### NAME SERVICE FUNCTION COUNTS");
+
+        System.out.println("nameCompareCounter\t\t\t\t\t\t\t\t" +nameCompareCounter.get());
+        System.out.println("decodeStringCounter\t\t\t\t\t\t\t\t" +decodeStringCounter.get());
+        System.out.println("getNameListFromStringListCounter\t\t\t\t\t\t\t\t" +getNameListFromStringListCounter.get());
+        System.out.println("findContainingNameCounter\t\t\t\t\t\t\t\t" +findContainingNameCounter.get());
+        System.out.println("findByIdCounter\t\t\t\t\t\t\t\t" +findByIdCounter.get());
+        System.out.println("getNameByAttributeCounter\t\t\t\t\t\t\t\t" +getNameByAttributeCounter.get());
+        System.out.println("findByNameCounter\t\t\t\t\t\t\t\t" +findByNameCounter.get());
+        System.out.println("findByNameCounter1\t\t\t\t\t\t\t\t" +findByNameCounter1.get());
+        System.out.println("clearChildrenCounter\t\t\t\t\t\t\t\t" +clearChildrenCounter.get());
+        System.out.println("findTopNamesCounter\t\t\t\t\t\t\t\t" +findTopNamesCounter.get());
+        System.out.println("findOrCreateNameStructure\t\t\t\t\t\t\t\t" +findOrCreateNameStructure.get());
+        System.out.println("findOrCreateNameStructure1\t\t\t\t\t\t\t\t" +findOrCreateNameStructure1.get());
+        System.out.println("includeInSetCount\t\t\t\t\t\t\t\t" +includeInSetCount.get());
+        System.out.println("findOrCreateNameInParentCount\t\t\t\t\t\t\t\t" +findOrCreateNameInParentCount.get());
+        System.out.println("findOrCreateNameInParentCount1\t\t\t\t\t\t\t\t" +findOrCreateNameInParentCount1.get());
+        System.out.println("findChildrenAtLevelCount\t\t\t\t\t\t\t\t" +findChildrenAtLevelCount.get());
+        System.out.println("addNamesCount\t\t\t\t\t\t\t\t" +addNamesCount.get());
+        System.out.println("getNameFromListAndMarkerCount\t\t\t\t\t\t\t\t" +getNameFromListAndMarkerCount.get());
+        System.out.println("findChildrenFromToCount\t\t\t\t\t\t\t\t" +findChildrenFromToCount.get());
+        System.out.println("parseQueryCount\t\t\t\t\t\t\t\t" +parseQueryCount.get());
+        System.out.println("parseQueryCount1\t\t\t\t\t\t\t\t" +parseQueryCount1.get());
+        System.out.println("parseQueryCount2\t\t\t\t\t\t\t\t" +parseQueryCount2.get());
+        System.out.println("attributeListCount\t\t\t\t\t\t\t\t" +attributeListCount.get());
+        System.out.println("findAllParentsCount\t\t\t\t\t\t\t\t" +findAllParentsCount.get());
+        System.out.println("dedupeOneCount\t\t\t\t\t\t\t\t" +dedupeOneCount.get());
+        System.out.println("deduplicateCount\t\t\t\t\t\t\t\t" +deduplicateCount.get());
+        System.out.println("inParentSetCount\t\t\t\t\t\t\t\t" +inParentSetCount.get());
+        System.out.println("isAllowedCount\t\t\t\t\t\t\t\t" +isAllowedCount.get());
+        System.out.println("filterCount\t\t\t\t\t\t\t\t" +filterCount.get());
+        System.out.println("interpretSetTermCount\t\t\t\t\t\t\t\t" + interpretSetTermCount.get());
+    }
+
+    public static void clearFunctionCountStats() {
+        nameCompareCounter.set(0);
+        decodeStringCounter.set(0);
+        getNameListFromStringListCounter.set(0);
+        findContainingNameCounter.set(0);
+        findByIdCounter.set(0);
+        getNameByAttributeCounter.set(0);
+        findByNameCounter.set(0);
+        findByNameCounter1.set(0);
+        clearChildrenCounter.set(0);
+        findTopNamesCounter.set(0);
+        findOrCreateNameStructure.set(0);
+        findOrCreateNameStructure1.set(0);
+        includeInSetCount.set(0);
+        findOrCreateNameInParentCount.set(0);
+        findOrCreateNameInParentCount1.set(0);
+        findChildrenAtLevelCount.set(0);
+        addNamesCount.set(0);
+        getNameFromListAndMarkerCount.set(0);
+        findChildrenFromToCount.set(0);
+        parseQueryCount.set(0);
+        parseQueryCount1.set(0);
+        parseQueryCount2.set(0);
+        attributeListCount.set(0);
+        findAllParentsCount.set(0);
+        dedupeOneCount.set(0);
+        deduplicateCount.set(0);
+        inParentSetCount.set(0);
+        isAllowedCount.set(0);
+        filterCount.set(0);
+        interpretSetTermCount.set(0);
+    }
+
 }

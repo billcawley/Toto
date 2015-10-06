@@ -16,7 +16,7 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -39,7 +39,9 @@ public final class ValueService {
 
     // one line function, much point??
 
+    private static AtomicInteger nameCompareCounter = new AtomicInteger(0);
     public Value createValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Provenance provenance, final String text) throws Exception {
+        nameCompareCounter.incrementAndGet();
         return new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, text);
     }
 
@@ -63,7 +65,9 @@ public final class ValueService {
 
     // this is passed a string for the value, not sure if that is the best practice, need to think on it.
 
+    private static AtomicInteger storeValueWithProvenanceAndNamesCounter = new AtomicInteger(0);
     public String storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
+        storeValueWithProvenanceAndNamesCounter.incrementAndGet();
         //long marker = System.currentTimeMillis();
         String toReturn = "";
 
@@ -117,7 +121,9 @@ public final class ValueService {
     }
 
 
+    private static AtomicInteger overWriteExistingValueCounter = new AtomicInteger(0);
     public boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, final String newValueString) throws Exception {
+        overWriteExistingValueCounter.incrementAndGet();
         if (newValueString.equals(existingValue.getText())){
             return true;
         }
@@ -129,7 +135,9 @@ public final class ValueService {
 
     // doesn't work down the name children
 
+    private static AtomicInteger findForNamesCounter = new AtomicInteger(0);
     public List<Value> findForNames(final Set<Name> names) {
+        findForNamesCounter.incrementAndGet();
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
         //long track = System.nanoTime();
         final List<Value> values = new ArrayList<>();
@@ -183,7 +191,9 @@ public final class ValueService {
     long part3NanoCallTime1 = 0;
     int numberOfTimesCalled1 = 0;
 
+    private static AtomicInteger findForNamesIncludeChildrenCounter = new AtomicInteger(0);
     public Collection<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
+        findForNamesIncludeChildrenCounter.incrementAndGet();
         long start = System.nanoTime();
         // first get the shortest value list taking into account children
         int smallestNameSetSize = -1;
@@ -312,8 +322,10 @@ public final class ValueService {
     int numberOfTimesCalled = 0;
 
     // the function that populates each cell.
+    private static AtomicInteger findValueForNamesCounter = new AtomicInteger(0);
     public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MutableBoolean locked
             , final boolean payAttentionToAdditive, List<Value> valuesFound, List<String> attributeNames, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) throws Exception {
+        findValueForNamesCounter.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
         String calcString = null;
@@ -405,7 +417,9 @@ public final class ValueService {
     // Added by Edd, like above but uses an attribute (attributes?) and doens't care about calc for the moment, hence should be much more simple
     // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function
 
+    private static AtomicInteger findValueForHeadingsCounter = new AtomicInteger(0);
     public String findValueForHeadings(final Set<DataRegionHeading> headings, final MutableBoolean locked, List<Name> namesForMap, List<String> attributesForMap) throws Exception {
+        findValueForHeadingsCounter.incrementAndGet();
         Set<Name> names = dsSpreadsheetService.namesFromDataRegionHeadings(headings);
         if (names.size() != 1) {
             locked.isTrue = true;
@@ -453,7 +467,9 @@ public final class ValueService {
 
     // on a standard non-calc cell this will give the result
 
+    private static AtomicInteger resolveValuesForNamesIncludeChildrenCounter = new AtomicInteger(0);
     public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, MutableBoolean locked) {
+        resolveValuesForNamesIncludeChildrenCounter.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
 
@@ -523,15 +539,6 @@ public final class ValueService {
             logger.info("total average nano : " + (totalNanoCallTime / numberOfTimesCalled));
         }
     }
-
-/*    public List<Value> findValuesForNameIncludeAllChildren(final Name name, boolean payAttentionToAdditive) {
-        List<Value> toReturn = new ArrayList<>(name.findNumberOfValuesIncludingChildren(payAttentionToAdditive)); // should speed that up a fair bit, no more resizing, I don't think.
-        toReturn.addAll(name.getValues());
-        for (Name child : name.findAllChildren(payAttentionToAdditive)) {
-            toReturn.addAll(child.getValues());
-        }
-        return toReturn;
-    }*/
 
     /* again unused commenting
 
@@ -605,7 +612,9 @@ public final class ValueService {
 */
     // find the most used name by a set of values, used by printBatch to derive headings
 
+    private static AtomicInteger getMostUsedNameCounter = new AtomicInteger(0);
     private Name getMostUsedName(Set<DummyValue> values, Name topParent) {
+        getMostUsedNameCounter.incrementAndGet();
         Map<Name, Integer> nameCount = new HashMap<>();
         for (DummyValue value : values) {
             for (Name name : value.getNames()) {
@@ -635,7 +644,9 @@ public final class ValueService {
     }
 
 
+    private static AtomicInteger sortValuesCounter = new AtomicInteger(0);
     public void sortValues(List<Value> values) {
+        sortValuesCounter.incrementAndGet();
         Collections.sort(values, (o1, o2) -> (o1.getProvenance().getTimeStamp())
                 .compareTo(o2.getProvenance().getTimeStamp()));
     }
@@ -664,7 +675,9 @@ public final class ValueService {
     them under them then the name that best represents the rest etc etc until all values have been displayed
       */
 
+    private static AtomicInteger getTreeNodesFromValuesCounter = new AtomicInteger(0);
     private List<TreeNode> getTreeNodesFromValues(Set<Value> values, int maxSize) {
+        getTreeNodesFromValuesCounter.incrementAndGet();
         Set<DummyValue> convertedToDummy = new HashSet<>(values.size());
         for (Value value : values) {
             convertedToDummy.add(new DummyValue(value.getText(), value.getNames()));
@@ -672,7 +685,9 @@ public final class ValueService {
         return getTreeNodesFromDummyValues(convertedToDummy, maxSize);
     }
 
+    private static AtomicInteger getTreeNodesFromValuesCounter1 = new AtomicInteger(0);
     private List<TreeNode> getTreeNodesFromDummyValues(Set<DummyValue> values, int maxSize) {
+        getTreeNodesFromValuesCounter1.incrementAndGet();
         //int debugCount = 0;
         boolean headingNeeded = false;
         double dValue = 0.0;
@@ -742,15 +757,18 @@ public final class ValueService {
 
     }
 
+    private static AtomicInteger roundValueCounter = new AtomicInteger(0);
     public String roundValue(double dValue){
+        roundValueCounter.incrementAndGet();
         Locale locale = Locale.getDefault();
         NumberFormat nf = NumberFormat.getInstance(locale);
         //todo - format this prettily, particularly when there are many decimal places
          return nf.format(dValue);
     }
 
-
+    private static AtomicInteger getTreeNodeCounter = new AtomicInteger(0);
     public TreeNode getTreeNode(Set<Value> values, Provenance p, int maxSize) {
+        getTreeNodeCounter.incrementAndGet();
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
         String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
         String method = p.getMethod();
@@ -771,13 +789,52 @@ public final class ValueService {
         return toReturn;
     }
 
+    private static AtomicInteger addNodeValuesCounter = new AtomicInteger(0);
     public void addNodeValues(TreeNode t) {
+        addNodeValuesCounter.incrementAndGet();
         double d = 0;
         for (TreeNode child : t.getChildren()) {
              d += child.getDvalue();
            }
         t.setValue(roundValue(d));
         t.setDvalue(d);
+    }
+
+    public static void printFunctionCountStats(){
+        System.out.println("######### VALUE SERVICE FUNCTION COUNTS");
+        System.out.println("nameCompareCounter\t\t\t\t\t\t\t\t" + nameCompareCounter.get());
+        System.out.println("storeValueWithProvenanceAndNamesCounter\t\t\t\t\t\t\t\t" + storeValueWithProvenanceAndNamesCounter.get());
+        System.out.println("overWriteExistingValueCounter\t\t\t\t\t\t\t\t" + overWriteExistingValueCounter.get());
+        System.out.println("findForNamesCounter\t\t\t\t\t\t\t\t" + findForNamesCounter.get());
+        System.out.println("findForNamesIncludeChildrenCounter\t\t\t\t\t\t\t\t" + findForNamesIncludeChildrenCounter.get());
+        System.out.println("findValueForNamesCounter\t\t\t\t\t\t\t\t" + findValueForNamesCounter.get());
+        System.out.println("findValueForHeadingsCounter\t\t\t\t\t\t\t\t" + findValueForHeadingsCounter.get());
+        System.out.println("resolveValuesForNamesIncludeChildrenCounter\t\t\t\t\t\t\t\t" + resolveValuesForNamesIncludeChildrenCounter.get());
+        System.out.println("getMostUsedNameCounter\t\t\t\t\t\t\t\t" + getMostUsedNameCounter.get());
+        System.out.println("sortValuesCounter\t\t\t\t\t\t\t\t" + sortValuesCounter.get());
+        System.out.println("getTreeNodesFromValuesCounter\t\t\t\t\t\t\t\t" + getTreeNodesFromValuesCounter.get());
+        System.out.println("getTreeNodesFromValuesCounter1\t\t\t\t\t\t\t\t" + getTreeNodesFromValuesCounter1.get());
+        System.out.println("roundValueCounter\t\t\t\t\t\t\t\t" + roundValueCounter.get());
+        System.out.println("getTreeNodeCounter\t\t\t\t\t\t\t\t" + getTreeNodeCounter.get());
+        System.out.println("addNodeValuesCounter\t\t\t\t\t\t\t\t" + addNodeValuesCounter.get());
+    }
+
+    public static void clearFunctionCountStats() {
+        nameCompareCounter.set(0);
+        storeValueWithProvenanceAndNamesCounter.set(0);
+        overWriteExistingValueCounter.set(0);
+        findForNamesCounter.set(0);
+        findForNamesIncludeChildrenCounter.set(0);
+        findValueForNamesCounter.set(0);
+        findValueForHeadingsCounter.set(0);
+        resolveValuesForNamesIncludeChildrenCounter.set(0);
+        getMostUsedNameCounter.set(0);
+        sortValuesCounter.set(0);
+        getTreeNodesFromValuesCounter.set(0);
+        getTreeNodesFromValuesCounter1.set(0);
+        roundValueCounter.set(0);
+        getTreeNodeCounter.set(0);
+        addNodeValuesCounter.set(0);
     }
 
 

@@ -685,6 +685,14 @@ seaports;children   container;children
                 displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored));
             }
         }
+/*        Name.printFunctionCountStats();
+        Name.clearFunctionCountStats();
+        Value.printFunctionCountStats();
+        Value.clearFunctionCountStats();
+        NameService.printFunctionCountStats();
+        NameService.clearFunctionCountStats();
+        ValueService.printFunctionCountStats();
+        ValueService.clearFunctionCountStats();*/
         // this is single threaded as I assume not much data should be returned. Need to think about this.
         return new CellsAndHeadingsForDisplay(convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), databaseAccessToken.getLanguages())
                 , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource);
@@ -778,7 +786,6 @@ seaports;children   container;children
         return dataToShow;
     }
 
-
     private List<Name> getContextNames(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource) throws Exception {
         final List<Name> contextNames = new ArrayList<>();
         if (contextSource==null) return contextNames;
@@ -798,7 +805,6 @@ seaports;children   container;children
             }
         }
         return contextNames;
-
     }
 
     // when doing things like saving/provenance the client needs to say "here's a region description and original position" to locate a cell server side
@@ -1415,9 +1421,9 @@ seaports;children   container;children
             throw new Exception("Data region took longer than an hour to load");
         }
         newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-        System.out.println();
+/*        System.out.println();
         System.out.println("Heap cost to make on multi thread : " + (newHeapMarker - oldHeapMarker) / mb);
-        System.out.println();
+        System.out.println();*/
         oldHeapMarker = newHeapMarker;
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());

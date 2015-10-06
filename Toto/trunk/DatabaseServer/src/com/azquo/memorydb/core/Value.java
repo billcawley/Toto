@@ -7,7 +7,7 @@ import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -35,8 +35,10 @@ public final class Value extends AzquoMemoryDBEntity {
 
     // to be used by the code when creating a new value
     // add the names after
+    private static AtomicInteger newValue = new AtomicInteger(0);
     public Value(final AzquoMemoryDB azquoMemoryDB, final Provenance provenance, final String text) throws Exception {
         super(azquoMemoryDB, 0);
+        newValue.incrementAndGet();
         this.provenance = provenance;
         this.text = text;
         names = new Name[0];
@@ -46,8 +48,10 @@ public final class Value extends AzquoMemoryDBEntity {
 
     // only to be used by azquomemory db, hence protected. What is notable is the setting of the id from the record in mysql
 
+    private static AtomicInteger newValue1 = new AtomicInteger(0);
     protected Value(final AzquoMemoryDB azquoMemoryDB, final int id, final String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id);
+        newValue1.incrementAndGet();
         try {
             JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
             this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
@@ -74,9 +78,10 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     // todo address this new fastloader one being public
-
+    private static AtomicInteger newValue2 = new AtomicInteger(0);
     public Value(final AzquoMemoryDB azquoMemoryDB, final int id, final int provenanceId, String text, byte[] namesCache) throws Exception {
         super(azquoMemoryDB, id);
+        newValue2.incrementAndGet();
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId);
         this.text = text.intern();
         // ok populate the names here but unlike before we're not doing any managing of the names themselves (as in adding this value to them), this just sets the names straight in there so to speak
@@ -90,7 +95,7 @@ public final class Value extends AzquoMemoryDBEntity {
         this.names = newNames;
         // this should be fine being handled here while loading a db - was storing this against the name but too much space
         for (Name newName : this.names) {
-            newName.addToValues(this);
+            newName.addToValues(this, true); // true here means don't check duplicates
         }
         getAzquoMemoryDB().addValueToDb(this);
     }
@@ -121,7 +126,9 @@ public final class Value extends AzquoMemoryDBEntity {
                 '}';
     }
 
+    private static AtomicInteger getNamesCount = new AtomicInteger(0);
     public Collection<Name> getNames() {
+        getNamesCount.incrementAndGet();
         return Collections.unmodifiableList(Arrays.asList(names)); // should be ok?
     }
 
@@ -129,7 +136,9 @@ public final class Value extends AzquoMemoryDBEntity {
     // synchronised but I'm not sure if this is good enough? Certainly better then nothing
     // change to a list internally
 
+    private static AtomicInteger setNamesWillBePersistedCount = new AtomicInteger(0);
     public synchronized void setNamesWillBePersisted(final Set<Name> newNameSet) throws Exception {
+        setNamesWillBePersistedCount.incrementAndGet();
         checkDatabaseForSet(newNameSet);
         // remove from where it is right now
         for (Name oldName : this.names) {
@@ -147,7 +156,9 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     // I think that's all that's needed now we're not saving deleted info?
+    private static AtomicInteger deleteCount = new AtomicInteger(0);
     public void delete() throws Exception {
+        deleteCount.incrementAndGet();
         needsDeleting = true;
         for (Name newName : this.names) {
             newName.removeFromValues(this);
@@ -177,8 +188,10 @@ public final class Value extends AzquoMemoryDBEntity {
         return StandardDAO.PersistedTable.value.name();
     }
 
+    private static AtomicInteger getAsJsonCount = new AtomicInteger(0);
     @Override
     public String getAsJson() {
+        getAsJsonCount.incrementAndGet();
         // yes could probably use list but lets match collection types . . .
         Set<Integer> nameIds = new LinkedHashSet<>();
         for (Name name : names) {
@@ -192,7 +205,9 @@ public final class Value extends AzquoMemoryDBEntity {
         return "";
     }
 
+    private static AtomicInteger getNameIdsAsBytesCount = new AtomicInteger(0);
     public byte[] getNameIdsAsBytes() {
+        getNameIdsAsBytesCount.incrementAndGet();
         ByteBuffer buffer = ByteBuffer.allocate(names.length * 4);
         for (Name name : names) {
             buffer.putInt(name.getId());
@@ -200,5 +215,27 @@ public final class Value extends AzquoMemoryDBEntity {
         return buffer.array();
     }
 
+    public static void printFunctionCountStats(){
+        System.out.println("######### VALUE FUNCTION COUNTS");
+        System.out.println("newValue\t\t\t\t\t\t\t\t" + newValue.get());
+        System.out.println("newValue1\t\t\t\t\t\t\t\t" + newValue1.get());
+        System.out.println("newValue2\t\t\t\t\t\t\t\t" + newValue2.get());
+        System.out.println("getNamesCount\t\t\t\t\t\t\t\t" + getNamesCount.get());
+        System.out.println("setNamesWillBePersistedCount\t\t\t\t\t\t\t\t" + setNamesWillBePersistedCount.get());
+        System.out.println("deleteCount\t\t\t\t\t\t\t\t" + deleteCount.get());
+        System.out.println("getAsJsonCount\t\t\t\t\t\t\t\t" + getAsJsonCount.get());
+        System.out.println("getNameIdsAsBytesCount\t\t\t\t\t\t\t\t" + getNameIdsAsBytesCount.get());
+    }
+
+    public static void clearFunctionCountStats() {
+        newValue.set(0);
+        newValue1.set(0);
+        newValue2.set(0);
+        getNamesCount.set(0);
+        setNamesWillBePersistedCount.set(0);
+        deleteCount.set(0);
+        getAsJsonCount.set(0);
+        getNameIdsAsBytesCount.set(0);
+    }
 
 }

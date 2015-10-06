@@ -83,7 +83,7 @@ public final class Name extends AzquoMemoryDBEntity {
     Gets to wrap with as list, don't want them altering the length anyway, this does have a bit of an overhead vs the old model but I don't think this will be a biggy. I guess check memory saving?
     Also I know that aslist doens't make immutable, I consider this class "trusted". If bothered can use unmodifiableList.
 
-    ok using arrays here has saved about 5% on a database's memory useage. They stay unless there's a big unfixable problem.
+    ok using arrays here has saved about 5% on a database's memory usage. They stay unless there's a big unfixable problem.
 
     and put the get in here, stops worry about an object switch in the middle of a get
 
@@ -122,7 +122,7 @@ public final class Name extends AzquoMemoryDBEntity {
         }
 
         public String getAttribute(String attributeName) {
-            //attributeName = attributeName.toUpperCase();
+            //attributeName = attributeName.toUpperCase(); // interesting I zapped this, why?
             int index = getAttributeKeys().indexOf(attributeName);
             if (index != -1) {
                 return attributeValues[index];
@@ -159,8 +159,11 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // for the code to make new names
 
+    private static AtomicInteger newName = new AtomicInteger(0);
+
     public Name(final AzquoMemoryDB azquoMemoryDB, final Provenance provenance, boolean additive) throws Exception {
         this(azquoMemoryDB, 0, null);
+        newName.incrementAndGet();
         setProvenanceWillBePersisted(provenance);
         setAdditiveWillBePersisted(additive);
     }
@@ -169,8 +172,11 @@ public final class Name extends AzquoMemoryDBEntity {
     // Lists/Sets are not set here as we need to wait then load from the json cache
     // use arrays internally?
 
+    private static AtomicInteger newName2 = new AtomicInteger(0);
+
     protected Name(final AzquoMemoryDB azquoMemoryDB, int id, String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id);
+        newName2.incrementAndGet();
         loadCache = new LoadCache(jsonFromDB, null);
         additive = true; // by default
         valuesAsSet = null;
@@ -185,8 +191,11 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // as above but using new fast loading - todo - work out if this bing public (as it needs to be for the DAO) is a problem
 
+    private static AtomicInteger newName3 = new AtomicInteger(0);
+
     public Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, boolean additive, String attributes, byte[] chidrenCache, int noParents, int noValues) throws Exception {
         super(azquoMemoryDB, id);
+        newName3.incrementAndGet();
         loadCache = new LoadCache(null, chidrenCache); // link these after
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId); // see no reason not to do this here now
         this.additive = additive;
@@ -209,7 +218,10 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // for convenience but be careful where it is used . . .
+    private static AtomicInteger getDefaultDisplayNameCounter = new AtomicInteger(0);
+
     public String getDefaultDisplayName() {
+        getDefaultDisplayNameCounter.incrementAndGet();
         return nameAttributes.getAttribute(Constants.DEFAULT_DISPLAY_NAME);
     }
 
@@ -251,14 +263,18 @@ public final class Name extends AzquoMemoryDBEntity {
     // we assume sets are built on concurrent hash map and lists are not modifiable
     // even if based on concurrent hash map we don't want anything external modifying it, make the set unmodifiable
 
+    private static AtomicInteger getValuesCounter = new AtomicInteger(0);
     public Collection<Value> getValues() {
+        getValuesCounter.incrementAndGet();
         return valuesAsSet != null ? Collections.unmodifiableCollection(valuesAsSet) : Collections.unmodifiableCollection(Arrays.asList(values));
     }
 
     // added by WFC I guess, need to check on this - Edd
     // this could be non thread safe.
 
+    private static AtomicInteger transferValuesCounter = new AtomicInteger(0);
     public void transferValues(Name from) throws Exception {
+        transferValuesCounter.incrementAndGet();
         if (from.valuesAsSet == null) return;
         if (valuesAsSet == null) {
             valuesAsSet = new HashSet<>(from.valuesAsSet);
@@ -273,8 +289,13 @@ public final class Name extends AzquoMemoryDBEntity {
     // these two are becoming protected so they can be set by Value.
     // Value will be the reference point for the value name link, the ones here are for fast lookup, no need for persistence
     // following parent pattern re switching to sets etc
-
     protected void addToValues(final Value value) throws Exception {
+        addToValues(value, false);
+    }
+
+    private static AtomicInteger addToValuesCounter = new AtomicInteger(0);
+    protected void addToValues(final Value value, boolean noDuplicationCheck) throws Exception {
+        addToValuesCounter.incrementAndGet();
         checkDatabaseMatches(value);
         if (valuesAsSet != null) {
             valuesAsSet.add(value);// Backed by concurrent hash map should be thread safe
@@ -285,12 +306,13 @@ public final class Name extends AzquoMemoryDBEntity {
                     valuesAsSet.add(value);
                     return;
                 }
-                List<Value> valuesList = Arrays.asList(values);
-                if (!valuesList.contains(value)) { // it's this contains expense that means we should stop using arraylists over a certain size
+                // it's this contains expense that means we should stop using arraylists over a certain size.
+                // If loading skip the duplication check, we assume data integrity, put the aslist in the conditional so we won't instantiate the object unnecessarily, this function is hammered on loading
+                if (noDuplicationCheck || !Arrays.asList(values).contains(value)) {
                     // OK, here it may get interesting, what about size???
-                    if (valuesList.size() >= ARRAYTHRESHOLD) { // we need to convert. copy the array to a new concurrent hashset then set it
+                    if (values.length >= ARRAYTHRESHOLD) { // we need to convert. copy the array to a new concurrent hashset then set it
                         valuesAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
-                        valuesAsSet.addAll(valuesList); // add the existing ones
+                        valuesAsSet.addAll(Arrays.asList(values)); // add the existing ones
                         valuesAsSet.add(value);
                         //values = new ArrayList<Value>(); // to save memory, leaving commented as the saving probably isn't that much and I'm a little worried about concurrency.
                         // todo - profile how many of these are left over in, for example, Damart.
@@ -316,7 +338,10 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
+    private static AtomicInteger removeFromValuesCounter = new AtomicInteger(0);
+
     protected void removeFromValues(final Value value) throws Exception {
+        removeFromValuesCounter.incrementAndGet();
         if (valuesAsSet != null) {
             valuesAsSet.remove(value);
         } else {
@@ -338,15 +363,19 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
+    private static AtomicInteger getParentsCounter = new AtomicInteger(0);
 
     public Collection<Name> getParents() {
+        getParentsCounter.incrementAndGet();
         return parentsAsSet != null ? Collections.unmodifiableCollection(parentsAsSet) : Collections.unmodifiableCollection(Arrays.asList(parents));
     }
 
     // note these two should be called in synchronized blocks if acting on things like parents, children etc
     // doesn't check contains, there is logic after the contains when adding which can't go in here (as in are we going to switch to set?)
+    private static AtomicInteger nameArrayAppendCounter = new AtomicInteger(0);
 
     private Name[] nameArrayAppend(Name[] source, Name toAppend) {
+        nameArrayAppendCounter.incrementAndGet();
         Name[] newArray = new Name[source.length + 1];
         System.arraycopy(source, 0, newArray, 0, source.length); // intellij simplified it to this, should be fine
         newArray[source.length] = toAppend;
@@ -355,7 +384,9 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // I realise some of this stuff is probably very like the internal workings of ArrayList! Important here to save space with vanilla arrays I'm rolling my own.
 
+    private static AtomicInteger nameArrayAppendCounter2 = new AtomicInteger(0);
     private Name[] nameArrayAppend(Name[] source, Name toAppend, int position) {
+        nameArrayAppendCounter2.incrementAndGet();
         if (position >= source.length) {
             return nameArrayAppend(source, toAppend);
         }
@@ -375,7 +406,9 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // can check contains
 
+    private static AtomicInteger nameArrayRemoveIfExists = new AtomicInteger(0);
     private Name[] nameArrayRemoveIfExists(Name[] source, Name toRemove) {
+        nameArrayRemoveIfExists.incrementAndGet();
         List<Name> sourceList = Arrays.asList(source);
         if (sourceList.contains(toRemove)) {
             return nameArrayRemove(source, toRemove);
@@ -386,7 +419,9 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // note, assumes it is in there! Otherwise will be an exception
 
+    private static AtomicInteger nameArrayRemoveCounter = new AtomicInteger(0);
     private Name[] nameArrayRemove(Name[] source, Name toRemove) {
+        nameArrayRemoveCounter.incrementAndGet();
         Name[] newArray = new Name[source.length - 1];
         int newArrayPosition = 0;// gotta have a separate index on the new array, they will go out of sync
         for (Name name : source) { // do one copy skipping the element we want removed
@@ -406,10 +441,16 @@ public final class Name extends AzquoMemoryDBEntity {
         return false;
     }*/
 
+    private void addToParents(final Name name) throws Exception {
+        addToParents(name, false);
+    }
     // don't allow external classes to set the parents I mean by function or otherwise, Name can manage this based on set children
     // synchronize on parents? It's not final is the thing
+    // this is absolutely hammered on loading, saving bits of logic or bytes of garbage generated is worth it!
 
-    private void addToParents(final Name name) throws Exception {
+    private static AtomicInteger addToParentsCounter = new AtomicInteger(0);
+    private void addToParents(final Name name, boolean noDuplicationCheck) throws Exception {
+        addToParentsCounter.incrementAndGet();
         if (parentsAsSet != null) {
             parentsAsSet.add(name);
         } else {
@@ -419,11 +460,12 @@ public final class Name extends AzquoMemoryDBEntity {
                     parentsAsSet.add(name);
                     return;
                 }
-                List<Name> parentsList = Arrays.asList(parents);
-                if (!parentsList.contains(name)) {
-                    if (parentsList.size() >= ARRAYTHRESHOLD) {
+                // it's this contains expense that means we should stop using arraylists over a certain size.
+                // If loading skip the duplication check, we assume data integrity, put the aslist in the conditional so we won't instantiate the object unnecessarily, this function is hammered on loading
+                if (noDuplicationCheck || !Arrays.asList(parents).contains(name)) {
+                    if (parents.length >= ARRAYTHRESHOLD) {
                         parentsAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
-                        parentsAsSet.addAll(parentsList);
+                        parentsAsSet.addAll(Arrays.asList(parents));
                         parentsAsSet.add(name);
                         // parents  new arraylist?
                     } else {
@@ -443,7 +485,9 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
+    private static AtomicInteger removeFromParentsCounter = new AtomicInteger(0);
     private void removeFromParents(final Name name) throws Exception {
+        removeFromParentsCounter.incrementAndGet();
         if (parentsAsSet != null) {
             parentsAsSet.remove(name);
         } else {
@@ -457,14 +501,18 @@ public final class Name extends AzquoMemoryDBEntity {
     // todo - check use of this and then whether we use sets internally or not
     // these two functions moved here from the spreadsheet
 
+    private static AtomicInteger findAllParentsCounter = new AtomicInteger(0);
     public Collection<Name> findAllParents() {
+        findAllParentsCounter.incrementAndGet();
         final Set<Name> allParents = new HashSet<>();
         findAllParents(this, allParents);
         return allParents;
     }
 
     // option for collect call but I don't really get it
+    private static AtomicInteger findAllParentsCounter2 = new AtomicInteger(0);
     private void findAllParents(Name name, final Set<Name> allParents) {
+        findAllParentsCounter2.incrementAndGet();
         for (Name parent : name.getParents()) {
             if (!allParents.contains(parent)) {
                 allParents.add(parent);
@@ -475,7 +523,9 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // we are now allowing a name to be in more than one top parent, hence the name change
 
+    private static AtomicInteger findATopParentCounter = new AtomicInteger(0);
     public Name findATopParent() {
+        findATopParentCounter.incrementAndGet();
         if (getParents().size() > 0) {
             Name parent = getParents().iterator().next();
             while (parent != null) {
@@ -497,16 +547,24 @@ public final class Name extends AzquoMemoryDBEntity {
     private Set<Name> findAllChildrenCache = null;// is this ever used?? COuld save a few bytes
     private Set<Name> findAllChildrenPayAttentionToAdditiveCache = null;
 
+    private static AtomicInteger finaAllChildrenCounter = new AtomicInteger(0);
     private void findAllChildren(Name name, boolean payAttentionToAdditive, final Set<Name> allChildren) {
+        finaAllChildrenCounter.incrementAndGet();
         if (payAttentionToAdditive && !name.additive) return;
         for (Name child : name.getChildren()) {
+            long track = System.currentTimeMillis();
             if (allChildren.add(child)) {
                 findAllChildren(child, payAttentionToAdditive, allChildren);
+            }
+            if ((System.currentTimeMillis() - track) > 1000){
+                System.out.println("took longer than a second (" + (System.currentTimeMillis() - track) + "ms) for findAllChildren " + payAttentionToAdditive + " on " + child.getDefaultDisplayName());
             }
         }
     }
 
+    private static AtomicInteger finaAllChildrenCounter1 = new AtomicInteger(0);
     public Collection<Name> findAllChildren(boolean payAttentionToAdditive) {
+        finaAllChildrenCounter1.incrementAndGet();
         if (payAttentionToAdditive) {
             // I think this a worthwhile variable in case the cache is zapped in the mean time, it's about thread safety
             Set<Name> localReference = findAllChildrenPayAttentionToAdditiveCache;
@@ -540,10 +598,10 @@ public final class Name extends AzquoMemoryDBEntity {
                         Related to contains hits? Or initial size? NEvertheless barring this occasional problem the meory overhead of the caches being this saves gigibytes, I'm leaving it in for the moment
                         with a view to fixing it.
                          */
-                        long track = System.currentTimeMillis();
+                        //long track = System.currentTimeMillis();
                         localReference = HashObjSets.newMutableSet();
                         findAllChildren(this, false, localReference);
-                        System.out.println("Time to make find all children false cache : " + (System.currentTimeMillis() - track) + " result size " + localReference.size());
+                        //System.out.println("Time to make find all children false cache : " + (System.currentTimeMillis() - track) + " result size " + localReference.size());
                         if (localReference.isEmpty()) {
                             findAllChildrenCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
                         } else {
@@ -563,7 +621,9 @@ public final class Name extends AzquoMemoryDBEntity {
     private Set<Value> valuesIncludingChildrenPayAttentionToAdditiveCache = null;
     // Tie its invalidation to the find all children invalidation
 
+    private static AtomicInteger findValuesIncludingChildrenCounter = new AtomicInteger(0);
     public Set<Value> findValuesIncludingChildren(boolean payAttentionToAdditive) {
+        findValuesIncludingChildrenCounter.incrementAndGet();
         if (payAttentionToAdditive) {
             Set<Value> localReference = valuesIncludingChildrenPayAttentionToAdditiveCache; // in case the cache is nulled before we try to return it
             if (localReference == null) {
@@ -643,20 +703,26 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // synchronized? Not sure if it matters, dn't need immediate visibility and the cache read should (!) be thread safe.
     // The read uses synchronized to stop creating the cache more than necessary rather than to be totally up to date
+    private static AtomicInteger clearChildrenCachesCounter = new AtomicInteger(0);
     public void clearChildrenCaches() {
+        clearChildrenCachesCounter.incrementAndGet();
         findAllChildrenCache = null;
         findAllChildrenPayAttentionToAdditiveCache = null;
         valuesIncludingChildrenCache = null;
         valuesIncludingChildrenPayAttentionToAdditiveCache = null;
     }
 
+    private static AtomicInteger getChildrenCounter = new AtomicInteger(0);
     public Collection<Name> getChildren() {
+        getChildrenCounter.incrementAndGet();
         return childrenAsSet != null ? Collections.unmodifiableCollection(childrenAsSet) : Collections.unmodifiableCollection(Arrays.asList(children));
     }
 
     // might seem inefficient but the adds and removes deal with parents and things. Might reconsider code if used more heavily
     // each add/remove is safe but for predictability best to synchronize the lot here I think
+    private static AtomicInteger setChildrenCounter = new AtomicInteger(0);
     public synchronized void setChildrenWillBePersisted(Collection<Name> children) throws Exception {
+        setChildrenCounter.incrementAndGet();
         Collection<Name> existingChildren = getChildren();
         // like an equals but the standard equals might trip up on different collection types
         // at the moment the passed should always be a hashset so run contains all against that I think
@@ -673,18 +739,24 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
+    private static AtomicInteger addChildWillBePersistedCounter = new AtomicInteger(0);
     public void addChildWillBePersisted(Name child) throws Exception {
+        addChildWillBePersistedCounter.incrementAndGet();
         addChildWillBePersisted(child, 0, true);
     }
 
+    private static AtomicInteger addChildWillBePersistedCounter1 = new AtomicInteger(0);
     public void addChildWillBePersisted(Name child, int position) throws Exception {
+        addChildWillBePersistedCounter1.incrementAndGet();
         addChildWillBePersisted(child, position, true);
     }
 
     // with position, will just add if none passed note : this sees position as starting at 1!
     // note : modified to do nothing if the name is in the set. No changing of position.
 
+    private static AtomicInteger addChildWillBePersistedCounter2 = new AtomicInteger(0);
     private void addChildWillBePersisted(Name child, int position, boolean clearCache) throws Exception {
+        addChildWillBePersistedCounter2.incrementAndGet();
         checkDatabaseMatches(child);
         if (child.equals(this)) return;//don't put child into itself
         /*removing this check - it takes far too long - maybe should make it optional
@@ -737,11 +809,15 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
+    private static AtomicInteger removeFromChildrenWillBePersistedCounter = new AtomicInteger(0);
     public void removeFromChildrenWillBePersisted(Name name) throws Exception {
+        removeFromChildrenWillBePersistedCounter.incrementAndGet();
         removeFromChildrenWillBePersisted(name, true);
     }
 
+    private static AtomicInteger removeFromChildrenWillBePersistedCounter1 = new AtomicInteger(0);
     private void removeFromChildrenWillBePersisted(Name name, boolean clearCache) throws Exception {
+        removeFromChildrenWillBePersistedCounter1.incrementAndGet();
         checkDatabaseMatches(name);// even if not needed throw the exception!
         // maybe could narrow this a little?
         synchronized (this) {
@@ -769,14 +845,27 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
+    private static AtomicInteger getAttributesCounter = new AtomicInteger(0);
     public Map<String, String> getAttributes() {
+        getAttributesCounter.incrementAndGet();
         return Collections.unmodifiableMap(nameAttributes.getAsMap());
+    }
+
+    // to be used in loading - could cause corruption so protected
+    protected List<String> getAttributeKeys() {
+        return nameAttributes.getAttributeKeys();
+    }
+
+    protected List<String> getAttributeValues() {
+        return nameAttributes.getAttributeValues();
     }
 
     // todo - be sure this makes sense given new name attributes
     // I think plain old synchronized here is safe enough if not that fast
 
+    private static AtomicInteger setAttributeWillBePersistedCounter = new AtomicInteger(0);
     public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
+        setAttributeWillBePersistedCounter.incrementAndGet();
         // make safe for new way of persisting attributes
         if (attributeName.contains("¬")) {
             attributeName = attributeName.replace("¬", "");
@@ -784,7 +873,7 @@ public final class Name extends AzquoMemoryDBEntity {
         if (attributeValue.contains("¬")) {
             attributeValue = attributeValue.replace("¬", "");
         }
-        attributeName = attributeName.toUpperCase(); // I think this is the only point at which attributes are created thus if it's uppercased here we should not need to check anywhere else
+        attributeName = attributeName.trim().toUpperCase(); // I think this is the only point at which attributes are created thus if it's uppercased here we should not need to check anywhere else
         // important, manage persistence, allowed name rules, db look ups
         // only care about ones in this set
         // code adapted from map based code to lists, may need rewriting
@@ -830,8 +919,10 @@ public final class Name extends AzquoMemoryDBEntity {
         setNeedsPersisting();
     }
 
+    private static AtomicInteger removeAttributeWillBePersistedCounter = new AtomicInteger(0);
     public synchronized void removeAttributeWillBePersisted(String attributeName) throws Exception {
-        attributeName = attributeName.toUpperCase();
+        removeAttributeWillBePersistedCounter.incrementAndGet();
+        attributeName = attributeName.trim().toUpperCase();
         int index = nameAttributes.getAttributeKeys().indexOf(attributeName);
         if (index != -1) {
             List<String> attributeKeys = new ArrayList<>(nameAttributes.getAttributeKeys());
@@ -845,14 +936,18 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // convenience
+    private static AtomicInteger clearAttributesCounter = new AtomicInteger(0);
     public synchronized void clearAttributes() throws Exception {
+        clearAttributesCounter.incrementAndGet();
         for (String attribute : nameAttributes.attributeKeys) { // nameAttributes will be reassigned by the function but that should be ok, hang onto the key set as it was at the beginning
             removeAttributeWillBePersisted(attribute);
         }
     }
 
+    private static AtomicInteger findParentAttributesCounter = new AtomicInteger(0);
     private String findParentAttributes(Name child, String attributeName, Set<Name> checked) {
-        attributeName = attributeName.toUpperCase();
+        findParentAttributesCounter.incrementAndGet();
+        attributeName = attributeName.trim().toUpperCase();
         for (Name parent : child.getParents()) {
             if (!checked.contains(parent)) {
                 checked.add(parent);
@@ -871,12 +966,16 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // default to parent check
 
+    private static AtomicInteger getAttributeCounter = new AtomicInteger(0);
     public String getAttribute(String attributeName) {
+        getAttributeCounter.incrementAndGet();
         return getAttribute(attributeName, true, new HashSet<>());
     }
 
 
+    private static AtomicInteger getAttributeCounter1 = new AtomicInteger(0);
     public String getAttribute(String attributeName, boolean parentCheck, Set<Name> checked) {
+        getAttributeCounter1.incrementAndGet();
         String attribute = nameAttributes.getAttribute(attributeName);
         if (attribute != null) return attribute;
         //look up the chain for any parent with the attribute
@@ -921,8 +1020,10 @@ public final class Name extends AzquoMemoryDBEntity {
         return StandardDAO.PersistedTable.name.name();
     }
 
+    private static AtomicInteger getAsJsonCounter = new AtomicInteger(0);
     @Override
     public String getAsJson() {
+        getAsJsonCounter.incrementAndGet();
         // Going against my previous comment we're vonverting to lists - transport should be "dumb" I think. Plus overhead.
         Collection<Name> children = getChildren();
         List<Integer> childrenIds = new ArrayList<>(children.size());
@@ -939,7 +1040,9 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // in here is a bit more efficient I think but should it be in the DAO?
 
+    private static AtomicInteger getAttributesForFastStoreCounter = new AtomicInteger(0);
     public String getAttributesForFastStore() {
+        getAttributesForFastStoreCounter.incrementAndGet();
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < nameAttributes.attributeKeys.length; i++) {
             if (i != 0) {
@@ -954,7 +1057,9 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // maybe move out of here?
 
+    private static AtomicInteger entitiesIdsAsBytesCounter = new AtomicInteger(0);
     private byte[] entitiesIdsAsBytes(Collection<? extends AzquoMemoryDBEntity> entities) {
+        entitiesIdsAsBytesCounter.incrementAndGet();
         ByteBuffer buffer = ByteBuffer.allocate(entities.size() * 4);
         for (AzquoMemoryDBEntity entity : entities) {
             buffer.putInt(entity.getId());
@@ -970,7 +1075,9 @@ public final class Name extends AzquoMemoryDBEntity {
     // changing synchronized to only relevant portions
     // note : this function is absolutely hammered while linking so optimiseations here are helpful
 
+    private static AtomicInteger linkCounter = new AtomicInteger(0);
     protected void link() throws Exception {
+        linkCounter.incrementAndGet();
         if (getAzquoMemoryDB().getNeedsLoading() && loadCache.jsonCache != null) { // during loading and using old json
             try {
                 /* Must make sure I set initial collection sizes when loading, resizing is not cheap generally.
@@ -1014,11 +1121,10 @@ public final class Name extends AzquoMemoryDBEntity {
                         this.children = newChildren;
                     }
                 }
-                // should parents be stored as ids? Or maybe the size would help, could init the map or array effectively
                 // need to sort out the parents - I deliberately excluded this from synchronisation or one could theoretically hit a deadlock
                 // addToParents can be synchronized on the child.
                 for (Name newChild : getChildren()) { // used to use a list set in the synchronized block. Not quite sure why now . . .
-                    newChild.addToParents(this);
+                    newChild.addToParents(this, true);
                 }
             } catch (IOException e) {
                 System.out.println("jsoncache = " + loadCache.jsonCache);
@@ -1032,35 +1138,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 //int noValues = loadCache.valuesCache.length / 4;
                 ////int noParents = loadCache.parentsCache.length / 4;
                 int noChildren = loadCache.childrenCache.length / 4;
-                // this used to be derived, I see no reason for it not to be there in the db to speed things up
-/*                    ByteBuffer byteBuffer = ByteBuffer.wrap(loadCache.valuesCache);
-                    if (noValues > ARRAYTHRESHOLD) {
-                        this.valuesAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(noValues));
-                        for (int i = 0; i < noValues; i++) {
-                            Value v = getAzquoMemoryDB().getValueById(byteBuffer.getInt(i * 4));
-                            this.valuesAsSet.add(v);
-                        }
-                    } else {
-                        Value[] newValues = new Value[noValues];
-                        for (int i = 0; i < noValues; i++) {
-                            newValues[i] = getAzquoMemoryDB().getValueById(byteBuffer.getInt(i * 4));
-                        }
-                        this.values = newValues;
-                    }
-                // this used to be derived, I see no reason for it not to be there in the db to speed things up
-                    byteBuffer = ByteBuffer.wrap(loadCache.parentsCache);
-                    if (noParents > ARRAYTHRESHOLD) {
-                        this.parentsAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(noParents));
-                        for (int i = 0; i < noParents; i++) {
-                            this.parentsAsSet.add(getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4)));
-                        }
-                    } else {
-                        Name[] newParents = new Name[noParents];
-                        for (int i = 0; i < noParents; i++) {
-                            newParents[i] = getAzquoMemoryDB().getNameById(byteBuffer.getInt(i * 4));
-                        }
-                        this.parents = newParents;
-                    }*/
                 ByteBuffer byteBuffer = ByteBuffer.wrap(loadCache.childrenCache);
                 if (noChildren > ARRAYTHRESHOLD) {
                     this.childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(noChildren));
@@ -1087,8 +1164,9 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // first of its kind. Try to be comprehensive
     // want to make it synchronized but I'm calling synchronized functions on other objects. Hmmmmmmmm.
-
+    private static AtomicInteger deleteCounter = new AtomicInteger(0);
     public void delete() throws Exception {
+        deleteCounter.incrementAndGet();
         Collection<Value> values;
         Collection<Name> parents;
 
@@ -1113,5 +1191,93 @@ public final class Name extends AzquoMemoryDBEntity {
         for (Name parent : parents) {
             parent.removeFromChildrenWillBePersisted(this);
         }
+    }
+
+    public static void printFunctionCountStats(){
+        System.out.println("######### NAME FUNCTION COUNTS");
+        System.out.println("newName\t\t\t\t" + newName.get());
+        System.out.println("newName2\t\t\t\t" + newName2.get());
+        System.out.println("newName3\t\t\t\t" + newName3.get());
+        System.out.println("getDefaultDisplayNameCounter\t\t\t\t" + getDefaultDisplayNameCounter.get());
+        System.out.println("getValuesCounter\t\t\t\t" + getValuesCounter.get());
+        System.out.println("transferValuesCounter\t\t\t\t" + transferValuesCounter.get());
+        System.out.println("addToValuesCounter\t\t\t\t" + addToValuesCounter.get());
+        System.out.println("removeFromValuesCounter\t\t\t\t" + removeFromValuesCounter.get());
+        System.out.println("getParentsCounter\t\t\t\t" + getParentsCounter.get());
+        System.out.println("nameArrayAppendCounter\t\t\t\t" + nameArrayAppendCounter.get());
+        System.out.println("nameArrayAppendCounter2\t\t\t\t" + nameArrayAppendCounter2.get());
+        System.out.println("nameArrayRemoveIfExists\t\t\t\t" + nameArrayRemoveIfExists.get());
+        System.out.println("nameArrayRemoveCounter\t\t\t\t" + nameArrayRemoveCounter.get());
+        System.out.println("addToParentsCounter\t\t\t\t" + addToParentsCounter.get());
+        System.out.println("removeFromParentsCounter\t\t\t\t" + removeFromParentsCounter.get());
+        System.out.println("findAllParentsCounter\t\t\t\t" + findAllParentsCounter.get());
+        System.out.println("findAllParentsCounter2\t\t\t\t" + findAllParentsCounter2.get());
+        System.out.println("findATopParentCounter\t\t\t\t" + findATopParentCounter.get());
+        System.out.println("finaAllChildrenCounter\t\t\t\t" + finaAllChildrenCounter.get());
+        System.out.println("finaAllChildrenCounter1\t\t\t\t" + finaAllChildrenCounter1.get());
+        System.out.println("findValuesIncludingChildrenCounter\t\t\t\t" + findValuesIncludingChildrenCounter.get());
+        System.out.println("clearChildrenCachesCounter\t\t\t\t" + clearChildrenCachesCounter.get());
+        System.out.println("getChildrenCounter\t\t\t\t" + getChildrenCounter.get());
+        System.out.println("setChildrenCounter\t\t\t\t" + setChildrenCounter.get());
+        System.out.println("addChildWillBePersistedCounter\t\t\t\t" + addChildWillBePersistedCounter.get());
+        System.out.println("addChildWillBePersistedCounter1\t\t\t\t" + addChildWillBePersistedCounter1.get());
+        System.out.println("addChildWillBePersistedCounter2\t\t\t\t" + addChildWillBePersistedCounter2.get());
+        System.out.println("removeFromChildrenWillBePersistedCounter\t\t\t\t" + removeFromChildrenWillBePersistedCounter.get());
+        System.out.println("removeFromChildrenWillBePersistedCounter1\t\t\t\t" + removeFromChildrenWillBePersistedCounter1.get());
+        System.out.println("getAttributesCounter\t\t\t\t" + getAttributesCounter.get());
+        System.out.println("setAttributeWillBePersistedCounter\t\t\t\t" + setAttributeWillBePersistedCounter.get());
+        System.out.println("removeAttributeWillBePersistedCounter\t\t\t\t" + removeAttributeWillBePersistedCounter.get());
+        System.out.println("clearAttributesCounter\t\t\t\t" + clearAttributesCounter.get());
+        System.out.println("findParentAttributesCounter\t\t\t\t" + findParentAttributesCounter.get());
+        System.out.println("getAttributeCounter\t\t\t\t" + getAttributeCounter.get());
+        System.out.println("getAttributeCounter1\t\t\t\t" + getAttributeCounter1.get());
+        System.out.println("getAsJsonCounter\t\t\t\t" + getAsJsonCounter.get());
+        System.out.println("getAttributesForFastStoreCounter\t\t\t\t" + getAttributesForFastStoreCounter.get());
+        System.out.println("entitiesIdsAsBytesCounter\t\t\t\t" + entitiesIdsAsBytesCounter.get());
+        System.out.println("linkCounter\t\t\t\t" + linkCounter.get());
+        System.out.println("deleteCounter\t\t\t\t" + deleteCounter.get());
+    }
+    public static void clearFunctionCountStats() {
+        newName.set(0);
+        newName2.set(0);
+        newName3.set(0);
+        getDefaultDisplayNameCounter.set(0);
+        getValuesCounter.set(0);
+        transferValuesCounter.set(0);
+        addToValuesCounter.set(0);
+        removeFromValuesCounter.set(0);
+        getParentsCounter.set(0);
+        nameArrayAppendCounter.set(0);
+        nameArrayAppendCounter2.set(0);
+        nameArrayRemoveIfExists.set(0);
+        nameArrayRemoveCounter.set(0);
+        addToParentsCounter.set(0);
+        removeFromParentsCounter.set(0);
+        findAllParentsCounter.set(0);
+        findAllParentsCounter2.set(0);
+        findATopParentCounter.set(0);
+        finaAllChildrenCounter.set(0);
+        finaAllChildrenCounter1.set(0);
+        findValuesIncludingChildrenCounter.set(0);
+        clearChildrenCachesCounter.set(0);
+        getChildrenCounter.set(0);
+        setChildrenCounter.set(0);
+        addChildWillBePersistedCounter.set(0);
+        addChildWillBePersistedCounter1.set(0);
+        addChildWillBePersistedCounter2.set(0);
+        removeFromChildrenWillBePersistedCounter.set(0);
+        removeFromChildrenWillBePersistedCounter1.set(0);
+        getAttributesCounter.set(0);
+        setAttributeWillBePersistedCounter.set(0);
+        removeAttributeWillBePersistedCounter.set(0);
+        clearAttributesCounter.set(0);
+        findParentAttributesCounter.set(0);
+        getAttributeCounter.set(0);
+        getAttributeCounter1.set(0);
+        getAsJsonCounter.set(0);
+        getAttributesForFastStoreCounter.set(0);
+        entitiesIdsAsBytesCounter.set(0);
+        linkCounter.set(0);
+        deleteCounter.set(0);
     }
 }
