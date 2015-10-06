@@ -297,6 +297,9 @@ public final class Name extends AzquoMemoryDBEntity {
     protected void addToValues(final Value value, boolean noDuplicationCheck) throws Exception {
         addToValuesCounter.incrementAndGet();
         checkDatabaseMatches(value);
+        // may make this more claver as in clearing only if there's a change but not now
+        valuesIncludingChildrenCache = null;
+        valuesIncludingChildrenPayAttentionToAdditiveCache = null;
         if (valuesAsSet != null) {
             valuesAsSet.add(value);// Backed by concurrent hash map should be thread safe
         } else {
@@ -343,7 +346,10 @@ public final class Name extends AzquoMemoryDBEntity {
     protected void removeFromValues(final Value value) throws Exception {
         removeFromValuesCounter.incrementAndGet();
         if (valuesAsSet != null) {
-            valuesAsSet.remove(value);
+            if (valuesAsSet.remove(value)){
+                valuesIncludingChildrenCache = null;
+                valuesIncludingChildrenPayAttentionToAdditiveCache = null;
+            }
         } else {
             synchronized (this) { // just sync on this object to protect the lists
                 List<Value> valuesList = Arrays.asList(values);
@@ -358,6 +364,8 @@ public final class Name extends AzquoMemoryDBEntity {
                         }
                     }
                     values = newValuesArray;
+                    valuesIncludingChildrenCache = null;
+                    valuesIncludingChildrenPayAttentionToAdditiveCache = null;
                 }
             }
         }

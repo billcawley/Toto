@@ -361,7 +361,7 @@ public final class AzquoMemoryDB {
                     from = 0;
                     maxIdForTable = valueDAO.findMaxId(this);
                     while (from < maxIdForTable) {
-                        executor.execute(new ValueBatchLoader(valueDAO, from, from + step, this, namesLoaded));
+                        executor.execute(new ValueBatchLoader(valueDAO, from, from + step, this, valuesLoaded));
                         from += step;
                     }
                     executor.shutdown();

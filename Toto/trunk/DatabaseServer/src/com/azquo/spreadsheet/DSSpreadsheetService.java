@@ -1615,7 +1615,6 @@ seaports;children   container;children
 
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
 
-        azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches(); // may need to optimise later, clear the name counts also?
 
         azquoMemoryDBConnection.setProvenance(user, "in spreadsheet", reportName, context);
         if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
@@ -1705,6 +1704,9 @@ seaports;children   container;children
         if (numberOfValuesModified > 0) {
             azquoMemoryDBConnection.persist();
         }
+        // clear the caches after, if we do before then some will be recreated as part of saving.
+        // Is this a bit overkill given that it should clear as it goes? I suppose there's the query and count caches, plus parents of the changed names
+        azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
     }
 
     // Four little utility functions added by Edd, required now headings are not names
