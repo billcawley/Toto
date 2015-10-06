@@ -435,12 +435,12 @@ public final class AzquoMemoryDB {
             NameService.clearFunctionCountStats();
             ValueService.printFunctionCountStats();
             ValueService.clearFunctionCountStats();*/
-            int testlimit = 10_000_000;
-/*            for (int i = 0; i < 5; i++){
+/*            int testlimit = 10_000_000;
+            for (int i = 0; i < 3; i++){
                 long track = System.currentTimeMillis();
                 System.out.println("Set test " + testlimit * (i + 1));
                 int count = 0;
-                Set<Name> testSet = HashObjSets.newMutableSet();
+                Set<Name> testSet = HashObjSets.newUpdatableSet();
                 for (Name test : nameByIdMap.values()){
                     testSet.add(test);
                     count++;
@@ -449,7 +449,7 @@ public final class AzquoMemoryDB {
                 System.out.println("Koloboke Name    :   " + (System.currentTimeMillis() - track) + "ms");
                 track = System.currentTimeMillis();
                 count = 0;
-                Set<Value> testSetV = HashObjSets.newMutableSet();
+                Set<Value> testSetV = HashObjSets.newUpdatableSet();
                 for (Value test : valueByIdMap.values()){
                     testSetV.add(test);
                     count++;
@@ -476,7 +476,7 @@ public final class AzquoMemoryDB {
                 System.out.println("Java Value :     " + (System.currentTimeMillis() - track) + "ms");
                 track = System.currentTimeMillis();
                 count = 0;
-                testSetV = HashObjSets.newMutableSet();
+                testSetV = HashObjSets.newUpdatableSet();
                 for (Value test : valueByIdMap.values()){
                     testSetV.contains(test);
                     testSetV.add(test);
@@ -495,8 +495,8 @@ public final class AzquoMemoryDB {
                     count++;
                     if (count == testlimit) break;
                 }
-                System.out.println("Java Value contains :               " + (System.currentTimeMillis() - track) + "ms");*/
-//            }
+                System.out.println("Java Value contains :               " + (System.currentTimeMillis() - track) + "ms");
+            }*/
 /*            System.out.println("=====================  Integers");
             for (int i =0; i < 5; i++){
                 long track = System.currentTimeMillis();

@@ -76,23 +76,26 @@ public abstract class AzquoMemoryDBEntity {
     }
 
     /*
-     NOTE!!
+    Hash is important for sets and maps, it was plain ID but koloboke doesn't like this, this hack from a github comment
 
-     Edd commenting - the hash was messing with koloboke sets and I'm now strongly thinking that the defaults are correct.
+  https://github.com/OpenHFT/Koloboke/issues/35
 
-     I mean there should only ever be one instance of a given name or value, hence equals is that instance, no need for any other checks???
+   I know equals being empty is kind of dirty but plain object == is correct for equals in Azquo, this should improve the performance a little (I mean not having the commented equals)
 
-     part of why I'm so funny about the ids, these two functions!
-     might be unorthodox but these entities are part of the memory DB, their interaction with collections sets etc is crucial
-     for speed and data integrity, since id should NOT change over an objects life this should be ok and fast
+   And this does fulfill the contract - only that equals give the same hash, which is must for ==, not that matching hashes means equals (objects from two different dbs having the same id, they should not be in the same sets anyway)
+
+   One can do this also on the set instantiation but as the Koloboke author says "if you cannot fix the keys' hashCode() implementation" but we can. .withKeyEquivalence(HashCodeMixingEquivalence.INSTANCE) is how it would be done.
+
+   Essentially in going for top speed koloboke trusts the hashes (unlike standard hash based collections), you either give it good hashes or tell it to mix them up. Or have poor performance.
+
      */
 
-/*    @Override
+    @Override
     public final int hashCode() {
-        return getId();
+        return getId() * -1640531527; // mix it up as per koloboke advice - we might hit ids of of a few hundred million but often they'll be at the bottom, relatively small range from -2billion to +2billion.
     }
 
-    @Override
+/*    @Override
     public boolean equals(Object o) {
         if (this == o) return true; // this should do the job for much of the memory db matching
 

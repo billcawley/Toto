@@ -552,16 +552,11 @@ public final class Name extends AzquoMemoryDBEntity {
         finaAllChildrenCounter.incrementAndGet();
         if (payAttentionToAdditive && !name.additive) return;
         for (Name child : name.getChildren()) {
-            long track = System.currentTimeMillis();
             if (allChildren.add(child)) {
                 findAllChildren(child, payAttentionToAdditive, allChildren);
             }
-            if ((System.currentTimeMillis() - track) > 1000){
-                System.out.println("took longer than a second (" + (System.currentTimeMillis() - track) + "ms) for findAllChildren " + payAttentionToAdditive + " on " + child.getDefaultDisplayName());
-            }
         }
     }
-
     private static AtomicInteger finaAllChildrenCounter1 = new AtomicInteger(0);
     public Collection<Name> findAllChildren(boolean payAttentionToAdditive) {
         finaAllChildrenCounter1.incrementAndGet();
@@ -632,32 +627,16 @@ public final class Name extends AzquoMemoryDBEntity {
                     localReference = valuesIncludingChildrenPayAttentionToAdditiveCache; // check again after synchronized, it may have been sorted in the mean time
                     if (localReference == null) {
 //                        long track = System.currentTimeMillis();
-                        localReference = HashObjSets.newMutableSet(getValues());
+                        localReference = HashObjSets.newUpdatableSet(getValues());
                         for (Name child : findAllChildren(true)) {
                             localReference.addAll(child.getValues());
                         }
-/*                        long normalTime = (System.currentTimeMillis() - track);
-                        track = System.currentTimeMillis();
-                        Set<Value> localReference1 = HashObjSets.newUpdatableSet(getValues());
-                        for (Name child : findAllChildren(true)) {
-                            localReference1.addAll(child.getValues());
-                        }
-                        long kolobokeTime = (System.currentTimeMillis() - track);
-                        track = System.currentTimeMillis();
-                        localReference1 = HashObjSets.newUpdatableSet();
-                        localReference1.addAll(getValues());
-                        for (Name child : findAllChildren(true)) {
-                            localReference1.addAll(child.getValues());
-                        }
-                        System.out.println("Normal find values inc children time : " + normalTime + " koloboke : " + kolobokeTime + " koloboke empty constructor : " + (System.currentTimeMillis() - track) + " " + getDefaultDisplayName());*/
                         if (localReference.isEmpty()) {
                             valuesIncludingChildrenPayAttentionToAdditiveCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
                         } else {
                             valuesIncludingChildrenPayAttentionToAdditiveCache = localReference;
                         }
-                    }/* else {
-                        System.out.println("skipped a simultaneous findValuesIncludingChildren cache populate, good stuff");
-                    }*/
+                    }
                 }
             }
             return Collections.unmodifiableSet(localReference);
@@ -668,33 +647,16 @@ public final class Name extends AzquoMemoryDBEntity {
                 synchronized (this) {
                     localReference = valuesIncludingChildrenCache; // check again after synchronized, it may have been sorted in the mean time
                     if (localReference == null) {
-//                        long track = System.currentTimeMillis();
-                        localReference = HashObjSets.newMutableSet(getValues());
+                        localReference = HashObjSets.newUpdatableSet(getValues());
                         for (Name child : findAllChildren(false)) {
                             localReference.addAll(child.getValues());
                         }
-/*                        long normalTime = (System.currentTimeMillis() - track);
-                        track = System.currentTimeMillis();
-                        Set<Value> localReference1 = HashObjSets.newUpdatableSet(getValues());
-                        for (Name child : findAllChildren(false)) {
-                            localReference1.addAll(child.getValues());
-                        }
-                        long kolobokeTime = (System.currentTimeMillis() - track);
-                        track = System.currentTimeMillis();
-                        localReference1 = HashObjSets.newUpdatableSet();
-                        localReference1.addAll(getValues());
-                        for (Name child : findAllChildren(false)) {
-                            localReference1.addAll(child.getValues());
-                        }
-                        System.out.println("Normal find values inc children false time : " + normalTime + " koloboke : " + kolobokeTime + " koloboke empty constructor : " + (System.currentTimeMillis() - track) + " " + getDefaultDisplayName());*/
                         if (localReference.isEmpty()) {
                             valuesIncludingChildrenCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
                         } else {
                             valuesIncludingChildrenCache = localReference;
                         }
-                    }/* else {
-                        System.out.println("skipped a simultaneous findValuesIncludingChildren cache populate, good stuff");
-                    }*/
+                    }
                 }
             }
             return Collections.unmodifiableSet(localReference);
