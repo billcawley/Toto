@@ -254,7 +254,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             isDouble = false;
             chosen = cellData.getFormatText();
         }
-        System.out.println("after cell change : " + row + " col " + col + " chosen");
+        //System.out.println("after cell change : " + row + " col " + col + " chosen");
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
         List<SName> names = getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());

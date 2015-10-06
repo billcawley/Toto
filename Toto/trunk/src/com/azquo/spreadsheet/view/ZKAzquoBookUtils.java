@@ -301,7 +301,12 @@ public class ZKAzquoBookUtils {
     }
 
     private String getRegionValue(Sheet sheet, CellRegion region) {
-        return sheet.getInternalSheet().getCell(region.getRow(), region.getColumn()).getStringValue();
+        try{
+            return sheet.getInternalSheet().getCell(region.getRow(), region.getColumn()).getStringValue();
+        } catch (Exception e){
+            e.printStackTrace();
+            return "";
+        }
     }
 
     private void fillRegion(Sheet sheet, String region, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) throws Exception {
