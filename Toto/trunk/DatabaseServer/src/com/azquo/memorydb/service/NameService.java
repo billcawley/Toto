@@ -98,7 +98,7 @@ public final class NameService {
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            Set<Name> nameSet = interpretSetTerm(nameName, formulaStrings, referencedNames, attributeStrings);
+            Set<Name> nameSet = new HashSet<>(interpretSetTerm(nameName, formulaStrings, referencedNames, attributeStrings));
             toReturn.add(nameSet);
         }
         return toReturn;
@@ -666,10 +666,10 @@ public final class NameService {
             }
             if (op == NAMEMARKER) {
                 stackCount++;
-                Set<Name> nextNames = interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings);
+                List<Name> nextNames = interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings);
                 // the collection implementation used here will affect performance, going to try a linked hash set. Some memory overhead but some functions like retain all should be much faster
-                //nameStack.add(new LinkedHashSet<>(nextNames)); // order and set contains speed, should do it! Memory overhead but it gets chucked after -- no, I don't want wastage like that
-                nameStack.add(nextNames); // now not necessary as interpretsetterm behaves more, I think that will have saved a fair bit
+                nameStack.add(new LinkedHashSet<>(nextNames)); // order and set contains speed, should do it! I don't like the potential memory overhead but for the moment we require natural ordering
+                //nameStack.add(nextNames); // now not necessary as interpretsetterm behaves more, I think that will have saved a fair bit
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + setFormula);
             } else if (op == '*') { // * meaning intersection here . . .
@@ -878,7 +878,7 @@ public final class NameService {
     }
 
     private static AtomicInteger filterCount = new AtomicInteger(0);
-    private void filter(Set<Name> names, String condition, List<String> strings, List<String> attributeNames) {
+    private void filter(List<Name> names, String condition, List<String> strings, List<String> attributeNames) {
         filterCount.incrementAndGet();
         //NOT HANDLING 'OR' AT PRESENT
         int andPos = condition.toLowerCase().indexOf(" and ");
@@ -952,10 +952,10 @@ public final class NameService {
         }
     }
 
-    // In both cases this was being turned to a hashset so make it return one!
+    // Although being turned to sets I'm going to revert this to list as it neesd natural ordering. Annoying
 
     private static AtomicInteger interpretSetTermCount = new AtomicInteger(0);
-    private Set<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
+    private List<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
         interpretSetTermCount.incrementAndGet();
         //System.out.println("interpret set term . . ." + setTerm);
         final String levelString = stringUtils.getInstruction(setTerm, LEVEL);
@@ -970,7 +970,7 @@ public final class NameService {
         //String totalledAsString = stringUtils.getInstruction(setTerm, AS);
         String selectString = stringUtils.getInstruction(setTerm, SELECT);
         // removed totalled as
-        Set<Name> namesFound =  new HashSet<>();
+        List<Name> namesFound =  new ArrayList<>();
 
         //final String associatedString = stringUtils.getInstruction(setTerm, ASSOCIATED);
         int wherePos = setTerm.toLowerCase().indexOf(WHERE.toLowerCase());
@@ -1013,7 +1013,7 @@ public final class NameService {
         // could parents and select be more efficient?
         if (parentsString != null) {
             //remove the childless names
-            Set<Name> filteredList =  new HashSet<>();
+            List<Name> filteredList =  new ArrayList<>();
             for (Name possibleName : namesFound) {
                 if (possibleName.getChildren().size() > 0) {
                     filteredList.add(possibleName);
@@ -1024,7 +1024,7 @@ public final class NameService {
         }
         if (selectString != null){
             String toFind = strings.get(Integer.parseInt(selectString.substring(1, 3))).toLowerCase();
-            Set<Name> selectedNames =  new HashSet<>();
+            List<Name> selectedNames =  new ArrayList<>();
             for (Name sname : namesFound){
                 if (sname != null && sname.getDefaultDisplayName() != null // is this checking to make intellij happy that important, maybe I want an NPE?
                         && sname.getDefaultDisplayName().toLowerCase().contains(toFind)){
@@ -1033,11 +1033,8 @@ public final class NameService {
             }
             namesFound = selectedNames;
         }
-        // expensive in terms of memory/garbage, I assume it will only be one on small sets
         if (sorted != null) {
-            List<Name> toSort = new ArrayList<>(namesFound);
-            Collections.sort(toSort, defaultLanguageCaseInsensitiveNameComparator);
-            namesFound = new LinkedHashSet<>(toSort);
+            Collections.sort(namesFound, defaultLanguageCaseInsensitiveNameComparator);
         }
         return namesFound;
     }
