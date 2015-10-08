@@ -1014,7 +1014,7 @@ seaports;children   container;children
                 for (AzquoCell azquoCell : row) {
                     long age = 10000; // about 30 years old as default
                     ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-                    if (valuesForCell != null && (valuesForCell.getValues() != null || !valuesForCell.getValues().isEmpty())) {
+                    if (valuesForCell != null && (valuesForCell.getValues() != null && !valuesForCell.getValues().isEmpty())) {
                         for (Value value : valuesForCell.getValues()) {
                             if (value.getText().length() > 0) {
                                 if (value.getProvenance() == null) {
