@@ -300,7 +300,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private String getRegionValue(Sheet sheet, CellRegion region) {
+    public static String getRegionValue(Sheet sheet, CellRegion region) {
         try{
             return sheet.getInternalSheet().getCell(region.getRow(), region.getColumn()).getStringValue();
         } catch (Exception e){

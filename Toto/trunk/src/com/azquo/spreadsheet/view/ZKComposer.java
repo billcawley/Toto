@@ -298,8 +298,11 @@ public class ZKComposer extends SelectorComposer<Component> {
     // to deal with provenance
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
-        // roght now a right click gets provenance ready, dunno if I need to do this
+        // right now a right click gets provenance ready, dunno if I need to do this
         List<SName> names = getNamedDataRegionForRowAndColumnSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
+        if (editPopup.getChildren().size() == 4){ // drilldown was added, remove it
+            editPopup.removeChild(editPopup.getLastChild());
+        }
         for (SName name : names) {
             if (ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_rowheadings" + name.getName().substring(13)) != null) {
 
@@ -346,8 +349,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                             provenancePopup.appendChild(provenanceLabel);
                             stringToShow = stringToShow.substring(nextBlock);
                             spreadPos = stringToShow.indexOf("in spreadsheet");
-
-
                         }
                         Label provenanceLabel = new Label();
                         provenanceLabel.setMultiline(true);
@@ -357,8 +358,35 @@ public class ZKComposer extends SelectorComposer<Component> {
                         final Toolbarbutton button = new Toolbarbutton("Download Full Audit");
                         button.addEventListener("onClick",
                                 event -> Filedownload.save(fullProvenance, "text/csv", "provenance.csv"));
-
                         provenancePopup.appendChild(button);
+
+                        // only check for drilldown on proper data, that which could have provenance
+
+                        CellRegion drillDown = ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_DrillDown" + region);
+                        if (drillDown != null) {
+                            String drillDownString = ZKAzquoBookUtils.getRegionValue(myzss.getSelectedSheet(), drillDown);
+                            if (drillDownString.length() > 0){
+                                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
+                                final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow());
+                                final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
+                                String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
+                                String colHeading = colHeadings.get(cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn());
+                                // rather unelegant way to be case insensetive
+                                drillDownString = drillDownString.replace("[rowHeading]", rowHeading);
+                                drillDownString = drillDownString.replace("[rowheading]", rowHeading);
+                                drillDownString = drillDownString.replace("[ROWHEADING]", rowHeading);
+                                drillDownString = drillDownString.replace("[colHeading]", colHeading);
+                                drillDownString = drillDownString.replace("[colheading]", colHeading);
+                                drillDownString = drillDownString.replace("[COLHEADING]", colHeading);
+                                final String stringToPass = drillDownString;
+                                Menuitem ddItem = new Menuitem("Drill Down");
+                                editPopup.appendChild(ddItem);
+                                ddItem.addEventListener("onClick",
+                                        event -> showProvenance(stringToPass));
+                                // now need to find the headings - is this easy?
+                            }
+                        }
+
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -396,7 +424,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                         }
                     }
                     instructionsLabel.setValue(instructionsText.toString());
-
                 }
 
                 popupChild = highlightPopup.getFirstChild();
@@ -422,8 +449,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                 addHighlight(highlightPopup, 7);
                 addHighlight(highlightPopup, 30);
                 addHighlight(highlightPopup, 90);
-
-
             }
             editPopup.open(cellMouseEvent.getClientx() - 130, cellMouseEvent.getClienty());
         }
@@ -448,7 +473,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
         if (or != null) {
             Clients.evalJavaScript("window.open(\"/api/Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + "\")");
-
         } else {
             Clients.evalJavaScript("alert(\"the report '" + reportName + "` is no longer available\")");
         }
