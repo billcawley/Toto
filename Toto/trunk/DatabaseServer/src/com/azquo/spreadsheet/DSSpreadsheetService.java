@@ -1750,7 +1750,7 @@ seaports;children   container;children
 
     public boolean headingsHaveAttributes(Collection<DataRegionHeading> dataRegionHeadings) {
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
-            if (dataRegionHeading.getAttribute() != null) {
+            if (dataRegionHeading!=null && dataRegionHeading.getAttribute() != null) {
                 return true;
             }
         }
