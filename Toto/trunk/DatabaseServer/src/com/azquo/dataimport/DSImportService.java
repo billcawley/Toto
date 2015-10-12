@@ -632,7 +632,7 @@ public class DSImportService {
         // now, since this will be multi threaded need to make line objects, Cannot be completely immutable due to the current logic, I may be able to change this, not sure
         int lineNo = 1; // start at 1, we think of the first line being 1 not 0.
         // pretty vanilla multi threading bits
-        ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDBConnection.getAzquoMemoryDB().getLoadingThreads());
+        ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDBConnection.getAzquoMemoryDB().getReportFillerThreads());
         AtomicInteger valueTracker = new AtomicInteger(0);
         int batchSize = 100000; // a bit arbitrary, I wonder shuld I go smaller?
         ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(batchSize);
