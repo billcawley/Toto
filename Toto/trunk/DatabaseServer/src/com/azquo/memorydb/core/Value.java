@@ -3,6 +3,7 @@ package com.azquo.memorydb.core;
 import com.azquo.memorydb.dao.StandardDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
@@ -35,10 +36,11 @@ public final class Value extends AzquoMemoryDBEntity {
 
     // to be used by the code when creating a new value
     // add the names after
-    private static AtomicInteger newValue = new AtomicInteger(0);
+    private static AtomicInteger newValueCount = new AtomicInteger(0);
+
     public Value(final AzquoMemoryDB azquoMemoryDB, final Provenance provenance, final String text) throws Exception {
         super(azquoMemoryDB, 0);
-        newValue.incrementAndGet();
+        newValueCount.incrementAndGet();
         this.provenance = provenance;
         this.text = text;
         names = new Name[0];
@@ -48,16 +50,17 @@ public final class Value extends AzquoMemoryDBEntity {
 
     // only to be used by azquomemory db, hence protected. What is notable is the setting of the id from the record in mysql
 
-    private static AtomicInteger newValue1 = new AtomicInteger(0);
+    private static AtomicInteger newValue2Count = new AtomicInteger(0);
+
     protected Value(final AzquoMemoryDB azquoMemoryDB, final int id, final String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id);
-        newValue1.incrementAndGet();
+        newValue2Count.incrementAndGet();
         try {
             JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
             this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
             // tested, .intern here saves memory
             this.text = transport.text.intern();
-            Set<Name> newNames = new HashSet<>(transport.nameIds.size());
+            Set<Name> newNames = HashObjSets.newUpdatableSet(transport.nameIds.size());
             //System.out.println("name ids" + transport.nameIds);
             for (Integer nameId : transport.nameIds) {
                 Name name = getAzquoMemoryDB().getNameById(nameId);
@@ -78,10 +81,11 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     // todo address this new fastloader one being public
-    private static AtomicInteger newValue2 = new AtomicInteger(0);
+    private static AtomicInteger newValue3Count = new AtomicInteger(0);
+
     public Value(final AzquoMemoryDB azquoMemoryDB, final int id, final int provenanceId, String text, byte[] namesCache) throws Exception {
         super(azquoMemoryDB, id);
-        newValue2.incrementAndGet();
+        newValue3Count.incrementAndGet();
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId);
         this.text = text.intern();
         // ok populate the names here but unlike before we're not doing any managing of the names themselves (as in adding this value to them), this just sets the names straight in there so to speak
@@ -127,6 +131,7 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     private static AtomicInteger getNamesCount = new AtomicInteger(0);
+
     public Collection<Name> getNames() {
         getNamesCount.incrementAndGet();
         return Collections.unmodifiableList(Arrays.asList(names)); // should be ok?
@@ -137,6 +142,7 @@ public final class Value extends AzquoMemoryDBEntity {
     // change to a list internally
 
     private static AtomicInteger setNamesWillBePersistedCount = new AtomicInteger(0);
+
     public synchronized void setNamesWillBePersisted(final Set<Name> newNameSet) throws Exception {
         setNamesWillBePersistedCount.incrementAndGet();
         checkDatabaseForSet(newNameSet);
@@ -157,6 +163,7 @@ public final class Value extends AzquoMemoryDBEntity {
 
     // I think that's all that's needed now we're not saving deleted info?
     private static AtomicInteger deleteCount = new AtomicInteger(0);
+
     public void delete() throws Exception {
         deleteCount.incrementAndGet();
         needsDeleting = true;
@@ -189,6 +196,7 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     private static AtomicInteger getAsJsonCount = new AtomicInteger(0);
+
     @Override
     public String getAsJson() {
         getAsJsonCount.incrementAndGet();
@@ -206,6 +214,7 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     private static AtomicInteger getNameIdsAsBytesCount = new AtomicInteger(0);
+
     public byte[] getNameIdsAsBytes() {
         getNameIdsAsBytesCount.incrementAndGet();
         ByteBuffer buffer = ByteBuffer.allocate(names.length * 4);
@@ -215,11 +224,11 @@ public final class Value extends AzquoMemoryDBEntity {
         return buffer.array();
     }
 
-    public static void printFunctionCountStats(){
+    public static void printFunctionCountStats() {
         System.out.println("######### VALUE FUNCTION COUNTS");
-        System.out.println("newValue\t\t\t\t\t\t\t\t" + newValue.get());
-        System.out.println("newValue1\t\t\t\t\t\t\t\t" + newValue1.get());
-        System.out.println("newValue2\t\t\t\t\t\t\t\t" + newValue2.get());
+        System.out.println("newValueCount\t\t\t\t\t\t\t\t" + newValueCount.get());
+        System.out.println("newValue2Count\t\t\t\t\t\t\t\t" + newValue2Count.get());
+        System.out.println("newValue3COunt\t\t\t\t\t\t\t\t" + newValue3Count.get());
         System.out.println("getNamesCount\t\t\t\t\t\t\t\t" + getNamesCount.get());
         System.out.println("setNamesWillBePersistedCount\t\t\t\t\t\t\t\t" + setNamesWillBePersistedCount.get());
         System.out.println("deleteCount\t\t\t\t\t\t\t\t" + deleteCount.get());
@@ -228,9 +237,9 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     public static void clearFunctionCountStats() {
-        newValue.set(0);
-        newValue1.set(0);
-        newValue2.set(0);
+        newValueCount.set(0);
+        newValue2Count.set(0);
+        newValue3Count.set(0);
         getNamesCount.set(0);
         setNamesWillBePersistedCount.set(0);
         deleteCount.set(0);

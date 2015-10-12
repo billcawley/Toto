@@ -37,11 +37,10 @@ public final class ValueService {
 
     private StringUtils stringUtils = new StringUtils();
 
-    // one line function, much point??
+    private static AtomicInteger nameCompareCount = new AtomicInteger(0);
 
-    private static AtomicInteger nameCompareCounter = new AtomicInteger(0);
     public Value createValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Provenance provenance, final String text) throws Exception {
-        nameCompareCounter.incrementAndGet();
+        nameCompareCount.incrementAndGet();
         return new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, text);
     }
 
@@ -65,9 +64,10 @@ public final class ValueService {
 
     // this is passed a string for the value, not sure if that is the best practice, need to think on it.
 
-    private static AtomicInteger storeValueWithProvenanceAndNamesCounter = new AtomicInteger(0);
+    private static AtomicInteger storeValueWithProvenanceAndNamesCount = new AtomicInteger(0);
+
     public String storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
-        storeValueWithProvenanceAndNamesCounter.incrementAndGet();
+        storeValueWithProvenanceAndNamesCount.incrementAndGet();
         //long marker = System.currentTimeMillis();
         String toReturn = "";
 
@@ -121,10 +121,11 @@ public final class ValueService {
     }
 
 
-    private static AtomicInteger overWriteExistingValueCounter = new AtomicInteger(0);
+    private static AtomicInteger overWriteExistingValueCount = new AtomicInteger(0);
+
     public boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, final String newValueString) throws Exception {
-        overWriteExistingValueCounter.incrementAndGet();
-        if (newValueString.equals(existingValue.getText())){
+        overWriteExistingValueCount.incrementAndGet();
+        if (newValueString.equals(existingValue.getText())) {
             return true;
         }
         Value newValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), newValueString);
@@ -135,9 +136,10 @@ public final class ValueService {
 
     // doesn't work down the name children
 
-    private static AtomicInteger findForNamesCounter = new AtomicInteger(0);
+    private static AtomicInteger findForNamesCount = new AtomicInteger(0);
+
     public List<Value> findForNames(final Set<Name> names) {
-        findForNamesCounter.incrementAndGet();
+        findForNamesCount.incrementAndGet();
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
         //long track = System.nanoTime();
         final List<Value> values = new ArrayList<>();
@@ -180,20 +182,17 @@ public final class ValueService {
     }
 
     // while the above is what would be used to check if data exists for a specific name combination (e.g. when inserting data) this will navigate down through the names
-    // I'm going to try for similar logic but using the lists of children for each name rather than just the name if that makes sense
-    // I wonder if it should be a list or set returned?
-
-    // this is slow relatively speaking
-
-
+    // this has been a major bottleneck, caching values against names helped a lot, also using similar logic to retainall but creating a new list seemed to double performance and with less garbage I hope!
+    // not to mention a list is better for iterator I think and .contains is NOT used in the one place this is called. CHanging the return type to list.
     long part1NanoCallTime1 = 0;
     long part2NanoCallTime1 = 0;
     long part3NanoCallTime1 = 0;
     int numberOfTimesCalled1 = 0;
 
-    private static AtomicInteger findForNamesIncludeChildrenCounter = new AtomicInteger(0);
-    public Collection<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
-        findForNamesIncludeChildrenCounter.incrementAndGet();
+    private static AtomicInteger findForNamesIncludeChildrenCount = new AtomicInteger(0);
+
+    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
+        findForNamesIncludeChildrenCount.incrementAndGet();
         long start = System.nanoTime();
         // first get the shortest value list taking into account children
         int smallestNameSetSize = -1;
@@ -218,17 +217,41 @@ public final class ValueService {
         // parallel stream is out, given this retain is best I think
         // I don't really like creating the new set object here but not sure of an alternative, this is no worse than clone having dug around in the code
         // the alternative might be, depending on size, a retainall which created a new set
-        Set<Value> values =  new HashSet<>(smallestValuesSet);
+/*        long track = System.currentTimeMillis();
+        Set<Value> values =  HashObjSets.newMutableSet(smallestValuesSet);
         for (Name name : names){
             if (name != smallestName){ // a little cheaper than making a new name set and knocking this one off I think
                 values.retainAll(name.findValuesIncludingChildren(payAttentionToAdditive));
             }
         }
+        System.out.println("value service old method time : " + (System.currentTimeMillis() - track));
+        track = System.currentTimeMillis();*/
+        // ok from testing a new list using contains against values seems to be the thing, double the speed at least I think!
+        List<Value> toReturn = new ArrayList<>();// since the source is a set it will already be deduped - can use arraylist
+        List<Collection<Value>> setsToCheck = new ArrayList<>();
+        for (Name name : names) {
+            if (name != smallestName) { // a little cheaper than making a new name set and knocking this one off I think
+                setsToCheck.add(name.findValuesIncludingChildren(payAttentionToAdditive));
+            }
+        }
+        for (Value value : smallestValuesSet) {
+            boolean add = true;
+            for (Collection<Value> setToCheck : setsToCheck) {
+                if (!setToCheck.contains(value)) {
+                    add = false;
+                    break;
+                }
+            }
+            if (add) {
+                toReturn.add(value);
+            }
+        }
+        //System.out.println("value service test new method time : " + (System.currentTimeMillis() - track));
         // from testing parallel is speedy but creates LOTS of garbage
         //List<Value> values = smallestValuesSet.stream().filter(value -> valueIsOk(value, namesWithoutSmallest, payAttentionToAdditive)).collect(Collectors.toList());
         part3NanoCallTime1 += (System.nanoTime() - point);
         numberOfTimesCalled1++;
-        return values;
+        return toReturn;
     }
 
 /*    private static boolean valueIsOk(Value value, Collection<Name> namesWithoutSmallest, boolean payAttentionToAdditive){
@@ -322,10 +345,11 @@ public final class ValueService {
     int numberOfTimesCalled = 0;
 
     // the function that populates each cell.
-    private static AtomicInteger findValueForNamesCounter = new AtomicInteger(0);
+    private static AtomicInteger findValueForNamesCount = new AtomicInteger(0);
+
     public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MutableBoolean locked
             , final boolean payAttentionToAdditive, List<Value> valuesFound, List<String> attributeNames, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) throws Exception {
-        findValueForNamesCounter.incrementAndGet();
+        findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
         String calcString = null;
@@ -396,7 +420,7 @@ public final class ValueService {
                         //int id = Integer.parseInt(term.substring(1));
                         // so get the name and add it to the other names
                         Name name = nameService.getNameFromListAndMarker(term, formulaNames);
-                        Set<Name> seekSet =  new HashSet<>(calcnames);
+                        Set<Name> seekSet = new HashSet<>(calcnames);
                         //if (name.getPeers().size() == 0 || name.getPeers().size() == calcnames.size()) {
                         seekSet.add(name);
                         //} else {
@@ -417,9 +441,10 @@ public final class ValueService {
     // Added by Edd, like above but uses an attribute (attributes?) and doens't care about calc for the moment, hence should be much more simple
     // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function
 
-    private static AtomicInteger findValueForHeadingsCounter = new AtomicInteger(0);
+    private static AtomicInteger findValueForHeadingsCount = new AtomicInteger(0);
+
     public String findValueForHeadings(final Set<DataRegionHeading> headings, final MutableBoolean locked, List<Name> namesForMap, List<String> attributesForMap) throws Exception {
-        findValueForHeadingsCounter.incrementAndGet();
+        findValueForHeadingsCount.incrementAndGet();
         Set<Name> names = dsSpreadsheetService.namesFromDataRegionHeadings(headings);
         if (names.size() != 1) {
             locked.isTrue = true;
@@ -467,9 +492,10 @@ public final class ValueService {
 
     // on a standard non-calc cell this will give the result
 
-    private static AtomicInteger resolveValuesForNamesIncludeChildrenCounter = new AtomicInteger(0);
+    private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
+
     public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, MutableBoolean locked) {
-        resolveValuesForNamesIncludeChildrenCounter.incrementAndGet();
+        resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
 
@@ -612,9 +638,10 @@ public final class ValueService {
 */
     // find the most used name by a set of values, used by printBatch to derive headings
 
-    private static AtomicInteger getMostUsedNameCounter = new AtomicInteger(0);
+    private static AtomicInteger getMostUsedNameCount = new AtomicInteger(0);
+
     private Name getMostUsedName(Set<DummyValue> values, Name topParent) {
-        getMostUsedNameCounter.incrementAndGet();
+        getMostUsedNameCount.incrementAndGet();
         Map<Name, Integer> nameCount = new HashMap<>();
         for (DummyValue value : values) {
             for (Name name : value.getNames()) {
@@ -644,9 +671,10 @@ public final class ValueService {
     }
 
 
-    private static AtomicInteger sortValuesCounter = new AtomicInteger(0);
+    private static AtomicInteger sortValuesCount = new AtomicInteger(0);
+
     public void sortValues(List<Value> values) {
-        sortValuesCounter.incrementAndGet();
+        sortValuesCount.incrementAndGet();
         Collections.sort(values, (o1, o2) -> (o1.getProvenance().getTimeStamp())
                 .compareTo(o2.getProvenance().getTimeStamp()));
     }
@@ -675,9 +703,10 @@ public final class ValueService {
     them under them then the name that best represents the rest etc etc until all values have been displayed
       */
 
-    private static AtomicInteger getTreeNodesFromValuesCounter = new AtomicInteger(0);
+    private static AtomicInteger getTreeNodesFromValuesCount = new AtomicInteger(0);
+
     private List<TreeNode> getTreeNodesFromValues(Set<Value> values, int maxSize) {
-        getTreeNodesFromValuesCounter.incrementAndGet();
+        getTreeNodesFromValuesCount.incrementAndGet();
         Set<DummyValue> convertedToDummy = new HashSet<>(values.size());
         for (Value value : values) {
             convertedToDummy.add(new DummyValue(value.getText(), value.getNames()));
@@ -685,9 +714,10 @@ public final class ValueService {
         return getTreeNodesFromDummyValues(convertedToDummy, maxSize);
     }
 
-    private static AtomicInteger getTreeNodesFromValuesCounter1 = new AtomicInteger(0);
+    private static AtomicInteger getTreeNodesFromValues2Count = new AtomicInteger(0);
+
     private List<TreeNode> getTreeNodesFromDummyValues(Set<DummyValue> values, int maxSize) {
-        getTreeNodesFromValuesCounter1.incrementAndGet();
+        getTreeNodesFromValues2Count.incrementAndGet();
         //int debugCount = 0;
         boolean headingNeeded = false;
         double dValue = 0.0;
@@ -699,8 +729,8 @@ public final class ValueService {
                 break;
             }
             count++;
-            if (count > maxSize){
-                nodeList.add(new TreeNode((values.size() - maxSize) + " more...","",0));
+            if (count > maxSize) {
+                nodeList.add(new TreeNode((values.size() - maxSize) + " more...", "", 0));
                 break;
             }
             String nameFound = null;
@@ -711,10 +741,10 @@ public final class ValueService {
             double d = 0;
             try {
                 d = Double.parseDouble(val);
-                if (d!= 0){
+                if (d != 0) {
                     val = roundValue(d);
                 }
-            } catch (Exception ignored){
+            } catch (Exception ignored) {
             }
             nodeList.add(new TreeNode(nameFound, val, d));
         }
@@ -726,12 +756,12 @@ public final class ValueService {
                 topParent = heading.findATopParent();
                 Set<DummyValue> extract = new HashSet<>();
                 Set<DummyValue> slimExtract = new HashSet<>();
-                 for (DummyValue value : values) {
+                for (DummyValue value : values) {
                     if (value.getNames().contains(heading)) {
                         extract.add(value);
-                        try{
+                        try {
                             dValue += Double.parseDouble(value.getValueText());
-                        }catch(Exception e){
+                        } catch (Exception e) {
                             //ignore
                         }
                         //creating a new 'value' with one less name for recursion
@@ -749,7 +779,7 @@ public final class ValueService {
                 }
                 values.removeAll(extract);
 
-                nodeList.add(new TreeNode("",heading.getDefaultDisplayName(), "", roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract, maxSize)));
+                nodeList.add(new TreeNode("", heading.getDefaultDisplayName(), "", roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract, maxSize)));
                 dValue = 0;
             }
         }
@@ -757,85 +787,86 @@ public final class ValueService {
 
     }
 
-    private static AtomicInteger roundValueCounter = new AtomicInteger(0);
-    public String roundValue(double dValue){
-        roundValueCounter.incrementAndGet();
+    private static AtomicInteger roundValueCount = new AtomicInteger(0);
+
+    public String roundValue(double dValue) {
+        roundValueCount.incrementAndGet();
         Locale locale = Locale.getDefault();
         NumberFormat nf = NumberFormat.getInstance(locale);
         //todo - format this prettily, particularly when there are many decimal places
-         return nf.format(dValue);
+        return nf.format(dValue);
     }
 
-    private static AtomicInteger getTreeNodeCounter = new AtomicInteger(0);
+    private static AtomicInteger getTreeNodeCount = new AtomicInteger(0);
+
     public TreeNode getTreeNode(Set<Value> values, Provenance p, int maxSize) {
-        getTreeNodeCounter.incrementAndGet();
+        getTreeNodeCount.incrementAndGet();
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
         String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
         String method = p.getMethod();
-        if (p.getName()!=null){
-            method  += " " + p.getName();
+        if (p.getName() != null) {
+            method += " " + p.getName();
         }
-        if (p.getContext()!=null && p.getContext().length() > 1) method += " with " + p.getContext();
+        if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
         String link = null;
 
-        if (method.contains("spreadsheet")){
-            try{
-                link = "/api/Online?opcode=provline&provline=" + URLEncoder.encode(method,"UTF-8");
-            } catch (Exception ignored){
+        if (method.contains("spreadsheet")) {
+            try {
+                link = "/api/Online?opcode=provline&provline=" + URLEncoder.encode(method, "UTF-8");
+            } catch (Exception ignored) {
             }
         }
-        TreeNode toReturn =new TreeNode(source, method, link,  null, 0, getTreeNodesFromValues(values, maxSize));
+        TreeNode toReturn = new TreeNode(source, method, link, null, 0, getTreeNodesFromValues(values, maxSize));
         addNodeValues(toReturn);
         return toReturn;
     }
 
-    private static AtomicInteger addNodeValuesCounter = new AtomicInteger(0);
+    private static AtomicInteger addNodeValuesCount = new AtomicInteger(0);
+
     public void addNodeValues(TreeNode t) {
-        addNodeValuesCounter.incrementAndGet();
+        addNodeValuesCount.incrementAndGet();
         double d = 0;
         for (TreeNode child : t.getChildren()) {
-             d += child.getDvalue();
-           }
+            d += child.getDvalue();
+        }
         t.setValue(roundValue(d));
         t.setDvalue(d);
     }
 
-    public static void printFunctionCountStats(){
+    public static void printFunctionCountStats() {
         System.out.println("######### VALUE SERVICE FUNCTION COUNTS");
-        System.out.println("nameCompareCounter\t\t\t\t\t\t\t\t" + nameCompareCounter.get());
-        System.out.println("storeValueWithProvenanceAndNamesCounter\t\t\t\t\t\t\t\t" + storeValueWithProvenanceAndNamesCounter.get());
-        System.out.println("overWriteExistingValueCounter\t\t\t\t\t\t\t\t" + overWriteExistingValueCounter.get());
-        System.out.println("findForNamesCounter\t\t\t\t\t\t\t\t" + findForNamesCounter.get());
-        System.out.println("findForNamesIncludeChildrenCounter\t\t\t\t\t\t\t\t" + findForNamesIncludeChildrenCounter.get());
-        System.out.println("findValueForNamesCounter\t\t\t\t\t\t\t\t" + findValueForNamesCounter.get());
-        System.out.println("findValueForHeadingsCounter\t\t\t\t\t\t\t\t" + findValueForHeadingsCounter.get());
-        System.out.println("resolveValuesForNamesIncludeChildrenCounter\t\t\t\t\t\t\t\t" + resolveValuesForNamesIncludeChildrenCounter.get());
-        System.out.println("getMostUsedNameCounter\t\t\t\t\t\t\t\t" + getMostUsedNameCounter.get());
-        System.out.println("sortValuesCounter\t\t\t\t\t\t\t\t" + sortValuesCounter.get());
-        System.out.println("getTreeNodesFromValuesCounter\t\t\t\t\t\t\t\t" + getTreeNodesFromValuesCounter.get());
-        System.out.println("getTreeNodesFromValuesCounter1\t\t\t\t\t\t\t\t" + getTreeNodesFromValuesCounter1.get());
-        System.out.println("roundValueCounter\t\t\t\t\t\t\t\t" + roundValueCounter.get());
-        System.out.println("getTreeNodeCounter\t\t\t\t\t\t\t\t" + getTreeNodeCounter.get());
-        System.out.println("addNodeValuesCounter\t\t\t\t\t\t\t\t" + addNodeValuesCounter.get());
+        System.out.println("nameCompareCount\t\t\t\t\t\t\t\t" + nameCompareCount.get());
+        System.out.println("storeValueWithProvenanceAndNamesCount\t\t\t\t\t\t\t\t" + storeValueWithProvenanceAndNamesCount.get());
+        System.out.println("overWriteExistingValueCount\t\t\t\t\t\t\t\t" + overWriteExistingValueCount.get());
+        System.out.println("findForNamesCount\t\t\t\t\t\t\t\t" + findForNamesCount.get());
+        System.out.println("findForNamesIncludeChildrenCount\t\t\t\t\t\t\t\t" + findForNamesIncludeChildrenCount.get());
+        System.out.println("findValueForNamesCount\t\t\t\t\t\t\t\t" + findValueForNamesCount.get());
+        System.out.println("findValueForHeadingsCount\t\t\t\t\t\t\t\t" + findValueForHeadingsCount.get());
+        System.out.println("resolveValuesForNamesIncludeChildrenCount\t\t\t\t\t\t\t\t" + resolveValuesForNamesIncludeChildrenCount.get());
+        System.out.println("getMostUsedNameCount\t\t\t\t\t\t\t\t" + getMostUsedNameCount.get());
+        System.out.println("sortValuesCount\t\t\t\t\t\t\t\t" + sortValuesCount.get());
+        System.out.println("getTreeNodesFromValuesCount\t\t\t\t\t\t\t\t" + getTreeNodesFromValuesCount.get());
+        System.out.println("getTreeNodesFromValues2Count\t\t\t\t\t\t\t\t" + getTreeNodesFromValues2Count.get());
+        System.out.println("roundValueCount\t\t\t\t\t\t\t\t" + roundValueCount.get());
+        System.out.println("getTreeNodeCount\t\t\t\t\t\t\t\t" + getTreeNodeCount.get());
+        System.out.println("addNodeValuesCount\t\t\t\t\t\t\t\t" + addNodeValuesCount.get());
     }
 
     public static void clearFunctionCountStats() {
-        nameCompareCounter.set(0);
-        storeValueWithProvenanceAndNamesCounter.set(0);
-        overWriteExistingValueCounter.set(0);
-        findForNamesCounter.set(0);
-        findForNamesIncludeChildrenCounter.set(0);
-        findValueForNamesCounter.set(0);
-        findValueForHeadingsCounter.set(0);
-        resolveValuesForNamesIncludeChildrenCounter.set(0);
-        getMostUsedNameCounter.set(0);
-        sortValuesCounter.set(0);
-        getTreeNodesFromValuesCounter.set(0);
-        getTreeNodesFromValuesCounter1.set(0);
-        roundValueCounter.set(0);
-        getTreeNodeCounter.set(0);
-        addNodeValuesCounter.set(0);
+        nameCompareCount.set(0);
+        storeValueWithProvenanceAndNamesCount.set(0);
+        overWriteExistingValueCount.set(0);
+        findForNamesCount.set(0);
+        findForNamesIncludeChildrenCount.set(0);
+        findValueForNamesCount.set(0);
+        findValueForHeadingsCount.set(0);
+        resolveValuesForNamesIncludeChildrenCount.set(0);
+        getMostUsedNameCount.set(0);
+        sortValuesCount.set(0);
+        getTreeNodesFromValuesCount.set(0);
+        getTreeNodesFromValues2Count.set(0);
+        roundValueCount.set(0);
+        getTreeNodeCount.set(0);
+        addNodeValuesCount.set(0);
     }
-
-
 }

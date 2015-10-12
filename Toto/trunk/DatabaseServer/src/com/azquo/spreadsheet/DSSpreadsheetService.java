@@ -685,14 +685,8 @@ seaports;children   container;children
                 displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored));
             }
         }
-/*        Name.printFunctionCountStats();
-        Name.clearFunctionCountStats();
-        Value.printFunctionCountStats();
-        Value.clearFunctionCountStats();
-        NameService.printFunctionCountStats();
-        NameService.clearFunctionCountStats();
-        ValueService.printFunctionCountStats();
-        ValueService.clearFunctionCountStats();*/
+//        AzquoMemoryDB.printAllCountStats();
+//        AzquoMemoryDB.clearAllCountStats();
         // this is single threaded as I assume not much data should be returned. Need to think about this.
         return new CellsAndHeadingsForDisplay(convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), databaseAccessToken.getLanguages())
                 , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource);

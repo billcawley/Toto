@@ -79,7 +79,10 @@ public final class AzquoMemoryDB {
     private boolean fastLoaded = false;
 
     // Initialising as concurrent hashmaps here, needs careful thought as to whether heavy concurrent access is actually a good idea, what could go wrong
+    private static AtomicInteger newDatabaseCount = new AtomicInteger(0);
+
     protected AzquoMemoryDB(String mysqlName, StandardDAO standardDAO, NameDAO nameDAO, ValueDAO valeuDAO, StringBuffer sessionLog) throws Exception {
+        newDatabaseCount.incrementAndGet();
         this.sessionLog = sessionLog;
         azquoProperties.load(getClass().getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring
         // now where the default multi threading number is defined. Different number based on the task? Can decide later.
@@ -145,6 +148,8 @@ public final class AzquoMemoryDB {
 
     // task for multi threaded loading of a database
 
+    private static AtomicInteger newSQLBatchLoaderRunCount = new AtomicInteger(0);
+
     private class SQLBatchLoader implements Runnable {
         private final StandardDAO standardDAO;
         private final int mode;
@@ -164,6 +169,7 @@ public final class AzquoMemoryDB {
 
         @Override
         public void run() {
+            newSQLBatchLoaderRunCount.incrementAndGet();
             try {
                 // may rearrange this later, could perhaps be more elegant
                 String tableName = "";
@@ -205,6 +211,8 @@ public final class AzquoMemoryDB {
 
     // needs factoring, just testing for the moment
 
+    private static AtomicInteger newNameBatchLoaderRunCount = new AtomicInteger(0);
+
     private class NameBatchLoader implements Runnable {
         private final NameDAO nameDAO;
         private final int minId;
@@ -222,6 +230,7 @@ public final class AzquoMemoryDB {
 
         @Override
         public void run() {
+            newNameBatchLoaderRunCount.incrementAndGet();
             try {
                 List<Name> names = nameDAO.findForMinMaxId(memDB, minId, maxId);
                 for (Name name : names) {// bit of an overhead just to get the max id? I guess no concern.
@@ -243,6 +252,8 @@ public final class AzquoMemoryDB {
 
     // needs factoring, just testing for the moment
 
+    private static AtomicInteger newValueBatchLoaderRunCount = new AtomicInteger(0);
+
     private class ValueBatchLoader implements Runnable {
         private final ValueDAO valueDAO;
         private final int minId;
@@ -260,6 +271,7 @@ public final class AzquoMemoryDB {
 
         @Override
         public void run() {
+            newValueBatchLoaderRunCount.incrementAndGet();
             try {
                 List<Value> values = valueDAO.findForMinMaxId(memDB, minId, maxId);
                 for (Value value : values) {// bit of an overhead just to get the max id? I guess no concern.
@@ -286,7 +298,10 @@ public final class AzquoMemoryDB {
         System.out.println(s);
     }
 
+    private static AtomicInteger loadDataCount = new AtomicInteger(0);
+
     synchronized private void loadData() {
+        loadDataCount.incrementAndGet();
         boolean memoryTrack = "true".equals(azquoProperties.getProperty("memorytrack"));
         if (needsLoading) { // only allow it once!
             long startTime = System.currentTimeMillis();
@@ -370,6 +385,7 @@ public final class AzquoMemoryDB {
                     }
                     logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
                     marker = System.currentTimeMillis();
+                    fastLoaded = true;
                 } else {
                     from = 0;
                     maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.name.name());
@@ -427,16 +443,10 @@ public final class AzquoMemoryDB {
                 System.out.println("Max Memory:" + runtime.maxMemory() / mb);
             }
             logInSessionLogAndSystem("Total load time for " + getMySQLName() + " " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
-/*            Name.printFunctionCountStats();
-            Name.clearFunctionCountStats();
-            Value.printFunctionCountStats();
-            Value.clearFunctionCountStats();
-            NameService.printFunctionCountStats();
-            NameService.clearFunctionCountStats();
-            ValueService.printFunctionCountStats();
-            ValueService.clearFunctionCountStats();*/
-/*            int testlimit = 10_000_000;
-            for (int i = 0; i < 3; i++){
+            //AzquoMemoryDB.printAllCountStats();
+            //AzquoMemoryDB.clearAllCountStats();
+            int testlimit = 10_000_000;
+            /*for (int i = 0; i < 3; i++){
                 long track = System.currentTimeMillis();
                 System.out.println("Set test " + testlimit * (i + 1));
                 int count = 0;
@@ -497,34 +507,16 @@ public final class AzquoMemoryDB {
                 }
                 System.out.println("Java Value contains :               " + (System.currentTimeMillis() - track) + "ms");
             }*/
-/*            System.out.println("=====================  Integers");
-            for (int i =0; i < 5; i++){
-                long track = System.currentTimeMillis();
-                int count = 0;
-                Set<Integer> iTestSet = HashObjSets.newUpdatableSet(testlimit);
-                while (true){
-                    iTestSet.add(count);
-                    count++;
-                    if (count == testlimit) break;
-                }
-                System.out.println("Koloboke : " + (System.currentTimeMillis() - track) + "ms");
-                track = System.currentTimeMillis();
-                count = 0;
-                iTestSet = new HashSet<>(testlimit);
-                while (true){
-                    iTestSet.add(count);
-                    count++;
-                    if (count == testlimit) break;
-                }
-                System.out.println("Java : " + (System.currentTimeMillis() - track) + "ms");
-            }*/
         }
     }
 
     // reads from a list of changed objects
     // should we synchronize on a write lock object?? I think it might be a plan.
 
+    private static AtomicInteger saveDataToMySQLCount = new AtomicInteger(0);
+
     public synchronized void saveDataToMySQL() {
+        saveDataToMySQLCount.incrementAndGet();
         // this is where I need to think carefully about concurrency, azquodb has the last say when the sets are modified although the flags are another point
         // just a simple DB write lock should to it
         // for the moment just make it work.
@@ -560,7 +552,10 @@ public final class AzquoMemoryDB {
     }
 
     // move name and value to the new tables
+    private static AtomicInteger saveToNewTablesCount = new AtomicInteger(0);
+
     public void saveToNewTables() throws Exception {
+        saveToNewTablesCount.incrementAndGet();
         nameDAO.createFastTableIfItDoesntExist(this);
         nameDAO.clearFastNameTable(this);
         valueDAO.createFastTableIfItDoesntExist(this);
@@ -602,11 +597,17 @@ public final class AzquoMemoryDB {
     // TODO address whether wrapping in a hash set here is the best plan. Memory of that object not such of an issue since it should be small and disposable
     // The iterator from CopyOnWriteArray does NOT support changes e.g. remove. A point.
 
+    private static AtomicInteger getAttributesCount = new AtomicInteger(0);
+
     public List<String> getAttributes() {
+        getAttributesCount.incrementAndGet();
         return Collections.unmodifiableList(new ArrayList<>(nameByAttributeMap.keySet()));
     }
 
+    private static AtomicInteger getNamesForAttributeCount = new AtomicInteger(0);
+
     private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
+        getNamesForAttributeCount.incrementAndGet();
         Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
         if (map != null) { // that attribute is there
             List<Name> names = map.get(attributeValue.toLowerCase().trim());
@@ -617,15 +618,21 @@ public final class AzquoMemoryDB {
         return Collections.emptySet(); // moving away from nulls
     }
 
-    // for checking confidential, will same considerable time
+    // for checking confidential, will save considerable time
+
+    private static AtomicInteger attributeExistsInDBCount = new AtomicInteger(0);
 
     public boolean attributeExistsInDB(final String attributeName) {
+        attributeExistsInDBCount.incrementAndGet();
         return nameByAttributeMap.get(attributeName.toUpperCase().trim()) != null;
     }
 
     // same as above but then zap any not in the parent
 
+    private static AtomicInteger getNamesForAttributeAndParentCount = new AtomicInteger(0);
+
     private Set<Name> getNamesForAttributeAndParent(final String attributeName, final String attributeValue, Name parent) {
+        getNamesForAttributeAndParentCount.incrementAndGet();
         Set<Name> possibles = getNamesForAttribute(attributeName, attributeValue);
         for (Name possible : possibles) {
             if (possible.getParents().contains(parent)) {//trying for immediate parent first
@@ -646,7 +653,10 @@ public final class AzquoMemoryDB {
 
     // work through a list of possible names for a given attribute in order that the attribute names are listed. Parent optional
 
+    private static AtomicInteger getNamesForAttributeNamesAndParentCount = new AtomicInteger(0);
+
     public Set<Name> getNamesForAttributeNamesAndParent(final List<String> attributeNames, final String attributeValue, Name parent) {
+        getNamesForAttributeNamesAndParentCount.incrementAndGet();
         if (parent != null) {
             for (String attributeName : attributeNames) {
                 Set<Name> names = getNamesForAttributeAndParent(attributeName, attributeValue, parent);
@@ -675,11 +685,17 @@ public final class AzquoMemoryDB {
         return getNameByAttribute( Arrays.asList(Name.DEFAULT_DISPLAY_NAME), attributeValue, parent);
     }*/
 
+    private static AtomicInteger getNameByAttributeCount = new AtomicInteger(0);
+
     public Name getNameByAttribute(final String attributeName, final String attributeValue, final Name parent) {
+        getNameByAttributeCount.incrementAndGet();
         return getNameByAttribute(Collections.singletonList(attributeName), attributeValue, parent);
     }
 
+    private static AtomicInteger getNameByAttribute2Count = new AtomicInteger(0);
+
     public Name getNameByAttribute(final List<String> attributeNames, final String attributeValue, final Name parent) {
+        getNameByAttribute2Count.incrementAndGet();
         Set<Name> possibles = getNamesForAttributeNamesAndParent(attributeNames, attributeValue, parent);
         // all well and good but now which one to return?
         if (possibles.size() == 1) { // simple
@@ -698,13 +714,19 @@ public final class AzquoMemoryDB {
         return null;
     }
 
+    private static AtomicInteger getNamesWithAttributeContainingCount = new AtomicInteger(0);
+
     public Set<Name> getNamesWithAttributeContaining(final String attributeName, final String attributeValue) {
+        getNamesWithAttributeContainingCount.incrementAndGet();
         return getNamesByAttributeValueWildcards(attributeName, attributeValue, true, true);
     }
 
     // get names containing an attribute using wildcards, start end both
 
+    private static AtomicInteger getNamesByAttributeValueWildcardsCount = new AtomicInteger(0);
+
     private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
+        getNamesByAttributeValueWildcardsCount.incrementAndGet();
         final Set<Name> names = new HashSet<>();
         if (attributeName.length() == 0) {
             for (String attName : nameByAttributeMap.keySet()) {
@@ -739,7 +761,10 @@ public final class AzquoMemoryDB {
         return names;
     }
 
+    private static AtomicInteger zapUnusedNamesCount = new AtomicInteger(0);
+
     public void zapUnusedNames() throws Exception {
+        zapUnusedNamesCount.incrementAndGet();
         for (Name name : nameByIdMap.values()) {
             // remove everything except top layer and names with values. Change parents to top layer where sets deleted
             if (name.getParents().size() > 0 && name.getValues().size() == 0) {
@@ -757,7 +782,10 @@ public final class AzquoMemoryDB {
         }
     }
 
+    private static AtomicInteger findTopNamesCount = new AtomicInteger(0);
+
     public List<Name> findTopNames(String language) {
+        findTopNamesCount.incrementAndGet();
         Map<String, List<Name>> thisMap = nameByAttributeMap.get(language);
 
         final List<Name> toReturn = new ArrayList<>();
@@ -783,7 +811,10 @@ public final class AzquoMemoryDB {
         return toReturn;
     }
 
+    private static AtomicInteger findTopNames2Count = new AtomicInteger(0);
+
     public List<Name> findTopNames() {
+        findTopNames2Count.incrementAndGet();
         final List<Name> toReturn = new ArrayList<Name>();
         for (Name name : nameByIdMap.values()) {
             if (name.getParents().size() == 0) {
@@ -794,7 +825,10 @@ public final class AzquoMemoryDB {
     }
     // this could be expensive on big databases
 
+    private static AtomicInteger clearCachesCount = new AtomicInteger(0);
+
     public void clearCaches() {
+        clearCachesCount.incrementAndGet();
         nameByIdMap.values().forEach(com.azquo.memorydb.core.Name::clearChildrenCaches);
         countCache.clear();
         setCache.clear();
@@ -824,14 +858,20 @@ public final class AzquoMemoryDB {
 
     // should do the trick though I worry a little about concurrency, that is to say how fast does the cache invalidation need to become visible
     // headings should be sorted after the options so hopefully ok? Watch for this
+    private static AtomicInteger clearSetAndCountCacheForNameCount = new AtomicInteger(0);
+
     public void clearSetAndCountCacheForName(Name name) {
+        clearSetAndCountCacheForNameCount.incrementAndGet();
         for (Name parent : name.findAllParents()){ // I hope this isn't too expensive
             clearSetAndCountCacheForString(parent.getDefaultDisplayName()); // in another language could cause a problem. If we could get the ids this would be more reliable.
             // Of course the ids means we could get a name list from parse query. A thought.
         }
     }
 
+    private static AtomicInteger clearSetAndCountCacheForStringCount = new AtomicInteger(0);
+
     private void clearSetAndCountCacheForString(String s) {
+        clearSetAndCountCacheForStringCount.incrementAndGet();
         s = s.toUpperCase();
         for (Iterator<Map.Entry<String, Integer>> it = countCache.entrySet().iterator(); it.hasNext();) {
             Map.Entry<String, Integer> entry = it.next();
@@ -872,7 +912,10 @@ public final class AzquoMemoryDB {
     // ok I'd have liked this to be part of add name to db but the name won't have been initialised, add name to db is called in the name constructor
     // before the attributes have been initialised
 
+    private static AtomicInteger addNameToAttributeNameMapCount = new AtomicInteger(0);
+
     protected void addNameToAttributeNameMap(final Name newName) throws Exception {
+        addNameToAttributeNameMapCount.incrementAndGet();
         newName.checkDatabaseMatches(this);
         // skip the map to save the memory
         int i = 0;
@@ -886,7 +929,10 @@ public final class AzquoMemoryDB {
     // Sets indexes for names, this needs to be thread safe to support multi threaded name linking
     // todo - address the uppercase situation with attributes - are they always stored like that? Am I reprocessing strings unnecessarily?
 
+    private static AtomicInteger setAttributeForNameInAttributeNameMapCount = new AtomicInteger(0);
+
     public void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
+        setAttributeForNameInAttributeNameMapCount.incrementAndGet();
         // upper and lower seems a bit arbitrary. Hmmm.
         // these interns have been tested as helping memory usage
         String lcAttributeValue = attributeValue.toLowerCase().trim().intern();
@@ -922,7 +968,10 @@ public final class AzquoMemoryDB {
 
     // I think this is just much more simple re thread safety in that if we can't find the map and list we just don't do anything and the final remove should be safe according to CopyOnWriteArray
 
+    private static AtomicInteger removeAttributeFromNameInAttributeNameMapCount = new AtomicInteger(0);
+
     protected void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
+        removeAttributeFromNameInAttributeNameMapCount.incrementAndGet();
         String ucAttributeName = attributeName.toUpperCase().trim();
         String lcAttributeValue = attributeValue.toLowerCase().trim();
         name.checkDatabaseMatches(this);
@@ -935,6 +984,8 @@ public final class AzquoMemoryDB {
         }
     }
 
+    private static AtomicInteger batchLinkerRunCount = new AtomicInteger(0);
+
     private class BatchLinker implements Runnable {
         private final AtomicInteger loadTracker;
         private final List<Name> batchToLink;
@@ -946,6 +997,7 @@ public final class AzquoMemoryDB {
 
         @Override
         public void run() { // well this is what's going to truly test concurrent modification of a database
+            batchLinkerRunCount.incrementAndGet();
             for (Name name : batchToLink) {
                 try { // I think the only exception is the db not matching one.
                     name.link();
@@ -965,8 +1017,10 @@ public final class AzquoMemoryDB {
 
     int batchLinkSize = 50000;
 
-    private synchronized void linkEntities() throws Exception {
+    private static AtomicInteger linkEntitiesCount = new AtomicInteger(0);
 
+    private synchronized void linkEntities() throws Exception {
+        linkEntitiesCount.incrementAndGet();
         // there may be a certain overhead to building the batches but otherwise it's dealing with millions of threads. My gut says this will be more of an overhead.
         ExecutorService executor = Executors.newFixedThreadPool(reportFillerThreads); // this is pure java, use the report filler criteria
         AtomicInteger loadTracker = new AtomicInteger(0);
@@ -996,13 +1050,19 @@ public final class AzquoMemoryDB {
     // maps will be set up in the constructor. Think about any concurrency issues here???
     // throw exception if loading?
 
+    private static AtomicInteger setEntityNeedsPersistingCount = new AtomicInteger(0);
+
     protected void setEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
+        setEntityNeedsPersistingCount.incrementAndGet();
         if (!needsLoading && entitiesToPersist.size() > 0) {
             entitiesToPersist.get(tableToPersistIn).add(azquoMemoryDBEntity);
         }
     }
 
+    private static AtomicInteger removeEntityNeedsPersistingCount = new AtomicInteger(0);
+
     protected void removeEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
+        removeEntityNeedsPersistingCount.incrementAndGet();
         if (!needsLoading) {
             entitiesToPersist.get(tableToPersistIn).remove(azquoMemoryDBEntity);
         }
@@ -1084,5 +1144,84 @@ public final class AzquoMemoryDB {
 
     public void saveInFastTables(){
 
+    }
+
+    public static void printFunctionCountStats() {
+        System.out.println("######### AZQUO MEMORY DB FUNCTION COUNTS");
+        System.out.println("newDatabaseCount\t\t\t\t" + newDatabaseCount.get());
+        System.out.println("newSQLBatchLoaderRunCount\t\t\t\t" + newSQLBatchLoaderRunCount.get());
+        System.out.println("newNameBatchLoaderRunCount\t\t\t\t" + newNameBatchLoaderRunCount.get());
+        System.out.println("newValueBatchLoaderRunCount\t\t\t\t" + newValueBatchLoaderRunCount.get());
+        System.out.println("loadDataCount\t\t\t\t" + loadDataCount.get());
+        System.out.println("saveDataToMySQLCount\t\t\t\t" + saveDataToMySQLCount.get());
+        System.out.println("saveToNewTablesCount\t\t\t\t" + saveToNewTablesCount.get());
+        System.out.println("getAttributesCount\t\t\t\t" + getAttributesCount.get());
+        System.out.println("getNamesForAttributeCount\t\t\t\t" + getNamesForAttributeCount.get());
+        System.out.println("attributeExistsInDBCount\t\t\t\t" + attributeExistsInDBCount.get());
+        System.out.println("getNamesForAttributeAndParentCount\t\t\t\t" + getNamesForAttributeAndParentCount.get());
+        System.out.println("getNamesForAttributeNamesAndParentCount\t\t\t\t" + getNamesForAttributeNamesAndParentCount.get());
+        System.out.println("getNameByAttributeCount\t\t\t\t" + getNameByAttributeCount.get());
+        System.out.println("getNameByAttribute2Count\t\t\t\t" + getNameByAttribute2Count.get());
+        System.out.println("getNamesWithAttributeContainingCount\t\t\t\t" + getNamesWithAttributeContainingCount.get());
+        System.out.println("getNamesByAttributeValueWildcardsCount\t\t\t\t" + getNamesByAttributeValueWildcardsCount.get());
+        System.out.println("zapUnusedNamesCount\t\t\t\t" + zapUnusedNamesCount.get());
+        System.out.println("findTopNamesCount\t\t\t\t" + findTopNamesCount.get());
+        System.out.println("findTopNames2Count\t\t\t\t" + findTopNames2Count.get());
+        System.out.println("clearCachesCount\t\t\t\t" + clearCachesCount.get());
+        System.out.println("clearSetAndCountCacheForNameCount\t\t\t\t" + clearSetAndCountCacheForNameCount.get());
+        System.out.println("clearSetAndCountCacheForStringCount\t\t\t\t" + clearSetAndCountCacheForStringCount.get());
+        System.out.println("setAttributeForNameInAttributeNameMapCount\t\t\t\t" + setAttributeForNameInAttributeNameMapCount.get());
+        System.out.println("removeAttributeFromNameInAttributeNameMapCount\t\t\t\t" + removeAttributeFromNameInAttributeNameMapCount.get());
+        System.out.println("batchLinkerRunCount\t\t\t\t" + batchLinkerRunCount.get());
+        System.out.println("linkEntitiesCount\t\t\t\t" + linkEntitiesCount.get());
+        System.out.println("setEntityNeedsPersistingCount\t\t\t\t" + setEntityNeedsPersistingCount.get());
+        System.out.println("removeEntityNeedsPersistingCount\t\t\t\t" + removeEntityNeedsPersistingCount.get());
+    }
+
+    public static void clearFunctionCountStats() {
+        newDatabaseCount.set(0);
+        newSQLBatchLoaderRunCount.set(0);
+        newNameBatchLoaderRunCount.set(0);
+        newValueBatchLoaderRunCount.set(0);
+        loadDataCount.set(0);
+        saveDataToMySQLCount.set(0);
+        saveToNewTablesCount.set(0);
+        getAttributesCount.set(0);
+        getNamesForAttributeCount.set(0);
+        attributeExistsInDBCount.set(0);
+        getNamesForAttributeAndParentCount.set(0);
+        getNamesForAttributeNamesAndParentCount.set(0);
+        getNameByAttributeCount.set(0);
+        getNameByAttribute2Count.set(0);
+        getNamesWithAttributeContainingCount.set(0);
+        getNamesByAttributeValueWildcardsCount.set(0);
+        zapUnusedNamesCount.set(0);
+        findTopNamesCount.set(0);
+        findTopNames2Count.set(0);
+        clearCachesCount.set(0);
+        clearSetAndCountCacheForNameCount.set(0);
+        clearSetAndCountCacheForStringCount.set(0);
+        setAttributeForNameInAttributeNameMapCount.set(0);
+        removeAttributeFromNameInAttributeNameMapCount.set(0);
+        batchLinkerRunCount.set(0);
+        linkEntitiesCount.set(0);
+        setEntityNeedsPersistingCount.set(0);
+        removeEntityNeedsPersistingCount.set(0);
+    }
+
+    public static void printAllCountStats(){
+        printFunctionCountStats();
+        Name.printFunctionCountStats();
+        Value.printFunctionCountStats();
+        NameService.printFunctionCountStats();
+        ValueService.printFunctionCountStats();
+    }
+
+    public static void clearAllCountStats(){
+        clearFunctionCountStats();
+        Name.clearFunctionCountStats();
+        Value.clearFunctionCountStats();
+        NameService.clearFunctionCountStats();
+        ValueService.clearFunctionCountStats();
     }
 }
