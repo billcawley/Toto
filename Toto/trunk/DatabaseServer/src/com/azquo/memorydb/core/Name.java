@@ -41,7 +41,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public static final String CALCULATION = "CALCULATION";
     public static final String LOCAL = "LOCAL";
-    private static final String ATTRIBUTEDIVIDER = "¬"; // it will go attribute name, attribute vale, attribute name, attribute vale
+    private static final String ATTRIBUTEDIVIDER = "↑"; // it will go attribute name, attribute vale, attribute name, attribute vale
 
     public static final char QUOTE = '`';
 
@@ -863,11 +863,11 @@ public final class Name extends AzquoMemoryDBEntity {
     public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
         setAttributeWillBePersistedCount.incrementAndGet();
         // make safe for new way of persisting attributes
-        if (attributeName.contains("¬")) {
-            attributeName = attributeName.replace("¬", "");
+        if (attributeName.contains(ATTRIBUTEDIVIDER)) {
+            attributeName = attributeName.replace(ATTRIBUTEDIVIDER, "");
         }
-        if (attributeValue.contains("¬")) {
-            attributeValue = attributeValue.replace("¬", "");
+        if (attributeValue.contains(ATTRIBUTEDIVIDER)) {
+            attributeValue = attributeValue.replace(ATTRIBUTEDIVIDER, "");
         }
         attributeName = attributeName.trim().toUpperCase(); // I think this is the only point at which attributes are created thus if it's uppercased here we should not need to check anywhere else
         // important, manage persistence, allowed name rules, db look ups
@@ -1126,11 +1126,6 @@ public final class Name extends AzquoMemoryDBEntity {
                         this.children = newChildren;
                     }
                 }
-                // need to sort out the parents - I deliberately excluded this from synchronisation or one could theoretically hit a deadlock
-                // addToParents can be synchronized on the child.
-                for (Name newChild : getChildren()) { // used to use a list set in the synchronized block. Not quite sure why now . . .
-                    newChild.addToParents(this, true);
-                }
             } catch (IOException e) {
                 System.out.println("jsoncache = " + loadCache.jsonCache);
                 e.printStackTrace();
@@ -1157,14 +1152,21 @@ public final class Name extends AzquoMemoryDBEntity {
                     this.children = newChildren;
                 }
                 loadCache = null;// free the memory
-            }                // should parents be stored as ids? Or maybe the size would help, could init the map or array effectively
-            // need to sort out the parents - I deliberately excluded this from synchronisation or one could theoretically hit a deadlock
-            // addToParents can be synchronized on the child.
-            for (Name newChild : getChildren()) { // used to use a list set in the synchronized block. Not quite sure why now . . .
-                newChild.addToParents(this);
             }
-
         }
+        // need to sort out the parents - I deliberately excluded this from synchronisation or one could theoretically hit a deadlock. Also it's the same regardless of loading for fast or slow tables
+        // addToParents can be synchronized on the child.
+        // changing from get children here as I want to avoid the array wrapping where I can (make less garbage)
+        if (childrenAsSet != null){
+            for (Name newChild : childrenAsSet) {
+                newChild.addToParents(this, true);
+            }
+        } else {
+            for (int i = 0; i < children.length; i++){ // directly hitting the array could cause a problem if it were reassigned while this happened but here it should be fine
+                children[i].addToParents(this, true);
+            }
+        }
+
     }
 
     // first of its kind. Try to be comprehensive
