@@ -74,6 +74,7 @@ public class DSImportService {
     public static final String NONZERO = "nonzero";
     public static final String headingsString = "headings";
     public static final String dateLang = "date";
+    public static final String ONLY = "only";
 
     /*
     To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't
@@ -129,6 +130,9 @@ public class DSImportService {
         /* to make the line value a composite of other values. Syntax is pretty simple replacing anything in quotes with the referenced line value
         `a column name`-`another column name` might make 1233214-1234. Such columns would probably be at the end,
         they are virtual in the sens that these values are made on uploading they are not there in the source file though the components are.*/
+        String only = null;
+        /* If `only` is specified on the first heading, the import will ignore any line that does not have this name
+        * */
         String compositionPattern = null;
         // a default value if the line value is blank
         String defaultValue = null;
@@ -159,6 +163,7 @@ public class DSImportService {
         final boolean isAttributeSubject;
         final List<ImmutableImportHeading> contextHeadings;
         final boolean isLocal;
+        final String only;
         final String compositionPattern;
         final String defaultValue;
         final boolean blankZeroes;
@@ -185,6 +190,7 @@ public class DSImportService {
             }
             this.contextHeadings = Collections.unmodifiableList(contextHeadings);
             this.isLocal = mutableImportHeading.isLocal;
+            this.only = mutableImportHeading.only;
             this.compositionPattern = mutableImportHeading.compositionPattern;
             this.defaultValue = mutableImportHeading.defaultValue;
             this.blankZeroes = mutableImportHeading.blankZeroes;
@@ -235,6 +241,31 @@ public class DSImportService {
         return tryDate(maybeDate.length() > 11 ? maybeDate.substring(0, 11) : maybeDate, ukdf5);
     }
 
+    private String findOrigName(String filePath){
+        //provenance should not show the temporary file name....
+
+
+        String provFile = filePath.substring(filePath.lastIndexOf("/")+1);
+        String suffix = provFile.substring(provFile.indexOf(".")+1);
+        provFile = provFile.substring(0,provFile.indexOf(".") + 1);
+        String finalSuffix = suffix.substring(suffix.indexOf(".")+1);
+        int num=0;
+        try{
+            num = Integer.parseInt(suffix.substring(0,3));
+        }catch(Exception e){
+
+        }
+        if (num > 0){
+            //sheet from a workbook
+            provFile += finalSuffix;
+        }else{
+            //probably should look for the first number, but usually this would be OK.
+            provFile += suffix.substring(0,3);
+        }
+        return provFile;
+
+    }
+
     /*
     Currently only two types of import supported and detection on file name (best idea?). Run the import and persist.
     Sets being as mentioned at the top one of the two files that are needed along with import headers to set up a database ready to load data.
@@ -243,7 +274,10 @@ public class DSImportService {
     public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames, String user) throws Exception {
         System.out.println("reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        azquoMemoryDBConnection.setProvenance(user, "imported", filePath, "");
+        String provFile = findOrigName(filePath);
+
+
+         azquoMemoryDBConnection.setProvenance(user, "imported", provFile, "");
         readPreparedFile(azquoMemoryDBConnection, filePath, fileType, attributeNames);
 
     }
@@ -332,6 +366,11 @@ public class DSImportService {
         } else if (firstWord.equals(EQUALS)) {
             heading.headingAlias = readClause(EQUALS, clause);
             if (heading.headingAlias.length() == 0) {
+                throw new Exception(clause + notUnderstood);
+            }
+        } else if (firstWord.equals(ONLY)) {
+            heading.only = readClause(ONLY, clause);
+            if (heading.only.length() == 0) {
                 throw new Exception(clause + notUnderstood);
             }
         } else if (firstWord.equals(COMPOSITION)) {
@@ -500,7 +539,8 @@ public class DSImportService {
                 /*skip any line that has a blank in the first column unless the first column had no header
                of course if the first column has no header and then the second has data but not on this line then it would get loaded
                  */
-                if (lineToLoad.get(0).lineValue.length() > 0 || lineToLoad.get(0).immutableImportHeading.heading == null) {
+                ImportCellWithHeading first = lineToLoad.get(0);
+                if ((first.lineValue.length() > 0 || first.immutableImportHeading.heading == null) && (first.immutableImportHeading.only == null || first.lineValue.equals(first.immutableImportHeading.only))) {
                     getCompositeValues(lineToLoad);
                     try {
                         valueTracker.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFound, attributeNames, lineNo));
@@ -873,14 +913,20 @@ public class DSImportService {
                                 MutableImportHeading check = headings.get(lookForContextIndex);// first time it will be the same as teh heading we're checking
                                 if (!check.contextHeadings.isEmpty()) { // then it's this one that's relevant
                                     for (MutableImportHeading contextCheck : check.contextHeadings) {
+                                        if (contextCheck.name == null){
+                                            List<String> languages = new ArrayList<>();
+                                            languages.add(Constants.DEFAULT_DISPLAY_NAME);
+                                            contextCheck.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,contextCheck.heading,null,false,languages);
+                                        }
                                         if (contextCheck.name.getDefaultDisplayName().equalsIgnoreCase(peer)) {//WFC: this used to look in the parents of the context name.  Now only looks at the name itself.
-                                            mutableImportHeading.peersFromContext.add(contextCheck.name);
+                                                mutableImportHeading.peersFromContext.add(contextCheck.name);
                                             peerHeadingIndex = 0;
                                             break;
                                         }
                                     }
                                     break;
                                 }
+
                                 lookForContextIndex--;
                             }
                         }
@@ -912,6 +958,7 @@ public class DSImportService {
                 fillAttributeAndParentOfForHeading(mutableImportHeading, headings);
                 for (MutableImportHeading contextHeading : mutableImportHeading.contextHeadings) {
                     fillAttributeAndParentOfForHeading(contextHeading, headings);
+
                 }
             }
             currentHeadingIndex++;
