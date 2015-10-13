@@ -7,6 +7,8 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
+import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.BufferedReader;
@@ -14,7 +16,6 @@ import java.io.FileReader;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Created by cawley on 20/05/15.
@@ -124,7 +125,7 @@ public class DSDataLoadService {
     public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
-        Map<String, List<Map<String, String>>> tableMap = new HashMap<>();
+        Map<String, List<Map<String, String>>> tableMap = HashObjObjMaps.newMutableMap();
         BufferedReader br = new BufferedReader(new FileReader(filePath));
         long marker = System.currentTimeMillis();
         String line;
@@ -140,10 +141,7 @@ public class DSDataLoadService {
                 System.out.print("Initial load of : " + tableName);
                 // I'm not going to support tables being loaded in two chunks I see no point. This would overwrite data if a table were referenced twice.
                 currentTableDataMap = new ArrayList<>(); // and I know this repeats keys for each row, the goal here is ease of use for importing, not efficiency
-                /* a further comment on efficiency :
-                this kind of loading means over 10x the size in memory vs the file size but cutting this down is a bit pointless as it will take about this much
-                in the memorydb. If we're really tight getting rid of the maps per line and leaving it as an ArrayList might help but the existing removal of tables as they're used
-                probably goes a long way to stopping memory spikes.*/
+                // to try to reduce garbage I'm moving thos to koloboke
                 tableMap.put(tableName, currentTableDataMap);
             } else { // data, is it the first one?
                 if (currentColumnNames == null) {
@@ -151,7 +149,7 @@ public class DSDataLoadService {
                 } else {
                     count++;
                     String[] lineValues = line.split("\t", -1);
-                    Map<String, String> dataRowMap = new HashMap<>();
+                    Map<String, String> dataRowMap = HashObjObjMaps.newMutableMap();
                     for (int i = 0; i < lineValues.length; i++) {
                         // I think this is a fair .intern, assuming from here the strings are used "as is"
                         String val = lineValues[i].intern();
@@ -195,7 +193,7 @@ public class DSDataLoadService {
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         Name storeName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "store", null, false, languages);
         Name allStoresName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All stores", storeName, false, languages);
-        Map<String, Name> storeGroupMap = new HashMap<>();
+        Map<String, Name> storeGroupMap = HashObjObjMaps.newMutableMap();
 
         for (Map<String, String> storeGroupRec : tableMap.get("core_store_group")) {
             String groupId = storeGroupRec.get("group_id");
@@ -207,7 +205,7 @@ public class DSDataLoadService {
         }
 
         tableMap.remove("core_store_group");
-        Map<String, Name> storeMap = new HashMap<>();
+        Map<String, Name> storeMap = HashObjObjMaps.newMutableMap();
 
         for (Map<String, String> storeRec : tableMap.get("core_store")) {
             String storeId = storeRec.get("store_id");
@@ -237,7 +235,7 @@ public class DSDataLoadService {
             }
         }
 
-        Map<String, String> attIds = new HashMap<>();
+        Map<String, String> attIds = HashObjObjMaps.newMutableMap();
 
         String categoryNameId = null;
         String productNameId = null;
@@ -265,9 +263,9 @@ public class DSDataLoadService {
             }
         }
         //now start the real work - categories first
-        Map<String, Name> azquoCategoriesFound = new HashMap<>();
-        Map<String, Name> azquoProductsFound = new HashMap<>();
-        Map<String, Name> azquoCustomersFound = new HashMap<>();
+        Map<String, Name> azquoCategoriesFound = HashObjObjMaps.newMutableMap();
+        Map<String, Name> azquoProductsFound = HashObjObjMaps.newMutableMap();
+        Map<String, Name> azquoCustomersFound = HashObjObjMaps.newMutableMap();
         List<String> defaultLanguage = new ArrayList<>();
         defaultLanguage.add("MAGENTOCATEGORYID");
         boolean hasCategoryIds = azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB("MAGENTOCATEGORYID");//interim - to be removed once all dbs have category ids (swimshop, ambitresearch, lazysusan, thbaker, woods, smiffy)
@@ -275,7 +273,7 @@ public class DSDataLoadService {
             defaultLanguage.clear();
             defaultLanguage.add(Constants.DEFAULT_DISPLAY_NAME);
         }
-        Map<String, String> categoryNames = new HashMap<>();
+        Map<String, String> categoryNames = HashObjObjMaps.newMutableMap();
         //name the categories
         for (Map<String, String> attributeRow : tableMap.get("catalog_category_entity_varchar")) { // should (!) have us looking in teh right place
             //only picking the name from all the category attributes
@@ -370,13 +368,13 @@ public class DSDataLoadService {
         }
         tableMap.remove("catalog_category_product");
         //now find the attributes that matter
-        Set<String> attributes = new HashSet<>(tableMap.get("catalog_product_super_attribute").size());
+        Set<String> attributes = HashObjSets.newMutableSet(tableMap.get("catalog_product_super_attribute").size());
         for (Map<String, String> attributeRow : tableMap.get("catalog_product_super_attribute")) {
             //only interested in the attribute_id
             attributes.add(attributeRow.get("attribute_id"));
         }        //only interested in the attribute_id
         //name the attributes that matter
-        Map<String, String> attributeNames = new HashMap<>();
+        Map<String, String> attributeNames = HashObjObjMaps.newMutableMap();
         for (Map<String, String> attribute : tableMap.get("eav_attribute")) {
             String attributeNo = attribute.get("attribute_id");
             if (attributes.contains(attributeNo)) {
@@ -385,7 +383,7 @@ public class DSDataLoadService {
         }
         tableMap.remove("catalog_product_super_attribute");
         //name the option values
-        Map<String, String> optionValues = new HashMap<>();
+        Map<String, String> optionValues = HashObjObjMaps.newMutableMap();
         for (Map<String, String> optionVal : tableMap.get("eav_attribute_option_value")) {
             String storeId = optionVal.get("store_id");
             if (storeId == null || (storeId != null && storeId.equals("0"))) {
@@ -477,7 +475,7 @@ public class DSDataLoadService {
                     if (productName == null) {
                         System.out.println("unable to find product_id : " + product + " used in cataloginventory_stock_item");
                     } else {
-                        Set<Name> namesForValue = new HashSet<>();
+                        Set<Name> namesForValue = HashObjSets.newMutableSet();
                         namesForValue.add(today);
                         namesForValue.add(inStockName);
                         namesForValue.add(productName);
@@ -521,7 +519,7 @@ public class DSDataLoadService {
         languages.add("email");
 
         System.out.println("customer groups");
-        Map<String, Name> customerGroups = new HashMap<>();
+        Map<String, Name> customerGroups = HashObjObjMaps.newMutableMap();
         if (tableMap.get("customer_group") != null) {
             for (Map<String, String> group : tableMap.get("customer_group")) {
                 String groupId = group.get("customer_group_id");
@@ -607,7 +605,7 @@ public class DSDataLoadService {
         }
 
         if (tableMap.get("customer_address_entity") != null) {
-            Map<String, Name> addressMap = new HashMap<>();
+            Map<String, Name> addressMap = HashObjObjMaps.newMutableMap();
             for (Map<String, String> addressRec : tableMap.get("customer_address_entity")) {
                 Name customer = azquoCustomersFound.get(addressRec.get("parent_id"));
                 if (customer == null) {
@@ -637,7 +635,7 @@ public class DSDataLoadService {
             System.out.println("customer info done");
         }
 
-        Map<String, Name> azquoOrdersFound = new HashMap<>();
+        Map<String, Name> azquoOrdersFound = HashObjObjMaps.newMutableMap();
 
         System.out.println("about to go into sales flat order item " + (System.currentTimeMillis() - marker));
         marker = System.currentTimeMillis();
@@ -770,16 +768,16 @@ public class DSDataLoadService {
                 //orderItemName.setAttributeWillBePersisted("price", price+"");
                 //orderItemName.setAttributeWillBePersisted("quantity",qty + "");
                 //....................END OF NEW STORAGE METHOD - LINE BELOW TO BE DELETED
-                Set<Name> namesForValue = new HashSet<>();
+                Set<Name> namesForValue = HashObjSets.newMutableSet();
                 if (bundleLine.length() == 0) {
                     namesForValue.add(orderItemName);
                     namesForValue.add(priceName);
                     valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, price + "", namesForValue);
-                    namesForValue = new HashSet<>();
+                    namesForValue = HashObjSets.newMutableSet();
                     namesForValue.add(orderItemName);
                     namesForValue.add(taxName);
                     valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, tax + "", namesForValue);
-                    namesForValue = new HashSet<>();
+                    namesForValue = HashObjSets.newMutableSet();
                 } else {
                     SaleItem saleItem = new SaleItem();
                     saleItem.itemName = orderItemName;
@@ -791,12 +789,12 @@ public class DSDataLoadService {
                 namesForValue.add(orderItemName);
                 namesForValue.add(qtyName);
                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, qty + "", namesForValue);
-                namesForValue = new HashSet<>();
+                namesForValue = HashObjSets.newMutableSet();
                 namesForValue.add(orderItemName);
                 namesForValue.add(weightName);
                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, weight + "", namesForValue);
                 if (qtyCanceled > 0) {
-                    namesForValue = new HashSet<>();
+                    namesForValue = HashObjSets.newMutableSet();
                     namesForValue.add(orderItemName);
                     namesForValue.add(canceledName);
                     valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, qtyCanceled + "", namesForValue);
@@ -875,7 +873,7 @@ public class DSDataLoadService {
                     } catch (Exception ignored) {
                     }
                     if (dShipping > 0) {
-                        Set<Name> namesForValue = new HashSet<>();
+                        Set<Name> namesForValue = HashObjSets.newMutableSet();
                         namesForValue.add(orderName);
                         namesForValue.add(shippingName);
                         valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, shipping, namesForValue);
@@ -1021,11 +1019,11 @@ public class DSDataLoadService {
             }
         }
         for (SaleItem saleItem : bundleItems) {
-            Set<Name> namesForValue = new HashSet<>();
+            Set<Name> namesForValue = HashObjSets.newMutableSet();
             namesForValue.add(saleItem.itemName);
             namesForValue.add(priceName);
             valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, df.format(saleItem.price), namesForValue);
-            namesForValue = new HashSet<>();
+            namesForValue = HashObjSets.newMutableSet();
             namesForValue.add(saleItem.itemName);
             namesForValue.add(taxName);
             valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, df.format(saleItem.tax), namesForValue);
