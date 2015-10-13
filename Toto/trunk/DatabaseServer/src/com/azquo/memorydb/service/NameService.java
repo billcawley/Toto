@@ -628,7 +628,7 @@ public final class NameService {
         if (setFormula.length() == 0) {
             return toReturn;
         }
-        List<Collection<Name>> nameStack = new ArrayList<>(); // make this more generic, the key is in the name marker bits, might use different collections depending on operator!
+        List<Set<Name>> nameStack = new ArrayList<>(); // make this more generic, the key is in the name marker bits, might use different collections depending on operator!
         List<String> formulaStrings = new ArrayList<>();
         List<String> nameStrings = new ArrayList<>();
         List<String> attributeStrings = new ArrayList<>(); // attribute names is taken. Perhaps need to think about function parameter names
@@ -767,7 +767,12 @@ public final class NameService {
                 nameStack.remove(stackCount);
             } else if (op == '+') {
                 //nameStack.get(stackCount - 1).addAll(nameStack.get(stackCount));
-                Set<Name> result = HashObjSets.newMutableSet(nameStack.get(stackCount - 1));
+                Set<Name> result;
+                if (nameStack.get(stackCount - 1) instanceof LinkedHashSet){ // todo - address this ordered or not business, I worry this is is not a good way of implementing the logic.
+                    result = nameStack.get(stackCount - 1); // if it's a linked hash set it can be modified - kind of against the criteria from interpret set term. I need a little container object that says ordered or mutable etc
+                } else {
+                    result = HashObjSets.newMutableSet(nameStack.get(stackCount - 1));
+                }
                 result.addAll(nameStack.get(stackCount));
                 nameStack.set(stackCount - 1, result); // replace the previous set
                 nameStack.remove(stackCount);
@@ -1027,7 +1032,7 @@ public final class NameService {
     }
 
     // Ok I'm now making this a set with the caveat that it may be a linked hash set if there's ordering. Also we assume that returned sets won't be modified.
-    // Some use of instanceof depending on wwhether we need ordering. Feels a bit hacky, might be able to clean up the logic
+    // Some use of instanceof depending on whether we need ordering. Feels a bit hacky, might be able to clean up the logic
 
     private static AtomicInteger interpretSetTermCount = new AtomicInteger(0);
 
