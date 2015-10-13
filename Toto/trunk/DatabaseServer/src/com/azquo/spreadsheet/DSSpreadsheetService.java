@@ -872,38 +872,6 @@ seaports;children   container;children
         }
         maxRows = Math.abs(maxRows);
         maxCols = Math.abs(maxCols);
-        if (filterCount > 0) {
-            int rowNo = 0;
-            while (rowNo < sourceData.size()) {
-                boolean rowsBlank = true;
-                for (int j = 0; j < filterCount; j++) {
-                    List<AzquoCell> rowToCheck = sourceData.get(rowNo + j); // size - 1 for the last index
-                    for (AzquoCell cellToCheck : rowToCheck) {
-                          /*
-                        if ((cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames().isEmpty())
-                                || (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty())) {// there were values or names for the call
-                            */
-                        //CHECKING VALUES ONLY
-                        if (cellToCheck.getListOfValuesOrNamesAndAttributeName() != null && cellToCheck.getListOfValuesOrNamesAndAttributeName().getAttributeNames() == null && cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {// there were values or names for the call
-                            rowsBlank = false;
-                            break;
-                        }
-                    }
-                    if (!rowsBlank) {
-                        break;
-                    }
-                }
-
-
-                if (rowsBlank) {
-                    for (int i = 0; i < filterCount; i++) {
-                        sourceData.remove(rowNo);
-                    }
-                }else{
-                    rowNo+=filterCount;
-                }
-             }
-        }
 
 
         if (sortOnColIndex != -1 || sortOnRowIndex != -1 || sortOnColTotals || sortOnRowTotals) { // then there's no sorting to do!
@@ -988,6 +956,38 @@ seaports;children   container;children
 
             }
             toReturn = sortedCells;
+        }
+        if (filterCount > 0) {
+            int rowNo = 0;
+            while (rowNo < toReturn.size()) {
+                boolean rowsBlank = true;
+                for (int j = 0; j < filterCount; j++) {
+                    List<AzquoCell> rowToCheck = toReturn.get(rowNo + j); // size - 1 for the last index
+                    for (AzquoCell cellToCheck : rowToCheck) {
+                          /*
+                        if ((cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames().isEmpty())
+                                || (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty())) {// there were values or names for the call
+                            */
+                        //CHECKING VALUES ONLY
+                        if (cellToCheck.getListOfValuesOrNamesAndAttributeName() != null && cellToCheck.getListOfValuesOrNamesAndAttributeName().getAttributeNames() == null && cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {// there were values or names for the call
+                            rowsBlank = false;
+                            break;
+                        }
+                    }
+                    if (!rowsBlank) {
+                        break;
+                    }
+                }
+
+
+                if (rowsBlank) {
+                    for (int i = 0; i < filterCount; i++) {
+                        toReturn.remove(rowNo);
+                    }
+                }else{
+                    rowNo+=filterCount;
+                }
+            }
         }
 
         // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
