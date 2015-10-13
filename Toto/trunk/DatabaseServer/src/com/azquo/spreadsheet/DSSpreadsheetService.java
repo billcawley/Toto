@@ -872,6 +872,40 @@ seaports;children   container;children
         }
         maxRows = Math.abs(maxRows);
         maxCols = Math.abs(maxCols);
+        if (filterCount > 0) {
+            int rowNo = 0;
+            while (rowNo < sourceData.size()) {
+                boolean rowsBlank = true;
+                for (int j = 0; j < filterCount; j++) {
+                    List<AzquoCell> rowToCheck = sourceData.get(rowNo + j); // size - 1 for the last index
+                    for (AzquoCell cellToCheck : rowToCheck) {
+                          /*
+                        if ((cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames().isEmpty())
+                                || (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty())) {// there were values or names for the call
+                            */
+                        //CHECKING VALUES ONLY
+                        if (cellToCheck.getListOfValuesOrNamesAndAttributeName() != null && cellToCheck.getListOfValuesOrNamesAndAttributeName().getAttributeNames() == null && cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {// there were values or names for the call
+                            rowsBlank = false;
+                            break;
+                        }
+                    }
+                    if (!rowsBlank) {
+                        break;
+                    }
+                }
+
+
+                if (rowsBlank) {
+                    for (int i = 0; i < filterCount; i++) {
+                        sourceData.remove(rowNo);
+                    }
+                }else{
+                    rowNo+=filterCount;
+                }
+             }
+        }
+
+
         if (sortOnColIndex != -1 || sortOnRowIndex != -1 || sortOnColTotals || sortOnRowTotals) { // then there's no sorting to do!
             // was a null check on sortRow and sortCol but it can't be null, it will be negative if none found
             final Map<Integer, Double> sortRowTotals = new HashMap<>(sourceData.size());
@@ -927,8 +961,7 @@ seaports;children   container;children
                 sortedCols = sortDoubleValues(sortColumnTotals, sortRowAsc);
             }
             // OK pasting and changing what was in format data region, it's only called by this
-            int blockRowCount = 0;
-            // zero passed or set above means don't limit, this feels a little hacky but we need a less than condition on the for loop. Both for limiting and we need this type of loop as the index looks up on the sort
+              // zero passed or set above means don't limit, this feels a little hacky but we need a less than condition on the for loop. Both for limiting and we need this type of loop as the index looks up on the sort
             if (maxRows == 0) {
                 maxRows = totalRows;
             }
@@ -952,34 +985,6 @@ seaports;children   container;children
             to be clear what this is doing is checking for chunks of blank rows and remoiving them from the results - worth noting that this doesn't compensate for the max,
             one could end up with less than the max when there was more data available as the max was loaded then chopped. On the other hand typical max ordering would mean that
             by this point it would all be blank rows anyway */
-                if (++blockRowCount == filterCount) {
-                    // we need the equivalent check of blank rows, checking the cell's list of names or values should do this
-                    // go back from the end
-                    boolean rowsBlank = true;
-                    for (int j = 0; j < filterCount; j++) {
-                        List<AzquoCell> rowToCheck = sortedCells.get((sortedCells.size() - 1) - j); // size - 1 for the last index
-                        for (AzquoCell cellToCheck : rowToCheck) {
-                          /*
-                        if ((cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames().isEmpty())
-                                || (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty())) {// there were values or names for the call
-                            */
-                            //CHECKING VALUES ONLY
-                            if (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {// there were values or names for the call
-                                rowsBlank = false;
-                                break;
-                            }
-                        }
-                        if (!rowsBlank) {
-                            break;
-                        }
-                    }
-                    if (rowsBlank) {
-                        for (int i = 0; i < filterCount; i++) {
-                            sortedCells.remove(sortedCells.size() - 1);
-                        }
-                    }
-                    blockRowCount = 0;
-                }
 
             }
             toReturn = sortedCells;
