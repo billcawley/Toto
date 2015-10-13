@@ -193,9 +193,9 @@ public final class NameService {
         // we need to look from the top to distinguish high street in different towns
         while (parentName != null) {
             if (remainder.contains(MEMBEROF)) {
-                remainder = remainder.substring(name.indexOf(MEMBEROF) + 2);
+                remainder = remainder.substring(remainder.indexOf(MEMBEROF) + 2);
             } else {
-                remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length()));
+                remainder = remainder.substring(0, remainder.lastIndexOf(",", remainder.length() - parentName.length()));
             }
             if (possibleParents == null) {
                 possibleParents = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parentName.replace(Name.QUOTE, ' ').trim(), null);
