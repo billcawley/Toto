@@ -1182,11 +1182,11 @@ seaports;children   container;children
             }
         }
         int toReturn = 0;
-        Set<Name> alreadyTested = new HashSet<>();
+        Set<Name> alreadyTested = HashObjSets.newMutableSet();
         // Edd reinstating code here - about a month ago it stopped paying attention to member set
         // todo - alternative to retainall again? Creation of new set?
         if (containsSet != null && memberSet != null) {
-            Set<Name> remainder = new HashSet<>(selectionSet);
+            Set<Name> remainder = HashObjSets.newMutableSet(selectionSet);
             remainder.retainAll(memberSet.findAllChildren(false));
             toReturn = totalNameSet(containsSet, remainder, alreadyTested, 0);
         }
@@ -1205,7 +1205,7 @@ seaports;children   container;children
             , List<Name> contextNames, int rowNo, int colNo, List<String> languages) throws Exception {
         String stringValue = "";
         double doubleValue = 0;
-        Set<DataRegionHeading> headingsForThisCell = new HashSet<>(rowHeadings.size());
+        Set<DataRegionHeading> headingsForThisCell = new HashSet<>(rowHeadings.size()); // I wonder a little how important having them as sets is . . .
         Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
         //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
@@ -1718,7 +1718,7 @@ seaports;children   container;children
     }
 
     public Set<String> attributesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
-        Set<String> names = new HashSet<>(); // attributes won't ever be big as they're manually defined, leave this to default (16 size table internally?)
+        Set<String> names = HashObjSets.newMutableSet(); // attributes won't ever be big as they're manually defined, leave this to default (16 size table internally?)
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
             if (dataRegionHeading.getAttribute() != null) {
                 names.add(dataRegionHeading.getAttribute().substring(1)); // at the mo I assume attributes begin with .

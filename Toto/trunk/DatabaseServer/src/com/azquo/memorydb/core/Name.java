@@ -2,6 +2,7 @@ package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.dao.StandardDAO;
+import com.azquo.memorydb.service.NameService;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
@@ -531,7 +532,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public Collection<Name> findAllParents() {
         findAllParentsCount.incrementAndGet();
-        final Set<Name> allParents = new HashSet<>(); // should be ok to use these now
+        final Set<Name> allParents = HashObjSets.newMutableSet(); // should be ok to use these now
         findAllParents(this, allParents);
         return allParents;
     }
@@ -556,6 +557,39 @@ public final class Name extends AzquoMemoryDBEntity {
             }
         }
     }
+
+    private static AtomicInteger addNamesCount = new AtomicInteger(0);
+    // adding in here as a static funciton to access name variables directly want speed and less garbage if I can
+    public static void addNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
+        addNamesCount.incrementAndGet();
+        // I think this logic is obsolete now I have the add all below
+/*        if (currentLevel == level) {
+            namesFound.add(name);
+            return;
+        }*/
+        if (!name.hasChildren()) {
+            if (level == NameService.LOWEST_LEVEL_INT) {
+                namesFound.add(name);
+            }
+        } else {
+            if (currentLevel == (level - 1)){ // then we want the next one down, just add it all . . .
+                if (name.childrenAsSet != null){
+                    namesFound.addAll(name.childrenAsSet);
+                } else if (name.children.length > 0){
+                    for (int i = 0; i < name.children.length; i++){ // intellij wants to use the collections implementation, I'll think about it
+                        namesFound.add(name.children[i]);
+                    }
+                }
+                //namesFound.addAll(name.getChildren());
+            } else {
+                for (Name child : name.getChildren()) {
+                    addNames(child, namesFound, currentLevel + 1, level);
+                }
+            }
+        }
+    }
+
+
 
     // we are now allowing a name to be in more than one top parent, hence the name change
 
@@ -679,8 +713,17 @@ public final class Name extends AzquoMemoryDBEntity {
                     if (localReference == null) {
 //                        long track = System.currentTimeMillis();
                         localReference = HashObjSets.newUpdatableSet(getValues());
+                        int i;
                         for (Name child : findAllChildren(true)) {
-                            localReference.addAll(child.getValues());
+                            // trying this as a slight speed increase/garbage save
+                            if (child.valuesAsSet != null){
+                                localReference.addAll(child.valuesAsSet);
+                            } else if (child.values.length > 0){
+                                for (i = 0; i < child.values.length; i++){
+                                    localReference.add(child.values[i]);
+                                }
+                            }
+                            //localReference.addAll(child.getValues());
                         }
                         if (localReference.isEmpty()) {
                             valuesIncludingChildrenPayAttentionToAdditiveCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
@@ -699,8 +742,16 @@ public final class Name extends AzquoMemoryDBEntity {
                     localReference = valuesIncludingChildrenCache; // check again after synchronized, it may have been sorted in the mean time
                     if (localReference == null) {
                         localReference = HashObjSets.newUpdatableSet(getValues());
+                        int i;
                         for (Name child : findAllChildren(false)) {
-                            localReference.addAll(child.getValues());
+                            if (child.valuesAsSet != null){
+                                localReference.addAll(child.valuesAsSet);
+                            } else if (child.values.length > 0){
+                                for (i = 0; i < child.values.length; i++){
+                                    localReference.add(child.values[i]);
+                                }
+                            }
+                            //localReference.addAll(child.getValues());
                         }
                         if (localReference.isEmpty()) {
                             valuesIncludingChildrenCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
@@ -1005,7 +1056,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public String getAttribute(String attributeName) {
         getAttributeCount.incrementAndGet();
-        return getAttribute(attributeName, true, new HashSet<>());
+        return getAttribute(attributeName, true, HashObjSets.newMutableSet());
     }
 
 
@@ -1256,6 +1307,7 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("removeFromParentsCount\t\t\t\t" + removeFromParentsCount.get());
         System.out.println("findAllParentsCount\t\t\t\t" + findAllParentsCount.get());
         System.out.println("findAllParents2Count\t\t\t\t" + findAllParents2Count.get());
+        System.out.println("addNamesCount\t\t\t\t" + addNamesCount.get());
         System.out.println("findATopParentCount\t\t\t\t" + findATopParentCount.get());
         System.out.println("finaAllChildrenCount\t\t\t\t" + finaAllChildrenCount.get());
         System.out.println("finaAllChildren2Count\t\t\t\t" + finaAllChildren2Count.get());
@@ -1300,6 +1352,7 @@ public final class Name extends AzquoMemoryDBEntity {
         removeFromParentsCount.set(0);
         findAllParentsCount.set(0);
         findAllParents2Count.set(0);
+        addNamesCount.set(0);
         findATopParentCount.set(0);
         finaAllChildrenCount.set(0);
         finaAllChildren2Count.set(0);

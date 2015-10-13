@@ -200,7 +200,7 @@ public final class NameService {
             if (possibleParents == null) {
                 possibleParents = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parentName.replace(Name.QUOTE, ' ').trim(), null);
             } else {
-                Set<Name> nextParents = new HashSet<>();
+                Set<Name> nextParents = HashObjSets.newMutableSet();
                 for (Name parent : possibleParents) {
                     Name foundParent = getNameByAttribute(azquoMemoryDBConnection, parentName, parent, attributeNames);
                     if (foundParent != null) {
@@ -461,7 +461,7 @@ public final class NameService {
         if (name.hasOrderedChildren()){
             boolean ordered = true;
             for (Name check : name.getChildren()){
-                if (!check.hasOrderedChildren()){ // then these children are unordered, I'm going to say the whole lot doens't need to be ordered
+                if (!check.hasOrderedChildren()){ // then these children are unordered, I'm going to say the whole lot doesn't need to be ordered
                     ordered = false;
                     break;
                 }
@@ -470,33 +470,11 @@ public final class NameService {
                 namesFound = new ArrayList<>();
             }
         }
-        addNames(name, namesFound, 0, level);
+        Name.addNames(name, namesFound, 0, level);
         return namesFound;
     }
 
     private static AtomicInteger addNamesCount = new AtomicInteger(0);
-
-    public void addNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
-        addNamesCount.incrementAndGet();
-        // I think this logic is obsolete now I have the add all below
-/*        if (currentLevel == level) {
-            namesFound.add(name);
-            return;
-        }*/
-        if (!name.hasChildren()) {
-            if (level == LOWEST_LEVEL_INT) {
-                namesFound.add(name);
-            }
-        } else {
-            if (currentLevel == (level - 1)){ // then we want the next one down, just add it all . . .
-                namesFound.addAll(name.getChildren());
-            } else {
-                for (Name child : name.getChildren()) {
-                    addNames(child, namesFound, currentLevel + 1, level);
-                }
-            }
-        }
-    }
 
     // edd : I wonder a little about this but will leave it for the mo
 
@@ -750,7 +728,7 @@ public final class NameService {
                 //System.out.println("aft mutable init " + heapMarker);
                 System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
                 for (Name child : nameStack.get(stackCount)) {
-                    Name.findAllParents(child, parents); // new call to static funciton should cut garbage generation a lot
+                    Name.findAllParents(child, parents); // new call to static function cuts garbage generation a lot
                 }
                 long now = System.currentTimeMillis();
                 System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
