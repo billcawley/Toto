@@ -387,7 +387,7 @@ public final class NameService {
             // if we can't find the name in parent  then it's acceptable to find one with no parents or children todo - think about this!
             if (existing == null) {
                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
-                if (existing != null && (existing.getParents().size() > 0 || existing.getChildren().size() > 0)) {
+                if (existing != null && (existing.hasParents() || existing.hasChildren())) {
                     existing = null;
                 }
             }
@@ -457,12 +457,11 @@ public final class NameService {
             toReturn.add(name); // a whole new set just to add this, grrr
             return toReturn;
         }
-
         Collection<Name> namesFound = HashObjSets.newMutableSet();
-        if (name.getChildren().size() <= Name.ARRAYTHRESHOLD){ // it might be something ordered
+        if (name.hasOrderedChildren()){
             boolean ordered = true;
             for (Name check : name.getChildren()){
-                if (check.getChildren().size() > Name.ARRAYTHRESHOLD){ // then these children are unordered, I'm going to say the whole lot doens't need to be ordered
+                if (!check.hasOrderedChildren()){ // then these children are unordered, I'm going to say the whole lot doens't need to be ordered
                     ordered = false;
                     break;
                 }
@@ -479,18 +478,23 @@ public final class NameService {
 
     public void addNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
         addNamesCount.incrementAndGet();
-        if (currentLevel == level) {
+        // I think this logic is obsolete now I have the add all below
+/*        if (currentLevel == level) {
             namesFound.add(name);
             return;
-        }
-        if (name.getChildren().size() == 0) {
+        }*/
+        if (!name.hasChildren()) {
             if (level == LOWEST_LEVEL_INT) {
                 namesFound.add(name);
             }
-            return;
-        }
-        for (Name child : name.getChildren()) {
-            addNames(child, namesFound, currentLevel + 1, level);
+        } else {
+            if (currentLevel == (level - 1)){ // then we want the next one down, just add it all . . .
+                namesFound.addAll(name.getChildren());
+            } else {
+                for (Name child : name.getChildren()) {
+                    addNames(child, namesFound, currentLevel + 1, level);
+                }
+            }
         }
     }
 
@@ -746,7 +750,7 @@ public final class NameService {
                 //System.out.println("aft mutable init " + heapMarker);
                 System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
                 for (Name child : nameStack.get(stackCount)) {
-                    findAllParents(child, parents);
+                    Name.findAllParents(child, parents); // new call to static funciton should cut garbage generation a lot
                 }
                 long now = System.currentTimeMillis();
                 System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
@@ -837,14 +841,14 @@ public final class NameService {
 
     private static AtomicInteger findAllParentsCount = new AtomicInteger(0);
 
-    private void findAllParents(Name name, final Set<Name> allParents) {
+/*    private void findAllParents(Name name, final Set<Name> allParents) {
         findAllParentsCount.incrementAndGet();
             for (Name parent : name.getParents()) {
                 if (allParents.add(parent)) {
                     findAllParents(parent, allParents);
                 }
             }
-    }
+    }*/
 
     private static AtomicInteger dedupeOneCount = new AtomicInteger(0);
 
@@ -1116,7 +1120,7 @@ public final class NameService {
                 withChildren = HashObjSets.newMutableSet();
             }
             for (Name possibleName : namesFound) {
-                if (possibleName.getChildren().size() > 0) {
+                if (possibleName.hasChildren()) {
                     withChildren.add(possibleName);
                 }
             }

@@ -41,6 +41,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public static final String CALCULATION = "CALCULATION";
     public static final String LOCAL = "LOCAL";
+    // need to run this for databases with the old attributes! UPDATE `fast_name` SET `attributes`=REPLACE(`attributes`,'¬','↑')
     private static final String ATTRIBUTEDIVIDER = "↑"; // it will go attribute name, attribute vale, attribute name, attribute vale
 
     public static final char QUOTE = '`';
@@ -271,6 +272,10 @@ public final class Name extends AzquoMemoryDBEntity {
         return valuesAsSet != null ? Collections.unmodifiableSet(valuesAsSet) : Collections.unmodifiableList(Arrays.asList(values));
     }
 
+    public boolean hasValues(){
+        return valuesAsSet != null || values.length > 0;
+    }
+
     // added by WFC I guess, need to check on this - Edd
     // this could be non thread safe.
 
@@ -380,6 +385,10 @@ public final class Name extends AzquoMemoryDBEntity {
     public Collection<Name> getParents() {
         getParentsCount.incrementAndGet();
         return parentsAsSet != null ? Collections.unmodifiableSet(parentsAsSet) : parents.length > 0 ? Collections.unmodifiableList(Arrays.asList(parents)) : Collections.emptyList();
+    }
+
+    public boolean hasParents(){
+        return parentsAsSet != null || parents.length > 0;
     }
 
     // note these two should be called in synchronized blocks if acting on things like parents, children etc
@@ -529,12 +538,21 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // option for collect call but I don't really get it
     private static AtomicInteger findAllParents2Count = new AtomicInteger(0);
-
-    private void findAllParents(Name name, final Set<Name> allParents) {
+    // note : this was using getParents, since it was really being hammered this was no good due to the garbage generation of that function, hence the change
+    // public and statless, in here as it accesses things I don't want accessed outside
+    public static void findAllParents(Name name, final Set<Name> allParents) {
         findAllParents2Count.incrementAndGet();
-        for (Name parent : name.getParents()) {
-            if (allParents.add(parent)) {
-                findAllParents(parent, allParents);
+        if (name.parentsAsSet != null){
+            for (Name parent : name.parentsAsSet) { // we'll allow this kind of access in here
+                if (allParents.add(parent)) {
+                    findAllParents(parent, allParents);
+                }
+            }
+        } else if (name.parents.length > 0){
+            for (int i = 0; i < name.parents.length; i++) { // we'll allow this kind of access in here
+                if (allParents.add(name.parents[i])) {
+                    findAllParents(name.parents[i], allParents);
+                }
             }
         }
     }
@@ -545,10 +563,10 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public Name findATopParent() {
         findATopParentCount.incrementAndGet();
-        if (getParents().size() > 0) {
+        if (hasParents()) {
             Name parent = getParents().iterator().next();
             while (parent != null) {
-                if (parent.getParents().size() > 0 && parent.getAttribute(LOCAL) == null) {
+                if (parent.hasParents() && parent.getAttribute(LOCAL) == null) {
                     parent = parent.getParents().iterator().next();
                 } else {
                     return parent; // it has no parents, must be top
@@ -571,9 +589,19 @@ public final class Name extends AzquoMemoryDBEntity {
     private void findAllChildren(Name name, boolean payAttentionToAdditive, final Set<Name> allChildren) {
         finaAllChildrenCount.incrementAndGet();
         if (payAttentionToAdditive && !name.additive) return;
-        for (Name child : name.getChildren()) {
-            if (allChildren.add(child)) {
-                findAllChildren(child, payAttentionToAdditive, allChildren);
+        // similar to optimisation for get all parents, this potentially could cause a concurrency problem if the array were shrunk by another thread, I don't think this a concern in the context it's used
+        // and we'll know if we look at the log. If this happened a local reference to the array should sort it
+        if (name.childrenAsSet != null){
+            for (Name child : name.childrenAsSet) { // as mentioned above I'll allow this kind of access in here
+                if (allChildren.add(child)) {
+                    findAllChildren(child, payAttentionToAdditive, allChildren);
+                }
+            }
+        } else if (name.children.length > 0){
+            for (int i = 0; i < name.children.length; i++){
+                if (allChildren.add(name.children[i])) {
+                    findAllChildren(name.children[i], payAttentionToAdditive, allChildren);
+                }
             }
         }
     }
@@ -704,6 +732,14 @@ public final class Name extends AzquoMemoryDBEntity {
         getChildrenCount.incrementAndGet();
         // as with parents we want to be frugal as possible re: garbage, so no making wrapped objects if there's nothing to return
         return childrenAsSet != null ? Collections.unmodifiableSet(childrenAsSet) : children.length > 0 ? Collections.unmodifiableList(Arrays.asList(children)) : Collections.emptyList();
+    }
+
+    public boolean hasChildren(){
+        return childrenAsSet != null || children.length > 0;
+    }
+
+    public boolean hasOrderedChildren(){
+        return childrenAsSet == null;
     }
 
     // might seem inefficient but the adds and removes deal with parents and things. Might reconsider code if used more heavily

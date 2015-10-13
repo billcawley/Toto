@@ -88,8 +88,8 @@ public final class AzquoMemoryDB {
         // now where the default multi threading number is defined. Different number based on the task? Can decide later.
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         int possibleLoadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
-        if (possibleLoadingThreads > 6) { // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
-            possibleLoadingThreads = 6;
+        if (possibleLoadingThreads > 8) { // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
+            possibleLoadingThreads = 8;
         }
         loadingThreads = possibleLoadingThreads;
         reportFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report generation, 2/3
@@ -444,6 +444,7 @@ public final class AzquoMemoryDB {
             }
             logInSessionLogAndSystem("Total load time for " + getMySQLName() + " " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
             //AzquoMemoryDB.printAllCountStats();
+
             //AzquoMemoryDB.clearAllCountStats();
             int testlimit = 10_000_000;
             /*for (int i = 0; i < 3; i++){
@@ -703,7 +704,7 @@ public final class AzquoMemoryDB {
         } else if (possibles.size() > 1) { // more than one . . . try and replicate logic that was there before
             if (parent == null) { // no parent criteria
                 for (Name possible : possibles) {
-                    if (possible.getParents().size() == 0) { // we chuck back the first top level one. Not sure this is the best logic, more than one possible with no top levels means return null
+                    if (!possible.hasParents()) { // we chuck back the first top level one. Not sure this is the best logic, more than one possible with no top levels means return null
                         return possible;
                     }
                 }
@@ -767,7 +768,7 @@ public final class AzquoMemoryDB {
         zapUnusedNamesCount.incrementAndGet();
         for (Name name : nameByIdMap.values()) {
             // remove everything except top layer and names with values. Change parents to top layer where sets deleted
-            if (name.getParents().size() > 0 && name.getValues().size() == 0) {
+            if (name.hasParents() && !name.hasValues()) {
                 Name topParent = name.findATopParent();
                 for (Name child : name.getChildren()) {
                     topParent.addChildWillBePersisted(child);
@@ -776,7 +777,7 @@ public final class AzquoMemoryDB {
             }
         }
         for (Name name : nameByIdMap.values()) {
-            if (name.getParents().size() == 0 && name.getChildren().size() == 0 && name.getValues().size() == 0) {
+            if (!name.hasParents() && !name.hasChildren() && !name.hasValues()) {
                 name.delete();
             }
         }
@@ -787,11 +788,10 @@ public final class AzquoMemoryDB {
     public List<Name> findTopNames(String language) {
         findTopNamesCount.incrementAndGet();
         Map<String, List<Name>> thisMap = nameByAttributeMap.get(language);
-
         final List<Name> toReturn = new ArrayList<>();
         for (List<Name> names : thisMap.values()) {
             for (Name name : names) {
-                if (name.getParents().size() == 0) {
+                if (!name.hasParents()) {
                     toReturn.add(name);
                 } else {
                     boolean include = true;

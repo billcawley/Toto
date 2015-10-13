@@ -685,8 +685,8 @@ seaports;children   container;children
                 displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored));
             }
         }
-//        AzquoMemoryDB.printAllCountStats();
-//        AzquoMemoryDB.clearAllCountStats();
+        //AzquoMemoryDB.printAllCountStats();
+        //AzquoMemoryDB.clearAllCountStats();
         // this is single threaded as I assume not much data should be returned. Need to think about this.
         return new CellsAndHeadingsForDisplay(convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), databaseAccessToken.getLanguages())
                 , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource);
@@ -697,8 +697,6 @@ seaports;children   container;children
     private List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, List<String> languages, int highlightDays) throws Exception {
-        long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-        long newHeapMarker = oldHeapMarker;
         azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
         long track = System.currentTimeMillis();
         long start = track;
@@ -723,7 +721,7 @@ seaports;children   container;children
         }
         if (rowHeadings.size() == 0) {
             //create a single row heading
-            rowHeadings.add(new ArrayList<DataRegionHeading>());
+            rowHeadings.add(new ArrayList<>());
             rowHeadings.get(0).add(new DataRegionHeading(null,false));
             //return new ArrayList<>();
         }
@@ -746,20 +744,10 @@ seaports;children   container;children
                 }
             }
         }
-        newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-/*        System.out.println();
-        System.out.println("Heap cost for headings/context : " + (newHeapMarker - oldHeapMarker) / mb);
-        System.out.println();*/
-        oldHeapMarker = newHeapMarker;
         // note, didn't se the context against the logged in connection, should I?
         // ok going to try to use the new function
         List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings
                 , columnHeadings, contextNames, languages);
-        newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-/*        System.out.println();
-        System.out.println("Heap cost for raw data : " + (newHeapMarker - oldHeapMarker) / mb);
-        System.out.println();*/
-        oldHeapMarker = newHeapMarker;
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data populated in " + time + "ms");
         if (time > 5000){ // a bit arbitrary
@@ -769,11 +757,6 @@ seaports;children   container;children
         track = System.currentTimeMillis();
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
                 , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays);
-        newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-/*        System.out.println();
-        System.out.println("Heap cost for sorting : " + (newHeapMarker - oldHeapMarker) / mb);
-        System.out.println();*/
-        oldHeapMarker = newHeapMarker;
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data sort/filter in " + time + "ms");
         System.out.println("region delivered in " + (System.currentTimeMillis() - start) + "ms");
@@ -1211,13 +1194,15 @@ seaports;children   container;children
         return toReturn;
     }
 
+    // hacky, I just need a way to pass the values without doing a redundant addAll
+    public static class ValuesHook{
+        public List<Value> values = null;
+    }
+
     // factored this off to enable getting a single cell, also useful to be called from the multi threading
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<Name> contextNames, int rowNo, int colNo, List<String> languages) throws Exception {
-        long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-        long newHeapMarker = oldHeapMarker;
-
         String stringValue = "";
         double doubleValue = 0;
         Set<DataRegionHeading> headingsForThisCell = new HashSet<>(rowHeadings.size());
@@ -1296,30 +1281,30 @@ seaports;children   container;children
                 stringValue = doubleValue + "";
             } else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
                 // TODO - peer additive check. If using peers and not additive, don't include children
-                List<Value> values = new ArrayList<>();
+                ValuesHook valuesHook = new ValuesHook();
                 // now , get the function from the headings
                 if (function != null) {
                     locked.isTrue = true;
                 }
                 if (headingsForThisCell.size() > 0) {
-                    doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, values, languages, function); // true = pay attention to names additive flag
+                    doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, valuesHook, languages, function); // true = pay attention to names additive flag
                     //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                    if (values.size() == 1 && !locked.isTrue) {
+                    if (valuesHook.values.size() == 1 && !locked.isTrue) {
 
-                        Value value = values.get(0);
+                        Value value = valuesHook.values.get(0);
                         stringValue = value.getText();
                         if (stringValue.contains("\n")) {
                             stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
                         }
                         // was isnumber test here to add a double to the
-                    } else if (values.size() > 0) {
-                            stringValue = doubleValue + "";
+                    } else if (valuesHook.values.size() > 0) {
+                        stringValue = doubleValue + "";
                      }
                 } else {
                     stringValue = "";
                     doubleValue = 0;
                 }
-                listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(values);
+                listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(valuesHook.values);
             } else {  // now, new logic for attributes
                 List<Name> names = new ArrayList<>();
                 List<String> attributes = new ArrayList<>();
@@ -1415,9 +1400,9 @@ seaports;children   container;children
             throw new Exception("Data region took longer than an hour to load");
         }
         newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-/*        System.out.println();
+        System.out.println();
         System.out.println("Heap cost to make on multi thread : " + (newHeapMarker - oldHeapMarker) / mb);
-        System.out.println();*/
+        System.out.println();
         oldHeapMarker = newHeapMarker;
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());
@@ -1681,7 +1666,7 @@ seaports;children   container;children
                                 Name toChange = valuesForCell.getNames().get(0);
                                 String attribute = valuesForCell.getAttributeNames().get(0).substring(1);//remove the initial '.'
                                 Name attSet = nameService.findByName(azquoMemoryDBConnection, attribute);
-                                if (attSet != null && attSet.getChildren().size() > 0 && !azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB(attribute)) {
+                                if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB(attribute)) {
                                     logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getStringValue() + " within " + attribute);
                                     Name category = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getStringValue(), attSet, true);
                                     category.addChildWillBePersisted(toChange);

@@ -39,10 +39,23 @@ public class LoginController {
             , @RequestParam(value = "password", required = false) String password
             , @RequestParam(value = "connectionid", required = false) String connectionid // only for the magento plugin
     ) throws Exception {
+/*        Runtime runtime = Runtime.getRuntime();
+        long mb = 1024*1024;
+        int parseTest = 1_000_000;
+        long startUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
+        for (int i =0; i < parseTest; i++){
+            Double.parseDouble("1.0");
+        }
+        System.out.println("heap increase : " +  (((runtime.totalMemory() - runtime.freeMemory()) / mb) - startUsed) + " for " + parseTest + " parses");
+        startUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
+        for (int i =0; i < parseTest; i++){
+            Double.parseDouble("111.4");
+        }
+        System.out.println("heap increase : " +  (((runtime.totalMemory() - runtime.freeMemory()) / mb) - startUsed) + " for " + parseTest + " parses");
         String callerId = request.getRemoteAddr();
         if (callerId != null && userEmail != null && userEmail.equals("demo@user.com")) {
             userEmail += callerId;
-        }
+        }*/
         if (connectionid != null && connectionid.length() > 0) { // nasty hack to support connection id from the plugin
             if (request.getServletContext().getAttribute(connectionid) != null) { // then pick up the temp logged in conneciton
                 LoggedInUser loggedInUser = (LoggedInUser)request.getServletContext().getAttribute(connectionid);

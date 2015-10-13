@@ -389,7 +389,7 @@ public class JSTreeService {
                 nameOrValue.name = child;
                 JSTreeService.JsTreeNode newNode = new JSTreeService.JsTreeNode(nameOrValue, name);
                 lookup.put(lastId + "", newNode);
-                boolean childrenBoolean = child.getChildren().size() > 0 || child.getValues().size() > 0 || child.getAttributes().size() > 1;
+                boolean childrenBoolean = child.hasChildren() || child.hasValues() || child.getAttributes().size() > 1;
                 if (count > 100) {
                     childTriples.add(new JsonChildren.Triple(lastId, (children.size() - 100) + " more....", childrenBoolean));
                     break;

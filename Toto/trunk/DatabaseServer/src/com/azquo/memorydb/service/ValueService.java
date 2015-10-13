@@ -27,6 +27,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class ValueService {
 
+    final Runtime runtime = Runtime.getRuntime();
+    final int mb = 1024 * 1024;
+    final int kb = 1024;
+
     private static final Logger logger = Logger.getLogger(ValueService.class);
 
     @Autowired
@@ -181,9 +185,12 @@ public final class ValueService {
         return values;
     }
 
-    // while the above is what would be used to check if data exists for a specific name combination (e.g. when inserting data) this will navigate down through the names
-    // this has been a major bottleneck, caching values against names helped a lot, also using similar logic to retainall but creating a new list seemed to double performance and with less garbage I hope!
-    // not to mention a list is better for iterator I think and .contains is NOT used in the one place this is called. CHanging the return type to list.
+    /* while the above is what would be used to check if data exists for a specific name combination (e.g. when inserting data) this will navigate down through the names
+    this has been a major bottleneck, caching values against names helped a lot, also using similar logic to retainall but creating a new list seemed to double performance and with less garbage I hope!
+    not to mention a list is better for iterator I think and .contains is NOT used in the one place this is called. Changing the return type to list.
+    As mentioned in comments in the function a lot of effort went in to speeding up this funciton and reducing garbage, be very careful before changing it.
+    */
+
     long part1NanoCallTime1 = 0;
     long part2NanoCallTime1 = 0;
     long part3NanoCallTime1 = 0;
@@ -207,37 +214,30 @@ public final class ValueService {
                 smallestName = name;
             }
         }
-
         part1NanoCallTime1 += (System.nanoTime() - start);
         long point = System.nanoTime();
         assert smallestName != null; // make intellij happy :P
         final Set<Value> smallestValuesSet = smallestName.findValuesIncludingChildren(payAttentionToAdditive);
         part2NanoCallTime1 += (System.nanoTime() - point);
         point = System.nanoTime();
-        // parallel stream is out, given this retain is best I think
-        // I don't really like creating the new set object here but not sure of an alternative, this is no worse than clone having dug around in the code
-        // the alternative might be, depending on size, a retainall which created a new set
-/*        long track = System.currentTimeMillis();
-        Set<Value> values =  HashObjSets.newMutableSet(smallestValuesSet);
-        for (Name name : names){
-            if (name != smallestName){ // a little cheaper than making a new name set and knocking this one off I think
-                values.retainAll(name.findValuesIncludingChildren(payAttentionToAdditive));
-            }
-        }
-        System.out.println("value service old method time : " + (System.currentTimeMillis() - track));
-        track = System.currentTimeMillis();*/
         // ok from testing a new list using contains against values seems to be the thing, double the speed at least I think!
         List<Value> toReturn = new ArrayList<>();// since the source is a set it will already be deduped - can use arraylist
-        List<Collection<Value>> setsToCheck = new ArrayList<>();
+        Set[] setsToCheck = new Set[names.size() - 1]; // I don't want to be creating iterators when checking. Iterator * millions = garbage. No problems losing typing, I just need the contains.
+        int arrayIndex = 0;
         for (Name name : names) {
             if (name != smallestName) { // a little cheaper than making a new name set and knocking this one off I think
-                setsToCheck.add(name.findValuesIncludingChildren(payAttentionToAdditive));
+                setsToCheck[arrayIndex] = name.findValuesIncludingChildren(payAttentionToAdditive);
+                arrayIndex++;
             }
         }
-        for (Value value : smallestValuesSet) {
-            boolean add = true;
-            for (Collection<Value> setToCheck : setsToCheck) {
-                if (!setToCheck.contains(value)) {
+        // todo - is building a collection here actually necessary? Could put the logic outside here (sum, min max) in here, then all we need to know is how important the values list actually is.
+        boolean add; // declare out here, save reinitialising each time
+        int index; // ditto that, should help
+        for (Value value : smallestValuesSet) { // because this could be a whacking great loop!
+            // stopping the iterator in here and moving the declarations out of here made a MASSIVE difference! Be careful doing anything with this loop,
+            add = true;
+            for (index = 0; index < setsToCheck.length; index++){
+                if (!setsToCheck[index].contains(value)) {
                     add = false;
                     break;
                 }
@@ -246,42 +246,10 @@ public final class ValueService {
                 toReturn.add(value);
             }
         }
-        //System.out.println("value service test new method time : " + (System.currentTimeMillis() - track));
-        // from testing parallel is speedy but creates LOTS of garbage
-        //List<Value> values = smallestValuesSet.stream().filter(value -> valueIsOk(value, namesWithoutSmallest, payAttentionToAdditive)).collect(Collectors.toList());
         part3NanoCallTime1 += (System.nanoTime() - point);
         numberOfTimesCalled1++;
         return toReturn;
     }
-
-/*    private static boolean valueIsOk(Value value, Collection<Name> namesWithoutSmallest, boolean payAttentionToAdditive){
-        boolean theValueIsOk = true;
-        for (Name name : namesWithoutSmallest) {
-            if (!value.getNames().contains(name)) { // top name not in there check children also
-                        //Set<Name> copy = new HashSet<>(value.getNames());
-                        //copy.retainAll(name.findAllChildren(payAttentionToAdditive));
-                        //if (copy.size() == 0) {
-                            //                        count++;
-                          //  theValueIsOk = false;
-                          //  break;
-                        //}
-                // going to try for new logic - what we're saying is : are there any matches between the child names and value names at all? I think the retain all code above is not as efficient as it might be
-                Collection<Name> allChildrenOfName = name.findAllChildren(payAttentionToAdditive);
-                boolean found = false;
-                for (Name tocheck : value.getNames()){
-                    if (allChildrenOfName.contains(tocheck)){
-                        found = true;
-                        break;
-                    }
-                }
-                if(!found){
-                    theValueIsOk = false;
-                    break;
-                }
-            }
-        }
-        return theValueIsOk;
-    }*/
 
     /* unused commenting
         // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
@@ -348,7 +316,7 @@ public final class ValueService {
     private static AtomicInteger findValueForNamesCount = new AtomicInteger(0);
 
     public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MutableBoolean locked
-            , final boolean payAttentionToAdditive, List<Value> valuesFound, List<String> attributeNames, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) throws Exception {
+            , final boolean payAttentionToAdditive, DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) throws Exception {
         findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
@@ -389,7 +357,7 @@ public final class ValueService {
 
         // no reverse polish converted formula, just sum
         if (!hasCalc) {
-            return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesFound, function, locked);
+            return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesHook, function, locked);
         } else {
             // this is where the work done by the shunting yard algorithm is used
             // ok I think I know why an array was used, to easily reference the entry before
@@ -429,7 +397,7 @@ public final class ValueService {
                         //}
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
-                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesFound, attributeNames, function);
+                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesHook, attributeNames, function);
                     }
                 }
             }
@@ -491,16 +459,16 @@ public final class ValueService {
     }
 
     // on a standard non-calc cell this will give the result
+    // heavily used function - a fair bit of testing has gone on to increase speed and reduce garbage collection, please be careful before changing
 
     private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
 
-    public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, List<Value> valuesFound, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, MutableBoolean locked) {
+    public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, DSSpreadsheetService.ValuesHook valuesHook, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, MutableBoolean locked) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
 
-        Collection<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive);
-
+        List<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive);
         double max = 0;
         double min = 0;
 
@@ -529,8 +497,13 @@ public final class ValueService {
                 }
             }
         }
-        if (valuesFound != null) {
-            valuesFound.addAll(values);
+        // ok the hack here is that it was just values. add all but this often involved copying into an empty list which is silly if the list is here and won't be used after,
+        // hence most of the time use the ready made list unless there's already one there in which case we're part of calc and will need to add
+        // I'm trying to minimise garbage
+        if (valuesHook.values != null) {
+            valuesHook.values.addAll(values);
+        } else {
+            valuesHook.values = values;
         }
 
         part2NanoCallTime += (System.nanoTime() - point);
