@@ -525,27 +525,56 @@ public final class AzquoMemoryDB {
         for (String tableToStoreIn : entitiesToPersist.keySet()) { // could go back to an enum of persist table names? Only implemented like this due to the old app tables
             Set<AzquoMemoryDBEntity> entities = entitiesToPersist.get(tableToStoreIn);
             if (!entities.isEmpty()) {
-                System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
-                List<JsonRecordTransport> recordsToStore = new ArrayList<>(entities.size()); // it's now bothering me a fair bit that I didn't used to initialise such lists!
                 // todo : write locking the db probably should start here
                 // multi thread this chunk? It can slow things down a little . . .
-                for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it. Copy perhaps expensive but consistency is important
-                    JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
-                    if (entity.getNeedsDeleting()) {
-                        state = JsonRecordTransport.State.DELETE;
+                if (!fastLoaded || tableToStoreIn.equals(StandardDAO.PersistedTable.provenance.name())){ // provenance is old style regardless
+                    System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
+                    List<JsonRecordTransport> recordsToStore = new ArrayList<>(entities.size()); // it's now bothering me a fair bit that I didn't used to initialise such lists!
+                    for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it. Copy perhaps expensive but consistency is important
+                        JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
+                        if (entity.getNeedsDeleting()) {
+                            state = JsonRecordTransport.State.DELETE;
+                        }
+                        if (entity.getNeedsInserting()) {
+                            state = JsonRecordTransport.State.INSERT;
+                        }
+                        recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state));
+                        entity.setAsPersisted(); // is this dangerous here???
                     }
-                    if (entity.getNeedsInserting()) {
-                        state = JsonRecordTransport.State.INSERT;
+                    // and end here
+                    try {
+                        standardDAO.persistJsonRecords(this, tableToStoreIn, recordsToStore);// note this is multi threaded internally
+                    } catch (Exception e) {
+                        // currently I'll just stack trace this, not sure of what would be the best strategy
+                        e.printStackTrace();
                     }
-                    recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state));
-                    entity.setAsPersisted(); // is this dangerous here???
-                }
-                // and end here
-                try {
-                    standardDAO.persistJsonRecords(this, tableToStoreIn, recordsToStore);// note this is multi threaded internally
-                } catch (Exception e) {
-                    // currently I'll just stack trace this, not sure of what would be the best strategy
-                    e.printStackTrace();
+                } else { // new save on name and value
+                    if (tableToStoreIn.equals(StandardDAO.PersistedTable.name.name())){
+                        System.out.println("new name store : " + entities.size());
+                        List<Name> namesToStore = new ArrayList<>(entities.size());
+                        for (AzquoMemoryDBEntity entity : entities){
+                            namesToStore.add((Name)entity);
+                            entity.setAsPersisted();// again need a little think about where this happens, maybe in the dao?
+                        }
+                        try {
+                            nameDAO.persistNames(this, namesToStore, false);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if (tableToStoreIn.equals(StandardDAO.PersistedTable.value.name())){
+                        System.out.println("new value store : " + entities.size());
+                        List<Value> valuesToStore = new ArrayList<>(entities.size());
+                        for (AzquoMemoryDBEntity entity : entities){
+                            valuesToStore.add((Value)entity);
+                            entity.setAsPersisted();// again need a little think about where this happens, maybe in the dao?
+                        }
+                        try {
+                            valueDAO.persistValues(this, valuesToStore, false);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
             }
         }
@@ -563,6 +592,7 @@ public final class AzquoMemoryDB {
         valueDAO.clearFastValueTable(this);
         nameDAO.persistNames(this, nameByIdMap.values(), true);
         valueDAO.persistValues(this, valueByIdMap.values(), true);
+        fastLoaded = true;
     }
 
     // will block currently! - a concern due to the writing synchronized above?
