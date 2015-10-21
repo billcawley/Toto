@@ -59,6 +59,23 @@ public class StandardDAO {
     }
 
 
+    // lots of info could be in here but for the moment we just want rows. Doens't need to be completely accuratye, it's for guessing map sizes
+    private static final String ROWS = "Rows";
+    private static class TableStatus {
+        public final int rows;
+
+        private TableStatus(int rows) {
+            this.rows = rows;
+        }
+    }
+
+    private static final class TableStatusRowMapper implements RowMapper<TableStatus> {
+        @Override
+        public TableStatus mapRow(final ResultSet rs, final int row) throws SQLException {
+            return new TableStatus(rs.getInt(ROWS));
+        }
+    }
+
     private class BulkInserter implements Runnable {
         private final AzquoMemoryDB azquoMemoryDB;
         private final String tableName;
@@ -204,5 +221,15 @@ WHERE id IN (1,2,3)
         final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`";
         Integer toReturn = jdbcTemplate.queryForObject (SQL_SELECT_ALL, new HashMap<>(), Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
+    }
+    // trusting of input
+    public final int findNumberOfRows(final String dbName, final String tableName) throws DataAccessException {
+        final String SQL_SELECT_STATUS = "SHOW TABLE STATUS from "+ dbName  + " LIKE '" + tableName + "'";
+        final List<TableStatus> query = jdbcTemplate.query(SQL_SELECT_STATUS, new TableStatusRowMapper());
+        if (query.isEmpty()){
+            return -1;
+        } else {
+            return query.iterator().next().rows;
+        }
     }
 }

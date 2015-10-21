@@ -6,7 +6,6 @@ import com.azquo.memorydb.dao.StandardDAO;
 import com.azquo.memorydb.dao.ValueDAO;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
 import java.util.*;
@@ -35,6 +34,7 @@ public final class AzquoMemoryDB {
 
     private final StandardDAO standardDAO;
 
+    // new faster loading/saving data access objects.
     private final NameDAO nameDAO;
 
     private final ValueDAO valueDAO;
@@ -78,7 +78,7 @@ public final class AzquoMemoryDB {
 
     private boolean fastLoaded = false;
 
-    // Initialising as concurrent hashmaps here, needs careful thought as to whether heavy concurrent access is actually a good idea, what could go wrong
+    // Initialising as concurrent hash maps here, needs careful thought as to whether heavy concurrent access is actually a good idea, what could go wrong
     private static AtomicInteger newDatabaseCount = new AtomicInteger(0);
 
     protected AzquoMemoryDB(String mysqlName, StandardDAO standardDAO, NameDAO nameDAO, ValueDAO valeuDAO, StringBuffer sessionLog) throws Exception {
@@ -92,7 +92,7 @@ public final class AzquoMemoryDB {
             possibleLoadingThreads = 8;
         }
         loadingThreads = possibleLoadingThreads;
-        reportFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report generation, 2/3
+        reportFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report generation, 2/3. Also used for linking.
         System.out.println("memory db transport threads : " + loadingThreads);
         System.out.println("reportFillerThreads : " + reportFillerThreads);
         this.mysqlName = mysqlName;
@@ -106,8 +106,18 @@ public final class AzquoMemoryDB {
 /*        nameByIdMap = HashIntObjMaps.newMutableMap();
         valueByIdMap = HashIntObjMaps.newMutableMap();
         provenanceByIdMap = HashIntObjMaps.newMutableMap();*/
-        // todo - get id counts from the tables and init the id maps to a proper size?
+        // also commenting the map init numbers, inno db can overestimate quite heavily.
+/*        int numberOfNames = standardDAO.findNumberOfRows(mysqlName, "fast_name");
+        if (numberOfNames == -1){
+            numberOfNames = standardDAO.findNumberOfRows(mysqlName, "name");
+        }
+        System.out.println("number of names : " + numberOfNames);*/
         nameByIdMap = new ConcurrentHashMap<>();
+/*        int numberOfValues = standardDAO.findNumberOfRows(mysqlName, "fast_value");
+        if (numberOfValues == -1){
+            numberOfValues = standardDAO.findNumberOfRows(mysqlName, "value");
+        }
+        System.out.println("number of values : " + numberOfValues);*/
         valueByIdMap = new ConcurrentHashMap<>();
         provenanceByIdMap = new ConcurrentHashMap<>();
         entitiesToPersist = new ConcurrentHashMap<>();
@@ -446,7 +456,7 @@ public final class AzquoMemoryDB {
             //AzquoMemoryDB.printAllCountStats();
 
             //AzquoMemoryDB.clearAllCountStats();
-            int testlimit = 10_000_000;
+            //int testlimit = 10_000_000;
             /*for (int i = 0; i < 3; i++){
                 long track = System.currentTimeMillis();
                 System.out.println("Set test " + testlimit * (i + 1));

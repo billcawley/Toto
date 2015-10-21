@@ -1033,6 +1033,7 @@ public final class NameService {
 
     // Ok I'm now making this a set with the caveat that it may be a linked hash set if there's ordering. Also we assume that returned sets won't be modified.
     // Some use of instanceof depending on whether we need ordering. Feels a bit hacky, might be able to clean up the logic
+    // I wanted this to return a custom object but in doing so the complexity began to spiral, I've reverted for the moment
 
     private static AtomicInteger interpretSetTermCount = new AtomicInteger(0);
 
@@ -1126,9 +1127,7 @@ public final class NameService {
             namesFound = selectedNames;
         }
         if (sorted != null) {
-            if (!(namesFound instanceof List)){ // it's a set, need to wrap, hope it's not a big set
-                namesFound = new ArrayList<>(namesFound);
-            }
+                namesFound = new ArrayList<>(namesFound); // make a new one regardless, it may already be a list but if immutable we're in trouble
             Collections.sort((List<Name>)namesFound, defaultLanguageCaseInsensitiveNameComparator);
         }
         if (namesFound instanceof List) { // it's a list but I want a set,

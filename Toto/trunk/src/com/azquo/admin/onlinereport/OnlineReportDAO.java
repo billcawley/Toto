@@ -97,7 +97,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     }
 
     public List<OnlineReport> findForDatabaseIdAndUserStatus(final int databaseId, String userStatus, String databaseType) {
-        if (databaseType.length() == 0){
+        if (databaseType == null || databaseType.length() == 0){
             databaseType = "none";
         }
         String[] statuses = userStatus.split(",");
