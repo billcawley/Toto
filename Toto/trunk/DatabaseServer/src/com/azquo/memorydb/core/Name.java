@@ -124,7 +124,7 @@ public final class Name extends AzquoMemoryDBEntity {
         }
 
         public String getAttribute(String attributeName) {
-            //attributeName = attributeName.toUpperCase(); // interesting I zapped this, why?
+            //attributeName = attributeName.toUpperCase(); // interesting I zapped this, why? ..... There were problems from 'getAttribute in DSImportService..... WFC
             for (int i = 0; i < attributeKeys.length; i++){
                 if (attributeKeys[i].equals(attributeName)){
                     return attributeValues[i];
