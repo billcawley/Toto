@@ -73,7 +73,7 @@ public class DSImportService {
     public static final String COMPOSITION = "composition";
     public static final String DEFAULT = "default";
     public static final String NONZERO = "nonzero";
-    public static final String headingsString = "headings";
+    public static final String headingsString = "HEADINGS";
     public static final String dateLang = "date";
     public static final String ONLY = "only";
 
@@ -583,7 +583,7 @@ public class DSImportService {
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         boolean skipTopLine = false;
         if (importInterpreter != null) {
-            // hack for spark response, I'll leave in here for the moment, it could be useful for others
+             // hack for spark response, I'll leave in here for the moment, it could be useful for others
             if ("true".equalsIgnoreCase(importInterpreter.getAttribute("transpose"))) {
                 // ok we want to transpose, will use similar logic to the server side transpose
                 final List<String[]> sourceList = new ArrayList<>();
@@ -614,8 +614,8 @@ public class DSImportService {
                     skipTopLine = true;
                 }
             }
-            if (importHeaders != null) {
-                headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
+             if (importHeaders != null) {
+                  headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
             }
         }
         // finally we might use the headers on the data file, this is notably used when setting up the headers themselves :)
