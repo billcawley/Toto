@@ -158,13 +158,18 @@ public class NameDAO {
         }
         bulkDelete(azquoMemoryDB, toDelete);
         System.out.println("bulk deleted " + counter);
+        int insertCount = 0;
+        for (Name name:names){
+            if (!name.getNeedsDeleting()) insertCount++;
+        }
         counter = 0;
         for (Name name : names) {
             if (!name.getNeedsDeleting()) { // then we insert, either it's new or was updated hence deleted ready for reinsertion
                 counter++;
+                insertCount--;
                 toInsert.add(name);
                 if (toInsert.size() == UPDATELIMIT) {
-                    executor.execute(new BulkNameInserter(azquoMemoryDB, toInsert, counter%1_000_000 == 0 ? "bulk inserted " + counter : null));
+                    executor.execute(new BulkNameInserter(azquoMemoryDB, toInsert, counter%1_000_000 == 0 ? "bulk inserted " + counter + " remaining "  + initialInsert: null));
                     toInsert = new ArrayList<>(UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
                 }
             }
