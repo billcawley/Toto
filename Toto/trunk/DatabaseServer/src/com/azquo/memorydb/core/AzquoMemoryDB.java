@@ -735,6 +735,55 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger getNameByAttribute2Count = new AtomicInteger(0);
 
+
+    public List<Name> findDuplicateNames(String attributeName){
+        List<Name> found = new ArrayList<>();
+        Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
+        if (map==null) return null;
+        int dupCount = 0;
+        for (String string:map.keySet()){
+            if (map.get(string).size() > 1){
+                Map<String,Set<String>> attributeList = new HashMap<>();
+                boolean dupFound = false;
+                for (Name name:map.get(string)){
+                    dupFound = true;
+                    for (String attribute:name.getAttributeKeys()){
+                        if (!attribute.equals(attributeName)){
+                            dupFound = false;
+                            String attValue = name.getAttribute(attribute);
+                            Set<String> existingVals = attributeList.get(attribute);
+                            if (existingVals==null){
+                                existingVals = new HashSet<String>();
+                                attributeList.put(attribute, existingVals);
+                            }
+                              for (String existingVal:existingVals){
+                                if (existingVal.equals(attValue)){
+                                    dupFound = true;
+                                    break;
+                                }
+                            }
+                            existingVals.add(attValue);
+                        }
+
+                    }
+                    if (dupFound){
+                        break;
+                    }
+
+                }
+                if (dupFound){
+                    found.addAll(map.get(string));
+                    if (dupCount++ > 100){
+                         break;
+                    }
+                }
+            }
+        }
+        return found;
+
+
+    }
+
     public Name getNameByAttribute(final List<String> attributeNames, final String attributeValue, final Name parent) {
         getNameByAttribute2Count.incrementAndGet();
         Set<Name> possibles = getNamesForAttributeNamesAndParent(attributeNames, attributeValue, parent);
