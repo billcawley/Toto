@@ -649,6 +649,9 @@ public final class NameService {
         if (setFormula.startsWith("deduplicate")) {
             return deduplicate(azquoMemoryDBConnection, setFormula.substring(12));
         }
+        if (setFormula.startsWith("findduplicates")){
+            return findDuplicateNames(azquoMemoryDBConnection);
+        }
         if (setFormula.startsWith("zap ")) {
             Collection<Name> names = parseQuery(azquoMemoryDBConnection, setFormula.substring(4), attributeNames); // defaulting to list here
             if (names != null) {
@@ -861,7 +864,13 @@ public final class NameService {
 
     private static AtomicInteger deduplicateCount = new AtomicInteger(0);
 
+    private List<Name> findDuplicateNames(AzquoMemoryDBConnection azquoMemoryDBConnection){
+          /*input syntax 'findduplicates`   probably need to add 'exception' list of cases where duplicates are expected (e.g.   Swimshop product categories)*/
+        return azquoMemoryDBConnection.getAzquoMemoryDB().findDuplicateNames(Constants.DEFAULT_DISPLAY_NAME);
+    }
+
     private List<Name> deduplicate(AzquoMemoryDBConnection azquoMemoryDBConnection, String formula) throws Exception {
+        /*The syntax of the query is 'deduplicate <Set<Name>> to <Name>   Any duplicate names within the source set will be renamed and put in the destination name*/
         deduplicateCount.incrementAndGet();
         List<Name> toReturn = new ArrayList<>();
         int toPos = formula.indexOf(" to ");
