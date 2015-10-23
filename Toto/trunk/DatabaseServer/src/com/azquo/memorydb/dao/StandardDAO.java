@@ -80,11 +80,13 @@ public class StandardDAO {
         private final AzquoMemoryDB azquoMemoryDB;
         private final String tableName;
         private final List<JsonRecordTransport> records;
+        private int totalCount;
 
-        public BulkInserter(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) {
+        public BulkInserter(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records, int totalCount) {
             this.azquoMemoryDB = azquoMemoryDB;
             this.tableName = tableName;
             this.records = records;
+            this.totalCount = totalCount;
         }
 
         @Override
@@ -104,7 +106,7 @@ public class StandardDAO {
                     insertSql.delete(insertSql.length() - 2, insertSql.length());
                     //System.out.println(insertSql.toString());
                     jdbcTemplate.update(insertSql.toString(), namedParams);
-                    System.out.println("bulk inserted " + DecimalFormat.getInstance().format(records.size()) + " into " + tableName + " in " + (System.currentTimeMillis() - track));
+                    System.out.println("bulk inserted " + DecimalFormat.getInstance().format(records.size()) + " into " + tableName + " in " + (System.currentTimeMillis() - track) + " remaining " + totalCount);
                 }
         }
     }
@@ -180,6 +182,7 @@ WHERE id IN (1,2,3)
         List<JsonRecordTransport> toDelete = new ArrayList<>();
         List<JsonRecordTransport> toInsert = new ArrayList<>(UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
         List<JsonRecordTransport> toUpdate = new ArrayList<>();
+        int totalCount = records.size();
         for (JsonRecordTransport record : records) {
             if (record.state == JsonRecordTransport.State.DELETE) {
                 toDelete.add(record);
@@ -191,7 +194,8 @@ WHERE id IN (1,2,3)
             if (record.state == JsonRecordTransport.State.INSERT) {
                 toInsert.add(record);
                 if (toInsert.size() == UPDATELIMIT) {
-                    executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert));
+                    totalCount -= toInsert.size();
+                    executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert, totalCount));
                     toInsert = new ArrayList<>(UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
                 }
             }
@@ -204,7 +208,7 @@ WHERE id IN (1,2,3)
             }
         }
         bulkDelete(azquoMemoryDB, tableName, toDelete);
-        executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert));
+        executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert, 0));
         bulkUpdate(azquoMemoryDB, tableName, toUpdate);
         executor.shutdown();
         if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
