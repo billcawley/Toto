@@ -78,6 +78,5 @@ New Business<br/>
         <input type="submit" name="submit" value="Submit"/>
     </div>
 </form>
-
 </body>
 </html>

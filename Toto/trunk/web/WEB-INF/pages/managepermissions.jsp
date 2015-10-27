@@ -1,52 +1,43 @@
-<%--
-  Created by IntelliJ IDEA.
-  User: cawley
-  Date: 24/04/15
-  Time: 15:48
-  To change this template use File | Settings | File Templates.
---%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<html>
-<head>
-  <link rel='stylesheet' id='bootstrap-css'  href='/wp-content/themes/stylish-v1.2.2/styles/bootstrap/css/bootstrap.css?ver=3.9.5' type='text/css' media='all' />
-  <link rel='stylesheet' id='bootstrap-responsive-css'  href='https://www.azquo.com/wp-content/themes/stylish-v1.2.2/styles/bootstrap/css/bootstrap-responsive.css?ver=3.9.5' type='text/css' media='all' />
-    <title>Manage Permissions</title>
-</head>
-<body>
-<body>
-<a href="/api/ManageReports">Manage Reports</a> &nbsp;<a href="/api/ManageReportSchedules">Manage Report Schedules</a> &nbsp;<a href="/api/ManageDatabases">Manage Databases</a> &nbsp;<a href="/api/ManageUsers">Manage Users</a> &nbsp;<a href="/api/ManagePermissions">Manage Permissions</a> &nbsp;<br/>
-<h1>Manage Permissions</h1><br/>
-<a href="/api/ManagePermissions?editId=0">New</a>
-<br/>
-<table>
-  <tr>
-    <td>Start Date</td>
-    <td>End Date</td>
-    <td>Read List</td>
-    <td>Write List</td>
-    <td>Database</td>
-    <td>Email</td>
-    <td></td>
-    <!-- password and salt pointless here -->
-  </tr>
-    <c:forEach items="${permissions}" var="permission">
-      <tr>
-        <td>${permission.startDate}</td>
-        <td>${permission.endDate}</td>
-        <td>${permission.readList}</td>
-        <td>${permission.writeList}</td>
-        <td>${permission.databaseName}</td>
-        <td>${permission.userEmail}</td>
-      <td><a href="/api/ManagePermissions?editId=${permission.id}">Edit</a>&nbsp;<a href="/api/ManagePermissions?deleteId=${permission.id}" onclick="return confirm('Are you sure?')">Delete</a></td>
-    </tr>
-  </c:forEach>
-</table>
+<c:set var="title" scope="request" value="Manage Permissions" />
+<%@ include file="../includes/admin_header.jsp" %>
 
+<main>
+	<h1>Manage Permissions</h1>
+	
+	<table>
+		<thead>
+			<tr>
+				<td>Database</td>
+				<td>Email</td>
+				<td>Start Date</td>
+				<td>End Date</td>
+				<td>Read List</td>
+				<td>Write List</td>
+				<td width="30"></td>
+				<td width="30"></td>
+				<!-- password and salt pointless here -->
+			</tr>
+		</thead>
+		<tbody>
+		<c:forEach items="${permissions}" var="permission">
+			<tr>
+				<td>${permission.databaseName}</td>
+				<td>${permission.userEmail}</td>
+				<td>${permission.startDate}</td>
+				<td>${permission.endDate}</td>
+				<td>${permission.readList}</td>
+				<td>${permission.writeList}</td>
+				<td><a href="/api/ManagePermissions?deleteId=${permission.id}" title="Delete Permission" onclick="return confirm('Are you sure?')" class="button small alt fa fa-trash"></a></td>
+				<td><a href="/api/ManagePermissions?editId=${permission.id}" title="Edit Permission" class="button small fa fa-edit"></a></td>
+			</tr>
+		</c:forEach>
+	</table>
+	
+	<div class="centeralign">
+		<a href="/api/ManagePermissions?editId=0" class="button"><span class="fa fa-plus-circle"></span> Add New Permission</a>
+	</div>
 
-
-
-
-
-</body>
-</html>
+</main>
+<%@ include file="../includes/admin_footer.jsp" %>

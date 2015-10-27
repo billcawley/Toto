@@ -180,7 +180,7 @@ public class ZKSpreadsheetCommandController {
                         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService,userChoiceDAO,userRegionOptionsDAO);
                         zkAzquoBookUtils.populateBook(newBook, true);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
-                        Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"none\";");
+                        Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

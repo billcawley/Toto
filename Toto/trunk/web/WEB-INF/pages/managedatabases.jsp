@@ -7,120 +7,192 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<html>
-<head>
-    <title>Manage Databases</title>
-</head>
-<body>
-<a href="/api/ManageReports">Manage Reports</a> &nbsp;<a href="/api/ManageReportSchedules">Manage Report Schedules</a> &nbsp;<a href="/api/ManageDatabases">Manage Databases</a> &nbsp;<a href="/api/ManageUsers">Manage Users</a> &nbsp;<a href="/api/ManagePermissions">Manage Permissions</a> &nbsp;<br/>
-<h1>Manage Databases</h1><br/>
-<br/><h1>${error}</h1>
-Memory report for servers<br/>
-<c:forEach items="${databaseServers}" var="databaseServer">
-    <a href="/api/MemoryReport?serverIp=${databaseServer.ip}" target="new">${databaseServer.name}</a>
-</c:forEach>
-<table>
-  <tr>
-  <form action="/api/ManageDatabases" method="post"><td>New Database</td><td><input name="createDatabase"/></td><td><input name="databaseType"/></td><td>
-      <select name="databaseServerId">
-      <c:forEach items="${databaseServers}" var="databaseServer">
-          <option value="${databaseServer.id}">${databaseServer.name} - ${databaseServer.ip}</option>
-      </c:forEach>
-  </select><input type="submit" name="Create Database" value="Create Database"/>
-  </td></form>
-  </tr>
-  <form action="/api/ManageDatabases" method="post">
-    <tr>
-    <td>Target Database</td><td><input name="backupTarget"/></td><td></td><td><input type="submit" name="Backup Database" value="Backup Database"/></td>
-      </tr>
-    <tr>
-    <td>Summary Level</td><td><input name="summaryLevel"/></td><td></td><td></td>
-    </tr>
-  </form>
-</table>
-<br/><br/>
-<table>
-  <tr>
-    <!--      <td>${database.id}</td> -->
-    <td>Start Date</td>
-    <td>End Date</td>
-<!--    <td>${database.businessId}</td> -->
-    <td>Name</td>
-    <td>MySQLName</td>
-      <td>Database type</td>
-    <td>Name Count</td>
-    <td>Value Count</td>
-      <td></td>
-      <td></td>
-      <td></td>
-  </tr>
-  <c:forEach items="${databases}" var="database">
-    <tr>
-<!--      <td>${database.id}</td> -->
-      <td>${database.startDate}</td>
-      <td>${database.endDate}</td>
-      <!-- <td>${database.businessId}</td> -->
-      <td>${database.name}</td>
-      <td>${database.mySQLName}</td>
-        <td>${database.databaseType}</td>
-        <td>${database.nameCount}</td>
-      <td>${database.valueCount}</td>
-        <td><a href="#" onclick="window.open('/api/Jstree?op=new&database=${database.urlEncodedName}', '_blank', 'toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600')">Inspect</a></td>
-        <td><a href="/api/ManageDatabases?emptyId=${database.id}" onclick="return confirm('Are you sure?')">Empty</a></td>
-        <td><a href="/api/ManageDatabases?deleteId=${database.id}" onclick="return confirm('Are you sure?')">Delete</a></td>
-        <td>
-            <c:if test="${database.loaded}">
-                <a href="/api/ManageDatabases?unloadId=${database.id}">Unload</a>
-            </c:if>
-            <c:if test="${database.canConvert}">
-                <a href="/api/ManageDatabases?convertId=${database.id}">Convert</a>
-            </c:if>
+<c:set var="title" scope="request" value="Manage Databases" />
+<%@ include file="../includes/admin_header.jsp" %>
 
-        </td>
-    </tr>
-  </c:forEach>
-</table>
-<br/><br/>
-Uploads
-<br/><br/>
-<table>
-  <tr>
-    <td>Date</td>
-    <td>Business Name</td>
-    <td>Database Name</td>
-    <td>User Name</td>
-    <td>File Name</td>
-    <td>File Type</td>
-    <td>Comments</td>
-  </tr>
-  <c:forEach items="${uploads}" var="upload">
-    <tr>
-      <td>${upload.date}</td>
-      <td>${upload.businessName}</td>
-      <td>${upload.databaseName}</td>
-      <td>${upload.userName}</td>
-      <td>${upload.fileName}</td>
-      <td>${upload.fileType}</td>
-      <td>${upload.comments}</td>
-    </tr>
-  </c:forEach>
-</table>
-<table>
-    <tr>
-        <form action="/api/ManageDatabases" method="post" enctype="multipart/form-data"><td>Upload File</td><td><input type="file" name="uploadFile"></td>
-            <td>
-                <select name="database">
-                    <option value="">None</option>
-            <c:forEach items="${databases}" var="database">
-                <option value="${database.name}" <c:if test="${database.name == lastSelected}">
-                    selected
-                </c:if>>${database.name}</option>
-            </c:forEach>
-            </select>
-            </td>
-            <td>Use database type ? <input type="checkbox" name="useType"/></td>
-            <td><input type="submit" name="Upload" value="Upload"/></td></form>
-    </tr>
-</table>
-</body>
-</html>
+
+<main class="databases">
+<h1>Manage Databases</h1>
+<div class="error">${error}</div>
+<div class="tabs">
+	<ul>
+		<li><a href="#tab1">Uploads</a></li>
+		<li><a href="#tab2">DB Management</a></li>
+		<li><a href="#tab3">Maintenance</a></li>
+	</ul>
+<!-- Uploads -->
+	<div id="tab1" style="display:none">
+	<h3>Uploads</h3>
+	<div class="well">
+	<form action="/api/ManageDatabases" method="post" enctype="multipart/form-data">
+	<table>
+		<tbody>
+			<tr>
+				<td><label for="uploadFile">Upload File:</label> <input id="uploadFile" type="file" name="uploadFile"></td>
+			<td>
+				<label for="uploadDatabase">Database:</label>
+				<select name="database" id="uploadDatabase">
+					<option value="">None</option>
+					<c:forEach items="${databases}" var="database">
+						<option value="${database.name}" <c:if test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
+					</c:forEach>
+				</select>
+			</td>
+			<td><label for=""><label for="useType">Use database type?</label> <input id="useType" type="checkbox" name="useType"/></td>
+			<td><input type="submit" name="Upload" value="Upload" class="button "/></td>
+			</tr>
+		</tbody>
+	</table>	
+	</form>
+	</div>
+	<!-- Archive List -->
+	<table>
+		<thead>
+			<tr>
+				<td>Date</td>
+				<td>Business Name</td>
+				<td>Database Name</td>
+				<td>User Name</td>
+				<td>File Name</td>
+				<td>File Type</td>
+				<td>Comments</td>
+			</tr>
+		</thead>
+		<tbody>
+		<c:forEach items="${uploads}" var="upload">
+			<tr>
+				<td>${upload.date}</td>
+				<td>${upload.businessName}</td>
+				<td>${upload.databaseName}</td>
+				<td>${upload.userName}</td>
+				<td>${upload.fileName}</td>
+				<td>${upload.fileType}</td>
+				<td>${upload.comments}</td>
+			</tr>
+		</c:forEach>
+		<t/body>
+	</table>
+
+
+
+
+	</div>
+<!-- END Uploads -->		
+<!-- DB Management -->		
+	<div id="tab2" style="display:none">
+		<h3>Create new database:</h3>
+		<div class="well">
+		<form action="/api/ManageDatabases" method="post">
+			<table>
+				<tr>
+					<td><label for="createDatabase">Database Name:</label> <input name="createDatabase" id="createDatabase"/></td>
+					<td><label for="databaseType">Database Type:</label> <input name="databaseType" id="databaseType"/></td>
+					<td>
+						<label for="databaseServerId">Select Server:</label>
+						<select name="databaseServerId" id="databaseServerId">
+							<c:forEach items="${databaseServers}" var="databaseServer">
+								<option value="${databaseServer.id}">${databaseServer.name} - ${databaseServer.ip}</option>
+							</c:forEach>
+						</select>
+					</td>
+					<td>
+						<input type="submit" name="Create Database" value="Create Database" class="button"/>
+					</td>
+				</tr>	
+			</table>
+		</form>
+		</div>
+		<!-- Database Options Table -->
+		<table>
+			<thead>
+				<tr>
+					<!--<td>${database.id}</td> -->
+					<td>Start Date</td>
+					<td>End Date</td>
+					<!--<td>${database.businessId}</td>-->
+					<td>Name</td>
+					<td>MySQLName</td>
+					<td>Database type</td>
+					<td>Name Count</td>
+					<td>Value Count</td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+				</tr>
+			</thead>
+			<tbody>
+				<c:forEach items="${databases}" var="database">
+				<tr>
+					<!--<td>${database.id}</td>-->
+					<td>${database.startDate}</td>
+					<td>${database.endDate}</td>
+					<!--<td>${database.businessId}</td> -->
+					<td>${database.name}</td>
+					<td>${database.mySQLName}</td>
+					<td>${database.databaseType}</td>
+					<td>${database.nameCount}</td>
+					<td>${database.valueCount}</td>
+					<td><a href="/api/Jstree?op=new&database=${database.urlEncodedName}" data-title="${database.urlEncodedName}" class="button small inspect" title="Inspect"><span class="fa fa-eye" title="Inspect ${database.name}"></span></a></td>
+					<td><a href="/api/ManageDatabases?emptyId=${database.id}" onclick="return confirm('Are you sure?')" class="button small" title="Empty ${database.name}"><span class="fa fa-bomb" title="Empty"></span></a></td>
+					<td><a href="/api/ManageDatabases?deleteId=${database.id}" onclick="return confirm('Are you sure?')" class="button small alt" title="Delete ${database.name}"><span class="fa fa-trash" title="Delete"></span> </a></td>
+					<td><c:if test="${database.loaded}"><a href="/api/ManageDatabases?unloadId=${database.id}" class="button small" title="Unload ${database.name}"><span class="fa fa-eject" title="Unload"></span></a></c:if></td>
+					<td><c:if test="${database.canConvert}"> <a href="/api/ManageDatabases?convertId=${database.id}" class="button small" title="Convert ${database.name}"><span class="fa fa-exchange" title="Convert"></span></a></c:if></td>
+				</tr>
+				</c:forEach>
+			</tbody>
+		</table>	
+		<!-- Database Backup -->
+		<div class="well">
+			<form action="/api/ManageDatabases" method="post">
+			<table>	
+				<tbody>
+					<tr>
+						<td><label for="backupTarget">Target Database:</label> <input name="backupTarget" id="backupTarget"/></td>
+						<td><label for="summaryLevel">Summary Level:</label> <input name="summaryLevel" id="summaryLevel"/></td>
+						<td><input type="submit" name="Backup Database" value="Backup Database" class="button"/></td>
+					</tr>
+				</tbody>
+			</table>
+			</form>		
+		</div>
+	</div>
+<!-- END DB Management -->		
+<!-- Maintenance -->	
+	<div id="tab3" style="display:none">
+		<h3>Memory report for servers:</h3>
+		<div class="well">
+			<c:forEach items="${databaseServers}" var="databaseServer">
+				<a href="/api/MemoryReport?serverIp=${databaseServer.ip}" target="new" class="button report">${databaseServer.name}</a>
+			</c:forEach>
+		</div>
+	</div>
+<!-- END Maintenance -->	
+</div>
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+</main>
+
+<!-- tabs -->
+<script type="text/javascript">
+	$(document).ready(function(){
+		$('.tabs').tabs();
+	});
+</script>
+
+<%@ include file="../includes/admin_footer.jsp" %>

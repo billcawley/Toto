@@ -1,102 +1,33 @@
-<?doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"
-		doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" />
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <title>Azquo</title>
-    <script type="text/javascript">
+#set( $title = "Dashboard" )
+#parse('../includes/velocity_header.vm')
 
-
-        function reportChosen(reportToLoad){
-            document.getElementById("reportToLoad").value = reportToLoad;
-            document.azquoform.submit();
-        }
-
-    </script>
-
-    <style>
-
-        .wrapper{
-            font-family:Arial;
-            font-color:#444444;
-            font-size:16px;
-        }
-        .heading {
-            height:100px;
-            border-bottom:4px solid #ff0000;
-        }
-
-        .welcome{
-            position:relative;
-            top:30px;
-            left:40px;
-            font-size:26px;
-
-        }
-
-        .report{
-            position:relative;
-            left:30px;
-            top:10px;
-          }
-
-        .reportname {
-            position:relative;
-            left:40px;
-            top:5px;
-            width:240px;
-
-        }
-
-        .reportname a{
-             font-size:16px;
-            text-decoration:none;
-            color:#444444;
-        }
-        .reportcategory {
-            position:relative;
-            left:0px;
-            font-size:20px;
-            text-decoration:none;
-            color:#444444;
-        }
-
-        .reportexplanation {
-            position:relative;
-            left:300px;
-            top:-10px;
-            width:300px;
-            font-size:12px;
-            font-color:#666666
-        }
-
-
-    </style>
-</head>
-<body>
-<div id="wrapper">
+<main class="public">
     <form  method="post" id="azquoform" name="azquoform">
-        <div class="heading">
-            <div class="welcome">$welcome</div>
-        </div>
+        <h1>$welcome</h1>
         <div class = "reportwrapper">
-
-            #foreach($report in $reports)
-                <div class="report">
-                      <div class="reportcategory">$report.category</div>
-                      <div class="reportname"><a href="$report.link"> $report.name</a></div>
-                    <div class="reportexplanation">$report.explanation</div>
-                    #if($report.image)
-                         <div class="reportimage>$report.image</div>
-                    #end
-
-                </div>
-            #end
-            <div class="feedbackBottom">
-            </div>
+			<table>
+				<thead>
+					<tr>
+						 #if($report.image)<td>Image</td>#end
+						<td>Category</td>
+						<td>Name</td>
+						<td>Explanation</td>
+						<td>#</td>
+					</tr>
+				</thead>
+				<tbody>	
+           			 #foreach($report in $reports)
+              		<tr >
+						 #if($report.image)<td><div class="reportimage">$report.image</div></td>#end
+						<td><div class="reportcategory">$report.category</div></td>
+						<td><div class="reportname"><a href="$report.link"> $report.name</a></div></td>
+						<td><div class="reportexplanation">$report.explanation</div></td>
+						<td><a href="$report.link" class="button small"><span class="fa fa-eye"></span></a></td>
+					</tr>
+           			 #end
+            	</tbody>
+            </table>	
         </div>
     </form>
-</div>
-</body>
-</html>
-
-
+</main>
+#parse('../includes/velocity_footer.vm')

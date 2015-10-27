@@ -953,7 +953,7 @@ public final class Name extends AzquoMemoryDBEntity {
         if (attributeName.contains(ATTRIBUTEDIVIDER)) {
             attributeName = attributeName.replace(ATTRIBUTEDIVIDER, "");
         }
-        if (attributeValue.contains(ATTRIBUTEDIVIDER)) {
+        if (attributeValue != null && attributeValue.contains(ATTRIBUTEDIVIDER)) {
             attributeValue = attributeValue.replace(ATTRIBUTEDIVIDER, "");
         }
         attributeName = attributeName.trim().toUpperCase(); // I think this is the only point at which attributes are created thus if it's uppercased here we should not need to check anywhere else

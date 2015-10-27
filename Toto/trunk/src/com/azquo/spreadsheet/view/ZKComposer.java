@@ -208,7 +208,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
                 if (zkAzquoBookUtils.populateBook(newBook)) { // check if formulae made saveable data
-                    Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
+                    Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                 }
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
             } catch (Exception e) {
@@ -268,7 +268,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow()
                         && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
                     CellForDisplay cellForDisplay = sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).get(col - name.getRefersToCellRegion().getColumn());
-                    Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
+                    Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                     if (isDouble) {
                         cellForDisplay.setDoubleValue(doubleValue);
                     }
@@ -592,7 +592,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
             ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
             if (zkAzquoBookUtils.populateBook(newBook)) { // check if formulae made saveable data
-                Clients.evalJavaScript("document.getElementById(\"saveData\").style.display=\"block\";");
+                Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
             }
             myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
         } catch (Exception e) {

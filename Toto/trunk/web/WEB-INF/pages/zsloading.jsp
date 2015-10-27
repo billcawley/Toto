@@ -1,18 +1,14 @@
-<%@page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<%@taglib prefix="zssjsp" uri="http://www.zkoss.org/jsp/zss" %>
-<html>
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-  <title>Azquo report</title>
-  <zssjsp:head/>
-</head>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<c:set var="title" scope="request" value="Loading" />
+<c:set var="requirezss" scope="request" value="true" />
+<%@ include file="../includes/basic_header.jsp" %>
+
 <%
   //prevent page cache in browser side
   response.setHeader("Pragma", "no-cache");
   response.setHeader("Cache-Control", "no-store, no-cache");
 %>
-<body>
 
 <script type="text/javascript">
 
@@ -59,17 +55,22 @@
 
 </script>
 
-<div id="wrapper" style="height: 100px;">
-  <div class="banner" id="banner">
-    <table cellpadding="0" cellspacing="0">
-      <tr>
-        <td><a href="/api/Online?opcode=loadsheet&reportid=1"><img src="/images/azquo-logo2.png" alt="Azquo logo"/></a></td>
-        <td><h1>Loading&nbsp;&nbsp;</h1>
-        </td>
-        <td width="600px"><div id="serverStatus" style="height:45px;width:100%;font:10px monospace;overflow:auto;"></div></td>
-      </tr>
-    </table>
-  </div>
-</div>
-</body>
-</html>
+
+<main class="basicDialog">
+	<div class="basic-box-container">
+		<div class="basic-head">
+			<div class="logo">
+				<a href="/api/Online?opcode=loadsheet&reportid=1"><img src="/images/logo_alt.png" alt="azquo"></a>
+			</div>
+		</div>
+		<div class="basic-box">
+			<h3>Loading Data...</h3>
+			<div class="loader">
+				<span class="fa fa-spin fa-cog"></span>
+			</div>
+			<div id="serverStatus"></div>
+		</div>
+	</div>
+</main>
+
+<%@ include file="../includes/basic_footer.jsp" %>

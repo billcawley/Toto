@@ -1,58 +1,65 @@
-<%--
-  Created by IntelliJ IDEA.
-  User: cawley
-  Date: 28/04/15
-  Time: 12:10
-  To change this template use File | Settings | File Templates.
---%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<html>
-<head>
-  <link rel='stylesheet' id='bootstrap-css'  href='/wp-content/themes/stylish-v1.2.2/styles/bootstrap/css/bootstrap.css?ver=3.9.5' type='text/css' media='all' />
-  <link rel='stylesheet' id='bootstrap-responsive-css'  href='https://www.azquo.com/wp-content/themes/stylish-v1.2.2/styles/bootstrap/css/bootstrap-responsive.css?ver=3.9.5' type='text/css' media='all' />
-  <title>Edit/New User</title>
-</head>
-<body>
-Edit/New User<br/>
-<form action="/api/ManageUsers" method="post">
-  <input type="hidden" name="editId" value="${id}"/>
-  <!-- no business id -->
- <div class="admintable">
-<table>
-  <tr>
-    <td>Start Date</td>
-    <td>${startDate}</td>
-  </tr>
-  <tr>
-    <td>End Date</td>
-    <td><input name="endDate" value="${endDate}"></td>
-  </tr>
-  <tr>
-    <td>Email</td>
-    <td><input name="email" value="${email}"></td>
-  </tr>
-  <tr>
-    <td>Name</td>
-    <td><input name="name" value="${name}"></td>
-  </tr>
-  <tr>
-    <td>Status</td>
-    <td><input name="status" value="${status}"></td>
-  </tr>
-  <tr>
-    <td>Password</td>
-    <td><input name="password"></td>
-  </tr>
-</table>
-   </div>
-  <div class="error">
-  ${error}
-    </div>
-  <div class="submit">
-  <input type="submit" name="submit" value="Submit"/>
-    </div>
-</form>
+<c:set var="title" scope="request" value="Edit/New User" />
+<%@ include file="../includes/admin_header.jsp" %>
 
-</body>
-</html>
+<main>
+	<h1>Edit/New User</h1>
+	<div class="error">${error}</div>
+	<form action="/api/ManageUsers" method="post">
+	<input type="hidden" name="editId" value="${id}"/>
+		<!-- no business id -->
+
+			<table class="edit">
+				<tbody>
+					<tr>
+					<td width="33%">
+						<h3>User Details</h3>
+						<div class="well">
+							<div>
+								<label for="name">Name</label>
+								<input name="name" id="name" value="${name}">
+							</div>
+							<div>
+								<label for="email">Email</label>
+								<input name="email" id="email" value="${email}">
+							</div>
+							<div>
+								<label for="status">Status</label>
+								<input name="status" id="status" value="${status}">
+							</div>
+						</div>
+					</td>
+					<td width="33%">
+						<h3>Start / End Date</h3>
+						<div class="well">
+							<div>
+								<label for="startDate">Start Date</label>
+								<input name="startDate" id="startDate" value="${startDate}">
+							</div>
+							<div>
+								<label for="endDate">End Date</label>
+								<input name="endDate" id="endDate" value="${endDate}">
+							</div>
+						</div>
+					</td>
+					<td width="33%">
+						<h3>Change Password</h3>
+						<div class="well">
+							<div>
+								<label for="password">Password</label>
+								<input name="password" id="password">
+							</div>
+						</div>
+					</td>
+				</tbody>
+			</table>		
+
+		<div class="centeralign">
+			<button type="submit" name="submit" value="save" class="button"><span class="fa fa-floppy-o"></span> Save </button>
+		</div>
+	</form>
+	
+</main>
+
+<%@ include file="../includes/admin_footer.jsp" %>

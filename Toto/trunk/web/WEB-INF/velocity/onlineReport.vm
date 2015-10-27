@@ -1,35 +1,6 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    $styles
-</head>
-<body>
-<div id="wrapper">
-    <div class="banner" id="banner">
-        <a href="#" onclick="toMenu()"><img src="/images/azquo-logo2.png" alt="Azquo logo"/></a>
-        <a class="menubutton" href="#" onclick="openTopMenu();"><img src="/images/menu.png"></a>
-        <div id="topmenubox" class="topmenubox">
-            <ul  class="topmenu">
-                <li><a href="#" onclick="downloadAsXLS()">Download as XLSX</a></li>
-                <li><a href="#" onclick="downloadAsPDF();">Download as PDF</a></li>
-                <li><a href="#" onclick="inspectDatabase();">Inspect database</a></li>
-                <li><a href="#" onclick="uploadFile();">Upload file</a></li>
-                <li>
-                    <a href="#"  onclick="showHighlight();">Highlight changed data
-                         (currently $hdays days)
-                  </a>
-                </li>
-            </ul>
-        </div>
-        <a class="savedata" href="#" onclick="saveData()" id="saveData" style="display:none;">Save data</a>
+#set( $title = "Azquo Report" )
+#parse('../includes/velocity_header.vm')
 
-
-
-
-        <div id="entryfield">Entry: <input id="topentry" value=""  type="text"/></div>
-        <div id="message">$topmessage</div>
-    </div>
     <form name="azquoform" onsubmit="submit();"  $enctype method="post" action="/api/Online">
         <div class="excelDefaults" style="height:$maxheight;overflow:auto" id="spreadsheet">
             <input type="hidden" name="reportid" id="reportId" value="$reportid"/>
@@ -198,17 +169,6 @@
             region.cols = parseInt(region.right) - region.x + 1;
         }
     }
-
-
-    function hideMenu(control, e) {
-        var element = document.getElementById(control);
-        if (element == null || mouseIn(element, e) || document.getElementById(control).style.display=="none") {
-            return false;
-        }
-        document.getElementById(control).style.display = "none";
-        return true;
-    }
-
 
     function mouseIn(elementChosen, e){
         if (e==null) return false;
@@ -389,15 +349,6 @@
         return "LOCKED";
     }
 
-
-
-    document.onclick = onClick
-
-
-    function noClick(e){
-        return true;
-    }
-
     function setSelection(cellId){
         var dashPos = cellId.indexOf("-");
         var yStr = cellId.substr(4, dashPos);
@@ -405,41 +356,6 @@
         selectionX = parseInt(xStr);
         selectionY = parseInt(yStr);
 
-    }
-
-    function openTopMenu(){
-        document.getElementById("topmenubox").style.display="block";
-        topMenuOpening = true;
-    }
-
-    function onClick(e){
-        setClicked(e);
-        if (!topMenuOpening){
-            hideMenu("topmenubox", e);
-        }
-        topMenuOpening = false;
-        if (hideMenu(dataRegionMenu, e)){
-            return false;
-        }
-        if (e==null) return false;
-        var target = e.target;
-        if (target==null) target = e;
-        if (target.type=="file"){
-            return true;
-        }
-        if (target.type == "checkbox"){
-            return true;//doesn't seem to like changing checkboxes.....
-        }
-        var cellId = target.id
-        while (cellId != undefined && cellId.substring(0, 4) != "cell" && target.parentNode != null) {
-            target = target.parentNode;
-            cellId = target.id;
-        }
-        if (cellId != null && cellId.substr(0, 4) == "cell") {
-            setSelection(cellId);
-        }
-        positionSelection();
-        return false;
     }
 
 
@@ -1006,5 +922,8 @@
 
 
 </script>
-</body>
-</html>
+
+	<div id="entryfield">Entry: <input id="topentry" value=""  type="text"/></div>
+	<div id="message">$topmessage</div>
+
+#parse('../includes/velocity_footer.vm')
