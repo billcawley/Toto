@@ -424,7 +424,7 @@ public class DSDataLoadService {
             String parentId = attVals.get("parent_product_id");
             if (!currentParent.equals(parentId)) {
                 if (currentParent.length() > 0) {
-                    bundleName.setAttributeWillBePersisted("bundleprices", bundlePrices);
+                    bundleName.setAttributeWillBePersisted("BUNDLEPRICES", bundlePrices);
                 }
                 bundlePrices = "";
                 currentParent = parentId;
@@ -579,16 +579,16 @@ public class DSDataLoadService {
                 String valFound = attributeRow.get("value");
                 String attFound;
                 if (attId.equals(firstNameId)) {
-                    attFound = "First name";
+                    attFound = "FIRST NAME";
                 } else {
-                    attFound = "Last name";
+                    attFound = "LAST NAME";
                 }
                 String customerId = attributeRow.get("entity_id");
                 Name customer = azquoCustomersFound.get(customerId);
                 if (customer != null) {
                     customer.setAttributeWillBePersisted(attFound, valFound);
-                    String firstName = customer.getAttribute("First name");
-                    String lastName = customer.getAttribute("Last name");
+                    String firstName = customer.getAttribute("FIRST NAME");
+                    String lastName = customer.getAttribute("LAST NAME");
                     String customerName;
                     if (firstName != null) {
                         if (lastName != null) {
@@ -963,7 +963,7 @@ public class DSDataLoadService {
 
 /*        List<String> productLanguage = new ArrayList<String>();
         productLanguage.add("MagentoProductId");*/
-        String bundlePrices = bundleTotal.itemName.getAttribute("bundleprices");
+        String bundlePrices = bundleTotal.itemName.getAttribute("BUNDLEPRICES");
         if (bundlePrices == null) {
             bundlePrices = "";
         }
