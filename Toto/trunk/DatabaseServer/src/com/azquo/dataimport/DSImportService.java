@@ -115,10 +115,9 @@ public class DSImportService {
         /*if there are multiple attributes then effectively there will be multiple columns with the same "heading", define which one we're using when the heading is referenced by other headings.
         Language will trigger something as being the attribute subject, after if on searching there is only one it might be set for convenience when sorting attributes */
         boolean isAttributeSubject = false;
-        /*when using the heading divider (a pipe at the moment) we now have new logic - don't stack the context headers in the same array at the others attach them to the heading where they were defined
-        I think a list is fine for this. Doing this means the outside array of headings will match the data array        */
+        /*when using the heading divider (a pipe at the moment) this indicates context headings which are now stacked against the heading (before they were put in the same array) */
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
-        // local in the azquo sense. Affects child of and parent of clauses - the other heading is local in the case of parent of and this one in the case of child of. Local as in Azquo name logic.
+        // Affects child of and parent of clauses - the other heading is local in the case of parent of and this one in the case of child of. Local as in Azquo name logic.
         boolean isLocal = false;
         // If `only` is specified on the first heading, the import will ignore any line that does not have this name
         String only = null;
@@ -128,19 +127,20 @@ public class DSImportService {
         String compositionPattern = null;
         // a default value if the line value is blank
         String defaultValue = null;
-        //don't import zero values;
+        // don't import zero values;
         boolean blankZeroes = false;
         // a way for a heading to have an alias or more specifically for its name to be overridden for the purposes of how headings find each other
         // need to clarify usage of this - not able to right now. I think it's something to do with the heading.name and how it's looked up being different,
         // that's how this is different than just changing the heading's name to whatever you'd use for the alias.
         String headingAlias = null;
+        // is this a column representing names (as opposed to values or attributes). Derived from parent of child of and being referenced by other headings
+        boolean lineNameRequired = false;
     }
 
-    // I see no reason for getters here. Class only used here. Note added later : getters and setters may make the code clearer though this could be done by better names also I think
+    // I see no reason for getters here. Class members only, saves a load of space. Note added later : getters and setters may make the code clearer though this could be done by better names also I think
     private class ImmutableImportHeading {
         final String heading;
         final Name name;
-        final Set<String> peers;
         final int indexForAttribute;
         final int indexForChild;
         // ok the set will be fixed, I suppose names can be modified but they should be thread safe. Well that's the plan.
@@ -160,11 +160,11 @@ public class DSImportService {
         final String defaultValue;
         final boolean blankZeroes;
         final String headingAlias;
+        final boolean lineNameRequired;
 
         public ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
             this.heading = mutableImportHeading.heading;
             this.name = mutableImportHeading.name;
-            this.peers = mutableImportHeading.peers;
             this.indexForAttribute = mutableImportHeading.indexForAttribute;
             this.indexForChild = mutableImportHeading.indexForChild;
             this.parentNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.parentNames));
@@ -181,6 +181,7 @@ public class DSImportService {
             this.defaultValue = mutableImportHeading.defaultValue;
             this.blankZeroes = mutableImportHeading.blankZeroes;
             this.headingAlias = mutableImportHeading.headingAlias;
+            this.lineNameRequired = mutableImportHeading.lineNameRequired;
         }
     }
 
@@ -205,6 +206,7 @@ public class DSImportService {
     static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd/MM/yy");
     static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd MMM yyyy");
     static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    // duplicate of 3? Check with WFC
     static final DateTimeFormatter ukdf5 = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
     private LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
@@ -271,7 +273,7 @@ public class DSImportService {
         azquoMemoryDBConnection.persist();
     }
 
-    // the readClause function would say that "parent of thing123" would return " thing123" if it was a readClause on "parent of"
+    // the readClause function would say that "parent of thing123" would return "thing123" if it was a readClause on "parent of"
     private String readClause(String keyName, String phrase) {
         if (phrase.length() >= keyName.length() && phrase.toLowerCase().startsWith(keyName)) {
             return phrase.substring(keyName.length()).trim();
@@ -279,7 +281,7 @@ public class DSImportService {
         return "";
     }
 
-    /* this is called for all the ; separated clauses in a header e.g. Gender; parent of Customer; child of Genders
+    /* This is called for all the ; separated clauses in a header e.g. Gender; parent of Customer; child of Genders
     Called multiple times per header and currently there may be multiple headers per actual header - something I'd like to change
     Edd : it feels like an enum or array could help here but I'm not sure, about 5 are what you might call vanilla, the rest have other conditions*/
 
@@ -350,7 +352,7 @@ public class DSImportService {
                 throw new Exception(clause + notUnderstood);
             }
         } else if (firstWord.equals(COMPOSITION)) {
-            // combine more than one row
+            // combine more than one column
             heading.compositionPattern = readClause(COMPOSITION, clause);
             if (heading.compositionPattern.length() == 0) {
                 throw new Exception(clause + notUnderstood);
@@ -364,7 +366,7 @@ public class DSImportService {
         } else if (firstWord.equals(NONZERO)) {
             heading.blankZeroes = true;
         } else if (firstWord.equals(PEERS)) {
-            // in new logic this is the only palce that peers are used in Azquo
+            // in new logic this is the only place that peers are used in Azquo
             heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);// todo - this will make the name regardless, should it?
             String peersString = readClause(PEERS, clause);
             if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
@@ -383,12 +385,13 @@ public class DSImportService {
     /*
     headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     essentially parsing through all the relevant things in a heading to populate an ImportHeading
+    Notable that this does not create the heading.name if it can't find it, unlike with context. Todo : confirm consistent behavior or not
     */
 
     private void interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, MutableImportHeading heading, List<String> attributeNames) throws Exception {
         StringTokenizer clauses = new StringTokenizer(headingString, ";");
-        heading.heading = clauses.nextToken().replace(Name.QUOTE + "", ""); // the heading na,e being the first
-        heading.name = nameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames);//at this stage, look for a name, but don't create it unless necessary
+        heading.heading = clauses.nextToken().replace(Name.QUOTE + "", ""); // the heading name being the first
+        heading.name = nameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames); // at this stage, look for a name, but don't create it unless necessary
         // loop over the clauses making sense and modifying the heading object as you go
         while (clauses.hasMoreTokens()) {
             interpretClause(azquoMemoryDBConnection, heading, clauses.nextToken().trim());
@@ -480,8 +483,8 @@ public class DSImportService {
         return child;
     }
 
-    /* Created by EFC to try to improve speed through multi threading. The basic parsing is single threaded but since this can start while later lines are
-     being read I don't think this is a problem */
+    /* Created by EFC to try to improve speed through multi threading.
+     The basic parsing is single threaded but since this can start while later lines are being read I don't think this is a problem */
 
     private class BatchImporter implements Runnable {
 
@@ -754,11 +757,12 @@ public class DSImportService {
             if (mutableImportHeading.heading != null) {
                 // ok find the indexes of peers and get shirty if you can't find them
                 // this had a check that is wasn't a context heading so presumably we don't need to do this to context headings
-                if (mutableImportHeading.name != null && mutableImportHeading.peers.size() > 0) { // has peers (of course) and a name. Little unsure on the name criteria - could one refine peers against no name?
+                if (mutableImportHeading.name != null && mutableImportHeading.peers.size() > 0) { // has peers (of course) and a name. Little unsure on the name criteria - could one define peers against no name?
                     for (String peer : mutableImportHeading.peers) {
                         //three possibilities to find the peer:
                         int peerHeadingIndex;
-                        if (peer.equalsIgnoreCase("this")) { // should be self explanatory
+                        if (peer.equalsIgnoreCase("this")) { // means a different thing than for context headings (where it refers to the heading name), this is the cells name, meaning the value is also a peer?
+                            // todo : Confirm with WFC - this seems to mean that the cells value would be both  a value and a name, should the logic be the same as for context? -1 which means the heading name?
                             peerHeadingIndex = headingNo;
                         } else { // standard lookup criteria - matching name that's not an attribute
                             peerHeadingIndex = findMutableHeadingIndex(peer, headings);
@@ -820,7 +824,7 @@ public class DSImportService {
                         contextPeersHeading = immutableImportHeading;
                     }
                 }
-                contextNames.add(mutableImportHeading.name);// add this name onto the context stack
+                contextNames.add(mutableImportHeading.name);// add this name onto the context stack - "this" referenced below will mean it's added again but only the first time, on subsequent headings it will be that heading (what with headings inheriting contexts)
                 if (contextPeersHeading != null) { // a value cell HAS to have peers, context headings are only for values
                     final Set<Name> namesForValue = new HashSet<>(); // the names we're preparing for values
                     namesForValue.add(contextPeersHeading.name);// ok the "defining" name with the peers.
@@ -858,6 +862,23 @@ public class DSImportService {
                 }
             }
         }
+        // and finally, detect whether each column will be referencing names or not
+        Set<Integer> indexesNeedingNames = new HashSet<>();
+        for (MutableImportHeading mutableImportHeading : headings) {
+            indexesNeedingNames.addAll(mutableImportHeading.peerCellIndexes);
+            indexesNeedingNames.addAll(mutableImportHeading.contextPeerCellIndexes);
+            if (mutableImportHeading.indexForChild != -1){
+                indexesNeedingNames.add(mutableImportHeading.indexForChild);
+            }
+            if (mutableImportHeading.indexForAttribute != -1){
+                indexesNeedingNames.add(mutableImportHeading.indexForChild);
+            }
+        }
+        for (int i = 0; i < headings.size(); i++) {
+            MutableImportHeading mutableImportHeading = headings.get(i);
+            // note remove from doesn't mean a line name is required
+            mutableImportHeading.lineNameRequired = mutableImportHeading.indexForChild != -1 || !mutableImportHeading.parentNames.isEmpty() || indexesNeedingNames.contains(i);
+        }
     }
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
@@ -879,32 +900,35 @@ public class DSImportService {
                     importCellWithHeading.lineValue = dateTimeFormatter.format(date);
                 }
             }
-
-            // 3 headings. Town, street, whether it's pedestrianized. Pedestrianized parent of street. Town parent of street local.
-
-            // the key here is that the handle parent has to resolve line Name for both of them - if it's called on "Pedestrianized parent of street" first
-            // both pedestrianized (ok) and street (NOT ok!) will have their line names resolved
-            // whereas resolving "Town parent of street local" first means that the street should be correct by the time we resolve "Pedestrianized parent of street".
-
-            // prepare the local parent of columns. Customer is in all customers local
-            // ok local is done up here and not local below so its only being called once. Parameters the same
-            if (importCellWithHeading.immutableImportHeading.indexForChild != -1 && importCellWithHeading.immutableImportHeading.isLocal) {
+            /* 3 headings. Town, street, whether it's pedestrianized. Pedestrianized parent of street. Town parent of street local.
+             the key here is that the resolveLineNamesParentsRemovesChildren has to resolve line Name for both of them - if it's called on "Pedestrianized parent of street" first
+             both pedestrianized (ok) and street (NOT ok!) will have their line names resolved
+             whereas resolving "Town parent of street local" first means that the street should be correct by the time we resolve "Pedestrianized parent of street".
+             essentially sort all local names */
+            if (importCellWithHeading.immutableImportHeading.lineNameRequired && importCellWithHeading.immutableImportHeading.isLocal) {
                 // local and it is a parent of another heading (has child heading), inside this function it will use the child heading set up
-                handleParent(azquoMemoryDBConnection, namesFoundCache, importCellWithHeading, cells, attributeNames, lineNo);
+                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, importCellWithHeading, cells, attributeNames, lineNo);
+            }
+        }
+        // now sort non local names
+        for (ImportCellWithHeading cell : cells) {
+            if (cell.immutableImportHeading.lineNameRequired && !cell.immutableImportHeading.isLocal) {
+                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cell, cells, attributeNames, lineNo);
             }
         }
         long tooLong = 2000000;
         long time = System.nanoTime();
+        // now do the peers
         for (ImportCellWithHeading cell : cells) {
             /* ok the gist seems to be that there's peers as defined in a context item in which case it's looking in context items and peers
-            ok context peers will look for other columns and in the context for names where it allows members off sets e.g. a peer might be year so 2014, 2015 etc will be ok.
+            peers as defined in the context will look for other columns and in the context (those in the context having been pre prepared)
              */
             boolean peersOk = true;
             final Set<Name> namesForValue = new HashSet<>(); // the names we're going to look for for this value
             if (!cell.immutableImportHeading.contextPeersFromContext.isEmpty() || !cell.immutableImportHeading.contextPeerCellIndexes.isEmpty()) { // new criteria,this means there are context peers to deal with
                 namesForValue.addAll(cell.immutableImportHeading.contextPeersFromContext);// start with the ones we have to hand, including the main name
                 for (int peerCellIndex : cell.immutableImportHeading.contextPeerCellIndexes) {
-                    // Clarified now - normally contextPeerCellIndexes refers to the
+                    // Clarified now - normally contextPeerCellIndexes refers to the line name but if it's "this" then it's the heading name. Inconsistent.
                     if (peerCellIndex == -1) {
                         namesForValue.add(cell.immutableImportHeading.name);
                     } else {
@@ -917,17 +941,27 @@ public class DSImportService {
                         }
                     }
                 }
-            } else if (!cell.immutableImportHeading.peerCellIndexes.isEmpty() || !cell.immutableImportHeading.peersFromContext.isEmpty()) { // can't have more than one peers defined so if not from context check standard peers
-                // check for peers as defined in peerHeadings, this will create peers if it can't find them. It will fail if a peer heading has no line value
-                // Edd : I commented that peers had to be to the left but now I look it will attempt to make the line name if it can't find it, hence this is not a concern?
-                // should we inline this function? It's only called here?
-                peersOk = findPeers(azquoMemoryDBConnection, namesFoundCache, cell, cells, namesForValue, attributeNames);
+                // can't have more than one peers defined so if not from context check standard peers - peers from context is as it says, from context but not defined in there!
+            } else if (!cell.immutableImportHeading.peerCellIndexes.isEmpty() || !cell.immutableImportHeading.peersFromContext.isEmpty()) {
+                namesForValue.add(cell.immutableImportHeading.name); // the one at the top of this headingNo, the name with peers.
+                // the old logic added the context peers straight in so I see no problem doing this here - this is what might be called inherited peers, from a col to the left.
+                // On the col where context peers are defined normal peers should not be defined or used
+                namesForValue.addAll(cell.immutableImportHeading.peersFromContext);
+                // Ok I had to stick to indexes to get the cells
+                for (Integer peerCellIndex : cell.immutableImportHeading.peerCellIndexes) { // go looking for non context peers
+                    ImportCellWithHeading peerCell = cells.get(peerCellIndex); // get the cell
+                    if (peerCell.lineName != null) {// under new logic the line name would have been created if possible so if it's not there fail
+                        namesForValue.add(peerCell.lineName);
+                    } else {
+                        peersOk = false;
+                        break; // no point continuing gathering the names
+                    }
+                }
             }
             if (peersOk && !namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value (the latter shouldn't happen, braces and a belt I suppose)
                 // now we have the set of names for that name with peers get the value from that headingNo it's a header for
                 String value = cell.lineValue;
-                if (cell.immutableImportHeading.blankZeroes && isZero(value)) value = "";
-                if (value.trim().length() > 0) { // no point storing if there's no value
+                if (!(cell.immutableImportHeading.blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
                     valueCount++;
                     // finally store our value and names for it
                     valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue);
@@ -937,30 +971,14 @@ public class DSImportService {
             if (cell.immutableImportHeading.indexForAttribute >= 0 && cell.immutableImportHeading.attribute != null
                     && cell.lineValue.length() > 0
                     && (!cell.immutableImportHeading.attribute.equalsIgnoreCase(dateLang) || (isADate(cell.lineValue) != null))) {
-                // funnily enough no longer using attributes
-                // inline it?
-                handleAttribute(azquoMemoryDBConnection, namesFoundCache, cell, cells);
-            }
-            // and child heading (as defined by the "parent of" clause), not local this time - handle attribute and find peers might have set the cell name? todo - clarify with WFC the before after if local or not thing
-            if (cell.immutableImportHeading.indexForChild != -1 && !cell.immutableImportHeading.isLocal) {
-                handleParent(azquoMemoryDBConnection, namesFoundCache, cell, cells, attributeNames, lineNo);
-            }
-            // names which are parents of this value,as defined by "child of" todo - hang on a minute wasn't this dealt with in handle parent??? ANSWER : maybe! If child of was with parent of then yes! To factor . . .
-            if (!cell.immutableImportHeading.parentNames.isEmpty()) {
-                if (cell.lineName != null) {
-                    for (Name parent : cell.immutableImportHeading.parentNames) {
-                        parent.addChildWillBePersisted(cell.lineName);
-                    }
-                } else {
-                    String childNameString = cell.lineValue;
-                    if (childNameString.length() > 0) {
-                        for (Name parent : cell.immutableImportHeading.parentNames) {
-                            cell.lineName = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childNameString, parent, cell.immutableImportHeading.isLocal, attributeNames);
-                        }
-                    }
+                // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot, there was a datelang check but I think that's dealt with above
+                ImportCellWithHeading identityCell = cells.get(cell.immutableImportHeading.indexForAttribute); // get our source cell
+                if (identityCell.lineName != null) {
+                    identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue);
                 }
+                // else an error? If the line name couldn't be made in resolveLineNamesParentsChildren above there's nothing to be done about it
             }
-            // as above but for remove from
+            // remove from, there was no point in making the line name just for remove so act on it only if it was made
             if (!cell.immutableImportHeading.removeParentNames.isEmpty()) {
                 if (cell.lineName != null) {
                     for (Name remove : cell.immutableImportHeading.removeParentNames) {
@@ -982,7 +1000,7 @@ public class DSImportService {
     private void fillAttributeAndParentOfForHeading(MutableImportHeading mutableImportHeading, List<MutableImportHeading> headings) throws Exception {
         if (mutableImportHeading.attribute != null) { // && !importHeading.attribute.equals(Constants.DEFAULT_DISPLAY_NAME)) {
             String headingName = mutableImportHeading.heading;
-            if (mutableImportHeading.headingAlias != null) {// a way for a heading to have an alias, not completely clear on the usage but I'm guessing by this point the alias is no longer important so overwrite it with the equals value
+            if (mutableImportHeading.headingAlias != null) {// a way for a heading to have an alias, I think this is the only place it's used? Not entirely sure of its use case
                 headingName = mutableImportHeading.headingAlias;
             }
             // so if it's Customer,Address1 we need to find customer.
@@ -1010,10 +1028,7 @@ public class DSImportService {
             if (mutableImportHeading.indexForChild < 0) {
                 throw new Exception("error: cannot find column " + mutableImportHeading.parentOfClause + " for child of " + mutableImportHeading.heading);
             }
-            //error = findTopParent(azquoMemoryDBConnection, importHeading, headings, attributeNames);
-            // if (error.length() > 0) return error;
         }
-
     }
 
     private List<String> setLocalLanguage(ImmutableImportHeading heading, List<String> defaultLanguages) {
@@ -1027,107 +1042,42 @@ public class DSImportService {
     }
 
     // namesFound is a cache. Then the heading we care about then the list of all headings.
-    // This is effectively the action derived from the "child of" and "parent of" clause, called before the bulk of interpretLine if local and after it if not
-    private void handleParent(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
+    // This used to be called handle parent and deal only with parents and children but it also resolved line names and I'm now adding remove as well. Should be called for local first then non local
+    // it tests to see if the current line name is null or not as it may have been set by a call to resolveLineNamesParentsChildrenRemove on a different cell setting the child name
+    private void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
+                                                       ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
         if (cellWithHeading.lineValue.length() == 0) { // so nothing to do
             return;
         }
+
         if (cellWithHeading.lineValue.contains(",") && !cellWithHeading.lineValue.contains(Name.QUOTE + "")) {//beware of treating commas in cells as set delimiters....
             cellWithHeading.lineValue = Name.QUOTE + cellWithHeading.lineValue + Name.QUOTE;
         }
-        if (cellWithHeading.lineName != null) { // This function is called in two places in interpret line, an either or based on local or not, if local this will be null, if not then line name will probably have been set
-            // definitely not local I'd say, but regardless the name exists so local is a moot point, put it in parents
-            if (!cellWithHeading.immutableImportHeading.parentNames.isEmpty()) {
-                for (Name parent : cellWithHeading.immutableImportHeading.parentNames) { // apparently there can be multiple childofs, put the name for the line in th appropriate sets, pretty vanilla based off the parents set up
-                    parent.addChildWillBePersisted(cellWithHeading.lineName);
-                }
-            }
-        } else { // probably local (though not necessarily!) call findOrCreateNameInParent for all the parents passing the local flag
+
+        if (cellWithHeading.lineName == null) { // then create it, this will take care of the parents ("child of") while creating
             cellWithHeading.lineName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cellWithHeading.lineValue
                     , cellWithHeading.immutableImportHeading.parentNames, cellWithHeading.immutableImportHeading.isLocal, setLocalLanguage(cellWithHeading.immutableImportHeading, attributeNames));
-        }
-        // ok that's child of (as in for names) done, now for "parent of"
-
-        ImportCellWithHeading childCell = cells.get(cellWithHeading.immutableImportHeading.indexForChild);
-        if (childCell.lineValue.length() == 0) {
-            throw new Exception("Line " + lineNo + ": blank value for child of " + cellWithHeading.lineValue);
-        }
-
-        // ok got the child cell, need to find the child cell name to add it to this cell's children
-        // I think here's it's trying to add to the cells name
-        if (childCell.lineName == null) {
-            childCell.lineName = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childCell.lineValue, cellWithHeading.lineName
-                    , cellWithHeading.immutableImportHeading.isLocal, setLocalLanguage(childCell.immutableImportHeading, attributeNames));
-        }
-        // and it if can't it adds to the heading's name
-        if (cellWithHeading.lineName == null) {
-            cellWithHeading.lineName = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, cellWithHeading.lineValue, cellWithHeading.immutableImportHeading.name,
-                    cellWithHeading.immutableImportHeading.isLocal, setLocalLanguage(cellWithHeading.immutableImportHeading, attributeNames));
-        }
-        cellWithHeading.lineName.addChildWillBePersisted(childCell.lineName);
-    }
-
-    // only called in one place, could inline
-
-    public void handleAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFound, ImportCellWithHeading cell, List<ImportCellWithHeading> cells) throws Exception {
-        ImportCellWithHeading identityCell = cells.get(cell.immutableImportHeading.indexForAttribute); // get our source cell
-        if (identityCell.lineName == null) { // no name on the cell I want to set the attribute on
-            // I guess for the first attribute, if not referencing another line the default display name would be the attribute value and then the attribute value would be set also (new name and attribute set at the same time)
-            if (identityCell.lineValue.length() == 0) { // and no line value for the line I want to set the attribute on, can't find the name, nothing to do!
-                return;
+        } else { // it existed (created below as a child name), sort parents if necessary
+            for (Name parent : cellWithHeading.immutableImportHeading.parentNames) { // apparently there can be multiple child ofs, put the name for the line in the appropriate sets, pretty vanilla based off the parents set up
+                parent.addChildWillBePersisted(cellWithHeading.lineName);
             }
-            List<String> localAttributes = new ArrayList<>();
-            if (identityCell.immutableImportHeading.attribute != null && !identityCell.immutableImportHeading.attribute.equals(dateLang)) {
-                localAttributes.add(identityCell.immutableImportHeading.attribute);
-            } else {
-                localAttributes.add(Constants.DEFAULT_DISPLAY_NAME);
-            }
-            identityCell.lineName = includeInParents(azquoMemoryDBConnection, namesFound, identityCell.lineValue, identityCell.immutableImportHeading.parentNames, false, localAttributes);
         }
-        // should we be checking line value not empty?
-        identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue);
-    }
-
-    // ok what's notable here is that this will create names to complete the peers if it can't find them
-    // this is called per line in ony one place, tempted to inline
-
-    private boolean findPeers(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, ImportCellWithHeading cell, List<ImportCellWithHeading> cells, Set<Name> namesForValue, List<String> attributeNames) throws Exception {
-        //ImportHeading headingWithPeers = heading;
-        boolean hasRequiredPeers = true;
-        namesForValue.add(cell.immutableImportHeading.name); // the one at the top of this headingNo, the name with peers.
-        // the old logic added the context peers straight in so I see no problem doing this here - this is what might be called inherited peers, from a col to the left.
-        // On the col where context peers are defined normal peers should not be defined or used
-        namesForValue.addAll(cell.immutableImportHeading.peersFromContext);
-        // Ok I had to stick to indexes to get the cells
-        for (Integer peerCellIndex : cell.immutableImportHeading.peerCellIndexes) { // go looking for non context peers
-            ImportCellWithHeading peerCell = cells.get(peerCellIndex); // get the cell
-            if (peerCell.lineName == null) {// then try and create the name
-                if (peerCell.lineValue.length() == 0) { // null name and no line value, I guess we can't find this peer
-                    hasRequiredPeers = false;
-                } else { // we do have a value on this line
-                    List<String> peerLanguages = new ArrayList<>();
-                    //It seems language is either attribute if it was set on this heading or the languages passed through right from the front end (attributeNames)
-                    if (peerCell.immutableImportHeading.attribute != null) {
-                        peerLanguages.add(peerCell.immutableImportHeading.attribute);
-                    } else {
-                        peerLanguages.addAll(attributeNames);
-                    }
-                        /* ok connection is obvious, namesfound is the speedy cache, the peerCell.lineValue is the name we want to create or find
-                        it's the line value that so often refers to a name rather than a value. After that cells.get(peerHeadingNo).lineName was passed as a parent but this will always be null!
-                        Hence make it null. false is local, peerLanguages is how we'll look up the name.
-                        As I'll comment below : includeInSet is essentially the same as findOrCreateNameStructure but with the cache
-                        */
-                    peerCell.lineName = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, peerCell.lineValue, null, false, peerLanguages);
-                }
+        // ok that's "child of" (as in for names) done
+        // now for "parent of", the, child of this line
+        if (cellWithHeading.immutableImportHeading.indexForChild != -1){
+            ImportCellWithHeading childCell = cells.get(cellWithHeading.immutableImportHeading.indexForChild);
+            if (childCell.lineValue.length() == 0) {
+                throw new Exception("Line " + lineNo + ": blank value for child of " + cellWithHeading.lineValue);
             }
-            // if we created the name (or it was there already) add to the set
-            // if it somehow was null should we return false?? todo
-            if (peerCell.lineName != null) {
-                namesForValue.add(peerCell.lineName);
+
+            // ok got the child cell, need to find the child cell name to add it to this cell's children
+            // I think here's it's trying to add to the cells name
+            if (childCell.lineName == null) {
+                childCell.lineName = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childCell.lineValue, cellWithHeading.lineName
+                        , cellWithHeading.immutableImportHeading.isLocal, setLocalLanguage(childCell.immutableImportHeading, attributeNames));
             }
-            //namesForValue.add(nameService.findOrCreateName(azquoMemoryDBConnection,peerVal + "," + peer.getName())) ;
+            cellWithHeading.lineName.addChildWillBePersisted(childCell.lineName);
         }
-        return hasRequiredPeers;
     }
 
     // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
@@ -1184,7 +1134,6 @@ public class DSImportService {
             }
         }
     }
-
 
     private boolean isZero(String text) {
         try {
