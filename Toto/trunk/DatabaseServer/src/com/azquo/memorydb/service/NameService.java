@@ -794,17 +794,13 @@ public final class NameService {
             pos = nextTerm;
         }
 
-        boolean hasPermissions = false;
         if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
-            hasPermissions = true;
-        }
-        if (hasPermissions || azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB("CONFIDENTIAL")) { // then we need to check permissions etc
             for (Name possible : nameStack.get(0)) {
-                if (possible == null || (possible.getAttribute("CONFIDENTIAL") == null && (!hasPermissions || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())))) {
+                if (possible == null || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())) {
                     toReturn.add(possible);
                 }
             }
-        } else { // just make a copy as list and return. This colleciton copying all over the pace bothers me a bit.
+        } else {
             toReturn.addAll(nameStack.get(0));
         }
         long time = (System.currentTimeMillis() - track);
@@ -937,6 +933,7 @@ public final class NameService {
         if (name == null || names == null || names.isEmpty()) { // empty the same as null
             return true;
         }
+
          /*
          * check if name is in one relevant set from names.  If so then OK
          * If not, then depends if the name is confidential.
@@ -950,8 +947,10 @@ public final class NameService {
                 }
             }
         }
-        String confidential = name.getAttribute("CONFIDENTIAL");
-        return confidential == null || !confidential.equalsIgnoreCase("true");
+        // new logic
+        return false;
+//        String confidential = name.getAttribute("CONFIDENTIAL");
+//        return confidential == null || !confidential.equalsIgnoreCase("true");
     }
 
     private static AtomicInteger filterCount = new AtomicInteger(0);

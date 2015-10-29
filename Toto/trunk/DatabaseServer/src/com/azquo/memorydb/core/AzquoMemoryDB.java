@@ -906,7 +906,7 @@ public final class AzquoMemoryDB {
         findTopNames2Count.incrementAndGet();
         final List<Name> toReturn = new ArrayList<Name>();
         for (Name name : nameByIdMap.values()) {
-            if (name.getParents().size() == 0) {
+            if (!name.hasParents()) {
                 toReturn.add(name);
             }
         }

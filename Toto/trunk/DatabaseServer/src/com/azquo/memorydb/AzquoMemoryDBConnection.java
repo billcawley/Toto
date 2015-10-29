@@ -33,20 +33,40 @@ public class AzquoMemoryDBConnection {
     private final StringBuffer userLog; // threadsafe, it probably needs to be
 
     // A bit involved but it makes this object immutable, think that's worth it - note
+    // new logic here : we'll say that top test that have no permissions are added as allowed - if someone has added a department for example they should still have access to all dates
 
     public AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, DatabaseAccessToken databaseAccessToken, NameService nameService, List<String> languages, StringBuffer userLog)  throws Exception {
         this.azquoMemoryDB = azquoMemoryDB;
         if (databaseAccessToken.getWritePermissions() != null && !databaseAccessToken.getWritePermissions().isEmpty()) {
             writePermissions = nameService.decodeString(this, databaseAccessToken.getWritePermissions(), languages);
+            addExtraPermissionIfRequired(nameService, writePermissions);
         } else {
             writePermissions = new ArrayList<>();
         }
         if (databaseAccessToken.getReadPermissions() != null && !databaseAccessToken.getReadPermissions().isEmpty()) {
             readPermissions = nameService.decodeString(this, databaseAccessToken.getReadPermissions(), languages);
+            addExtraPermissionIfRequired(nameService, readPermissions);
         } else {
             readPermissions = new ArrayList<>();
         }
         this.userLog = userLog;
+    }
+
+    private void addExtraPermissionIfRequired(NameService nameService, List<Set<Name>> permissions){
+        /* assume that top names which don't contain any of the selection criteria are ok - easiest way to do this is probably to collect the top names that do
+        and remove them from top names then add that result as the last set if there's anything left */
+
+        Set<Name> topNamesWithPermissions = new HashSet<>();
+        for (Set<Name> listNames : permissions) {
+            for (Name check : listNames){
+                topNamesWithPermissions.addAll(check.findTopParents());
+            }
+        }
+        final Set<Name> topNamesToAdd = new HashSet<>(nameService.findTopNames(this, Constants.DEFAULT_DISPLAY_NAME));
+        topNamesToAdd.removeAll(topNamesWithPermissions);
+        if (!topNamesToAdd.isEmpty()){ // there are top names which have nothing to do with the permissions, add them as an ok set
+            permissions.add(topNamesToAdd); // wrap it in a set
+        }
     }
 
     public AzquoMemoryDB getAzquoMemoryDB() {

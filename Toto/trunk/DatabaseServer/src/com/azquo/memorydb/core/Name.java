@@ -610,6 +610,25 @@ public final class Name extends AzquoMemoryDBEntity {
         return this;
     }
 
+    // we are now allowing a name to be in more than one top parent, hence the name change
+
+    private static AtomicInteger findTopParentsCount = new AtomicInteger(0);
+
+    public List<Name> findTopParents() {
+        findTopParentsCount.incrementAndGet();
+        List<Name> toReturn = new ArrayList<>();
+        if (hasParents()) {
+            for (Name parent : findAllParents()){
+                if (!parent.hasParents()){
+                    toReturn.add(parent);
+                }
+            }
+            return toReturn;
+        }
+        //WFC amendment - used to be 'null' below
+        return Collections.singletonList(this);
+    }
+
     // same logic as find all parents but returns a set, should be correct
     // also we have the option to use additive or not
 
@@ -1308,6 +1327,7 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("findAllParents2Count\t\t\t\t" + findAllParents2Count.get());
         System.out.println("addNamesCount\t\t\t\t" + addNamesCount.get());
         System.out.println("findATopParentCount\t\t\t\t" + findATopParentCount.get());
+        System.out.println("findTopParentsCount\t\t\t\t" + findTopParentsCount.get());
         System.out.println("finaAllChildrenCount\t\t\t\t" + finaAllChildrenCount.get());
         System.out.println("finaAllChildren2Count\t\t\t\t" + finaAllChildren2Count.get());
         System.out.println("findValuesIncludingChildrenCount\t\t\t\t" + findValuesIncludingChildrenCount.get());
@@ -1353,6 +1373,7 @@ public final class Name extends AzquoMemoryDBEntity {
         findAllParents2Count.set(0);
         addNamesCount.set(0);
         findATopParentCount.set(0);
+        findTopParentsCount.set(0);
         finaAllChildrenCount.set(0);
         finaAllChildren2Count.set(0);
         findValuesIncludingChildrenCount.set(0);
