@@ -1,6 +1,6 @@
 package com.azquo.memorydb.core;
 
-import com.azquo.memorydb.dao.StandardDAO;
+import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
@@ -16,12 +16,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Date: 22/10/13
  * Time: 22:31
  * To reflect a fundamental Azquo idea : a piece of data which has names attached
- * Delete solution is to unlink names and jam the old links in delete_info.
- * Can worry about how to restore later.
  * Notable that the names list object here is what defines the relationship between values and names, value sets against each name is just a lookup
  * I'm using an array internally to save memory,
  * <p>
- * todo - should store a double value also? Will it save loads of parsing?
+ * Should store a double value also? Will it save loads of parsing?
  */
 public final class Value extends AzquoMemoryDBEntity {
 
@@ -70,8 +68,6 @@ public final class Value extends AzquoMemoryDBEntity {
                     logger.info("Value referenced a name id that did not exist : " + nameId + " skipping");
                 }
             }
-            // todo - is this efficient? I mean the values being added into names, rewriting the arrays etc.
-            // I guess do some testing? New time reporting on DB loading should show if it's worth investigating
             names = new Name[0]; // simply to stop the call below getting shirty about possible old names that aren't there
             setNamesWillBePersisted(newNames); //again I know this looks a bit odd, part of the hack for lists internally
             getAzquoMemoryDB().addValueToDb(this);
@@ -80,7 +76,7 @@ public final class Value extends AzquoMemoryDBEntity {
         }
     }
 
-    // todo address this new fastloader one being public
+    // todo address this new fast loader one being public
     private static AtomicInteger newValue3Count = new AtomicInteger(0);
 
     public Value(final AzquoMemoryDB azquoMemoryDB, final int id, final int provenanceId, String text, byte[] namesCache) throws Exception {
@@ -192,7 +188,7 @@ public final class Value extends AzquoMemoryDBEntity {
 
     @Override
     protected String getPersistTable() {
-        return StandardDAO.PersistedTable.value.name();
+        return JsonRecordDAO.PersistedTable.value.name();
     }
 
     private static AtomicInteger getAsJsonCount = new AtomicInteger(0);

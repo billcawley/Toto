@@ -23,21 +23,23 @@ import java.util.regex.Pattern;
  * Time: 14:18
  * <p>
  * Ok, outside of the memorydb package this may be the the most fundamental class.
- * Edd trying to understand it properly and trying to get string parsing out of it but not sure how easy that will be
  * <p>
- * I don't feel that tere are obviously better places for the funcitons right now except that
- * todo : can the string parsing and json generation be moved out of here?
+ * We need to consider how much string parsing should go on in here - I think StringUtils may be better.
+ *
+ * While this has been tidied a fair bit it could do with more I think, arranging of logic, checking of names etc.
+ *
+ * I mentioned the string parsing above - it can lead to code that's doing something fairly simple but looks complex if we're not careful.
  */
 public final class NameService {
     public static final String MEMBEROF = "->";
 
     @Autowired
-    ValueService valueService;//used only in formating children for output
+    ValueService valueService;//used only in formatting children for output
     @Autowired
-    DSSpreadsheetService dsSpreadsheetService;//used only in formating children for output
+    DSSpreadsheetService dsSpreadsheetService;//used only in formatting children for output
 
     public StringUtils stringUtils = new StringUtils(); // just make it quickly like this for the mo
-    //    private static final ObjectMapper jacksonMapper = new ObjectMapper();
+
     private static final Logger logger = Logger.getLogger(NameService.class);
 
     public static final String LEVEL = "level";
@@ -84,7 +86,7 @@ public final class NameService {
         return n1.getDefaultDisplayName().toUpperCase().compareTo(n2.getDefaultDisplayName().toUpperCase()); // think that will give us a case insensitive sort!
     };
 
-    // get names from a comma separated list. Well expressions describing names.
+    // get names from a comma separated list. Well expressions describing names - only used for read and write permissions at the moment.
 
     private static AtomicInteger decodeStringCount = new AtomicInteger(0);
 
@@ -100,7 +102,7 @@ public final class NameService {
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            Set<Name> nameSet = interpretSetTerm(nameName, formulaStrings, referencedNames, attributeStrings); // no need to wrap it
+            Set<Name> nameSet = interpretSetTerm(nameName, formulaStrings, referencedNames, attributeStrings);
             toReturn.add(nameSet);
         }
         return toReturn;
@@ -123,20 +125,17 @@ public final class NameService {
         return referencedNames;
     }
 
-/*    public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) {
-        // go for the default for the moment
-        return findContainingName(azquoMemoryDBConnection, name, Constants.DEFAULT_DISPLAY_NAME);
-     }*/
-
-    // the parameter is called name as the get attribute function will look up and derive attributes it can't find from parent/combinations
+    /* renaming this function to match the memory DB one - it's a straight proxy through except for trying for all
+    attributes if it can't find any names for the specified attribute and sorting the result (hence loading the set in an arraylist)
+     */
 
     private static AtomicInteger findContainingNameCount = new AtomicInteger(0);
 
-    public ArrayList<Name> findContainingName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, String attribute) {
+    public ArrayList<Name> getNamesWithAttributeContaining(final AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute, final String searchString) {
         findContainingNameCount.incrementAndGet();
-        ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, name));
+        ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, searchString));
         if (namesList.size() == 0 && attribute.length() > 0) {
-            namesList = findContainingName(azquoMemoryDBConnection, name, "");//try all the attributes
+            namesList = getNamesWithAttributeContaining(azquoMemoryDBConnection, "", searchString);//try all the attributes
         }
         Collections.sort(namesList, defaultLanguageCaseInsensitiveNameComparator);
         return namesList;
@@ -163,10 +162,7 @@ public final class NameService {
 
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) throws Exception {
         findByNameCount.incrementAndGet();
-        // aha, not null passed here now, jam in a default display name I think
-        List<String> attNames = new ArrayList<>();
-        attNames.add(Constants.DEFAULT_DISPLAY_NAME);
-        return findByName(azquoMemoryDBConnection, name, attNames);
+        return findByName(azquoMemoryDBConnection, name, Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME));
     }
 
     private static AtomicInteger findByName2Count = new AtomicInteger(0);
@@ -179,25 +175,27 @@ public final class NameService {
         It can accept multiple layers - ' London, Ontario, Place' would find   Place/Canada/Ontario/London
         It should also recognise ""    "London, North", "Ontario", "Place"     should recognise that the 'North' is part of 'London, North'
 
-        */
+        language effectively being the attribute name so london, ontario, canada parent name would be canada (initially)
+         The point is to resolve the last name in the list then the second last with the last as parent then the third last with the second last as parent etc until
+         we're on the left most of the parents, we use that to try to find the name we're after. I wonder if the logic could be neatened a little? Perhaps variable names improved
 
-        // language effectively being the attribute name
-        // so london, ontario, canada
-        // parent name would be canada
+         */
         if (name == null || name.length() == 0) return null;
         String parentName = stringUtils.findParentFromList(name);
         String remainder = name;
         Set<Name> possibleParents = null;
-        // keep chopping away at the string until we find the closest parent we can
-        // the point of all of this is to be able to ask for a name with the nearest parent but we can't just try and get it from the string directly e.g. get me WHsmiths on High street
-        // we need to look from the top to distinguish high street in different towns
+        /* keep chopping away at the string until we find the closest parent we can
+         the point of all of this is to be able to ask for a name with the nearest parent but we can't just try and get it from the string directly e.g. get me WHsmiths on High street
+         we need to look from the top to distinguish high street in different towns
+         */
         while (parentName != null) {
             if (remainder.contains(MEMBEROF)) {
                 remainder = remainder.substring(remainder.indexOf(MEMBEROF) + 2);
             } else {
                 remainder = remainder.substring(0, remainder.lastIndexOf(",", remainder.length() - parentName.length()));
             }
-            if (possibleParents == null) {
+            if (possibleParents == null) { // so the first one
+                // most of the time would only be one but this is the top one, not parent, there could be multiple "london"s for example if london were the top of the specified parents
                 possibleParents = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parentName.replace(Name.QUOTE, ' ').trim(), null);
             } else {
                 Set<Name> nextParents = HashObjSets.newMutableSet();
@@ -206,20 +204,20 @@ public final class NameService {
                     if (foundParent != null) {
                         nextParents.add(foundParent);
                     }
-                    possibleParents = nextParents;
                 }
+                // edd note - this was in the for loop but it made no sense (though it would have worked - the for loop would have got and held an iterator from the original parents)
+                possibleParents = nextParents;
             }
             if (possibleParents == null || possibleParents.size() == 0) { // parent was null, since we're just trying to find that stops us right here
                 return null;
             }
-            // so chop off the last name, lastindex of moves backwards from the index
-            // the reason for this is to deal with quotes, we could have said simply the substring take off the parent name length but we don't know about quotes or spaces after the comma
-            // remainder is the rest of the string, could be london, ontario - Canada was taken off
+            /* so chop off the last name, lastindex of moves backwards from the index
+             the reason for this is to deal with quotes, we could have said simply the substring take off the parent name length but we don't know about quotes or spaces after the comma
+             remainder is the rest of the string, could be london, ontario - Canada was taken off */
             parentName = stringUtils.findParentFromList(remainder);
         }
         if (possibleParents == null) {
             return getNameByAttribute(azquoMemoryDBConnection, remainder, null, attributeNames);
-
         } else {
             for (Name parent : possibleParents) {
                 Name found = getNameByAttribute(azquoMemoryDBConnection, remainder.replace(Name.QUOTE, ' ').trim(), parent, attributeNames);
@@ -231,6 +229,8 @@ public final class NameService {
         return null;
     }
 
+    // used by sets import - should this be a function against name?
+
     private static AtomicInteger clearChildrenCount = new AtomicInteger(0);
 
     public void clearChildren(Name name) throws Exception {
@@ -238,7 +238,6 @@ public final class NameService {
         for (Name child : name.getChildren()) {
             name.removeFromChildrenWillBePersisted(child);
         }
-
     }
 
     private static AtomicInteger findTopNamesCount = new AtomicInteger(0);
@@ -273,8 +272,7 @@ public final class NameService {
 
         It should also recognise ""    "London, North", "Ontario", "Place"     should recognise that the 'North' is part of 'London, North'
 
-         */
-        /* NEW BEHAVIOUR APRIL 2015
+          NEW BEHAVIOUR APRIL 2015
            If, on the first pass at finding a parent, more than one parent is found, it will see if it can find the whole string in any of the parent sets.
          */
 
@@ -286,7 +284,7 @@ public final class NameService {
         }
 
        /*
-        ok teh key here is to step through the parent -> child list as defined in the name string creating teh hierarchy as you go along
+        ok the key here is to step through the parent -> child list as defined in the name string creating the hierarchy as you go along
         the top parent is the context in which names should be searched for and created if not existing, the parent name and parent is the direct parent we may have just created
         so what unique is saying is : ok we have the parent we want to add a name to : the question is do we search under that parent to find or create or under the top parent?
         More specifically : if it is unique check for the name anywhere under the top parent to find it and then move it if necessary, if not unique then it could, for example, be another name called London
@@ -331,7 +329,6 @@ public final class NameService {
         return findOrCreateNameInParent(azquoMemoryDBConnection, name, newParent, local, null);
     }
 
-    // um I think that should be concurrent
     Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
 
     private long addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long marker) {
@@ -367,8 +364,7 @@ public final class NameService {
         }
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an dataimport),and insert a structure into it*/
         if (attributeNames == null) {
-            attributeNames = new ArrayList<>();
-            attributeNames.add(Constants.DEFAULT_DISPLAY_NAME);
+            attributeNames = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
         }
 
         String storeName = name.replace(Name.QUOTE, ' ').trim();
@@ -430,7 +426,7 @@ public final class NameService {
     public static final int LOWEST_LEVEL_INT = 100;
     public static final int ALL_LEVEL_INT = 101;
 
-    // needs to be a list to preserve order when adding. Or could use a linked set, don't see much advantage
+    // a loose type of return as we might be pulling sets or lists from names - later a custom object might be useful
 
     private static AtomicInteger findChildrenAtLevelCount = new AtomicInteger(0);
 
@@ -850,12 +846,9 @@ public final class NameService {
                 }
                 name.transferValues(child2);
                 child2.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, "duplicate-" + child2.getDefaultDisplayName());
-
                 rubbishBin.addChildWillBePersisted(child2);
-
             }
         }
-
     }
 
     private static AtomicInteger deduplicateCount = new AtomicInteger(0);

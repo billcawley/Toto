@@ -1,6 +1,6 @@
 package com.azquo.memorydb.core;
 
-import com.azquo.memorydb.dao.StandardDAO;
+import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.log4j.Logger;
@@ -116,7 +116,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
 
     @Override
     protected String getPersistTable() {
-        return StandardDAO.PersistedTable.provenance.name();
+        return JsonRecordDAO.PersistedTable.provenance.name();
     }
 
     @Override

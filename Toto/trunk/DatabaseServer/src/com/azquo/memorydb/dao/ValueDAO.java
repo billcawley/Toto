@@ -1,7 +1,6 @@
 package com.azquo.memorydb.dao;
 
 import com.azquo.memorydb.core.AzquoMemoryDB;
-import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -25,21 +24,19 @@ import java.util.concurrent.TimeUnit;
  *
  * todo - factor off common bits?
  */
-public class ValueDAO {
-
-    @Autowired
-    private NamedParameterJdbcTemplate jdbcTemplate;
+public class ValueDAO extends FastDAO{
 
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
-    //    public static final int UPDATELIMIT = 5000;
-    public static final int UPDATELIMIT = 2500; // going to 2.5k as now some of the records can be quite large! Also simultaneous.
-
     private static final String FASTVALUE = "fast_value";
-    private static final String ID = "id";
     private static final String PROVENANCEID = "provenance_id";
     private static final String TEXT = "text";
     private static final String NAMES = "names";
+
+    @Override
+    public String getTableName() {
+        return FASTVALUE;
+    }
 
     private static final class ValueRowMapper implements RowMapper<Value> {
         final AzquoMemoryDB azquoMemoryDB;
@@ -103,28 +100,6 @@ public class ValueDAO {
         }
     }
 
-    private void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final List<Value> values) throws DataAccessException {
-        if (!values.isEmpty()) {
-            long track = System.currentTimeMillis();
-            final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-            final StringBuilder updateSql = new StringBuilder("delete from `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "` where " + ID + " in (");
-
-            int count = 1;
-            for (Value value : values) {
-                if (count == 1) {
-                    updateSql.append(value.getId());
-                } else {
-                    updateSql.append(",").append(value.getId());
-                }
-                count++;
-            }
-            updateSql.append(")");
-            //System.out.println(updateSql.toString());
-            jdbcTemplate.update(updateSql.toString(), namedParams);
-            System.out.println("bulk deleted " + values.size() + " from " + FASTVALUE + " in " + (System.currentTimeMillis() - track));
-        }
-    }
-
     public void persistValues(final AzquoMemoryDB azquoMemoryDB, final Collection<Value> values, boolean initialInsert) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult
         // old pattern had update, I think this is a pain and unnecessary, just delete than add to the insert
@@ -166,17 +141,6 @@ public class ValueDAO {
         }
     }
 
-    public final List<Value> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
-        return jdbcTemplate.query(SQL_SELECT_ALL, new ValueRowMapper(azquoMemoryDB));
-    }
-
-    public final int findMaxId(final AzquoMemoryDB azquoMemoryDB) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "`";
-        Integer toReturn = jdbcTemplate.queryForObject (SQL_SELECT_ALL, StandardDAO.EMPTY_PARAMETERS_MAP, Integer.class);
-        return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
-    }
-
     public void createFastTableIfItDoesntExist(final AzquoMemoryDB azquoMemoryDB){
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
@@ -184,17 +148,12 @@ public class ValueDAO {
                 "  `text` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,\n" +
                 "  `names` blob NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;", StandardDAO.EMPTY_PARAMETERS_MAP);
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
-    public void clearFastValueTable(final AzquoMemoryDB azquoMemoryDB){
-        jdbcTemplate.update("delete from `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "`", StandardDAO.EMPTY_PARAMETERS_MAP);
-
-    }
-
-    public boolean checkFastTableExists(final AzquoMemoryDB azquoMemoryDB){
-        final List<Map<String, Object>> maps = jdbcTemplate.queryForList("show tables from  `" + azquoMemoryDB.getMySQLName() + "` like 'fast_value' ", StandardDAO.EMPTY_PARAMETERS_MAP);
-        return !maps.isEmpty();
+    public final List<Value> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
+        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
+        return jdbcTemplate.query(SQL_SELECT_ALL, new ValueRowMapper(azquoMemoryDB));
     }
 
 }

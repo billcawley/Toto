@@ -360,7 +360,7 @@ public class JSTreeService {
                 } catch (Exception e) {//carry on
                 }
                 if (children == null || children.size() == 0) {
-                    children = nameService.findContainingName(loggedInConnection, searchTerm, language);
+                    children = nameService.getNamesWithAttributeContaining(loggedInConnection, language, searchTerm);
                 }
             }
         } else if (name != null) {

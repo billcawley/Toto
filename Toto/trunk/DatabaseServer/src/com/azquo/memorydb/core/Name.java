@@ -1,7 +1,7 @@
 package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.Constants;
-import com.azquo.memorydb.dao.StandardDAO;
+import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.azquo.memorydb.service.NameService;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -83,7 +83,7 @@ public final class Name extends AzquoMemoryDBEntity {
     This was using arraylists, I want to switch to arrays to save memory
 
     Gets to wrap with as list, don't want them altering the length anyway, this does have a bit of an overhead vs the old model but I don't think this will be a biggy. I guess check memory saving?
-    Also I know that aslist doens't make immutable, I consider this class "trusted". If bothered can use unmodifiableList.
+    Also I know that aslist doesn't make immutable, I consider this class "trusted". If bothered can use unmodifiableList.
 
     ok using arrays here has saved about 5% on a database's memory usage. They stay unless there's a big unfixable problem.
 
@@ -146,11 +146,11 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private NameAttributes nameAttributes;
 
-    // memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
-    // these (values, parent) are for quick lookup, must be modified appropriately
-    // to be clear, these are not used when persisting, they are derived from the name sets in values and the two below
-    // Sets are expensive in terms of memory, will use arrays instead unless they get big (above threshold 512 at the mo) make a new array and switch on changing to make atomic and always wrap them unmodifiable on get
-    // I'm not going to make these volatile as the ony time it really matters is on writes which are synchronized and I understand this deals with memory barriers
+    /* memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
+     these (values, parent) are for quick lookup, must be modified appropriately
+     to be clear, these are not used when persisting, they are derived from the name sets in values and the two below
+     Sets are expensive in terms of memory, will use arrays instead unless they get big (above threshold 512 at the mo) make a new array and switch on changing to make atomic and always wrap them unmodifiable on get
+     I'm not going to make these volatile as the ony time it really matters is on writes which are synchronized and I understand this deals with memory barriers*/
     private Set<Value> valuesAsSet;
     private Value[] values;
     private Set<Name> parentsAsSet;
@@ -171,9 +171,7 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // protected, should only be called by azquo memory db
-    // Lists/Sets are not set here as we need to wait then load from the json cache
-    // use arrays internally?
-
+    // things not initialised here are sorted when linking
     private static AtomicInteger newName2Count = new AtomicInteger(0);
 
     protected Name(final AzquoMemoryDB azquoMemoryDB, int id, String jsonFromDB) throws Exception {
@@ -191,7 +189,7 @@ public final class Name extends AzquoMemoryDBEntity {
         getAzquoMemoryDB().addNameToDb(this);
     }
 
-    // as above but using new fast loading - todo - work out if this bing public (as it needs to be for the DAO) is a problem
+    // as above but using new fast loading - todo - work out if this being public (as it needs to be for the DAO) is a problem
 
     private static AtomicInteger newName3Count = new AtomicInteger(0);
 
@@ -457,14 +455,6 @@ public final class Name extends AzquoMemoryDBEntity {
         return newArray;
     }
 
-/*    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof Name) {
-            return getId() == ((Name)obj).getId();
-        }
-        return false;
-    }*/
-
     private void addToParents(final Name name) throws Exception {
         addToParents(name, false);
     }
@@ -539,7 +529,7 @@ public final class Name extends AzquoMemoryDBEntity {
     // option for collect call but I don't really get it
     private static AtomicInteger findAllParents2Count = new AtomicInteger(0);
     // note : this was using getParents, since it was really being hammered this was no good due to the garbage generation of that function, hence the change
-    // public and statless, in here as it accesses things I don't want accessed outside
+    // public and stateless, in here as it accesses things I don't want accessed outside
     public static void findAllParents(Name name, final Set<Name> allParents) {
         findAllParents2Count.incrementAndGet();
         if (name.parentsAsSet != null){
@@ -558,14 +548,9 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     private static AtomicInteger addNamesCount = new AtomicInteger(0);
-    // adding in here as a static funciton to access name variables directly want speed and less garbage if I can
+    // adding in here as a static function to access name variables directly want speed and less garbage if I can
     public static void addNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
         addNamesCount.incrementAndGet();
-        // I think this logic is obsolete now I have the add all below
-/*        if (currentLevel == level) {
-            namesFound.add(name);
-            return;
-        }*/
         if (!name.hasChildren()) {
             if (level == NameService.LOWEST_LEVEL_INT) {
                 namesFound.add(name);
@@ -578,8 +563,8 @@ public final class Name extends AzquoMemoryDBEntity {
                     for (int i = 0; i < name.children.length; i++){ // intellij wants to use the collections implementation, I'll think about it
                         namesFound.add(name.children[i]);
                     }
+                    //Collections.addAll(namesFound, name.children);
                 }
-                //namesFound.addAll(name.getChildren());
             } else {
                 for (Name child : name.getChildren()) {
                     addNames(child, namesFound, currentLevel + 1, level);
@@ -606,7 +591,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
         }
-        //WFC amendment - used to be 'null' below
         return this;
     }
 
@@ -625,15 +609,14 @@ public final class Name extends AzquoMemoryDBEntity {
             }
             return toReturn;
         }
-        //WFC amendment - used to be 'null' below
-        return Collections.singletonList(this);
+        return Collections.singletonList(this); // no parents then this is a top parent
     }
 
     // same logic as find all parents but returns a set, should be correct
     // also we have the option to use additive or not
 
     // leaving as sets for the mo. Arrays would be cheaper on the memory I suppose, conversion can be expensive though
-    private Set<Name> findAllChildrenCache = null;// is this ever used?? COuld save a few bytes
+    private Set<Name> findAllChildrenCache = null;
     private Set<Name> findAllChildrenPayAttentionToAdditiveCache = null;
 
     private static AtomicInteger finaAllChildrenCount = new AtomicInteger(0);
@@ -677,9 +660,7 @@ public final class Name extends AzquoMemoryDBEntity {
                         } else {
                             findAllChildrenPayAttentionToAdditiveCache = localReference;
                         }
-                    }/* else {
-                        System.out.println("skipped a simultaneous findAllChildren cache populate, good stuff");
-                    }*/
+                    }
                 }
             }
             return Collections.unmodifiableSet(localReference);
@@ -690,23 +671,14 @@ public final class Name extends AzquoMemoryDBEntity {
                 synchronized (this) { // ideally I wouldn't synchronize on this, it would be on findAllChildrenCache but it's not final and I don't want it to be for the moment
                     localReference = findAllChildrenCache; // check again after synchronized, it may have been sorted in the mean time
                     if (localReference == null) {
-                        /*
-                        TODO - this seems, in some circumstances, to go slow. It's when it has over 20 million entries but this of itself is not the problem, I've tested higher than that with the names
-                        Related to contains hits? Or initial size? NEvertheless barring this occasional problem the meory overhead of the caches being this saves gigibytes, I'm leaving it in for the moment
-                        with a view to fixing it.
-                         */
-                        //long track = System.currentTimeMillis();
                         localReference = HashObjSets.newMutableSet();
                         findAllChildren(this, false, localReference);
-                        //System.out.println("Time to make find all children false cache : " + (System.currentTimeMillis() - track) + " result size " + localReference.size());
                         if (localReference.isEmpty()) {
-                            findAllChildrenCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
+                            findAllChildrenCache = Collections.emptySet();
                         } else {
                             findAllChildrenCache = localReference;
                         }
-                    }/* else {
-                        System.out.println("skipped a simultaneous findAllChildren cache populate, good stuff");
-                    }*/
+                    }
                 }
             }
             return Collections.unmodifiableSet(localReference);
@@ -729,11 +701,9 @@ public final class Name extends AzquoMemoryDBEntity {
                 synchronized (this) {
                     localReference = valuesIncludingChildrenPayAttentionToAdditiveCache; // check again after synchronized, it may have been sorted in the mean time
                     if (localReference == null) {
-//                        long track = System.currentTimeMillis();
                         localReference = HashObjSets.newUpdatableSet(getValues());
                         int i;
                         for (Name child : findAllChildren(true)) {
-                            // trying this as a slight speed increase/garbage save
                             if (child.valuesAsSet != null){
                                 localReference.addAll(child.valuesAsSet);
                             } else if (child.values.length > 0){
@@ -741,10 +711,9 @@ public final class Name extends AzquoMemoryDBEntity {
                                     localReference.add(child.values[i]);
                                 }
                             }
-                            //localReference.addAll(child.getValues());
                         }
                         if (localReference.isEmpty()) {
-                            valuesIncludingChildrenPayAttentionToAdditiveCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
+                            valuesIncludingChildrenPayAttentionToAdditiveCache = Collections.emptySet();
                         } else {
                             valuesIncludingChildrenPayAttentionToAdditiveCache = localReference;
                         }
@@ -769,10 +738,9 @@ public final class Name extends AzquoMemoryDBEntity {
                                     localReference.add(child.values[i]);
                                 }
                             }
-                            //localReference.addAll(child.getValues());
                         }
                         if (localReference.isEmpty()) {
-                            valuesIncludingChildrenCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
+                            valuesIncludingChildrenCache = Collections.emptySet();
                         } else {
                             valuesIncludingChildrenCache = localReference;
                         }
@@ -783,7 +751,7 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
-    // synchronized? Not sure if it matters, dn't need immediate visibility and the cache read should (!) be thread safe.
+    // synchronized? Not sure if it matters, don't need immediate visibility and the cache read should (!) be thread safe.
     // The read uses synchronized to stop creating the cache more than necessary rather than to be totally up to date
     private static AtomicInteger clearChildrenCachesCount = new AtomicInteger(0);
 
@@ -861,8 +829,8 @@ public final class Name extends AzquoMemoryDBEntity {
             throw new Exception("error cannot assign child due to circular reference, " + child + " cannot be added to " + this);
         }
         */
-        // NOTE!! for the set version we're now just using a set backed by a concurrent hash map NOT liked hashset, for large child sets ordering will be ignored!
-        // while childrenasaset is thread safe I think I'm going to need to synchronize the lot to make make state more consistent
+        // NOTE!! for the set version we're now just using a set backed by a concurrent hash map NOT LinkedHashSet, for large child sets ordering will be ignored!
+        // while childrenAsSet is thread safe I think I'm going to need to synchronize the lot to make make state more consistent
         boolean changed = false; // only do the after stuff if something changed
         synchronized (this) {
             if (childrenAsSet != null) {
@@ -891,7 +859,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 child.addToParents(this);//synchronized internally with this also so will not deadlock
                 setNeedsPersisting();
                 //and check that there are not indirect connections which should be deleted (e.g. if London exists in UK and Europe, and we are now
-                //specifying that UK is in Europe, we must remove the direct link from London to Europe
+                //specifying that UK is in Europe, we must remove the direct link from London to Europe - this was commented due to speed I guess? todo clarify and uncomment or delete
                 /*
                 for (Name descendant : child.findAllChildren(false)) {
                     if (getChildren().contains(descendant)) {
@@ -922,14 +890,7 @@ public final class Name extends AzquoMemoryDBEntity {
         synchronized (this) {
             if (getChildren().contains(name)) { // then something to remove
                 name.removeFromParents(this);
-                /*THIS CONDITION NO LONGER APPLIES
-
-                //don't allow names that have previously had parents to fall out of topparent set
-                if (name.getParents().size() == 0) {
-                    this.findATopParent().addChildWillBePersisted(name);//revert to top parent (Note that, if 'this' is top parent, then it will be re-instated!
-                }
-                */
-
+                // deleted code to put the removed name in the top parent
                 if (childrenAsSet != null) {
                     childrenAsSet.remove(name);
                 } else {
@@ -960,7 +921,6 @@ public final class Name extends AzquoMemoryDBEntity {
         return nameAttributes.getAttributeValues();
     }
 
-    // todo - be sure this makes sense given new name attributes
     // I think plain old synchronized here is safe enough if not that fast
 
     private static AtomicInteger setAttributeWillBePersistedCount = new AtomicInteger(0);
@@ -975,10 +935,8 @@ public final class Name extends AzquoMemoryDBEntity {
             attributeValue = attributeValue.replace(ATTRIBUTEDIVIDER, "");
         }
         attributeName = attributeName.trim().toUpperCase(); // I think this is the only point at which attributes are created thus if it's uppercased here we should not need to check anywhere else
-        // important, manage persistence, allowed name rules, db look ups
-        // only care about ones in this set
-        // code adapted from map based code to lists, may need rewriting
-        // again assume nameAttributes reference only set in code synchronized on this block
+        /* important, manage persistence, allowed name rules, db look ups only care about ones in this set
+         code adapted from map based code to lists assume nameAttributes reference only set in code synchronized on this block*/
         List<String> attributeKeys = new ArrayList<>(nameAttributes.getAttributeKeys());
         List<String> attributeValues = new ArrayList<>(nameAttributes.getAttributeValues());
 
@@ -1061,7 +1019,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 String attribute = parent.getAttribute(attributeName, true, checked);
                 if (attribute != null) {
                     return attribute;
-
                 }
             }
         }
@@ -1123,7 +1080,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     @Override
     protected String getPersistTable() {
-        return StandardDAO.PersistedTable.name.name();
+        return JsonRecordDAO.PersistedTable.name.name();
     }
 
     private static AtomicInteger getAsJsonCount = new AtomicInteger(0);
@@ -1163,21 +1120,26 @@ public final class Name extends AzquoMemoryDBEntity {
         return stringBuilder.toString();
     }
 
-    // maybe move out of here?
+    // not really bothered about factoring at the moment - it would involve using the getChildren and getNames functions which needlesly create garbage (this function will be hammered when persisting, would rather not make the garbage)
 
-    private static AtomicInteger entitiesIdsAsBytesCount = new AtomicInteger(0);
-
-    private byte[] entitiesIdsAsBytes(Collection<? extends AzquoMemoryDBEntity> entities) {
-        entitiesIdsAsBytesCount.incrementAndGet();
-        ByteBuffer buffer = ByteBuffer.allocate(entities.size() * 4);
-        for (AzquoMemoryDBEntity entity : entities) {
-            buffer.putInt(entity.getId());
-        }
-        return buffer.array();
-    }
+    private static AtomicInteger getChildrenIdsAsBytesCount = new AtomicInteger(0);
 
     public byte[] getChildrenIdsAsBytes() {
-        return entitiesIdsAsBytes(getChildren());
+        getChildrenIdsAsBytesCount.incrementAndGet();
+        if (childrenAsSet != null){
+            // theoretical possibility of size changing between allocate and creating the byte array
+            ByteBuffer buffer = ByteBuffer.allocate(childrenAsSet.size() * 4);
+            for (Name name : childrenAsSet) {
+                buffer.putInt(name.getId());
+            }
+            return buffer.array();
+        } else {
+            ByteBuffer buffer = ByteBuffer.allocate(children.length * 4);
+            for (Name name : children) {
+                buffer.putInt(name.getId());
+            }
+            return buffer.array();
+        }
     }
 
     // protected to only be used by the database loading, can't be called in the constructor as name by id maps may not be populated
@@ -1240,8 +1202,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 /* Synchronize to set up the 3 lists, hopefully not too difficult*/
             synchronized (this) {
                 // it's things like this that I believe will be way faster and lighter ongarbage than the old json method
-                //int noValues = loadCache.valuesCache.length / 4;
-                ////int noParents = loadCache.parentsCache.length / 4;
                 int noChildren = loadCache.childrenCache.length / 4;
                 ByteBuffer byteBuffer = ByteBuffer.wrap(loadCache.childrenCache);
                 if (noChildren > ARRAYTHRESHOLD) {
@@ -1259,9 +1219,9 @@ public final class Name extends AzquoMemoryDBEntity {
                 loadCache = null;// free the memory
             }
         }
-        // need to sort out the parents - I deliberately excluded this from synchronisation or one could theoretically hit a deadlock. Also it's the same regardless of loading for fast or slow tables
-        // addToParents can be synchronized on the child.
-        // changing from get children here as I want to avoid the array wrapping where I can (make less garbage)
+        /* need to sort out the parents - I deliberately excluded this from synchronisation or one could theoretically hit a deadlock. Also it's the same regardless of loading for fast or slow tables
+         addToParents can be synchronized on the child.
+         changing from get children here as I want to avoid the array wrapping where I can (make less garbage)*/
         if (childrenAsSet != null){
             for (Name newChild : childrenAsSet) {
                 newChild.addToParents(this, true);
@@ -1348,7 +1308,7 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("getAttribute2Count\t\t\t\t" + getAttribute2Count.get());
         System.out.println("getAsJsonCount\t\t\t\t" + getAsJsonCount.get());
         System.out.println("getAttributesForFastStoreCount\t\t\t\t" + getAttributesForFastStoreCount.get());
-        System.out.println("entitiesIdsAsBytesCount\t\t\t\t" + entitiesIdsAsBytesCount.get());
+        System.out.println("getChildrenIdsAsBytesCount\t\t\t\t" + getChildrenIdsAsBytesCount.get());
         System.out.println("linkCount\t\t\t\t" + linkCount.get());
         System.out.println("deleteCount\t\t\t\t" + deleteCount.get());
     }
@@ -1394,7 +1354,7 @@ public final class Name extends AzquoMemoryDBEntity {
         getAttribute2Count.set(0);
         getAsJsonCount.set(0);
         getAttributesForFastStoreCount.set(0);
-        entitiesIdsAsBytesCount.set(0);
+        getChildrenIdsAsBytesCount.set(0);
         linkCount.set(0);
         deleteCount.set(0);
     }

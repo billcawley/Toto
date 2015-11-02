@@ -2,10 +2,12 @@ package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.dao.JsonRecordTransport;
 import com.azquo.memorydb.dao.NameDAO;
-import com.azquo.memorydb.dao.StandardDAO;
+import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.azquo.memorydb.dao.ValueDAO;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
+import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
 import java.util.*;
@@ -25,14 +27,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public final class AzquoMemoryDB {
 
-    // have given up trying this though spring for the moment
+    // have given up trying this through spring for the moment
     Properties azquoProperties = new Properties();
 
     private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
 
-    //I don't think I can auto wire this as I can't guarantee it will be ready for the constructor
+    // I don't think I can auto wire this as I can't guarantee it will be ready for the constructor
 
-    private final StandardDAO standardDAO;
+    private final JsonRecordDAO jsonRecordDAO;
 
     // new faster loading/saving data access objects.
     private final NameDAO nameDAO;
@@ -54,7 +56,7 @@ public final class AzquoMemoryDB {
 
     // object ids. We handle this here, it's not done by MySQL
     private volatile int maxIdAtLoad; // volatile as it may be hit by multiple threads
-    // should this also be volatile??
+    // should this also be volatile?? Currently only used in synchronized  . . .
     private int nextId;
 
     // when objects are modified they are added to these sets held in a map. AzquoMemoryDBEntity has all functions require to persist.
@@ -81,7 +83,7 @@ public final class AzquoMemoryDB {
     // Initialising as concurrent hash maps here, needs careful thought as to whether heavy concurrent access is actually a good idea, what could go wrong
     private static AtomicInteger newDatabaseCount = new AtomicInteger(0);
 
-    protected AzquoMemoryDB(String mysqlName, StandardDAO standardDAO, NameDAO nameDAO, ValueDAO valeuDAO, StringBuffer sessionLog) throws Exception {
+    protected AzquoMemoryDB(String mysqlName, JsonRecordDAO jsonRecordDAO, NameDAO nameDAO, ValueDAO valeuDAO, StringBuffer sessionLog) throws Exception {
         newDatabaseCount.incrementAndGet();
         this.sessionLog = sessionLog;
         azquoProperties.load(getClass().getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring
@@ -96,17 +98,13 @@ public final class AzquoMemoryDB {
         System.out.println("memory db transport threads : " + loadingThreads);
         System.out.println("reportFillerThreads : " + reportFillerThreads);
         this.mysqlName = mysqlName;
-        this.standardDAO = standardDAO;
+        this.jsonRecordDAO = jsonRecordDAO;
         this.nameDAO = nameDAO;
         this.valueDAO = valeuDAO;
         needsLoading = true;
         maxIdAtLoad = 0;
         nameByAttributeMap = new ConcurrentHashMap<>();
-        // commented koloboke should we wish to try that. Not thread safe though.
-/*        nameByIdMap = HashIntObjMaps.newMutableMap();
-        valueByIdMap = HashIntObjMaps.newMutableMap();
-        provenanceByIdMap = HashIntObjMaps.newMutableMap();*/
-        // also commenting the map init numbers, inno db can overestimate quite heavily.
+        // commenting the map init numbers, inno db can overestimate quite heavily.
 /*        int numberOfNames = standardDAO.findNumberOfRows(mysqlName, "fast_name");
         if (numberOfNames == -1){
             numberOfNames = standardDAO.findNumberOfRows(mysqlName, "name");
@@ -122,13 +120,13 @@ public final class AzquoMemoryDB {
         provenanceByIdMap = new ConcurrentHashMap<>();
         entitiesToPersist = new ConcurrentHashMap<>();
         // loop over the possible persisted tables making the empty sets, cunning
-        if (standardDAO != null) {
-            for (StandardDAO.PersistedTable persistedTable : StandardDAO.PersistedTable.values()) {
+        if (jsonRecordDAO != null) {
+            for (JsonRecordDAO.PersistedTable persistedTable : JsonRecordDAO.PersistedTable.values()) {
                 // wasn't concurrent, surely it should be?
                 entitiesToPersist.put(persistedTable.name(), Collections.newSetFromMap(new ConcurrentHashMap<>()));
             }
         }
-        if (standardDAO != null) {
+        if (jsonRecordDAO != null) {
             loadData();
         }
         needsLoading = false;
@@ -161,15 +159,15 @@ public final class AzquoMemoryDB {
     private static AtomicInteger newSQLBatchLoaderRunCount = new AtomicInteger(0);
 
     private class SQLBatchLoader implements Runnable {
-        private final StandardDAO standardDAO;
+        private final JsonRecordDAO jsonRecordDAO;
         private final int mode;
         private final int minId;
         private final int maxId;
         private final AzquoMemoryDB memDB;
         private final AtomicInteger loadTracker;
 
-        public SQLBatchLoader(StandardDAO standardDAO, int mode, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
-            this.standardDAO = standardDAO;
+        public SQLBatchLoader(JsonRecordDAO jsonRecordDAO, int mode, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
+            this.jsonRecordDAO = jsonRecordDAO;
             this.mode = mode;
             this.minId = minId;
             this.maxId = maxId;
@@ -184,15 +182,15 @@ public final class AzquoMemoryDB {
                 // may rearrange this later, could perhaps be more elegant
                 String tableName = "";
                 if (mode == PROVENANCE_MODE) {
-                    tableName = StandardDAO.PersistedTable.provenance.name();
+                    tableName = JsonRecordDAO.PersistedTable.provenance.name();
                 }
                 if (mode == NAME_MODE) {
-                    tableName = StandardDAO.PersistedTable.name.name();
+                    tableName = JsonRecordDAO.PersistedTable.name.name();
                 }
                 if (mode == VALUE_MODE) {
-                    tableName = StandardDAO.PersistedTable.value.name();
+                    tableName = JsonRecordDAO.PersistedTable.value.name();
                 }
-                List<JsonRecordTransport> dataToLoad = standardDAO.findFromTableMinMaxId(memDB, tableName, minId, maxId);
+                List<JsonRecordTransport> dataToLoad = jsonRecordDAO.findFromTableMinMaxId(memDB, tableName, minId, maxId);
                 for (JsonRecordTransport dataRecord : dataToLoad) {
                     if (dataRecord.id > maxIdAtLoad) {
                         maxIdAtLoad = dataRecord.id;
@@ -352,9 +350,9 @@ public final class AzquoMemoryDB {
                 // create thread pool, rack up the loading tasks and wait for it to finish. Repeat for name and values.
                 ExecutorService executor = Executors.newFixedThreadPool(loadingThreads);
                 int from = 0;
-                int maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.provenance.name());
+                int maxIdForTable = jsonRecordDAO.findMaxId(this, JsonRecordDAO.PersistedTable.provenance.name());
                 while (from < maxIdForTable) {
-                    executor.execute(new SQLBatchLoader(standardDAO, PROVENANCE_MODE, from, from + step, this, provenaceLoaded));
+                    executor.execute(new SQLBatchLoader(jsonRecordDAO, PROVENANCE_MODE, from, from + step, this, provenaceLoaded));
                     from += step;
                 }
                 executor.shutdown();
@@ -398,9 +396,9 @@ public final class AzquoMemoryDB {
                     fastLoaded = true;
                 } else {
                     from = 0;
-                    maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.name.name());
+                    maxIdForTable = jsonRecordDAO.findMaxId(this, JsonRecordDAO.PersistedTable.name.name());
                     while (from < maxIdForTable) {
-                        executor.execute(new SQLBatchLoader(standardDAO, NAME_MODE, from, from + step, this, namesLoaded));
+                        executor.execute(new SQLBatchLoader(jsonRecordDAO, NAME_MODE, from, from + step, this, namesLoaded));
                         from += step;
                     }
                     executor.shutdown();
@@ -411,9 +409,9 @@ public final class AzquoMemoryDB {
                     marker = System.currentTimeMillis();
                     executor = Executors.newFixedThreadPool(loadingThreads);
                     from = 0;
-                    maxIdForTable = standardDAO.findMaxId(this, StandardDAO.PersistedTable.value.name());
+                    maxIdForTable = jsonRecordDAO.findMaxId(this, JsonRecordDAO.PersistedTable.value.name());
                     while (from < maxIdForTable) {
-                        executor.execute(new SQLBatchLoader(standardDAO, VALUE_MODE, from, from + step, this, valuesLoaded));
+                        executor.execute(new SQLBatchLoader(jsonRecordDAO, VALUE_MODE, from, from + step, this, valuesLoaded));
                         from += step;
                     }
                     executor.shutdown();
@@ -454,75 +452,11 @@ public final class AzquoMemoryDB {
             }
             logInSessionLogAndSystem("Total load time for " + getMySQLName() + " " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
             //AzquoMemoryDB.printAllCountStats();
-
-            //AzquoMemoryDB.clearAllCountStats();
-            //int testlimit = 10_000_000;
-            /*for (int i = 0; i < 3; i++){
-                long track = System.currentTimeMillis();
-                System.out.println("Set test " + testlimit * (i + 1));
-                int count = 0;
-                Set<Name> testSet = HashObjSets.newUpdatableSet();
-                for (Name test : nameByIdMap.values()){
-                    testSet.add(test);
-                    count++;
-                    if (count == testlimit * (i + 1)) break;
-                }
-                System.out.println("Koloboke Name    :   " + (System.currentTimeMillis() - track) + "ms");
-                track = System.currentTimeMillis();
-                count = 0;
-                Set<Value> testSetV = HashObjSets.newUpdatableSet();
-                for (Value test : valueByIdMap.values()){
-                    testSetV.add(test);
-                    count++;
-                    if (count == testlimit * (i + 1)) break;
-                }
-                System.out.println("Koloboke Value :     " + (System.currentTimeMillis() - track) + "ms");
-                track = System.currentTimeMillis();
-                count = 0;
-                testSet = new HashSet<>();
-                for (Name test : nameByIdMap.values()){
-                    testSet.add(test);
-                    count++;
-                    if (count == testlimit * (i + 1)) break;
-                }
-                System.out.println("Java Name :               " + (System.currentTimeMillis() - track) + "ms");
-                track = System.currentTimeMillis();
-                count = 0;
-                testSetV = new HashSet<>();
-                for (Value test : valueByIdMap.values()){
-                    testSetV.add(test);
-                    count++;
-                    if (count == testlimit * (i + 1)) break;
-                }
-                System.out.println("Java Value :     " + (System.currentTimeMillis() - track) + "ms");
-                track = System.currentTimeMillis();
-                count = 0;
-                testSetV = HashObjSets.newUpdatableSet();
-                for (Value test : valueByIdMap.values()){
-                    testSetV.contains(test);
-                    testSetV.add(test);
-                    testSetV.contains(test);
-                    count++;
-                    if (count == testlimit) break;
-                }
-                System.out.println("Koloboke Value contains :     " + (System.currentTimeMillis() - track) + "ms");
-                track = System.currentTimeMillis();
-                count = 0;
-                testSetV = new HashSet<>();
-                for (Value test : valueByIdMap.values()){
-                    testSetV.contains(test);
-                    testSetV.add(test);
-                    testSetV.contains(test);
-                    count++;
-                    if (count == testlimit) break;
-                }
-                System.out.println("Java Value contains :               " + (System.currentTimeMillis() - track) + "ms");
-            }*/
         }
     }
 
     // reads from a list of changed objects
-    // should we synchronize on a write lock object?? I think it might be a plan.
+    // should we synchronize on a write lock object? I think it might be a plan.
 
     private static AtomicInteger saveDataToMySQLCount = new AtomicInteger(0);
 
@@ -537,7 +471,7 @@ public final class AzquoMemoryDB {
             if (!entities.isEmpty()) {
                 // todo : write locking the db probably should start here
                 // multi thread this chunk? It can slow things down a little . . .
-                if (!fastLoaded || tableToStoreIn.equals(StandardDAO.PersistedTable.provenance.name())){ // provenance is old style regardless
+                if (!fastLoaded || tableToStoreIn.equals(JsonRecordDAO.PersistedTable.provenance.name())){ // provenance is old style regardless
                     System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
                     List<JsonRecordTransport> recordsToStore = new ArrayList<>(entities.size()); // it's now bothering me a fair bit that I didn't used to initialise such lists!
                     for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it. Copy perhaps expensive but consistency is important
@@ -553,13 +487,13 @@ public final class AzquoMemoryDB {
                     }
                     // and end here
                     try {
-                        standardDAO.persistJsonRecords(this, tableToStoreIn, recordsToStore);// note this is multi threaded internally
+                        jsonRecordDAO.persistJsonRecords(this, tableToStoreIn, recordsToStore);// note this is multi threaded internally
                     } catch (Exception e) {
                         // currently I'll just stack trace this, not sure of what would be the best strategy
                         e.printStackTrace();
                     }
                 } else { // new save on name and value
-                    if (tableToStoreIn.equals(StandardDAO.PersistedTable.name.name())){
+                    if (tableToStoreIn.equals(JsonRecordDAO.PersistedTable.name.name())){
                         System.out.println("new name store : " + entities.size());
                         List<Name> namesToStore = new ArrayList<>(entities.size());
                         for (AzquoMemoryDBEntity entity : entities){
@@ -572,7 +506,7 @@ public final class AzquoMemoryDB {
                             e.printStackTrace();
                         }
                     }
-                    if (tableToStoreIn.equals(StandardDAO.PersistedTable.value.name())){
+                    if (tableToStoreIn.equals(JsonRecordDAO.PersistedTable.value.name())){
                         System.out.println("new value store : " + entities.size());
                         List<Value> valuesToStore = new ArrayList<>(entities.size());
                         for (AzquoMemoryDBEntity entity : entities){
@@ -597,9 +531,9 @@ public final class AzquoMemoryDB {
     public void saveToNewTables() throws Exception {
         saveToNewTablesCount.incrementAndGet();
         nameDAO.createFastTableIfItDoesntExist(this);
-        nameDAO.clearFastNameTable(this);
+        nameDAO.clearTable(this);
         valueDAO.createFastTableIfItDoesntExist(this);
-        valueDAO.clearFastValueTable(this);
+        valueDAO.clearTable(this);
         nameDAO.persistNames(this, nameByIdMap.values(), true);
         valueDAO.persistValues(this, valueByIdMap.values(), true);
         fastLoaded = true;
@@ -608,7 +542,7 @@ public final class AzquoMemoryDB {
     // will block currently! - a concern due to the writing synchronized above?
 
     protected synchronized int getNextId() {
-        nextId++; // increment but return what it was . . .a little messy but I want that value in memory to be what it says
+        nextId++;
         return nextId - 1;
     }
 
@@ -626,17 +560,13 @@ public final class AzquoMemoryDB {
         return nameByIdMap.size();
     }
 
-    public Value getValueById(final int id) {
+    /*public Value getValueById(final int id) {
         return valueByIdMap.get(id);
-    }
+    }*/
 
     public int getValueCount() {
         return valueByIdMap.size();
     }
-
-    //fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
-    // TODO address whether wrapping in a hash set here is the best plan. Memory of that object not such of an issue since it should be small and disposable
-    // The iterator from CopyOnWriteArray does NOT support changes e.g. remove. A point.
 
     private static AtomicInteger getAttributesCount = new AtomicInteger(0);
 
@@ -644,6 +574,9 @@ public final class AzquoMemoryDB {
         getAttributesCount.incrementAndGet();
         return Collections.unmodifiableList(new ArrayList<>(nameByAttributeMap.keySet()));
     }
+
+    //fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
+    // Is wrapping in a hashSet such a big deal? Using koloboke immutable should be a little more efficient
 
     private static AtomicInteger getNamesForAttributeCount = new AtomicInteger(0);
 
@@ -653,7 +586,7 @@ public final class AzquoMemoryDB {
         if (map != null) { // that attribute is there
             List<Name> names = map.get(attributeValue.toLowerCase().trim());
             if (names != null) { // were there any entries for that value?
-                return new HashSet<>(names);
+                return HashObjSets.newMutableSet(names); // I've seen this modified outside, I guess no harm in that
             }
         }
         return Collections.emptySet(); // moving away from nulls
@@ -676,20 +609,20 @@ public final class AzquoMemoryDB {
         getNamesForAttributeAndParentCount.incrementAndGet();
         Set<Name> possibles = getNamesForAttribute(attributeName, attributeValue);
         for (Name possible : possibles) {
-            if (possible.getParents().contains(parent)) {//trying for immediate parent first
-                Set<Name> found = new HashSet<>();
+            if (possible.getParents().contains(parent)) { //trying for immediate parent first
+                Set<Name> found = HashObjSets.newMutableSet();
                 found.add(possible);
-                return found;
+                return found; // and return straight away
             }
         }
         Iterator<Name> iterator = possibles.iterator();
         while (iterator.hasNext()) {
             Name possible = iterator.next();
-            if (!possible.findAllParents().contains(parent)) {//logic changed b y WFC 30/06/15 to allow sets import to search within a general set (e.g. 'date') rather than need an immediate parent (e.g. 'All dates')
+            if (!possible.findAllParents().contains(parent)) {//logic changed by WFC 30/06/15 to allow sets import to search within a general set (e.g. 'date') rather than need an immediate parent (e.g. 'All dates')
                 iterator.remove();
             }
         }
-        return possibles;
+        return possibles; // so this could be more than one if there were multiple in a big parent set (presumably at different levels)
     }
 
     // work through a list of possible names for a given attribute in order that the attribute names are listed. Parent optional
@@ -733,55 +666,49 @@ public final class AzquoMemoryDB {
         return getNameByAttribute(Collections.singletonList(attributeName), attributeValue, parent);
     }
 
+    // todo - confirm this is still needed or used, the logic is a little odd
     private static AtomicInteger getNameByAttribute2Count = new AtomicInteger(0);
-
 
     public List<Name> findDuplicateNames(String attributeName){
         List<Name> found = new ArrayList<>();
         Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
-        if (map==null) return null;
+        if (map == null) return null;
         int dupCount = 0;
-        for (String string:map.keySet()){
+        for (String string : map.keySet()){
+            // so let's say the attribute was address, we found more than one name with the same address . . .
             if (map.get(string).size() > 1){
-                Map<String,Set<String>> attributeList = new HashMap<>();
+                Map<String, Set<String>> attributeList = HashObjObjMaps.newMutableMap();
                 boolean dupFound = false;
-                for (Name name:map.get(string)){
+                for (Name name : map.get(string)){ // run through these names with the same address
                     dupFound = true;
-                    for (String attribute:name.getAttributeKeys()){
-                        if (!attribute.equals(attributeName)){
-                            dupFound = false;
+                    for (String attribute : name.getAttributeKeys()){
+                        if (!attribute.equals(attributeName)){ // the name has an attribute that is not address
+                            dupFound = false; // we assume it's not a duplicate
                             String attValue = name.getAttribute(attribute);
                             Set<String> existingVals = attributeList.get(attribute);
-                            if (existingVals==null){
-                                existingVals = new HashSet<String>();
+                            if (existingVals == null){ // if so far we've no values for that attribute then make a set of values for that attribute
+                                existingVals = HashObjSets.newMutableSet();
                                 attributeList.put(attribute, existingVals);
-                            }
-                              for (String existingVal:existingVals){
-                                if (existingVal.equals(attValue)){
-                                    dupFound = true;
-                                    break;
-                                }
+                            } else if (existingVals.contains(attValue)){ // other names for the same address do have a matching value for this other attribute, I guess the dame default name for example?
+                                dupFound = true;// this triggers a dupe
+                                break;
                             }
                             existingVals.add(attValue);
                         }
-
                     }
                     if (dupFound){
                         break;
                     }
-
                 }
-                if (dupFound){
-                    found.addAll(map.get(string));
-                    if (dupCount++ > 100){
-                         break;
+                if (dupFound){ // for that particular address there were many names and at least one of them had a different attribute that matched
+                    found.addAll(map.get(string)); // add all that had that address
+                    if (dupCount++ > 100){ // if this has happened for more than 100 addresses then give it up
+                        break;
                     }
                 }
             }
         }
         return found;
-
-
     }
 
     public Name getNameByAttribute(final List<String> attributeNames, final String attributeValue, final Name parent) {
@@ -817,10 +744,10 @@ public final class AzquoMemoryDB {
 
     private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
         getNamesByAttributeValueWildcardsCount.incrementAndGet();
-        final Set<Name> names = new HashSet<>();
-        if (attributeName.length() == 0) {
+        final Set<Name> names = HashObjSets.newMutableSet();
+        if (attributeName.length() == 0) { // odd that it might be
             for (String attName : nameByAttributeMap.keySet()) {
-                names.addAll(getNamesByAttributeValueWildcards(attName, attributeValueSearch, startsWith, endsWith));
+                names.addAll(getNamesByAttributeValueWildcards(attName, attributeValueSearch, startsWith, endsWith)); // and when attribute name is blank we don't return for all attribute names, just the first that contains this
                 if (names.size() > 0) {
                     return names;
                 }
@@ -880,9 +807,10 @@ public final class AzquoMemoryDB {
         final List<Name> toReturn = new ArrayList<>();
         for (List<Name> names : thisMap.values()) {
             for (Name name : names) {
-                if (!name.hasParents()) {
+                if (!name.hasParents()) { // top parent full stop
                     toReturn.add(name);
-                } else {
+                } else { // little hazy on the logic here but I think the point is to say that if all the parents of the name are NOT in the language specified then that's a top name for this language.
+                    // Kind of makes sense but where is this used?
                     boolean include = true;
                     for (Name parent : name.getParents()) {
                         if (parent.getAttribute(language) != null) {
@@ -904,7 +832,7 @@ public final class AzquoMemoryDB {
 
     public List<Name> findTopNames() {
         findTopNames2Count.incrementAndGet();
-        final List<Name> toReturn = new ArrayList<Name>();
+        final List<Name> toReturn = new ArrayList<>();
         for (Name name : nameByIdMap.values()) {
             if (!name.hasParents()) {
                 toReturn.add(name);
@@ -1104,7 +1032,7 @@ public final class AzquoMemoryDB {
     // called after loading as the names reference themselves
     // going to try a basic multi-thread - it was 100,000 but I wonder if this is as efficient as it could be given that at the end leftover threads can hang around. Trying for 50,000
 
-    int batchLinkSize = 50000;
+    int batchLinkSize = 50_000;
 
     private static AtomicInteger linkEntitiesCount = new AtomicInteger(0);
 
@@ -1127,12 +1055,6 @@ public final class AzquoMemoryDB {
         if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
             throw new Exception("Database " + getMySQLName() + " took longer than an hour to link");
         }
-/*
-        for (Name name : nameByIdMap.values()) {
-            name.populateFromJson();
-            addNameToAttributeNameMap(name);
-        }*/
-
     }
 
     // trying for new more simplified persistence - make functions not linked to classes
@@ -1229,10 +1151,6 @@ public final class AzquoMemoryDB {
 
     public boolean getFastLoaded() {
         return fastLoaded;
-    }
-
-    public void saveInFastTables(){
-
     }
 
     public static void printFunctionCountStats() {

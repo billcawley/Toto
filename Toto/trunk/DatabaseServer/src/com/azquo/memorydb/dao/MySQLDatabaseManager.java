@@ -25,30 +25,30 @@ public class MySQLDatabaseManager {
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` longtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ;", StandardDAO.EMPTY_PARAMETERS_MAP);
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`value` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` longtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ", StandardDAO.EMPTY_PARAMETERS_MAP);
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1 ", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`provenance` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `json` longtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1  ;", StandardDAO.EMPTY_PARAMETERS_MAP);
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1  ;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
     public void emptyDatabase(String databaseName) throws IOException {
         databaseName = databaseName.replace("`", "oh no you don't");
-        jdbcTemplate.update("truncate `" + databaseName + "`.name", StandardDAO.EMPTY_PARAMETERS_MAP);
-        jdbcTemplate.update("truncate `" + databaseName + "`.value", StandardDAO.EMPTY_PARAMETERS_MAP);
-        jdbcTemplate.update("truncate `" + databaseName + "`.provenance", StandardDAO.EMPTY_PARAMETERS_MAP);
+        jdbcTemplate.update("truncate `" + databaseName + "`.name", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        jdbcTemplate.update("truncate `" + databaseName + "`.value", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        jdbcTemplate.update("truncate `" + databaseName + "`.provenance", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
     public void dropDatabase(String databaseName) throws IOException {
         // we assume the database name is safe, should we???
         databaseName = databaseName.replace("`", "oh no you don't");
-        jdbcTemplate.update("drop database `" + databaseName + "`", StandardDAO.EMPTY_PARAMETERS_MAP);
+        jdbcTemplate.update("drop database `" + databaseName + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
 }

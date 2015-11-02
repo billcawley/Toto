@@ -29,7 +29,7 @@ public abstract class AzquoMemoryDBEntity {
     // I am going to hold a reference here, then we simply compare objects by == to check that objects are in their created databases
 
     private final AzquoMemoryDB azquoMemoryDB;
-    // final id, can on;y be set in the constructor, we like that! Note I'm limiting to 2 billion entities total per database. Not a problem right now.
+    // final id, can only be set in the constructor, we like that! Note I'm limiting to 2 billion entities total per database. Not a problem right now.
     private final int id;
     // it's a new object, this is private as all dealt with here
     private boolean needsInserting;
@@ -53,7 +53,7 @@ public abstract class AzquoMemoryDBEntity {
             // point of this is attempt at lockdown on entity constructors. Any entity that's instantiated is part of the
             // memory database and fair game for persistence
             // if it's not been built with an assigned ID then it needs to be persisted
-                setNeedsPersisting();
+            setNeedsPersisting();
             // we assume new, inserting true
             needsInserting = true;
         }
@@ -64,6 +64,7 @@ public abstract class AzquoMemoryDBEntity {
     protected abstract String getPersistTable();
 
     // all entities need this to save in the key/pair store
+    // notably new fast persistence of name and value does not
     public abstract String getAsJson();
 
     protected final AzquoMemoryDB getAzquoMemoryDB() {

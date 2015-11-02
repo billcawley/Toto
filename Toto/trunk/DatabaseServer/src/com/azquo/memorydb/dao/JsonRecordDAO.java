@@ -20,17 +20,13 @@ import java.util.concurrent.TimeUnit;
  * User: cawley
  * Date: 17/10/13
  * Time: 09:18
- * Most data tables in the database have common features such as an id and a simple place that they're stored which means we can,
- * factor things off here
- * <p/>
- * Note : warnings about appending form intellij but zapping them would undermine readability, leaving for the moment.
- * <p/>
- * This used to be an abstract class with classes for each entity extending it. Now after full json it's just used for moving the very standard json records about.
+ *
+ * Used to have sub classes but has morphed over time to be for saving/loading JSON, hence the class rename to JsonRecordDAO.
  *
  * Multi threading is beginning to be added for loads and saves - for loading it's taken care of externally but for saving it seems fine that it's in here. Can concurrently throw
  * updates/inserts/deletes at MySQL. Currently only inserts.
  */
-public class StandardDAO {
+public class JsonRecordDAO {
 
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
@@ -46,8 +42,7 @@ public class StandardDAO {
 
     public static final Map<String,?> EMPTY_PARAMETERS_MAP = new HashMap<>();
 
-    // there will be others for app stuff, their table names will live in the spreadsheet
-    // given how wonderfully generic this class is I could take these out . . .no harm here I suppose
+    // names there may be for tables in here. I wonder if it should be moved?
 
     public enum PersistedTable {provenance, name, value}
 
@@ -58,23 +53,6 @@ public class StandardDAO {
         }
     }
 
-
-    // lots of info could be in here but for the moment we just want rows. Doens't need to be completely accuratye, it's for guessing map sizes
-    private static final String ROWS = "Rows";
-    private static class TableStatus {
-        public final int rows;
-
-        private TableStatus(int rows) {
-            this.rows = rows;
-        }
-    }
-
-    private static final class TableStatusRowMapper implements RowMapper<TableStatus> {
-        @Override
-        public TableStatus mapRow(final ResultSet rs, final int row) throws SQLException {
-            return new TableStatus(rs.getInt(ROWS));
-        }
-    }
 
     private class BulkInserter implements Runnable {
         private final AzquoMemoryDB azquoMemoryDB;
@@ -226,6 +204,25 @@ WHERE id IN (1,2,3)
         Integer toReturn = jdbcTemplate.queryForObject (SQL_SELECT_ALL, new HashMap<>(), Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }
+
+/*    private static final class TableStatusRowMapper implements RowMapper<TableStatus> {
+        @Override
+        public TableStatus mapRow(final ResultSet rs, final int row) throws SQLException {
+            return new TableStatus(rs.getInt(ROWS));
+        }
+    }
+
+    // lots of info could be in here but for the moment we just want rows. Doesn't need to be completely accurate, it's for guessing map sizes
+    private static final String ROWS = "Rows";
+    private static class TableStatus {
+        public final int rows;
+
+        private TableStatus(int rows) {
+            this.rows = rows;
+        }
+    }
+
+
     // trusting of input
     public final int findNumberOfRows(final String dbName, final String tableName) throws DataAccessException {
         final String SQL_SELECT_STATUS = "SHOW TABLE STATUS from "+ dbName  + " LIKE '" + tableName + "'";
@@ -235,5 +232,5 @@ WHERE id IN (1,2,3)
         } else {
             return query.iterator().next().rows;
         }
-    }
+    }*/
 }
