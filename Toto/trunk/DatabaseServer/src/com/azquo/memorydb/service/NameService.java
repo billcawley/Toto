@@ -26,11 +26,12 @@ import java.util.regex.Pattern;
  * <p>
  * We need to consider how much string parsing should go on in here - I think StringUtils may be better.
  *
- * While this has been tidied a fair bit it could do with more I think, arranging of logic, checking of names etc.
+ * While this has been tidied a fair bit it could do with more I think, arranging of logic, checking of function/variable names etc.
  *
  * I mentioned the string parsing above - it can lead to code that's doing something fairly simple but looks complex if we're not careful.
  */
 public final class NameService {
+    // an alternative to using "," between names. Perhaps should replace it? Of course that means it can't be in names!
     public static final String MEMBEROF = "->";
 
     @Autowired
@@ -167,60 +168,48 @@ public final class NameService {
 
     private static AtomicInteger findByName2Count = new AtomicInteger(0);
 
-    public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final List<String> attributeNames) throws Exception {
+    public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, final List<String> attributeNames) throws Exception {
         findByName2Count.incrementAndGet();
-     /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
+     /* this routine now accepts a comma separated list to indicate a 'general' hierarchy as well as a basic Parent->Name syntax
         This may not be an immediate hierarchy.
         e.g.  if 'London, place' is sent, then the system will look for any 'London' that is ultimately in the set 'Place', whether through direct parent, or parent of parents.
         It can accept multiple layers - ' London, Ontario, Place' would find   Place/Canada/Ontario/London
-        It should also recognise ""    "London, North", "Ontario", "Place"     should recognise that the 'North' is part of 'London, North'
+        It should also recognise "" "London, North", "Ontario", "Place" should recognise that the 'North' is part of 'London, North'
 
         language effectively being the attribute name so london, ontario, canada parent name would be canada (initially)
          The point is to resolve the last name in the list then the second last with the last as parent then the third last with the second last as parent etc until
-         we're on the left most of the parents, we use that to try to find the name we're after. I wonder if the logic could be neatened a little? Perhaps variable names improved
+         we're on the left most of the parents, we use that to try to find the name we're after. Variable names and logic might be improved, not sure.
+
+        The new function parseNameQualifiedWithParents deals with the parsing and returns the parents first
 
          */
-        if (name == null || name.length() == 0) return null;
-        String parentName = stringUtils.findParentFromList(name);
-        String remainder = name;
+        if (qualifiedName == null || qualifiedName.length() == 0) return null;
+        List<String> parents = stringUtils.parseNameQualifiedWithParents(qualifiedName); // should never return an empty array given the check just now on qualified name
+        String name = parents.remove(parents.size() - 1); // get the name off the end of the list now should just be parents in top to bottom order
         Set<Name> possibleParents = null;
-        /* keep chopping away at the string until we find the closest parent we can
-         the point of all of this is to be able to ask for a name with the nearest parent but we can't just try and get it from the string directly e.g. get me WHsmiths on High street
-         we need to look from the top to distinguish high street in different towns
-         */
-        while (parentName != null) {
-            if (remainder.contains(MEMBEROF)) {
-                remainder = remainder.substring(remainder.indexOf(MEMBEROF) + 2);
+        for (String parent : parents){
+            if (possibleParents == null) { // will happen on the first one
+                // most of the time would only be one but the name on the right (top for this expression) might not be a top name in the DB hence there could be multiple
+                possibleParents = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parent, null);
             } else {
-                remainder = remainder.substring(0, remainder.lastIndexOf(",", remainder.length() - parentName.length()));
-            }
-            if (possibleParents == null) { // so the first one
-                // most of the time would only be one but this is the top one, not parent, there could be multiple "london"s for example if london were the top of the specified parents
-                possibleParents = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parentName.replace(Name.QUOTE, ' ').trim(), null);
-            } else {
-                Set<Name> nextParents = HashObjSets.newMutableSet();
-                for (Name parent : possibleParents) {
-                    Name foundParent = getNameByAttribute(azquoMemoryDBConnection, parentName, parent, attributeNames);
+                Set<Name> nextPossibleParents = HashObjSets.newMutableSet();
+                for (Name possibleParent : possibleParents) {
+                    Name foundParent = getNameByAttribute(azquoMemoryDBConnection, parent, possibleParent, attributeNames);
                     if (foundParent != null) {
-                        nextParents.add(foundParent);
+                        nextPossibleParents.add(foundParent);
                     }
                 }
-                // edd note - this was in the for loop but it made no sense (though it would have worked - the for loop would have got and held an iterator from the original parents)
-                possibleParents = nextParents;
+                possibleParents = nextPossibleParents;
             }
-            if (possibleParents == null || possibleParents.size() == 0) { // parent was null, since we're just trying to find that stops us right here
+            if (possibleParents == null || possibleParents.size() == 0) { // unable to find this level of parents - stop now
                 return null;
             }
-            /* so chop off the last name, lastindex of moves backwards from the index
-             the reason for this is to deal with quotes, we could have said simply the substring take off the parent name length but we don't know about quotes or spaces after the comma
-             remainder is the rest of the string, could be london, ontario - Canada was taken off */
-            parentName = stringUtils.findParentFromList(remainder);
         }
         if (possibleParents == null) {
-            return getNameByAttribute(azquoMemoryDBConnection, remainder, null, attributeNames);
+            return getNameByAttribute(azquoMemoryDBConnection, name, null, attributeNames);
         } else {
             for (Name parent : possibleParents) {
-                Name found = getNameByAttribute(azquoMemoryDBConnection, remainder.replace(Name.QUOTE, ' ').trim(), parent, attributeNames);
+                Name found = getNameByAttribute(azquoMemoryDBConnection, name, parent, attributeNames);
                 if (found != null) {
                     return found;
                 }
@@ -261,49 +250,27 @@ public final class NameService {
 
     private static AtomicInteger findOrCreateNameStructure2Count = new AtomicInteger(0);
 
-    public Name findOrCreateNameStructure(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, Name topParent, boolean local, List<String> attributeNames) throws Exception {
+    public Name findOrCreateNameStructure(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, Name topParent, boolean local, List<String> attributeNames) throws Exception {
         findOrCreateNameStructure2Count.incrementAndGet();
-        /* this routine now accepts a comma separated list to indicate a 'general' hierarchy.
-        This may not be an immediate hierarchy.
+        // see findByName for structure string style
+        // note a null/empty qualifiedName will end up returning topParent
 
-        e.g.  if 'London, place' is sent, then the system will look for any 'London' that is ultimately in the set 'Place', whether through direct parent, or parent of parents.
-
-        It can accept multiple layers - ' London, Ontario, Place' would find   Place/Canada/Ontario/London
-
-        It should also recognise ""    "London, North", "Ontario", "Place"     should recognise that the 'North' is part of 'London, North'
-
-          NEW BEHAVIOUR APRIL 2015
-           If, on the first pass at finding a parent, more than one parent is found, it will see if it can find the whole string in any of the parent sets.
-         */
-
-
-        String parentName = stringUtils.findParentFromList(name);
-        String remainder = name;
-        if (parentName == null) {
-            return findOrCreateNameInParent(azquoMemoryDBConnection, name, topParent, local, attributeNames);
+        List<String> nameAndParents = stringUtils.parseNameQualifiedWithParents(qualifiedName); // should never return an empty array given the check just now on qualified name
+        if (nameAndParents.size() == 1) { // no structure just the name, pass on through
+            return findOrCreateNameInParent(azquoMemoryDBConnection, qualifiedName, topParent, local, attributeNames);
         }
-
        /*
         ok the key here is to step through the parent -> child list as defined in the name string creating the hierarchy as you go along
-        the top parent is the context in which names should be searched for and created if not existing, the parent name and parent is the direct parent we may have just created
-        so what unique is saying is : ok we have the parent we want to add a name to : the question is do we search under that parent to find or create or under the top parent?
-        More specifically : if it is unique check for the name anywhere under the top parent to find it and then move it if necessary, if not unique then it could, for example, be another name called London
-        I think maybe the names of variables could be clearer here!, maybe look into on second pass
+        the top parent is used for the first one - inside findOrCreateNameInParent local will make the distinction internally to allow names
+         with the same name in different places or to move the name from where it was. Moving the parsing to parseNameQualifiedWithParents has mad this a lot simpler
+        hopefully it's all still sound.
         */
-        Name parent = topParent;
-        while (parentName != null) {
-            if (remainder.contains(MEMBEROF) && !remainder.endsWith(MEMBEROF)) {
-                remainder = remainder.substring(remainder.indexOf(MEMBEROF) + 2);
-            } else {
-                remainder = remainder.substring(0, name.lastIndexOf(",", remainder.length() - parentName.length() - 1));
-            }
-            //if two commas in succession occur, ignore the blank parent
-            if (parentName.length() > 0) {
-                parent = findOrCreateNameInParent(azquoMemoryDBConnection, parentName, parent, local, attributeNames);
-            }
-            parentName = stringUtils.findParentFromList(remainder);
+        Name nameOrParent = topParent;
+        // given the separated parsing this is much more simple, creating down the chain but starting with the very top parent. Could have left the
+        for (String nameParentString : nameAndParents) {
+            nameOrParent = findOrCreateNameInParent(azquoMemoryDBConnection, nameParentString, nameOrParent, local, attributeNames);
         }
-        return findOrCreateNameInParent(azquoMemoryDBConnection, remainder, parent, local, attributeNames);
+        return nameOrParent; // the last one created is what we want
     }
 
     private static AtomicInteger includeInSetCount = new AtomicInteger(0);

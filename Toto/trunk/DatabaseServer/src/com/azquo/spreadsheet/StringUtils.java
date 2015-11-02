@@ -16,16 +16,24 @@ import java.util.regex.Pattern;
  */
 public class StringUtils {
 
-    // when passed a name tries to find the last in the list e.g. london, ontario, canada gets canada
-    public String findParentFromList(final String name) {
-        if (name.contains(NameService.MEMBEROF) && !name.endsWith(NameService.MEMBEROF)) return name.substring(0, name.indexOf("->"));
-        // ok preprocess to remove commas in quotes, easiest way.
-        String nameWithoutCommasInQuotes = replaceCommasInQuotes(name);
-        if (!nameWithoutCommasInQuotes.contains(",")) return null;
-        // get the position from the string with commas in quotes removed
-        int commaPos = nameWithoutCommasInQuotes.lastIndexOf(",");
-        // but return from the unmodified string
-        return name.substring(commaPos + 1).trim();
+    // returns parsed names from a name qualified with parents, the parents are returned first!
+
+    public List<String> parseNameQualifiedWithParents(String source){
+        List<String> toReturn = new ArrayList<>();
+        if (source == null || source.isEmpty()) return toReturn;
+        // ok I'm making a rule here if MEMBEROF is used (->) it's a straight parent/child thing, no multi levels or anything
+        if (source.contains(NameService.MEMBEROF) && !source.endsWith(NameService.MEMBEROF)){
+            toReturn.add(source.substring(0, source.indexOf("->")).replace(Name.QUOTE, ' ').trim()); // note! MEMBEROF reverses the order compared to "," as in it's parent then child, but the order returned is the same
+            toReturn.add(source.substring(source.indexOf("->") + 2).replace(Name.QUOTE, ' ').trim());
+        } else {
+            String sourceWithoutCommasInQuotes = replaceCommasInQuotes(source); // need to zap the commas in quotes so we can detect the relevant commas
+            while (sourceWithoutCommasInQuotes.contains(",")){ // we're going to chop off this one until there are no more parents but get the parents from the source as they won't have commas replaces
+                toReturn.add(source.substring(sourceWithoutCommasInQuotes.indexOf(",") + 1, sourceWithoutCommasInQuotes.length()).replace(Name.QUOTE, ' ').trim()); // see no reason not to trim possible quotes here
+                sourceWithoutCommasInQuotes = sourceWithoutCommasInQuotes.substring(0, sourceWithoutCommasInQuotes.indexOf(","));
+            }
+            toReturn.add(source.substring(0, sourceWithoutCommasInQuotes.length()).replace(Name.QUOTE, ' ').trim()); // finally add what's left, this will be the name
+        }
+        return toReturn;
     }
 
     // replaces commas in quotes (e.g. "shop", "location", "region with a , in it's name" should become "shop", "location", "region with a - in it's name")  with -, useful for parsing name lists
