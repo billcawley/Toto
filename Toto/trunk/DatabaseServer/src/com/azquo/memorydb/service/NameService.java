@@ -3,7 +3,6 @@ package com.azquo.memorydb.service;
 import com.azquo.memorydb.Constants;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.spreadsheet.StringUtils;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
@@ -320,13 +319,13 @@ public final class NameService {
     private static final boolean profile = false;
 
     // todo - permissions here or at a higher level?
-
+    // aside from the odd logic to get existing I think this is fairly clear
     private static AtomicInteger findOrCreateNameInParent2Count = new AtomicInteger(0);
 
     public Name findOrCreateNameInParent(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name, final Name parent, boolean local, List<String> attributeNames) throws Exception {
         findOrCreateNameInParent2Count.incrementAndGet();
         long marker = System.currentTimeMillis();
-        if (name.length() == 0) {
+        if (name == null || name.length() == 0) {
             return null;
         }
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an dataimport),and insert a structure into it*/
@@ -342,17 +341,15 @@ public final class NameService {
             //try for an existing name already with the same parent
             if (local) {// ok looking only below that parent or just in it's whole set or top parent.
                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, parent);
-            } else {
-                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
-            }
-            if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
-            // find an existing name with no parents. (note that if there are multiple such names, then the return will be null)
-            // if we can't find the name in parent  then it's acceptable to find one with no parents or children todo - think about this!
-            if (existing == null) {
-                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
-                if (existing != null && (existing.hasParents() || existing.hasChildren())) {
-                    existing = null;
+                if (existing == null) { // couldn't find local - try for one which has no parents or children, that's allowable for local (to be moved)
+                    existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+                    if (existing != null && (existing.hasParents() || existing.hasChildren())) {
+                        existing = null;
+                    }
                 }
+                if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
+            } else {// so we ignore parent if not local, we'll grab what we can to move it into the right parent set
+                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
             }
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent3", marker);
         } else { // no parent passed go for a vanilla lookup
@@ -372,10 +369,8 @@ public final class NameService {
             return existing;
         } else {
             logger.debug("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
-            // todo - we should not be getting the provenance from the connection
-            Provenance provenance = azquoMemoryDBConnection.getProvenance();
-            Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, true); // default additive to true
-            // was != which would probably have worked but safer with !.equals
+            // I think provenance from connection is correct, we should be looking to make a useful provenance when making the connection from the data access token
+            Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), true); // default additive to true
             if (!attributeNames.get(0).equals(Constants.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
                 newName.setAttributeWillBePersisted(attributeNames.get(0), storeName);
             }
@@ -393,7 +388,7 @@ public final class NameService {
     public static final int LOWEST_LEVEL_INT = 100;
     public static final int ALL_LEVEL_INT = 101;
 
-    // a loose type of return as we might be pulling sets or lists from names - later a custom object might be useful
+    // a loose type of return as we might be pulling sets or lists from names - todo - custom object
 
     private static AtomicInteger findChildrenAtLevelCount = new AtomicInteger(0);
 
@@ -433,6 +428,7 @@ public final class NameService {
                 namesFound = new ArrayList<>();
             }
         }
+        // has been moved to name to directly access contents of name hopefully increasing speed and saving on garbage generation
         Name.addNames(name, namesFound, 0, level);
         return namesFound;
     }
@@ -470,16 +466,15 @@ public final class NameService {
 
     // since we need different from the standard set ordering use a list, I see no real harm in that in these functions
     // note : in default language!
-
     private static AtomicInteger findChildrenFromToCount = new AtomicInteger(0);
 
-    public List<Name> findChildrenFromToCount(final List<Name> names, String fromString, String toString, final String countString, final String countbackString, final String compareWithString, List<Name> referencedNames) throws Exception {
+    public List<Name> constrainNameListFromToCount(final List<Name> names, String fromString, String toString, final String countString, final String countBackString, final String compareWithString, List<Name> referencedNames) throws Exception {
         findChildrenFromToCount.incrementAndGet();
         final ArrayList<Name> toReturn = new ArrayList<>();
         int to = -10000;
         int from = 1;
         int count = parseInt(countString, -1);
-        int offset = parseInt(countbackString, 0);
+        int offset = parseInt(countBackString, 0);
         int compareWith = parseInt(compareWithString, 0);
         int space = 1; //spacing between 'compare with' fields
         //first look for integers and encoded names...
@@ -519,13 +514,12 @@ public final class NameService {
             to = names.size() + to;
         }
 
-
         int added = 0;
 
         for (int i = offset; i < names.size() + offset; i++) {
-
-            if (position == from || (i < names.size() && names.get(i).getDefaultDisplayName().equals(fromString)))
+            if (position == from || (i < names.size() && names.get(i).getDefaultDisplayName().equals(fromString))){
                 inSet = true;
+            }
             if (inSet) {
                 toReturn.add(names.get(i - offset));
                 if (compareWith != 0) {
@@ -536,8 +530,9 @@ public final class NameService {
                 }
                 added++;
             }
-            if (position == to || (i < names.size() && names.get(i).getDefaultDisplayName().equals(toString)) || added == count)
+            if (position == to || (i < names.size() && names.get(i).getDefaultDisplayName().equals(toString)) || added == count){
                 inSet = false;
+            }
             position++;
         }
         while (added++ < count) {
@@ -667,17 +662,34 @@ public final class NameService {
                 //assume that the second term implies 'level all'
                 long start = System.currentTimeMillis();
                 System.out.println("starting * set sizes  nameStack(stackcount)" + nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
-                Collection<Name> previousSet = nameStack.get(stackCount - 1);
+                Set<Name> previousSet = nameStack.get(stackCount - 1);
                 // testing shows no harm, should be a bit faster and better on memory.
                 // Should I be testing sizes for the most efficient iterator? With the extra name it's a bit different in terms of logic
-                Set<Name> setIntersection = HashObjSets.newMutableSet();
-                for (Name name : nameStack.get(stackCount)) {
-                    if (previousSet.contains(name)) {
-                        setIntersection.add(name);
+                boolean ordered = previousSet instanceof LinkedHashSet;
+                Set<Name> setIntersection;
+                if (!ordered){
+                    setIntersection = HashObjSets.newMutableSet();
+                    for (Name name : nameStack.get(stackCount)) {
+                        if (previousSet.contains(name)) {
+                            setIntersection.add(name);
+                        }
+                        for (Name child : name.findAllChildren(false)) {
+                            if (previousSet.contains(child)) {
+                                setIntersection.add(child);
+                            }
+                        }
                     }
-                    for (Name child : name.findAllChildren(false)) {
-                        if (previousSet.contains(child)) {
-                            setIntersection.add(child);
+                } else { // I need to use previous set as the outside loop
+                    setIntersection = new LinkedHashSet<>();
+                    for (Name name : previousSet){
+                        if (nameStack.get(stackCount).contains(name)) {
+                            setIntersection.add(name);
+                        } else { // we've already checked the top members, check all children to see if it's in there also
+                            for (Name intersectName : nameStack.get(stackCount)){
+                                if (intersectName.findAllChildren(false).contains(name)){
+                                    setIntersection.add(name);
+                                }
+                            }
                         }
                     }
                 }
@@ -700,20 +712,33 @@ public final class NameService {
                 System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
                 start = now;
                 //nameStack.get(stackCount - 1).retainAll(parents); //can't do this any more, need to make a new one
-                Collection<Name> previousSet = nameStack.get(stackCount - 1);
-                Set<Name> setIntersection = HashObjSets.newMutableSet(); // testing shows no harm, should be a bit faster and better on memory
-                if (previousSet.size() < parents.size()){ // since contains should be the same regardless of set size we want to iterate the smaller one to create the intersection
-                    for (Name name : previousSet) {
-                        if (parents.contains(name)) {
-                            setIntersection.add(name);
+                Set<Name> previousSet = nameStack.get(stackCount - 1);
+                // aaqgh ordering problem again
+                boolean ordered = previousSet instanceof LinkedHashSet;
+                Set<Name> setIntersection;
+                if (!ordered){
+                    setIntersection = HashObjSets.newMutableSet(); // testing shows no harm, should be a bit faster and better on memory
+                    if (previousSet.size() < parents.size()){ // since contains should be the same regardless of set size we want to iterate the smaller one to create the intersection
+                        for (Name name : previousSet) {
+                            if (parents.contains(name)) {
+                                setIntersection.add(name);
+                            }
+                        }
+                    } else {
+                        for (Name name : parents) {
+                            if (previousSet.contains(name)) {
+                                setIntersection.add(name);
+                            }
                         }
                     }
                 } else {
-                    for (Name name : parents) {
-                        if (previousSet.contains(name)) {
-                            setIntersection.add(name);
+                    setIntersection = new LinkedHashSet<>();
+                    // we must use previous set
+                        for (Name name : previousSet) {
+                            if (parents.contains(name)) {
+                                setIntersection.add(name);
+                            }
                         }
-                    }
                 }
                 System.out.println("after retainall " + (System.currentTimeMillis() - start));
                 nameStack.set(stackCount - 1, setIntersection); // replace the previous set
@@ -721,8 +746,8 @@ public final class NameService {
             } else if (op == '-') {
                 // using immutable sets on the stack causes more code here but populating the stack should be MUCH faster
                 //nameStack.get(stackCount - 1).removeAll(nameStack.get(stackCount));
-                Collection<Name> currentSet = nameStack.get(stackCount);
-                Collection<Name> previousSet = nameStack.get(stackCount - 1);
+                Set<Name> currentSet = nameStack.get(stackCount);
+                Set<Name> previousSet = nameStack.get(stackCount - 1);
                 Set<Name> result = HashObjSets.newMutableSet();
                 for (Name name : previousSet) {
                     if (!currentSet.contains(name)) { // only the ones not in the current set
@@ -1052,7 +1077,7 @@ public final class NameService {
             //THIRD  trim that down to the subset defined by from, to, count
             if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
                 if (namesFound instanceof List){ // yeah I know some say this is not best practice but hey ho
-                    namesFound = findChildrenFromToCount((List<Name>)namesFound, fromString, toString, countString, countbackString, compareWithString, referencedNames);
+                    namesFound = constrainNameListFromToCount((List<Name>) namesFound, fromString, toString, countString, countbackString, compareWithString, referencedNames);
                 } else {
                     System.out.println("can't from/to/count a non-list, " + setTerm);
                 }
@@ -1130,7 +1155,7 @@ public final class NameService {
         System.out.println("findChildrenAtLevelCount\t\t\t\t\t\t\t\t" + findChildrenAtLevelCount.get());
         System.out.println("addNamesCount\t\t\t\t\t\t\t\t" + addNamesCount.get());
         System.out.println("getNameFromListAndMarkerCount\t\t\t\t\t\t\t\t" + getNameFromListAndMarkerCount.get());
-        System.out.println("findChildrenFromToCount\t\t\t\t\t\t\t\t" + findChildrenFromToCount.get());
+        System.out.println("constrainNameListFromToCount\t\t\t\t\t\t\t\t" + findChildrenFromToCount.get());
         System.out.println("parseQueryCount\t\t\t\t\t\t\t\t" + parseQueryCount.get());
         System.out.println("parseQuery2Count\t\t\t\t\t\t\t\t" + parseQuery2Count.get());
         System.out.println("parseQuery3Count\t\t\t\t\t\t\t\t" + parseQuery3Count.get());

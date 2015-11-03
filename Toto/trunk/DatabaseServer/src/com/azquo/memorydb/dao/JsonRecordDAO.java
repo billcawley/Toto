@@ -157,24 +157,34 @@ WHERE id IN (1,2,3)
     public void persistJsonRecords(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult - todo, perhaps for update and possible list optimisation there?
         ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDB.getLoadingThreads());
-        List<JsonRecordTransport> toDelete = new ArrayList<>();
         List<JsonRecordTransport> toInsert = new ArrayList<>(UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
-        List<JsonRecordTransport> toUpdate = new ArrayList<>();
         int totalCount = records.size();
         for (JsonRecordTransport record : records) {
-            if (record.state == JsonRecordTransport.State.DELETE) {
-                toDelete.add(record);
-                if (toDelete.size() == UPDATELIMIT) {
-                    bulkDelete(azquoMemoryDB, tableName, toDelete);
-                    toDelete = new ArrayList<>();
-                }
-            }
             if (record.state == JsonRecordTransport.State.INSERT) {
                 toInsert.add(record);
                 if (toInsert.size() == UPDATELIMIT) {
                     totalCount -= toInsert.size();
                     executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert, totalCount));
                     toInsert = new ArrayList<>(UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
+                }
+            }
+        }
+        executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert, 0));
+        executor.shutdown();
+        if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+            throw new Exception("Database " + azquoMemoryDB.getMySQLName() + " took longer than an hour to persist");
+        }
+
+        // don't want the update at the same time as insert, I think it can cause problems. Insert first then update/delete
+
+        List<JsonRecordTransport> toDelete = new ArrayList<>();
+        List<JsonRecordTransport> toUpdate = new ArrayList<>();
+        for (JsonRecordTransport record : records) {
+            if (record.state == JsonRecordTransport.State.DELETE) {
+                toDelete.add(record);
+                if (toDelete.size() == UPDATELIMIT) {
+                    bulkDelete(azquoMemoryDB, tableName, toDelete);
+                    toDelete = new ArrayList<>();
                 }
             }
             if (record.state == JsonRecordTransport.State.UPDATE) {
@@ -186,12 +196,8 @@ WHERE id IN (1,2,3)
             }
         }
         bulkDelete(azquoMemoryDB, tableName, toDelete);
-        executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert, 0));
         bulkUpdate(azquoMemoryDB, tableName, toUpdate);
-        executor.shutdown();
-        if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
-            throw new Exception("Database " + azquoMemoryDB.getMySQLName() + " took longer than an hour to persist");
-        }
+
     }
 
     public final List<JsonRecordTransport> findFromTableMinMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName, int minId, int maxId) throws DataAccessException {

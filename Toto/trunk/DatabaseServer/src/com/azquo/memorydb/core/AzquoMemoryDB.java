@@ -666,9 +666,6 @@ public final class AzquoMemoryDB {
         return getNameByAttribute(Collections.singletonList(attributeName), attributeValue, parent);
     }
 
-    // todo - confirm this is still needed or used, the logic is a little odd
-    private static AtomicInteger getNameByAttribute2Count = new AtomicInteger(0);
-
     public List<Name> findDuplicateNames(String attributeName){
         List<Name> found = new ArrayList<>();
         Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
@@ -710,6 +707,8 @@ public final class AzquoMemoryDB {
         }
         return found;
     }
+
+    private static AtomicInteger getNameByAttribute2Count = new AtomicInteger(0);
 
     public Name getNameByAttribute(final List<String> attributeNames, final String attributeValue, final Name parent) {
         getNameByAttribute2Count.incrementAndGet();

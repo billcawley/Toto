@@ -367,7 +367,7 @@ public class DSImportService {
             heading.blankZeroes = true;
         } else if (firstWord.equals(PEERS)) {
             // in new logic this is the only place that peers are used in Azquo
-            heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);// todo - this will make the name regardless, should it?
+            heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
             String peersString = readClause(PEERS, clause);
             if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
                 if (peersString.contains("}")) {
@@ -385,7 +385,6 @@ public class DSImportService {
     /*
     headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     essentially parsing through all the relevant things in a heading to populate an ImportHeading
-    Notable that this does not create the heading.name if it can't find it, unlike with context. Todo : confirm consistent behavior or not
     */
 
     private void interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, MutableImportHeading heading, List<String> attributeNames) throws Exception {
@@ -760,13 +759,7 @@ public class DSImportService {
                 if (mutableImportHeading.name != null && mutableImportHeading.peers.size() > 0) { // has peers (of course) and a name. Little unsure on the name criteria - could one define peers against no name?
                     for (String peer : mutableImportHeading.peers) {
                         //three possibilities to find the peer:
-                        int peerHeadingIndex;
-                        if (peer.equalsIgnoreCase("this")) { // means a different thing than for context headings (where it refers to the heading name), this is the cells name, meaning the value is also a peer?
-                            // todo : Confirm with WFC - this seems to mean that the cells value would be both  a value and a name, should the logic be the same as for context? -1 which means the heading name?
-                            peerHeadingIndex = headingNo;
-                        } else { // standard lookup criteria - matching name that's not an attribute
-                            peerHeadingIndex = findMutableHeadingIndex(peer, headings);
-                        }
+                        int peerHeadingIndex = findMutableHeadingIndex(peer, headings);
                         if (peerHeadingIndex >= 0) {
                             mutableImportHeading.peerCellIndexes.add(peerHeadingIndex);
                         } else {
