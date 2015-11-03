@@ -666,46 +666,50 @@ public final class AzquoMemoryDB {
         return getNameByAttribute(Collections.singletonList(attributeName), attributeValue, parent);
     }
 
-    public List<Name> findDuplicateNames(String attributeName){
+
+    public List<Name> findDuplicateNames(String attributeName, Set<String>exceptions){
         List<Name> found = new ArrayList<>();
         Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
         if (map == null) return null;
         int dupCount = 0;
+        int testCount = 0;
         for (String string : map.keySet()){
-            // so let's say the attribute was address, we found more than one name with the same address . . .
+            if (testCount++ % 50000 == 0) System.out.println("testing for duplicates - count " + testCount + " dups found " + dupCount);
             if (map.get(string).size() > 1){
-                Map<String, Set<String>> attributeList = HashObjObjMaps.newMutableMap();
                 boolean dupFound = false;
-                for (Name name : map.get(string)){ // run through these names with the same address
-                    dupFound = true;
+                List<Name> names = map.get(string);
+                boolean nameadded = false;
+                for (Name name:names){
                     for (String attribute : name.getAttributeKeys()){
-                        if (!attribute.equals(attributeName)){ // the name has an attribute that is not address
-                            dupFound = false; // we assume it's not a duplicate
+                        if (name.getAttributes().size()==1 || (!attribute.equals(attributeName) && !exceptions.contains(attribute))){
                             String attValue = name.getAttribute(attribute);
-                            Set<String> existingVals = attributeList.get(attribute);
-                            if (existingVals == null){ // if so far we've no values for that attribute then make a set of values for that attribute
-                                existingVals = HashObjSets.newMutableSet();
-                                attributeList.put(attribute, existingVals);
-                            } else if (existingVals.contains(attValue)){ // other names for the same address do have a matching value for this other attribute, I guess the dame default name for example?
-                                dupFound = true;// this triggers a dupe
-                                break;
+                             for (Name name2:names){
+                                if (name2.getId()==name.getId())break;
+                                 List<String> attKeys2 = name2.getAttributeKeys();
+                                 //note checking here only on the attribute values of the name itself (not parent names)
+                                 if (attKeys2.contains(attribute) && name2.getAttribute(attribute).equals(attValue)){
+                                      if (!nameadded){
+                                        found.add(name);
+                                        nameadded = true;
                             }
-                            existingVals.add(attValue);
+                                    found.add(name2);
+                                    dupCount++;
+
                         }
                     }
-                    if (dupFound){
-                        break;
                     }
+
                 }
-                if (dupFound){ // for that particular address there were many names and at least one of them had a different attribute that matched
-                    found.addAll(map.get(string)); // add all that had that address
-                    if (dupCount++ > 100){ // if this has happened for more than 100 addresses then give it up
+
+                }
+                if (dupCount> 100){
                         break;
                     }
                 }
             }
-        }
         return found;
+
+
     }
 
     private static AtomicInteger getNameByAttribute2Count = new AtomicInteger(0);
