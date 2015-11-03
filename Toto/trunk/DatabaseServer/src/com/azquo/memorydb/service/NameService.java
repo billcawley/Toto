@@ -608,7 +608,7 @@ public final class NameService {
             return deduplicate(azquoMemoryDBConnection, setFormula.substring(12));
         }
         if (setFormula.startsWith("findduplicates")){
-            return findDuplicateNames(azquoMemoryDBConnection);
+            return findDuplicateNames(azquoMemoryDBConnection, setFormula);
         }
         if (setFormula.startsWith("zap ")) {
             Collection<Name> names = parseQuery(azquoMemoryDBConnection, setFormula.substring(4), attributeNames); // defaulting to list here
@@ -845,9 +845,18 @@ public final class NameService {
 
     private static AtomicInteger deduplicateCount = new AtomicInteger(0);
 
-    private List<Name> findDuplicateNames(AzquoMemoryDBConnection azquoMemoryDBConnection){
-          /*input syntax 'findduplicates`   probably need to add 'exception' list of cases where duplicates are expected (e.g.   Swimshop product categories)*/
-        return azquoMemoryDBConnection.getAzquoMemoryDB().findDuplicateNames(Constants.DEFAULT_DISPLAY_NAME);
+    private List<Name> findDuplicateNames(AzquoMemoryDBConnection azquoMemoryDBConnection, String instructions){
+        Set<String> attributeExceptions = new HashSet<>();
+        if (instructions.toLowerCase().contains("except ")){
+            String exceptionList = instructions.toUpperCase().substring(instructions.toUpperCase().indexOf("EXCEPT ") +7).trim();
+            String[] eList = exceptionList.split(",");
+            for (String exception:eList){
+                attributeExceptions.add(exception.trim());
+
+            }
+        }
+       /*input syntax 'findduplicates`   probably need to add 'exception' list of cases where duplicates are expected (e.g.   Swimshop product categories)*/
+        return azquoMemoryDBConnection.getAzquoMemoryDB().findDuplicateNames(Constants.DEFAULT_DISPLAY_NAME, attributeExceptions);
     }
 
     private List<Name> deduplicate(AzquoMemoryDBConnection azquoMemoryDBConnection, String formula) throws Exception {
