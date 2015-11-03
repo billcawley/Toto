@@ -610,7 +610,8 @@ public class DSImportService {
                 }
             }
              if (importHeaders != null) {
-                  headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
+                 System.out.println("has headers " + importHeaders);
+                 headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
             }
         }
         // finally we might use the headers on the data file, this is notably used when setting up the headers themselves :)
@@ -870,7 +871,7 @@ public class DSImportService {
         for (int i = 0; i < headings.size(); i++) {
             MutableImportHeading mutableImportHeading = headings.get(i);
             // note remove from doesn't mean a line name is required
-            mutableImportHeading.lineNameRequired = mutableImportHeading.indexForChild != -1 || !mutableImportHeading.parentNames.isEmpty() || indexesNeedingNames.contains(i);
+            mutableImportHeading.lineNameRequired = mutableImportHeading.indexForChild != -1 || !mutableImportHeading.parentNames.isEmpty() || indexesNeedingNames.contains(i) || mutableImportHeading.isAttributeSubject;
         }
     }
 
@@ -899,6 +900,7 @@ public class DSImportService {
              whereas resolving "Town parent of street local" first means that the street should be correct by the time we resolve "Pedestrianized parent of street".
              essentially sort all local names */
             if (importCellWithHeading.immutableImportHeading.lineNameRequired && importCellWithHeading.immutableImportHeading.isLocal) {
+
                 // local and it is a parent of another heading (has child heading), inside this function it will use the child heading set up
                 resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, importCellWithHeading, cells, attributeNames, lineNo);
             }
