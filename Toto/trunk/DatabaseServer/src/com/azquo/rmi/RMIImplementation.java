@@ -279,5 +279,14 @@ public class RMIImplementation implements RMIInterface {
         }
     }
 
+    @Override
+    public void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws RemoteException {
+        try {
+            dsSpreadsheetService.sendStopMessageToLog(databaseAccessToken);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
     //memoryDBManager.getAzquoMemoryDB(databaseAccessT)
 }

@@ -872,6 +872,9 @@ public final class NameService {
             }
     }*/
 
+    // Edd note - I'm not completely clear on the deduplicate utility functions but they are not core functionality, more to do with importing (should they be in there?)
+    // so happy to just check for code warnings and not understand 100%
+
     private static AtomicInteger dedupeOneCount = new AtomicInteger(0);
 
     private void dedupeOne(Name name, Set<Name> possibles, Name rubbishBin) throws Exception {
@@ -900,7 +903,7 @@ public final class NameService {
     private List<Name> findDuplicateNames(AzquoMemoryDBConnection azquoMemoryDBConnection, String instructions){
         Set<String> attributeExceptions = new HashSet<>();
         if (instructions.toLowerCase().contains("except ")){
-            String exceptionList = instructions.toUpperCase().substring(instructions.toUpperCase().indexOf("EXCEPT ") +7).trim();
+            String exceptionList = instructions.toUpperCase().substring(instructions.toUpperCase().indexOf("EXCEPT ") + 7).trim();
             String[] eList = exceptionList.split(",");
             for (String exception:eList){
                 attributeExceptions.add(exception.trim());

@@ -128,6 +128,12 @@ public class AzquoMemoryDBConnection {
         (new Thread(new PersistenceRunner())).start();
     }
 
+    public static String STOP = "STOP";
+    public void setStopInUserLog() {
+        userLog.setLength(0);
+        userLog.append(STOP);
+    }
+
     public class PersistenceRunner implements Runnable {
         @Override
         public void run() {
@@ -135,21 +141,26 @@ public class AzquoMemoryDBConnection {
         }
     }
 
-    public StringBuffer getUserLog() {
-        return userLog;
+    public void clearUserLog() {
+        userLog.setLength(0);
     }
 
-    public void addToUserLog(String toAdd){
+    public void addToUserLog(String toAdd) throws Exception{
         addToUserLog(toAdd, true);
     }
 
-    public void addToUserLog(String toAdd, boolean newline){
+    public void addToUserLog(String toAdd, boolean newline) throws Exception{
+        boolean exception = userLog.toString().equals(STOP);
         if (newline){
             System.out.println(toAdd);
             userLog.append(toAdd + "\n");
         } else {
             System.out.print(toAdd);
             userLog.append(toAdd);
+        }
+        if (exception){
+            userLog.append("INTERRUPTED BY USER, THROWING EXCEPTION\n");
+            throw new Exception("Execution interrupted by user");
         }
     }
 }

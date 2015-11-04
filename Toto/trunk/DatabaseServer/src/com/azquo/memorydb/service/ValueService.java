@@ -27,10 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class ValueService {
 
-    final Runtime runtime = Runtime.getRuntime();
-    final int mb = 1024 * 1024;
-    final int kb = 1024;
-
     private static final Logger logger = Logger.getLogger(ValueService.class);
 
     @Autowired
@@ -74,16 +70,11 @@ public final class ValueService {
         storeValueWithProvenanceAndNamesCount.incrementAndGet();
         //long marker = System.currentTimeMillis();
         String toReturn = "";
-
-        final Set<Name> validNames = new HashSet<>();
-
-        //removed valid name set check - caveat saver! WFC.
-        validNames.addAll(names);
-
         final List<Value> existingValues = findForNames(names);
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
         boolean alreadyInDatabase = false;
+        // there's new logic to add values to existing but this only applies to the same provenance and when importing (so same file)
         for (Value existingValue : existingValues) { // really should only be one
             if (existingValue.getProvenance().equals(azquoMemoryDBConnection.getProvenance()) && existingValue.getProvenance().getMethod().equals("import")) {
                 //new behaviour - add values from same dataimport.
@@ -98,7 +89,7 @@ public final class ValueService {
             }
             //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
             //marker = System.currentTimeMillis();
-
+            // won't be true for the same file as it will be caught above but from different files it could well happen
             if (dsSpreadsheetService.compareStringValues(existingValue.getText(), valueString)) {
                 toReturn += "  that value already exists, skipping";
                 alreadyInDatabase = true;
@@ -117,14 +108,14 @@ public final class ValueService {
             Value value = createValue(azquoMemoryDBConnection, azquoMemoryDBConnection.getProvenance(), valueString);
             toReturn += "  stored";
             // and link to names
-            value.setNamesWillBePersisted(validNames);
+            value.setNamesWillBePersisted(names);
         }
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames5", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
         return toReturn;
     }
 
-
+    // called when altering values in a spreadsheet
     private static AtomicInteger overWriteExistingValueCount = new AtomicInteger(0);
 
     public boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, final String newValueString) throws Exception {
@@ -145,7 +136,6 @@ public final class ValueService {
     public List<Value> findForNames(final Set<Name> names) {
         findForNamesCount.incrementAndGet();
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
-        //long track = System.nanoTime();
         final List<Value> values = new ArrayList<>();
         // first get the shortest value list
         int smallestNameSetSize = -1;
@@ -156,39 +146,28 @@ public final class ValueService {
                 smallestName = name;
             }
         }
-
-        //System.out.println("track a   : " + (System.nanoTime() - track) + "  ---   ");
-        //track = System.nanoTime();
-        // changing to sets for speed (hopefully!)
-        //int count = 0;
-
-        assert smallestName != null; // make intellij happy :P
+        assert smallestName != null; // make intellij happy
         for (Value value : smallestName.getValues()) {
             boolean theValueIsOk = true;
             for (Name name : names) {
                 if (!name.equals(smallestName)) { // ignore the one we started with
                     if (!value.getNames().contains(name)) {
-//                        count++;
                         theValueIsOk = false;
                         break; // important, stop checking that that value contains he names we're interested in as, we didn't find one no point checking for the rest
                     }
                 }
             }
-            if (theValueIsOk) { // it was in all the names :)
+            if (theValueIsOk) { // it was in all the names
                 values.add(value);
             }
         }
-
-        //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
-        //track = System.nanoTime();
-
         return values;
     }
 
     /* while the above is what would be used to check if data exists for a specific name combination (e.g. when inserting data) this will navigate down through the names
     this has been a major bottleneck, caching values against names helped a lot, also using similar logic to retainall but creating a new list seemed to double performance and with less garbage I hope!
     not to mention a list is better for iterator I think and .contains is NOT used in the one place this is called. Changing the return type to list.
-    As mentioned in comments in the function a lot of effort went in to speeding up this funciton and reducing garbage, be very careful before changing it.
+    As mentioned in comments in the function a lot of effort went in to speeding up this function and reducing garbage, be very careful before changing it.
     */
 
     long part1NanoCallTime1 = 0;
@@ -216,13 +195,13 @@ public final class ValueService {
         }
         part1NanoCallTime1 += (System.nanoTime() - start);
         long point = System.nanoTime();
-        assert smallestName != null; // make intellij happy :P
+        assert smallestName != null; // make intellij happy
         final Set<Value> smallestValuesSet = smallestName.findValuesIncludingChildren(payAttentionToAdditive);
         part2NanoCallTime1 += (System.nanoTime() - point);
         point = System.nanoTime();
         // ok from testing a new list using contains against values seems to be the thing, double the speed at least I think!
-        List<Value> toReturn = new ArrayList<>();// since the source is a set it will already be deduped - can use arraylist
-        Set[] setsToCheck = new Set[names.size() - 1]; // I don't want to be creating iterators when checking. Iterator * millions = garbage. No problems losing typing, I just need the contains.
+        List<Value> toReturn = new ArrayList<>();// since the source is a set it will already be deduped - can use ArrayList to return
+        Set[] setsToCheck = new Set[names.size() - 1]; // I don't want to be creating iterators when checking. Iterator * millions = garbage (in the Java sense!). No problems losing typing, I just need the contains.
         int arrayIndex = 0;
         for (Name name : names) {
             if (name != smallestName) { // a little cheaper than making a new name set and knocking this one off I think
@@ -230,7 +209,8 @@ public final class ValueService {
                 arrayIndex++;
             }
         }
-        // todo - is building a collection here actually necessary? Could put the logic outside here (sum, min max) in here, then all we need to know is how important the values list actually is.
+        // The core things we want to know about values e.g. sum, max, min, could be done in here but currently the values list, via ValuesHook, is still accesed and used.
+        // When we zap it there may be a case for having this funciton return a double according to whether min max sum etc is required. Performance is pretty good at the moment though.
         boolean add; // declare out here, save reinitialising each time
         int index; // ditto that, should help
         for (Value value : smallestValuesSet) { // because this could be a whacking great loop!
@@ -251,53 +231,6 @@ public final class ValueService {
         return toReturn;
     }
 
-    /* unused commenting
-        // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
-        public Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names, boolean payAttentionToAdditive) {
-            long start = System.nanoTime();
-
-            final Set<Value> values = new HashSet<Value>();
-            // assume that the first set of names is the most restrictive
-            Set<Name> smallestNames = names.get(0);
-            part1NanoCallTime1 += (System.nanoTime() - start);
-            long point = System.nanoTime();
-
-            final Set<Value> valueSet = new HashSet<Value>();
-            for (Name name : smallestNames) {
-                valueSet.addAll(findValuesForNameIncludeAllChildren(name, payAttentionToAdditive));
-            }
-            // this seems a fairly crude implementation, list all values for the name sets then check that that values list is in all the name sets
-            part2NanoCallTime1 += (System.nanoTime() - point);
-            point = System.nanoTime();
-            for (Value value : valueSet) {
-                boolean theValueIsOk = true;
-                for (Set<Name> nameSet : names) {
-                    if (!nameSet.equals(smallestNames)) { // ignore the one we started with
-                        boolean foundInChildList = false;
-                        for (Name valueNames : value.getNames()) {
-                            if (nameService.inParentSet(valueNames, nameSet) != null) {
-                                foundInChildList = true;
-                                break;
-                            }
-                        }
-                        if (!foundInChildList) {
-                            theValueIsOk = false;
-                            break;
-                        }
-                    }
-                }
-                if (theValueIsOk) { // it was in all the names :)
-                    values.add(value);
-                }
-            }
-            part3NanoCallTime1 += (System.nanoTime() - point);
-            numberOfTimesCalled1++;
-            //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
-            //track = System.nanoTime();
-
-            return values;
-        }
-    */
     public void printFindForNamesIncludeChildrenStats() {
         if (numberOfTimesCalled1 > 0) {
             logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
@@ -320,15 +253,14 @@ public final class ValueService {
         findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
-        String calcString = null;
         List<Name> formulaNames = new ArrayList<>();
-        boolean hasCalc = false;
+        String calcString = null; // whether this is null replaces hasCalc
         // add all names to calcnames except the the one with CALCULATION
         // and here's a thing : if more than one name has CALCULATION then only the first will be used
         // todo : I think this logic could be cleaned up a little - the way hascalc is set seems wrong but initial attempts to simplify were also wrong
         for (Name name : names) {
-            if (!hasCalc) {// then try and find one
-                String calc = name.getAttribute(Name.CALCULATION, false, new HashSet<>());
+            if (calcString == null) {// then try and find one - can only happen once
+                String calc = name.getAttribute(Name.CALCULATION, false, new HashSet<>()); // using extra parameters to stop parent checking for this attribute
                 if (calc != null) {
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
@@ -342,21 +274,18 @@ public final class ValueService {
                     //todo : make sure name lookups below use the new style of marker
                     if (!calc.startsWith("error")) { // there should be a better way to deal with errors
                         calcString = calc;
-                        hasCalc = true;
                     }
                 }
-                if (calcString != null) {
-                    hasCalc = true;
-                } else {
+                if (calcString == null) { // couldn't find and resolve a calculation (the vast majority of the time due to there being no attribute)
                     calcnames.add(name);
                 }
-            } else {
+            } else { // already have a calculation
                 calcnames.add(name);
             }
         }
 
         // no reverse polish converted formula, just sum
-        if (!hasCalc) {
+        if (calcString == null) {
             return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesHook, function, locked);
         } else {
             // this is where the work done by the shunting yard algorithm is used
@@ -406,12 +335,12 @@ public final class ValueService {
         }
     }
 
-    // Added by Edd, like above but uses an attribute (attributes?) and doens't care about calc for the moment, hence should be much more simple
-    // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function
+    // Added by Edd, like above but uses an attribute (attributes?) and doesn't care about calc for the moment, hence should be much more simple
+    // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function - will it ever need to do this?
 
     private static AtomicInteger findValueForHeadingsCount = new AtomicInteger(0);
 
-    public String findValueForHeadings(final Set<DataRegionHeading> headings, final MutableBoolean locked, List<Name> namesForMap, List<String> attributesForMap) throws Exception {
+    public String findValueForHeadings(final Set<DataRegionHeading> headings, final MutableBoolean locked) throws Exception {
         findValueForHeadingsCount.incrementAndGet();
         Set<Name> names = dsSpreadsheetService.namesFromDataRegionHeadings(headings);
         if (names.size() != 1) {
@@ -420,26 +349,27 @@ public final class ValueService {
         Set<String> attributes = dsSpreadsheetService.attributesFromDataRegionHeadings(headings);
         String stringResult = null;
         double numericResult = 0;
-        // was on set intersection . . .
         int count = 0;
         String attValue = null;
-        for (Name n : names) {
-            for (String attribute : attributes) {
+        for (Name n : names) { // go through each name
+            for (String attribute : attributes) { // and for each name the
                 attValue = n.getAttribute(attribute.replace("`", ""));
                 if (attValue != null) {
                     count++;
-                    if (!locked.isTrue && n.getAttribute(attribute, false, new HashSet<>()) == null) { // tha attribute is not against the name itself (it's form the parent or structure)
+                    if (!locked.isTrue && n.getAttribute(attribute, false, new HashSet<>()) == null) { // the attribute is not against the name itself (it's from the parent or structure)
                         locked.isTrue = true;
-                    } else {
+                    }/* Edd note on comment, this was being added for saving but the only place this is called the names and attributes are added outside,
+                     I don't see how these maps that were passed could not contain the required names and attributes.
+                     else {
                         // this feels a little hacky but I need to record this for saving purposes later
-                        // that is to say this is note required directly for the return value here
+                        // that is to say this is not required directly for the return value here
                         if (!namesForMap.contains(n)) {
                             namesForMap.add(n);
                         }
                         if (!attributesForMap.contains(attribute)) {
                             attributesForMap.add(attribute);
                         }
-                    }
+                    }*/
                     // basic sum across the names/attributes (not going into children)
                     // comma separated for non numeric. If mixed it will default to the string
                     try {
@@ -643,7 +573,7 @@ public final class ValueService {
         return maxName;
     }
 
-
+    // by time. For database inspect.
     private static AtomicInteger sortValuesCount = new AtomicInteger(0);
 
     public void sortValues(List<Value> values) {
@@ -652,7 +582,7 @@ public final class ValueService {
                 .compareTo(o2.getProvenance().getTimeStamp()));
     }
 
-    // printbatch was creating a value, no good
+    // printbatch was creating a value, no good, use this instead
     private static class DummyValue {
 
         private final String valueText;
@@ -674,6 +604,7 @@ public final class ValueService {
 
     /* nodify the values. It finds the name which represents the most values and displays
     them under them then the name that best represents the rest etc etc until all values have been displayed
+    For inspecting databases
       */
 
     private static AtomicInteger getTreeNodesFromValuesCount = new AtomicInteger(0);
@@ -751,7 +682,6 @@ public final class ValueService {
                     }
                 }
                 values.removeAll(extract);
-
                 nodeList.add(new TreeNode("", heading.getDefaultDisplayName(), "", roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract, maxSize)));
                 dValue = 0;
             }
@@ -766,15 +696,17 @@ public final class ValueService {
         roundValueCount.incrementAndGet();
         Locale locale = Locale.getDefault();
         NumberFormat nf = NumberFormat.getInstance(locale);
-        //todo - format this prettily, particularly when there are many decimal places
+        // is other formatting required?
         return nf.format(dValue);
     }
+
+    // jam this outside to stop instantiation in each function call
+    DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
 
     private static AtomicInteger getTreeNodeCount = new AtomicInteger(0);
 
     public TreeNode getTreeNode(Set<Value> values, Provenance p, int maxSize) {
         getTreeNodeCount.incrementAndGet();
-        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
         String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
         String method = p.getMethod();
         if (p.getName() != null) {
@@ -782,7 +714,6 @@ public final class ValueService {
         }
         if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
         String link = null;
-
         if (method.contains("spreadsheet")) {
             try {
                 link = "/api/Online?opcode=provline&provline=" + URLEncoder.encode(method, "UTF-8");

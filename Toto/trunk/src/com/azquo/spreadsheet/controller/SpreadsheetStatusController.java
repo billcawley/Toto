@@ -41,6 +41,13 @@ public class SpreadsheetStatusController {
                 return spreadsheetService.getSessionLog(loggedInUser.getDataAccessToken()).replace("\n","<br>"); // note - I am deliberately not doing <br/>, it seems javascript messes with it and then I can't detect changes
             }
         }
+        if ("stop".equals(action)){
+            LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+            if (loggedInUser != null) {
+                spreadsheetService.sendStopMessageToLog(loggedInUser.getDataAccessToken());
+                return "stopsent";
+            }
+        }
         return "session lost";
     }
 

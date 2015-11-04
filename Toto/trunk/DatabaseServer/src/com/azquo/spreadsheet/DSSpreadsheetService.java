@@ -36,7 +36,8 @@ public class DSSpreadsheetService {
 
     final Runtime runtime = Runtime.getRuntime();
     final int mb = 1024 * 1024;
-    final int kb = 1024;
+
+    final int COL_HEADINGS_NAME_QUERY_LIMIT = 500;
 
 
     private static final Logger logger = Logger.getLogger(DSSpreadsheetService.class);
@@ -153,6 +154,10 @@ seaports;children   container;children
      */
 
     private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames) throws Exception {
+        return  createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection,headingRegion,attributeNames,0);
+    }
+
+    private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, int namesQueryLimit) throws Exception {
         List<List<List<DataRegionHeading>>> nameLists = new ArrayList<>(headingRegion.size());
         for (List<String> sourceRow : headingRegion) { // we're stepping through the cells that describe headings
             // ok here's the thing, before it was just names here, now it could be other things, attribute names formulae etc.
@@ -223,7 +228,12 @@ seaports;children   container;children
                             forNameCount.add(new DataRegionHeading(typeSet.iterator().next(), false, function, selectionSet, sourceCell));
                             row.add(forNameCount);
                         } else {
-                            row.add(dataRegionHeadingsFromNames(nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames), azquoMemoryDBConnection, function));
+                            final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
+                            if (names.size() > namesQueryLimit){
+                                throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
+                            }
+                            // we want a test here in case soemthing questionalble was passed
+                            row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function));
                         }
                     }
                 }
@@ -651,7 +661,12 @@ seaports;children   container;children
 
     public void clearLog(DatabaseAccessToken databaseAccessToken) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        azquoMemoryDBConnection.getUserLog().setLength(0); // clear I guess?
+        azquoMemoryDBConnection.clearUserLog(); // clear I guess?
+    }
+
+    public void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+        azquoMemoryDBConnection.setStopInUserLog();
     }
 
     // function that can be called by the front end to deliver the data and headings
@@ -708,7 +723,7 @@ seaports;children   container;children
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Row headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
-        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages);
+        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages, COL_HEADINGS_NAME_QUERY_LIMIT);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Column headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
@@ -792,7 +807,7 @@ seaports;children   container;children
         // these 25 lines or so are used elsewhere, maybe normalise?
         final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
         final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists);
-        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages);
+        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages, COL_HEADINGS_NAME_QUERY_LIMIT); // same as standard limit for col headings
         final List<List<DataRegionHeading>> columnHeadings = expandHeadings(transpose2DList(columnHeadingLists));
         if (columnHeadings.size() == 0 || rowHeadings.size() == 0) {
             return null;
@@ -1322,9 +1337,8 @@ seaports;children   container;children
                     }
                 }
                 listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
-                String attributeResult = valueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked, names, attributes);
+                String attributeResult = valueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked);
                 try {
-
                     doubleValue = Double.parseDouble(attributeResult);
                 } catch (Exception e) {
                     //ignore

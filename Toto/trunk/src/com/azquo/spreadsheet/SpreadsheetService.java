@@ -437,6 +437,10 @@ public class SpreadsheetService {
         return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getSessionLog(databaseAccessToken);
     }
 
+    public void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws Exception{
+        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).sendStopMessageToLog(databaseAccessToken);
+    }
+
     public void clearSessionLog(DatabaseAccessToken databaseAccessToken) throws Exception{
         rmiClient.getServerInterface(databaseAccessToken.getServerIp()).clearSessionLog(databaseAccessToken);
     }

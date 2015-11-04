@@ -67,4 +67,6 @@ public interface RMIInterface extends Remote {
     String getSessionLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
     void clearSessionLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
+
+    void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 }
