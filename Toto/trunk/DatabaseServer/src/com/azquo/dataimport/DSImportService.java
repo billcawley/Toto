@@ -540,13 +540,6 @@ public class DSImportService {
         // Preparatory stuff
         // Local cache just to speed things up
         final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
-        if (fileType.indexOf(" ") > 0) {
-            //file type should be first word only
-            fileType = fileType.substring(0, fileType.indexOf(" "));
-        }
-        if (fileType.contains("_")) {
-            fileType = fileType.substring(0, fileType.indexOf("_"));
-        }
         long track = System.currentTimeMillis();
         char delimiter = ',';
         BufferedReader br = new BufferedReader(new FileReader(filePath));
@@ -576,6 +569,15 @@ public class DSImportService {
         // It looks for a name for the file type, this name can have headers and/or the definitions for each header
         // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
+        while (importInterpreter == null && (fileType.contains(" ") || fileType.contains("_"))){ //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
+            //There may, though, be separate interpreters for A_B_xxx and A_xxx, so we try A_B first
+            if (fileType.contains(" ")){
+                fileType = fileType.substring(0, fileType.lastIndexOf(" "));
+            }else{
+                fileType = fileType.substring(0, fileType.lastIndexOf("_"));
+            }
+            importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
+        }
         boolean skipTopLine = false;
         if (importInterpreter != null) {
              // hack for spark response, I'll leave in here for the moment, it could be useful for others
