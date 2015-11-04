@@ -102,7 +102,8 @@ public final class NameService {
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            Set<Name> nameSet = interpretSetTerm(nameName, formulaStrings, referencedNames, attributeStrings);
+            final NameSetList nameSetList = interpretSetTerm(nameName, formulaStrings, referencedNames, attributeStrings);
+            Set<Name> nameSet = nameSetList.set != null ? nameSetList.set : HashObjSets.newMutableSet(nameSetList.list); // just wrap if it's a list, should be fine. This object return type is for the query parser really
             toReturn.add(nameSet);
         }
         return toReturn;
@@ -385,6 +386,30 @@ public final class NameService {
         }
     }
 
+    // in order to avoid unnecessary collection copying (we could be talking millions of names) I made this little container to move a collection that could be a list or set and possibly mutable
+
+    public static class NameSetList{
+        public final Set<Name> set;
+        public final List<Name> list;
+        public final boolean mutable;
+
+        public NameSetList(Set<Name> set, List<Name> list, boolean mutable) {
+            this.set = set;
+            this.list = list;
+            this.mutable = mutable;
+        }
+        // make from an existing (probably immutable) one
+        public NameSetList(NameSetList nameSetList){
+            set = nameSetList.set != null ? HashObjSets.newMutableSet(nameSetList.set) : null;
+            list = nameSetList.list != null ? new ArrayList<>(nameSetList.list) : null;
+            mutable = true;
+        }
+
+        public Collection<Name> getAsCollection(){
+            return set != null ? set : list != null ? list : null;
+        }
+    }
+
     public static final int LOWEST_LEVEL_INT = 100;
     public static final int ALL_LEVEL_INT = 101;
 
@@ -392,7 +417,7 @@ public final class NameService {
 
     private static AtomicInteger findChildrenAtLevelCount = new AtomicInteger(0);
 
-    public Collection<Name> findChildrenAtLevel(final Name name, final String levelString) throws Exception {
+    public NameSetList findChildrenAtLevel(final Name name, final String levelString) throws Exception {
         findChildrenAtLevelCount.incrementAndGet();
         // level 100 means get me the lowest
         // level 101 means 'ALL' (including the top level
@@ -406,31 +431,34 @@ public final class NameService {
             }
         }
         if (level == 1) { // then no need to get clever, just return the children
-            return name.getChildren(); // we do NOT want to wrap such an collection, it could be massive!
+            if (name.hasChildrenAsSet()){
+                return new NameSetList(name.getChildrenAsSet(), null, false);
+            } else {
+                return new NameSetList(null, name.getChildrenAsList(), false);
+            }
         }
         if (level == ALL_LEVEL_INT) {
             System.out.println("ALL_LEVEL_INT called on " + name.getDefaultDisplayName() + ", annoying!");
             // new logic! All names is the name find all children plus itself. A bit annoying to make a copy but there we go
-            Set<Name> toReturn = HashObjSets.newUpdatableSet(name.findAllChildren(false));
+            Set<Name> toReturn = HashObjSets.newMutableSet(name.findAllChildren(false));
             toReturn.add(name); // a whole new set just to add this, grrr
-            return toReturn;
+            return new NameSetList(toReturn, null, true); // at least we're now flagging this up : you can modify this set
         }
-        Collection<Name> namesFound = HashObjSets.newMutableSet();
-        if (name.hasOrderedChildren()){
-            boolean ordered = true;
+        List<Name> namesFoundList = new ArrayList<>();
+        Set<Name> namesFoundSet = HashObjSets.newMutableSet();
+        boolean ordered = false;
+        if (!name.hasChildrenAsSet()){
+            ordered = true;
             for (Name check : name.getChildren()){
-                if (!check.hasOrderedChildren()){ // then these children are unordered, I'm going to say the whole lot doesn't need to be ordered
+                if (check.hasChildrenAsSet()){ // then these children are unordered, I'm going to say the whole lot doesn't need to be ordered
                     ordered = false;
                     break;
                 }
             }
-            if (ordered){ // I'll grudgingly use a list . . .
-                namesFound = new ArrayList<>();
-            }
         }
         // has been moved to name to directly access contents of name hopefully increasing speed and saving on garbage generation
-        Name.addNames(name, namesFound, 0, level);
-        return namesFound;
+        Name.addNames(name, ordered ? namesFoundList : namesFoundSet, 0, level);
+        return new NameSetList(ordered ? null : namesFoundSet, ordered ? namesFoundList : null, true); // it will be mutable either way
     }
 
     private static AtomicInteger addNamesCount = new AtomicInteger(0);
@@ -468,7 +496,10 @@ public final class NameService {
     // note : in default language!
     private static AtomicInteger findChildrenFromToCount = new AtomicInteger(0);
 
-    public List<Name> constrainNameListFromToCount(final List<Name> names, String fromString, String toString, final String countString, final String countBackString, final String compareWithString, List<Name> referencedNames) throws Exception {
+    public NameSetList constrainNameListFromToCount(final NameSetList nameSetList, String fromString, String toString, final String countString, final String countBackString, final String compareWithString, List<Name> referencedNames) throws Exception {
+        if (nameSetList.list == null){
+            return nameSetList; // don't bother trying to constrain a non list
+        }
         findChildrenFromToCount.incrementAndGet();
         final ArrayList<Name> toReturn = new ArrayList<>();
         int to = -10000;
@@ -499,7 +530,7 @@ public final class NameService {
             }
             try {
                 to = Integer.parseInt(toString);
-                if (fromEnd) to = names.size() - to;
+                if (fromEnd) to = nameSetList.list.size() - to;
             } catch (NumberFormatException nfe) {// may be a number, may not . . .
                 if (toString.charAt(0) == NAMEMARKER) {
                     Name toName = getNameFromListAndMarker(toString, referencedNames);
@@ -511,26 +542,26 @@ public final class NameService {
         int position = 1;
         boolean inSet = false;
         if (to != -1000 && to < 0) {
-            to = names.size() + to;
+            to = nameSetList.list.size() + to;
         }
 
         int added = 0;
 
-        for (int i = offset; i < names.size() + offset; i++) {
-            if (position == from || (i < names.size() && names.get(i).getDefaultDisplayName().equals(fromString))){
+        for (int i = offset; i < nameSetList.list.size() + offset; i++) {
+            if (position == from || (i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(fromString))){
                 inSet = true;
             }
             if (inSet) {
-                toReturn.add(names.get(i - offset));
+                toReturn.add(nameSetList.list.get(i - offset));
                 if (compareWith != 0) {
-                    toReturn.add(names.get(i - offset + compareWith));
+                    toReturn.add(nameSetList.list.get(i - offset + compareWith));
                     for (int j = 0; j < space; j++) {
                         toReturn.add(null);
                     }
                 }
                 added++;
             }
-            if (position == to || (i < names.size() && names.get(i).getDefaultDisplayName().equals(toString)) || added == count){
+            if (position == to || (i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(toString)) || added == count){
                 inSet = false;
             }
             position++;
@@ -538,7 +569,7 @@ public final class NameService {
         while (added++ < count) {
             toReturn.add(null);
         }
-        return toReturn;
+        return new NameSetList(null, toReturn, true);
     }
 
     // to find a set of names, a few bits that were part of the original set of functions
@@ -559,11 +590,13 @@ public final class NameService {
         return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, null);
     }
 
-    // todo : sort exceptions? Move to another class? Also should the namestack be more generic
+    // todo : sort exceptions? Move to another class?
     // todo - cache option in here
     Runtime runtime = Runtime.getRuntime();
     int mb = 1024 * 1024;
 
+    // now uses NameSetList to move commections of names around and only copy them as necessary. Has made the logic a little more complex
+    // in places but performance should be better and garbage generation reduced
     private static AtomicInteger parseQuery3Count = new AtomicInteger(0);
 
     public final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn) throws Exception {
@@ -586,7 +619,7 @@ public final class NameService {
         if (setFormula.length() == 0) {
             return toReturn;
         }
-        List<Set<Name>> nameStack = new ArrayList<>(); // make this more generic, the key is in the name marker bits, might use different collections depending on operator!
+        List<NameSetList> nameStack = new ArrayList<>(); // now use the container object, means we only create new collecitons at the last minute as required
         List<String> formulaStrings = new ArrayList<>();
         List<String> nameStrings = new ArrayList<>();
         List<String> attributeStrings = new ArrayList<>(); // attribute names is taken. Perhaps need to think about function parameter names
@@ -653,143 +686,162 @@ public final class NameService {
             }
             if (op == NAMEMARKER) {
                 stackCount++;
-                // new logic - we trust interpret set term to return an ordered set if it thinks it necessary.
-                // ok there's a good change the set returned is immutable, need to take this into account!
+                // now returns a custom little object that hods a list a set and whether it's immutable
                 nameStack.add(interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings));
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + setFormula);
             } else if (op == '*') { // * meaning intersection here . . .
                 //assume that the second term implies 'level all'
                 long start = System.currentTimeMillis();
-                System.out.println("starting * set sizes  nameStack(stackcount)" + nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
-                Set<Name> previousSet = nameStack.get(stackCount - 1);
-                // testing shows no harm, should be a bit faster and better on memory.
-                // Should I be testing sizes for the most efficient iterator? With the extra name it's a bit different in terms of logic
-                boolean ordered = previousSet instanceof LinkedHashSet;
-                Set<Name> setIntersection;
-                if (!ordered){
-                    setIntersection = HashObjSets.newMutableSet();
-                    for (Name name : nameStack.get(stackCount)) {
-                        if (previousSet.contains(name)) {
-                            setIntersection.add(name);
+                System.out.println("starting * set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
+                NameSetList previousSet = nameStack.get(stackCount - 1);
+                // preserving ordering important - retainall on a mutable set, if available, might save a bit vs creating a new one
+                // for the moment create a new collection, list or set based on the type of "previous set"
+                Set<Name> setIntersectionSet = null;
+                List<Name> setIntersectionList = null;
+                if (previousSet.set != null){ // not ordered
+                    setIntersectionSet = HashObjSets.newMutableSet();
+                    Set<Name> previousSetSet = previousSet.set;
+                    for (Name name : nameStack.get(stackCount).getAsCollection()) { // if the last one on the stack is a list or set it doens't matter I'm not doing a contains on it
+                        if (previousSetSet.contains(name)) {
+                            setIntersectionSet.add(name);
                         }
                         for (Name child : name.findAllChildren(false)) {
-                            if (previousSet.contains(child)) {
-                                setIntersection.add(child);
+                            if (previousSetSet.contains(child)) {
+                                setIntersectionSet.add(child);
                             }
                         }
                     }
-                } else { // I need to use previous set as the outside loop
-                    setIntersection = new LinkedHashSet<>();
-                    for (Name name : previousSet){
-                        if (nameStack.get(stackCount).contains(name)) {
-                            setIntersection.add(name);
+                } else { // I need to use previous set as the outside loop for ordering
+                    setIntersectionList = new ArrayList<>(); // kepp it as a list
+                    Set<Name> lastSet = nameStack.get(stackCount).set != null ? nameStack.get(stackCount).set : HashObjSets.newMutableSet(nameStack.get(stackCount).set); // wrap the last one in a set if it's not a set
+                    for (Name name : previousSet.list){
+                        if (lastSet.contains(name)) {
+                            setIntersectionList.add(name);
                         } else { // we've already checked the top members, check all children to see if it's in there also
-                            for (Name intersectName : nameStack.get(stackCount)){
+                            for (Name intersectName : lastSet){
                                 if (intersectName.findAllChildren(false).contains(name)){
-                                    setIntersection.add(name);
+                                    setIntersectionList.add(name);
                                 }
                             }
                         }
                     }
                 }
-                nameStack.set(stackCount - 1, setIntersection); // replace the previous set
+                nameStack.set(stackCount - 1, new NameSetList(setIntersectionSet, setIntersectionList, true)); // replace the previous NameSetList
                 System.out.println("after new retainall " + (System.currentTimeMillis() - start) + "ms");
                 nameStack.remove(stackCount);
-            } else if (op == '/') { // this can be slow : todo - speed up? Is it the retainall? Should I be using sets?
-                //new HashSet<>(nameStack.get(stackCount));
-                // do we have to make a new set?
-                //System.out.println("pre mutable init " + ((runtime.totalMemory() - runtime.freeMemory()) / mb));
-                Set<Name> parents = HashObjSets.newMutableSet(nameStack.get(stackCount)); // ok since what's on namestack is now immutable I guess we need to copy this
+            } else if (op == '/') { // a possible perfoamnce hit here, not sure of other possible optimseations
+                // ok what's on the stack may be mutable but I'm going to have to make a copy - if I modify it the iterator on the loop below will break
+                Set<Name> parents = HashObjSets.newMutableSet(nameStack.get(stackCount).getAsCollection());
                 long start = System.currentTimeMillis();
                 long heapMarker = ((runtime.totalMemory() - runtime.freeMemory()) / mb);
                 //System.out.println("aft mutable init " + heapMarker);
-                System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).size());
-                for (Name child : nameStack.get(stackCount)) {
+                System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
+                for (Name child : nameStack.get(stackCount).getAsCollection()) {
                     Name.findAllParents(child, parents); // new call to static function cuts garbage generation a lot
                 }
                 long now = System.currentTimeMillis();
                 System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
                 start = now;
                 //nameStack.get(stackCount - 1).retainAll(parents); //can't do this any more, need to make a new one
-                Set<Name> previousSet = nameStack.get(stackCount - 1);
-                // aaqgh ordering problem again
-                boolean ordered = previousSet instanceof LinkedHashSet;
-                Set<Name> setIntersection;
-                if (!ordered){
-                    setIntersection = HashObjSets.newMutableSet(); // testing shows no harm, should be a bit faster and better on memory
-                    if (previousSet.size() < parents.size()){ // since contains should be the same regardless of set size we want to iterate the smaller one to create the intersection
-                        for (Name name : previousSet) {
-                            if (parents.contains(name)) {
-                                setIntersection.add(name);
-                            }
-                        }
-                    } else {
-                        for (Name name : parents) {
-                            if (previousSet.contains(name)) {
-                                setIntersection.add(name);
-                            }
-                        }
+                NameSetList previousSet = nameStack.get(stackCount - 1);
+                // ok going to try to get a little clever here since it can be mutable
+                if (previousSet.mutable){
+                    if (previousSet.list != null){
+                        previousSet.list.retainAll(parents);
+                    } else { // I keep assuming set won't be null. I guess we'll see
+                        previousSet.set.retainAll(parents);
                     }
-                } else {
-                    setIntersection = new LinkedHashSet<>();
-                    // we must use previous set
-                        for (Name name : previousSet) {
+                } else { // need to make a new one
+                    Set<Name> setIntersectionSet = null;
+                    List<Name> setIntersectionList = null;
+                    if (previousSet.list != null){ // ordered
+                        setIntersectionList = new ArrayList<>();
+                        // we must use previous set on the outside
+                        for (Name name : previousSet.list) {
                             if (parents.contains(name)) {
-                                setIntersection.add(name);
+                                setIntersectionList.add(name);
                             }
                         }
+                    } else { // need to make a new set, unordered, check set sizes in an attempt to keep speed high
+                        setIntersectionSet = HashObjSets.newMutableSet(); // testing shows no harm, should be a bit faster and better on memory
+                        Set<Name> previousSetSet = previousSet.set;
+                        if (previousSetSet.size() < parents.size()){ // since contains should be the same regardless of set size we want to iterate the smaller one to create the intersection
+                            for (Name name : previousSetSet) {
+                                if (parents.contains(name)) {
+                                    setIntersectionSet.add(name);
+                                }
+                            }
+                        } else {
+                            for (Name name : parents) {
+                                if (previousSetSet.contains(name)) {
+                                    setIntersectionSet.add(name);
+                                }
+                            }
+                        }
+
+                    }
+                    nameStack.set(stackCount - 1, new NameSetList(setIntersectionSet, setIntersectionList, true)); // replace the previous NameSetList
                 }
                 System.out.println("after retainall " + (System.currentTimeMillis() - start));
-                nameStack.set(stackCount - 1, setIntersection); // replace the previous set
                 nameStack.remove(stackCount);
             } else if (op == '-') {
                 // using immutable sets on the stack causes more code here but populating the stack should be MUCH faster
                 //nameStack.get(stackCount - 1).removeAll(nameStack.get(stackCount));
-                Set<Name> currentSet = nameStack.get(stackCount);
-                Set<Name> previousSet = nameStack.get(stackCount - 1);
-                Set<Name> result = HashObjSets.newMutableSet();
-                for (Name name : previousSet) {
-                    if (!currentSet.contains(name)) { // only the ones not in the current set
-                        result.add(name);
+                // ok I have the mutable option now
+                if (nameStack.get(stackCount - 1).mutable){
+                    nameStack.get(stackCount - 1).getAsCollection().removeAll(nameStack.get(stackCount).getAsCollection());
+                } else { // make a new one
+                    Set<Name> currentSet =  nameStack.get(stackCount).set != null ? nameStack.get(stackCount).set : HashObjSets.newMutableSet(nameStack.get(stackCount).list); // convert to a set if it's not. Faster contains.
+                    NameSetList previousSet = nameStack.get(stackCount - 1);
+                    // standard list or set check
+                    Set<Name> resultAsSet = null;
+                    List<Name> resultAsList = null;
+                    // instantiate the correct type of collection and point result at it
+                    Collection<Name> result = previousSet.set != null ? (resultAsSet = HashObjSets.newMutableSet()) : (resultAsList = new ArrayList<>()); // assignment expression, I hope clear.
+                    // populate result with the difference
+                    for (Name name : previousSet.getAsCollection()) {
+                        if (!currentSet.contains(name)) { // only the ones not in the current set
+                            result.add(name);
+                        }
                     }
+                    nameStack.set(stackCount - 1, new NameSetList(resultAsSet, resultAsList, true)); // replace the previous NameSetList
                 }
-                nameStack.set(stackCount - 1, result); // replace the previous set
                 nameStack.remove(stackCount);
             } else if (op == '+') {
                 //nameStack.get(stackCount - 1).addAll(nameStack.get(stackCount));
-                Set<Name> result;
-                if (nameStack.get(stackCount - 1) instanceof LinkedHashSet){ // todo - address this ordered or not business, I worry this is is not a good way of implementing the logic.
-                    result = nameStack.get(stackCount - 1); // if it's a linked hash set it can be modified - kind of against the criteria from interpret set term. I need a little container object that says ordered or mutable etc
-                } else {
-                    result = HashObjSets.newMutableSet(nameStack.get(stackCount - 1));
+                if (nameStack.get(stackCount - 1).mutable){ // can use the old simple call :)
+                    nameStack.get(stackCount - 1).getAsCollection().addAll(nameStack.get(stackCount).getAsCollection()); // simple - note lists won't detect duplicates but I guess they never did
+                } else { // need to make a new one preserving type for ordering
+                    NameSetList previousSet = nameStack.get(stackCount - 1);
+                    Set<Name> resultAsSet = null;
+                    List<Name> resultAsList = null;
+                    Collection<Name> result;
+                    // instantiate the correct type of collection with the data and point result at it
+                    result = previousSet.set != null ? (resultAsSet = HashObjSets.newMutableSet(previousSet.set)) : (resultAsList = new ArrayList<>(previousSet.list));
+                    result.addAll(nameStack.get(stackCount).getAsCollection());
+                    nameStack.set(stackCount - 1, new NameSetList(resultAsSet, resultAsList, true)); // replace the previous NameSetList
                 }
-                result.addAll(nameStack.get(stackCount));
-                nameStack.set(stackCount - 1, result); // replace the previous set
                 nameStack.remove(stackCount);
             } else if (op == ASSYMBOL) {
-                Name totalName = nameStack.get(stackCount).iterator().next(); // alternative if we're using a linked hash set
-                totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1));
+                Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next(); // alternative if we're using a linked hash set
+                totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection());
                 nameStack.remove(stackCount);
-                // can't do that any more
-                //nameStack.get(stackCount - 1).clear();
-                //nameStack.get(stackCount - 1).add(totalName);
-                // should be the same
                 Set<Name> totalNameSet = HashObjSets.newMutableSet();
                 totalNameSet.add(totalName);
-                nameStack.set(stackCount - 1, totalNameSet);
+                nameStack.set(stackCount - 1, new NameSetList(totalNameSet, null, true));
             }
             pos = nextTerm;
         }
 
         if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
-            for (Name possible : nameStack.get(0)) {
+            for (Name possible : nameStack.get(0).getAsCollection()) {
                 if (possible == null || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())) {
                     toReturn.add(possible);
                 }
             }
-        } else {
-            toReturn.addAll(nameStack.get(0));
+        } else { // is the add all inefficient?
+            toReturn.addAll(nameStack.get(0).getAsCollection());
         }
         long time = (System.currentTimeMillis() - track);
         long heapIncrease = ((runtime.totalMemory() - runtime.freeMemory()) / mb) - startUsed;
@@ -852,7 +904,6 @@ public final class NameService {
             String[] eList = exceptionList.split(",");
             for (String exception:eList){
                 attributeExceptions.add(exception.trim());
-
             }
         }
        /*input syntax 'findduplicates`   probably need to add 'exception' list of cases where duplicates are expected (e.g.   Swimshop product categories)*/
@@ -927,42 +978,26 @@ public final class NameService {
         if (name == null || names == null || names.isEmpty()) { // empty the same as null
             return true;
         }
-
-         /*
-         * check if name is in one relevant set from names.  If so then OK
-         * If not, then depends if the name is confidential.
-          *
-          * */
         for (Set<Name> listNames : names) {
             if (!listNames.isEmpty()) {
-                //Name listName = listNames.iterator().next();//all names in each list have the same topparent, so don't try further (just get the first)
                 if (inParentSet(name, listNames) != null) {
                     return true;
                 }
             }
         }
-        // new logic
         return false;
-//        String confidential = name.getAttribute("CONFIDENTIAL");
-//        return confidential == null || !confidential.equalsIgnoreCase("true");
     }
 
     private static AtomicInteger filterCount = new AtomicInteger(0);
 
     // since what it's passed could be immutable need to return
-    // not sure of the scope for optimiseation
-    private Collection<Name> filter(Collection<Name> names, String condition, List<String> strings, List<String> attributeNames) {
+    private NameSetList filter(NameSetList nameSetList, String condition, List<String> strings, List<String> attributeNames) {
         filterCount.incrementAndGet();
+        NameSetList toReturn = nameSetList.mutable ? nameSetList : new NameSetList(nameSetList); // make a new mutable NameSetList if the one passed wasn't mutable
         //NOT HANDLING 'OR' AT PRESENT
         int andPos = condition.toLowerCase().indexOf(" and ");
-        Collection<Name> namesToReturn;
-        // again feels hacky :P, I'm looking to preserve ordering, can't build the list in order as removing isn't in order
-        // so need new collections, hopefully this won't be called much on big sets.
-        if (names instanceof List){
-            namesToReturn = new ArrayList<>(names);
-        } else {
-            namesToReturn = HashObjSets.newMutableSet(names); // need a mutable one
-        }
+        // get the correct now mutable member collection to filter
+        Collection<Name> namesToFilter = toReturn.getAsCollection();
         int lastPos = 0;
         while (lastPos < condition.length()) {
             if (andPos < 0) {
@@ -995,7 +1030,7 @@ public final class NameService {
                 }
 
                 Set<Name> namesToRemove = HashObjSets.newMutableSet();
-                for (Name name : namesToReturn) {
+                for (Name name : namesToFilter) {
                     String valLhs = name.getAttribute(clauseLhs);
                     if (valLhs == null) {
                         valLhs = "";
@@ -1025,12 +1060,13 @@ public final class NameService {
                         namesToRemove.add(name);
                     }
                 }
-                namesToReturn.removeAll(namesToRemove);
+                // outside the loop, iterator shouldn't get shirty
+                namesToFilter.removeAll(namesToRemove);
             }
             lastPos = andPos + 5;
             andPos = condition.toLowerCase().indexOf(" and ", lastPos);
         }
-        return namesToReturn;
+        return toReturn; // its appropriate member collection should have been modified via namesToFilter above, return it
     }
 
     // Ok I'm now making this a set with the caveat that it may be a linked hash set if there's ordering. Also we assume that returned sets won't be modified.
@@ -1039,7 +1075,7 @@ public final class NameService {
 
     private static AtomicInteger interpretSetTermCount = new AtomicInteger(0);
 
-    private Set<Name> interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
+    private NameSetList interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
         interpretSetTermCount.incrementAndGet();
         //System.out.println("interpret set term . . ." + setTerm);
         final String levelString = stringUtils.getInstruction(setTerm, LEVEL);
@@ -1064,7 +1100,7 @@ public final class NameService {
         if (levelString != null) {
             childrenString = "true";
         }
-        Collection<Name> namesFound = new ArrayList<>(); // default for a single name?
+        NameSetList namesFound; // default for a single name?
         // used to be ; at the end of a name
         String nameString = setTerm;
         if (setTerm.indexOf(' ') > 0) {
@@ -1075,7 +1111,9 @@ public final class NameService {
             throw new Exception("error:  not understood: " + nameString);
         }
         if (childrenString == null && fromString == null && toString == null && countString == null) {
-            namesFound.add(name); // one in the arraylist
+            List<Name> singleName = new ArrayList<>();
+            singleName.add(name);
+            namesFound = new NameSetList(null, singleName, true);// mutable single item list
         } else {
             namesFound = findChildrenAtLevel(name, levelString); // reassign names from the find children clause
             if (fromString == null) fromString = "";
@@ -1085,61 +1123,53 @@ public final class NameService {
 
             //THIRD  trim that down to the subset defined by from, to, count
             if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
-                if (namesFound instanceof List){ // yeah I know some say this is not best practice but hey ho
-                    namesFound = constrainNameListFromToCount((List<Name>) namesFound, fromString, toString, countString, countbackString, compareWithString, referencedNames);
+                if (namesFound.list != null){ // yeah I know some say this is not best practice but hey ho
+                    namesFound = constrainNameListFromToCount(namesFound, fromString, toString, countString, countbackString, compareWithString, referencedNames);
                 } else {
                     System.out.println("can't from/to/count a non-list, " + setTerm);
                 }
             }
         }
         if (whereString != null) {
+            // will only work if it's a list internally
             namesFound = filter(namesFound, whereString, strings, attributeStrings);
         }
         // could parents and select be more efficient?
         if (parentsString != null) {
-            //remove the childless names
-            Collection<Name> withChildren;
-            // ergh again :P
-            if (namesFound instanceof List){
-                withChildren = new ArrayList<>();
-            } else {
-                withChildren = HashObjSets.newMutableSet();
+            // make mutable if it isn't
+            if (!namesFound.mutable){
+                namesFound = new NameSetList(namesFound);
             }
-            for (Name possibleName : namesFound) {
-                if (possibleName.hasChildren()) {
-                    withChildren.add(possibleName);
+            Iterator<Name> withChildrenOnlyIterator = namesFound.getAsCollection().iterator();
+            while (withChildrenOnlyIterator.hasNext()){
+                Name check = withChildrenOnlyIterator.next();
+                if (!check.hasChildren()){// use iterator remove for childless names
+                    withChildrenOnlyIterator.remove();
                 }
             }
-            namesFound = withChildren;
         }
         if (selectString != null) {
             String toFind = strings.get(Integer.parseInt(selectString.substring(1, 3))).toLowerCase();
-            Collection<Name> selectedNames;
-            if (namesFound instanceof List){
-                selectedNames = new ArrayList<>();
-            } else {
-                selectedNames = HashObjSets.newMutableSet();
+            // make mutbale if not
+            if (!namesFound.mutable){
+                namesFound = new NameSetList(namesFound);
             }
-            for (Name sname : namesFound) {
-                if (sname != null && sname.getDefaultDisplayName() != null // is this checking to make intellij happy that important, maybe I want an NPE?
-                        && sname.getDefaultDisplayName().toLowerCase().contains(toFind)) {
-                    selectedNames.add(sname);
+            Iterator<Name> selectedNamesIterator = namesFound.getAsCollection().iterator();
+            while (selectedNamesIterator.hasNext()){
+                Name check = selectedNamesIterator.next();
+                if (check == null || check.getDefaultDisplayName() == null
+                        || !check.getDefaultDisplayName().toLowerCase().contains(toFind)) { // reversing logic from before to use iterator remove to get rid of non relevant names
+                    selectedNamesIterator.remove(); //
                 }
             }
-            namesFound = selectedNames;
         }
-        if (sorted != null) {
-                namesFound = new ArrayList<>(namesFound); // make a new one regardless, it may already be a list but if immutable we're in trouble
-            Collections.sort((List<Name>)namesFound, defaultLanguageCaseInsensitiveNameComparator);
+        if (sorted != null) { // I guess force list
+            if (namesFound.list == null || !namesFound.mutable){ // then force to a mutable list, don't see that we have a choice
+                namesFound = new NameSetList(null, new ArrayList<>(namesFound.getAsCollection()), true);
+            }
+            Collections.sort(namesFound.list, defaultLanguageCaseInsensitiveNameComparator);
         }
-        if (namesFound instanceof List) { // it's a list but I want a set,
-            return new LinkedHashSet<>(namesFound); // want to avoid this under most circumstances
-        }
-        if (namesFound instanceof Set) { // what I hope it will be mopst of the time
-            return (Set<Name>) namesFound;
-        }
-        System.out.println("unexpected collection type in interpter set term : " + setTerm);
-        return null;
+        return namesFound;
     }
 
 

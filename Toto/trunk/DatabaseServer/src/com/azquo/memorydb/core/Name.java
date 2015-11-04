@@ -771,12 +771,25 @@ public final class Name extends AzquoMemoryDBEntity {
         return childrenAsSet != null ? Collections.unmodifiableSet(childrenAsSet) : children.length > 0 ? Collections.unmodifiableList(Arrays.asList(children)) : Collections.emptyList();
     }
 
+    private static AtomicInteger getChildrenAsSetCount = new AtomicInteger(0);
+    // if used incorrectly means NPE, I don't mind about this for the mo
+    public Set<Name> getChildrenAsSet() {
+        getChildrenAsSetCount.incrementAndGet();
+        return Collections.unmodifiableSet(childrenAsSet);
+    }
+
+    private static AtomicInteger getChildrenAsListCount = new AtomicInteger(0);
+    public List<Name> getChildrenAsList() {
+        getChildrenAsListCount.incrementAndGet();
+        return children.length > 0 ? Collections.unmodifiableList(Arrays.asList(children)) : Collections.emptyList();
+    }
+
     public boolean hasChildren(){
         return childrenAsSet != null || children.length > 0;
     }
 
-    public boolean hasOrderedChildren(){
-        return childrenAsSet == null;
+    public boolean hasChildrenAsSet(){
+        return childrenAsSet != null;
     }
 
     // might seem inefficient but the adds and removes deal with parents and things. Might reconsider code if used more heavily
