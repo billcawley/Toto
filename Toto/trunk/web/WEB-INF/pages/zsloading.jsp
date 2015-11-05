@@ -69,6 +69,8 @@
 				<span class="fa fa-spin fa-cog"></span>
 			</div>
 			<div id="serverStatus"></div>
+            <a id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)'>Abort load</a>
+
 		</div>
 	</div>
 </main>
