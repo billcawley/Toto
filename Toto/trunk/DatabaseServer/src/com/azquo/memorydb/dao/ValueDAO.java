@@ -26,6 +26,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class ValueDAO extends FastDAO{
 
+    @Autowired
+    protected JdbcTemplateUtils jdbcTemplateUtils;
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
     private static final String FASTVALUE = "fast_value";
@@ -94,7 +96,7 @@ public class ValueDAO extends FastDAO{
                 }
                 insertSql.delete(insertSql.length() - 2, insertSql.length());
                 //System.out.println(insertSql.toString());
-                jdbcTemplate.update(insertSql.toString(), namedParams);
+                jdbcTemplateUtils.update(insertSql.toString(), namedParams);
                 System.out.println("bulk inserted " + DecimalFormat.getInstance().format(valuesToInsert.size()) + " into " + FASTVALUE + " in " + (System.currentTimeMillis() - track) + " remaining " + totalCount);
             }
         }
@@ -142,7 +144,7 @@ public class ValueDAO extends FastDAO{
     }
 
     public void createFastTableIfItDoesntExist(final AzquoMemoryDB azquoMemoryDB){
-        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "` (\n" +
+        jdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +
                 "  `text` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,\n" +
@@ -153,7 +155,7 @@ public class ValueDAO extends FastDAO{
 
     public final List<Value> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
-        return jdbcTemplate.query(SQL_SELECT_ALL, new ValueRowMapper(azquoMemoryDB));
+        return jdbcTemplateUtils.query(SQL_SELECT_ALL, new ValueRowMapper(azquoMemoryDB));
     }
 
 }

@@ -14,6 +14,8 @@ import java.util.HashMap;
  *
  * I would like to use concurrent hashmap but the putifabsent pattern does not lend itself as well as it might - the catch being the long instantiation time of the memory db as it loads
  * park for the mo unless it's a performance issue, since this is the only place that instantiates and hence loads the db could move the managing of that to here.
+ *
+ * todo - loading databases simutaneously??
  */
 public final class MemoryDBManager {
 

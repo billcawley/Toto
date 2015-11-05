@@ -34,7 +34,7 @@
     <property name="minIdle" value="2" />
  </bean>
      -->
-    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+    <bean name="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
         <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
         <!--<property name="url" value="jdbc:mysql://localhost:3306/azquo?jdbcCompliantTruncation=false&amp;useUnicode=true&amp;characterEncoding=UTF-8"/>-->
         <property name="url"
@@ -42,9 +42,10 @@
         <property name="username" value="toto"/>
         <property name="password" value="ark"/>
     </bean>
-    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
+    <bean name="jdbcTemplate" class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
+    <bean name="jdbcTemplateUtils" class="com.azquo.memorydb.dao.JdbcTemplateUtils"/>
     <bean name="nameService" class="com.azquo.memorydb.service.NameService"/>
     <bean name="valueService" class="com.azquo.memorydb.service.ValueService"/>
     <bean name="jsonRecordDAO" class="com.azquo.memorydb.dao.JsonRecordDAO"/>

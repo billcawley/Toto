@@ -5,7 +5,6 @@ import com.azquo.memorydb.core.AzquoMemoryDBEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -18,12 +17,12 @@ import java.util.Map;
  */
 public abstract class FastDAO {
 
+    @Autowired
+    protected JdbcTemplateUtils jdbcTemplateUtils;
+
     protected static final String ID = "id";
 
     public static final int UPDATELIMIT = 2500; // going to 2.5k as now some of the records can be quite large! Also simultaneous.
-
-    @Autowired
-    protected NamedParameterJdbcTemplate jdbcTemplate;
 
     public abstract String getTableName();
 
@@ -45,23 +44,23 @@ public abstract class FastDAO {
             }
             updateSql.append(")");
             //System.out.println(updateSql.toString());
-            jdbcTemplate.update(updateSql.toString(), namedParams);
+            jdbcTemplateUtils.update(updateSql.toString(), namedParams);
         }
     }
 
     public final int findMaxId(final AzquoMemoryDB azquoMemoryDB) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`";
-        Integer toReturn = jdbcTemplate.queryForObject (SQL_SELECT_ALL, JsonRecordDAO.EMPTY_PARAMETERS_MAP, Integer.class);
+        Integer toReturn = jdbcTemplateUtils.queryForObject (SQL_SELECT_ALL, JsonRecordDAO.EMPTY_PARAMETERS_MAP, Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }
 
     public void clearTable(final AzquoMemoryDB azquoMemoryDB){
-        jdbcTemplate.update("delete from `" + azquoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        jdbcTemplateUtils.update("delete from `" + azquoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
 
     }
 
     public boolean checkFastTableExists(final AzquoMemoryDB azquoMemoryDB){
-        final List<Map<String, Object>> maps = jdbcTemplate.queryForList("show tables from  `" + azquoMemoryDB.getMySQLName() + "` like 'fast_value' ", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        final List<Map<String, Object>> maps = jdbcTemplateUtils.queryForList("show tables from  `" + azquoMemoryDB.getMySQLName() + "` like 'fast_value' ", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         return !maps.isEmpty();
     }
 

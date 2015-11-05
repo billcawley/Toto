@@ -26,6 +26,8 @@ import java.util.concurrent.TimeUnit;
 public class NameDAO extends FastDAO{
 
 
+    @Autowired
+    protected JdbcTemplateUtils jdbcTemplateUtils;
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
     //    public static final int UPDATELIMIT = 5000;
@@ -104,7 +106,7 @@ public class NameDAO extends FastDAO{
                 }
                 insertSql.delete(insertSql.length() - 2, insertSql.length());
                 //System.out.println(insertSql.toString());
-                jdbcTemplate.update(insertSql.toString(), namedParams);
+                jdbcTemplateUtils.update(insertSql.toString(), namedParams);
                 if (message != null){
                     System.out.println(message);
                 }
@@ -163,11 +165,11 @@ public class NameDAO extends FastDAO{
 
     public final List<Name> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTNAME + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTNAME + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
-        return jdbcTemplate.query(SQL_SELECT_ALL, new NameRowMapper(azquoMemoryDB));
+        return jdbcTemplateUtils.query(SQL_SELECT_ALL, new NameRowMapper(azquoMemoryDB));
     }
 
     public void createFastTableIfItDoesntExist(final AzquoMemoryDB azquoMemoryDB){
-        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTNAME + "` (\n" +
+        jdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTNAME + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +
                 "  `additive` tinyint(1) NOT NULL,\n" +

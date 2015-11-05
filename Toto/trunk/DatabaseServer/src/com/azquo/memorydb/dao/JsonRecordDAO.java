@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -29,8 +28,9 @@ import java.util.concurrent.TimeUnit;
 public class JsonRecordDAO {
 
     @Autowired
-    private NamedParameterJdbcTemplate jdbcTemplate;
-
+    protected JdbcTemplateUtils jdbcTemplateUtils;
+/*    @Autowired
+    protected NamedParameterJdbcTemplate jdbcTemplate;*/
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
 //    public static final int UPDATELIMIT = 5000;
@@ -83,7 +83,7 @@ public class JsonRecordDAO {
                     }
                     insertSql.delete(insertSql.length() - 2, insertSql.length());
                     //System.out.println(insertSql.toString());
-                    jdbcTemplate.update(insertSql.toString(), namedParams);
+                    jdbcTemplateUtils.update(insertSql.toString(), namedParams);
                     System.out.println("bulk inserted " + DecimalFormat.getInstance().format(records.size()) + " into " + tableName + " in " + (System.currentTimeMillis() - track) + " remaining " + totalCount);
                 }
         }
@@ -127,7 +127,7 @@ WHERE id IN (1,2,3)
             }
             updateSql.append(")");
             //System.out.println(updateSql.toString());
-            jdbcTemplate.update(updateSql.toString(), namedParams);
+            jdbcTemplateUtils.update(updateSql.toString(), namedParams);
             System.out.println("bulk updated " + records.size() + " into " + tableName + " in " + (System.currentTimeMillis() - track));
         }
     }
@@ -149,7 +149,7 @@ WHERE id IN (1,2,3)
             }
             updateSql.append(")");
             //System.out.println(updateSql.toString());
-            jdbcTemplate.update(updateSql.toString(), namedParams);
+            jdbcTemplateUtils.update(updateSql.toString(), namedParams);
             System.out.println("bulk deleted " + records.size() + " from " + tableName + " in " + (System.currentTimeMillis() - track));
         }
     }
@@ -202,12 +202,12 @@ WHERE id IN (1,2,3)
 
     public final List<JsonRecordTransport> findFromTableMinMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName, int minId, int maxId) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
-        return jdbcTemplate.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
+        return jdbcTemplateUtils.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
     }
 
     public final int findMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`";
-        Integer toReturn = jdbcTemplate.queryForObject (SQL_SELECT_ALL, new HashMap<>(), Integer.class);
+        Integer toReturn = jdbcTemplateUtils.queryForObject(SQL_SELECT_ALL, new HashMap<>(), Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }
 
