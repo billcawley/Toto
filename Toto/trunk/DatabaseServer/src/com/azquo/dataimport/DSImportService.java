@@ -512,20 +512,21 @@ public class DSImportService {
                of course if the first column has no header and then the second has data but not on this line then it would get loaded
                  happy for the check to remain in here - more stuff for */
                 ImportCellWithHeading first = lineToLoad.get(0);
-                if ((first.lineValue.length() > 0 || first.immutableImportHeading.heading == null) && (first.immutableImportHeading.only == null || first.lineValue.equals(first.immutableImportHeading.only))) {
-                    getCompositeValues(lineToLoad);
-                    try {
-                        valueTracker.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo));
-                    } catch (Exception e) {
-                        System.out.println("error: line " + lineNo);
-                        e.printStackTrace();
-                        break;
+                if (first.lineValue.length() > 0 || first.immutableImportHeading.heading == null) {
+                    if (getCompositeValuesAndCheckOnly(lineToLoad)) {
+                        try {
+                            valueTracker.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo));
+                        } catch (Exception e) {
+                            System.out.println("error: line " + lineNo);
+                            e.printStackTrace();
+                            break;
+                        }
+                        Long now = System.currentTimeMillis();
+                        if (now - time > trigger) {
+                            System.out.println("line no " + lineNo + " time = " + (now - time) + "ms");
+                        }
+                        time = now;
                     }
-                    Long now = System.currentTimeMillis();
-                    if (now - time > trigger) {
-                        System.out.println("line no " + lineNo + " time = " + (now - time) + "ms");
-                    }
-                    time = now;
                 }
                 lineNo++;
             }
@@ -1079,13 +1080,13 @@ public class DSImportService {
 
     // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
 
-    private void getCompositeValues(List<ImportCellWithHeading> cells) {
+    private boolean getCompositeValuesAndCheckOnly(List<ImportCellWithHeading> cells) {
         int adjusted = 2;
         //loops in case there are multiple levels of dependencies
         while (adjusted > 1) {
             adjusted = 0;
             for (ImportCellWithHeading cell : cells) {
-                if (cell.immutableImportHeading.compositionPattern != null) {
+                 if (cell.immutableImportHeading.compositionPattern != null) {
                     String result = cell.immutableImportHeading.compositionPattern;
                     int headingMarker = result.indexOf("`");
                     while (headingMarker >= 0) {
@@ -1128,8 +1129,31 @@ public class DSImportService {
                         adjusted++;
                     }
                 }
+                if (cell.immutableImportHeading.only != null){
+                    //`only' can have wildcards  '*xxx*'
+                    String only = cell.immutableImportHeading.only.toLowerCase();
+                    String lineValue = cell.lineValue.toLowerCase();
+                    if (only.startsWith("*")){
+                        if (only.endsWith("*")){
+                            if (!lineValue.contains(only.substring(1,only.length()-1))) {
+                                return false;
+                            }
+                        }else if (!lineValue.startsWith(only.substring(1))) {
+                            return false;
+                        }
+                    }else if (only.endsWith("*")){
+                        if (!lineValue.startsWith(only.substring(0,only.length()-1))){
+                            return false;
+                        }
+                    }else{
+                        if (!lineValue.equals(only)){
+                            return false;
+                        }
+                    }
+                }
             }
         }
+        return true;
     }
 
     private boolean isZero(String text) {
