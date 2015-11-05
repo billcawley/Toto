@@ -153,7 +153,7 @@ public class AzquoMemoryDBConnection {
         boolean exception = userLog.toString().equals(STOP);
         if (newline){
             System.out.println(toAdd);
-            userLog.append(toAdd + "\n");
+            userLog.append(toAdd).append("\n");
         } else {
             System.out.print(toAdd);
             userLog.append(toAdd);
