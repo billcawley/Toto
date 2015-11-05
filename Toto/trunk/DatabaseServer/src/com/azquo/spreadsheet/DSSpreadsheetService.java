@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 // it seems that trying to configure the properties in spring is a problem - todo : see if upgrading spring to 4.2 makes this easier?
-// todo : try to address proper use of protected and private given how I've shifter lots of classes around. This could apply to all sorts in the system.
+// todo : try to address proper use of protected and private given how I've shifted lots of classes around. This could apply to all sorts in the system.
 
 public class DSSpreadsheetService {
 
@@ -104,37 +104,6 @@ public class DSSpreadsheetService {
         }
         return "";
     }
-
-/*    public void anonymise(DatabaseAccessToken databaseAccessToken) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        List<Name> anonNames = nameService.findContainingName(azquoMemoryDBConnection, "", Name.ANON);
-
-
-        for (Name set : anonNames) {
-            String anonName = set.getAttribute(Name.ANON);
-            if (set.getPeers().size() > 0) {
-                Double low = 0.5;
-                Double high = 0.5;
-                try {
-                    String[] limits = anonName.split(" ");
-                    low = Double.parseDouble(limits[0]) / 100;
-                    high = Double.parseDouble(limits[1]) / 100;
-
-                } catch (Exception ignored) {
-                }
-                randomAdjust(set, low, high);
-            } else {
-                int count = 1;
-                for (Name name : set.getChildren()) {
-                    try {
-                        name.setTemporaryAttribute(Constants.DEFAULT_DISPLAY_NAME, anonName.replace("[nn]", count + ""));
-                        count++;
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-        }
-    }*/
 
     /*
 
@@ -229,10 +198,9 @@ seaports;children   container;children
                             row.add(forNameCount);
                         } else {
                             final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
-                            if (names.size() > namesQueryLimit){
+                            if (namesQueryLimit > 0 && names.size() > namesQueryLimit){
                                 throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
                             }
-                            // we want a test here in case soemthing questionalble was passed
                             row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function));
                         }
                     }
@@ -275,7 +243,8 @@ seaports;children   container;children
 
     Row/column reference below is based off the above example - in toReturn the index of the outside list is y and the the inside list x
 
-    given what we now know about arraylists can this be optimized? Very probably. TODO.
+    I tried optimising based on calculating the size of the arraylist that would be required but it seemed to provide little additional benefit,
+     plus I don't think this is a big performance bottleneck. Commented attempt at optimising will be in SVN if required.
     */
 
     private <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
@@ -298,40 +267,6 @@ seaports;children   container;children
             }
         }
         return toReturn;
-
-        /* second attempt, want it all in one function, benchmarking makes this slow, leave here commented for the moment
-        // It would be nice to just return the list if there's onlly one of them but I can't do that I don't think, it would be one long row.
-        // stop null pointers and calculate the size (what I'm after to use a single arraylist of the right size)
-        int returnSize = 1;
-        for (List<T> permutationDimension : listsToPermute) {
-            if (permutationDimension == null) {
-                permutationDimension = new ArrayList<>();
-                permutationDimension.add(null);
-            }
-            returnSize *= permutationDimension.size();
-        }
-        List<List<T>> toReturn2 = new ArrayList<>(returnSize);
-        boolean moreData = true;
-        int[] indexes = new int[listsToPermute.size()]; // bunch of zeroes
-        while (moreData){
-            List<T> row = new ArrayList<>(listsToPermute.size());
-            for (int i = 0; i < indexes.length; i++){
-                row.add(listsToPermute.get(i).get(indexes[i]));
-            }
-            toReturn2.add(row);
-                for (int i = indexes.length - 1; i >=0; i--){ // and go back increneting as they "roll over"
-                    indexes[i]++;
-                    if (indexes[i] >= listsToPermute.get(i).size()){ // it needs to roll over
-                        indexes[i] = 0;
-                        if (i == 0){ // we tried to roll over on the first list, should be all done!
-                            moreData = false;  // stop the big loop.
-                        }
-                    } else { // don't carry on back
-                        break;
-                    }
-                }
-        }*/
-
     }
 
     /* so say we already have
@@ -389,7 +324,6 @@ seaports;children   container;children
 
      */
 
-
     private List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists) {
         final int noOfHeadingDefinitionRows = headingLists.size();
         if (noOfHeadingDefinitionRows == 0) {
@@ -400,8 +334,8 @@ seaports;children   container;children
         // we would just run through the rows running a 2d permutation on each row BUT there's a rule that if there's
         // a row below blank except the right most one then add that right most one to the one above
         boolean starting = true;
-        // ok the reason I'm doing this is to avoid unncessary array copying and resizing. If the size is 1 can just return that otherwise create an arraylist of the right size and copy in
-        ArrayList<List<List<DataRegionHeading>>> permutedLists = new ArrayList<>(noOfHeadingDefinitionRows); // could be slightly less elemnts than this but it's unlikely to be a biggy.
+        // ok the reason I'm doing this is to avoid unnecessary array copying and resizing. If the size is 1 can just return that otherwise create an arraylist of the right size and copy in
+        ArrayList<List<List<DataRegionHeading>>> permutedLists = new ArrayList<>(noOfHeadingDefinitionRows); // could be slightly less elements than this but it's unlikely to be a biggy.
         for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) {
             List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
             if (lastHeadingDefinitionCellIndex > 0 && !headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex)))
@@ -663,6 +597,8 @@ seaports;children   container;children
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.clearUserLog(); // clear I guess?
     }
+
+    // to try to force an exception to stop execution
 
     public void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
@@ -993,8 +929,6 @@ seaports;children   container;children
                         break;
                     }
                 }
-
-
                 if (rowsBlank) {
                     for (int i = 0; i < filterCount; i++) {
                         toReturn.remove(rowNo);
@@ -1300,7 +1234,6 @@ seaports;children   container;children
                 }
                 stringValue = doubleValue + "";
             } else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
-                // TODO - peer additive check. If using peers and not additive, don't include children
                 ValuesHook valuesHook = new ValuesHook();
                 // now , get the function from the headings
                 if (function != null) {
@@ -1450,21 +1383,6 @@ seaports;children   container;children
         return toReturn;
     }
 
-    /* for anonymiseing data
-    public void randomAdjust(Name name, double low, double high) {
-        for (Value value : name.getValues()) {
-            try {
-                double orig = Double.parseDouble(value.getText());
-                Double newValue = orig * ((1 + low) + (high - low) * Math.random());
-                int newRound = (int) (newValue * 100);
-                value.setText((((double) newRound) / 100) + "");
-            } catch (Exception e) {
-
-            }
-        }
-
-    }*/
-
     // used when comparing values. So ignore the currency symbol if the numbers are the same
     private String stripCurrency(String val) {
         //TODO we need to be able to detect other currencies
@@ -1609,18 +1527,12 @@ seaports;children   container;children
 
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
     public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws Exception {
-
-
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-
-
         azquoMemoryDBConnection.setProvenance(user, "in spreadsheet", reportName, context);
         if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
             importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
             return;
         }
-
-
         int numberOfValuesModified = 0;
         List<Name> contextNames = getContextNames(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getContextSource());
         int rowCounter = 0;
@@ -1707,7 +1619,7 @@ seaports;children   container;children
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
     }
 
-    // Four little utility functions added by Edd, required now headings are not names
+    // Five little utility functions added by Edd, required now headings are not names
 
     public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
@@ -1763,5 +1675,4 @@ seaports;children   container;children
         }
         return null;
     }
-
 }
