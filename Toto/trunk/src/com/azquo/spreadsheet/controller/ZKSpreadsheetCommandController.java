@@ -19,6 +19,7 @@ import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
+import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.jsp.JsonUpdateBridge;
@@ -81,6 +82,12 @@ public class ZKSpreadsheetCommandController {
             protected void process(Desktop desktop) {
                 Spreadsheet ss = (Spreadsheet) desktop.getComponentByUuidIfAny(zssUuid);
                 try {
+                    if ("FREEZE".equals(action)) {
+                        Ranges.range(ss.getSelectedSheet()).setFreezePanel(ss.getSelection().getRow(), ss.getSelection().getColumn());
+                    }
+                    if ("UNFREEZE".equals(action)) {
+                        Ranges.range(ss.getSelectedSheet()).setFreezePanel(0,0);
+                    }
                     if ("XLS".equals(action)) {
 
                         Exporter exporter = Exporters.getExporter();
