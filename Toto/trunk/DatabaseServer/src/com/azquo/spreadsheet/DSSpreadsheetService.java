@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 // it seems that trying to configure the properties in spring is a problem - todo : see if upgrading spring to 4.2 makes this easier?
 // todo : try to address proper use of protected and private given how I've shifted lots of classes around. This could apply to all sorts in the system.
@@ -58,16 +59,11 @@ public class DSSpreadsheetService {
 
     public final StringUtils stringUtils;
 
-    static class UniqueName {
-        Name name;
-        String string;
-    }
-
     // todo, clean this up when sessions are expired, maybe a last accessed time?
     private final Map<String, StringBuffer> sessionLogs;
 
     public DSSpreadsheetService() {
-        String thost = "";
+        String thost = ""; // Currently just to put in the log
         try {
             thost = InetAddress.getLocalHost().getHostName();
         } catch (Exception e) {
@@ -99,7 +95,7 @@ public class DSSpreadsheetService {
 
     public String getSessionLog(DatabaseAccessToken databaseAccessToken) throws Exception {
         StringBuffer log = sessionLogs.get(databaseAccessToken.getUserSessionId());
-        if (log != null){
+        if (log != null) {
             return log.toString();
         }
         return "";
@@ -123,8 +119,10 @@ seaports;children   container;children
      */
 
     private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames) throws Exception {
-        return  createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection,headingRegion,attributeNames,0);
+        return createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, headingRegion, attributeNames, 0);
     }
+
+    // now has the option to exception based on large sets being returned by parse query. Used currently on columns, if these name sets are more than a few hundred then that's clearly unworkable.
 
     private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, int namesQueryLimit) throws Exception {
         List<List<List<DataRegionHeading>>> nameLists = new ArrayList<>(headingRegion.size());
@@ -143,7 +141,6 @@ seaports;children   container;children
                     } else {
                         DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;// that's sum practically speaking
                         // now allow functions
-                        // I feel there should be a loop here
                         for (DataRegionHeading.BASIC_RESOLVE_FUNCTION basic_resolve_function : DataRegionHeading.BASIC_RESOLVE_FUNCTION.values()) {
                             if (sourceCell.startsWith(basic_resolve_function.name())) {
                                 function = basic_resolve_function;
@@ -159,9 +156,9 @@ seaports;children   container;children
                             sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
                             // ok these could be heavy so let's cache them, feels a bit dodgy but we'll see how it goes.
                             Set<Name> nameCountSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(sourceCell);
-                            if (nameCountSet == null){
+                            if (nameCountSet == null) {
                                 nameCountSet = HashObjSets.newMutableSet();
-                                nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames, nameCountSet); // namecount set will be populated internally. I'm not sure if this is clear as it might be, or comprehensive
+                                nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames, nameCountSet); // namecount set will be populated internally - the last parameter passed
                                 azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(sourceCell, nameCountSet);
                             }
                             List<DataRegionHeading> forNameCount = new ArrayList<>();
@@ -172,33 +169,29 @@ seaports;children   container;children
                             sourceCell = sourceCell.substring(sourceCell.indexOf("(", NAMECOUNT.length()) + 1); // chop off the beginning
                             sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
                             String selectionType = sourceCell.substring(0, sourceCell.indexOf(","));
-
                             // edd trying some caching
-
                             Set<Name> typeSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(selectionType);
-                            if (typeSet == null){
+                            if (typeSet == null) {
                                 typeSet = HashObjSets.newMutableSet();
-                                nameService.parseQuery(azquoMemoryDBConnection, selectionType, attributeNames, typeSet); // namecount set will be populated internally. I'm not sure if this is clear as it might be, or comprehensive
+                                nameService.parseQuery(azquoMemoryDBConnection, selectionType, attributeNames, typeSet); // namecount set will be populated internally - the last parameter passed
                                 azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(sourceCell, typeSet);
                             }
-
                             if (typeSet.size() != 1) {
                                 throw new Exception("selection types must be single cells = use 'as'");
                             }
                             String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1);
                             Set<Name> selectionSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(secondSet);
-                            if (selectionSet == null){
+                            if (selectionSet == null) {
                                 selectionSet = HashObjSets.newMutableSet();
-                                nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames, selectionSet); // namecount set will be populated internally. I'm not sure if this is clear as it might be, or comprehensive
+                                nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames, selectionSet); // namecount set will be populated internally - the last parameter passed
                                 azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(secondSet, selectionSet);
                             }
-
                             List<DataRegionHeading> forNameCount = new ArrayList<>();
                             forNameCount.add(new DataRegionHeading(typeSet.iterator().next(), false, function, selectionSet, sourceCell));
                             row.add(forNameCount);
-                        } else {
+                        } else { // most of the time it will be a vanilla query
                             final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
-                            if (namesQueryLimit > 0 && names.size() > namesQueryLimit){
+                            if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
                                 throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
                             }
                             row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function));
@@ -321,6 +314,7 @@ seaports;children   container;children
     if this region is more than on column wide then rows which have only one cell populated and that cell is the right most cell
     then that cell is added to the cell above it, it becomes part of that permutation.
 
+    That logic just described is the bulk of the function I think. Permutation is handed off to get2DPermutationOfLists, then those permuted lists are simply stacked together.
 
      */
 
@@ -344,9 +338,9 @@ seaports;children   container;children
                     && headingLists.get(headingDefinitionRowIndex + 1).size() > 1 // the next row is not a single cell (will all rows be the same length?)
                     && headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex + 1)) // and the last cell is the only not null one
                     ) {
-                if (headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex)== null){
+                if (headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex) == null) {
                     headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
-                }else{
+                } else {
                     headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
                 }
                 headingDefinitionRowIndex++;
@@ -354,12 +348,12 @@ seaports;children   container;children
             List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
             permutedLists.add(permuted);
         }
-        if (permutedLists.size() == 1){ // it may often be
+        if (permutedLists.size() == 1) { // it may often be
             return permutedLists.get(0);
         }
         // the point is I only want to make a new arraylist if there are lists to be combined and then I want it to be the right size. Some reports have had millions in here . . .
         int size = 0;
-        for (List<List<DataRegionHeading>> permuted : permutedLists){
+        for (List<List<DataRegionHeading>> permuted : permutedLists) {
             size += permuted.size();
         }
         List<List<DataRegionHeading>> output = new ArrayList<>(size);
@@ -380,86 +374,74 @@ seaports;children   container;children
         return true; // All null - treat as last cell populated
     }
 
-    private void nameAndParent(UniqueName uName) {
-        Name name = uName.name;
-        if (name.getParents() != null) {
-            for (Name parent : name.getParents()) {
-                //check that there are no duplicates with the same immediate parent
-                boolean duplicate = false;
-                for (Name sibling : parent.getChildren()) {
-                    if (sibling != name && sibling.getDefaultDisplayName() != null
-                            && sibling.getDefaultDisplayName().equals(name.getDefaultDisplayName())) {
-                        duplicate = true;
-                        break;
-                    }
-                }
-                if (!duplicate) {
-                    uName.string = uName.string + "," + parent.getDefaultDisplayName();
-                    uName.name = parent;//we may need this to go up the chain if the job is not yet done
-                }
-            }
+    // to help making names on a dropdown.
+    static class UniqueName {
+        Name topName; // often topName is name and the description will just be left as the basic name
+        String description; // when the name becomes qualified the description will become name, parent, parent of parent etc. And top name will be the highest parent, held in case we need to qualify up another level.
+
+        public UniqueName(Name topName, String description) {
+            this.topName = topName;
+            this.description = description;
         }
     }
 
-    private List<String> findUniqueNames(List<UniqueName> pending) {
-        List<String> output = new ArrayList<>();
-        if (pending.size() == 1) {
-            output.add(pending.get(0).string);
-            return output;
-        }
-        //first add a unique parent onto each name
-        pending.forEach(this::nameAndParent);
-        //but maybe the parents are not unique names!
-        boolean unique = false;
-        int ucount = 10; //to prevent loops
-        while (!unique && ucount-- > 0) {
-            unique = true;
-            for (UniqueName uName : pending) {
-                int ncount = 0;
-                for (UniqueName uName2 : pending) {
-                    if (uName2.string.equals(uName.string)) ncount++;
-                    if (ncount > 1) {
-                        nameAndParent(uName2);
-                    }
-                }
-                if (ncount > 1) {
-                    nameAndParent(uName);
-                    unique = false;
+    private boolean qualifyUniqueNameWithParent(UniqueName uName) {
+        Name name = uName.topName;
+        boolean changed = false;
+        for (Name parent : name.getParents()) {
+            //check that there are no names with the same name for this shared parent. Otherwise the description/name combo would be non unique.
+            // If no viable parents were found then this function is out of luck so to speak
+            boolean duplicate = false;
+            for (Name sibling : parent.getChildren()) { // go through all siblings
+                if (sibling != name && sibling.getDefaultDisplayName() != null
+                        && sibling.getDefaultDisplayName().equals(name.getDefaultDisplayName())) {
+                    duplicate = true;
                     break;
                 }
             }
+            if (!duplicate) {
+                changed = true; // we actually did something
+                // Edd added check for the parent name containing space and adding quotes
+                // the key here is that whatever is in description can be used to look up a name
+                uName.description = uName.description + "," + (parent.getDefaultDisplayName().contains(",") ? ("'" + parent.getDefaultDisplayName() + "'") : parent.getDefaultDisplayName());
+                uName.topName = parent;
+                break; // no point continuing I guess, the unique name has a further unambiguous qualifier
+            }
         }
-        for (UniqueName uName : pending) {
-            output.add(uName.string);
-        }
-        return output;
+        return changed;
     }
 
-    private List<String> getIndividualNames(Collection<Name> sortedNames) {
-        //this routine to output a list of names without duplicates by including parent names on duplicates
-        List<String> output = new ArrayList<>();
-        String lastName = null;
-        List<UniqueName> pending = new ArrayList<>();
-        for (Name name : sortedNames) {
-            if (lastName != null) {
-                if (name.getDefaultDisplayName() != null && !name.getDefaultDisplayName().equals(lastName)) {
-                    output.addAll(findUniqueNames(pending));
-                    pending = new ArrayList<>();
-                    if (output.size() > 1500) break;
+    // for the drop down, essentially given a collection of names for a query need to give a meaningful list qualifying names with parents where they are duplicates (I suppose high streets in different towns)
+    // it was assumed that names were sorted, one can't guarantee this though preserving the order is important. EFC going to rewrite, won't require ordering
+    private List<String> getUniqueNameStrings(Collection<Name> names) {
+        List<UniqueName> toCheck = names.stream().map(name -> new UniqueName(name, name.getDefaultDisplayName())).collect(Collectors.toList()); // java 8 should be ok here, basically copy the names to unique names to check
+        int triesLeft = 10; // just in case
+        boolean keepChecking = true;
+        while (triesLeft >= 0 && keepChecking){
+            keepChecking = false; // set to false, only go around again if something below changes the list of unique names
+            Set<String> descriptionDuplicateCheck = HashObjSets.newMutableSet();
+            Set<String> duplicatedDescriptions = HashObjSets.newMutableSet();
+            for (UniqueName uniqueName : toCheck){
+                if (descriptionDuplicateCheck.contains(uniqueName.description)){ // we have this description already
+                    duplicatedDescriptions.add(uniqueName.description); // so add it to the list of descriptions to qualify further
+                }
+                descriptionDuplicateCheck.add(uniqueName.description);
+            }
+            if (!duplicatedDescriptions.isEmpty()){ // there are duplicates, try to sort it
+                for (UniqueName uniqueName : toCheck){ // run through the list again
+                    if (duplicatedDescriptions.contains(uniqueName.description)){ // ok this is one of the ones that needs sorting
+                        if (qualifyUniqueNameWithParent(uniqueName)){ // try to sort the name
+                            keepChecking = true; // something changed
+                        }
+                    }
                 }
             }
-            lastName = name.getDefaultDisplayName();
-            UniqueName uName = new UniqueName();
-            uName.name = name;
-            uName.string = lastName;
-            pending.add(uName);
+            triesLeft--;
         }
-        output.addAll(findUniqueNames(pending));
-        return output;
+        return toCheck.stream().map(uniqueName -> uniqueName.description).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that fine
     }
 
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
-
         //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices)
         int dotPos = query.indexOf(".");
         if (dotPos > 0) {//todo check that it's not part of a name
@@ -471,8 +453,7 @@ seaports;children   container;children
                 return toReturn;
             }
         }
-
-        return getIndividualNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages));
+        return getUniqueNameStrings(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages));
     }
 
     public void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
@@ -623,13 +604,13 @@ seaports;children   container;children
                 // I suppose a little overhead from this - if it's a big problem can store lists of ignored rows and cols above and use that
                 boolean ignored = false;
                 //todo check this null heading business
-                for (DataRegionHeading dataRegionHeading : sourceCell.getColumnHeadings()){
-                    if (dataRegionHeading == null || ".".equals(dataRegionHeading.getAttribute())){
+                for (DataRegionHeading dataRegionHeading : sourceCell.getColumnHeadings()) {
+                    if (dataRegionHeading == null || ".".equals(dataRegionHeading.getAttribute())) {
                         ignored = true;
                     }
                 }
-                for (DataRegionHeading dataRegionHeading : sourceCell.getRowHeadings()){
-                    if (dataRegionHeading == null || ".".equals(dataRegionHeading.getAttribute())){
+                for (DataRegionHeading dataRegionHeading : sourceCell.getRowHeadings()) {
+                    if (dataRegionHeading == null || ".".equals(dataRegionHeading.getAttribute())) {
                         ignored = true;
                     }
                 }
@@ -673,7 +654,7 @@ seaports;children   container;children
         if (rowHeadings.size() == 0) {
             //create a single row heading
             rowHeadings.add(new ArrayList<>());
-            rowHeadings.get(0).add(new DataRegionHeading(null,false));
+            rowHeadings.get(0).add(new DataRegionHeading(null, false));
             //return new ArrayList<>();
         }
         final List<Name> contextNames = new ArrayList<>();
@@ -701,7 +682,7 @@ seaports;children   container;children
                 , columnHeadings, contextNames, languages);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data populated in " + time + "ms");
-        if (time > 5000){ // a bit arbitrary
+        if (time > 5000) { // a bit arbitrary
             valueService.printSumStats();
             valueService.printFindForNamesIncludeChildrenStats();
         }
@@ -716,7 +697,7 @@ seaports;children   container;children
 
     private List<Name> getContextNames(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource) throws Exception {
         final List<Name> contextNames = new ArrayList<>();
-        if (contextSource==null) return contextNames;
+        if (contextSource == null) return contextNames;
         for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell
             for (String contextItem : contextItems) {
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
@@ -880,7 +861,7 @@ seaports;children   container;children
                 sortedCols = sortDoubleValues(sortColumnTotals, sortRowAsc);
             }
             // OK pasting and changing what was in format data region, it's only called by this
-              // zero passed or set above means don't limit, this feels a little hacky but we need a less than condition on the for loop. Both for limiting and we need this type of loop as the index looks up on the sort
+            // zero passed or set above means don't limit, this feels a little hacky but we need a less than condition on the for loop. Both for limiting and we need this type of loop as the index looks up on the sort
             if (maxRows == 0) {
                 maxRows = totalRows;
             }
@@ -933,8 +914,8 @@ seaports;children   container;children
                     for (int i = 0; i < filterCount; i++) {
                         toReturn.remove(rowNo);
                     }
-                }else{
-                    rowNo+=filterCount;
+                } else {
+                    rowNo += filterCount;
                 }
             }
         }
@@ -1024,7 +1005,7 @@ seaports;children   container;children
                         returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextNames, rowNo, colNo, languages));
                         // for some reason this was before, it buggered up the ability to find the right column!
                         colNo++;
-                        if (counter.incrementAndGet() % progressBarStep == 0){
+                        if (counter.incrementAndGet() % progressBarStep == 0) {
                             connection.addToUserLog("=", false);
                         }
                     }
@@ -1074,7 +1055,7 @@ seaports;children   container;children
                 // connection.addToUserLog(".", false);
                 // for some reason this was before, it buggered up the ability to find the right column!
                 targetRow.set(col, getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextNames, row, col, languages));
-                if (counter.incrementAndGet() % progressBarStep == 0){
+                if (counter.incrementAndGet() % progressBarStep == 0) {
                     connection.addToUserLog("=", false);
                 }
             } catch (Exception e) {
@@ -1112,14 +1093,14 @@ seaports;children   container;children
     private int getTotalNameCount(AzquoMemoryDBConnection connection, Set<DataRegionHeading> headings) {
         String cacheKey = "";
         for (DataRegionHeading heading : headings) {
-            if (heading.getDescription() != null){
+            if (heading.getDescription() != null) {
                 cacheKey += heading.getDescription();
-            } else if (heading.getName() != null){
+            } else if (heading.getName() != null) {
                 cacheKey += heading.getName().getDefaultDisplayName();
             }
         }
         Integer cached = connection.getAzquoMemoryDB().getCountFromCache(cacheKey); // I want hash code match not equals match (what hashmap would do)
-        if (cached != null){
+        if (cached != null) {
             return cached;
         }
         Name memberSet = null;
@@ -1149,7 +1130,7 @@ seaports;children   container;children
     }
 
     // hacky, I just need a way to pass the values without doing a redundant addAll
-    public static class ValuesHook{
+    public static class ValuesHook {
         public List<Value> values = null;
     }
 
@@ -1195,7 +1176,7 @@ seaports;children   container;children
         }
         if (!checked) { // not a valid peer set? Lock and no values set (blank)
             locked.isTrue = true;
-         } else {
+        } else {
             // ok new logic here, we need to know if we're going to use attributes or values or namecount!
             DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;
             for (DataRegionHeading heading : headingsForThisCell) {
@@ -1217,7 +1198,7 @@ seaports;children   container;children
                             Collection<Name> nameCountSet2 = dataRegionHeading.getName().findAllChildren(false);
                             String cacheKey = nameCountHeading.getDescription() + dataRegionHeading.getName().getDefaultDisplayName();
                             Integer cached = connection.getAzquoMemoryDB().getCountFromCache(cacheKey);
-                            if (cached != null){
+                            if (cached != null) {
                                 doubleValue = cached;
                             } else {
                                 int valueAsInt;
@@ -1252,7 +1233,7 @@ seaports;children   container;children
                         // was isnumber test here to add a double to the
                     } else if (valuesHook.values.size() > 0) {
                         stringValue = doubleValue + "";
-                     }
+                    }
                 } else {
                     stringValue = "";
                     doubleValue = 0;
@@ -1323,11 +1304,11 @@ seaports;children   container;children
         // different style, just chuck every row in the queue
         int progressBarStep = (totalCols * totalRows) / 50 + 1;
         AtomicInteger counter = new AtomicInteger();
-        if (totalRows < 1000){ // arbitrary cut off for the moment
+        if (totalRows < 1000) { // arbitrary cut off for the moment
             for (int row = 0; row < totalRows; row++) {
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
                 List<AzquoCell> returnRow = new ArrayList<>(headingsForEachColumn.size());
-                for (int i = 0; i < headingsForEachColumn.size(); i++){
+                for (int i = 0; i < headingsForEachColumn.size(); i++) {
                     returnRow.add(null);// yes a bit hacky, want to make the space that will be used by cellfiller
                 }
                 int colNo = 0;
@@ -1427,7 +1408,7 @@ seaports;children   container;children
     }
 
 
-    public TreeNode getDataList(Set<Name> names, int maxSize)throws Exception{
+    public TreeNode getDataList(Set<Name> names, int maxSize) throws Exception {
         List<Value> values = null;
         String heading = "";
         for (Name name : names) {
@@ -1508,7 +1489,7 @@ seaports;children   container;children
                 if (!firstCol) sb.append("\t");
                 else firstCol = false;
                 // use string if we have it,otherwise double if it's not 0 or explicitly changed (0 allowed if manually entered). Otherwise blank.
-                if (cellForDisplay.getStringValue()!=null){
+                if (cellForDisplay.getStringValue() != null) {
                     String val = cellForDisplay.getStringValue().length() > 0 ? cellForDisplay.getStringValue() : cellForDisplay.getDoubleValue() != 0 || cellForDisplay.isChanged() ? cellForDisplay.getDoubleValue() + "" : "";
                     //for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
                     sb.append(val);
@@ -1542,7 +1523,7 @@ seaports;children   container;children
                 if (!cell.isLocked() && cell.isChanged()) {
                     //logger.info(orig + "|" + edited + "|"); // we no longet know the original value unless we jam it in AzquoCell
                     // note, if there are many cells being edited this becomes inefficient as headings are being repeatedly looked up
-                     AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRowHeadingsSource()
+                    AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRowHeadingsSource()
                             , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                             , cell.getUnsortedRow(), cell.getUnsortedCol(), databaseAccessToken.getLanguages());
 
@@ -1564,7 +1545,7 @@ seaports;children   container;children
                             }
                         } catch (Exception ignored) {
                         }
-                        if (cell.getStringValue()!=null && cell.getStringValue().endsWith("%")) {
+                        if (cell.getStringValue() != null && cell.getStringValue().endsWith("%")) {
                             String percent = cell.getStringValue().substring(0, cell.getStringValue().length() - 1);
                             try {
                                 double d = Double.parseDouble(percent) / 100;
@@ -1580,7 +1561,7 @@ seaports;children   container;children
                             if (valuesForCell.getValues().size() == 1) {
                                 final Value theValue = valuesForCell.getValues().get(0);
                                 logger.info("trying to overwrite");
-                                if (cell.getStringValue()!=null && cell.getStringValue().length() > 0) {
+                                if (cell.getStringValue() != null && cell.getStringValue().length() > 0) {
                                     //sometimes non-existant original values are stored as '0'
                                     valueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getStringValue());
                                     numberOfValuesModified++;
@@ -1623,7 +1604,7 @@ seaports;children   container;children
 
     public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
-        if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()){
+        if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
             // then check permissions
             for (Name name : names) {
                 // will the new write permissions cause an overhead?
@@ -1660,7 +1641,7 @@ seaports;children   container;children
 
     public boolean headingsHaveAttributes(Collection<DataRegionHeading> dataRegionHeadings) {
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
-            if (dataRegionHeading!=null && dataRegionHeading.getAttribute() != null) {
+            if (dataRegionHeading != null && dataRegionHeading.getAttribute() != null) {
                 return true;
             }
         }
