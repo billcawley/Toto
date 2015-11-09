@@ -267,7 +267,9 @@ public class DSDataLoadService {
         Map<String, Name> azquoProductsFound = HashObjObjMaps.newMutableMap();
         Map<String, Name> azquoCustomersFound = HashObjObjMaps.newMutableMap();
         List<String> defaultLanguage = new ArrayList<>();
-        defaultLanguage.add("MAGENTOCATEGORYID");
+        languages = new ArrayList<>();
+        languages.add("MAGENTOCATEGORYID");
+        defaultLanguage.add(Constants.DEFAULT_DISPLAY_NAME);
         Map<String, String> categoryNames = HashObjObjMaps.newMutableMap();
         //name the categories
         for (Map<String, String> attributeRow : tableMap.get("catalog_category_entity_varchar")) { // should (!) have us looking in teh right place
@@ -294,7 +296,7 @@ public class DSDataLoadService {
                 }
             }
             //TODO consider what might happen if importing categories from two different databases - don't do it!
-            Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, defaultLanguage);
+            Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, languages);
                 categoryName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, categoryNames.get(thisCatNo));
             azquoCategoriesFound.put(thisCatNo, categoryName);
             allCategories.addChildWillBePersisted(categoryName);
