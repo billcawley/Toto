@@ -564,7 +564,7 @@ public class DSDataLoadService {
             String groupId = customerRec.get("group_id");
             if (groupId != null) {
                 Name group = customerGroups.get(groupId);
-                if (group != null) {
+                if (group != null && customer != null) { // customer null if blank?
                     group.addChildWillBePersisted(customer);
                 }
             }

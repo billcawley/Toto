@@ -153,7 +153,8 @@ public final class NameService {
 
     public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent, final List<String> attributeNames) throws Exception {
         getNameByAttributeCount.incrementAndGet();
-        if (attributeValue.charAt(0) == NAMEMARKER) {
+        // attribute value null? Can it happen?
+        if (attributeValue.length() > 0 && attributeValue.charAt(0) == NAMEMARKER) {
             throw new Exception("error: getNameByAttribute should no longer have name marker passed to it!");
         }
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, attributeValue.replace(Name.QUOTE, ' ').trim(), parent);
@@ -1172,7 +1173,7 @@ public final class NameService {
             }
             Collections.sort(namesFound.list, defaultLanguageCaseInsensitiveNameComparator);
         }
-        return namesFound;
+        return namesFound != null ? namesFound : new NameSetList(null, new ArrayList<>(), true); // empty one if it's null
     }
 
 

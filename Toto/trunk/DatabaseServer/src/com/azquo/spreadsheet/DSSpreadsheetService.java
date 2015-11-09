@@ -11,6 +11,8 @@ import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
+import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
+import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -456,6 +458,7 @@ seaports;children   container;children
         return getUniqueNameStrings(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages));
     }
 
+    // it doens't return anything for things like setting up "as" criteria
     public void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
         nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages);
     }
@@ -521,25 +524,6 @@ seaports;children   container;children
         }
         return flipped;
     }
-
-    // I guess headings when showing a jumble of values?
-/*
-    public LinkedHashSet<Name> getHeadings(Map<Set<Name>, Set<Value>> showValues) {
-        LinkedHashSet<Name> headings = new LinkedHashSet<Name>();
-        // this may not be optimal, can sort later . . .
-        int count = 0;
-        for (Set<Name> valNames : showValues.keySet()) {
-            if (count++ == 2000) {
-                break;
-            }
-            for (Name name : valNames) {
-                if (!headings.contains(name.findATopParent())) {
-                    headings.add(name.findATopParent());
-                }
-            }
-        }
-        return headings;
-    }*/
 
     // return headings as strings for display, I'm going to put blanks in here if null.
 
@@ -808,13 +792,10 @@ seaports;children   container;children
 
         if (sortOnColIndex != -1 || sortOnRowIndex != -1 || sortOnColTotals || sortOnRowTotals) { // then there's no sorting to do!
             // was a null check on sortRow and sortCol but it can't be null, it will be negative if none found
-            final Map<Integer, Double> sortRowTotals = new HashMap<>(sourceData.size());
-            final Map<Integer, String> sortRowStrings = new HashMap<>(sourceData.size());
-            final Map<Integer, Double> sortColumnTotals = new HashMap<>(totalCols);
 
-/*            final Map<Integer, Double> sortRowTotals = HashIntDoubleMaps.newMutableMap(sourceData.size());
+            final Map<Integer, Double> sortRowTotals = HashIntDoubleMaps.newMutableMap(sourceData.size());
             final Map<Integer, String> sortRowStrings = HashIntObjMaps.newMutableMap(sourceData.size());
-            final Map<Integer, Double> sortColumnTotals = HashIntDoubleMaps.newMutableMap(totalCols);*/
+            final Map<Integer, Double> sortColumnTotals = HashIntDoubleMaps.newMutableMap(totalCols);
 
             for (int colNo = 0; colNo < totalCols; colNo++) {
                 sortColumnTotals.put(colNo, 0.00);
@@ -933,7 +914,6 @@ seaports;children   container;children
                                     break;
                                 }
                                 LocalDateTime provdate = LocalDateTime.ofInstant(value.getProvenance().getTimeStamp().toInstant(), ZoneId.systemDefault());
-                                // ah, decent Date APIs! Although the line above seems a bit verbose
                                 long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.DAYS);
                                 if (cellAge < age) {
                                     age = cellAge;
