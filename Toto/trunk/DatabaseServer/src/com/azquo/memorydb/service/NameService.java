@@ -715,7 +715,7 @@ public final class NameService {
                     }
                 } else { // I need to use previous set as the outside loop for ordering
                     setIntersectionList = new ArrayList<>(); // kepp it as a list
-                    Set<Name> lastSet = nameStack.get(stackCount).set != null ? nameStack.get(stackCount).set : HashObjSets.newMutableSet(nameStack.get(stackCount).set); // wrap the last one in a set if it's not a set
+                    Set<Name> lastSet = nameStack.get(stackCount).set != null ? nameStack.get(stackCount).set : HashObjSets.newMutableSet(nameStack.get(stackCount).list); // wrap the last one in a set if it's not a set
                     for (Name name : previousSet.list){
                         if (lastSet.contains(name)) {
                             setIntersectionList.add(name);
