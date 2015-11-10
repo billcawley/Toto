@@ -228,7 +228,7 @@ I should be ok for StringTokenizer at this point
                 || term.equalsIgnoreCase(NameService.LEVEL) || term.equalsIgnoreCase(NameService.FROM)
                 || term.equalsIgnoreCase(NameService.TO) || term.equalsIgnoreCase(NameService.COUNT)
                 || term.equalsIgnoreCase(NameService.SORTED) || term.equalsIgnoreCase(NameService.CHILDREN)
-                || term.equalsIgnoreCase(NameService.PEERS) || term.equalsIgnoreCase(NameService.PARENTS)
+                || term.equalsIgnoreCase(NameService.PARENTS)
                 || term.equalsIgnoreCase(NameService.COUNTBACK) || term.equalsIgnoreCase(NameService.COMPAREWITH)
                 || term.equalsIgnoreCase(NameService.AS)
                 || term.equalsIgnoreCase(NameService.CREATE)

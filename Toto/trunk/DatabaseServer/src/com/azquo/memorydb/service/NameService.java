@@ -53,7 +53,6 @@ public final class NameService {
     public static final char NAMEMARKER = '!';
     public static final char ATTRIBUTEMARKER = '|';
     public static final String CREATE = "create";
-    public static final String PEERS = "peers";
     public static final String EDIT = "edit";
     public static final String NEW = "new";
     public static final String DELETE = "delete";
