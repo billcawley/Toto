@@ -30,8 +30,6 @@ import java.util.regex.Pattern;
  * I mentioned the string parsing above - it can lead to code that's doing something fairly simple but looks complex if we're not careful.
  */
 public final class NameService {
-    // an alternative to using "," between names. Perhaps should replace it? Of course that means it can't be in names!
-    public static final String MEMBEROF = "->";
 
     @Autowired
     ValueService valueService;//used only in formatting children for output
@@ -96,7 +94,7 @@ public final class NameService {
         List<String> formulaStrings = new ArrayList<>();
         List<String> nameStrings = new ArrayList<>();
         List<String> attributeStrings = new ArrayList<>(); // attribute names is taken. Perhaps need to think about function parameter names
-        searchByNames = stringUtils.parseStatement(searchByNames, nameStrings, formulaStrings, attributeStrings);
+        searchByNames = stringUtils.prepareStatement(searchByNames, nameStrings, formulaStrings, attributeStrings);
         List<Name> referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
         // given that parse statement treats "," as an operator this should be ok.
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
@@ -651,7 +649,7 @@ public final class NameService {
                 return toReturn;
             }
         }
-        setFormula = stringUtils.parseStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
+        setFormula = stringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames;
         try {
             referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);

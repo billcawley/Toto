@@ -268,7 +268,7 @@ public final class ValueService {
                     List<String> nameStrings = new ArrayList<>();
                     List<String> attributeStrings = new ArrayList<>();
 
-                    calc = stringUtils.parseStatement(calc, nameStrings, formulaStrings, attributeStrings);
+                    calc = stringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
                     formulaNames = nameService.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
                     calc = stringUtils.shuntingYardAlgorithm(calc);
                     //todo : make sure name lookups below use the new style of marker

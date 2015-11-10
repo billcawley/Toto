@@ -1,6 +1,8 @@
 package com.azquo.app.magento.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
@@ -38,6 +40,9 @@ public class MagentoController {
 
     @Autowired
     OnlineReportDAO onlineReportDAO;
+
+    @Autowired
+    BusinessDAO businessDAO;
 
     @Autowired
     SpreadsheetService spreadsheetService;
@@ -127,7 +132,8 @@ public class MagentoController {
                         dataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr());
                     long elapsed = System.currentTimeMillis() - start;
                     if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1")) { // if it's from us don't email us :)
-                        String title = "Magento file upload " + logon + " from " + request.getRemoteAddr() + " elapsed time " + elapsed + " millisec";
+                        Business business = businessDAO.findById(loggedInUser.getUser().getBusinessId());
+                        String title = "Magento file upload " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr() + " elapsed time " + elapsed + " millisec";
                         azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
                         azquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
                         azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);

@@ -19,16 +19,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * Created by cawley on 13/05/15.
  * <p/>
  * All JSTree code that deals with DB objects to go in here. It will initially have some "View" code i.e. JSON creation
- * This needs to be moved out in time. Initially I'll use jackson here but in time I can take those jackson objects and send them over RMI for rendering on the front end.
+ * This needs to be moved out in time. I'll use jackson here but in time I can take those jackson objects and send them over RMI for rendering on the front end.
  * <p/>
- * Initial set of functions from NameService along with code moved from the controller
+ * Set of functions from NameService along with code moved from the controller - the front/back end split put some code in here that might not be if coded from scratch.
+ *
+ * I'd like to rewrite bits but the inspect functions that this code supports are important. Need to get it right.
  */
 public class JSTreeService {
 
     @Autowired
-    ValueService valueService;//used only in formating children for output
+    ValueService valueService;//used only in formatting children for output
     @Autowired
-    DSSpreadsheetService dsSpreadsheetService;//used only in formating children for output
+    DSSpreadsheetService dsSpreadsheetService;//used only in formatting children for output
     @Autowired
     NameService nameService;
 
@@ -66,13 +68,13 @@ public class JSTreeService {
     // ok annoyingly the lookup needs to be persisted across calls, so I'll need a map in here of the lookups.
     // This lookup was against the LIC but I can't use this on client/server. Could find a way to zap it fully if I understand the logic, putting the last id in there as well
     // string literals in here . . .
-    // jstree id really should be a number but it seems to be true on new? FOr the mo leave as string here
+    // jstree id really should be a number but it seems to be true on new? For the mo leave as string here
     public Set<Name> interpretNameString(DatabaseAccessToken databaseAccessToken, String nameString)throws Exception{
         Set<Name> names = new HashSet<>();
         String[] namesString = nameString.split(",");
         if (namesString[0].startsWith("jstreeids:")){
             Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(databaseAccessToken.toString());
-            namesString[0]= namesString[0].substring(10);
+            namesString[0]= namesString[0].substring("jstreeids:".length());
             for(String jstreeId:namesString){
                 JSTreeService.JsTreeNode currentNode = lookup.get(jstreeId);
                 if (currentNode.child.name != null){
@@ -82,9 +84,9 @@ public class JSTreeService {
             return names;
         } else {
             AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-            for (String nString:namesString){
+            for (String nString : namesString){
                 Name name = nameService.findByName(azquoMemoryDBConnection, nString);
-                if (name!=null) names.add(name);
+                if (name != null) names.add(name);
             }
         }
         return names;
@@ -103,9 +105,8 @@ public class JSTreeService {
             language = Constants.DEFAULT_DISPLAY_NAME;
 
         }
-
         // trying for the tree id here, hope that will work
-        Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(databaseAccessToken.toString()); // todo, sort this hack later, it's called in
+        Map<String, JSTreeService.JsTreeNode> lookup = lookupMap.get(databaseAccessToken.toString());
         if (lookup == null) {
             lookup = new ConcurrentHashMap<>();
             lookupMap.put(databaseAccessToken.toString(), lookup);

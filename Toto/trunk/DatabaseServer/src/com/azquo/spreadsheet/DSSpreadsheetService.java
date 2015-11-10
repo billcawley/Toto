@@ -139,7 +139,7 @@ seaports;children   container;children
                     // was just a name expression, now we allow an attribute also. May be more in future.
                     if (sourceCell.startsWith(".")) { //
                         // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
-                        row.add(Collections.singletonList(new DataRegionHeading(sourceCell, true))); // we say that an attribuite heading defaults to writeable, it will defer to the name
+                        row.add(Collections.singletonList(new DataRegionHeading(sourceCell, true))); // we say that an attribute heading defaults to writable, it will defer to the name
                     } else {
                         DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;// that's sum practically speaking
                         // now allow functions
@@ -404,8 +404,8 @@ seaports;children   container;children
             if (!duplicate) {
                 changed = true; // we actually did something
                 // Edd added check for the parent name containing space and adding quotes
-                // the key here is that whatever is in description can be used to look up a name
-                uName.description = uName.description + "," + (parent.getDefaultDisplayName().contains(",") ? ("'" + parent.getDefaultDisplayName() + "'") : parent.getDefaultDisplayName());
+                // the key here is that whatever is in description can be used to look up a name. Used to be reverse orcer comma separated, now use new member of notation
+                uName.description =  parent.getDefaultDisplayName() + StringUtils.MEMBEROF + uName.description;
                 uName.topName = parent;
                 break; // no point continuing I guess, the unique name has a further unambiguous qualifier
             }
@@ -1047,8 +1047,19 @@ seaports;children   container;children
         }
     }
 
-    private int totalNameSet(Name containsSet, Set<Name> selectionSet, Set<Name> alreadyTested, int track) {
-//            System.out.println("totalNameSet track " + track + " contains set : " + containsSet.getDefaultDisplayName() + ", children size : " + containsSet.getChildren().size());
+    /* only called by itself and total name count, we want to know the number of intersecting names between containsSet
+    and all its children and selectionSet, recursive to deal with containsSet down to the bottom. alreadyTested is
+    simply to stop checking names that have already been checked.
+
+    Worth pointing out that findOverlap for Name Count is a total of unique names and hence can use a contains on findAllChildren which returns a set
+     whereas this, on the other hand, requires the non unique intersection, a single name could contribute to the count more than once by bing in more than one set.
+
+    Note : if this is really hammered there would be a case for moving it inside name to directly access the array and hence avoid Iterator instantiation.
+
+       */
+
+    private int totalSetIntersectionCount(Name containsSet, Set<Name> selectionSet, Set<Name> alreadyTested, int track) {
+//            System.out.println("totalSetIntersectionCount track " + track + " contains set : " + containsSet.getDefaultDisplayName() + ", children size : " + containsSet.getChildren().size());
         track++;
         if (alreadyTested.contains(containsSet)) return 0;
         alreadyTested.add(containsSet);
@@ -1062,13 +1073,18 @@ seaports;children   container;children
             return count;
         } else {
             for (Name child : containsSet.getChildren()) {
-                if (!child.getChildren().isEmpty()) {
-                    count += totalNameSet(child, selectionSet, alreadyTested, track);
+                if (child.hasChildren()) {
+                    count += totalSetIntersectionCount(child, selectionSet, alreadyTested, track);
                 }
             }
         }
         return count;
     }
+
+    /* the total name count function is the intersection count of its first parameter (a name) and all it's children and the second parameter which is a set
+     the key being that that second parameter set is modified by being intersected with the row heading and all its children
+     so number of intersections between the first parameter and all its children and (the second parameter set intersected with the row name and all its children)
+     */
 
     private int getTotalNameCount(AzquoMemoryDBConnection connection, Set<DataRegionHeading> headings) {
         String cacheKey = "";
@@ -1079,7 +1095,7 @@ seaports;children   container;children
                 cacheKey += heading.getName().getDefaultDisplayName();
             }
         }
-        Integer cached = connection.getAzquoMemoryDB().getCountFromCache(cacheKey); // I want hash code match not equals match (what hashmap would do)
+        Integer cached = connection.getAzquoMemoryDB().getCountFromCache(cacheKey);
         if (cached != null) {
             return cached;
         }
@@ -1088,22 +1104,21 @@ seaports;children   container;children
         Set<Name> selectionSet = null;
         for (DataRegionHeading heading : headings) {
             if (heading.getName() != null) {
-                if (heading.getNameCountSet() != null) {
-                    selectionSet = heading.getNameCountSet();
-                    containsSet = heading.getName();
-                } else {
+                if (heading.getNameCountSet() != null) { // the heading with the function, typically a column heading I think
+                    containsSet = heading.getName(); // the first parameter of the function in the report  - a single name but it could well be defined in an "as"
+                    selectionSet = heading.getNameCountSet(); // the second parameter of the function in the report, a set
+                } else { // a vanilla name heading, typically a row heading
                     memberSet = heading.getName();
                 }
             }
         }
         int toReturn = 0;
         Set<Name> alreadyTested = HashObjSets.newMutableSet();
-        // Edd reinstating code here - about a month ago it stopped paying attention to member set
         // todo - alternative to retainall again? Creation of new set?
         if (containsSet != null && memberSet != null) {
-            Set<Name> remainder = HashObjSets.newMutableSet(selectionSet);
-            remainder.retainAll(memberSet.findAllChildren(false));
-            toReturn = totalNameSet(containsSet, remainder, alreadyTested, 0);
+            Set<Name> remainder = HashObjSets.newMutableSet(selectionSet); // so take the second function parameter set
+            remainder.retainAll(memberSet.findAllChildren(false)); // intersect with the row heading name and all it's children
+            toReturn = totalSetIntersectionCount(containsSet, remainder, alreadyTested, 0); // and get the set intersection of that and the first parameter and all its children
         }
         connection.getAzquoMemoryDB().setCountInCache(cacheKey, toReturn);
         return toReturn;
@@ -1120,7 +1135,7 @@ seaports;children   container;children
             , List<Name> contextNames, int rowNo, int colNo, List<String> languages) throws Exception {
         String stringValue = "";
         double doubleValue = 0;
-        Set<DataRegionHeading> headingsForThisCell = new HashSet<>(rowHeadings.size()); // I wonder a little how important having them as sets is . . .
+        Set<DataRegionHeading> headingsForThisCell = HashObjSets.newMutableSet(rowHeadings.size()); // I wonder a little how important having them as sets is . . .
         Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
         //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
@@ -1169,11 +1184,11 @@ seaports;children   container;children
                 if (nameCountHeading.getName() != null) {
                     //System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName());
                     doubleValue = getTotalNameCount(connection, headingsForThisCell);
-                } else {
+                } else {// without the name set that means name count - practically speaking after dealing with the caching this is really about calling findOverlap with the set and all the children of the row
                     Set<Name> nameCountSet = nameCountHeading.getNameCountSet();
                     doubleValue = 0.0;
                     for (DataRegionHeading dataRegionHeading : headingsForThisCell) {
-                        if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null) { // should be fine
+                        if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null) { // should be the non function heading, the row heading with a name
                             // we know this is a cached set internally, no need to create a new set - might be expensive
                             Collection<Name> nameCountSet2 = dataRegionHeading.getName().findAllChildren(false);
                             String cacheKey = nameCountHeading.getDescription() + dataRegionHeading.getName().getDefaultDisplayName();
@@ -1218,7 +1233,7 @@ seaports;children   container;children
                     stringValue = "";
                     doubleValue = 0;
                 }
-                listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(valuesHook.values);
+                listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(valuesHook.values);// can we zap the values from here? It might be a bit of a saving if there are loads of values per cell
             } else {  // now, new logic for attributes
                 List<Name> names = new ArrayList<>();
                 List<String> attributes = new ArrayList<>();
@@ -1237,7 +1252,7 @@ seaports;children   container;children
                 } catch (Exception e) {
                     //ignore
                 }
-                // ZK would sant this typed? Maybe just sort out later?
+                // ZK would want this typed? Maybe just sort out later? EFC later : what does this mean?
                 if (attributeResult != null) {
                     attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
                     stringValue = attributeResult;
@@ -1251,6 +1266,7 @@ seaports;children   container;children
         return new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextNames, rowNo, colNo, stringValue, doubleValue, false);
     }
 
+    // we were doing retainAll().size() but this is less expensive
     private int findOverlap(Collection<Name> set1, Collection<Name> set2) {
         int count = 0;
         for (Name name : set1) {
@@ -1279,8 +1295,8 @@ seaports;children   container;children
         int threads = connection.getAzquoMemoryDB().getReportFillerThreads();
         connection.addToUserLog("Populating using " + threads + " thread(s)");
         ExecutorService executor = Executors.newFixedThreadPool(threads); // picking 10 based on an example I saw . . .
-        StringBuffer errorTrack = new StringBuffer();// deliberately threadsafe, need to keep an eye on the report building . . .
-        // tried multithreaded, abandoning big chunks
+        StringBuffer errorTrack = new StringBuffer();// deliberately thread safe, need to keep an eye on the report building . . .
+        // tried multi-threaded, abandoning big chunks
         // different style, just chuck every row in the queue
         int progressBarStep = (totalCols * totalRows) / 50 + 1;
         AtomicInteger counter = new AtomicInteger();
@@ -1316,7 +1332,7 @@ seaports;children   container;children
         System.out.println();
         System.out.println("Heap cost to make on multi thread : " + (newHeapMarker - oldHeapMarker) / mb);
         System.out.println();
-        oldHeapMarker = newHeapMarker;
+        //oldHeapMarker = newHeapMarker;
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());
         }
@@ -1387,7 +1403,7 @@ seaports;children   container;children
         return new ArrayList<>(); //just empty ok? null? Unsure
     }
 
-
+    // for inspect database I think
     public TreeNode getDataList(Set<Name> names, int maxSize) throws Exception {
         List<Value> values = null;
         String heading = "";
@@ -1439,13 +1455,10 @@ seaports;children   container;children
     }
 
     public void importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
-
-
-        //write the columnheadings and data to a temporary file, then import it
+        //write the column headings and data to a temporary file, then import it
         String fileName = "temp_" + user;
         File temp = File.createTempFile(fileName + ".csv", "csv");
         String tempName = temp.getPath();
-        temp.deleteOnExit();
         BufferedWriter bw = new BufferedWriter(new FileWriter(temp));
         StringBuffer sb = new StringBuffer();
         List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(0);
@@ -1457,7 +1470,6 @@ seaports;children   container;children
                 firstCol = false;
             }
             sb.append(heading);
-
         }
         bw.write(sb.toString());
         bw.newLine();
@@ -1481,9 +1493,8 @@ seaports;children   container;children
         }
         bw.flush();
         bw.close();
-        List<String> languages = new ArrayList<>();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        importService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", languages);
+        importService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME));
+        temp.delete(); // see no harm in this here. Delete on exit has a problem with Tomcat being killed.
     }
 
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
@@ -1501,24 +1512,18 @@ seaports;children   container;children
             int columnCounter = 0;
             for (CellForDisplay cell : row) {
                 if (!cell.isLocked() && cell.isChanged()) {
-                    //logger.info(orig + "|" + edited + "|"); // we no longet know the original value unless we jam it in AzquoCell
+                    //logger.info(orig + "|" + edited + "|"); // we no longer know the original value unless we jam it in AzquoCell
                     // note, if there are many cells being edited this becomes inefficient as headings are being repeatedly looked up
                     AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRowHeadingsSource()
                             , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                             , cell.getUnsortedRow(), cell.getUnsortedCol(), databaseAccessToken.getLanguages());
-
                     if (azquoCell != null) {
                         numberOfValuesModified++;
                         // this save logic is the same as before but getting necessary info from the AzquoCell
                         logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                         final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-                        final Set<DataRegionHeading> headingsForCell = new HashSet<>(azquoCell.getColumnHeadings().size() + azquoCell.getRowHeadings().size());
-                        headingsForCell.addAll(azquoCell.getColumnHeadings());
-                        headingsForCell.addAll(azquoCell.getRowHeadings());
                         // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
-                        // right, switch here to deal with attribute based cell values
-
-                        //first align text and numbers where appropriate
+                        // first align text and numbers where appropriate
                         try {
                             if (cell.getDoubleValue() != 0.0) {
                                 cell.setStringValue(cell.getDoubleValue() + "");
@@ -1534,15 +1539,12 @@ seaports;children   container;children
                                 //do nothing
                             }
                         }
-                        if (valuesForCell.getValues() != null) {
-                            // this call to make the hash set seems rather unefficient
-                            Set<Name> cellNames = namesFromDataRegionHeadings(headingsForCell);
-                            cellNames.addAll(contextNames);
+                        if (valuesForCell.getValues() != null) { // this assumes empty values rather than null if the populating code couldn't find any
                             if (valuesForCell.getValues().size() == 1) {
                                 final Value theValue = valuesForCell.getValues().get(0);
                                 logger.info("trying to overwrite");
                                 if (cell.getStringValue() != null && cell.getStringValue().length() > 0) {
-                                    //sometimes non-existant original values are stored as '0'
+                                    //sometimes non-existent original values are stored as '0'
                                     valueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getStringValue());
                                     numberOfValuesModified++;
                                 } else {
@@ -1550,19 +1552,32 @@ seaports;children   container;children
                                 }
                             } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue() != null && cell.getStringValue().length() > 0) {
                                 logger.info("storing new value here . . .");
+                                // need to get the names, this was outside
+                                final Set<DataRegionHeading> headingsForCell = HashObjSets.newMutableSet(azquoCell.getColumnHeadings().size() + azquoCell.getRowHeadings().size());
+                                headingsForCell.addAll(azquoCell.getColumnHeadings());
+                                headingsForCell.addAll(azquoCell.getRowHeadings());
+                                Set<Name> cellNames = namesFromDataRegionHeadings(headingsForCell);
+                                cellNames.addAll(contextNames);
                                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), cellNames);
                                 numberOfValuesModified++;
                             }
+                            // warning on multiple values?
                         } else {
-                            if (valuesForCell.getNames().size() == 1 && valuesForCell.getAttributeNames().size() == 1) { // allows a simple store
+                            if (valuesForCell.getNames().size() == 1 && valuesForCell.getAttributeNames().size() == 1) { // allows a simple attribute store
                                 Name toChange = valuesForCell.getNames().get(0);
                                 String attribute = valuesForCell.getAttributeNames().get(0).substring(1);//remove the initial '.'
                                 Name attSet = nameService.findByName(azquoMemoryDBConnection, attribute);
                                 if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB(attribute)) {
+                                    /* right : when populating attribute based data findParentttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
+                                    returned is not in fact attributes but the name of an intermediate set in the hierarchy - suppose you want the category of a product the structure is
+                                    all categories -> category -> product and .all categories is the column heading and the products are row headings then you'll get the category for the product as the cell value
+                                     So attSet following that example is "All Categories", category is a (possibly) new name that's a child of all categories and then we need to add the product
+                                     , named toChange at the moment to that category.
+                                    */
                                     logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getStringValue() + " within " + attribute);
                                     Name category = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getStringValue(), attSet, true);
                                     category.addChildWillBePersisted(toChange);
-                                } else {
+                                } else {// simple attribute set
                                     logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
                                     toChange.setAttributeWillBePersisted(attribute, cell.getStringValue());
                                 }

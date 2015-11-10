@@ -13,49 +13,27 @@ import java.util.regex.Pattern;
 
 /**
  * Edd trying to factor off some functions. We want functions that are fairly simple and do not require database access.
+ *
+ * Generally stateless functions that could be static.
  */
 public class StringUtils {
 
-    // returns parsed names from a name qualified with parents, the parents are returned first!
+    public static final String MEMBEROF = "->"; // used to qualify names, no longer using ","
+    // returns parsed names from a name qualified with parents, the parents are returned first. Note, support for "," removed
 
     public List<String> parseNameQualifiedWithParents(String source){
         List<String> toReturn = new ArrayList<>();
         if (source == null || source.isEmpty()) return toReturn;
-        // ok I'm making a rule here if MEMBEROF is used (->) it's a straight parent/child thing, no multi levels or anything
-        if (source.contains(NameService.MEMBEROF) && !source.endsWith(NameService.MEMBEROF)){
-            toReturn.add(source.substring(0, source.indexOf("->")).replace(Name.QUOTE, ' ').trim()); // note! MEMBEROF reverses the order compared to "," as in it's parent then child, but the order returned is the same
-            toReturn.add(source.substring(source.indexOf("->") + 2).replace(Name.QUOTE, ' ').trim());
-        } else {
-            String sourceWithoutCommasInQuotes = replaceCommasInQuotes(source); // need to zap the commas in quotes so we can detect the relevant commas
-            while (sourceWithoutCommasInQuotes.contains(",")){ // we're going to chop off this one until there are no more parents but get the parents from the source as they won't have commas replaces
-                toReturn.add(source.substring(sourceWithoutCommasInQuotes.indexOf(",") + 1, sourceWithoutCommasInQuotes.length()).replace(Name.QUOTE, ' ').trim()); // see no reason not to trim possible quotes here
-                sourceWithoutCommasInQuotes = sourceWithoutCommasInQuotes.substring(0, sourceWithoutCommasInQuotes.indexOf(","));
-            }
-            toReturn.add(source.substring(0, sourceWithoutCommasInQuotes.length()).replace(Name.QUOTE, ' ').trim()); // finally add what's left, this will be the name
+
+        while (source.contains(MEMBEROF) && !source.endsWith(MEMBEROF)){
+            toReturn.add(source.substring(0, source.indexOf(MEMBEROF)).replace(Name.QUOTE, ' ').trim());
+            source = source.substring(source.indexOf(MEMBEROF) + MEMBEROF.length()); // chop that one off source
         }
+        toReturn.add(source.replace(Name.QUOTE, ' ').trim()); // what's left
         return toReturn;
     }
 
-    // replaces commas in quotes (e.g. "shop", "location", "region with a , in it's name" should become "shop", "location", "region with a - in it's name")  with -, useful for parsing name lists
-
-    public String replaceCommasInQuotes(String s) {
-        boolean inQuotes = false;
-        StringBuilder withoutCommasInQuotes = new StringBuilder();
-        char[] charactersString = s.toCharArray();
-        for (char c : charactersString) {
-            if (c == Name.QUOTE) {
-                inQuotes = !inQuotes;
-            }
-            if (c == ',') {
-                withoutCommasInQuotes.append(inQuotes ? '-' : ',');
-            } else {
-                withoutCommasInQuotes.append(c);
-            }
-        }
-        return withoutCommasInQuotes.toString();
-    }
-
-    // edd changed references to ; to a space, hope it's all going to keep working . . .
+    // Used to use a ; between instructions. A basic part of the parser e.g. from X level Y etc.
 
     public String getInstruction(final String instructions, final String instructionName) {
         String toReturn = null;
@@ -110,11 +88,13 @@ Also - operators + - / * and , added also to facilitate a list of statements (de
 
 I'll add better tracking of where an error is later
 
+Essentially prepares a statement for functions like interpretSetTerm and shuntingYardAlgorithm
+
      */
 
     DecimalFormat twoDigit = new DecimalFormat("00");
 
-    public String parseStatement(String statement, List<String> nameNames, List<String> attributeStrings, List<String> stringLiterals) throws Exception {
+    public String prepareStatement(String statement, List<String> nameNames, List<String> attributeStrings, List<String> stringLiterals) throws Exception {
 
         /* sort the name quotes - what is replaced is just needed here, the way names can be referenced
          with hierarchy and commas makes things more interesting e.g. `High Street`,London,Ontario. In this case we'll have !01,London,Ontario instead
@@ -130,16 +110,8 @@ I'll add better tracking of where an error is later
             } else {
                 modifiedStatement.append(statement.substring(lastEnd, matcher.start()));
             }
-            int matchStart = matcher.start();
             lastEnd = matcher.end();
-            while (lastEnd < statement.length() - 2 && statement.substring(lastEnd,lastEnd + 2).equals(",`")) {
-                int nextQuote = statement.indexOf("`", lastEnd + 2);
-                if (nextQuote > 0) {
-                    matcher.find();//skip the next field todo - workout the objection from intellij, can I just put this above in the conditional?
-                    lastEnd = nextQuote + 1;
-                }
-            }
-            quotedNameCache.add(statement.substring(matchStart, lastEnd));
+            quotedNameCache.add(statement.substring(matcher.start(), lastEnd));
               // it should never be more and it breaks our easy fixed length marker thing here
             if (quotedNameCache.size() > 100) {
                 throw new Exception("More than 100 quoted names.");
@@ -180,7 +152,7 @@ I'll add better tracking of where an error is later
         }
 
 
-        // ok we've escaped what we need to
+        // ok we've escaped what we need to (we have quoted names and strings squirrelled away)
 
         statement = statement.replace(";", " "); // legacy from when this was required
 
@@ -197,7 +169,6 @@ I'll add better tracking of where an error is later
         statement = statement.replace("=", " = ").replace("  ", " ");
         statement = statement.replace("(", " ( ").replace("  ", " ");
         statement = statement.replace(")", " ) ").replace("  ", " ");
-        // added, as an operator, should make it more robust when used with decode string
         // this assumes that the , will be taken care of after the parsing
         statement = statement.replace(",", " , ").replace("  ", " ");
         statement = statement.replaceAll("(?i)level lowest", "level 100");
@@ -205,7 +176,7 @@ I'll add better tracking of where an error is later
 
  /* so now we have things like this, should be ready for a basic test
         !1 level 2 from !2 to !3 as !4
-!1,London,Ontario level 2 from !2 to !3 as !4
+!1,Ontario->London level 2 from !2 to !3 as !4
 !1,!2 level lowest
 Entities children
 !1 children * !2
@@ -215,7 +186,7 @@ Entities children
 !1 level lowest WHERE !2 >= 54 * order level lowest * !3 level lowest 114 thing thing
 
 
-I should be ok for stringtokenizer at this point
+I should be ok for StringTokenizer at this point
         */
 
         StringTokenizer st = new StringTokenizer(statement, " ");
@@ -227,8 +198,9 @@ I should be ok for stringtokenizer at this point
                 while (term.indexOf(NameService.NAMEMARKER) != -1) { // we need to put the quoted ones back in, it will be the same order they were taken out in, hence remove(0) will work.
                     term = term.substring(0, term.indexOf(NameService.NAMEMARKER)) + quotedNameCache.remove(0) + term.substring(term.indexOf(NameService.NAMEMARKER) + 3);
                 }
-                /* ok the use of name marker might be a bit ambiguous. First used internally here for names or fragments in quotes. Now used in the returned string and the names strings are chucked into an array to be resolved in name spreadsheet
-                we also need attribute names in array so attribute names don't trip the shunting hard algorithm etc. Of course attributes aren't fit for batch resolution after this  parse
+                /* ok the use of name marker might be a bit ambiguous. First used internally here for names or fragments in quotes.
+                 Now used in the returned string and the names strings are chucked into an array to be resolved in name spreadsheet
+                we also need attribute names in array so attribute names don't trip the shunting yard algorithm etc.
                 I'm not completely clear this is the best way but it the resultant statement is "safe" for the shunting yard algorithm
                 */
                 if (term.startsWith(".")) {
@@ -263,14 +235,13 @@ I should be ok for stringtokenizer at this point
                 || term.equalsIgnoreCase(NameService.EDIT) || term.equalsIgnoreCase(NameService.NEW)
                 || term.equalsIgnoreCase(NameService.SELECT)
                 || term.equalsIgnoreCase(NameService.DELETE) || term.equalsIgnoreCase(NameService.WHERE);
-
     }
-
 
     // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
 
     public String shuntingYardAlgorithm(String calc) {
         // note from Edd, this function assumes a string ready to parse, quoted areas dealt with
+        // I have a strong suspicion this was yoinked from t'internet and modified
 /*
         Routine to convert a formula (if it exists) to reverse polish.
 
@@ -331,11 +302,9 @@ I should be ok for stringtokenizer at this point
 
         }
         // the last term...
-
         if (calc.substring(startPos).trim().length() > 0) {
             sb.append(calc.substring(startPos)).append(" ");
         }
-
         //.. and clear the stack
         while (stack.length() > 0) {
             sb.append(stack.charAt(0)).append(" ");
@@ -343,20 +312,6 @@ I should be ok for stringtokenizer at this point
         }
         return sb.toString();
     }
-
-
-    // edd jamming this commented function in here for the moment
-    // untested!
-/*
-    public ArrayList<Name> sortNames(final ArrayList<Name> namesList, final String language) {
-        Comparator<Name> compareName = new Comparator<Name>() {
-            public int compare(Name n1, Name n2) {
-            return n1.getAttribute(language).compareTo(n1.getAttribute(language));
-            }
-        };
-        Collections.sort(namesList, compareName);
-        return namesList;
-    }*/
 
 
 }
