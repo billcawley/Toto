@@ -7,6 +7,7 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
+import com.azquo.spreadsheet.StringUtils;
 import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -289,10 +290,10 @@ public class DSDataLoadService {
             while (pathBits.hasMoreTokens()) {
                 String catNo = pathBits.nextToken();
                 if (catNo != null) {
-                    path = "`" + catNo + "`," + path;
+                    path = "`" + path + StringUtils.MEMBEROF + catNo + "`";
                 } else {
                     System.out.println("we have a category with no name!");
-                    path = "`" + catNo + "`," + path;
+                    path = "`" + path + StringUtils.MEMBEROF + catNo + "`";
                 }
             }
             //TODO consider what might happen if importing categories from two different databases - don't do it!
@@ -493,7 +494,7 @@ public class DSDataLoadService {
         Name ordersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "order", null, false);
         Name allOrdersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All orders", ordersName, false);
         Name allCurrenciesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All currencies", ordersName, false);
-        Name allHours = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All hours, date", null, false);
+        Name allHours = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "date" + StringUtils.MEMBEROF + "All hours", null, false);
         languages.clear();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
 
