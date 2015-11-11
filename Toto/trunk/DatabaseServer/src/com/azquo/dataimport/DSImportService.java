@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import org.apache.commons.lang.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
@@ -74,6 +75,7 @@ public class DSImportService {
     public static final String DEFAULT = "default";
     public static final String NONZERO = "nonzero";
     public static final String headingsString = "HEADINGS";
+    public static final String skipLinesString = "SKIPLINES";
     public static final String dateLang = "date";
     public static final String ONLY = "only";
 
@@ -104,8 +106,10 @@ public class DSImportService {
         Set<Name> removeParentNames = new HashSet<>();
         // result of the attribute clause. Notable that "." is replaced with ;attribute
         String attribute = null;
+        //should we try to treat the cell as a date?
+        boolean isDate = false;
         /* the results of the peers clause are jammed in peers but then we need to know which headings those peers refer to - if context assign the name otherwise it's going to be the cell index that's used */
-        Set<Integer> peerCellIndexes = new HashSet<>();
+         Set<Integer> peerCellIndexes = new HashSet<>();
         // if context provides any of the peers they're in here
         Set<Name> peersFromContext = new HashSet<>();
         // the same as the above two but for a peer set defined in the context. The normal peers can get names from context, the context can get names from itself
@@ -147,6 +151,7 @@ public class DSImportService {
         final Set<Name> parentNames;
         final Set<Name> removeParentNames;
         final String attribute;
+        final boolean isDate;
         final Set<Integer> peerCellIndexes;
         final Set<Name> peersFromContext;
         final Set<Integer> contextPeerCellIndexes;
@@ -170,6 +175,7 @@ public class DSImportService {
             this.parentNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.parentNames));
             this.removeParentNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.removeParentNames));
             this.attribute = mutableImportHeading.attribute;
+            this.isDate = mutableImportHeading.isDate;
             this.peerCellIndexes = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.peerCellIndexes));
             this.peersFromContext = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.peersFromContext));
             this.contextPeerCellIndexes = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.contextPeerCellIndexes));
@@ -265,10 +271,11 @@ public class DSImportService {
 
     public void readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
+        boolean isSpreadsheet = filePath.contains("xls");
         if (fileType.toLowerCase().startsWith("sets")) {
             setsImport(azquoMemoryDBConnection, new FileInputStream(filePath), attributeNames, fileType);
         } else {
-            valuesImport(azquoMemoryDBConnection, filePath, fileType, attributeNames);
+            valuesImport(azquoMemoryDBConnection, filePath, fileType, attributeNames,isSpreadsheet);
         }
         azquoMemoryDBConnection.persist();
     }
@@ -324,9 +331,17 @@ public class DSImportService {
             }
             // language being attribute
         } else if (firstWord.equals(LANGUAGE)) {
-            heading.attribute = readClause(LANGUAGE, clause);
-            heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
-            if (heading.attribute.length() == 0) {
+            String language = readClause(LANGUAGE, clause);
+            if (language.equalsIgnoreCase(dateLang)){
+                heading.isDate = true;
+            }else{
+                heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
+
+            }
+            if (heading.attribute==null || !heading.isDate) {//any other named attribute overrides 'language date'
+                heading.attribute = readClause(LANGUAGE, clause);
+            }
+             if (heading.attribute.length() == 0) {
                 throw new Exception(clause + notUnderstood);
             }
             // same as language really but .Name is special - it means default display name. Watch out for this.
@@ -537,7 +552,7 @@ public class DSImportService {
 
     // calls header validation and batches up the data with headers ready for batch importing
 
-    public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
+    public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
         // Preparatory stuff
         // Local cache just to speed things up
         final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
@@ -547,7 +562,7 @@ public class DSImportService {
         // grab the first line to check on delimiters
         String firstLine = br.readLine();
         br.close();
-        if (firstLine != null) {
+         if (firstLine != null) {
             if (firstLine.contains("|")) {
                 delimiter = '|';
             }
@@ -563,6 +578,10 @@ public class DSImportService {
         CsvSchema schema = csvMapper.schemaFor(String[].class)
                 .withColumnSeparator(delimiter)
                 .withLineSeparator("\n");
+        if (delimiter == '\t'){
+            schema = schema.withoutQuoteChar();
+        }
+
         // keep this one separate so it can be closed at the end
         MappingIterator<String[]> originalLineIterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));
         Iterator<String[]> lineIterator = originalLineIterator; // for the data, it might be reassigned in the case of transposing
@@ -570,7 +589,7 @@ public class DSImportService {
         // It looks for a name for the file type, this name can have headers and/or the definitions for each header
         // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
-        while (importInterpreter == null && (fileType.contains(" ") || fileType.contains("_"))){ //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
+        while (!isSpreadsheet && importInterpreter == null && (fileType.contains(" ") || fileType.contains("_"))){ //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
             //There may, though, be separate interpreters for A_B_xxx and A_xxx, so we try A_B first
             if (fileType.contains(" ")){
                 fileType = fileType.substring(0, fileType.lastIndexOf(" "));
@@ -579,8 +598,8 @@ public class DSImportService {
             }
             importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         }
-        boolean skipTopLine = false;
-        if (importInterpreter != null) {
+        int skipLines = 0;
+        if (!isSpreadsheet && importInterpreter != null) {
              // hack for spark response, I'll leave in here for the moment, it could be useful for others
             if ("true".equalsIgnoreCase(importInterpreter.getAttribute("transpose"))) {
                 // ok we want to transpose, will use similar logic to the server side transpose
@@ -605,14 +624,23 @@ public class DSImportService {
             }
             // The code below should be none the wiser that a transpose happened if it did.
             String importHeaders = importInterpreter.getAttribute(headingsString);
-            if (importHeaders == null) {
+
+            if (importHeaders == null) {//no longer used - Nov 2015
                 // todo - get rid of this and change to an attribute like transpose to skip a number of lines
                 importHeaders = importInterpreter.getAttribute(headingsString + "1");
                 if (importHeaders != null) {
-                    skipTopLine = true;
+                    skipLines = 1;
                 }
             }
              if (importHeaders != null) {
+                 String skipLinesSt = importInterpreter.getAttribute(skipLinesString);
+                 if (skipLinesSt!=null){
+                     try{
+                         skipLines = Integer.parseInt(skipLinesSt);
+                     }catch(Exception e){
+
+                     }
+                 }
                  System.out.println("has headers " + importHeaders);
                  headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
             }
@@ -620,8 +648,18 @@ public class DSImportService {
         // finally we might use the headers on the data file, this is notably used when setting up the headers themselves :)
         if (headers == null) {
             headers = lineIterator.next();
+            if (isSpreadsheet){
+                Name importSheets = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"All import sheets",null, false);
+                Name dataImportThis = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"DataImport " + fileType, importSheets, true);
+                StringBuffer sb = new StringBuffer();
+                for (String header:headers){
+                    sb.append(header+"¬");
+                }
+                dataImportThis.setAttributeWillBePersisted(headingsString, sb.toString());
+                dataImportThis.setAttributeWillBePersisted(skipLinesString,"1");//  currently assuming one line - may need to adjust
+            }
         } else {
-            if (skipTopLine) {
+            while (skipLines-- > 0) {
                 lineIterator.next();
             }
         }
@@ -652,9 +690,28 @@ public class DSImportService {
         AtomicInteger valueTracker = new AtomicInteger(0);
         int batchSize = 100000; // a bit arbitrary, I wonder shuld I go smaller?
         ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(batchSize);
+        int colCount = immutableImportHeadings.size();
+        while (immutableImportHeadings.get(colCount-1).compositionPattern  != null)
+            colCount--;
+
+        int testLine = 10874;
         while (lineIterator.hasNext()) { // new Jackson call . . .
+            if (lineNo == testLine){
+                int j = 1;
+            }
             String[] lineValues = lineIterator.next();
+            while (lineValues.length < colCount&& lineIterator.hasNext()){ // if there are carriage returns in columns, we'll assume on this import that every line must have the same number of columns (may need an option later to miss this)
+                String[] additionalValues = lineIterator.next();
+                if (additionalValues.length == 0) break;
+                if (additionalValues.length >= colCount){
+                    lineValues = additionalValues;
+                }else {
+                    lineValues[lineValues.length - 1] += "\n" + additionalValues[0];
+                    lineValues = (String[]) ArrayUtils.addAll(lineValues, ArrayUtils.subarray(additionalValues, 1, additionalValues.length));
+                }
+            }
             lineNo++;
+
             List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
             int columnIndex = 0;
             for (ImmutableImportHeading immutableImportHeading : immutableImportHeadings) {
@@ -887,7 +944,7 @@ public class DSImportService {
             if (importCellWithHeading.immutableImportHeading.defaultValue != null && importCellWithHeading.lineValue.length() == 0) {
                 importCellWithHeading.lineValue = importCellWithHeading.immutableImportHeading.defaultValue;
             }
-            if (importCellWithHeading.immutableImportHeading.attribute != null && importCellWithHeading.immutableImportHeading.attribute.equalsIgnoreCase(dateLang)) {
+            if (importCellWithHeading.immutableImportHeading.attribute != null && importCellWithHeading.immutableImportHeading.isDate) {
                     /*
                     interpret the date and change to standard form
                     todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
@@ -967,9 +1024,8 @@ public class DSImportService {
             }
             // ok that's the peer/value stuff done I think, now onto attributes
             if (cell.immutableImportHeading.indexForAttribute >= 0 && cell.immutableImportHeading.attribute != null
-                    && cell.lineValue.length() > 0
-                    && (!cell.immutableImportHeading.attribute.equalsIgnoreCase(dateLang) || (isADate(cell.lineValue) != null))) {
-                // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot, there was a datelang check but I think that's dealt with above
+                    && cell.lineValue.length() > 0) {
+                // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
                 ImportCellWithHeading identityCell = cells.get(cell.immutableImportHeading.indexForAttribute); // get our source cell
                 if (identityCell.lineName != null) {
                     identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue);
@@ -1031,7 +1087,7 @@ public class DSImportService {
 
     private List<String> setLocalLanguage(ImmutableImportHeading heading, List<String> defaultLanguages) {
         List<String> languages = new ArrayList<>();
-        if (heading.attribute != null && !heading.attribute.equalsIgnoreCase(dateLang)) {
+        if (heading.attribute != null) {
             languages.add(heading.attribute);
         } else {
             languages.addAll(defaultLanguages);
@@ -1151,6 +1207,7 @@ public class DSImportService {
                         }
                     }
                 }
+
             }
         }
         return true;
@@ -1167,11 +1224,12 @@ public class DSImportService {
 
     public void setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames, String fileName) throws Exception {
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
-        String sheetSetName = "";
+        String sheetLanguage = "";
         Name sheetSet = null;
         if (fileName.length() > 4 && fileName.charAt(4) == '-') {
-            sheetSetName = fileName.substring(5);
-            sheetSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, sheetSetName, null, false, attributeNames);
+            sheetLanguage = fileName.substring(5);
+            attributeNames = new ArrayList<>();
+            attributeNames.add(sheetLanguage);
         }
         String line;
         while ((line = br.readLine()) != null) {
@@ -1183,11 +1241,7 @@ public class DSImportService {
                 String setName = st.nextToken().replace("\"", "");//sometimes the last line of imported spreadsheets has come up as ""
                 if (setName.length() > 0) {
                     interpretHeading(azquoMemoryDBConnection, setName, mutableImportHeading, attributeNames);
-                    if (mutableImportHeading.heading.equalsIgnoreCase(sheetSetName)) {
-                        mutableImportHeading.name = sheetSet;
-                    } else {
-                        mutableImportHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, sheetSet, true, attributeNames);
-                    }
+                    mutableImportHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, sheetSet, true, attributeNames);
                     if (mutableImportHeading.name != null) { // is this a concern? I'll throw an exception in case (based on IntelliJ warning)
                         Name set = mutableImportHeading.name;
                         while (st.hasMoreTokens()) {
