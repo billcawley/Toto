@@ -484,6 +484,12 @@ public class SpreadsheetService {
         return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).formatJstreeDataForOutput(loggedInUser.getDataAccessToken(), values, maxSize);
      }
 
+    public void saveData(LoggedInUser loggedInUser)throws  Exception{
+        //saving aspose worksheet
+        loggedInUser.getAzquoBook().saveData(loggedInUser);
+ 
+    }
+
 
     public void saveData(LoggedInUser loggedInUser, String region, String reportName) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
