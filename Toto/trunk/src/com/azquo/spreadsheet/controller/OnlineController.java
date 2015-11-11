@@ -142,6 +142,10 @@ public class OnlineController {
                     }
                     opcode = "loadsheet";
                 }
+                if (opcode.equals("savedata")) {
+                    spreadsheetService.saveData(loggedInUser);
+                    result = "data saved successfully";
+                }
                 // highlighting etc. From the top right menu and the azquobook context menu, can be zapped later
                 if ((opcode.equals("setchosen")) && choiceName != null) {
                     if (choiceName.startsWith("region options:")) {
