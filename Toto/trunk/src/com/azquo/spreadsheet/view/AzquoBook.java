@@ -376,21 +376,34 @@ public class AzquoBook {
 
     private void fillRegion(LoggedInUser loggedInUser, String region, Map<Cell, Boolean> highlighted, UserRegionOptions userRegionOptions) throws Exception {
         logger.info("loading " + region);
-        Range rowHeadings = getRange("az_rowheadings" + region);
-        if (rowHeadings == null) {
-            return;//no need to have row headings - if no row headings regio is treated as a data entry region
-        }
-        //don't bother to display yet - maybe need to filter out or sort
         Range columnHeadings = getRange("az_columnheadings" + region);
         if (columnHeadings == null) {
             throw new Exception("no range az_ColumnHeadings" + region);
         }
-        //fillRange("az_displaycolumnheadings" + region, result, "LOCKED");
-        Range context = getRange("az_context" + region);
-        if (context == null) {
-            throw new Exception("no range az_Context" + region);
+        Range rowHeadings = getRange("az_rowheadings" + region);
+        if (rowHeadings == null) {
+            List<List<String>> colHeadings = rangeToStringLists(columnHeadings);
+            List<List<CellForDisplay>> dataRegionCells = new ArrayList<>();
+            Range  dataRegion = getRange("az_DataRegion" + region);
+            for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
+
+                List<CellForDisplay> oneRow = new ArrayList<>();
+                for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
+                    oneRow.add(new CellForDisplay(false, dataRegion.getCellOrNull(rowNo, colNo).getStringValue(), 0, false, rowNo, colNo, true));
+                }
+                dataRegionCells.add(oneRow);
+            }
+            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null);
+            loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
+            return;
+
+
+
         }
-        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
+        //don't bother to display yet - maybe need to filter out or sort
+         //fillRange("az_displaycolumnheadings" + region, result, "LOCKED");
+        Range context = getRange("az_context" + region);
+       CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
                 rangeToStringLists(context), userRegionOptions);
         loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
         // think this language detection is sound
@@ -1116,6 +1129,7 @@ public class AzquoBook {
 
     private List<List<String>> rangeToStringLists(Range range) {
         List<List<String>> toReturn = new ArrayList<>();
+        if (range==null) return toReturn;
         for (int rowNo = 0; rowNo < range.getRowCount(); rowNo++) {
             List<String> row = new ArrayList<>();
             toReturn.add(row);
@@ -1265,7 +1279,7 @@ public class AzquoBook {
         if (fileType.toLowerCase().contains("transpose")) {
             transpose = true;
         }
-        File temp = File.createTempFile(tempFileName.substring(0, tempFileName.length() - 4), "." + fileType);
+        File temp = File.createTempFile(tempFileName, "." + fileType);
         String tempName = temp.getPath();
         temp.deleteOnExit();
         //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
