@@ -659,7 +659,7 @@ public final class NameService {
         setFormula = setFormula.replace(AS, ASSYMBOL + "");
         setFormula = stringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*/" + NAMEMARKER + NameService.ASSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
-
+        boolean resetDefs = false;
         logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
         int stackCount = 0;
@@ -822,6 +822,7 @@ public final class NameService {
                 }
                 nameStack.remove(stackCount);
             } else if (op == ASSYMBOL) {
+                resetDefs = true;
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next(); // alternative if we're using a linked hash set
                 totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection());
                 nameStack.remove(stackCount);
@@ -848,6 +849,17 @@ public final class NameService {
         }
         if (time > 50) {
             System.out.println("Parse query : " + formulaCopy + " took : " + time + "ms");
+        }
+        if (resetDefs){
+            //currently recalculates ALL definitons regardless of whether they contain the changed set.  Could speed this by looking for expressions that contain the changed set name
+            Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDB().namesForAttribute("DEFINITION");
+            for (Name defName:defNames){
+                String definition = defName.getAttribute("DEFINITION");
+                Collection<Name>defSet = parseQuery(azquoMemoryDBConnection,definition);
+                if (defSet != null){
+                    defName.setChildrenWillBePersisted(defSet);
+                }
+            }
         }
         return toReturn;
     }
