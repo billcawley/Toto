@@ -144,7 +144,7 @@ seaports;children   container;children
                         DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;// that's sum practically speaking
                         // now allow functions
                         for (DataRegionHeading.BASIC_RESOLVE_FUNCTION basic_resolve_function : DataRegionHeading.BASIC_RESOLVE_FUNCTION.values()) {
-                            if (sourceCell.startsWith(basic_resolve_function.name())) {
+                            if (sourceCell.toUpperCase().startsWith(basic_resolve_function.name())) {
                                 function = basic_resolve_function;
                                 sourceCell = sourceCell.substring(sourceCell.indexOf("(") + 1, sourceCell.trim().length() - 1);// +1 - 1 to get rid of the brackets
                             }
@@ -725,9 +725,10 @@ seaports;children   container;children
     // for looking up a heading given a string. Used to find the col/row index to sort on
 
     private int findPosition(List<List<DataRegionHeading>> headings, String toFind) {
-        if (toFind == null || toFind.length() == 0) {
+         if (toFind == null || toFind.length() == 0) {
             return -1;
         }
+        toFind = toFind.replace(" ","");
         int count = 0;
         for (List<DataRegionHeading> heading : headings) {
             DataRegionHeading dataRegionHeading = heading.get(heading.size() - 1);
