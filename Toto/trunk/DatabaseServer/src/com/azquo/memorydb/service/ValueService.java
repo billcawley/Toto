@@ -76,7 +76,7 @@ public final class ValueService {
         boolean alreadyInDatabase = false;
         // there's new logic to add values to existing but this only applies to the same provenance and when importing (so same file)
         for (Value existingValue : existingValues) { // really should only be one
-            if (existingValue.getProvenance().equals(azquoMemoryDBConnection.getProvenance()) && existingValue.getProvenance().getMethod().equals("import")) {
+            if (existingValue.getProvenance().equals(azquoMemoryDBConnection.getProvenance()) && existingValue.getProvenance().getMethod().equals("imported")) {
                 //new behaviour - add values from same dataimport.
                 try {
                     Double existingDouble = Double.parseDouble(existingValue.getText());
@@ -353,7 +353,7 @@ public final class ValueService {
         String attValue = null;
         for (Name n : names) { // go through each name
             for (String attribute : attributes) { // and for each name the
-                attValue = n.getAttribute(attribute.replace("`", ""));
+                attValue = n.getAttribute(attribute.replace("`", "").toUpperCase());
                 if (attValue != null) {
                     count++;
                     if (!locked.isTrue && n.getAttribute(attribute, false, new HashSet<>()) == null) { // the attribute is not against the name itself (it's from the parent or structure)
