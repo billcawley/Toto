@@ -951,6 +951,17 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger setAttributeForNameInAttributeNameMapCount = new AtomicInteger(0);
 
+    public Collection<Name> namesForAttribute(String attribute){
+        Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(attribute);
+        Collection<Name> toReturn = new HashSet<>();
+        for (String key:namesForThisAttribute.keySet()){
+            toReturn.addAll(namesForThisAttribute.get(key));
+
+        }
+        return toReturn;
+    }
+
+
     public void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
         setAttributeForNameInAttributeNameMapCount.incrementAndGet();
         // upper and lower seems a bit arbitrary. Hmmm.
