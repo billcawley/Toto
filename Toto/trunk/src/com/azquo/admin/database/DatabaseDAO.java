@@ -21,10 +21,12 @@ public final class DatabaseDAO extends StandardDAO<Database> {
     // the default table name for this data.
     @Override
     public String getTableName() {
-        return "database";
+        return DATABASE;
     }
 
     // column names except ID which is in the superclass
+
+    public static final String DATABASE = "database"; // need to see it externally
 
     public static final String STARTDATE = "start_date";
     public static final String ENDDATE = "end_date";

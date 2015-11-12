@@ -4,6 +4,7 @@ import com.azquo.admin.StandardEntity;
 
 /**
  * Created by cawley on 29/06/15.
+ *
  */
 public class UserRegionOptions extends StandardEntity{
     final int userId;
@@ -42,7 +43,6 @@ public class UserRegionOptions extends StandardEntity{
 
     public static String SPREADSHEETHIDEROWS = "hiderows";
     public static String SPREADSHEETHIDEROWS2 = "hiderowvalues";
-    public static String SORTABLE = "sortable";
     public static String ROWLIMIT = "maxrows";
     public static String COLUMNLIMIT = "maxcols";
     public static String HIGHLIGHT = "highlight";

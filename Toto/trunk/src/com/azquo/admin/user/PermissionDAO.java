@@ -22,8 +22,10 @@ public final class PermissionDAO extends StandardDAO<Permission> {
     // the default table name for this data.
     @Override
     public String getTableName() {
-        return "permission";
+        return PERMISSION;
     }
+
+    public static final String PERMISSION = "permission";
 
     // column names except ID which is in the superclass
 
@@ -47,13 +49,12 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         return toReturn;
     }
 
-    // ok need a bit of heavier sql here, probably need to reference some fields and
-    // TODO : sort out hard coded field names
+    // ok need a bit of heavier sql here, a little join
 
     public List<Permission> findByBusinessId(int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DatabaseDAO.BUSINESSID, businessId);
-        return findListWithWhereSQLAndParameters(", `master_db`.`database`  WHERE `master_db`.`database`.id = `master_db`.`permission`.`database_id` and  `master_db`.`database`.`" + DatabaseDAO.BUSINESSID + "` = :" + DatabaseDAO.BUSINESSID, namedParams, false);
+        return findListWithWhereSQLAndParameters(", `" + MASTER_DB + "`.`" + DatabaseDAO.DATABASE + "`  WHERE `" + MASTER_DB + "`.`" + DatabaseDAO.DATABASE + "`." + ID + " = `" + MASTER_DB + "`.`" + PERMISSION + "`.`" + DATABASEID + "` and  `" + MASTER_DB + "`.`" + DatabaseDAO.DATABASE + "`.`" + DatabaseDAO.BUSINESSID + "` = :" + DatabaseDAO.BUSINESSID, namedParams, false);
     }
 
     public Permission findByBusinessUserAndDatabase(User user, Database database) {
@@ -116,8 +117,8 @@ public final class PermissionDAO extends StandardDAO<Permission> {
 
     public final void update(int id, Map<String, Object> parameters) {
         if (id == 0) {
-            int dbId = (Integer) parameters.get("database_id");
-            int userId = (Integer) parameters.get("user_id");
+            int dbId = (Integer) parameters.get(DATABASEID);
+            int userId = (Integer) parameters.get(USERID);
             Permission p = findForUserIdAndDatabaseId(userId, dbId);
             if (p != null) {
                 id = p.getId();

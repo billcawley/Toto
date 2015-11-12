@@ -93,6 +93,8 @@ public class UserDAO extends StandardDAO<User> {
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
 
+    // not using standard update due to extra bits of logic e.g. encryption
+
     public final void update(int id, int businessId, Map<String, Object> parameters) throws Exception{
         String email = (String) parameters.get("email");
         if (id == 0 && email.length() > 0) {

@@ -11,7 +11,6 @@ import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.SpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
@@ -132,7 +131,7 @@ public class AdminService {
         return b != null ? (b.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "") : null;
     }
 
-    // ok in new report/datavase server split creating a database needs distinct bits
+    // ok in new report/database server split creating a database needs distinct bits
 
     public void createDatabase(final String databaseName, final String databaseType, final LoggedInUser loggedInUser, DatabaseServer databaseServer) throws Exception {
         if (loggedInUser.getUser().isAdministrator()) {
@@ -155,7 +154,6 @@ public class AdminService {
         }
     }
 
-    // will be for the database side
     public void emptyDatabase(DatabaseServer databaseServer, Database database) throws Exception {
         rmiClient.getServerInterface(databaseServer.getIp()).emptyDatabase(database.getMySQLName());
     }
@@ -198,15 +196,8 @@ public class AdminService {
         }
     }
 
-    //variation on a function I've used before
-
-    /*                String salt = PasswordUtils.shaHash(System.currentTimeMillis() + "salt");
-    v.setPasswordSalt(salt);
-    v.setPassword(PasswordUtils.encrypt(password, salt)); // new better encryption . . .*/
-
-
     public String encrypt(final String password, String salt) throws Exception {
-        // WARNING! DO NOT MODIFY THE reference to "scapbadopbebedop"  bit in the code below or it will stop working! This is the extra bit on the salt or the number of hash cycles! stay at 3296
+        // WARNING! DO NOT MODIFY THE reference to "scapbadopbebedop"  bit in the code below or existing passwords will stop working! This is the extra bit on the salt or the number of hash cycles! stay at 3296
         salt += "scapbadopbebedop";
         byte[] passBytes = password.getBytes();
         byte[] saltBytes = salt.getBytes();
@@ -314,13 +305,6 @@ public class AdminService {
         return null;
     }
 
-    public List<Permission> getPermissionList(final LoggedInUser loggedInUser) {
-        if (loggedInUser.getUser().isAdministrator()) {
-            return permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId());
-        }
-        return null;
-    }
-
     public List<Permission.PermissionForDisplay> getDisplayPermissionList(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
             List<Permission.PermissionForDisplay> permissions = new ArrayList<>();
@@ -335,7 +319,7 @@ public class AdminService {
     // will be purely DB side
 
     public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
-        //todo proxy through
+        rmiClient.getServerInterface(source.getServerIp()).copyDatabase(source, target, nameList, readLanguages);
     }
 
     public void storeReport(OnlineReport report){

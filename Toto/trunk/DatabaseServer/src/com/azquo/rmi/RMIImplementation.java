@@ -345,5 +345,14 @@ public class RMIImplementation implements RMIInterface {
         }
     }
 
+    @Override
+    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws RemoteException {
+        try {
+            dsAdminService.copyDatabase(source,target,nameList,readLanguages);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
     //memoryDBManager.getAzquoMemoryDB(databaseAccessT)
 }

@@ -85,4 +85,6 @@ public interface RMIInterface extends Remote {
     boolean createNode(DatabaseAccessToken dataAccessToken, int nameId) throws RemoteException;
 
     boolean renameNode(DatabaseAccessToken dataAccessToken, int nameId, String position) throws RemoteException;
+
+    void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws RemoteException;
 }

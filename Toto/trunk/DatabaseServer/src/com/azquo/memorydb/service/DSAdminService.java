@@ -3,12 +3,19 @@ package com.azquo.memorydb.service;
 //import com.azquo.memorydb.AzquoMemoryDBConnection;
 //import com.azquo.memorydb.Constants;
 //import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.Constants;
+import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.MemoryDBManager;
 //import com.azquo.memorydb.core.Name;
 //import com.azquo.memorydb.core.Value;
+import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.dao.MySQLDatabaseManager;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.*;
 
 //import java.util.*;
 
@@ -34,7 +41,7 @@ public class DSAdminService {
     MemoryDBManager memoryDBManager;
 
 
-/*    private Name copyName(AzquoMemoryDBConnection toDB, Name name, Name parent, List<String> languages, Collection<Name> allowed, Map<Name, Name> dictionary) throws Exception {
+    private Name copyName(AzquoMemoryDBConnection toDB, Name name, Name parent, List<String> languages, Collection<Name> allowed, Map<Name, Name> dictionary) throws Exception {
         Name name2 = dictionary.get(name);
         if (name2 != null) {
             return name2;
@@ -44,48 +51,39 @@ public class DSAdminService {
         for (String attName : name.getAttributes().keySet()) {
             name2.setAttributeWillBePersisted(attName, name.getAttribute(attName));
         }
-        LinkedHashMap<Name, Boolean> peers2 = new LinkedHashMap<Name, Boolean>();
-        for (Name peer : name.getPeers().keySet()) {
-            Name peer2 = copyName(toDB, peer, null, languages, null, dictionary);//assume that peers can be found globally
-            peers2.put(peer2, name.getPeers().get(peer));
-        }
-        if (peers2.size() > 0) {
-            name2.setPeersWillBePersisted(peers2);
-        }
+        // no peers stuff any more
         for (Name child : name.getChildren()) {
             if (allowed == null || allowed.contains(child)) {
                 copyName(toDB, child, name2, languages, allowed, dictionary);
             }
         }
         return name2;
-    }*/
+    }
 
-    // will be purely DB side
-
-/*    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
+    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
         AzquoMemoryDBConnection sourceConnection = dsSpreadsheetService.getConnectionFromAccessToken(source);
         AzquoMemoryDBConnection targetConnection = dsSpreadsheetService.getConnectionFromAccessToken(target);
         if (targetConnection == null) {
             throw new Exception("cannot log in to " + target.getDatabaseMySQLName());
         }
-        targetConnection.setNewProvenance("transfer from", source.getDatabaseMySQLName());
+        targetConnection.setProvenance("generic admin", "transfer from", source.getDatabaseMySQLName(), "");
         //can't use 'nameService.decodeString as this may have multiple values in each list
         List<Set<Name>> namesToTransfer = nameService.decodeString(sourceConnection, nameList, readLanguages);
         //find the data to transfer
         Map<Set<Name>, Set<Value>> showValues = valueService.getSearchValues(namesToTransfer);
 
         //extract the names from this data
-        final Set<Name> namesFound = new HashSet<Name>();
+        final Set<Name> namesFound = new HashSet<>();
         for (Set<Name> nameValues : showValues.keySet()) {
             for (Name name : nameValues) {
                 namesFound.add(name);
             }
         }
         // todo, check why we have a different language lists, can't we use the same?
-        List<String> languages = new ArrayList<String>();
+        List<String> languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         //transfer each name and its parents.
-        Map<Name, Name> dictionary = new HashMap<Name, Name>();
+        Map<Name, Name> dictionary = new HashMap<>();
         for (Name name : namesFound) {
             Collection<Name> allowed = name.findAllParents();
             allowed.add(name);
@@ -98,7 +96,7 @@ public class DSAdminService {
 
         }
         for (Set<Name> nameValues : showValues.keySet()) {
-            Set<Name> names2 = new HashSet<Name>();
+            Set<Name> names2 = new HashSet<>();
             for (Name name : nameValues) {
                 names2.add(dictionary.get(name));
 
@@ -106,7 +104,7 @@ public class DSAdminService {
             valueService.storeValueWithProvenanceAndNames(targetConnection, valueService.addValues(showValues.get(nameValues)), names2);
         }
         targetConnection.persist();
-    }*/
+    }
 
     public void emptyDatabase(String mysqlName) throws Exception {
         mySQLDatabaseManager.emptyDatabase(mysqlName);

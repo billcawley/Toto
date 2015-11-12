@@ -469,76 +469,6 @@ public final class ValueService {
         }
     }
 
-    /* again unused commenting
-
-    // edd not completely clear about these three functions, todo
-
-    private Name sumName(Name name, List<Set<Name>> searchNames) {
-        for (Set<Name> searchName : searchNames) {
-            Name maybeParent = nameService.inParentSet(name, searchName);
-            if (maybeParent != null) {
-                return maybeParent;
-            }
-        }
-        return name;
-    }
-
-
-    public Map<Set<Name>, Set<Value>> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
-        if (searchNames == null) return null;
-        Set<Value> values = findForSearchNamesIncludeChildren(searchNames, false);
-        //The names on the values have been moved 'up' the tree to the name that was searched
-        // e.g. if the search was 'England' and the name was 'London' then 'London' has been replaced with 'England'
-        // so there may be duplicates in an unordered search - hence the consolidation below.
-        final Map<Set<Name>, Set<Value>> showValues = new HashMap<Set<Name>, Set<Value>>();
-        for (Value value : values) {
-            Set<Name> sumNames = new HashSet<Name>();
-            for (Name name : value.getNames()) {
-                sumNames.add(sumName(name, searchNames));
-            }
-            Set<Value> alreadyThere = showValues.get(sumNames);
-            if (alreadyThere != null) {
-                alreadyThere.add(value);
-            } else {
-                Set<Value> newValues = new HashSet<Value>();
-                newValues.add(value);
-                showValues.put(sumNames, newValues);
-            }
-        }
-        return showValues;
-    }
-
-    public String addValues(Set<Value> values) {
-        String stringVal = null;
-        Double doubleVal = 0.0;
-        boolean percentage = false;
-        for (Value value : values) {
-            String thisVal = value.getText();
-            Double thisNum = 0.0;
-            if (NumberUtils.isNumber(thisVal)) {
-                thisNum = Double.parseDouble(thisVal);
-            } else {
-                if (thisVal.endsWith("%") && NumberUtils.isNumber(thisVal.substring(0, thisVal.length() - 1))) {
-                    thisNum = Double.parseDouble(thisVal.substring(0, thisVal.length() - 1)) / 100;
-                    percentage = true;
-                }
-            }
-            doubleVal += thisNum;
-            if (stringVal == null) {
-                stringVal = thisVal;
-            }
-        }
-        if (doubleVal != 0.0) {
-            if (percentage) doubleVal *= 100;
-            stringVal = doubleVal + "";
-            if (stringVal.endsWith(".0")) {
-                stringVal = stringVal.substring(0, stringVal.length() - 2);
-            }
-            if (percentage) stringVal += "%";
-        }
-        return stringVal;
-    }
-*/
     // find the most used name by a set of values, used by printBatch to derive headings
 
     private static AtomicInteger getMostUsedNameCount = new AtomicInteger(0);
@@ -737,6 +667,132 @@ public final class ValueService {
         t.setDvalue(d);
     }
 
+    // these 4 are related to database copying, an admin function, It's more complex than a simple copy due to the ability to copy at a level
+    // EFC note : I'm re-enabling this code but I'm not going to look too closely until it's being used again
+
+    private static AtomicInteger sumNameCount = new AtomicInteger(0);
+
+    private Name sumName(Name name, List<Set<Name>> searchNames) {
+        sumNameCount.incrementAndGet();
+        for (Set<Name> searchName : searchNames) {
+            Name maybeParent = nameService.inParentSet(name, searchName);
+            if (maybeParent != null) {
+                return maybeParent;
+            }
+        }
+        return name;
+    }
+
+    private static AtomicInteger findForSearchNamesIncludeChildrenCount = new AtomicInteger(0);
+
+    // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
+    public Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names, boolean payAttentionToAdditive) {
+        findForSearchNamesIncludeChildrenCount.incrementAndGet();
+        long start = System.nanoTime();
+
+        final Set<Value> values = new HashSet<>();
+        // assume that the first set of names is the most restrictive
+        Set<Name> smallestNames = names.get(0);
+        part1NanoCallTime1 += (System.nanoTime() - start);
+        long point = System.nanoTime();
+
+        final Set<Value> valueSet = new HashSet<>();
+        for (Name name : smallestNames) {
+            valueSet.addAll(name.findValuesIncludingChildren(payAttentionToAdditive));
+        }
+        // this seems a fairly crude implementation, list all values for the name sets then check that that values list is in all the name sets
+        part2NanoCallTime1 += (System.nanoTime() - point);
+        point = System.nanoTime();
+        for (Value value : valueSet) {
+            boolean theValueIsOk = true;
+            for (Set<Name> nameSet : names) {
+                if (!nameSet.equals(smallestNames)) { // ignore the one we started with
+                    boolean foundInChildList = false;
+                    for (Name valueNames : value.getNames()) {
+                        if (nameService.inParentSet(valueNames, nameSet) != null) {
+                            foundInChildList = true;
+                            break;
+                        }
+                    }
+                    if (!foundInChildList) {
+                        theValueIsOk = false;
+                        break;
+                    }
+                }
+            }
+            if (theValueIsOk) { // it was in all the names :)
+                values.add(value);
+            }
+        }
+        part3NanoCallTime1 += (System.nanoTime() - point);
+        numberOfTimesCalled1++;
+        //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
+        //track = System.nanoTime();
+
+        return values;
+    }
+
+    private static AtomicInteger getSearchValuesCount = new AtomicInteger(0);
+
+    public Map<Set<Name>, Set<Value>> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
+        getSearchValuesCount.incrementAndGet();
+        if (searchNames == null) return null;
+        Set<Value> values = findForSearchNamesIncludeChildren(searchNames, false);
+        //The names on the values have been moved 'up' the tree to the name that was searched
+        // e.g. if the search was 'England' and the name was 'London' then 'London' has been replaced with 'England'
+        // so there may be duplicates in an unordered search - hence the consolidation below.
+        final Map<Set<Name>, Set<Value>> showValues = new HashMap<>();
+        for (Value value : values) {
+            Set<Name> sumNames = new HashSet<>();
+            for (Name name : value.getNames()) {
+                sumNames.add(sumName(name, searchNames));
+            }
+            Set<Value> alreadyThere = showValues.get(sumNames);
+            if (alreadyThere != null) {
+                alreadyThere.add(value);
+            } else {
+                Set<Value> newValues = new HashSet<>();
+                newValues.add(value);
+                showValues.put(sumNames, newValues);
+            }
+        }
+        return showValues;
+    }
+
+    private static AtomicInteger addValuesCount = new AtomicInteger(0);
+
+    public String addValues(Set<Value> values) {
+        addValuesCount.incrementAndGet();
+        String stringVal = null;
+        Double doubleVal = 0.0;
+        boolean percentage = false;
+        for (Value value : values) {
+            String thisVal = value.getText();
+            Double thisNum = 0.0;
+            if (NumberUtils.isNumber(thisVal)) {
+                thisNum = Double.parseDouble(thisVal);
+            } else {
+                if (thisVal.endsWith("%") && NumberUtils.isNumber(thisVal.substring(0, thisVal.length() - 1))) {
+                    thisNum = Double.parseDouble(thisVal.substring(0, thisVal.length() - 1)) / 100;
+                    percentage = true;
+                }
+            }
+            doubleVal += thisNum;
+            if (stringVal == null) {
+                stringVal = thisVal;
+            }
+        }
+        if (doubleVal != 0.0) {
+            if (percentage) doubleVal *= 100;
+            stringVal = doubleVal + "";
+            if (stringVal.endsWith(".0")) {
+                stringVal = stringVal.substring(0, stringVal.length() - 2);
+            }
+            if (percentage) stringVal += "%";
+        }
+        return stringVal;
+    }
+
     public static void printFunctionCountStats() {
         System.out.println("######### VALUE SERVICE FUNCTION COUNTS");
         System.out.println("nameCompareCount\t\t\t\t\t\t\t\t" + nameCompareCount.get());
@@ -754,6 +810,10 @@ public final class ValueService {
         System.out.println("roundValueCount\t\t\t\t\t\t\t\t" + roundValueCount.get());
         System.out.println("getTreeNodeCount\t\t\t\t\t\t\t\t" + getTreeNodeCount.get());
         System.out.println("addNodeValuesCount\t\t\t\t\t\t\t\t" + addNodeValuesCount.get());
+        System.out.println("sumNameCount\t\t\t\t\t\t\t\t" + sumNameCount.get());
+        System.out.println("findForSearchNamesIncludeChildrenCount\t\t\t\t\t\t\t\t" + findForSearchNamesIncludeChildrenCount.get());
+        System.out.println("getSearchValuesCount\t\t\t\t\t\t\t\t" + getSearchValuesCount.get());
+        System.out.println("addValuesCount\t\t\t\t\t\t\t\t" + addValuesCount.get());
     }
 
     public static void clearFunctionCountStats() {
@@ -772,5 +832,9 @@ public final class ValueService {
         roundValueCount.set(0);
         getTreeNodeCount.set(0);
         addNodeValuesCount.set(0);
+        sumNameCount.set(0);
+        findForSearchNamesIncludeChildrenCount.set(0);
+        getSearchValuesCount.set(0);
+        addValuesCount.set(0);
     }
 }
