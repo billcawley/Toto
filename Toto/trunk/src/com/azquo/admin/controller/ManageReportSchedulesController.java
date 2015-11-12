@@ -14,16 +14,14 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.xml.crypto.Data;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
  * Created by edward on 21/09/15.
+ *
+ * Report Schedule CRUD.
  *
  */
 @Controller
@@ -83,7 +81,6 @@ public class ManageReportSchedulesController {
                     } catch (DateTimeParseException e) {
                         error.append("End date format not yyyy-MM-dd hh:mm<br/>");
                     }
-
                     String databaseId = request.getParameter("databaseId" + reportSchedule.getId());
                     if (databaseId != null && !databaseId.equals(reportSchedule.getDatabaseId() + "")) {
                         try{
@@ -96,7 +93,6 @@ public class ManageReportSchedulesController {
                             error.append("Database id is not a number<br/>");
                         }
                     }
-
                     String reportId = request.getParameter("reportId" + reportSchedule.getId());
                     if (reportId != null && !reportId.equals(reportSchedule.getReportId() + "")) {
                         try{
@@ -109,20 +105,17 @@ public class ManageReportSchedulesController {
                             error.append("Report id is not a number<br/>");
                         }
                     }
-
                     String type = request.getParameter("type" + reportSchedule.getId());
                     if (type != null && !type.equals(reportSchedule.getType())) {
                         reportSchedule.setType(type);
                         store = true;
                     }
-
                     String parameters = request.getParameter("parameters" + reportSchedule.getId());
                     if (parameters != null && !parameters.equals(reportSchedule.getParameters())) {
                         reportSchedule.setParameters(parameters);
                         store = true;
                     }
-
-                    if (store) {
+                   if (store) {
                         adminService.storeReportSchedule(reportSchedule);
                     }
                 }

@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * Created by cawley on 07/01/14.
- * Details on each database
+ * Records each user login.
  */
 public final class LoginRecordDAO extends StandardDAO<LoginRecord> {
 

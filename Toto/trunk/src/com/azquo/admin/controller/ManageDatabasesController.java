@@ -28,6 +28,7 @@ import java.util.List;
  *
  * New HTML admin, upload files and manage databases
  *
+ * CRUD type stuff though databases will be created/deleted etc. server side.
  */
 @Controller
 @RequestMapping("/ManageDatabases")

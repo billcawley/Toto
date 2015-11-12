@@ -4,6 +4,7 @@ import com.azquo.memorydb.TreeNode;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.spreadsheet.jsonentities.JsonChildren;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -11,9 +12,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by bill on 05/08/15.
+ *
+ * Used by JSTree
  */
 
 @Controller
@@ -34,8 +40,29 @@ public class ShowdataController {
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
-            TreeNode node = spreadsheetService.getTreeNode(loggedInUser, chosen, 1000);//1000 is the number of items to show before showing 'more...'
-            modelMap.addAttribute("node", node);
+            // ok we'll put the id parsing bits in here now, much better
+            String[] namesString = chosen.split(",");
+            if (namesString[0].startsWith("jstreeids:")){
+                Set<Integer> nameIds = new HashSet<>();
+                namesString[0] = namesString[0].substring("jstreeids:".length());
+                // I note that we are trusting lookup not to be null
+                for(String jstreeId : namesString){
+                    JsonChildren.Node node = loggedInUser.getFromJsTreeLookupMap(Integer.parseInt(jstreeId));
+                    if (node != null){
+                        nameIds.add(node.nameId);
+                    }
+                }
+                TreeNode node = spreadsheetService.getTreeNodeForNameIds(loggedInUser, nameIds, 1000);//1000 is the number of items to show before showing 'more...'
+                modelMap.addAttribute("node", node);
+            } else {
+                Set<String> nameNames = new HashSet<>();
+                for (String nString : namesString){
+                    nameNames.add(nString);
+                }
+                TreeNode node = spreadsheetService.getTreeNodeForNames(loggedInUser, nameNames, 1000);//1000 is the number of items to show before showing 'more...'
+                modelMap.addAttribute("node", node);
+            }
+            // this jsp has JSTL which will render tree nodes correctly
             return "showdata";
         }
     }

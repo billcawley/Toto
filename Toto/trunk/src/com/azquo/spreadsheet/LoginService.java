@@ -92,7 +92,9 @@ public class LoginService {
             databaseServer = databaseServerDao.findById(database.getDatabaseServerId());
         }
         LoggedInUser loggedInUser = new LoggedInUser(sessionId, user,databaseServer,database, permission != null ? permission.getReadList() : null, permission != null ? permission.getWriteList() : null);
-        loginRecordDAO.store(new LoginRecord(0, user.getId(), database != null ? database.getId() : 0, new Date()));
+        if (loggedInUser.getUser().getId() != 25){ // stop recording Nic's logins which are also used by the monitoring software!
+            loginRecordDAO.store(new LoginRecord(0, user.getId(), database != null ? database.getId() : 0, new Date()));
+        }
         // I zapped something to do with anonymising here, don't know if it's still relevant
         return loggedInUser;
     }

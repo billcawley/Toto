@@ -8,15 +8,20 @@ import com.azquo.admin.user.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
+import com.azquo.spreadsheet.jsonentities.JsonChildren;
+import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import com.azquo.util.AzquoMailer;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,11 +29,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.ui.ModelMap;
-import org.zkoss.util.media.AMedia;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.model.Book;
-import org.zkoss.zul.Filedownload;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
@@ -455,8 +458,76 @@ public class SpreadsheetService {
                 , userRegionOptions.getSortRowAsc(), userRegionOptions.getSortColumn(), userRegionOptions.getSortColumnAsc(), userRegionOptions.getHighlightDays());
     }
 
-    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm, String language) throws Exception{
-        return rmiClient.getServerInterface(dataAccessToken.getServerIp()).processJSTreeRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, itemsChosen, position, backupSearchTerm, language);
+    // should move this to the controller? Have a think
+    protected static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    // after the initial client server split this just proxied but that meant json creation and session stuff (node/name mapping) server side, I'm going to bring some of this back
+    public String processJSTreeRequest(LoggedInUser loggedInUser, String json, String jsTreeId, int topNameId, String op, int parent, boolean parents, String itemsChosen, String position, String backupSearchTerm, String language) throws Exception{
+            if (language == null || language.length() == 0){
+                language = Constants.DEFAULT_DISPLAY_NAME;
+            }
+            if (json != null && json.length() > 0) {
+                NameJsonRequest nameJsonRequest = jacksonMapper.readValue(json, NameJsonRequest.class);
+                JsonChildren.Node currentNode = loggedInUser.getFromJsTreeLookupMap(nameJsonRequest.id); // we assume it is there, the code did before
+                if (currentNode.nameId != -1) {
+                    nameJsonRequest.id = currentNode.nameId;//convert from jstree id to the name id
+                    return rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).processJSTreeRequest(loggedInUser.getDataAccessToken(), nameJsonRequest); // Now we pass through to the back end
+                }
+            } else {
+                JsonChildren.Node currentNode = new JsonChildren.Node(-1, null, false,-1,-1);
+                if (jsTreeId == null || jsTreeId.equals("#")) {
+                    if (topNameId > 0) {
+                        currentNode.nameId = topNameId;
+                    }
+                    jsTreeId = "0";
+                } else { // on standard children there will be a tree id
+                    currentNode = loggedInUser.getFromJsTreeLookupMap(Integer.parseInt(jsTreeId));
+                }
+                // need to understand syntax on these 3
+                if (jsTreeId.equals("true")) {
+                    currentNode = loggedInUser.getFromJsTreeLookupMap(parent);
+                }
+                if (op.equals("new")) { // on the first call to the tree it will be new
+                    int rootId = 0;
+                    if (currentNode != null && currentNode.nameId != -1) { // but on new current will be null
+                        rootId = currentNode.nameId;
+                    }
+                    return rootId + ""; // 0 on the first call
+                }
+                if (op.equals("children")) { // the first call to JSTree gets returned quickly 2 lines above, this one is the seccond and is different as it has the "children" in op
+                    if (itemsChosen != null && itemsChosen.startsWith(",")) {
+                        itemsChosen = itemsChosen.substring(1);
+                    }
+                    if (itemsChosen == null) {
+                        itemsChosen = backupSearchTerm;
+                    }
+                    // the return type JsonChildren is designed to produce javascript that js tree understands
+                    final JsonChildren jsonChildren = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents, itemsChosen, language);
+                    // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
+                    jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);
+                    return jacksonMapper.writeValueAsString(jsonChildren);
+                }
+                if (currentNode.nameId != -1) { // assuming it is not null!
+                    if (op.equals("move_node")) {
+                        //lookup.get(parent).child.addChildWillBePersisted(current.child);
+                        return "" + rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                                .moveJsTreeNode(loggedInUser.getDataAccessToken(), loggedInUser.getFromJsTreeLookupMap(parent).nameId, currentNode.nameId);
+                    }
+                    if (op.equals("create_node")) {
+                        return "" + rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                                .createNode(loggedInUser.getDataAccessToken(), currentNode.nameId);
+                    }
+                    if (op.equals("rename_node")) {
+                        return "" + rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                                .renameNode(loggedInUser.getDataAccessToken(), currentNode.nameId, position);
+                    }
+                    if (op.equals("details")) {
+                        return "true,\"namedetails\":" + jacksonMapper.writeValueAsString(rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getChildDetailsFormattedForOutput(loggedInUser.getDataAccessToken(), currentNode.nameId));
+                    }
+                    throw new Exception(op + " not understood");
+                }
+            }
+            return "no action taken";
     }
 
     public List<String> getAttributeList(DatabaseAccessToken databaseAccessToken)throws Exception{
@@ -480,9 +551,13 @@ public class SpreadsheetService {
     }
 
 
-    public TreeNode getTreeNode(LoggedInUser loggedInUser, String values, int maxSize) throws Exception {
-        return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).formatJstreeDataForOutput(loggedInUser.getDataAccessToken(), values, maxSize);
-     }
+    public TreeNode getTreeNodeForNames(LoggedInUser loggedInUser, Set<String> nameNames, int maxSize) throws Exception {
+        return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingNames(loggedInUser.getDataAccessToken(), nameNames, maxSize);
+    }
+
+    public TreeNode getTreeNodeForNameIds(LoggedInUser loggedInUser, Set<Integer> nameIds, int maxSize) throws Exception {
+        return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingIds(loggedInUser.getDataAccessToken(), nameIds, maxSize);
+    }
 
     public void saveData(LoggedInUser loggedInUser)throws  Exception{
         //saving aspose worksheet

@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * Created by cawley on 07/01/14.
- * record of uploaded files :P
+ * record of uploaded files
  */
 public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
 

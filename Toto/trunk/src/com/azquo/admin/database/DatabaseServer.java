@@ -5,6 +5,8 @@ import com.azquo.admin.StandardEntity;
 /**
  * Created by cawley on 05/08/15.
  * Only edited in the database, can make immutable
+ *
+ * The Server being the server the database is physically hosted on (if that was not obvious)
  */
 public final class DatabaseServer extends StandardEntity {
     // name user time db, email user when logged in

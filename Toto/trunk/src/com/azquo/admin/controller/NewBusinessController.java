@@ -16,7 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 /**
  * Created by cawley on 09/07/15.
  * <p/>
- * A simple page ot create a new controller
+ * A simple page to create a new business. Currently fo our own use, it has not been beautified.
  */
 @Controller
 @RequestMapping("/NewBusiness")

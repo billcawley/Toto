@@ -7,6 +7,8 @@ import java.util.Date;
 /**
  * Created by cawley on 18/02/14.
  * have made immutable which simplifies the code
+ *
+ * notably not used after the initial client/server code split
  */
 public final class OpenDatabase extends StandardEntity {
     // name user time db, email user when logged in

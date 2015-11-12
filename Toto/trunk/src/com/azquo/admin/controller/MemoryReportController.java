@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServletRequest;
 /**
  * Created by edward on 30/09/15.
  *
+ * Pushes a database server memory report through to the user, I don't think many non Azquo people would look at this at the moment.
  */
 @Controller
 @RequestMapping("/MemoryReport")

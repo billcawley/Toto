@@ -20,6 +20,7 @@ import java.time.format.DateTimeParseException;
 /**
  * Created by cawley on 24/04/15.
  *
+ * User CRUD.
  */
 @Controller
 @RequestMapping("/ManageUsers")
@@ -47,14 +48,10 @@ public class ManageUsersController {
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
-
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
             if (deleteId != null && NumberUtils.isDigits(deleteId)){
                 adminService.deleteUserById(Integer.parseInt(deleteId), loggedInUser);
             }
-
-
             if (editId != null && NumberUtils.isDigits(editId)){
                 User toEdit = adminService.getUserById(Integer.parseInt(editId), loggedInUser);
                 // ok check to see if data was submitted

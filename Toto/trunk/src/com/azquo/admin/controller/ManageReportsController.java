@@ -4,24 +4,19 @@ import com.azquo.admin.AdminService;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
-import com.sun.mail.imap.IMAPFolder;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import javax.mail.*;
-import javax.mail.internet.MimeBodyPart;
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
 import java.util.List;
-import java.util.Properties;
 
 /**
  * Created by cawley on 24/04/15.
- * <p>
- * recreating what was in the excel/azquo book as simple pages. Calls to get data initially will simply be what was in fillAdminData in AzquoBook.
+ *
+ * No delete or create but updating of reports. Simple as all on one page, a list. May need pagination at some point.
  */
 
 @Controller

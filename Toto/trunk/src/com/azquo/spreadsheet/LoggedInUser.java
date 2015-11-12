@@ -5,11 +5,14 @@ import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.user.User;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.spreadsheet.jsonentities.JsonChildren;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import org.apache.log4j.Logger;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by cawley on 12/05/15.
@@ -43,6 +46,12 @@ public class LoggedInUser {
 
     private static final String defaultRegion = "default-region";
 
+    // after the client/server split a bunch of code that was client ended up on the server, I'm moving it back here now. It can only hold IDs not the actual objects as it would on the server.
+
+    private AtomicInteger lastJSTreeNodeId;
+
+    private final Map<Integer, JsonChildren.Node> jsTreeLookupMap;
+
     protected LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions) {
         this.sessionId = sessionId;
         this.user = user;
@@ -58,6 +67,23 @@ public class LoggedInUser {
         this.readPermissions = readPermissions;
         this.writePermissions = writePermissions;
         this.context = null;
+        lastJSTreeNodeId = new AtomicInteger();
+        jsTreeLookupMap = new ConcurrentHashMap<>();
+    }
+
+    public JsonChildren.Node getFromJsTreeLookupMap(int jsTreeNodeId){
+        return jsTreeLookupMap.get(jsTreeNodeId);
+    }
+
+    public void clearJsTreeLookupMap(){ // necessary? Maybe a map could get a bit big, I'm not concerned right now
+        jsTreeLookupMap.clear();
+    }
+
+    // ok we need to keep a session map of jstree ids which are created incrementally against the actual name ids, passing the nodes here seems fine
+
+    public void assignIdForJsTreeNode(JsonChildren.Node node){
+        node.id = lastJSTreeNodeId.incrementAndGet();
+        jsTreeLookupMap.put(node.id, node);
     }
 
     public String getSessionId() {

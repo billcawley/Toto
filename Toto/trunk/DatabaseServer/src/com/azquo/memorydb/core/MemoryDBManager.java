@@ -61,8 +61,6 @@ public final class MemoryDBManager {
         if (memoryDatabaseMap.get(mysqlName) != null){
             memoryDatabaseMap.remove(mysqlName);
         }
-        // a pain, nevessary as references may be in here
-        jsTreeService.unloadingDatabase(mysqlName);
     }
 
     public synchronized void addNewToDBMap(String mysqlName) throws Exception {

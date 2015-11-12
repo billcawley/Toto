@@ -22,7 +22,7 @@ import java.time.format.DateTimeParseException;
 /**
  * Created by cawley on 24/04/15.
  *
- * new basic HTML admin, manage permissions. Need to add pagination.
+ * Permissions CRUD. Need to add pagination though now we'd need to check with Visual Code about this.
  */
 @Controller
 @RequestMapping("/ManagePermissions")
@@ -147,8 +147,6 @@ public class ManagePermissionsController {
                 model.put("users", adminService.getUserListForBusiness(loggedInUser));
                 return "editpermission";
             }
-
-
             model.put("permissions", adminService.getDisplayPermissionList(loggedInUser));
             return "managepermissions";
         }

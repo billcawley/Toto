@@ -14,7 +14,6 @@ import java.util.Map;
 
 /**
  * Created by cawley on 07/01/14.
- * Like vendor from Feefo I suppose
  */
 public final class BusinessDAO extends StandardDAO<Business> {
 

@@ -2,11 +2,15 @@ package com.azquo.rmi;
 
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
+import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
+import com.azquo.spreadsheet.jsonentities.JsonChildren;
+import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by cawley on 20/05/15.
@@ -35,7 +39,13 @@ public interface RMIInterface extends Remote {
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColumnAsc, int highlightDays) throws RemoteException;
 
-    String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm, String language) throws RemoteException;
+    String processJSTreeRequest(DatabaseAccessToken dataAccessToken, NameJsonRequest nameJsonRequest) throws RemoteException;
+
+    JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws RemoteException;
+
+    JsonChildStructure getChildDetailsFormattedForOutput(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException;
+
+    boolean moveJsTreeNode(DatabaseAccessToken databaseAccessToken, int parentId, int childId) throws RemoteException;
 
     List<String> getAttributeList(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
@@ -46,7 +56,9 @@ public interface RMIInterface extends Remote {
     List<TreeNode> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException;
 
-    TreeNode formatJstreeDataForOutput(DatabaseAccessToken databaseAccessToken, String nameString, int maxSize) throws RemoteException;
+    TreeNode getJstreeDataForOutputUsingNames(DatabaseAccessToken databaseAccessToken, Set<String> nameNames, int maxSize) throws RemoteException;
+
+    TreeNode getJstreeDataForOutputUsingIds(DatabaseAccessToken databaseAccessToken, Set<Integer> nameIds, int maxSize) throws RemoteException;
 
     boolean isDatabaseLoaded(String mysqlName) throws RemoteException;
 
@@ -69,4 +81,8 @@ public interface RMIInterface extends Remote {
     void clearSessionLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
     void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
+
+    boolean createNode(DatabaseAccessToken dataAccessToken, int nameId) throws RemoteException;
+
+    boolean renameNode(DatabaseAccessToken dataAccessToken, int nameId, String position) throws RemoteException;
 }

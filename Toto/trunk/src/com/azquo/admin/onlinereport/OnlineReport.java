@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 /**
  * Created by bill on 15/04/14.
  *
+ * Called OnlineReport back when there may have still been the Excel interface but all reports are online now.
  */
 public class OnlineReport extends StandardEntity {
 

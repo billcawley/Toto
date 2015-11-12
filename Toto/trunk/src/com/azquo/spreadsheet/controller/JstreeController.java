@@ -52,7 +52,7 @@ public class JstreeController {
             , @RequestParam(value = "attribute", required = false) String attribute //only for use at root.
             , @RequestParam(value = "itemschosen", required = false) String itemsChosen
     ) throws Exception {
-        if (attribute==null || attribute.length()==0){
+        if (attribute == null || attribute.length() == 0){
             attribute = Constants.DEFAULT_DISPLAY_NAME;
         }
         String jsonFunction = "azquojsonfeed";
@@ -74,12 +74,22 @@ public class JstreeController {
             if (loggedInUser.getAzquoBook() != null){
                 backupSearchTerm =loggedInUser.getAzquoBook().getRangeData("az_inputInspectChoice");// don't reallyunderstand, what's important is that this is now client side
             }
+            int topNodeInt = 0;
+            try {
+                topNodeInt = Integer.parseInt(topNode);
+            } catch (Exception ignored){
+            }
+            int parentInt = 0;
+            try {
+                parentInt = Integer.parseInt(parent);
+            } catch (Exception ignored){
+            }
             // todo - clean up the logic here
-            String result = spreadsheetService.processJSTreeRequest(loggedInUser.getDataAccessToken(),json,jsTreeId,topNode
-                    ,op,parent,parents != null && parents.equals("true"),itemsChosen,position,backupSearchTerm,attribute);
+            String result = spreadsheetService.processJSTreeRequest(loggedInUser,json,jsTreeId,topNodeInt
+                    ,op,parentInt,parents != null && parents.equals("true"),itemsChosen,position,backupSearchTerm,attribute);
             model.addAttribute("content", result);
-            // seems to be the logic from before, if children/new then don't do the funciton. Not sure why . . .
-            if (op==null) op="";
+            // seems to be the logic from before, if children/new then don't do the function. Not sure why . . .
+            if (op == null) op = "";
             if (!op.equals("children") && !op.equals("new")) {
                 model.addAttribute("content", jsonFunction + "({\"response\":" + result + "})");
             } else {

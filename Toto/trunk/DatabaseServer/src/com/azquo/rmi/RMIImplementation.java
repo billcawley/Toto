@@ -8,10 +8,14 @@ import com.azquo.memorydb.core.MemoryDBManager;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
+import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
+import com.azquo.spreadsheet.jsonentities.JsonChildren;
+import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 
 import java.rmi.RemoteException;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by cawley on 20/05/15.
@@ -124,9 +128,54 @@ public class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, String json, String jsTreeId, String topNode, String op, String parent, boolean parents, String itemsChosen, String position, String backupSearchTerm, String language) throws RemoteException {
+    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, NameJsonRequest nameJsonRequest) throws RemoteException {
         try {
-            return jsTreeService.processRequest(dataAccessToken, json, jsTreeId, topNode, op, parent, parents, itemsChosen, position, backupSearchTerm, language);
+            return jsTreeService.processJsonRequest(dataAccessToken, nameJsonRequest);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws RemoteException {
+        try {
+            return jsTreeService.getJsonChildren(databaseAccessToken,jsTreeId,nameId,parents,searchTerm,language);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public JsonChildStructure getChildDetailsFormattedForOutput(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException {
+        try {
+            return jsTreeService.getChildDetailsFormattedForOutput(databaseAccessToken,nameId);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public boolean moveJsTreeNode(DatabaseAccessToken databaseAccessToken, int parentId, int childId) throws RemoteException {
+        try {
+            return jsTreeService.moveJsTreeNode(databaseAccessToken,parentId,childId);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public boolean createNode(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException {
+        try {
+            return jsTreeService.createJsTreeNode(databaseAccessToken, nameId);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public boolean renameNode(DatabaseAccessToken databaseAccessToken, int nameId, String name) throws RemoteException {
+        try {
+            return jsTreeService.renameJsTreeNode(databaseAccessToken, nameId, name);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -160,9 +209,17 @@ public class RMIImplementation implements RMIInterface {
         }
     }
 
-    public TreeNode formatJstreeDataForOutput(DatabaseAccessToken databaseAccessToken, String jsTreeString, int maxSize) throws RemoteException {
+    public TreeNode getJstreeDataForOutputUsingNames(DatabaseAccessToken databaseAccessToken, Set<String> nameNames, int maxSize) throws RemoteException {
         try {
-              return dsSpreadsheetService.getDataList(jsTreeService.interpretNameString(databaseAccessToken, jsTreeString), maxSize);
+            return dsSpreadsheetService.getDataList(jsTreeService.interpretNameFromStrings(databaseAccessToken, nameNames), maxSize);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    public TreeNode getJstreeDataForOutputUsingIds(DatabaseAccessToken databaseAccessToken, Set<Integer> nameIds, int maxSize) throws RemoteException {
+        try {
+            return dsSpreadsheetService.getDataList(jsTreeService.interpretNameFromIds(databaseAccessToken, nameIds), maxSize);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
