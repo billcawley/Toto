@@ -807,7 +807,9 @@ public final class Name extends AzquoMemoryDBEntity {
                 removeFromChildrenWillBePersisted(oldChild, false); // no cache clear, will do it in a mo!
             }
             for (Name child : children) {
-                addChildWillBePersisted(child, 0, false); // no cache clear, will do it in a mo!
+                if (child!=null){
+                    addChildWillBePersisted(child, 0, false); // no cache clear, will do it in a mo!
+                }
             }
             clearChildrenCaches();
             getAzquoMemoryDB().clearSetAndCountCacheForName(this);
