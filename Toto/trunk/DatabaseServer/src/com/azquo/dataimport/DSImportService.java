@@ -133,10 +133,6 @@ public class DSImportService {
         String defaultValue = null;
         // don't import zero values;
         boolean blankZeroes = false;
-        // a way for a heading to have an alias or more specifically for its name to be overridden for the purposes of how headings find each other
-        // need to clarify usage of this - not able to right now. I think it's something to do with the heading.name and how it's looked up being different,
-        // that's how this is different than just changing the heading's name to whatever you'd use for the alias.
-        String headingAlias = null;
         // is this a column representing names (as opposed to values or attributes). Derived from parent of child of and being referenced by other headings
         boolean lineNameRequired = false;
     }
@@ -164,7 +160,6 @@ public class DSImportService {
         final String compositionPattern;
         final String defaultValue;
         final boolean blankZeroes;
-        final String headingAlias;
         final boolean lineNameRequired;
 
         public ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
@@ -186,7 +181,6 @@ public class DSImportService {
             this.compositionPattern = mutableImportHeading.compositionPattern;
             this.defaultValue = mutableImportHeading.defaultValue;
             this.blankZeroes = mutableImportHeading.blankZeroes;
-            this.headingAlias = mutableImportHeading.headingAlias;
             this.lineNameRequired = mutableImportHeading.lineNameRequired;
         }
     }
@@ -355,12 +349,6 @@ public class DSImportService {
             }
         } else if (firstWord.equals(LOCAL)) { // local names in child of, can work with parent of but then it's the subject that it affects
             heading.isLocal = true;
-        } else if (firstWord.equals(EQUALS)) {
-            heading.headingAlias = readClause(EQUALS, clause);
-            if (heading.headingAlias.length() == 0) {
-                throw new Exception(clause + notUnderstood);
-            }
-            // a way of excluding "all lines but". A bit of a hack to deal with data for more than one database in the same file.
         } else if (firstWord.equals(ONLY)) {
             heading.only = readClause(ONLY, clause);
             if (heading.only.length() == 0) {
@@ -423,8 +411,8 @@ public class DSImportService {
         for (ImportCellWithHeading importCellWithHeading : importCellWithHeadings) {
             ImmutableImportHeading heading = importCellWithHeading.immutableImportHeading;
             //checking the name itself, then the name as part of a comma separated string
-            if (heading.heading != null && (heading.heading.equalsIgnoreCase(nameToFind) || heading.heading.toLowerCase().startsWith(nameToFind.toLowerCase() + ","))
-                    && (heading.isAttributeSubject || heading.attribute == null || heading.headingAlias != null)) {
+            if (heading.heading != null && (heading.heading.equalsIgnoreCase(nameToFind))
+                    && (heading.isAttributeSubject || heading.attribute == null ||  heading.isDate)) {
                 if (heading.isAttributeSubject) {
                     return importCellWithHeading;
                 }
@@ -451,7 +439,7 @@ public class DSImportService {
             MutableImportHeading heading = headings.get(headingNo);
             //checking the name itself, then the name as part of a comma separated string
             if (heading.heading != null && (heading.heading.equalsIgnoreCase(nameToFind) || heading.heading.toLowerCase().startsWith(nameToFind.toLowerCase() + ","))
-                    && (heading.isAttributeSubject || heading.attribute == null || heading.headingAlias != null)) {
+                    && (heading.isAttributeSubject || heading.attribute == null || heading.isDate)) {
                 if (heading.isAttributeSubject) {
                     return headingNo;
                 }
@@ -474,6 +462,7 @@ public class DSImportService {
         if (parent != null) {
             np += parent.getId();
         }
+        np+=attributeNames.get(0);
         Name found = namesFoundCache.get(np);
         if (found != null) {
             return found;
@@ -1054,9 +1043,6 @@ public class DSImportService {
     private void fillAttributeAndParentOfForHeading(MutableImportHeading mutableImportHeading, List<MutableImportHeading> headings) throws Exception {
         if (mutableImportHeading.attribute != null) { // && !importHeading.attribute.equals(Constants.DEFAULT_DISPLAY_NAME)) {
             String headingName = mutableImportHeading.heading;
-            if (mutableImportHeading.headingAlias != null) {// a way for a heading to have an alias, I think this is the only place it's used? Not entirely sure of its use case
-                headingName = mutableImportHeading.headingAlias;
-            }
             // so if it's Customer,Address1 we need to find customer.
             // This findHeadingIndex will look for the Customer with isAttributeSubject = true or the first one without an attribute
             // attribute won't be context
