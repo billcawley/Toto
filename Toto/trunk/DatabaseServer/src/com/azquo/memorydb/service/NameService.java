@@ -494,7 +494,7 @@ public final class NameService {
     // note : in default language!
     private static AtomicInteger findChildrenFromToCount = new AtomicInteger(0);
 
-    public NameSetList constrainNameListFromToCount(final NameSetList nameSetList, String fromString, String toString, final String countString, final String countBackString, final String compareWithString, List<Name> referencedNames) throws Exception {
+    public NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String countBackString, final String compareWithString, List<Name> referencedNames) throws Exception {
         if (nameSetList.list == null){
             return nameSetList; // don't bother trying to constrain a non list
         }
@@ -507,6 +507,16 @@ public final class NameService {
         int compareWith = parseInt(compareWithString, 0);
         int space = 1; //spacing between 'compare with' fields
         //first look for integers and encoded names...
+
+        if (toString.length()> 0 && count > 0 ){
+            if (!nameSetList.mutable){
+                nameSetList = new NameSetList(null, new ArrayList<>(nameSetList.list), true);// then make it mutable
+            }
+            //invert the list
+            Collections.reverse(nameSetList.list);
+            fromString = toString;
+            toString = "";
+         }
 
         if (fromString.length() > 0) {
             from = -1;
@@ -852,12 +862,17 @@ public final class NameService {
         }
         if (resetDefs){
             //currently recalculates ALL definitons regardless of whether they contain the changed set.  Could speed this by looking for expressions that contain the changed set name
+
             Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDB().namesForAttribute("DEFINITION");
-            for (Name defName:defNames){
-                String definition = defName.getAttribute("DEFINITION");
-                Collection<Name>defSet = parseQuery(azquoMemoryDBConnection,definition);
-                if (defSet != null){
-                    defName.setChildrenWillBePersisted(defSet);
+            if (defNames!=null) {
+                for (Name defName : defNames) {
+                    String definition = defName.getAttribute("DEFINITION");
+                    if (definition!=null) {
+                        Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition);
+                        if (defSet != null) {
+                            defName.setChildrenWillBePersisted(defSet);
+                        }
+                    }
                 }
             }
         }
