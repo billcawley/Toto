@@ -953,6 +953,7 @@ public final class AzquoMemoryDB {
 
     public Collection<Name> namesForAttribute(String attribute){
         Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(attribute);
+        if (namesForThisAttribute == null) return null;
         Collection<Name> toReturn = new HashSet<>();
         for (String key:namesForThisAttribute.keySet()){
             toReturn.addAll(namesForThisAttribute.get(key));
