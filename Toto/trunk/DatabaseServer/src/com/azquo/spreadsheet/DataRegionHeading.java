@@ -25,15 +25,18 @@ public class DataRegionHeading {
     private final boolean writeAllowed;
     private final BASIC_RESOLVE_FUNCTION function;
     private final Set<Name> nameCountSet;
+    // easiest way to add this without disrupting - if we add more may need to just have a set and a flag for what it is for
+    private final Set<Name> valueParentCountSet;
     // an identifier,
     private final String description;
 
-    public DataRegionHeading(Name name, boolean writeAllowed, BASIC_RESOLVE_FUNCTION function, Set<Name> nameCountSet, String description) {
+    public DataRegionHeading(Name name, boolean writeAllowed, BASIC_RESOLVE_FUNCTION function, Set<Name> nameCountSet, Set<Name> valueParentCountSet, String description) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
         this.function = function;
         this.nameCountSet =  nameCountSet != null ? Collections.unmodifiableSet(nameCountSet) : null;
+        this.valueParentCountSet =  valueParentCountSet != null ? Collections.unmodifiableSet(valueParentCountSet) : null;
         this.description = description;
     }
 
@@ -44,6 +47,7 @@ public class DataRegionHeading {
         this.writeAllowed = writeAllowed;
         this.function = null;
         this.nameCountSet = null;
+        this.valueParentCountSet = null;
         this.description = null;
     }
 
@@ -60,8 +64,11 @@ public class DataRegionHeading {
     }
 
     public Set<Name> getNameCountSet() {
-        // leaving this unprotected for the mo, could make unmodifiable if strange behavior creeps in
         return nameCountSet;
+    }
+
+    public Set<Name> getValueParentCountSet() {
+        return valueParentCountSet;
     }
 
     public BASIC_RESOLVE_FUNCTION getFunction() {

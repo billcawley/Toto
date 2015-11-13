@@ -30,17 +30,10 @@ import java.util.zip.ZipInputStream;
 
 /**
  * Created by bill on 13/12/13.
- * spreadsheet to process files used to dataimport data into the database
- * <p/>
- * <p/>
- * edd : I don't really understand all this code but for the moment I'm not that concerned by that.
+ * Preliminary processing before being sent over to the database server for loading.
  */
 
 public final class ImportService {
-
-
-    //private static final String reportPath = "/home/bill/apache-tomcat-7.0.47/dataimport/";
-//    public static final String homePath = "/home/cawley/";
     public static final String dbPath = "/databases/";
 
     @Autowired
@@ -87,7 +80,6 @@ public final class ImportService {
         }
         InputStream uploadFile = new FileInputStream(filePath);
         // todo : address provenance on an import
-        //azquoMemoryDBConnection.setNewProvenance("import", fileName);
         if (loggedInUser.getDatabase() == null && !fileName.endsWith(".xls") && !fileName.endsWith(".xlsx")) {
             throw new Exception("error: no database set");
         }
@@ -135,7 +127,7 @@ public final class ImportService {
         FileUtils.copyInputStreamToFile(inputStream, output);
     }
 
-    // File pre processing functions. SHould maybe be hived off into utils?
+    // File pre processing functions. Should maybe be hived off into utils?
 
     private String unzip(String fileName, String suffix) {
         String outputFile = fileName.substring(0, fileName.length() - 4);
@@ -229,6 +221,7 @@ public final class ImportService {
         return "";
     }
 
+    // I have a suspicion these two were grabbed off the internet
 
     private static byte[] codes = new byte[256];
 
@@ -280,7 +273,6 @@ public final class ImportService {
                 }
             }
             //write it
-            //write it
             fos.close();
             System.out.println("Decode 64 Done");
         } catch (Exception e) {
@@ -289,10 +281,8 @@ public final class ImportService {
         return tempName;
     }
 
-    // todo - directory location should be the database code!
-    //
 
-    private void uploadReport(LoggedInUser loggedInUser, String sourceName,String fileName, String reportName, String reportType) throws Exception {
+    private void uploadReport(LoggedInUser loggedInUser, String sourceName, String fileName, String reportName, String reportType) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = 0;
         String pathName = reportType;
@@ -365,7 +355,6 @@ public final class ImportService {
         }
     }
 
-
     // modified internet example
     public String copyFileToDatabaseServer(String filePath, String sftpDestination) {
         StandardFileSystemManager manager = new StandardFileSystemManager();
@@ -404,5 +393,4 @@ public final class ImportService {
         }
         return toReturn;
     }
-
 }

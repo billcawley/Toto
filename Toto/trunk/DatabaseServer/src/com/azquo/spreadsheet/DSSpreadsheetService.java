@@ -151,6 +151,7 @@ seaports;children   container;children
                         }
                         String NAMECOUNT = "NAMECOUNT";
                         String TOTALNAMECOUNT = "TOTALNAMECOUNT";
+                        String VALUEPARENTCOUNT = "VALUEPARENTCOUNT";
                         // for these two I need the descriptions so I can make a useful cache key for counts
                         if (sourceCell.toUpperCase().startsWith(NAMECOUNT)) {
                             // should strip off the function
@@ -164,7 +165,7 @@ seaports;children   container;children
                                 azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(sourceCell, nameCountSet);
                             }
                             List<DataRegionHeading> forNameCount = new ArrayList<>();
-                            forNameCount.add(new DataRegionHeading(null, false, function, nameCountSet, sourceCell));
+                            forNameCount.add(new DataRegionHeading(null, false, function, nameCountSet, null, sourceCell));
                             row.add(forNameCount);
                         } else if (sourceCell.toUpperCase().startsWith(TOTALNAMECOUNT)) {
                             // should strip off the function
@@ -172,6 +173,7 @@ seaports;children   container;children
                             sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
                             String selectionType = sourceCell.substring(0, sourceCell.indexOf(","));
                             // edd trying some caching
+                            // this type set is an odd one - we on;y use the first one. Which would mean it's eithe a vanilla name or an as set in which case caching may not be a thing. TODO
                             Set<Name> typeSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(selectionType);
                             if (typeSet == null) {
                                 typeSet = HashObjSets.newMutableSet();
@@ -189,7 +191,33 @@ seaports;children   container;children
                                 azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(secondSet, selectionSet);
                             }
                             List<DataRegionHeading> forNameCount = new ArrayList<>();
-                            forNameCount.add(new DataRegionHeading(typeSet.iterator().next(), false, function, selectionSet, sourceCell));
+                            forNameCount.add(new DataRegionHeading(typeSet.iterator().next(), false, function, selectionSet, null, sourceCell));
+                            row.add(forNameCount);
+                        } else if (sourceCell.toUpperCase().startsWith(VALUEPARENTCOUNT)) { // similar to above in terms of gathering info - could be a normaliseation later for the moment make it work
+                            // should strip off the function
+                            sourceCell = sourceCell.substring(sourceCell.indexOf("(", VALUEPARENTCOUNT.length()) + 1); // chop off the beginning
+                            sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
+                            String selectionType = sourceCell.substring(0, sourceCell.indexOf(","));
+                            // edd trying some caching
+                            Set<Name> typeSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(selectionType);
+                            if (typeSet == null) {
+                                typeSet = HashObjSets.newMutableSet();
+                                nameService.parseQuery(azquoMemoryDBConnection, selectionType, attributeNames, typeSet);
+                                azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(sourceCell, typeSet);
+                            }
+                            if (typeSet.size() != 1) {
+                                throw new Exception("selection types must be single cells = use 'as'");
+                            }
+                            String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1);
+                            Set<Name> selectionSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(secondSet);
+                            if (selectionSet == null) {
+                                selectionSet = HashObjSets.newMutableSet();
+                                nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames, selectionSet); // namecount set will be populated internally - the last parameter passed
+                                azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(secondSet, selectionSet);
+                            }
+                            List<DataRegionHeading> forNameCount = new ArrayList<>();
+                            // same as above but put the set in a different place for detection later
+                            forNameCount.add(new DataRegionHeading(typeSet.iterator().next(), false, function, null, selectionSet, sourceCell));
                             row.add(forNameCount);
                         } else { // most of the time it will be a vanilla query
                             final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
@@ -1181,6 +1209,7 @@ seaports;children   container;children
                 }
             }
             DataRegionHeading nameCountHeading = getHeadingWithNameCount(headingsForThisCell);
+            DataRegionHeading valueParentCountHeading = getHeadingWithValueParentCount(headingsForThisCell);
             if (nameCountHeading != null && headingsForThisCell.size() == 2) {//these functions only work if there's no context
                 if (nameCountHeading.getName() != null) {
                     //System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName());
@@ -1208,6 +1237,25 @@ seaports;children   container;children
                             }
                         }
                     }
+                }
+                stringValue = doubleValue + "";
+                // again this block copy pasted from above to make valueparent count work,
+            } else if (valueParentCountHeading != null && valueParentCountHeading.getName() != null && headingsForThisCell.size() == 2) {//these functions only work if there's no context
+                ValuesHook valuesHook = new ValuesHook();
+                valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, valuesHook, languages, function);// so resolve as we usually would to get the values
+                // now, find all the parents and cross them with the valueParentCountHeading set
+                Set<Name> allValueParents = HashObjSets.newMutableSet();
+                for (Value v : valuesHook.values){
+                    for (Name n : v.getNames()){
+                        allValueParents.add(n); // add the name
+                        allValueParents.addAll(n.findAllParents()); // and all it's parents
+                    }
+                }
+                // now find the overlap between the value parents and the set in the heading
+                if (valueParentCountHeading.getValueParentCountSet().size() < allValueParents.size()) {
+                    doubleValue = findOverlap(valueParentCountHeading.getValueParentCountSet(), allValueParents);
+                } else {
+                    doubleValue = findOverlap(allValueParents, valueParentCountHeading.getValueParentCountSet());
                 }
                 stringValue = doubleValue + "";
             } else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
@@ -1268,6 +1316,7 @@ seaports;children   container;children
     }
 
     // we were doing retainAll().size() but this is less expensive
+    // todo : put the size check of each set and hence which way we run through the loop in here
     private int findOverlap(Collection<Name> set1, Collection<Name> set2) {
         int count = 0;
         for (Name name : set1) {
@@ -1604,11 +1653,11 @@ seaports;children   container;children
             // then check permissions
             for (Name name : names) {
                 // will the new write permissions cause an overhead?
-                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null, null));
+                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null, null, null));
             }
         } else { // don't bother checking permissions, write permissions to true
             for (Name name : names) {
-                dataRegionHeadings.add(new DataRegionHeading(name, true, function, null, null));
+                dataRegionHeadings.add(new DataRegionHeading(name, true, function, null, null, null));
             }
         }
         return dataRegionHeadings;
@@ -1647,6 +1696,15 @@ seaports;children   container;children
     public DataRegionHeading getHeadingWithNameCount(Collection<DataRegionHeading> dataRegionHeadings) {
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
             if (dataRegionHeading.getNameCountSet() != null) {
+                return dataRegionHeading;
+            }
+        }
+        return null;
+    }
+
+    public DataRegionHeading getHeadingWithValueParentCount(Collection<DataRegionHeading> dataRegionHeadings) {
+        for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
+            if (dataRegionHeading.getValueParentCountSet() != null) {
                 return dataRegionHeading;
             }
         }

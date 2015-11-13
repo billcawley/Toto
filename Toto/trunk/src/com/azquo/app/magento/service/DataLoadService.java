@@ -22,7 +22,6 @@ public final class DataLoadService {
         return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).magentoDBNeedsSettingUp(databaseAccessToken);
     }
 
-
     public String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
         return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).findRequiredTables(databaseAccessToken, remoteAddress);
     }

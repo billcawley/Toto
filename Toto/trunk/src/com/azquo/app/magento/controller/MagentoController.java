@@ -11,7 +11,6 @@ import com.azquo.app.magento.service.DataLoadService;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.*;
 import com.azquo.util.AzquoMailer;
-//dataimport org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,6 +27,7 @@ import java.util.Date;
  * Created by bill on 28/10/14
  * <p/>
  * Created to handle requests from the plugin.
+ *
  */
 
 @Controller
