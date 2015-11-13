@@ -1240,7 +1240,7 @@ seaports;children   container;children
                 }
                 stringValue = doubleValue + "";
                 // again this block copy pasted from above to make valueparent count work,
-            } else if (valueParentCountHeading != null && valueParentCountHeading.getName() != null && headingsForThisCell.size() == 2) {//these functions only work if there's no context
+            } else if (valueParentCountHeading != null && valueParentCountHeading.getName() != null) {//this will work with context
                 ValuesHook valuesHook = new ValuesHook();
                 valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, valuesHook, languages, function);// so resolve as we usually would to get the values
                 // now, find all the parents and cross them with the valueParentCountHeading set
