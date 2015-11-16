@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.jsonentities;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -8,7 +9,7 @@ import java.util.Map;
  * This was a local class but now it's
  *
  */
-public class JsonChildStructure{
+public class JsonChildStructure implements Serializable {
     // public for jackson to see them
     public final String name;
     public final int id;
