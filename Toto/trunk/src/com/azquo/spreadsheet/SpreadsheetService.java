@@ -31,6 +31,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.ui.ModelMap;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
+import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 
 import javax.servlet.ServletContext;
@@ -701,15 +702,12 @@ public class SpreadsheetService {
                 }
                 // similar to normal loading
                 String bookPath = getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
-                //Importers.getImporter().imports
-                final Book book = new support.importer.PatchedImporterImpl().imports(new File(bookPath), "Report name");
+//                final Book book = new support.importer.PatchedImporterImpl().imports(new File(bookPath), "Report name"); // the old temporary one, should be fixed now in the ZK libraries
+                final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                 // the first two make sense. Little funny about the second two but we need a reference to these
                 book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
                 // ok what user? I think we'll call it an admin one.
-                DatabaseServer databaseServer = null;
-                if (database != null){
-                    databaseServer = databaseServerDAO.findById(database.getDatabaseServerId());
-                }
+                DatabaseServer databaseServer = databaseServerDAO.findById(database.getDatabaseServerId());
                 // assuming no read permissions?
                 LoggedInUser loggedInUser = new LoggedInUser("", user,databaseServer,database, null, null);
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);

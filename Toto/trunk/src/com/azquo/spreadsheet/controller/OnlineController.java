@@ -18,6 +18,7 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.model.SName;
 
@@ -275,8 +276,8 @@ public class OnlineController {
                                     long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                     long newHeapMarker = oldHeapMarker;
                                     String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + finalOnlineReport.getPathname() + "/onlinereports/" + finalOnlineReport.getFilename();
-                                    //final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                                    final Book book = new support.importer.PatchedImporterImpl().imports(new File(bookPath), "Report name");
+                                    final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+//                                    final Book book = new support.importer.PatchedImporterImpl().imports(new File(bookPath), "Report name");
                                     /*newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                     System.out.println();
                                     System.out.println("Heap cost to load a ZK book : " + (newHeapMarker - oldHeapMarker) / mb);
