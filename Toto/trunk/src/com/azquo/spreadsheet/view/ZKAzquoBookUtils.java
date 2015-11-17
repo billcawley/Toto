@@ -4,6 +4,7 @@ import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.apache.commons.lang.math.NumberUtils;
@@ -30,12 +31,14 @@ public class ZKAzquoBookUtils {
     final SpreadsheetService spreadsheetService;
     final UserChoiceDAO userChoiceDAO;
     final UserRegionOptionsDAO userRegionOptionsDAO;
+    final RMIClient rmiClient;
     final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 
-    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO) {
+    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, RMIClient rmiClient) {
         this.spreadsheetService = spreadsheetService;
         this.userChoiceDAO = userChoiceDAO;
         this.userRegionOptionsDAO = userRegionOptionsDAO;
+        this.rmiClient = rmiClient;
     }
 
     public boolean populateBook(Book book) throws Exception {
@@ -236,8 +239,7 @@ public class ZKAzquoBookUtils {
             addValidation(namesForSheet, sheet, choiceOptions);
         }
         loggedInUser.setContext(context);
-        spreadsheetService.clearSessionLog(loggedInUser.getDataAccessToken()); // clear after . . .
-
+        rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
         return showSave;
     }
 
@@ -283,7 +285,8 @@ public class ZKAzquoBookUtils {
                         if (defaultName != null) {
                             String query = "`" + getRegionValue(sheet, defaultName) + "`" + defaultString.substring(dotPos);
                             try {
-                                List<String> choiceOptions = spreadsheetService.getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
+                                List<String> choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                        .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
                                 if (choiceOptions.size() == 1) {
                                     CellRegion chosen = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
                                     if (chosen != null) {
@@ -579,7 +582,8 @@ public class ZKAzquoBookUtils {
                                 String[] choices = query.split(",");
                                 Collections.addAll(choiceOptions, choices);
                             } else {
-                                choiceOptions = spreadsheetService.getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
+                                choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                        .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
                             }
                         } catch (Exception e) {
                             choiceOptions.add(e.getMessage());
@@ -590,7 +594,8 @@ public class ZKAzquoBookUtils {
                     CellRegion query = getCellRegionForSheetAndName(sheet, name.getName());
                     String queryString = getRegionValue(sheet, query);
                     try {
-                        spreadsheetService.resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages()); // sending the same as choice but the goal here is execute server side. Generally to set an "As"
+                        rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
                     } catch (Exception e) {
                         e.printStackTrace();
                     }

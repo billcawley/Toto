@@ -18,20 +18,19 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by cawley on 12/05/15.
  *
  * On the new client/server model the old LoggedInConnection will not do. We want an object representing a logged in user against the session
- * which holds no database classes. It will have a fair bit of stuff that was in logged in conneciton but no DB classes
+ * which holds no database classes. It will have a fair bit of stuff that was in logged in connection but no DB classes
  *
  */
 public class LoggedInUser {
 
     private static final Logger logger = Logger.getLogger(LoggedInUser.class);
 
-    private final String sessionId;
+    private final String sessionId; // it's used to match to a log server side
     private final User user;
     private int reportId;
 
-    // I still need this for the locks in azquobook
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
-    // need to hold the current one unlke with ZK which holds onto the user after the spreadsheet is created
+    // need to hold the current one unlike with ZK which holds onto the user after the spreadsheet is created
     private AzquoBook azquoBook;
     private List<String> languages;
 
@@ -46,7 +45,7 @@ public class LoggedInUser {
 
     private static final String defaultRegion = "default-region";
 
-    // after the client/server split a bunch of code that was client ended up on the server, I'm moving it back here now. It can only hold IDs not the actual objects as it would on the server.
+    // moved back in here now (was on the db server for a bit)
 
     private AtomicInteger lastJSTreeNodeId;
 
@@ -58,7 +57,6 @@ public class LoggedInUser {
         reportId = 0;
         sentCellsMaps = new HashMap<>();
         azquoBook = null;
-
         languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         this.database = database;

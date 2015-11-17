@@ -1,6 +1,7 @@
 package com.azquo.admin.controller;
 
 import com.azquo.memorydb.TreeNode;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
@@ -30,7 +31,10 @@ public class ShowdataController {
     @Autowired
     SpreadsheetService spreadsheetService;
 
-      @RequestMapping
+    @Autowired
+    RMIClient rmiClient;
+
+    @RequestMapping
     public String handleRequest(ModelMap modelMap, HttpServletRequest request
             , @RequestParam(value = "chosen", required = false) String chosen
     ) throws Exception
@@ -52,14 +56,14 @@ public class ShowdataController {
                         nameIds.add(node.nameId);
                     }
                 }
-                TreeNode node = spreadsheetService.getTreeNodeForNameIds(loggedInUser, nameIds, 1000);//1000 is the number of items to show before showing 'more...'
+                TreeNode node = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingIds(loggedInUser.getDataAccessToken(), nameIds, 1000);
                 modelMap.addAttribute("node", node);
             } else {
                 Set<String> nameNames = new HashSet<>();
                 for (String nString : namesString){
                     nameNames.add(nString);
                 }
-                TreeNode node = spreadsheetService.getTreeNodeForNames(loggedInUser, nameNames, 1000);//1000 is the number of items to show before showing 'more...'
+                TreeNode node = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingNames(loggedInUser.getDataAccessToken(), nameNames, 1000);
                 modelMap.addAttribute("node", node);
             }
             // this jsp has JSTL which will render tree nodes correctly

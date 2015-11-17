@@ -9,6 +9,7 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import org.apache.log4j.Logger;
@@ -32,6 +33,8 @@ import java.util.List;
  * Created by bill on 22/04/14.
  * <p>
  * Currently deals with a fair bit for AzquoBook, this may shrink in time.
+ *
+ * EFC : I'd like to zap a fair few of the parameters, perhaps difficult when Azquobook is still used in places.
  */
 
 @Controller
@@ -39,7 +42,7 @@ import java.util.List;
 public class OnlineController {
     final Runtime runtime = Runtime.getRuntime();
     final int mb = 1024 * 1024;
-    // todo get rid of dao objects in controllers
+    // note : I'm now thinking dao objects are acceptable in controllers if moving the call to the service would just be a proxy
 
     @Autowired
     private LoginService loginService;
@@ -57,9 +60,10 @@ public class OnlineController {
     private SpreadsheetService spreadsheetService;
     @Autowired
     private ImportService importService;
+    @Autowired
+    private RMIClient rmiClient;
 
-
-    // TODO : break up into separate functions
+    // TODO : break up into separate functions?
 
     private static final Logger logger = Logger.getLogger(OnlineController.class);
 
@@ -77,15 +81,11 @@ public class OnlineController {
             , @RequestParam(value = "editedname", required = false) String choiceName
             , @RequestParam(value = "editedvalue", required = false) String choiceValue
             , @RequestParam(value = "reportid", required = false) String reportId
-            , @RequestParam(value = "jsonfunction", required = false, defaultValue = "azquojsonfeed") String jsonFunction
-            , @RequestParam(value = "row", required = false, defaultValue = "") String rowStr
-            , @RequestParam(value = "col", required = false, defaultValue = "") String colStr
             , @RequestParam(value = "opcode", required = false, defaultValue = "") String opcode
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
-            , @RequestParam(value = "provline", required = false, defaultValue = "") String provline
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
 
     ) {
@@ -103,7 +103,7 @@ public class OnlineController {
                 LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                 if (loggedInUser == null) {
                     if (user == null) {
-                        return "utf8page";// note - this means a blank if no session or credentials. Should maybe redirect to login page?
+                        return "redirect:/api/Login";// I guess redirect to login page
                     }
                     if (user.equals("demo@user.com")) {
                         user += request.getRemoteAddr();
@@ -121,34 +121,13 @@ public class OnlineController {
                     //report id is assumed to be integer - sent from the website
                     onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
                 }
-                /* todo, sort provenance setting later
-                if (onlineReport != null && onlineReport.getId() > 1 && loggedInConnection.hasAzquoMemoryDB()) {
-                    loggedInConnection.setNewProvenance("spreadsheet", onlineReport.getReportName(), "");
-                }*/
                 String result = "error: no action taken";
-                int row = 0;
-                try {
-                    row = Integer.parseInt(rowStr);
-                } catch (Exception e) {
-                    //rowStr can be blank or '0'
-                }
-                if (opcode.equals("provline")) {
-                    String reportName = spreadsheetService.setChoices(loggedInUser, provline);
-                    onlineReport = null;
-                    if (reportName != null) {
-                        onlineReport = onlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
-                        if (onlineReport == null) {
-                            onlineReport = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
-                        }
-                    }
-                    opcode = "loadsheet";
-                }
                 if (opcode.equals("savedata")) {
-                    spreadsheetService.saveData(loggedInUser);
+                    loggedInUser.getAzquoBook().saveData(loggedInUser);
                     result = "data saved successfully";
                 }
                 // highlighting etc. From the top right menu and the azquobook context menu, can be zapped later
-                if ((opcode.equals("setchosen")) && choiceName != null) {
+                if ((opcode.equals("setchosen")) && choiceName != null && onlineReport != null) {
                     if (choiceName.startsWith("region options:")) {
                         String region = choiceName.substring(15);
                         System.out.println("saving choices: " + choiceName + " " + choiceValue);
@@ -189,6 +168,7 @@ public class OnlineController {
                     }
                     opcode = "loadsheet";
                 }
+                // I wonder if this should be a different controller
                 if (opcode.equals("upload")) {
                     reportId = "";
                     if (submit.length() > 0) {
@@ -201,17 +181,10 @@ public class OnlineController {
                         //importing here cannot set 'useType' to a value
                         importService.importTheFile(loggedInUser, fileName, "", moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
                         result = "File imported successfully";
-
-
                     } else {
                         model.addAttribute("azquodatabaselist", spreadsheetService.createDatabaseSelect(loggedInUser));
                         return "upload";
                     }
-                }
-                if (opcode.equals("provenance")) {
-                    result = spreadsheetService.getProvenance(loggedInUser, row, Integer.parseInt(colStr), jsonFunction, 40);
-                    model.addAttribute("content", result);
-                    return "utf8javascript";
                 }
                 if (reportId != null && reportId.equals("1")) {
                     if (!loggedInUser.getUser().isAdministrator()) {
@@ -242,6 +215,7 @@ public class OnlineController {
                     if (db != null) {
                         onlineReport.setDatabase(db.getName());
                     }
+                    // ok the new sheet and the loading screen have added chunks of code here, should it be in a service or can it "live" here?
                     if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK) {
                         HttpSession session = request.getSession();
                         if (session.getAttribute(reportId) != null) {
@@ -262,8 +236,7 @@ public class OnlineController {
                             return "zsshowsheet";// show the sheet
                         }
                         // ok now I need to set the sheet loading but on a new thread
-                        // hmm, how to stop multiple loadings?
-                        if (session.getAttribute(reportId + "loading") == null) { // don't wanna load it twice! THis could be hit if the user refreshes while generating the report.
+                        if (session.getAttribute(reportId + "loading") == null) { // don't wanna load it twice! This could be hit if the user refreshes while generating the report.
                             // yes there's a chance a user could cause a double load if they were really quick but I'm not that bothered about this
                             session.setAttribute(reportId + "loading", Boolean.TRUE);
                             // this is a bit hacky, the new thread doesn't want them reassigned, fair enough
@@ -277,18 +250,11 @@ public class OnlineController {
                                     long newHeapMarker = oldHeapMarker;
                                     String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + finalOnlineReport.getPathname() + "/onlinereports/" + finalOnlineReport.getFilename();
                                     final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-//                                    final Book book = new support.importer.PatchedImporterImpl().imports(new File(bookPath), "Report name");
-                                    /*newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-                                    System.out.println();
-                                    System.out.println("Heap cost to load a ZK book : " + (newHeapMarker - oldHeapMarker) / mb);
-                                    System.out.println();
-                                    oldHeapMarker = newHeapMarker;*/
-                                    // the first two make sense. Little funny about the second two but we need a reference to these
                                     book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                                     book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);
                                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                                     book.getInternalBook().setAttribute(REPORT_ID, finalLoggedInUser.getReportId());
-                                    ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
+                                    ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
                                     session.setAttribute(finalReportId + SAVE_FLAG, bookUtils.populateBook(book));
                                     newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                     System.out.println();
@@ -334,16 +300,12 @@ public class OnlineController {
             , @RequestParam(value = "editedname", required = false) String choiceName
             , @RequestParam(value = "editedvalue", required = false) String choiceValue
             , @RequestParam(value = "reportid", required = false) String reportId
-            , @RequestParam(value = "jsonfunction", required = false, defaultValue = "azquojsonfeed") String jsonFunction
-            , @RequestParam(value = "row", required = false, defaultValue = "") String rowStr
-            , @RequestParam(value = "col", required = false, defaultValue = "") String colStr
             , @RequestParam(value = "opcode", required = false, defaultValue = "") String opcode
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
-            , @RequestParam(value = "provline", required = false, defaultValue = "") String provline
     ) {
-        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, jsonFunction, rowStr, colStr, opcode, spreadsheetName, database, reportToLoad, submit, provline, null);
+        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, opcode, spreadsheetName, database, reportToLoad, submit, null);
     }
 }

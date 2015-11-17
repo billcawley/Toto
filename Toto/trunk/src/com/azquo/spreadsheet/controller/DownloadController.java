@@ -40,8 +40,7 @@ public class DownloadController {
             , @RequestParam(value = "pdf", required = false, defaultValue = "false") boolean pdf
             , @RequestParam(value = "image", required = false) String image
     ) throws Exception {
-        // deliver a preprepared image. Are these names unique? Could images move between spreadsheets unintentionally?
-        // Edd note - use nio?
+        // deliver a pre prepared image. Are these names unique? Could images move between spreadsheets unintentionally?
         if (image != null && image.length() > 0) {
             response.setContentType("image/png"); // Set up mime type
             OutputStream out = response.getOutputStream();
@@ -92,17 +91,13 @@ public class DownloadController {
             fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
         }
         if (pdf) {
-            spreadsheetService.saveBookasPDF(response, loggedInUser, fileName);
+            loggedInUser.getAzquoBook().saveBookAsPDF(response, fileName);
         } else {
             if (withMacros) {
-                spreadsheetService.saveBookActive(response, loggedInUser, fileName);
+                loggedInUser.getAzquoBook().saveBookActive(response, fileName, spreadsheetService.getHomeDir() + "/onlinereports/Admin/Azquoblank.xls");
             } else {
-                spreadsheetService.saveBook(response, loggedInUser, fileName);
+                loggedInUser.getAzquoBook().saveBook(response, fileName);
             }
         }
     }
 }
-
-
-
-

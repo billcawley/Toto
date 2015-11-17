@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,8 @@ public class SpreadsheetStatusController {
 
     @Autowired
     private SpreadsheetService spreadsheetService;
+    @Autowired
+    private RMIClient rmiClient;
 
     public static final String LOGGED_IN_USER_SESSION = "LOGGED_IN_USER_SESSION";
 
@@ -38,13 +41,13 @@ public class SpreadsheetStatusController {
             LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
             // todo - limit the maount returned?
             if (loggedInUser != null) {
-                return spreadsheetService.getSessionLog(loggedInUser.getDataAccessToken()).replace("\n","<br>"); // note - I am deliberately not doing <br/>, it seems javascript messes with it and then I can't detect changes
+                return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getSessionLog(loggedInUser.getDataAccessToken()).replace("\n","<br>"); // note - I am deliberately not doing <br/>, it seems javascript messes with it and then I can't detect changes
             }
         }
         if ("stop".equals(action)){
             LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
             if (loggedInUser != null) {
-                spreadsheetService.sendStopMessageToLog(loggedInUser.getDataAccessToken());
+                rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).sendStopMessageToLog(loggedInUser.getDataAccessToken());
                 return "stopsent";
             }
         }

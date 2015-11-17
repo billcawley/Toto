@@ -8,20 +8,15 @@ import com.azquo.admin.user.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
-import com.azquo.spreadsheet.jsonentities.JsonChildren;
-import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import com.azquo.util.AzquoMailer;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -146,7 +141,6 @@ public class SpreadsheetService {
     public final int threadsToTry;
 
     public SpreadsheetService() {
-
         String current = null;
         try {
             current = new File( "." ).getCanonicalPath();
@@ -168,14 +162,11 @@ public class SpreadsheetService {
 
     }
 
-    // What actually delivers the reports to the browser. Maybe change to an output writer? Save memory and increase speed.
-    // also there's html in here, view stuff, need to get rid of that
-    // the report/database server is going to force the view/model split
-
+    // to nload the old AzquoBook. Will be phased out so I'll leave the HTML in here.
     public void readExcel(ModelMap model, LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName) throws Exception {
         String message;
         String path = getHomeDir() + "/temp/";
-        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, this);
+        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, this, rmiClient);
         StringBuilder worksheet = new StringBuilder();
         StringBuilder tabs = new StringBuilder();
         StringBuilder head = new StringBuilder();
@@ -195,7 +186,7 @@ public class SpreadsheetService {
                 //note - the database specified in the report may not be the current database (as in applications such as Magento and reviews), but be 'temp'
                 String filepath = ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                 azquoBook.loadBook(getHomeDir() + filepath, useAsposeLicense());
-                // excecuting parked commented as the executeloop code makes no sense
+                // executing parked commented as the execute loop code makes no sense
                 /*
                 String executeSetName = azquoBook.getRangeValue("az_ExecuteSet");
                 List<SetNameChosen> nameLoop = new ArrayList<SetNameChosen>();
@@ -297,7 +288,6 @@ public class SpreadsheetService {
         StringBuilder sb = new StringBuilder();
         BufferedReader in = null;
         try {
-
             in = new BufferedReader(new InputStreamReader(servletContext.getResourceAsStream("/WEB-INF/" + filename)));
             String line;
             while ((line = in.readLine()) != null) {
@@ -336,22 +326,6 @@ public class SpreadsheetService {
                 userChoiceDAO.removeById(userChoice);
             }
         }
-    }
-
-    public void saveBook(HttpServletResponse response, LoggedInUser loggedInUser, String fileName) throws Exception {
-        loggedInUser.getAzquoBook().saveBook(response, fileName);
-    }
-
-    public void saveBookasPDF(HttpServletResponse response, LoggedInUser loggedInUser, String fileName) throws Exception {
-        loggedInUser.getAzquoBook().saveBookAsPDF(response, fileName);
-    }
-
-    public void saveBookActive(HttpServletResponse response, LoggedInUser loggedInUser, String fileName) throws Exception {
-        loggedInUser.getAzquoBook().saveBookActive(response, fileName, env.getProperty("azquo.home") + "/onlinereports/Admin/Azquoblank.xls");
-    }
-
-    public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction, int maxSize) throws Exception {
-        return loggedInUser.getAzquoBook().getProvenance(loggedInUser, row, col, jsonFunction, maxSize);
     }
 
     public StringBuilder createDatabaseSelect(LoggedInUser loggedInUser) {
@@ -410,46 +384,9 @@ public class SpreadsheetService {
         model.addAttribute("reports", reports);
     }
 
-    public void showNameDetails(ModelMap model, LoggedInUser loggedInUser, String database, String rootId, String parents, String searchNames, String language) throws Exception {
-        model.addAttribute("message","");
-        if (database != null && database.length() > 0) {
-            Database newDB = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
-            if (newDB == null) {
-                model.addAttribute("message","no database chosen");
-            }
-            loginService.switchDatabase(loggedInUser, newDB);
-        }
-        if (searchNames == null) searchNames = "";
-        model.addAttribute("parents", parents);
-        model.addAttribute("rootid", rootId);
-        model.addAttribute("searchnames", searchNames);
-        model.addAttribute("attributeChosen", language);
-        List<String>attributes = getAttributeList(loggedInUser.getDataAccessToken());
-        model.addAttribute("attributes", attributes);
-
-    }
-
-    public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception{
-        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getDropDownListForQuery(databaseAccessToken, query, languages);
-    }
-
-    public void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception{
-        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).resolveQuery(databaseAccessToken, query, languages);
-    }
-
-    public String getSessionLog(DatabaseAccessToken databaseAccessToken) throws Exception{
-        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getSessionLog(databaseAccessToken);
-    }
-
-    public void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws Exception{
-        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).sendStopMessageToLog(databaseAccessToken);
-    }
-
-    public void clearSessionLog(DatabaseAccessToken databaseAccessToken) throws Exception{
-        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).clearSessionLog(databaseAccessToken);
-    }
 
     // function that can be called by the front end to deliver the data and headings
+    // this is sort of a proxy but the number of parameters changes a fair bit, I'll leave it for the mo
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
@@ -457,82 +394,6 @@ public class SpreadsheetService {
         return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, rowHeadingsSource, colHeadingsSource, contextSource,
                 userRegionOptions.getHideRows(), userRegionOptions.getRowLimit(), userRegionOptions.getColumnLimit(), userRegionOptions.getSortRow()
                 , userRegionOptions.getSortRowAsc(), userRegionOptions.getSortColumn(), userRegionOptions.getSortColumnAsc(), userRegionOptions.getHighlightDays());
-    }
-
-    // should move this to the controller? Have a think
-    protected static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
-    // after the initial client server split this just proxied but that meant json creation and session stuff (node/name mapping) server side, I'm going to bring some of this back
-    public String processJSTreeRequest(LoggedInUser loggedInUser, String json, String jsTreeId, int topNameId, String op, int parent, boolean parents, String itemsChosen, String position, String backupSearchTerm, String language) throws Exception{
-            if (language == null || language.length() == 0){
-                language = Constants.DEFAULT_DISPLAY_NAME;
-            }
-            if (json != null && json.length() > 0) {
-                NameJsonRequest nameJsonRequest = jacksonMapper.readValue(json, NameJsonRequest.class);
-                JsonChildren.Node currentNode = loggedInUser.getFromJsTreeLookupMap(nameJsonRequest.id); // we assume it is there, the code did before
-                if (currentNode.nameId != -1) {
-                    nameJsonRequest.id = currentNode.nameId;//convert from jstree id to the name id
-                    return rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).processJSTreeRequest(loggedInUser.getDataAccessToken(), nameJsonRequest); // Now we pass through to the back end
-                }
-            } else {
-                JsonChildren.Node currentNode = new JsonChildren.Node(-1, null, false,-1,-1);
-                if (jsTreeId == null || jsTreeId.equals("#")) {
-                    if (topNameId > 0) {
-                        currentNode.nameId = topNameId;
-                    }
-                    jsTreeId = "0";
-                } else { // on standard children there will be a tree id
-                    currentNode = loggedInUser.getFromJsTreeLookupMap(Integer.parseInt(jsTreeId));
-                }
-                // need to understand syntax on these 3
-                if (jsTreeId.equals("true")) {
-                    currentNode = loggedInUser.getFromJsTreeLookupMap(parent);
-                }
-                if (op.equals("new")) { // on the first call to the tree it will be new
-                    int rootId = 0;
-                    if (currentNode != null && currentNode.nameId != -1) { // but on new current will be null
-                        rootId = currentNode.nameId;
-                    }
-                    return rootId + ""; // 0 on the first call
-                }
-                if (op.equals("children")) { // the first call to JSTree gets returned quickly 2 lines above, this one is the seccond and is different as it has the "children" in op
-                    if (itemsChosen != null && itemsChosen.startsWith(",")) {
-                        itemsChosen = itemsChosen.substring(1);
-                    }
-                    if (itemsChosen == null) {
-                        itemsChosen = backupSearchTerm;
-                    }
-                    // the return type JsonChildren is designed to produce javascript that js tree understands
-                    final JsonChildren jsonChildren = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents, itemsChosen, language);
-                    // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
-                    jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);
-                    return jacksonMapper.writeValueAsString(jsonChildren);
-                }
-                if (currentNode.nameId != -1) { // assuming it is not null!
-                    if (op.equals("move_node")) {
-                        //lookup.get(parent).child.addChildWillBePersisted(current.child);
-                        return "" + rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                                .moveJsTreeNode(loggedInUser.getDataAccessToken(), loggedInUser.getFromJsTreeLookupMap(parent).nameId, currentNode.nameId);
-                    }
-                    if (op.equals("create_node")) {
-                        return "" + rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                                .createNode(loggedInUser.getDataAccessToken(), currentNode.nameId);
-                    }
-                    if (op.equals("rename_node")) {
-                        return "" + rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                                .renameNode(loggedInUser.getDataAccessToken(), currentNode.nameId, position);
-                    }
-                    if (op.equals("details")) {
-                        return "true,\"namedetails\":" + jacksonMapper.writeValueAsString(rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getChildDetailsFormattedForOutput(loggedInUser.getDataAccessToken(), currentNode.nameId));
-                    }
-                    throw new Exception(op + " not understood");
-                }
-            }
-            return "no action taken";
-    }
-
-    public List<String> getAttributeList(DatabaseAccessToken databaseAccessToken)throws Exception{
-        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getAttributeList(databaseAccessToken);
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
@@ -549,21 +410,6 @@ public class SpreadsheetService {
                     , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(), maxSize);
         }
         return new ArrayList<>(); // maybe "not found"?
-    }
-
-
-    public TreeNode getTreeNodeForNames(LoggedInUser loggedInUser, Set<String> nameNames, int maxSize) throws Exception {
-        return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingNames(loggedInUser.getDataAccessToken(), nameNames, maxSize);
-    }
-
-    public TreeNode getTreeNodeForNameIds(LoggedInUser loggedInUser, Set<Integer> nameIds, int maxSize) throws Exception {
-        return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingIds(loggedInUser.getDataAccessToken(), nameIds, maxSize);
-    }
-
-    public void saveData(LoggedInUser loggedInUser)throws  Exception{
-        //saving aspose worksheet
-        loggedInUser.getAzquoBook().saveData(loggedInUser);
- 
     }
 
 
@@ -594,7 +440,6 @@ public class SpreadsheetService {
             equalsPos = paramString.indexOf(" = ");
         }
         return reportName;
-
     }
 
     // adapted from some VB and description at http://grandzebu.net/informatique/codbar-en/ean13.htm
@@ -713,7 +558,7 @@ public class SpreadsheetService {
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());
-                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(this, userChoiceDAO, userRegionOptionsDAO);
+                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(this, userChoiceDAO, userRegionOptionsDAO, rmiClient);
                 bookUtils.populateBook(book);
                 AzquoMailer azquoMailer = new AzquoMailer();
                 // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
@@ -764,10 +609,6 @@ public class SpreadsheetService {
                 }
                 reportScheduleDAO.store(reportSchedule);
             }
-
         }
     }
-
-
-
 }

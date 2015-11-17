@@ -19,11 +19,10 @@ import java.util.Properties;
 public class AzquoMailer {
 
     public boolean sendEMail(String toEmail, String toName, String subject, String body) {
-        return sendEMail(toEmail,toName,subject,body,null);
-
+        return sendEMail(toEmail, toName, subject, body, null);
     }
 
-        public boolean sendEMail(String toEmail, String toName, String subject, String body, File attachment) {
+    public boolean sendEMail(String toEmail, String toName, String subject, String body, File attachment) {
         try {
             HtmlEmail email = new HtmlEmail();
             //email.setDebug(true); // useful stuff if things go wrong
@@ -31,12 +30,12 @@ public class AzquoMailer {
             email.setAuthenticator(new DefaultAuthenticator("app@azquo.com", "Yd44d8R4"));
             email.setHostName("logichound.servers.eqx.misp.co.uk");
             email.setSmtpPort(465);
-            if (toEmail.contains(",")){// ignore name
-                for (String to : toEmail.split(",")){
+            if (toEmail.contains(",")) {// ignore name
+                for (String to : toEmail.split(",")) {
                     email.addTo(to, to);
                 }
-            } else if(toEmail.contains(";")){
-                for (String to : toEmail.split(";")){
+            } else if (toEmail.contains(";")) {
+                for (String to : toEmail.split(";")) {
                     email.addTo(to, to);
                 }
             } else {
@@ -50,7 +49,7 @@ public class AzquoMailer {
             email.setHtmlMsg(body);
             // set the plain text message - so simple compared to the arse before!
             email.setTextMsg("Your email client does not support HTML messages");
-            if (attachment != null){
+            if (attachment != null) {
                 email.attach(attachment);
             }
             email.send();
@@ -64,7 +63,6 @@ public class AzquoMailer {
     // yoinked from tinternet and modified
 
     public void readGoogleAnalyticsEmail() {
-
         Store store = null;
         IMAPFolder folder = null;
         try {
@@ -94,14 +92,14 @@ public class AzquoMailer {
                 //Object String;
                 //System.out.println(folder.getUID(msg)
                 String subject = msg.getSubject();
-                    System.out.println("MESSAGE " + (i + 1) + ":");
-                    System.out.println("Subject: " + subject);
-                    System.out.println("From: " + msg.getFrom()[0]);
-                    System.out.println("To: "+msg.getAllRecipients());
-                    System.out.println("Date: "+msg.getReceivedDate());
-                    System.out.println("Size: "+msg.getSize());
-                    System.out.println(msg.getFlags());
-                    System.out.println("Body: \n"+ msg.getContent());
+                System.out.println("MESSAGE " + (i + 1) + ":");
+                System.out.println("Subject: " + subject);
+                System.out.println("From: " + msg.getFrom()[0]);
+                System.out.println("To: " + msg.getAllRecipients());
+                System.out.println("Date: " + msg.getReceivedDate());
+                System.out.println("Size: " + msg.getSize());
+                System.out.println(msg.getFlags());
+                System.out.println("Body: \n" + msg.getContent());
 
                 if (subject != null && subject.startsWith("Google Analytics")) {
                     String contentType = msg.getContentType();

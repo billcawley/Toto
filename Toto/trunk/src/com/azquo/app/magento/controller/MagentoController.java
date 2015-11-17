@@ -95,7 +95,7 @@ public class MagentoController {
             }
             if (op.equals("connect")) {
                 if (dataLoadService.findLastUpdate(loggedInUser.getDataAccessToken(), request.getRemoteAddr()) != null) {
-                    // was connection id here, hacking ths back in to get the logged in conneciton
+                    // was connection id here, hacking ths back in to get the logged in connection. We're dealing with the legacy of the conneciton id still in the plugin.
                     String tempConnectionId = System.currentTimeMillis() + "";
                     request.getServletContext().setAttribute(tempConnectionId, loggedInUser);
                     return tempConnectionId;
@@ -129,7 +129,7 @@ public class MagentoController {
                     // now copying all files, will make it easier for the client/server split. No passing of input streams just the file name
                     File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + db + new Date());
                     data.transferTo(moved);
-                        dataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr());
+                    dataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr());
                     long elapsed = System.currentTimeMillis() - start;
                     if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1")) { // if it's from us don't email us :)
                         Business business = businessDAO.findById(loggedInUser.getUser().getBusinessId());
@@ -146,7 +146,6 @@ public class MagentoController {
                 } else { 
                     return "error: no data posted";
                 }
-                //return onlineService.readExcel(loggedInConnection, onlineReport, null, "");
             }
             if (op.equals("reports")) {
                 response.sendRedirect("/api/Online?opcode=loadsheet&reporttoload=1"); // I think that will do it
@@ -158,7 +157,7 @@ public class MagentoController {
         }
     }
 
-    // when nt multipart
+    // when not multipart, just pass it through
 
     @RequestMapping
     @ResponseBody

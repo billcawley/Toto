@@ -8,6 +8,7 @@ import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.memorydb.TreeNode;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.csvreader.CsvWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +41,7 @@ public class AzquoBook {
     private UserRegionOptionsDAO userRegionOptionsDAO;
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
     private SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
+    private RMIClient rmiClient;
 
     public static final String azDataRegion = "az_dataregion";
 //    public static final String OPTIONPREFIX = "!";
@@ -138,10 +140,11 @@ public class AzquoBook {
         }
     };
 
-    public AzquoBook(UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, SpreadsheetService spreadsheetService) throws Exception {
+    public AzquoBook(UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, SpreadsheetService spreadsheetService, RMIClient rmiClient) throws Exception {
         this.userRegionOptionsDAO = userRegionOptionsDAO;
         this.userChoiceDAO = userChoiceDAO;
         this.spreadsheetService = spreadsheetService;
+        this.rmiClient = rmiClient;
         jacksonMapper.registerModule(new JSR310Module());
     }
 
@@ -830,7 +833,8 @@ public class AzquoBook {
                 } else {
                     try {
                         System.out.println("SELECTION: choosing from " + cellChoice);
-                        choiceList = spreadsheetService.getDropDownListForQuery(loggedInUser.getDataAccessToken(), cellChoice, loggedInUser.getLanguages());
+                        choiceList = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                .getDropDownListForQuery(loggedInUser.getDataAccessToken(), cellChoice, loggedInUser.getLanguages());
                     } catch (Exception e) {
                         constants.add(e.getMessage());
                     }

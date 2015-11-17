@@ -643,14 +643,7 @@ public final class ValueService {
             method += " " + p.getName();
         }
         if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
-        String link = null;
-        if (method.contains("spreadsheet")) {
-            try {
-                link = "/api/Online?opcode=provline&provline=" + URLEncoder.encode(method, "UTF-8");
-            } catch (Exception ignored) {
-            }
-        }
-        TreeNode toReturn = new TreeNode(source, method, link, null, 0, getTreeNodesFromValues(values, maxSize));
+        TreeNode toReturn = new TreeNode(source, method, null, null, 0, getTreeNodesFromValues(values, maxSize)); // no link now, remove?
         addNodeValues(toReturn);
         return toReturn;
     }

@@ -6,6 +6,7 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.springframework.context.ApplicationContext;
@@ -45,12 +46,11 @@ public class ZKComposer extends SelectorComposer<Component> {
     //Label provenanceLabel = new Label();
     Label instructionsLabel = new Label();
     SpreadsheetService spreadsheetService;
+    RMIClient rmiClient;
     UserChoiceDAO userChoiceDAO;
     OnlineReportDAO onlineReportDAO;
     UserRegionOptionsDAO userRegionOptionsDAO;
     AdminService adminService;
-
-
     Popup provenancePopup = null;
     Popup highlightPopup = null;
 
@@ -64,6 +64,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         userChoiceDAO = (UserChoiceDAO) applicationContext.getBean("userChoiceDao");
         userRegionOptionsDAO = (UserRegionOptionsDAO) applicationContext.getBean("userRegionOptionsDao");
         adminService = (AdminService) applicationContext.getBean("adminService");
+        rmiClient = (RMIClient) applicationContext.getBean("rmiClient");
         editPopup.setId("editPopup");
         editPopup.setStyle("background-color:#ffffcc");
         Menuitem item1 = new Menuitem("Audit");
@@ -95,6 +96,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         item2.setPopup(instructionsPopup);
         item3.setPopup(highlightPopup);
 
+        // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
+
         if (myzss.getFirstChild() != null) {
             myzss.getFirstChild().appendChild(editPopup);
             myzss.getFirstChild().appendChild(provenancePopup);
@@ -110,19 +113,6 @@ public class ZKComposer extends SelectorComposer<Component> {
             g.appendChild(highlightPopup);
         }
 
-//        myzss.appendChild(editPopup);
-        //myzss.getParent().appendChild(editPopup);
-//        myzss.appendChild();
-/*        final Button button = new Button("XLS");
-        button.addEventListener("onClick",
-                new EventListener() {
-                    public void onEvent(Event event) throws Exception {
-                        System.out.println("thing");
-                    }
-                });
-
-        myzss.getFirstChild().appendChild(button);*/
-//        myzss.getPage().getFirstRoot().appendChild(editPopup);
     }
 
     // Bit of an odd one this : on a cell click "wake" the log back up as there may be activity shortly
@@ -132,15 +122,12 @@ public class ZKComposer extends SelectorComposer<Component> {
         Clients.evalJavaScript("window.skipSetting = 0;window.skipMarker = 0;");
     }
 
-//org.zkoss.zss.ui.event.Events
-
-
     // In theory could just have on cellchange but this seems to have broken the dropdowns onchange stuff, ergh. Luckily it seems there's no need for code duplication
     // checking for save stuff in the onchange and the other stuff here
 
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
-        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO); // used in more than one place
+        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
         String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
@@ -198,12 +185,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
         }
-        // could maybe be moved up to where the boolean is set.
         if (reload) {
             try {
                 // new book from same source
-//                Clients.evalJavaScript("zUtl.progressbox('test1', 'edd testing',true, '')"); // make another?
-//                Clients.evalJavaScript("zUtl.destroyProgressbox('test1')");
                 final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
                 for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
@@ -215,7 +199,6 @@ public class ZKComposer extends SelectorComposer<Component> {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-//            new Thread(() -> reload(book, zkAzquoBookUtils)).start(); // java 8 notation, NICE!
         }
     }
 
@@ -250,7 +233,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
         String dataFormat = Ranges.range(event.getSheet(), row, col).getCellStyle().getDataFormat();
         if (dataFormat.toLowerCase().contains("mm")) {
-
             //it's a date
             isDouble = false;
             chosen = cellData.getFormatText();
@@ -290,7 +272,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onSheetSelect = #myzss")
     public void onSheetSelect(SheetSelectEvent sheetSelectEvent) {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
-        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
+        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
         Book book = sheetSelectEvent.getSheet().getBook();
         final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptionsAndQueries(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
         zkAzquoBookUtils.addValidation(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),choiceOptions);
@@ -548,8 +530,6 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
     private void addHighlight(Popup highlightPopup, final int days) {
-
-
         String hDays = days + " days";
         if (days == 0) hDays = "none";
         final Toolbarbutton highlightButton = new Toolbarbutton("highlight " + hDays);
@@ -559,12 +539,9 @@ public class ZKComposer extends SelectorComposer<Component> {
         Label highlightLabel = (new Label("\n\n"));
         highlightLabel.setMultiline(true);
         highlightPopup.appendChild(highlightLabel);
-
     }
 
     private void showHighlight(int days) {
-
-
         Book book = myzss.getBook();
         boolean reload = false;
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
@@ -591,7 +568,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                 newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
             }
-            ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO);
+            ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
             if (zkAzquoBookUtils.populateBook(newBook)) { // check if formulae made saveable data
                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
             }
@@ -601,4 +578,3 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 }
-

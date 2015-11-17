@@ -13,7 +13,6 @@ import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.view.AzquoBook;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.Selectors;
@@ -23,7 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.zip.ZipInputStream;
@@ -31,6 +30,7 @@ import java.util.zip.ZipInputStream;
 /**
  * Created by bill on 13/12/13.
  * Preliminary processing before being sent over to the database server for loading.
+ *
  */
 
 public final class ImportService {
@@ -49,25 +49,13 @@ public final class ImportService {
     @Autowired
     private UploadRecordDAO uploadRecordDAO;
 
+    // currently only for the magento setup
     public void importTheFile(LoggedInUser loggedInUser, String fileName, String filePath) throws Exception {
-        //used for Magento importing (data  - not report templates)
-        List<String> languages = new ArrayList<>();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        importTheFile(loggedInUser, fileName, "", filePath, "", true, languages);
-    }
-
-    public void importTheFile(LoggedInUser loggedInUser, String fileName, String useType, String filePath, String fileType, boolean skipBase64, List<String> attributeNames) throws Exception {
-        String error = "";
-        importTheFile1(loggedInUser, fileName, useType, filePath, fileType, skipBase64, attributeNames);
-        UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, "", error);//;should record the error????
-        uploadRecordDAO.store(uploadRecord);
+        importTheFile(loggedInUser, fileName, "", filePath, "", true, Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME));
     }
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    public void importTheFile1(LoggedInUser loggedInUser, String fileName, String useType, String filePath, String fileType, boolean skipBase64, List<String> attributeNames)
-            throws Exception {
-
-
+    public void importTheFile(LoggedInUser loggedInUser, String fileName, String useType, String filePath, String fileType, boolean skipBase64, List<String> attributeNames) throws Exception {
         //fileType is now always the first word of the spreadsheet/dataimport file name
         if (fileType.length() == 0) {
             int slashpos = filePath.lastIndexOf("/");
@@ -84,10 +72,6 @@ public final class ImportService {
             throw new Exception("error: no database set");
         }
         String tempFile = "";
-        String lcName = fileName.toLowerCase();
-        if (lcName.endsWith(".jpg") || lcName.endsWith(".png") || lcName.endsWith(".gif")) {
-            imageImport(loggedInUser, uploadFile, fileName);
-        }
         if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")) {
             if (skipBase64) {
                 tempFile = tempFileWithoutDecoding(uploadFile, fileName);
@@ -115,16 +99,8 @@ public final class ImportService {
             }
             readPreparedFile(loggedInUser, filePath, fileType, attributeNames);
         }
-    }
-
-    private void imageImport(LoggedInUser loggedInUser, InputStream inputStream, String fileName) throws Exception {
-        String targetFileName = spreadsheetService.getHomeDir() + "/databases/" + loggedInUser.getDatabase().getName() + "/images/" + fileName;
-        File output = new File(targetFileName);
-        output.getParentFile().mkdirs();
-        if (!output.exists()) {
-            output.createNewFile();
-        }
-        FileUtils.copyInputStreamToFile(inputStream, output);
+        UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, "", "");//should record the error? (last parameter)
+        uploadRecordDAO.store(uploadRecord);
     }
 
     // File pre processing functions. Should maybe be hived off into utils?
@@ -132,10 +108,8 @@ public final class ImportService {
     private String unzip(String fileName, String suffix) {
         String outputFile = fileName.substring(0, fileName.length() - 4);
         try {
-            byte[] data = new byte[1024*1024]; // changing this to 10k should it be more?
+            byte[] data = new byte[1024*1024]; // changing this to 1 meg
             int byteRead;
-
-
             ZipInputStream zin = new ZipInputStream(new BufferedInputStream(new FileInputStream(fileName)));
             // while((zin.getNextEntry()) != null){
             //READ ONE ENTRY ONLY...
@@ -154,9 +128,6 @@ public final class ImportService {
         }
         return "";
     }
-
-
-
 
     /*
     public void unzip(String fileName, String fileSuffix) {
@@ -258,7 +229,6 @@ public final class ImportService {
                 if (codes[b[0]] >= 0) {
                     accum <<= 6;            // bits shift up by 6 each time thru
                     shift += 6;             // loop, with new bits being put in
-
                     accum |= codes[b[0]];         // at the bottom.
                     if (shift >= 8) {       // whenever there are 8 or more shifted in,
                         shift -= 8;         // write them out (from the top, leaving any
@@ -292,7 +262,7 @@ public final class ImportService {
         }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         if (or == null) {
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName,"","", "", fileName, "", "", 1,  true); // default to old for the moment
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName,"","", "", fileName, "", "", 1,  true); // default to ZK now
         } else {
             or.setActive(false);
             onlineReportDAO.store(or);
@@ -313,7 +283,7 @@ public final class ImportService {
     }
 
     private void readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean useType) throws Exception {
-        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService);
+        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService, rmiClient);
         azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = azquoBook.getReportName();
         if (reportName != null) {

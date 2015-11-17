@@ -36,15 +36,7 @@ public class LoginService {
     @Autowired
     private AdminService adminService;
 
-    // like the two above but for new object that does not reference the memory DB objects. Is the demo stuff still important??
-    // very similar to top function, proxies through to a different one
-
     public LoggedInUser loginLoggedInUser(final String sessionId, final String databaseName, final String userEmail, final String password, boolean loggedIn) throws Exception {
-
-/*            System.out.println("database name " + databaseName);
-            System.out.println("usermeail " + userEmail);
-            System.out.println("password " + password);*/
-
         User user;
         //for demo users, a new User id is made for each user.
         if (userEmail.startsWith("demo@user.com")) {
@@ -75,11 +67,6 @@ public class LoginService {
         if (okDatabases.size() == 1) {
             logger.info("1 database, use that");
             database = okDatabases.values().iterator().next();
-            /* do we need to add this back in via proxy?
-            memoryDB = memoryDBManager.getAzquoMemoryDB(database);
-            if (database.getName().equals("temp")) {
-                memoryDB.zapDatabase();//to be on the safe side and avoid any persistance
-            }*/
         } else {
             database = okDatabases.get(databaseName);
         }
@@ -141,5 +128,4 @@ public class LoginService {
         }
         loggedInUser.setDatabaseWithServer(databaseServer, db);
     }
-
 }
