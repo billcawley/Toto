@@ -1,6 +1,7 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +22,7 @@ import javax.servlet.http.HttpServletRequest;
 public class MemoryReportController {
 
     @Autowired
-    AdminService adminService;
+    RMIClient rmiClient;
 
     @RequestMapping
     public String handleRequest(ModelMap modelMap, HttpServletRequest request
@@ -34,7 +35,7 @@ public class MemoryReportController {
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
-            modelMap.addAttribute("memoryReport", adminService.getMemoryReport(serverIp, "true".equalsIgnoreCase(gc)));
+            modelMap.addAttribute("memoryReport", rmiClient.getServerInterface(serverIp).getMemoryReport("true".equalsIgnoreCase(gc)));
             modelMap.addAttribute("serverIp", serverIp);
             return "memoryreport";
         }

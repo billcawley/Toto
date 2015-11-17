@@ -147,7 +147,7 @@ public class AdminService {
             final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), b.getId(), databaseName, mysqlName, databaseType, 0, 0, databaseServer.getId());
             databaseDAO.store(database);
             // will be over to the DB side
-            createDatabase(databaseServer, database.getMySQLName());
+            rmiClient.getServerInterface(databaseServer.getIp()).createDatabase(database.getMySQLName());
             loggedInUser.setDatabaseWithServer(databaseServer, database);
         } else {
             throw new Exception("Only administrators can create databases");
@@ -158,13 +158,10 @@ public class AdminService {
         rmiClient.getServerInterface(databaseServer.getIp()).emptyDatabase(database.getMySQLName());
     }
 
-    public void dropDatabase(DatabaseServer databaseServer, Database database) throws Exception {
-        rmiClient.getServerInterface(databaseServer.getIp()).dropDatabase(database.getMySQLName());
+    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
+        rmiClient.getServerInterface(source.getServerIp()).copyDatabase(source, target, nameList, readLanguages);
     }
 
-    private void createDatabase(DatabaseServer databaseServer, final String mysqlName) throws Exception {
-        rmiClient.getServerInterface(databaseServer.getIp()).createDatabase(mysqlName);
-    }
 
     public void createUser(final String email
             , final String userName
@@ -235,10 +232,6 @@ public class AdminService {
             return databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         }
         return null;
-    }
-
-    public List<Database> getDatabaseListForBusiness(final Business business) {
-        return databaseDAO.findForBusinessId(business.getId());
     }
 
     public List<User> getUserListForBusiness(final LoggedInUser loggedInUser) {
@@ -316,16 +309,6 @@ public class AdminService {
         return null;
     }
 
-    // will be purely DB side
-
-    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
-        rmiClient.getServerInterface(source.getServerIp()).copyDatabase(source, target, nameList, readLanguages);
-    }
-
-    public void storeReport(OnlineReport report){
-        onlineReportDAO.store(report);
-    }
-
     public void deleteUserById(int userId, LoggedInUser loggedInUser) {
         User user = userDao.findById(userId);
         if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
@@ -339,10 +322,6 @@ public class AdminService {
             return user;
         }
         return null;
-    }
-
-    public void storeUser(User user){
-        userDao.store(user);
     }
 
     public void deletePermissionById(int permissionId, LoggedInUser loggedInUser) {
@@ -364,10 +343,6 @@ public class AdminService {
         return null;
     }
 
-    public void storePermission(Permission permission){
-        permissionDAO.store(permission);
-    }
-
     public Database getDatabaseById(int databaseId, LoggedInUser loggedInUser) {
         Database database = databaseDAO.findById(databaseId);
         if (database != null && loggedInUser.getUser().getBusinessId() == database.getBusinessId()){
@@ -385,13 +360,6 @@ public class AdminService {
     }
 
 
-    public void storeReportSchedule(ReportSchedule reportSchedule) {
-        reportScheduleDAO.store(reportSchedule);
-    }
-
-    public void storeDatabase(Database database) {
-        databaseDAO.store(database);
-    }
 
     // code adapted from spreadsheet service which it wilol be removed from
     public void removeDatabaseById(LoggedInUser loggedInUser,  int databaseId) throws Exception {
@@ -404,14 +372,14 @@ public class AdminService {
             permissionDAO.removeForDatabaseId(db.getId());
             uploadRecordDAO.removeForDatabaseId(db.getId());
             databaseDAO.removeById(db);
-            dropDatabase(databaseServerDAO.findById(db.getDatabaseServerId()), db);
+            rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).dropDatabase(db.getMySQLName());
         }
     }
 
     public void emptyDatabaseById(LoggedInUser loggedInUser,  int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            emptyDatabase(databaseServerDAO.findById(db.getDatabaseServerId()), db);
+            rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getMySQLName());
         }
     }
 
@@ -458,7 +426,4 @@ public class AdminService {
         return 0;
     }
 
-    public String getMemoryReport(String serverIp, boolean suggestGc) throws Exception {
-        return rmiClient.getServerInterface(serverIp).getMemoryReport(suggestGc);
-    }
 }

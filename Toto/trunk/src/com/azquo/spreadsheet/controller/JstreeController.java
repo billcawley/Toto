@@ -143,7 +143,8 @@ public class JstreeController {
                         itemsChosen = backupSearchTerm;
                     }
                     // the return type JsonChildren is designed to produce javascript that js tree understands
-                    final JsonChildren jsonChildren = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"), itemsChosen, attribute);
+                    final JsonChildren jsonChildren = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                            .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"), itemsChosen, attribute);
                     // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
                     jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);
                     result = jacksonMapper.writeValueAsString(jsonChildren);
@@ -164,7 +165,8 @@ public class JstreeController {
                                     .renameNode(loggedInUser.getDataAccessToken(), currentNode.nameId, position);
                             break;
                         case "details":
-                            result = "true,\"namedetails\":" + jacksonMapper.writeValueAsString(rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getChildDetailsFormattedForOutput(loggedInUser.getDataAccessToken(), currentNode.nameId));
+                            result = "true,\"namedetails\":" + jacksonMapper.writeValueAsString(rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                                    .getChildDetailsFormattedForOutput(loggedInUser.getDataAccessToken(), currentNode.nameId));
                             break;
                         default:
                             throw new Exception(op + " not understood");

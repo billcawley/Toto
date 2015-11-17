@@ -2,6 +2,7 @@ package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.log4j.Logger;
@@ -25,6 +26,10 @@ public class ManageReportsController {
 
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private OnlineReportDAO onlineReportDAO;
+
     private static final Logger logger = Logger.getLogger(ManageReportsController.class);
 
     @RequestMapping
@@ -64,7 +69,7 @@ public class ManageReportsController {
                     store = true;
                 }
                 if (store) {
-                    adminService.storeReport(report);
+                    onlineReportDAO.store(report);
                 }
             }
             model.put("reports", reports);

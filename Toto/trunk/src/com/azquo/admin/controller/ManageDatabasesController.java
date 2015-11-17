@@ -2,8 +2,10 @@ package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.dataimport.ImportService;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -37,6 +39,8 @@ public class ManageDatabasesController {
     private AdminService adminService;
     @Autowired
     private DatabaseServerDAO databaseServerDAO;
+    @Autowired
+    private DatabaseDAO databaseDAO;
     @Autowired
     private SpreadsheetService spreadsheetService;
     @Autowired
@@ -152,7 +156,7 @@ public class ManageDatabasesController {
                             || adminService.getValueCount(loggedInUser, database) != database.getValueCount())){ // then update the counts
                         database.setNameCount(adminService.getNameCount(loggedInUser, database));
                         database.setValueCount(adminService.getValueCount(loggedInUser, database));
-                        adminService.storeDatabase(database);
+                        databaseDAO.store(database);
                     }
                 }
             } catch (Exception e) {
@@ -224,7 +228,7 @@ public class ManageDatabasesController {
                             || adminService.getValueCount(loggedInUser, database1) != database1.getValueCount())){ // then update the counts
                         database1.setNameCount(adminService.getNameCount(loggedInUser, database1));
                         database1.setValueCount(adminService.getValueCount(loggedInUser, database1));
-                        adminService.storeDatabase(database1);
+                        databaseDAO.store(database1);
                     }
                 }
             } catch (Exception e) {

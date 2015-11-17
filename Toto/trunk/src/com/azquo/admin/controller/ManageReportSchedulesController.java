@@ -4,6 +4,7 @@ import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.ReportSchedule;
+import com.azquo.admin.onlinereport.ReportScheduleDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
@@ -31,6 +32,8 @@ public class ManageReportSchedulesController {
     @Autowired
     private AdminService adminService;
     @Autowired
+    private ReportScheduleDAO reportScheduleDAO;
+    @Autowired
     private SpreadsheetService spreadsheetService;
     private static final Logger logger = Logger.getLogger(ManageReportsController.class);
 
@@ -55,7 +58,7 @@ public class ManageReportSchedulesController {
                 // note, this will fail with no reports or databases
                 ReportSchedule reportSchedule = new ReportSchedule(0,"DAILY", "", LocalDateTime.now().plusYears(30)
                         , adminService.getDatabaseListForBusiness(loggedInUser).get(0).getId(), adminService.getReportList(loggedInUser).get(0).getId(),"","");
-                adminService.storeReportSchedule(reportSchedule);
+                reportScheduleDAO.store(reportSchedule);
             }
             final List<ReportSchedule> reportSchedules = adminService.getReportScheduleList(loggedInUser);
             StringBuilder error = new StringBuilder();
@@ -116,7 +119,7 @@ public class ManageReportSchedulesController {
                         store = true;
                     }
                    if (store) {
-                        adminService.storeReportSchedule(reportSchedule);
+                       reportScheduleDAO.store(reportSchedule);
                     }
                 }
             }

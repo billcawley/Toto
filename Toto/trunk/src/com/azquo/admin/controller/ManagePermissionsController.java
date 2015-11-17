@@ -3,6 +3,7 @@ package com.azquo.admin.controller;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.user.Permission;
+import com.azquo.admin.user.PermissionDAO;
 import com.azquo.admin.user.User;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
@@ -29,6 +30,8 @@ import java.time.format.DateTimeParseException;
 public class ManagePermissionsController {
     @Autowired
     private AdminService adminService;
+    @Autowired
+    private PermissionDAO permissionDAO;
 
     private static final Logger logger = Logger.getLogger(ManagePermissionsController.class);
 
@@ -116,7 +119,7 @@ public class ManagePermissionsController {
                             toEdit.setEndDate(LocalDate.parse(endDate, formatter).atStartOfDay());
                             toEdit.setReadList(readList);
                             toEdit.setWriteList(writeList);
-                            adminService.storePermission(toEdit);
+                            permissionDAO.store(toEdit);
                         }
                         model.put("permissions", adminService.getDisplayPermissionList(loggedInUser));
                         return "managepermissions";

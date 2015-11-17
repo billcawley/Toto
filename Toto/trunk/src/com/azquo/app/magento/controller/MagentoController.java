@@ -9,6 +9,7 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.app.magento.service.DataLoadService;
 import com.azquo.dataimport.ImportService;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.azquo.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;

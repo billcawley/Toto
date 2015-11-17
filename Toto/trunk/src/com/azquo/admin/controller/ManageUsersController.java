@@ -2,6 +2,7 @@ package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.user.User;
+import com.azquo.admin.user.UserDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.commons.lang.math.NumberUtils;
@@ -27,6 +28,8 @@ import java.time.format.DateTimeParseException;
 public class ManageUsersController {
     @Autowired
     AdminService adminService;
+    @Autowired
+    UserDAO userDAO;
     // TODO : break up into separate functions
 
     private static final Logger logger = Logger.getLogger(ManageUsersController.class);
@@ -91,7 +94,7 @@ public class ManageUsersController {
                                 toEdit.setSalt(salt);
                                 toEdit.setPassword(adminService.encrypt(password, salt));
                             }
-                            adminService.storeUser(toEdit);
+                            userDAO.store(toEdit);
                         }
                         model.put("users", adminService.getUserListForBusiness(loggedInUser));
                         return "manageusers";
