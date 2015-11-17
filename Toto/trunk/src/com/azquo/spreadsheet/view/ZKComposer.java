@@ -17,6 +17,7 @@ import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.CellOperationUtil;
+import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
@@ -203,7 +204,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 // new book from same source
 //                Clients.evalJavaScript("zUtl.progressbox('test1', 'edd testing',true, '')"); // make another?
 //                Clients.evalJavaScript("zUtl.destroyProgressbox('test1')");
-                final Book newBook = new support.importer.PatchedImporterImpl().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+                final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
                 for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
@@ -586,7 +587,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (!reload) return;
         try {
             // new book from same source
-            final Book newBook = new support.importer.PatchedImporterImpl().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+            final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                 newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
             }
