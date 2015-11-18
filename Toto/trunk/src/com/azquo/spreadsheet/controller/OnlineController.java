@@ -26,6 +26,7 @@ import org.zkoss.zss.model.SName;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -262,9 +263,9 @@ public class OnlineController {
                                     System.out.println();
                                     oldHeapMarker = newHeapMarker;
                                     session.setAttribute(finalReportId, book);
-                                } catch (Exception e) {
-                                    model.addAttribute("content", "error:" + e.getMessage());// think that works!
-                                    e.printStackTrace(); // n eed this anyway
+                                } catch (IOException e) {
+                                    e.printStackTrace(); // Could be when importing the book, just log it
+                                    // todo - put an error book here? That could hold the results of an exception . . .
                                 }
                             }).start();
                             session.removeAttribute(reportId + "loading");

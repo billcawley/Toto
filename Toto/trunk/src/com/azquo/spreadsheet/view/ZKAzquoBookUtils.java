@@ -41,12 +41,12 @@ public class ZKAzquoBookUtils {
         this.rmiClient = rmiClient;
     }
 
-    public boolean populateBook(Book book) throws Exception {
+    public boolean populateBook(Book book) {
         return populateBook(book, false);
     }
     // kind of like azquo book prepare sheet, load data bits, will aim to replicate the basics from there
 
-    public boolean populateBook(Book book, boolean useSavedValuesOnFormulae) throws Exception {
+    public boolean populateBook(Book book, boolean useSavedValuesOnFormulae) {
         long track = System.currentTimeMillis();
         boolean showSave = false;
         //book.getInternalBook().getAttribute(ZKAzquoBookProvider.BOOK_PATH);
@@ -239,7 +239,11 @@ public class ZKAzquoBookUtils {
             addValidation(namesForSheet, sheet, choiceOptions);
         }
         loggedInUser.setContext(context);
-        rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
+        // after stripping off some redundant exception throwing this was the only possiblity left, ignore it
+        try {
+            rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
+        } catch (Exception ignored){
+        }
         return showSave;
     }
 
@@ -312,7 +316,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private void fillRegion(Sheet sheet, String region, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) throws Exception {
+    private void fillRegion(Sheet sheet, String region, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
         CellRegion columnHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_ColumnHeadings" + region);
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);

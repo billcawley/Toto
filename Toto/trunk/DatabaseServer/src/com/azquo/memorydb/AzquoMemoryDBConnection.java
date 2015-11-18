@@ -151,16 +151,20 @@ public class AzquoMemoryDBConnection {
 
     public void addToUserLog(String toAdd, boolean newline) throws Exception{
         boolean exception = userLog.toString().equals(STOP);
+        addToUserLogNoException(toAdd, newline);
+        if (exception){
+            userLog.append("INTERRUPTED BY USER, THROWING EXCEPTION\n");
+            throw new Exception("Execution interrupted by user");
+        }
+    }
+
+    public void addToUserLogNoException(String toAdd, boolean newline) {
         if (newline){
             System.out.println(toAdd);
             userLog.append(toAdd).append("\n");
         } else {
             System.out.print(toAdd);
             userLog.append(toAdd);
-        }
-        if (exception){
-            userLog.append("INTERRUPTED BY USER, THROWING EXCEPTION\n");
-            throw new Exception("Execution interrupted by user");
         }
     }
 }

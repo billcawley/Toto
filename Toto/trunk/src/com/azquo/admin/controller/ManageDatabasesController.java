@@ -4,12 +4,14 @@ import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServerDAO;
+import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.dataimport.ImportService;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +20,11 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.zkoss.zss.api.Importers;
+import org.zkoss.zss.api.model.Book;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -118,6 +123,10 @@ public class ManageDatabasesController {
             return "redirect:/api/Login";
         } else {
             StringBuilder error = new StringBuilder();
+            if (request.getSession().getAttribute("importResult") != null){
+                error.append(request.getSession().getAttribute("importResult"));
+                request.getSession().removeAttribute("importResult");
+            }
             try {
                 if (createDatabase != null && !createDatabase.isEmpty() && databaseServerId != null && !databaseServerId.isEmpty()) {
                     adminService.createDatabase(createDatabase, databaseType, loggedInUser, databaseServerDAO.findById(Integer.parseInt(databaseServerId)));
@@ -200,14 +209,31 @@ public class ManageDatabasesController {
                     model.put("error", "Please select a file to upload");
                 } else {
                     try{
+                        HttpSession session = request.getSession();
                         loginService.switchDatabase(loggedInUser, database); // could be blank now
                         String fileName = uploadFile.getOriginalFilename();
                         // always move uplaoded files now, they'll need to be transferred to the DB server after code split
                         File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
                         uploadFile.transferTo(moved);
-
-                        importService.importTheFile(loggedInUser, fileName, useType, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
-                    } catch (Exception e){
+                        // need to add in code similar to report loading to give feedback on imports
+                            new Thread(() -> {
+                                // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
+                                try {
+                                    importService.importTheFile(loggedInUser, fileName, useType, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
+                                } catch (Exception e) {
+                                    String exceptionError = e.getMessage();
+                                    e.printStackTrace();
+                                    if (exceptionError != null && exceptionError.contains("error:"))
+                                        exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
+                                    session.setAttribute("importResult", exceptionError);
+                                }
+                                if (session.getAttribute("importResult") == null){
+                                    // todo better summary from the server
+                                    session.setAttribute("importResult", "Import Complete");
+                                }
+                            }).start();
+                        return "importrunning";
+                    } catch (Exception e){ // now the import has it's onw exception catching
                         String exceptionError = e.getMessage();
                         e.printStackTrace();
                         //trim off the javaspeak

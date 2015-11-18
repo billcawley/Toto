@@ -656,7 +656,7 @@ public class AzquoBook {
         model.addAttribute("regions", getRegions(loggedInUser, dataRegionPrefix).toString());//this is for javascript routines
     }
 
-    public void loadData(LoggedInUser loggedInUser, Map<Cell, Boolean> highlighted, int reportId) throws Exception {
+    public void loadData(LoggedInUser loggedInUser, Map<Cell, Boolean> highlighted, int reportId) {
         errorMessage = "";
         calculateAll();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {

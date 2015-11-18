@@ -64,7 +64,7 @@
 			</div>
 		</div>
 		<div class="basic-box">
-			<h3>Loading Data...</h3>
+			<h3>Importing Data...</h3>
 			<div class="loader">
 				<span class="fa fa-spin fa-cog"></span>
 			</div>

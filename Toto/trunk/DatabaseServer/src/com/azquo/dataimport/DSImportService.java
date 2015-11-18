@@ -521,7 +521,7 @@ public class DSImportService {
                         try {
                             valueTracker.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo));
                         } catch (Exception e) {
-                            System.out.println("error: line " + lineNo);
+                            azquoMemoryDBConnection.addToUserLogNoException("error: line " + lineNo, true);
                             e.printStackTrace();
                             break;
                         }
@@ -534,8 +534,8 @@ public class DSImportService {
                 }
                 lineNo++;
             }
-            System.out.println("Batch finishing : " + DecimalFormat.getInstance().format(lineNo) + " imported.");
-            System.out.println("Values Imported : " + DecimalFormat.getInstance().format(valueTracker));
+            azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(lineNo) + " imported.", true);
+            azquoMemoryDBConnection.addToUserLogNoException("Values Imported : " + DecimalFormat.getInstance().format(valueTracker), true);
         }
     }
 
@@ -733,7 +733,7 @@ public class DSImportService {
                 }
             }
         }
-        System.out.println("csv dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + (lineNo - 1) + " lines");
+        azquoMemoryDBConnection.addToUserLogNoException("dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + (lineNo - 1) + " lines", true);
         System.out.println("---------- names found cache size " + namesFoundCache.size());
     }
 

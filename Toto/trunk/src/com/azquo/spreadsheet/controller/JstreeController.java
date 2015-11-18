@@ -15,6 +15,7 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -66,10 +67,8 @@ public class JstreeController {
             , @RequestParam(value = "id", required = false) String jsTreeId
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "position", required = false) String position
-            , @RequestParam(value = "parent", required = false) String parent
             , @RequestParam(value = "json", required = false) String json
             , @RequestParam(value = "parents", required = false) String parents
-            , @RequestParam(value = "topnode", required = false) String topNode //only for use at root.
             , @RequestParam(value = "attribute", required = false) String attribute //only for use at root.
             , @RequestParam(value = "itemschosen", required = false) String itemsChosen
     ) throws Exception {
@@ -82,29 +81,15 @@ public class JstreeController {
             model.addAttribute("content", "error:not logged in");
             return "utf8page";
         }
+
         try {
             if ((database == null || database.length() == 0) && loggedInUser.getDatabase() != null) {
                 database = loggedInUser.getDatabase().getName();
             } else {
                 loginService.switchDatabase(loggedInUser, database);
             }
-            // from here I need to move code that references db objects (JsTreeNode Does) out of the controller into the service
-            // the service may have some controller and view code but we just have to put up with that for the mo.
-
-            String backupSearchTerm = "";
-            if (loggedInUser.getAzquoBook() != null){
-                backupSearchTerm =loggedInUser.getAzquoBook().getRangeData("az_inputInspectChoice");// don't reallyunderstand, what's important is that this is now client side
-            }
-            int topNodeInt = 0;
-            try {
-                topNodeInt = Integer.parseInt(topNode);
-            } catch (Exception ignored){
-            }
-            int parentInt = 0;
-            try {
-                parentInt = Integer.parseInt(parent);
-            } catch (Exception ignored){
-            }
+            int topNodeInt = ServletRequestUtils.getIntParameter(request, "topnode", 0);
+            int parentInt = ServletRequestUtils.getIntParameter(request, "parent", 0);
             // todo - clean up the logic here
             String result = null;
             if (json != null && json.length() > 0) {
@@ -133,14 +118,32 @@ public class JstreeController {
                     if (currentNode != null && currentNode.nameId != -1) { // but on new current will be null
                         rootId = currentNode.nameId;
                     }
-                    result = rootId + ""; // 0 on the first call
+                    if (parents == null){
+                        parents = "false";
+                    }
+                    model.addAttribute("message","");
+                    if (database != null && database.length() > 0) {
+                        Database newDB = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
+                        if (newDB == null) {
+                            model.addAttribute("message","no database chosen");
+                        }
+                        loginService.switchDatabase(loggedInUser, newDB);
+                    }
+                    if (itemsChosen == null) itemsChosen = "";
+                    model.addAttribute("parents", parents);
+                    model.addAttribute("rootid", rootId);
+                    model.addAttribute("searchnames", itemsChosen);
+                    model.addAttribute("attributeChosen", attribute);
+                    List<String> attributes = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getAttributeList(loggedInUser.getDataAccessToken());
+                    model.addAttribute("attributes", attributes);
+                    return "jstree";
                 }
                 if (op.equals("children")) { // the first call to JSTree gets returned quickly 2 lines above, this one is the seccond and is different as it has the "children" in op
                     if (itemsChosen != null && itemsChosen.startsWith(",")) {
                         itemsChosen = itemsChosen.substring(1);
                     }
                     if (itemsChosen == null) {
-                        itemsChosen = backupSearchTerm;
+                        itemsChosen = "";
                     }
                     // the return type JsonChildren is designed to produce javascript that js tree understands
                     final JsonChildren jsonChildren = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
@@ -148,8 +151,7 @@ public class JstreeController {
                     // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
                     jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);
                     result = jacksonMapper.writeValueAsString(jsonChildren);
-                }
-                if (currentNode != null && currentNode.nameId != -1) { // assuming it is not null!
+                } else if (currentNode != null && currentNode.nameId != -1) { // assuming it is not null!
                     switch (op) {
                         case "move_node":
                             //lookup.get(parent).child.addChildWillBePersisted(current.child);
@@ -177,33 +179,13 @@ public class JstreeController {
                 result =  "no action taken";
             }
 
-            model.addAttribute("content", result);
             // seems to be the logic from before, if children/new then don't do the function. Not sure why . . .
             if (op == null) op = "";
-            if (!op.equals("children") && !op.equals("new")) {
+
+            if (!op.equals("children")) {
                 model.addAttribute("content", jsonFunction + "({\"response\":" + result + "})");
             } else {
-                if (op.equals("new")){ // this is nasty and hacky, a bit of logic I needed to remove from the DB side, I'm returning the root id when new
-                    if (parents == null){
-                        parents = "false";
-                    }
-                    model.addAttribute("message","");
-                    if (database != null && database.length() > 0) {
-                        Database newDB = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
-                        if (newDB == null) {
-                            model.addAttribute("message","no database chosen");
-                        }
-                        loginService.switchDatabase(loggedInUser, newDB);
-                    }
-                    if (itemsChosen == null) itemsChosen = "";
-                    model.addAttribute("parents", parents);
-                    model.addAttribute("rootid", result);
-                    model.addAttribute("searchnames", itemsChosen);
-                    model.addAttribute("attributeChosen", attribute);
-                    List<String> attributes = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getAttributeList(loggedInUser.getDataAccessToken());
-                    model.addAttribute("attributes", attributes);
-                    return "jstree";
-                }
+                model.addAttribute("content", result);
             }
             response.setHeader("Access-Control-Allow-Origin", "*");
             response.setHeader("Content-type", "application/json");

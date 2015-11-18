@@ -37,6 +37,12 @@ public class SpreadsheetStatusController {
                 return "true";
             }
         }
+        // not strictly a spreadsheet status, may move this later
+        if ("importResult".equals(action)){
+            if (request.getSession().getAttribute("importResult") != null){
+                return "true";
+            }
+        }
         if ("log".equals(action)){
             LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
             // todo - limit the maount returned?
