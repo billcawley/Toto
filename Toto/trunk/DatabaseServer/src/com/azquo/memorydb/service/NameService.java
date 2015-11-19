@@ -61,6 +61,7 @@ public final class NameService {
     public static final String AS = "as";
     public static final char ASSYMBOL = '@';
     public static final String WHERE = "where";
+    public static final String languageIndicator = "<-";
 
     // hopefully thread safe??
     private static AtomicInteger nameCompareCount = new AtomicInteger(0);
@@ -114,7 +115,7 @@ public final class NameService {
         getNameListFromStringListCount.incrementAndGet();
         List<Name> referencedNames = new ArrayList<>(nameStrings.size());
         for (String nameString : nameStrings) {
-            Name toAdd = findByName(azquoMemoryDBConnection, nameString, attributeNames);
+            Name toAdd = findNameAndAttribute(azquoMemoryDBConnection, nameString, attributeNames);
             if (toAdd == null) {
                 throw new Exception("error: cannot resolve reference to a name " + nameString);
             }
@@ -165,6 +166,38 @@ public final class NameService {
     }
 
     private static AtomicInteger findByName2Count = new AtomicInteger(0);
+
+
+    public Name findParentAttributesName(Name child, String attributeName, Set<Name> checked) {
+        attributeName = attributeName.trim().toUpperCase();
+        for (Name parent : child.getParents()) {
+            if (!checked.contains(parent)) {
+                checked.add(parent);
+                if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
+                    return child;
+                }
+                Name attribute = findParentAttributesName(parent,attributeName, checked);
+                if (attribute != null) {
+                    return attribute;
+                }
+            }
+        }
+        return null;
+    }
+
+
+
+    private Name findNameAndAttribute(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, final List<String>attributeNames) throws Exception{
+
+        int attPos = qualifiedName.lastIndexOf("`.`");
+        if (attPos > 0) {
+            Name parentFound = findNameAndAttribute(azquoMemoryDBConnection, qualifiedName.substring(0,attPos+1),attributeNames);
+            if (parentFound == null) return null;
+            return findParentAttributesName(parentFound,qualifiedName.substring(attPos + 2).replace("`",""), HashObjSets.newMutableSet());
+        }else{
+            return findByName(azquoMemoryDBConnection, qualifiedName,attributeNames);
+        }
+    }
 
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, final List<String> attributeNames) throws Exception {
         findByName2Count.incrementAndGet();
@@ -627,11 +660,23 @@ public final class NameService {
         if (setFormula.length() == 0) {
             return toReturn;
         }
+        List<String> languages = new ArrayList<>(attributeNames);
+        int languagePos = setFormula.indexOf(languageIndicator);
+        if (languagePos>0){
+            int namePos = setFormula.indexOf(Name.QUOTE);
+            if (namePos < 0 || namePos > languagePos){
+                //change the language
+                languages.clear();
+                languages.add(setFormula.substring(0,languagePos));
+                setFormula = setFormula.substring(languagePos + 2);
+            }
+        }
+
         List<NameSetList> nameStack = new ArrayList<>(); // now use the container object, means we only create new collecitons at the last minute as required
         List<String> formulaStrings = new ArrayList<>();
         List<String> nameStrings = new ArrayList<>();
         List<String> attributeStrings = new ArrayList<>(); // attribute names is taken. Perhaps need to think about function parameter names
-        Name possibleName = findByName(azquoMemoryDBConnection, setFormula);
+        Name possibleName = findByName(azquoMemoryDBConnection, setFormula, languages);
         if (possibleName != null) {
             toReturn.add(possibleName);
             long time = (System.currentTimeMillis() - track);
@@ -652,7 +697,7 @@ public final class NameService {
             return findDuplicateNames(azquoMemoryDBConnection, setFormula);
         }
         if (setFormula.startsWith("zap ")) {
-            Collection<Name> names = parseQuery(azquoMemoryDBConnection, setFormula.substring(4), attributeNames); // defaulting to list here
+            Collection<Name> names = parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages); // defaulting to list here
             if (names != null) {
                 for (Name name : names) name.delete();
                 return toReturn;
@@ -661,7 +706,7 @@ public final class NameService {
         setFormula = stringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames;
         try {
-            referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
+            referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, languages);
         } catch (Exception e) {
             if (setFormula.toLowerCase().equals("!00 children")) return new ArrayList<>();// what is this??
             throw e;
