@@ -756,7 +756,7 @@ seaports;children   container;children
          if (toFind == null || toFind.length() == 0) {
             return -1;
         }
-        toFind = toFind.replace(" ","");
+        toFind = toFind.replace(" ","").toLowerCase();
         int count = 0;
         for (List<DataRegionHeading> heading : headings) {
             DataRegionHeading dataRegionHeading = heading.get(heading.size() - 1);
@@ -767,7 +767,7 @@ seaports;children   container;children
                 } else {
                     toCompare = dataRegionHeading.getAttribute();
                 }
-                if (toCompare.equals(toFind)) {
+                if (toCompare.replace(" ","").toLowerCase().equals(toFind)) {
                     return count;
                 }
             }
