@@ -111,6 +111,13 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
                 modifiedStatement.append(statement.substring(lastEnd, matcher.start()));
             }
             lastEnd = matcher.end();
+            while (lastEnd < statement.length() - 2 && statement.substring(lastEnd-1,lastEnd + 2).equals("`.`")) {
+                int nextQuote = statement.indexOf("`", lastEnd + 2);
+                if (nextQuote > 0) {
+                    matcher.find();//skip the next field
+                    lastEnd = nextQuote + 1;
+                }
+            }
             quotedNameCache.add(statement.substring(matcher.start(), lastEnd));
               // it should never be more and it breaks our easy fixed length marker thing here
             if (quotedNameCache.size() > 100) {
