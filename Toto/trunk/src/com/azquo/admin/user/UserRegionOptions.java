@@ -55,30 +55,41 @@ public class UserRegionOptions extends StandardEntity{
 
 
         hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS, spreadsheetSource));
-        if (hideRows == 0){
+        if (hideRows == 0) {
             hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS2, spreadsheetSource));
         }
         // todo : find out why this is so! (legacy logic)
-        if (hideRows == 0){
+        if (hideRows == 0) {
             hideRows = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
         }
-        if (spreadsheetSource!=null) {
+        if (spreadsheetSource != null) {
             this.sortable = spreadsheetSource.contains("sortable"); // the get option thing is no good for just an "exists with no value" check, this is the same
             this.rowLimit = asNumber(getOptionFromSpreadsheetOptions(ROWLIMIT, spreadsheetSource));
             this.columnLimit = asNumber(getOptionFromSpreadsheetOptions(COLUMNLIMIT, spreadsheetSource));
             this.highlightDays = asNumber(getOptionFromSpreadsheetOptions(HIGHLIGHT, spreadsheetSource));
-        }else{
+        } else {
             this.sortable = false;
             this.rowLimit = 0;
             this.columnLimit = 0;
             this.highlightDays = 0;
         }
-        // currently sort columns and rows are not supported in this way
         this.sortRow = null;
         this.sortRowAsc = false;
         this.sortColumn = null;
         this.sortColumnAsc = false;
-     }
+
+        String sortColumn = getOptionFromSpreadsheetOptions("sortcolumn", spreadsheetSource);
+        if (sortColumn != null) {
+            this.sortColumnAsc = true;
+            this.sortColumn = sortColumn;
+
+
+            if (sortColumn.toLowerCase().endsWith(" desc")) {
+                this.sortColumnAsc = false;
+                this.sortColumn = sortColumn.substring(0, sortColumn.length() - 5);
+            }
+        }
+    }
 
 
     private static int asNumber(String string) {
