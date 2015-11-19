@@ -53,6 +53,7 @@
         
     	$.inspectOverlay("Inspect").tab("/api/Jstree?op=new", "Inspect");
     	return false;
+       // window.open("/api/Jstree?op=new", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
     }
 
 

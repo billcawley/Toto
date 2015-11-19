@@ -12,9 +12,7 @@
 %>
 
 <script type="text/javascript">
-
-    var skipSetting = 0;
-    var skipMarker = 5;
+// edd changed to call every second, no skip maker
     function updateStatus(){
         jq.post("/api/SpreadsheetStatus?action=importResult", function(data){
             var objDiv = document.getElementById("serverStatus");
@@ -23,9 +21,6 @@
                 return;
             }
         });
-
-
-        if (window.skipMarker <= 0){
             jq.post("/api/SpreadsheetStatus?action=log", function(data){
                 var objDiv = document.getElementById("serverStatus");
                 if (objDiv.innerHTML != data){ // it was updated
@@ -33,22 +28,11 @@
                     objDiv.style.backgroundColor = '#EEFFEE'; // highlight the change
                     objDiv.scrollTop = objDiv.scrollHeight;
                     // assume there could be more stuff!
-                    window.skipSetting = 0;
-                    window.skipMarker = 0;
                 } else {
                     objDiv.style.backgroundColor = 'white';
-                    if (window.skipSetting == 0){
-                        window.skipSetting = 1;
-                    } else {
-                        window.skipSetting *= 2;
-                    }
 //                alert("same data, new skip setting : " + window.skipSetting);
-                    window.skipMarker = window.skipSetting;
                 }
             });
-        } else {
-            window.skipMarker--;
-        }
     }
 
     setInterval(function(){ updateStatus(); }, 1000);
@@ -64,7 +48,7 @@
             </div>
         </div>
         <div class="basic-box">
-            <h3>Loading Data...</h3>
+            <h3>Importing Data...</h3>
             <div class="loader">
                 <span class="fa fa-spin fa-cog"></span>
             </div>

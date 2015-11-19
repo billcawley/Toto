@@ -64,12 +64,12 @@
 			</div>
 		</div>
 		<div class="basic-box">
-			<h3>Importing Data...</h3>
+			<h3>Loading Data...</h3>
 			<div class="loader">
 				<span class="fa fa-spin fa-cog"></span>
 			</div>
 			<div id="serverStatus"></div>
-            <a id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)'>Abort load</a>
+            <a href="javascript:void(0)" id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)' class="button alt small"><span class="fa fa-times-circle"></span> Abort Load</a>
 
 		</div>
 	</div>

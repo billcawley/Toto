@@ -6,8 +6,9 @@
 	<link rel="stylesheet" href="/css/themes/proton/style.min.css" />
 	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jstree/3.0.4/themes/default/style.min.css" />
 	<link href="/css/style.css" rel="stylesheet" type="text/css">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
 </head>
-<body>
+<body class="jstree">
 <div id="js-wrapper">
 	<form method="post" id="names" name="names">
 		<div id="js-container" class="js-col2"></div>
@@ -33,23 +34,37 @@
 				<input class="itemselect" type="text" value="" id="itemschosen" name="itemschosen"/>
 			</div>
 			
-			<div class="choicesubmit"><p><a href="#" onclick="submitChoice()" class="button">Show data</a></p></div>
+			<div class="choicesubmit" style="margin-top:10px;"><p><a href="#" onclick="submitChoice()" class="button">Show data</a></p></div>
 		</div>
     </form>
 	<div class="namedetails" id="namedetails" style="display:none">
-		<div class="closebutton"><a href="#" onclick="hideDetails();"><img src="https://data.azquo.com/images/closebutton.png" alt="close button"/></a></div>
-		<div class="namedetailsline">
-			Name
-			<div class="value">
-				<input name="DEFAULT_DISPLAY_NAME" id="DEFAULT_DISPLAY_NAME" type="text" value="" class="attvalue">
+		<div class="namedetailsinner">
+			<div class="closebutton">
+				<a href="#" onclick="hideDetails();"><span class="fa fa-times-circle"></span></a>
 			</div>
+			<div class="propertyname">
+				<h3>Property Name</h3>
+				<div class="value">
+					<label for="DEFAULT_DISPLAY_NAME">Name</label>
+					<input name="DEFAULT_DISPLAY_NAME" id="DEFAULT_DISPLAY_NAME" type="text" value="" class="attvalue">
+				</div>
+			</div>
+			<div class="attributes">
+				<h3>Attributes:</h3>
+				<div id="htmlatts"></div>
+			</div>
+			<div class="propertystats">
+				<div class="datacount"> 
+					Direct data count <b><span id="mydatacount"></span></b> Total Data Count <b><span id="totaldatacount"></span></b>
+				</div>
+				<h3>Provenance:</h3>
+				<div id="provenance"></div>
+			</div>
+			<div class="namedetailssubmit">
+				<p><a href="#" onclick="submitNameDetails()" class="button">Submit</a></p>
+			</div>
+			<div class="clear"></div>
 		</div>
-		<p>Attributes:</p>
-		<div id="htmlatts"></div>
-		<div class="datacount"> Direct data count <span id="mydatacount"></span> Total Data Count <span id="totaldatacount"></span></div>
-		<p>Provenance:</p>
-		<div id="provenance"></div>
-		<div class="namedetailssubmit"><p><a href="#" onclick="submitNameDetails()">Submit</a></p></div>
 	</div>
 
     <script type="text/javascript">
@@ -160,6 +175,8 @@
 
 		function changeLanguage(){
 			window.parent.$.inspectOverlay().tab("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", document.getElementById("attributeChosen").value);
+			//window.open("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
+
 		}
 
 		function submitChoice(){
@@ -185,8 +202,8 @@
 		function addAttribute(i, attname, attvalue){
 			var htmlAtts = document.getElementById("htmlatts");
 			htmlAtts.innerHTML += "<div class=\"namedetailsline\">" +
-					"<div class = \"name\"><input id=\"attname" + i + "\" class=\"attname\" type=\"text\" value=\"" + attname + "\"/></div>" +
-					"<div class=\"value\"><input class=\"attvalue\" id=\"attvalue" + i + "\" type=\"text\" value=\"" + attvalue + "\"/></div>" +
+					"<div class = \"name\"><input id=\"attname" + i + "\" class=\"attname\" type=\"text\" value=\"" + attname + "\" placeholder=\"Attribute Name\"/></div>" +
+					"<div class=\"value\"><input class=\"attvalue\" id=\"attvalue" + i + "\" type=\"text\" value=\"" + attvalue + "\" placeholder=\"Attribute Value\"/></div>" +
 					"</div>"
 
 		}
@@ -233,6 +250,7 @@
 			json +="}";
 			hideDetails();
 			azquojson("Jstree", "json={" + json + "}");
+
 		}
 
 
