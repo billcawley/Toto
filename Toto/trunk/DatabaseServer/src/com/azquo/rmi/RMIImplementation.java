@@ -108,9 +108,9 @@ public class RMIImplementation implements RMIInterface {
     }
     // import
     @Override
-    public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames, String user) throws RemoteException {
+    public String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames, String user, boolean persistAfter) throws RemoteException {
         try {
-            dsImportService.readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames, user);
+            return dsImportService.readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames, user, persistAfter);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

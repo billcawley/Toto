@@ -1543,7 +1543,7 @@ seaports;children   container;children
         }
         bw.flush();
         bw.close();
-        importService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME));
+        importService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true);
         temp.delete(); // see no harm in this here. Delete on exit has a problem with Tomcat being killed.
     }
 

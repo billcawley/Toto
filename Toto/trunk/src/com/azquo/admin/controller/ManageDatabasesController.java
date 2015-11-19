@@ -191,7 +191,6 @@ public class ManageDatabasesController {
     @RequestMapping(headers = "content-type=multipart/*")
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "database", required = false) String database
-            , @RequestParam(value = "useType", required = false) String useType
             , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
 
     ){
@@ -219,17 +218,15 @@ public class ManageDatabasesController {
                             new Thread(() -> {
                                 // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
                                 try {
-                                    importService.importTheFile(loggedInUser, fileName, useType, moved.getAbsolutePath(), "", true, loggedInUser.getLanguages());
+                                    session.setAttribute("importResult",
+                                            importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages())
+                                    );
                                 } catch (Exception e) {
                                     String exceptionError = e.getMessage();
                                     e.printStackTrace();
                                     if (exceptionError != null && exceptionError.contains("error:"))
                                         exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
                                     session.setAttribute("importResult", exceptionError);
-                                }
-                                if (session.getAttribute("importResult") == null){
-                                    // todo better summary from the server
-                                    session.setAttribute("importResult", "Import Complete");
                                 }
                             }).start();
                         return "importrunning";

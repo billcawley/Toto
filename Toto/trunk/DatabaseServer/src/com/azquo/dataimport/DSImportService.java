@@ -70,7 +70,6 @@ public class DSImportService {
     public static final String LANGUAGE = "language";
     public static final String PEERS = "peers";
     public static final String LOCAL = "local";
-    public static final String EQUALS = "equals";
     public static final String COMPOSITION = "composition";
     public static final String DEFAULT = "default";
     public static final String NONZERO = "nonzero";
@@ -217,7 +216,7 @@ public class DSImportService {
         }
     }
 
-    public LocalDate isADate(String maybeDate) {
+    private LocalDate isADate(String maybeDate) {
         LocalDate date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, dateTimeFormatter);
         if (date != null) return date;
         date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, ukdf4);
@@ -255,23 +254,27 @@ public class DSImportService {
     Sets being as mentioned at the top one of the two files that are needed along with import headers to set up a database ready to load data.
     */
 
-    public void readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames, String user) throws Exception {
+    public String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames, String user, boolean persistAfter) throws Exception {
         System.out.println("reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         String provFile = findOrigName(filePath);
         azquoMemoryDBConnection.setProvenance(user, "imported", provFile, "");
-        readPreparedFile(azquoMemoryDBConnection, filePath, fileType, attributeNames);
+        return readPreparedFile(azquoMemoryDBConnection, filePath, fileType, attributeNames, persistAfter);
     }
 
-    public void readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames) throws Exception {
+    public String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean persistAfter) throws Exception {
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         boolean isSpreadsheet = filePath.contains("xls");
+        String toReturn;
         if (fileType.toLowerCase().startsWith("sets")) {
-            setsImport(azquoMemoryDBConnection, new FileInputStream(filePath), attributeNames, fileType);
+            toReturn = setsImport(azquoMemoryDBConnection, new FileInputStream(filePath), attributeNames, fileType);
         } else {
-            valuesImport(azquoMemoryDBConnection, filePath, fileType, attributeNames,isSpreadsheet);
+            toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileType, attributeNames,isSpreadsheet);
         }
-        azquoMemoryDBConnection.persist();
+        if (persistAfter){
+            azquoMemoryDBConnection.persist();
+        }
+        return toReturn;
     }
 
     // the readClause function would say that "parent of thing123" would return "thing123" if it was a readClause on "parent of"
@@ -456,7 +459,7 @@ public class DSImportService {
 
     // I think the cache is purely a performance thing though it's used for a little logging later (total number of names inserted)
 
-    public Name findOrCreateNameStructureWithCache(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
+    private Name findOrCreateNameStructureWithCache(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
         //namesFound is a quick lookup to avoid going to findOrCreateNameInParent
         String np = name + ",";
         if (parent != null) {
@@ -474,7 +477,7 @@ public class DSImportService {
 
     // to make a batch call to the above if there are a list of parents a name should have
 
-    public Name includeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Set<Name> parents, boolean local, List<String> attributeNames) throws Exception {
+    private Name includeInParents(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Set<Name> parents, boolean local, List<String> attributeNames) throws Exception {
         Name child = null;
         if (parents == null || parents.size() == 0) {
             child = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, name, null, local, attributeNames);
@@ -541,7 +544,7 @@ public class DSImportService {
 
     // calls header validation and batches up the data with headers ready for batch importing
 
-    public void valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
+    public String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
         // Preparatory stuff
         // Local cache just to speed things up
         final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
@@ -559,7 +562,7 @@ public class DSImportService {
                 delimiter = '\t';
             }
         } else {
-            return;//if he first line is blank, ignore the sheet
+            return "First line blank";//if he first line is blank, ignore the sheet
         }
         // now we know the delimiter can CSV read, I've read jackson is pretty quick
         CsvMapper csvMapper = new CsvMapper();
@@ -733,8 +736,10 @@ public class DSImportService {
                 }
             }
         }
-        azquoMemoryDBConnection.addToUserLogNoException("dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + (lineNo - 1) + " lines", true);
+        String toReturn = "dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + (lineNo - 1) + " lines";
+        azquoMemoryDBConnection.addToUserLogNoException(toReturn, true);
         System.out.println("---------- names found cache size " + namesFoundCache.size());
+        return toReturn;
     }
 
     // run through the headers. Mostly this means running through clauses,
@@ -1208,7 +1213,7 @@ public class DSImportService {
         }
     }
 
-    public void setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames, String fileName) throws Exception {
+    public String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames, String fileName) throws Exception {
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
         String sheetLanguage = "";
         Name sheetSet = null;
@@ -1218,6 +1223,7 @@ public class DSImportService {
             attributeNames.add(sheetLanguage);
         }
         String line;
+        int lines = 0;
         while ((line = br.readLine()) != null) {
             StringTokenizer st = new StringTokenizer(line, "\t");
             //clear the set before re-instating
@@ -1257,6 +1263,8 @@ public class DSImportService {
                     }
                 }
             }
+            lines++;
         }
+        return lines + " line(s) of a set file imported.";
     }
 }

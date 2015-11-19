@@ -9,6 +9,7 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.app.magento.service.DataLoadService;
 import com.azquo.dataimport.ImportService;
+import com.azquo.memorydb.Constants;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.azquo.util.AzquoMailer;
@@ -22,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
+import java.util.Collections;
 import java.util.Date;
 
 /**
@@ -179,7 +181,7 @@ public class MagentoController {
         if (dataLoadService.magentoDBNeedsSettingUp(loggedInUser.getDataAccessToken())){
             String magentoSetupFile = spreadsheetService.getHomeDir() + "/databases/ecommerce/setup/ecommerce setup.xlsx";
             String fileName = "magentosetup.xlsx";
-            importService.importTheFile(loggedInUser, fileName, magentoSetupFile);
+            importService.importTheFile(loggedInUser, fileName, magentoSetupFile, Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME));
         }
         return dataLoadService.findRequiredTables(loggedInUser.getDataAccessToken(), remoteAddress);
     }
