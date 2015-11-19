@@ -103,7 +103,7 @@ public final class ImportService {
         if (fileName.contains(".xls")) {
             return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter);
         } else {
-            return readPreparedFile(loggedInUser, filePath, "", attributeNames, true); // no file type
+            return readPreparedFile(loggedInUser, filePath, "", attributeNames, persistAfter); // no file type
         }
     }
 
