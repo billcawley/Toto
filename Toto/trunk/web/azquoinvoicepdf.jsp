@@ -59,6 +59,9 @@
     System.out.println("creating Invoice PDF " + request.getRemoteAddr());
 
     response.setContentType("application/pdf");
+    String address1 = invoiceAddress.contains("\n") ? invoiceAddress.substring(0, invoiceAddress.indexOf("\n")) : invoiceAddress;
+    address1 = address1.contains("\r") ? address1.substring(0, address1.indexOf("\r")) : address1;
+    response.addHeader("Content-Disposition", "attachment; filename=AzquoInvoice" + address1 + month + ".pdf");
     Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF, response.getOutputStream());
     Transformer transformer = tFactory.newTransformer();
     StringBuffer template = new StringBuffer();
