@@ -475,7 +475,11 @@ public final class NameService {
             toReturn.add(name); // a whole new set just to add this, grrr
             return new NameSetList(toReturn, null, true); // at least we're now flagging this up : you can modify this set
         }
-        List<Name> namesFoundList = new ArrayList<>();
+        /* To explain the nasty hack here with the linked hash set : it was just list but we don't want duplicates. So use LinkedHashSet
+            which is still ordered but unfortunately is not sortable, need a list for that, hence why it's re-wrtapped in an array list below.
+           This is probably not efficient but I'm assuming a non all or level one ordered is fairly rare
+          */
+        Set<Name> namesFoundOrderedSet = new LinkedHashSet<>();
         Set<Name> namesFoundSet = HashObjSets.newMutableSet();
         boolean ordered = false;
         if (!name.hasChildrenAsSet()){
@@ -488,8 +492,8 @@ public final class NameService {
             }
         }
         // has been moved to name to directly access contents of name hopefully increasing speed and saving on garbage generation
-        Name.addNames(name, ordered ? namesFoundList : namesFoundSet, 0, level);
-        return new NameSetList(ordered ? null : namesFoundSet, ordered ? namesFoundList : null, true); // it will be mutable either way
+        Name.addNames(name, ordered ? namesFoundOrderedSet : namesFoundSet, 0, level);
+        return new NameSetList(ordered ? null : namesFoundSet, ordered ? new ArrayList<>(namesFoundOrderedSet) : null, true); // it will be mutable either way
     }
 
     private static AtomicInteger addNamesCount = new AtomicInteger(0);
