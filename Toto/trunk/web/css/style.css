@@ -1,0 +1,244 @@
+/*
+Description:	CSS 2015
+Author:			Visualcode Limited
+Date: 			October 2015
+Version:		1.0
+*/
+
+
+/*---------------------------Global Start -----------------------------*/
+
+html{ }
+body { font:15px/23px 'Open Sans', helvetica, arial, san-serif; margin:0px; padding:0px; color:#666; text-align:center; background:#ECECEC; font-weight:400; }
+body.jstree { background:#FFFFFF; }
+
+html,body,div,span,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,address,cite,code,del,dfn,em,img,ins,q,small,strong,sub,sup,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{border:0;margin:0;padding:0}
+article,aside,figure,figure img,figcaption,hgroup,footer,header,nav,section,video,object{display:block}
+a img{border:0}
+figure{position:relative}
+figure img{width:100%}
+
+::selection {  background: #F58030; color:#FFF; }
+::-moz-selection {  background: #F58030; color:#FFF;}
+ 
+*:before, *:after{box-sizing:border-box;}
+
+a:link {color:#F58030; text-decoration: none;}
+a:visited {color:#F58030; text-decoration: none;}
+a:active {color:#CCC;}
+a:hover {color:#CCC;} 
+a img{border:none;}
+
+.button{display:inline-block; color:#FFF !important; background:#F58030; padding:7px 10px; font-size:15px; font-weight:400; border-radius:5px;  border:0px; margin:0px 2px 5px 2px; vertical-align:top; overflow:visible; /* IE button hack for width */ cursor:pointer; box-shadow:rgba(0,0,0,0.25) 0px 2px 3px;}
+.button:hover{background:#000; box-shadow:none;}
+form .button {clear:both; width:auto;}
+
+.button.small{padding:0px 4px; min-width:18px; font-size:13px; line-height:26px ; text-align:center;}
+
+.button.alt{background:#000;}
+.button.alt:hover{background:#666;}
+
+p.buttonContainer{text-align:center;}
+
+h1, h2, h3, h4{line-height:1em; font-weight:400;  margin:0px 0px 20px 0px; color:#000; font-size: 20px; letter-spacing:-0.01em; }
+	
+h1 {font-size:30px; font-weight:400;}
+h2 {font-size:25px; text-transform:none;}
+h3 {font-size:21px;}
+h4 {text-transform:none;}
+
+hr {border: none; height: 1px; margin: 20px auto; padding: 0px !important; color:#FFF; clear:both; border-top:#CCC dotted 1px; }
+pre {display: inline; white-space: pre-wrap; word-wrap: break-word;}
+p{margin:0px 0px 20px 0px;}
+div{position:relative; min-width:0px} /* IE 6/7 Picaboo bug fix */
+
+i, em {font-family: georgia, times, times new roman, serif;}
+b. strong{font-weight:700;}
+
+.error{line-height:30px; background:#FFFFCC; text-indent:10px; margin:10px 0px;}
+
+
+/* General Table Formating */
+table{margin:0; border-collapse:collapse; width:100%; margin-bottom:20px;}	
+table td,table th{padding:5px; vertical-align:top;}	
+
+table thead td, table th{ border-top:0px; color:#FFFFFF; padding-left:5px; font-weight:600;
+background: #444444; 
+background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDEgMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkLXVjZ2ctZ2VuZXJhdGVkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIwJSIgeTI9IjEwMCUiPgogICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzQ0NDQ0NCIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgICA8c3RvcCBvZmZzZXQ9Ijk5JSIgc3RvcC1jb2xvcj0iIzIyMjIyMiIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgPC9saW5lYXJHcmFkaWVudD4KICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSJ1cmwoI2dyYWQtdWNnZy1nZW5lcmF0ZWQpIiAvPgo8L3N2Zz4=);
+background: -moz-linear-gradient(top,  #444444 0%, #222222 99%); 
+background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#444444), color-stop(99%,#222222)); 
+background: -webkit-linear-gradient(top,  #444444 0%,#222222 99%); 
+background: -o-linear-gradient(top,  #444444 0%,#222222 99%); 
+background: -ms-linear-gradient(top,  #444444 0%,#222222 99%); 
+background: linear-gradient(to bottom,  #444444 0%,#222222 99%); 
+filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#444444', endColorstr='#222222',GradientType=0 ); 
+
+}
+
+table thead td:first-child{border-radius:5px 0px 0px 0px; }
+table thead td:last-child{border-radius:0px 5px 0px 0px; }
+
+table tbody td{ padding:5px 5px; vertical-align:middle;}
+table tbody tr:nth-child(even) td{background:#F2F2F2;}	
+
+
+/* General Form Formating */
+main input, main button, main select, main textarea {display:block;}
+main form {margin:0; padding:1px 0px; display:block;}
+main form p {margin:0; padding:10px 0px;}
+main form div{display:block; }
+
+main form label {display:inline-block;  padding:10px 0px;}
+main form input,
+main form select,
+main form textarea{padding:5px; border:none; display:inline-block; background:#FFF; border:#CCC solid 1px; color:#333; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; font:13px/21px "Open Sans", helvetica, arial, san-serif; box-sizing:border-box;}
+main form select{max-width:200px;}
+main form textarea {font-size:13px; min-width:300px;}	
+
+.centeralign{clear:both; text-align:center; padding:20px; margin-top:20px; border-top:#CCC solid 1px;}
+
+/*--------------------------- Layout -----------------------------*/
+
+header{margin:0px; padding:0px; background:#222; color:#FFF; width:100%; height:70px; box-shadow:rgba(0,0,0,0.25) 0px 2px 3px;}
+
+header.public{background:#F58030;}
+
+
+header .logo {float:left; width:175px; height:50px; padding:15px 20px 5px 20px;}
+header .nav{float:right; padding:0px 20px;}
+header .nav ul {list-style:none; margin:0px; padding:0px; min-height:70px; border-right:#000 solid 1px; border-left:#333 solid 1px;}
+header .nav ul li{float:left;}
+header .nav ul li a{display:block; line-height:70px; padding:0px 30px;  border-left:#000 solid 1px; border-right:#333 solid 1px; color:#FFF;}
+header .nav ul li a.on{background:#F58030; position:relative;}
+header .nav ul li a.on:after{display:none; content:''; height:0px; width:0px; margin:0px; padding:0px; border:#222 solid 10px; border-bottom:0px; border-left:transparent solid 10px; border-right:transparent solid 10px; position:absolute; top:0px; left:50%; margin-left:-10px;}
+
+
+header.public .nav ul {border-right:rgba(0,0,0,0.15) solid 1px; border-left:rgba(255,255,255,0.25) solid 1px; position:relative;}
+header.public .nav ul li{ position:relative;}
+header.public .nav ul li a {border-left:rgba(0,0,0,0.15) solid 1px; border-right:rgba(255,255,255,0.25) solid 1px;}
+header.public .nav ul li a:hover{background:#222;}
+
+
+header.public .nav ul li ul{display:none; background:#222; position:absolute; z-index:9999; width:300px; top:70px; right:0px; border:0px;}
+header.public .nav ul li:hover ul{display:block;}
+header.public .nav ul li ul li{display:block; float:none; }
+header.public .nav ul li ul li a{line-height:40px; display:block; text-align:left; padding:0px 10px; border:0px; border-bottom:rgba(0,0,0,0.15) solid 1px; border-top:rgba(255,255,255,0.25) solid 1px; }
+header.public .nav ul li ul li a:hover{background:#F58030;}
+
+
+main{background:#FFF; margin:20px; padding:20px 10px; box-shadow:rgba(0,0,0,0.25) 0px 2px 3px; border-radius:10px; text-align:left;}
+
+
+/*--------------------------- Basic Dialog Layout -----------------------------*/
+
+main.basicDialog{background:#FFF; max-width:420px; margin:50px auto; padding:0px; }
+main.basicDialog h3{color:#000; margin:10px 0px; padding:10px 0px; border-top:#FFF solid 3px; border-bottom:#FFF solid 3px; }
+
+main.basicDialog form {margin-top:0px; padding-top:0px;}
+main.basicDialog form label{display:block; font-size:11px; font-weight:bold; line-height:15px; display:none;}
+main.basicDialog form input{display:block; width:100%; margin-bottom:10px;}
+
+.basic-head{background:#F58030; padding:20px 20px 10px 20px; border-radius:10px 10px 0px 0px;}
+
+.basic-box{padding:20px;}
+
+.basic-box .loader, .loading .loader{font-size:65px; text-align:center; padding:20px 0px;}
+
+.basic-box #serverStatus{height:45px; width:100%;font:10px monospace;overflow:auto;}
+
+/*--------------------------- Manage Database Layout -----------------------------*/
+
+.well{background:#ECECEC; border-radius:10px; box-shadow:inset rgba(0,0,0,0.25) 0px 3px 3px; padding:20px; margin-bottom:20px;}
+.well table{margin-bottom:0px;}
+
+/*--------------------------- Manage Database Layout -----------------------------*/
+
+
+table.edit td{vertical-align:top;}
+table.edit td label{min-width:100px;}
+
+/*--------------------------- UI JQuery -----------------------------*/
+
+.ui-widget{border:0px !important; adding:0px; border-radius:0px; font:15px/23px 'Open Sans', helvetica, arial, san-serif;}
+.ui-tabs {box-shadow:none !important; background:#FFF; padding:0px;}
+.ui-widget .ui-widget-header{background:none;  border-radius:0px; border:0px; border-bottom:#F58030 solid 1px;}
+.ui-widget .ui-widget-header li.ui-state-default{background:#ECECEC; border-radius:0px; border:#ECECEC solid 1px; }
+.ui-widget .ui-widget-header li.ui-state-default a{color:#666; text-shadow:#FFF 0px 1px 1px;}
+.ui-widget .ui-widget-header li.ui-state-active{background:#F58030; border:#F58030 solid 1px;}
+.ui-widget .ui-widget-header li.ui-state-active a{color:#FFF; text-shadow:none;}
+
+
+.ui-widget .ui-tabs-panel{padding:20px 0px; border-radius:0px; background:#FFF; box-shadow:none;}
+
+
+.ui-datepicker{font-size:11px !important;}
+.ui-datepicker select{display:inline;}
+
+.ui-dialog.ui-widget{background:#F58030; padding:10px;}
+.ui-dialog.ui-widget .ui-dialog-titlebar{background:#FFF;}
+.ui-widget .overlay{text-align:left; background:#FFF;}
+.ui-dialog-titlebar-close{border-radius:50%; background:#666 !important; border:#444 solid 1px; box-shadow:inset rgba(0,0,0,0.25) 0px 2px 3px; color:#FFF; text-shadow:rgba(0,0,0,0.25) -1px -1px 0px; }
+
+.ui-dialog-title{text-align:left; font-weight:400; font-size:19px; color:#000;}
+
+/*.ui-dialog{min-height:400px; min-width:780px;}*/
+.ui-dialog-content{min-height:380px !important;}
+.ui-dialog-content iframe{min-height:380px !important;}
+.ui-dialog .ui-tabs-panel{min-height:350px; background:#ECECEC; padding:5px 5px 0px 5px; }
+.ui-dialog .ui-tabs-panel iframe{min-height:350px; background:#FFF;}
+
+.ui-dialog .ui-tabs .ui-tabs-nav{}
+
+.ui-dialog .ui-tabs li{position:relative; padding-right:10px;}
+.ui-dialog .ui-tabs li span.ui-icon-close{position:absolute; right:4px; top:8px; background:none; display:block; color:#999; cursor:pointer;}
+.ui-dialog .ui-tabs li span.ui-icon-close:hover{color:#666;}
+.ui-dialog .ui-tabs li span.ui-icon-close:before{font-family:FontAwesome; content:'\f057'; position:absolute; top:0px; left:0px; text-indent:0px; }
+
+.ui-dialog .ui-tabs li.ui-state-active span.ui-icon-close{color:#FFF;}
+
+/*--------------------------- JS iFRAME -----------------------------*/
+
+#js-wrapper{text-align:left; background:#FFF !important; height:100%; width:100%; display:table;}
+.js-col2{background:#FFF; float:left; width:45%; padding-left:5%}
+.js-col2:after{display:block; width:100%; content:''; clear:both; height:0px;}
+
+.js-col2 label{display:block; font-size:11px; font-weight:bold;}
+.js-col2 input,
+.js-col2  select{display:block; min-width:200px;}
+
+
+/*--------------------------- zs-sheet -----------------------------*/
+
+.zssheet, .z-window, .z-menupopup{text-align:left;}
+
+
+
+/*--------------------------- Edit attribute -----------------------------*/
+
+#namedetails{background:rgba(255,255,255,0.95); z-index:20; margin:0px; padding:30px; position:absolute; left:0px; top:0px; bottom:0px; right:0px;}
+
+#namedetails .namedetailsinner{background:#FFF; margin:0px; border:#ECECEC solid 5px; box-shadow:rgba(0,0,0,0.25) 0px 2px 3px; position:relative; padding:10px;}
+#namedetails .namedetailsinner .closebutton{width:30px; height:30px; background:#FFF; box-shadow:rgba(0,0,0,0.25) 0px 2px 3px; border-radius:50%; position:absolute; top:-15px; right:-15px;  text-align:center; line-height:34px; font-size:25px;}
+#namedetails .namedetailsinner h3{font-size:15px; margin:0px; padding:5px 0px; font-weight:600;}
+
+#namedetails .namedetailsinner input{font-size:13px;}
+#namedetails .namedetailsinner .attributes{margin-bottom:5px; border-bottom:#ECECEC solid 1px;}
+#namedetails .namedetailsinner .attributes .namedetailsline{border:#ECECEC solid 1px; border-bottom:none; clear:both;}
+#namedetails .namedetailsinner .attributes .namedetailsline:nth-child(even) div{background:#F2F2f2;}
+#namedetails .namedetailsinner .attributes .namedetailsline:after{content:""; display:block; clear:both !important; height:0px; width:100%;  }
+#namedetails .namedetailsinner .attributes .namedetailsline .name,
+#namedetails .namedetailsinner .attributes .namedetailsline .value{width:50%; float:left; }
+#namedetails .namedetailsinner .attributes .namedetailsline .name input,
+#namedetails .namedetailsinner .attributes .namedetailsline .value input{display:block; margin:3px; min-width:90%;}
+
+
+#namedetails .namedetailsinner .datacount{font-size:11px;}
+#namedetails .namedetailsinner .datacount b{color:#000;}
+
+#namedetails .namedetailsinner #provenance{font-size:11px; padding:10px; background:#F2f2f2; line-height:15px;}
+
+#namedetails .namedetailsinner .namedetailssubmit,
+#namedetails .namedetailsinner .propertystats{width:50%; float:left;}
+#namedetails .namedetailsinner .clear{display:block; clear:both; width:100%;}
+
+#namedetails .namedetailsinner .namedetailssubmit{padding-top:20px; text-align:center; font-weight:bold;}
