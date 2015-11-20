@@ -6,7 +6,7 @@
 
     double quantity = 1;
     int dayrate = 2000;
-    int terms = 14;
+    String terms = "";
     String poNumber = "";
     Date invoiceDate = new Date();
     String invoiceid = "2014/03";
@@ -21,9 +21,6 @@
     String sageRef = "AG1";
 
     try{
-        quantity = Double.parseDouble(request.getParameter("quantity"));
-        dayrate = Integer.parseInt(request.getParameter("dayrate"));
-        terms = Integer.parseInt(request.getParameter("terms"));
         poNumber = request.getParameter("ponumber");
         invoiceDate = sdf.parse(request.getParameter("invoicedate"));
 
@@ -33,6 +30,9 @@
         invoiceAddress = request.getParameter("invoiceaddress");
         invoiceDesc = request.getParameter("description");
         sageRef = request.getParameter("sageref");
+        terms = request.getParameter("terms");
+        quantity = Double.parseDouble(request.getParameter("quantity"));
+        dayrate = Integer.parseInt(request.getParameter("dayrate"));
 
     } catch (Exception e){
         e.printStackTrace();
@@ -49,9 +49,9 @@
 
     // check here that we won't get a keyword error on month!!!!!
 
-    String invoicePeriod;
+/*    String invoicePeriod;
     String ponumber = "";
-    invoicePeriod = month;
+    invoicePeriod = month;*/
 
 
     FopFactory fopFactory = FopFactory.newInstance();
@@ -83,15 +83,15 @@
     String invoiceFOP = template.toString();
     NumberFormat nf = NumberFormat.getInstance();
     nf.setMinimumFractionDigits(2);
-    String paymentTerms = "30 Days";
-    if (paymentTerms != null && paymentTerms.length() > 0) {
-        String days = paymentTerms.substring(0, paymentTerms.indexOf(" "));
+    int termsInt = 30;
+    if (terms != null && terms.length() > 0) {
+        String days =  terms.contains(" ") ? terms.substring(0, terms.indexOf(" ")) : terms;
         try {
-            terms = Integer.parseInt(days);
+            termsInt = Integer.parseInt(days);
         } catch (Exception e) {
         }
     }
-    java.util.Date dateDue = new java.util.Date(invoiceDate.getYear(), invoiceDate.getMonth(), invoiceDate.getDate() + terms);
+    java.util.Date dateDue = new java.util.Date(invoiceDate.getYear(), invoiceDate.getMonth(), invoiceDate.getDate() + termsInt);
     SimpleDateFormat monthDisplay = new SimpleDateFormat("MMMMM");
     //invoiceFOP = invoiceFOP.replace("INVOICEMONTH",monthDisplay.format(i.getDate()), true);
     String invoiceTitle = "Monthly fee for developmennt of RaceAdvisor App";
@@ -178,9 +178,7 @@
     text = text.replace("ADDRESS" + line, ""); // blank other lines . . .
     line++;
 
-    if (paymentTerms == null) paymentTerms = "30 days";
-    text = text.replace("PAYMENTTERMS", paymentTerms);
-
+    text = text.replace("PAYMENTTERMS", termsInt + " Days");
 
     invoiceFOP = text;
 
