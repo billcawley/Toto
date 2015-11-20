@@ -271,8 +271,8 @@ public class DSImportService {
         } else {
             toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileType, attributeNames,isSpreadsheet);
         }
-        if (persistAfter){
-            azquoMemoryDBConnection.persist();
+        if (persistAfter){ // get back to the user straight away. Should not be a problem, multiple persists would be queued. The only issue is of changes while persisting, need to check this in the memory db.
+             new Thread(azquoMemoryDBConnection::persist).start();
         }
         return toReturn;
     }
