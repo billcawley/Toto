@@ -9,6 +9,7 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.servlet.http.HttpServletRequest;
@@ -35,13 +36,16 @@ public class ManageReportsController {
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
     )
-
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
 
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
+            int deleteId = ServletRequestUtils.getIntParameter(request, "deleteId", 0);
+            if (deleteId != 0){
+                adminService.removeReportById(loggedInUser,deleteId);
+            }
             final List<OnlineReport> reports = adminService.getReportList(loggedInUser);
             for (OnlineReport report : reports) {
                 boolean store = false;

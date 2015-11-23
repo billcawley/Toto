@@ -173,14 +173,9 @@ public final class ImportService {
         return "";
     }
 
-    private String uploadReport(LoggedInUser loggedInUser, String sourceName, String fileName, String reportName, String reportType) throws Exception {
+    private String uploadReport(LoggedInUser loggedInUser, String sourceName, String fileName, String reportName) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
-        int databaseId = 0;
-        String pathName = reportType;
-        if (pathName.length() == 0) {
-            databaseId = loggedInUser.getDatabase().getId();
-            pathName = loggedInUser.getDatabase().getMySQLName();
-        }
+            int databaseId = loggedInUser.getDatabase().getId();
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         if (or == null) {
             or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName, "", "", "", fileName, "", "", 1, true); // default to ZK now
@@ -192,7 +187,7 @@ public final class ImportService {
         or.setId(0);
         or.setRenderer(1);
         or.setActive(true);
-        String fullPath = spreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
+        String fullPath = spreadsheetService.getHomeDir() + dbPath + loggedInUser.getDatabase().getMySQLName() + "/onlinereports/" + fileName;
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
 
@@ -209,7 +204,7 @@ public final class ImportService {
         azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = azquoBook.getReportName();
         if (reportName != null) {
-            return uploadReport(loggedInUser, tempName, fileName, reportName, "");
+            return uploadReport(loggedInUser, tempName, fileName, reportName);
         }
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("no database set");

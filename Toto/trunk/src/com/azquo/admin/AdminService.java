@@ -8,12 +8,15 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.onlinereport.ReportSchedule;
 import com.azquo.admin.onlinereport.ReportScheduleDAO;
 import com.azquo.admin.user.*;
+import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.SpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
+import java.io.File;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -54,6 +57,8 @@ public class AdminService {
     private ReportScheduleDAO reportScheduleDAO;
     @Autowired
     private RMIClient rmiClient;
+    @Autowired
+    private SpreadsheetService spreadsheetService;
 
     // after uncommenting to use it won't requite the activation email initially
 
@@ -357,6 +362,21 @@ public class AdminService {
             return onlineReport;
         }
         return null;
+    }
+
+    public void removeReportById(LoggedInUser loggedInUser, int reportId) {
+        OnlineReport onlineReport = onlineReportDAO.findById(reportId);
+        if (onlineReport != null && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+            Database database = databaseDAO.findById(onlineReport.getDatabaseId());
+            if (database != null){ // should not be!
+                String fullPath = spreadsheetService.getHomeDir() + ImportService.dbPath + database.getMySQLName() + "/onlinereports/" + onlineReport.getFilename();
+                File file = new File(fullPath);
+                if (file.exists()){
+                    file.delete();
+                }
+            }
+            onlineReportDAO.removeById(onlineReport);
+        }
     }
 
 

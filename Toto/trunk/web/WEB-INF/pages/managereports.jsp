@@ -19,7 +19,8 @@
 					<td>Report Category</td>
 					<td>User Groups</td>
 					<!-- <td>File Name</td> -->
-					<td>Explanation</td>
+                    <td>Explanation</td>
+                    <td></td>
 				</tr>
 			</thead>
 		<tbody>
@@ -37,6 +38,7 @@
 				 <td><input name="userStatus${report.id}" value="${report.userStatus}" /></td>
 				 <!-- <td>${report.filename}</td> -->
 				 <td><textarea name="explanation${report.id}" rows="3">${report.explanation}</textarea></td>
+				 <td><a href="/api/ManageReports?deleteId=${report.id}" onclick="return confirm('Are you sure you want to delete ${report.reportName}?')" class="button small alt" title="Delete ${report.reportName}"><span class="fa fa-trash" title="Delete"></span> </a></td>
 			</tr>
 		</c:forEach>
 		</tbody>
