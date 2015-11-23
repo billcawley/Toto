@@ -670,11 +670,11 @@ seaports;children   container;children
             //return new ArrayList<>();
         }
         final List<Name> contextNames = new ArrayList<>();
-        for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell. Rather arbitrary, remove at some point?
+        for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell. Rather arbitrary, remove at some point? Also should be using get context names?
             for (String contextItem : contextItems) {
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
                 while (st.hasMoreTokens()) {
-                    final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, st.nextToken().trim());
+                    final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, st.nextToken().trim(), languages);
                     time = (System.currentTimeMillis() - track);
                     if (time > threshold) System.out.println("Context parsed in " + time + "ms");
                     track = System.currentTimeMillis();
@@ -707,14 +707,14 @@ seaports;children   container;children
         return dataToShow;
     }
 
-    private List<Name> getContextNames(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource) throws Exception {
+    private List<Name> getContextNames(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception {
         final List<Name> contextNames = new ArrayList<>();
         if (contextSource == null) return contextNames;
         for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell
             for (String contextItem : contextItems) {
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
                 while (st.hasMoreTokens()) {
-                    final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBConnection, st.nextToken().trim());
+                    final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBConnection, st.nextToken().trim(), languages);
                     if (thisContextNames.size() > 1) {
                         throw new Exception("error: context names must be individual - use 'as' to put sets in context");
                     }
@@ -741,7 +741,7 @@ seaports;children   container;children
         if (columnHeadings.size() == 0 || rowHeadings.size() == 0) {
             return null;
         }
-        final List<Name> contextNames = getContextNames(azquoMemoryDBCOnnection, contextSource);
+        final List<Name> contextNames = getContextNames(azquoMemoryDBCOnnection, contextSource, languages);
         // now onto the bit to find the specific cell - the column headings were transposed then expanded so they're in the same format as the row headings
         // that is to say : the outside list's size is the number of columns or headings. So, do we have the row and col?
         if (unsortedRow < rowHeadings.size() && unsortedCol < columnHeadings.size()) {
@@ -1556,7 +1556,7 @@ seaports;children   container;children
             return;
         }
         int numberOfValuesModified = 0;
-        List<Name> contextNames = getContextNames(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getContextSource());
+        List<Name> contextNames = getContextNames(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getContextSource(), databaseAccessToken.getLanguages());
         int rowCounter = 0;
         for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
             int columnCounter = 0;

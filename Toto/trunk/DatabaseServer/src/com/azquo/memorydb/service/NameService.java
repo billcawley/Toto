@@ -617,8 +617,7 @@ public final class NameService {
         return new NameSetList(null, toReturn, true);
     }
 
-    // to find a set of names, a few bits that were part of the original set of functions
-    // add the default display name since no attributes were specified.
+    // for deduplicate, inspect search and definition. This is teh same as below and
     private static AtomicInteger parseQueryCount = new AtomicInteger(0);
 
     public final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
@@ -882,7 +881,18 @@ public final class NameService {
                 nameStack.remove(stackCount);
             } else if (op == ASSYMBOL) {
                 resetDefs = true;
-                Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next(); // alternative if we're using a linked hash set
+                Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
+                /* ok here's the thing. We don't want this to be under the default display name, new logic jams the user email as the last "language"
+                therefore if there's more than one language, we use the last one as the way to define this name.
+                The point being that the result of "blah blah blah as 'Period Chosen'" will now mean different 'Period Chosen's for each user
+                */
+                if (attributeNames.size() > 1){
+                    String userEmail = attributeNames.get(attributeNames.size() - 1);
+                    String nameName = totalName.getDefaultDisplayName();
+                    totalName.setAttributeWillBePersisted(userEmail, nameName);
+                    // now zap the default name
+                    totalName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, null);
+                }
                 totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection());
                 nameStack.remove(stackCount);
                 Set<Name> totalNameSet = HashObjSets.newMutableSet();

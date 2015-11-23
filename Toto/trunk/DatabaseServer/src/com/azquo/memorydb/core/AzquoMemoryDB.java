@@ -482,8 +482,10 @@ public final class AzquoMemoryDB {
                         if (entity.getNeedsInserting()) {
                             state = JsonRecordTransport.State.INSERT;
                         }
+                        entity.setAsPersisted(); /* ok we do this before setting to save so we don't get a state for save, state changed, then set as persisted (hence not allowing for latest changes)
+                        the multi threaded handling of sets to persist is via concurrent hash map, hence ordering which is important here should be right I hope. The only concern is for the same
+                        element being removed being added back into the map and I think the internal locking (via striping?) should deal with this*/
                         recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state));
-                        entity.setAsPersisted(); // is this dangerous here???
                     }
                     // and end here
                     try {
@@ -498,7 +500,7 @@ public final class AzquoMemoryDB {
                         List<Name> namesToStore = new ArrayList<>(entities.size());
                         for (AzquoMemoryDBEntity entity : entities){
                             namesToStore.add((Name)entity);
-                            entity.setAsPersisted();// again need a little think about where this happens, maybe in the dao?
+                            entity.setAsPersisted();// the big commented issue above is a moot point here - the actual saving of the state happens later. If modified in the mean time a name will be added back onto the set
                         }
                         try {
                             nameDAO.persistNames(this, namesToStore, false);
@@ -511,7 +513,7 @@ public final class AzquoMemoryDB {
                         List<Value> valuesToStore = new ArrayList<>(entities.size());
                         for (AzquoMemoryDBEntity entity : entities){
                             valuesToStore.add((Value)entity);
-                            entity.setAsPersisted();// again need a little think about where this happens, maybe in the dao?
+                            entity.setAsPersisted();
                         }
                         try {
                             valueDAO.persistValues(this, valuesToStore, false);
