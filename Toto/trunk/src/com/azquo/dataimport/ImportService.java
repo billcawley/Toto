@@ -103,7 +103,7 @@ public final class ImportService {
         if (fileName.contains(".xls")) {
             return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter);
         } else {
-            return readPreparedFile(loggedInUser, filePath, "", attributeNames, persistAfter); // no file type
+            return readPreparedFile(loggedInUser, filePath, "", attributeNames, persistAfter, false); // no file type
         }
     }
 
@@ -173,9 +173,14 @@ public final class ImportService {
         return "";
     }
 
-    private String uploadReport(LoggedInUser loggedInUser, String sourceName, String fileName, String reportName) throws Exception {
+    private String uploadReport(LoggedInUser loggedInUser, String sourceName, String fileName, String reportName, String reportType) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
-            int databaseId = loggedInUser.getDatabase().getId();
+        int databaseId = 0;
+        String pathName = reportType;
+        if (pathName.length() == 0) {
+            databaseId = loggedInUser.getDatabase().getId();
+            pathName = loggedInUser.getDatabase().getMySQLName();
+        }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         if (or == null) {
             or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName, "", "", "", fileName, "", "", 1, true); // default to ZK now
@@ -187,7 +192,7 @@ public final class ImportService {
         or.setId(0);
         or.setRenderer(1);
         or.setActive(true);
-        String fullPath = spreadsheetService.getHomeDir() + dbPath + loggedInUser.getDatabase().getMySQLName() + "/onlinereports/" + fileName;
+        String fullPath = spreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
 
@@ -204,7 +209,23 @@ public final class ImportService {
         azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = azquoBook.getReportName();
         if (reportName != null) {
-            return uploadReport(loggedInUser, tempName, fileName, reportName);
+            if (loggedInUser.getUser().getStatus().equals("ADMINISTRATOR")) {
+
+                return uploadReport(loggedInUser, tempName, fileName, reportName, "");
+            }
+            LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
+            OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
+            if (or==null) return "no report named " + reportName + " found";
+            azquoBook.calculateAll();
+            Map <String,String> choices = azquoBook.uploadChoices();
+            for (String choice:choices.keySet()) {
+                spreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
+             }
+            AzquoBook reportBook = spreadsheetService.loadAzquoBook(loadingUser, or);
+            azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
+            String toReturn = azquoBook.fillDataRangesFromCopy(loadingUser);
+            reportBook.saveData(loadingUser);
+            return toReturn;
         }
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("no database set");
@@ -222,21 +243,21 @@ public final class ImportService {
     private String readSheet(LoggedInUser loggedInUser, AzquoBook azquoBook, final String tempFileName, final int sheetNo, List<String> attributeNames, boolean persistAfter) throws Exception {
         String tempName = azquoBook.convertSheetToCSV(tempFileName, sheetNo);
         String fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
-        return readPreparedFile(loggedInUser, tempName, fileType, attributeNames, persistAfter);
+        return readPreparedFile(loggedInUser, tempName, fileType, attributeNames, persistAfter, true);
     }
 
     static String LOCALIP = "127.0.0.1";
 
-    public String readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileType, List<String> attributeNames, boolean persistAfter) throws Exception {
+    public String readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileType, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         // right - here we're going to have to move the file if the DB server is not local.
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         if (databaseServer.getIp().equals(LOCALIP)) {
-            return rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter);
+            return rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
         } else {
             // move it
             String remoteFilePath = copyFileToDatabaseServer(filePath, databaseServer.getSftpUrl());
-            return rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, remoteFilePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter);
+            return rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, remoteFilePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
         }
     }
 
