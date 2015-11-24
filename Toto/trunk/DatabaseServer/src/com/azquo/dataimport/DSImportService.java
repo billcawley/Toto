@@ -254,17 +254,16 @@ public class DSImportService {
     Sets being as mentioned at the top one of the two files that are needed along with import headers to set up a database ready to load data.
     */
 
-    public String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames, String user, boolean persistAfter) throws Exception {
+    public String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileType, List<String> attributeNames, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         System.out.println("reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         String provFile = findOrigName(filePath);
         azquoMemoryDBConnection.setProvenance(user, "imported", provFile, "");
-        return readPreparedFile(azquoMemoryDBConnection, filePath, fileType, attributeNames, persistAfter);
+        return readPreparedFile(azquoMemoryDBConnection, filePath, fileType, attributeNames, persistAfter, isSpreadsheet);
     }
 
-    public String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean persistAfter) throws Exception {
+    public String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
-        boolean isSpreadsheet = filePath.contains("xls");
         String toReturn;
         if (fileType.toLowerCase().startsWith("sets")) {
             toReturn = setsImport(azquoMemoryDBConnection, new FileInputStream(filePath), attributeNames, fileType);
@@ -547,6 +546,17 @@ public class DSImportService {
     public String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
         // Preparatory stuff
         // Local cache just to speed things up
+        if (!isSpreadsheet && fileType.length() == 0){
+            //need a file type to know which header to use
+            int dotPos = filePath.lastIndexOf(".");
+            int strokePos = filePath.lastIndexOf("/");
+            if (strokePos > 0 && dotPos > strokePos){
+                fileType = filePath.substring(strokePos + 1, dotPos);
+                if (fileType.contains(" ")){
+                    fileType = fileType.substring(0,fileType.indexOf(" "));
+                }
+            }
+         }
         final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
         long track = System.currentTimeMillis();
         char delimiter = ',';
@@ -736,7 +746,7 @@ public class DSImportService {
                 }
             }
         }
-        String toReturn = "dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + (lineNo - 1) + " lines";
+        String toReturn = fileType + " imported. Dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + (lineNo - 1) + " lines<br/>\n";
         azquoMemoryDBConnection.addToUserLogNoException(toReturn, true);
         System.out.println("---------- names found cache size " + namesFoundCache.size());
         return toReturn;
@@ -750,6 +760,7 @@ public class DSImportService {
         //  It need not interpret every column heading, but any attribute of the same name as a column heading will be used.
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         String lastHeading = "";
+        int colWithContext = 0;
         for (String header : headers) {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 MutableImportHeading heading = new MutableImportHeading();
@@ -767,11 +778,12 @@ public class DSImportService {
 
                 if (dividerPos == -1 && col > 0) { // no context headings defined for this one, copy the previous (may well be empty)
                     // hence context headings may be re-resolved multiple times if they're copied, this doesn't bother me that much
-                    heading.contextHeadings = headings.get(col - 1).contextHeadings;
+                    heading.contextHeadings = headings.get(colWithContext).contextHeadings;
                 }
 
                 // right, headingDivider, |. It seems to work backwards, stacking context headings for this heading, now this is against the heading as opposed to putting them in the same array
                 while (dividerPos >= 0) {
+                    colWithContext = col;
                     MutableImportHeading contextHeading = new MutableImportHeading();
                     interpretHeading(azquoMemoryDBConnection, head.substring(dividerPos + 1), contextHeading, attributeNames);
                     //headings.add(contextHeading); // no we're not doing that now, headings list matches the actual number of headings
@@ -1265,6 +1277,6 @@ public class DSImportService {
             }
             lines++;
         }
-        return lines + " line(s) of a set file imported.";
+        return fileName + " imported. " + lines + " line(s) of a set file.<br/>";
     }
 }
