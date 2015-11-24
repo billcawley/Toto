@@ -892,6 +892,7 @@ public final class NameService {
                     String userEmail = attributeNames.get(0);
                     if (totalName.getAttribute(userEmail) == null){ // there is no specific set for this user yet, need to do something
                         Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), totalName.getAdditive()); // a basic copy of the set
+                        userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
                         userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
                         for (Name parent : totalName.getParents()){ // set the name parents
                             parent.addChildWillBePersisted(userSpecificSet);
