@@ -79,6 +79,25 @@ public class LoggedInUser {
     }
 
     // ok we need to keep a session map of jstree ids which are created incrementally against the actual name ids, passing the nodes here seems fine
+    public LoggedInUser(LoggedInUser originalUser){
+
+        this.sessionId = originalUser.sessionId;
+        this.user = originalUser.user;
+        reportId = 0;
+        sentCellsMaps = new HashMap<>();
+        azquoBook = null;
+        languages = new ArrayList<>();
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        languages.add(originalUser.user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and otehr names that might be assigned for a user. Needs testing.
+        this.database = originalUser.database;
+        this.databaseServer = originalUser.databaseServer;
+
+        this.readPermissions = originalUser.readPermissions;
+        this.writePermissions = originalUser.writePermissions;
+        this.context = null;
+        lastJSTreeNodeId = new AtomicInteger();
+        jsTreeLookupMap = new ConcurrentHashMap<>();
+    }
 
     public void assignIdForJsTreeNode(JsonChildren.Node node){
         node.id = lastJSTreeNodeId.incrementAndGet();
