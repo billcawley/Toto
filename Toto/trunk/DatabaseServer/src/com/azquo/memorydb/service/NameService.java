@@ -1,6 +1,7 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.memorydb.Constants;
+import com.azquo.memorydb.core.Provenance;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
@@ -882,16 +883,21 @@ public final class NameService {
             } else if (op == ASSYMBOL) {
                 resetDefs = true;
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
-                /* ok here's the thing. We don't want this to be under the default display name, new logic jams the user email as the last "language"
-                therefore if there's more than one language, we use the last one as the way to define this name.
+                /* ok here's the thing. We don't want this to be under the default display name, new logic jams the user email as the first "language"
+                therefore if there's more than one language, we use the first one as the way to define this name.
                 The point being that the result of "blah blah blah as 'Period Chosen'" will now mean different 'Period Chosen's for each user
+                Need to watch out regarding creating user specific sets : when we get the name see if it's for this user, if so then just change it otherwise make a new one
                 */
-                if (attributeNames.size() > 1){
-                    String userEmail = attributeNames.get(attributeNames.size() - 1);
-                    String nameName = totalName.getDefaultDisplayName();
-                    totalName.setAttributeWillBePersisted(userEmail, nameName);
-                    // now zap the default name
-                    totalName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, null);
+                if (attributeNames.size() > 1){ // just checking we have have the user added to the list
+                    String userEmail = attributeNames.get(0);
+                    if (totalName.getAttribute(userEmail) == null){ // there is no specific set for this user yet, need to do something
+                        Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), totalName.getAdditive()); // a basic copy of the set
+                        userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
+                        for (Name parent : totalName.getParents()){ // set the name parents
+                            parent.addChildWillBePersisted(userSpecificSet);
+                        }
+                        totalName = userSpecificSet; // switch the new one in, it will be used as normal
+                    }
                 }
                 totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection());
                 nameStack.remove(stackCount);

@@ -58,8 +58,8 @@ public class LoggedInUser {
         sentCellsMaps = new HashMap<>();
         azquoBook = null;
         languages = new ArrayList<>();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
         languages.add(user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and otehr names that might be assigned for a user. Needs testing.
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
         this.database = database;
         this.databaseServer = databaseServer;
 
@@ -127,7 +127,9 @@ public class LoggedInUser {
     }
 
     public void setLanguages(List<String> languages) {
-        languages.add(user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and other names that might be assigned for a user. Needs testing.
+        if (languages != null){ // should not be!
+            languages.add(0, user.getEmail()); // make it first
+        }
         this.languages = languages;
     }
 

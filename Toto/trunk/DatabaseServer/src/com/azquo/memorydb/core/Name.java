@@ -1053,6 +1053,7 @@ public final class Name extends AzquoMemoryDBEntity {
     private static AtomicInteger getAttribute2Count = new AtomicInteger(0);
 
     public String getAttribute(String attributeName, boolean parentCheck, Set<Name> checked) {
+        attributeName = attributeName.toUpperCase(); // edd adding (back?) in, need to do this since all attributes are uppercase internally
         getAttribute2Count.incrementAndGet();
         String attribute = nameAttributes.getAttribute(attributeName);
         if (attribute != null) return attribute;
