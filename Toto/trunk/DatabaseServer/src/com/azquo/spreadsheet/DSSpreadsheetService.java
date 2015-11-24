@@ -700,7 +700,7 @@ seaports;children   container;children
         }
         track = System.currentTimeMillis();
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
-                , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays);
+                , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays, languages);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data sort/filter in " + time + "ms");
         System.out.println("region delivered in " + (System.currentTimeMillis() - start) + "ms");
@@ -752,7 +752,7 @@ seaports;children   container;children
 
     // for looking up a heading given a string. Used to find the col/row index to sort on
 
-    private int findPosition(List<List<DataRegionHeading>> headings, String toFind) {
+    private int findPosition(List<List<DataRegionHeading>> headings, String toFind, List<String> languages) {
          if (toFind == null || toFind.length() == 0) {
             return -1;
         }
@@ -762,13 +762,19 @@ seaports;children   container;children
             DataRegionHeading dataRegionHeading = heading.get(heading.size() - 1);
             if (dataRegionHeading != null) {
                 String toCompare;
-                if (dataRegionHeading.getName() != null && dataRegionHeading.getName().getDefaultDisplayName() != null) {
-                    toCompare = dataRegionHeading.getName().getDefaultDisplayName().replace(" ", "");
+                if (dataRegionHeading.getName() != null) {
+                    // ok now we need to deal with the languages! This function didn't before
+                    for (String language : languages){
+                        String languageValue = dataRegionHeading.getName().getAttribute(language);
+                        // just run through the relevant languages looking for this column
+                        if (languageValue != null &&  languageValue.replace(" ","").toLowerCase().equals(toFind)) {
+                            return count;
+                        }
+                    }
                 } else {
-                    toCompare = dataRegionHeading.getAttribute();
-                }
-                if (toCompare.replace(" ","").toLowerCase().equals(toFind)) {
-                    return count;
+                    if (dataRegionHeading.getAttribute().replace(" ","").toLowerCase().equals(toFind)) {
+                        return count;
+                    }
                 }
             }
             count++;
@@ -780,14 +786,14 @@ seaports;children   container;children
     // also deals with highlighting
 
     private List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
-            , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays) throws Exception {
+            , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays, List<String> languages) throws Exception {
         long track = System.currentTimeMillis();
         List<List<AzquoCell>> toReturn = sourceData;
         if (sourceData == null || sourceData.isEmpty()) {
             return sourceData;
         }
-        Integer sortOnColIndex = findPosition(columnHeadings, sortColString);
-        Integer sortOnRowIndex = findPosition(rowHeadings, sortRowString); // not used at the mo
+        Integer sortOnColIndex = findPosition(columnHeadings, sortColString, languages);
+        Integer sortOnRowIndex = findPosition(rowHeadings, sortRowString, languages); // not used at the mo
         // new logic states that sorting on row or col totals only happens if a sort row or col hasn't been passed and there are more rows or cols than max rows or cols
 
         int totalRows = sourceData.size();
