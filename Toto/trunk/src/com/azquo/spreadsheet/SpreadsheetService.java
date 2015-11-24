@@ -307,6 +307,37 @@ public class SpreadsheetService {
         return sb;
     }
 
+    public AzquoBook loadAzquoBook(LoggedInUser loggedInUser, OnlineReport onlineReport) throws Exception {
+        if (onlineReport.getDatabaseId() > 0) {
+            onlineReport.setPathname(loggedInUser.getDatabase().getMySQLName());
+        } else {
+            onlineReport.setPathname(onlineReport.getDatabaseType());
+        }
+
+        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, this, rmiClient);
+        String filepath = ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
+        azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
+        azquoBook.loadBook(getHomeDir() + filepath, useAsposeLicense());
+        azquoBook.setSheet(0);//assume currently that this is a single sheet workbook
+        azquoBook.prepareSheet(loggedInUser,onlineReport.getId(), null);
+        return azquoBook;
+
+    }
+
+/*    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
+        AzquoBook azquoBook = loggedInConnection.getAzquoBook();
+        for (Name chosen : nameLoop.get(level).choiceList) {
+            setUserChoice(loggedInConnection.getUser().getId(), reportId, nameLoop.get(level).setName, chosen.getDefaultDisplayName());
+            level++;
+            if (level == nameLoop.size()) {
+                azquoBook.executeSheet(loggedInConnection);
+            } else {
+                executeLoop(loggedInConnection, reportId, nameLoop, level + 1);
+            }
+        }
+    }*/
+
+
     public void setUserChoice(int userId, String choiceName, String choiceValue) {
         UserChoice userChoice = userChoiceDAO.findForUserIdAndChoice(userId, choiceName);
         if (choiceValue != null && choiceValue.length() > 0) {
