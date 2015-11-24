@@ -376,7 +376,7 @@ public class ZKAzquoBookUtils {
                     }
                     if (cellsAndHeadingsForDisplay.getRowHeadings() != null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
                         rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
-                        int insertRow = displayDataRegion.getRow() + 2; // I think this is correct, middle row of 3?
+                        int insertRow = displayDataRegion.getRow() +displayDataRegion.getRowCount() -1; // last but one row
                         Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
                         Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
                         CellOperationUtil.insertRow(insertRange);
@@ -390,7 +390,7 @@ public class ZKAzquoBookUtils {
                     int maxRow = sheet.getLastRow();
                     if (displayDataRegion.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayDataRegion.getColumnCount() > 2) { // then we need to expand
                         colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
-                        int insertCol = displayDataRegion.getColumn() + 2; // I think this is correct, just after the second column?
+                        int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
                         Range copySource = Ranges.range(sheet, 0, insertCol - 1, maxRow, insertCol - 1);
                         Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the 3rd col
                         CellOperationUtil.insertColumn(insertRange);
@@ -613,6 +613,7 @@ public class ZKAzquoBookUtils {
                     String queryString = getRegionValue(sheet, query);
                     try {
                         rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+
                                 .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
                     } catch (Exception e) {
                         e.printStackTrace();
