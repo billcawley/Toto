@@ -16,10 +16,7 @@
     </facet>
     <facet type="Spring" name="Spring">
       <configuration>
-        <fileset id="fileset" name="Spring Application Context" removed="false">
-          <file>file://$MODULE_DIR$/web/WEB-INF/tootospringdispatcher.xml</file>
-          <file>file://$MODULE_DIR$/web/WEB-INF/totoospringdispatcher-servlet.xml</file>
-        </fileset>
+        <fileset id="fileset" name="Spring Application Context" removed="false" />
       </configuration>
     </facet>
   </component>
