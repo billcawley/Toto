@@ -180,8 +180,8 @@ public class OnlineController {
                         File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
                         uploadfile.transferTo(moved);
                         //importing here cannot set 'useType' to a value
-                        importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages());
-                        result = "File imported successfully";
+                        result = importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages());
+                         //result = "File imported successfully";
                     } else {
                         model.addAttribute("azquodatabaselist", spreadsheetService.createDatabaseSelect(loggedInUser));
                         return "upload";
