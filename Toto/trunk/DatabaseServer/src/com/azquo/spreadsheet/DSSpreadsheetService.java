@@ -555,7 +555,11 @@ seaports;children   container;children
 
     // return headings as strings for display, I'm going to put blanks in here if null.
 
-    public List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languages) {
+    public List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languagesSent) {
+        List<String> languages = new ArrayList<>();
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);//for displaying headings always look for DEFAULT_DISPLAY_NAME first - otherwise may look up the chain for local names
+        languages.addAll(languagesSent);
+
         List<List<String>> toReturn = new ArrayList<>(source.size());
         for (List<DataRegionHeading> row : source) {
             List<String> returnRow = new ArrayList<>(row.size());
@@ -756,7 +760,13 @@ seaports;children   container;children
          if (toFind == null || toFind.length() == 0) {
             return -1;
         }
-        toFind = toFind.replace(" ","").toLowerCase();
+        try {
+            return Integer.parseInt(toFind);
+
+        }catch(Exception e){
+            //so it isn't a number!
+        }
+        toFind = toFind.replace(" ","").replace("`","").toLowerCase();
         int count = 0;
         for (List<DataRegionHeading> heading : headings) {
             DataRegionHeading dataRegionHeading = heading.get(heading.size() - 1);
@@ -1549,7 +1559,7 @@ seaports;children   container;children
         }
         bw.flush();
         bw.close();
-        importService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true);
+        importService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true, true);
         temp.delete(); // see no harm in this here. Delete on exit has a problem with Tomcat being killed.
     }
 
