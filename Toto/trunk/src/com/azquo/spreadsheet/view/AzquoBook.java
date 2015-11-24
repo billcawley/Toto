@@ -13,6 +13,8 @@ import com.azquo.spreadsheet.*;
 import com.csvreader.CsvWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
+import org.apache.commons.collections.map.HashedMap;
+import org.apache.commons.io.output.StringBuilderWriter;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.ui.ModelMap;
@@ -1378,4 +1380,87 @@ public class AzquoBook {
         }
         return null;
     }
+
+    private StringBuffer rangeToText(String rangeName){
+
+        Range range = getRange(rangeName);
+        StringBuffer sb = new StringBuffer();
+        sb.append("Range name:" +  rangeName + "\n");
+        sb.append("Rows:" + range.getRowCount() + "\n");
+        sb.append("Columns:" + range.getColumnCount() + "\n");
+        for (int row=0;row<range.getRowCount();row++){
+            for (int col=0;col<range.getColumnCount();col++){
+                Cell cell = range.getCellOrNull(row,col);
+                if (cell!=null){
+                    sb.append(cell.toString());
+                }
+                sb.append("\t");
+            }
+            sb.append("\n");
+        }
+        return sb;
+    }
+
+    public Map<String,String> uploadChoices(){
+        //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
+        Map<String,String> choices = new HashedMap();
+        for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
+            com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
+            String rangeName = name.getText().toLowerCase();
+                if (rangeName.endsWith("chosen")){
+                choices.put(rangeName.substring(rangeName.length()-6),getRangeData(rangeName));
+            }
+        }
+
+        return choices;
+    }
+
+    public String fillDataRangesFromCopy(LoggedInUser loadingUser){
+        int items = 0;
+        for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
+            com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
+            if (name.getText().toLowerCase().startsWith(dataRegionPrefix)) {
+                String regionName = name.getText().substring(dataRegionPrefix.length()).toLowerCase();
+                Range source = getRange(name.getText());
+                CellsAndHeadingsForDisplay sentCells = loadingUser.getSentCells(regionName);
+                if (sentCells != null){
+                    List<List<CellForDisplay>> data = sentCells.getData();
+                    if (data.size() ==source.getRowCount() && data.get(0).size() == source.getColumnCount()){
+                        for (int row=0;row<source.getRowCount();row++){
+                            List<CellForDisplay> dataRow = data.get(row);
+                            for (int col=0;col < source.getColumnCount(); col++){
+                                CellForDisplay dataCell = dataRow.get(col);
+                                String chosen;
+                                boolean isDouble = false;
+                                double doubleValue = 0.0;
+                                try {
+                                    chosen = source.get(row,col).getStringValue();
+                                } catch (Exception e) {
+                                    try {
+
+                                        doubleValue = source.get(row,col).getDoubleValue();
+                                        isDouble = true;
+                                        chosen = doubleValue + "";
+
+                                    } catch (Exception e2) {
+                                        chosen = "";
+                                    }
+                                }
+                                dataCell.setStringValue(chosen);
+                                if (isDouble) {
+                                    dataCell.setDoubleValue(doubleValue);
+                                }
+                                items++;
+                            }
+                        }
+                    }
+
+
+                }
+              }
+        }
+        return items + " data items transferred successfully";
+
+    }
+
 }
