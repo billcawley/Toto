@@ -194,27 +194,36 @@ public final class NameService {
         if (attPos > 0) {
             Name parentFound = findNameAndAttribute(azquoMemoryDBConnection, qualifiedName.substring(0,attPos+1),attributeNames);
             if (parentFound == null) return null;
-            return findParentAttributesName(parentFound,qualifiedName.substring(attPos + 2).replace("`",""), HashObjSets.newMutableSet());
+            String attribute = qualifiedName.substring(attPos + 2).replace("`","");
+            Name attName = findParentAttributesName(parentFound,attribute, HashObjSets.newMutableSet());
+            if (attName==null) {//see if we can find a name from the string value
+                String attVal = parentFound.getAttribute(attribute);
+                if (attVal!=null) {
+                    return findByName(azquoMemoryDBConnection,attVal);
+                }
+            }
+            return attName;
         }else{
             return findByName(azquoMemoryDBConnection, qualifiedName,attributeNames);
         }
     }
 
-    public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, final List<String> attributeNames) throws Exception {
+    public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String qualifiedName, final List<String> attributeNames) throws Exception {
         findByName2Count.incrementAndGet();
-     /* this routine now accepts a comma separated list to indicate a 'general' hierarchy as well as a basic Parent->Name syntax
-        This may not be an immediate hierarchy.
-        e.g.  if 'London, place' is sent, then the system will look for any 'London' that is ultimately in the set 'Place', whether through direct parent, or parent of parents.
-        It can accept multiple layers - ' London, Ontario, Place' would find   Place/Canada/Ontario/London
-        It should also recognise "" "London, North", "Ontario", "Place" should recognise that the 'North' is part of 'London, North'
-
-        language effectively being the attribute name so london, ontario, canada parent name would be canada (initially)
-         The point is to resolve the last name in the list then the second last with the last as parent then the third last with the second last as parent etc until
-         we're on the left most of the parents, we use that to try to find the name we're after. Variable names and logic might be improved, not sure.
-
-        The new function parseNameQualifiedWithParents deals with the parsing and returns the parents first
+     /*
+        This routine accepts multiple 'memberof (->) symbols.  It also checks for the 'language indicator' (<-)
 
          */
+        int langPos = qualifiedName.indexOf(languageIndicator);
+        if (langPos > 0){
+            int quotePos = qualifiedName.indexOf(Name.QUOTE);
+            if (quotePos < 0 || quotePos> langPos){
+                attributeNames.clear();
+                attributeNames.add(qualifiedName.substring(0,langPos));
+                qualifiedName = qualifiedName.substring(langPos + 2);
+            }
+        }
+
         if (qualifiedName == null || qualifiedName.length() == 0) return null;
         List<String> parents = stringUtils.parseNameQualifiedWithParents(qualifiedName); // should never return an empty array given the check just now on qualified name
         String name = parents.remove(parents.size() - 1); // get the name off the end of the list now should just be parents in top to bottom order
@@ -934,7 +943,7 @@ public final class NameService {
                 for (Name defName : defNames) {
                     String definition = defName.getAttribute("DEFINITION");
                     if (definition!=null) {
-                        Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition);
+                        Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition,attributeNames);
                         if (defSet != null) {
                             defName.setChildrenWillBePersisted(defSet);
                         }
