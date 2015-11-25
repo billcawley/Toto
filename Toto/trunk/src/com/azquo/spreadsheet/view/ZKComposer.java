@@ -466,7 +466,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = myzss.getBook();
         List<SName> found = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) { // seems best to loop through names checking which matches I think
-            if (name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
+            if (name.getRefersToSheetName()!=null && name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
                     && name.getRefersToCellRegion() != null
                     && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
                     && col >= name.getRefersToCellRegion().getColumn() && col <= name.getRefersToCellRegion().getLastColumn()) {
@@ -482,7 +482,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = myzss.getBook();
         List<SName> found = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) { // seems best to loop through names checking which matches I think
-            if (name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
+            if (name.getRefersToSheetName()!=null && name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
                     && name.getName().toLowerCase().startsWith("az_dataregion")
                     && name.getRefersToCellRegion() != null
                     && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
