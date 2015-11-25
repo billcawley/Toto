@@ -901,11 +901,9 @@ public final class NameService {
                     String userEmail = attributeNames.get(0);
                     if (totalName.getAttribute(userEmail) == null){ // there is no specific set for this user yet, need to do something
                         Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), totalName.getAdditive()); // a basic copy of the set
-                        userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
+                        //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
                         userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
-                        for (Name parent : totalName.getParents()){ // set the name parents
-                            parent.addChildWillBePersisted(userSpecificSet);
-                        }
+                        totalName.addChildWillBePersisted(userSpecificSet);
                         totalName = userSpecificSet; // switch the new one in, it will be used as normal
                     }
                 }
@@ -942,8 +940,23 @@ public final class NameService {
             if (defNames!=null) {
                 for (Name defName : defNames) {
                     String definition = defName.getAttribute("DEFINITION");
-                    if (definition!=null) {
-                        Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition,attributeNames);
+                     if (definition!=null) {
+                         if (attributeNames.size()>1) {
+                             String userEmail = attributeNames.get(0);
+                             if (defName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
+                                 List<String> localLanguages = new ArrayList<>();
+                                 localLanguages.add(userEmail);
+                                 Name userSpecificSet = findByName(azquoMemoryDBConnection,defName.getDefaultDisplayName(),localLanguages);
+                                 if (userSpecificSet==null) {
+                                     userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), defName.getAdditive()); // a basic copy of the set
+                                     //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
+                                     userSpecificSet.setAttributeWillBePersisted(userEmail, defName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
+                                     defName.addChildWillBePersisted(userSpecificSet);
+                                 }
+                                 defName = userSpecificSet; // switch the new one in, it will be used as normal
+                             }
+                         }
+                         Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition,attributeNames);
                         if (defSet != null) {
                             defName.setChildrenWillBePersisted(defSet);
                         }
