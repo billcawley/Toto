@@ -23,6 +23,7 @@ import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.model.CellRegion;
+import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zss.ui.event.*;
@@ -53,6 +54,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     AdminService adminService;
     Popup provenancePopup = null;
     Popup highlightPopup = null;
+    Popup instructionsPopup = null;
 
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
@@ -67,6 +69,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         rmiClient = (RMIClient) applicationContext.getBean("rmiClient");
         editPopup.setId("editPopup");
         editPopup.setStyle("background-color:#ffffcc");
+        /*
         Menuitem item1 = new Menuitem("Audit");
         item1.setId("provenance");
         Menuitem item2 = new Menuitem("Region Spec");
@@ -78,23 +81,23 @@ public class ZKComposer extends SelectorComposer<Component> {
         editPopup.appendChild(item1);
         editPopup.appendChild(item2);
         editPopup.appendChild(item3);
-
+*/
         provenancePopup = new Popup();
         provenancePopup.setId("provenancePopup");
         provenancePopup.setDraggable("true");
         provenancePopup.setDroppable("true");
         provenancePopup.setStyle("background:#ffffcc");
-        item1.setPopup(provenancePopup); // I think that will automatically work??
+        //item1.setPopup(provenancePopup); // I think that will automatically work??
 
 
-        Popup instructionsPopup = new Popup();
+        instructionsPopup = new Popup();
         instructionsPopup.setId("instructionsPopup");
         instructionsLabel.setMultiline(true);
         instructionsPopup.appendChild(instructionsLabel);
         highlightPopup = new Popup();
         highlightPopup.setId("highlightPopup");
-        item2.setPopup(instructionsPopup);
-        item3.setPopup(highlightPopup);
+        //item2.setPopup(instructionsPopup);
+        //item3.setPopup(highlightPopup);
 
         // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
 
@@ -283,158 +286,190 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
         // right now a right click gets provenance ready, dunno if I need to do this
         List<SName> names = getNamedDataRegionForRowAndColumnSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
-        if (editPopup.getChildren().size() == 4){ // drilldown was added, remove it
+        while (editPopup.getChildren().size() > 0){ // clear it out
             editPopup.removeChild(editPopup.getLastChild());
         }
-        for (SName name : names) {
-            if (ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_rowheadings" + name.getName().substring(13)) != null) {
 
-                Component popupChild = provenancePopup.getFirstChild();
-                while (popupChild != null) {
-                    provenancePopup.removeChild(popupChild);
-                    popupChild = provenancePopup.getFirstChild();
-                }
-                String region = name.getName().substring("az_DataRegion".length());
-                Book book = myzss.getBook();
-                LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-                try {
-                    // ok this is a bit nasty, after Azquobook is zapped we could try something different
-                    // todo - sort after zapping azquobook! Maybe clickable again?
-                    List<TreeNode> TreeNodes = spreadsheetService.getTreeNode(loggedInUser, region
-                            , cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow(), cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn(), 1000);
-                    if (!TreeNodes.isEmpty()) {
-                        StringBuilder toShow = new StringBuilder();
-                        for (TreeNode TreeNode : TreeNodes) {
-                            resolveTreeNode(0, toShow, TreeNode);
-                        }
-                        String stringToShow = toShow.toString();
-                        final String fullProvenance = stringToShow;
-                        stringToShow = stringToShow.replace("\t", "....");
-                        int spreadPos = stringToShow.indexOf("in spreadsheet");
-                        int nextBlock;
-                        while (spreadPos >= 0) {
-                            int endLine = stringToShow.indexOf("\n");
-                            nextBlock = stringToShow.indexOf("in spreadsheet", endLine);
-                            if (nextBlock < 0) {
-                                nextBlock = stringToShow.length();
-                            } else {
-                                nextBlock = stringToShow.lastIndexOf("\n", nextBlock) + 1;
+        Component popupChild = provenancePopup.getFirstChild();
+        while (popupChild != null) {
+            provenancePopup.removeChild(popupChild);
+            popupChild = provenancePopup.getFirstChild();
+        }
+        SCell sCell = cellMouseEvent.getSheet().getInternalSheet().getCell(cellMouseEvent.getRow(),cellMouseEvent.getColumn());
+        if (sCell.getType()== SCell.CellType.FORMULA){
+            String formula =sCell.getFormulaValue();
+            Label provenanceLabel = new Label();
+            provenanceLabel.setMultiline(true);
+            provenanceLabel.setValue(trimString("Spreadsheet formula: =" + formula));
+            provenancePopup.appendChild(provenanceLabel);
+            Menuitem auditItem = new Menuitem("Audit");
+            editPopup.appendChild(auditItem);
+            auditItem.setPopup(provenancePopup);
+            editPopup.open(cellMouseEvent.getClientx() - 130, cellMouseEvent.getClienty());
+
+        }else {
+            for (SName name : names) {
+                if (ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_rowheadings" + name.getName().substring(13)) != null) {
+                    String region = name.getName().substring("az_DataRegion".length());
+                    Book book = myzss.getBook();
+                    LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+                    try {
+                        // ok this is a bit nasty, after Azquobook is zapped we could try something different
+                        // todo - sort after zapping azquobook! Maybe clickable again?
+                        int regionRow =  cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow();
+                        int regionColumn = cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn();
+                        List<TreeNode> TreeNodes = spreadsheetService.getTreeNode(loggedInUser, region, regionRow, regionColumn, 1000);
+                        if (!TreeNodes.isEmpty()) {
+                            StringBuilder toShow = new StringBuilder();
+                            for (TreeNode TreeNode : TreeNodes) {
+                                resolveTreeNode(0, toShow, TreeNode);
                             }
-                            final String provLine = stringToShow.substring(0, endLine);
-                            final Toolbarbutton provButton = new Toolbarbutton(provLine);
-                            provButton.addEventListener("onClick",
-                                    event -> showProvenance(provLine));
-                            provenancePopup.appendChild(provButton);
+                            String stringToShow = toShow.toString();
+                            final String fullProvenance = stringToShow;
+                            stringToShow = stringToShow.replace("\t", "....");
+                            int spreadPos = stringToShow.indexOf("in spreadsheet");
+                            int nextBlock;
+                            while (spreadPos >= 0) {
+                                int endLine = stringToShow.indexOf("\n");
+                                nextBlock = stringToShow.indexOf("in spreadsheet", endLine);
+                                if (nextBlock < 0) {
+                                    nextBlock = stringToShow.length();
+                                } else {
+                                    nextBlock = stringToShow.lastIndexOf("\n", nextBlock) + 1;
+                                }
+                                final String provLine = stringToShow.substring(0, endLine);
+                                final Toolbarbutton provButton = new Toolbarbutton(provLine);
+                                provButton.addEventListener("onClick",
+                                        event -> showProvenance(provLine));
+                                provenancePopup.appendChild(provButton);
+                                Label provenanceLabel = new Label();
+                                provenanceLabel.setMultiline(true);
+
+                                provenanceLabel.setValue(trimString(stringToShow.substring(endLine, nextBlock)));
+                                provenancePopup.appendChild(provenanceLabel);
+                                stringToShow = stringToShow.substring(nextBlock);
+                                spreadPos = stringToShow.indexOf("in spreadsheet");
+                            }
                             Label provenanceLabel = new Label();
                             provenanceLabel.setMultiline(true);
-
-                            provenanceLabel.setValue(trimString(stringToShow.substring(endLine, nextBlock)));
+                            provenanceLabel.setValue(trimString(stringToShow));
                             provenancePopup.appendChild(provenanceLabel);
-                            stringToShow = stringToShow.substring(nextBlock);
-                            spreadPos = stringToShow.indexOf("in spreadsheet");
+
+                            final Toolbarbutton button = new Toolbarbutton("Download Full Audit");
+                            button.addEventListener("onClick",
+                                    event -> Filedownload.save(fullProvenance, "text/csv", "provenance.csv"));
+                            provenancePopup.appendChild(button);
+                            Menuitem auditItem = new Menuitem("Audit");
+                            editPopup.appendChild(auditItem);
+                            auditItem.setPopup(provenancePopup);
+
+                            // only check for drilldown on proper data, that which could have provenance
+
+                            CellRegion drillDown = ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_DrillDown" + region);
+                            if (drillDown != null) {
+                                String drillDownString = ZKAzquoBookUtils.getRegionValue(myzss.getSelectedSheet(), drillDown);
+                                if (drillDownString.length() > 0) {
+                                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
+                                    final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow());
+                                    final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
+                                    String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
+                                    String colHeading = colHeadings.get(cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn());
+                                    // rather unelegant way to be case insensetive
+                                    drillDownString = drillDownString.replace("[rowHeading]", rowHeading);
+                                    drillDownString = drillDownString.replace("[rowheading]", rowHeading);
+                                    drillDownString = drillDownString.replace("[ROWHEADING]", rowHeading);
+                                    drillDownString = drillDownString.replace("[colHeading]", colHeading);
+                                    drillDownString = drillDownString.replace("[colheading]", colHeading);
+                                    drillDownString = drillDownString.replace("[COLHEADING]", colHeading);
+                                    final String stringToPass = drillDownString;
+                                    Menuitem ddItem = new Menuitem("Drill Down");
+                                    editPopup.appendChild(ddItem);
+                                    ddItem.addEventListener("onClick",
+                                            event -> showProvenance(stringToPass));
+                                    // now need to find the headings - is this easy?
+                                }
+                            }
+
                         }
-                        Label provenanceLabel = new Label();
-                        provenanceLabel.setMultiline(true);
-                        provenanceLabel.setValue(trimString(stringToShow));
-                        provenancePopup.appendChild(provenanceLabel);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
 
-                        final Toolbarbutton button = new Toolbarbutton("Download Full Audit");
-                        button.addEventListener("onClick",
-                                event -> Filedownload.save(fullProvenance, "text/csv", "provenance.csv"));
-                        provenancePopup.appendChild(button);
-
-                        // only check for drilldown on proper data, that which could have provenance
-
-                        CellRegion drillDown = ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_DrillDown" + region);
-                        if (drillDown != null) {
-                            String drillDownString = ZKAzquoBookUtils.getRegionValue(myzss.getSelectedSheet(), drillDown);
-                            if (drillDownString.length() > 0){
-                                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
-                                final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow());
-                                final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
-                                String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
-                                String colHeading = colHeadings.get(cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn());
-                                // rather unelegant way to be case insensetive
-                                drillDownString = drillDownString.replace("[rowHeading]", rowHeading);
-                                drillDownString = drillDownString.replace("[rowheading]", rowHeading);
-                                drillDownString = drillDownString.replace("[ROWHEADING]", rowHeading);
-                                drillDownString = drillDownString.replace("[colHeading]", colHeading);
-                                drillDownString = drillDownString.replace("[colheading]", colHeading);
-                                drillDownString = drillDownString.replace("[COLHEADING]", colHeading);
-                                final String stringToPass = drillDownString;
-                                Menuitem ddItem = new Menuitem("Drill Down");
-                                editPopup.appendChild(ddItem);
-                                ddItem.addEventListener("onClick",
-                                        event -> showProvenance(stringToPass));
-                                // now need to find the headings - is this easy?
+                    instructionsLabel.setValue("");
+                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
+                    if (sentCells != null && sentCells.getData().size() > 0) {
+                        StringBuilder instructionsText = new StringBuilder();
+                        instructionsText.append("COLUMN HEADINGS\n\n");
+                        List<List<String>> headings = sentCells.getColHeadingsSource();
+                        if (headings != null) {
+                            for (List<String> row : sentCells.getColHeadingsSource()) { // flatten for the mo
+                                for (String cell : row) {
+                                    instructionsText.append(cell + "\n");
+                                }
                             }
                         }
-
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-                instructionsLabel.setValue("");
-                final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
-                if (sentCells != null && sentCells.getData().size() > 0) {
-                    StringBuilder instructionsText = new StringBuilder();
-                    instructionsText.append("COLUMN HEADINGS\n\n");
-                    List<List<String>> headings = sentCells.getColHeadingsSource();
-                    if (headings != null) {
-                        for (List<String> row : sentCells.getColHeadingsSource()) { // flatten for the mo
-                            for (String cell : row) {
-                                instructionsText.append(cell + "\n");
+                        instructionsText.append("\nROW HEADINGS\n\n");
+                        headings = sentCells.getRowHeadingsSource();
+                        if (headings != null) {
+                            for (List<String> row : sentCells.getRowHeadingsSource()) { // flatten for the mo
+                                for (String cell : row) {
+                                    instructionsText.append(cell + "\n");
+                                }
                             }
                         }
-                    }
-                    instructionsText.append("\nROW HEADINGS\n\n");
-                    headings = sentCells.getRowHeadingsSource();
-                    if (headings != null) {
-                        for (List<String> row : sentCells.getRowHeadingsSource()) { // flatten for the mo
-                            for (String cell : row) {
-                                instructionsText.append(cell + "\n");
+                        headings = sentCells.getContextSource();
+                        instructionsText.append("\nCONTEXT\n\n");
+                        if (headings != null) {
+                            for (List<String> row : sentCells.getContextSource()) { // flatten for the mo
+                                for (String cell : row) {
+                                    instructionsText.append(cell + "\n");
+                                }
                             }
                         }
+                        instructionsLabel.setValue(instructionsText.toString());
                     }
-                    headings = sentCells.getContextSource();
-                    instructionsText.append("\nCONTEXT\n\n");
-                    if (headings != null) {
-                        for (List<String> row : sentCells.getContextSource()) { // flatten for the mo
-                            for (String cell : row) {
-                                instructionsText.append(cell + "\n");
-                            }
-                        }
-                    }
-                    instructionsLabel.setValue(instructionsText.toString());
-                }
+                    Menuitem instructionsItem = new Menuitem("Region definition");
+                    editPopup.appendChild(instructionsItem);
+                    instructionsItem.setPopup(instructionsPopup);
 
-                popupChild = highlightPopup.getFirstChild();
-                while (popupChild != null) {
-                    highlightPopup.removeChild(popupChild);
                     popupChild = highlightPopup.getFirstChild();
+                    while (popupChild != null) {
+                        highlightPopup.removeChild(popupChild);
+                        popupChild = highlightPopup.getFirstChild();
+                    }
+                    int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+                    UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+                    int highlightDays = 0;
+                    if (userRegionOptions != null) {
+                        highlightDays = userRegionOptions.getHighlightDays();
+                    }
+                    String highlightString = "no highlight";
+                    if (highlightDays > 0) highlightString = highlightDays + " days";
+                    final String highlightList = "Current highlight is " + highlightString + "\n";
+                    Label highlightLabel = new Label();
+                    highlightLabel.setMultiline(true);
+                    highlightLabel.setValue(highlightList);
+                    highlightPopup.appendChild(highlightLabel);
+                    addHighlight(highlightPopup, 0);
+                    addHighlight(highlightPopup, 1);
+                    addHighlight(highlightPopup, 7);
+                    addHighlight(highlightPopup, 30);
+                    addHighlight(highlightPopup, 90);
+                    Menuitem highlightItem = new Menuitem("Highlight");
+                    editPopup.appendChild(highlightItem);
+                    highlightItem.setPopup(highlightPopup);
+                    editPopup.open(cellMouseEvent.getClientx() - 130, cellMouseEvent.getClienty());
                 }
-                int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-                UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
-                int highlightDays = 0;
-                if (userRegionOptions != null) {
-                    highlightDays = userRegionOptions.getHighlightDays();
-                }
-                String highlightString = "no highlight";
-                if (highlightDays > 0) highlightString = highlightDays + " days";
-                final String highlightList = "Current highlight is " + highlightString + "\n";
-                Label highlightLabel = new Label();
-                highlightLabel.setMultiline(true);
-                highlightLabel.setValue(highlightList);
-                highlightPopup.appendChild(highlightLabel);
-                addHighlight(highlightPopup, 0);
-                addHighlight(highlightPopup, 1);
-                addHighlight(highlightPopup, 7);
-                addHighlight(highlightPopup, 30);
-                addHighlight(highlightPopup, 90);
             }
-            editPopup.open(cellMouseEvent.getClientx() - 130, cellMouseEvent.getClienty());
         }
+    }
+
+    private List<String> getHeadings(List<List<String>>headings, int headingPos){
+        List<String>toReturn = new ArrayList<>();
+        for (List<String>headingRow:headings){
+            toReturn.add(headingRow.get(headingPos));
+        }
+        return toReturn;
     }
 
     private void showProvenance(String provline) {
