@@ -21,7 +21,7 @@ public class TreeNode implements Serializable{
         link= null;
         value = null;
         dValue = 0;
-        children= null;
+        children= new ArrayList<TreeNode>();
     }
 
 
