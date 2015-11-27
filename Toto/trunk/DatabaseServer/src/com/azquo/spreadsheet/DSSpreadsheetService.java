@@ -21,6 +21,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import javax.servlet.ServletContext;
 import java.io.*;
 import java.net.InetAddress;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -1465,6 +1467,19 @@ seaports;children   container;children
             if (valuesForCell.getValues() != null) {
                 return nodify(valuesForCell.getValues(), maxSize);
             }
+            if (azquoCell.getRowHeadings().get(0).getAttribute()!=null || azquoCell.getColumnHeadings().get(0).getAttribute()!=null){
+                Name cellName = null;
+                String attribute = null;
+                if (azquoCell.getRowHeadings().get(0).getAttribute()!=null){
+                    cellName = azquoCell.getColumnHeadings().get(0).getName();
+                    attribute = azquoCell.getRowHeadings().get(0).getAttribute();
+                }else{
+                    cellName = azquoCell.getRowHeadings().get(0).getName();
+                    attribute = azquoCell.getColumnHeadings().get(0).getAttribute();
+
+                }
+                return nodify(cellName,attribute);
+            }
         }
         return new ArrayList<>(); //just empty ok? null? Unsure
     }
@@ -1519,6 +1534,29 @@ seaports;children   container;children
         }
         return toReturn;
     }
+
+
+    public List<TreeNode> nodify(Name name, String attribute) {
+
+        attribute = attribute.substring(1).replace("`","");
+        List<TreeNode> toReturn = new ArrayList<>();
+        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
+        Provenance p = name.getProvenance();
+        TreeNode node = new TreeNode();
+        node.setValue(name.getAttribute(attribute));
+        node.setName(name.getDefaultDisplayName() + "." + attribute);
+        String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
+        String method = p.getMethod();
+        if (p.getName() != null) {
+            method += " " + p.getName();
+        }
+        if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
+        node.setHeading(source + " " + method);
+        toReturn.add(node);
+        return toReturn;
+    }
+
+
 
     public void importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
         //write the column headings and data to a temporary file, then import it
