@@ -331,6 +331,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                             int nextBlock;
                             while (spreadPos >= 0) {
                                 int endLine = stringToShow.indexOf("\n");
+                                if (endLine==-1) endLine = stringToShow.length();
                                 nextBlock = stringToShow.indexOf("in spreadsheet", endLine);
                                 if (nextBlock < 0) {
                                     nextBlock = stringToShow.length();
