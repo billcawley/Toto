@@ -1464,10 +1464,16 @@ seaports;children   container;children
         if (azquoCell != null) {
             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
             //Set<Name> specialForProvenance = new HashSet<Name>();
+
+            if (valuesForCell==null){
+                return nameCountProvenance(azquoCell);
+                 }
+
+
             if (valuesForCell.getValues() != null) {
                 return nodify(valuesForCell.getValues(), maxSize);
             }
-            if (azquoCell.getRowHeadings().get(0).getAttribute()!=null || azquoCell.getColumnHeadings().get(0).getAttribute()!=null){
+              if (azquoCell.getRowHeadings().get(0).getAttribute()!=null || azquoCell.getColumnHeadings().get(0).getAttribute()!=null){
                 Name cellName = null;
                 String attribute = null;
                 if (azquoCell.getRowHeadings().get(0).getAttribute()!=null){
@@ -1482,6 +1488,56 @@ seaports;children   container;children
             }
         }
         return new ArrayList<>(); //just empty ok? null? Unsure
+    }
+
+    private List<TreeNode> nameCountProvenance(AzquoCell azquoCell){
+        String provString = "";
+        Set<Name> cellNames = new HashSet<Name>();
+        Name nameCountHeading = null;
+        for (DataRegionHeading rowHeading:azquoCell.getRowHeadings()){
+            if (rowHeading.getNameCountSet()!=null){
+                provString+= "namecount("+rowHeading.getDescription();
+                nameCountHeading = rowHeading.getName();
+            }
+            if (rowHeading.getName()!=null){
+                cellNames.add(rowHeading.getName());
+            }
+
+        }
+        for (DataRegionHeading colHeading:azquoCell.getColumnHeadings()){
+            if (colHeading.getNameCountSet()!=null){
+                provString+= "namecount("+colHeading.getDescription();
+                nameCountHeading = colHeading.getName();
+                break;
+            }
+            if (colHeading.getName()!=null){
+                cellNames.add(colHeading.getName());
+            }
+        }
+        List<TreeNode> toReturn = new ArrayList<>();
+        if (provString!=null){
+            if (nameCountHeading!=null){
+                provString="total" + provString;
+            }
+            Name cellName = cellNames.iterator().next();
+            provString += " * " + cellName.getDefaultDisplayName() + ")";
+            DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
+            Provenance p = cellName.getProvenance();
+            TreeNode node = new TreeNode();
+            node.setValue(azquoCell.getDoubleValue()+"");
+            node.setName(provString);
+            String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
+            String method = p.getMethod();
+            if (p.getName() != null) {
+                method += " " + p.getName();
+            }
+            if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
+            node.setHeading(source + " " + method);
+            toReturn.add(node);
+
+        }
+        return toReturn;
+
     }
 
     // for inspect database I think
