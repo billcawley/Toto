@@ -56,6 +56,7 @@ public final class ImportService {
             throw new Exception("error: no database set");
         }
         String tempFile = tempFileWithoutDecoding(uploadFile, fileName);
+        uploadFile.close(); // windows requires this (though windows will never be used in production), perhaps not a bad idea anyway
         String toReturn;
         if (fileName.endsWith(".zip")) {
             fileName = fileName.substring(0, fileName.length() - 4);
@@ -108,7 +109,12 @@ public final class ImportService {
     }
 
     public List<File> unZip(String zipFile) {
-        String outputFolder = zipFile.substring(0, zipFile.lastIndexOf("/"));// same dir
+        String outputFolder;
+        if (!zipFile.contains("/")){
+            outputFolder = zipFile.substring(0, zipFile.lastIndexOf("\\"));// same dir
+        } else { // normal
+            outputFolder = zipFile.substring(0, zipFile.lastIndexOf("/"));// same dir
+        }
         byte[] buffer = new byte[1024];
         List<File> toReturn = new ArrayList<>();
         try {
