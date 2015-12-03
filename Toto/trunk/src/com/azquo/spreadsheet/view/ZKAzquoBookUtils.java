@@ -132,7 +132,7 @@ public class ZKAzquoBookUtils {
                         userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
                     }
 
-                    fillRegion(sheet, region, userRegionOptions, loggedInUser);
+                    fillRegion(sheet, reportId, region, userRegionOptions, loggedInUser);
                 }
             }
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");
@@ -160,7 +160,7 @@ public class ZKAzquoBookUtils {
                     if (name.getName().startsWith(azDataRegion)) {
                         String region = name.getName().substring(azDataRegion.length());
                         CellRegion displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
-                        final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
+                        final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
                         if (displayDataRegion != null && sentCells != null) {
                             int startRow = displayDataRegion.getRow();
                             int endRow = displayDataRegion.getLastRow();
@@ -330,7 +330,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private void fillRegion(Sheet sheet, String region, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
+    private void fillRegion(Sheet sheet, int reportId,  String region, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
         CellRegion columnHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_ColumnHeadings" + region);
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
@@ -348,7 +348,7 @@ public class ZKAzquoBookUtils {
                 dataRegionCells.add(oneRow);
             }
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null);
-            loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
+            loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
             return;
         }
 
@@ -356,7 +356,7 @@ public class ZKAzquoBookUtils {
             try {
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
                         regionToStringLists(contextDescription, sheet), userRegionOptions);
-                loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
+                loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
                 // might be factored into fill range in a bit
                 CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayColumnHeadings" + region);

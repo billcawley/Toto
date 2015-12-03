@@ -1,7 +1,6 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.memorydb.Constants;
-import com.azquo.memorydb.core.Provenance;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
@@ -186,19 +185,16 @@ public final class NameService {
         return null;
     }
 
-
-
     private Name findNameAndAttribute(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, final List<String>attributeNames) throws Exception{
-
         int attPos = qualifiedName.lastIndexOf("`.`");
         if (attPos > 0) {
             Name parentFound = findNameAndAttribute(azquoMemoryDBConnection, qualifiedName.substring(0,attPos+1),attributeNames);
             if (parentFound == null) return null;
             String attribute = qualifiedName.substring(attPos + 2).replace("`","");
             Name attName = findParentAttributesName(parentFound,attribute, HashObjSets.newMutableSet());
-            if (attName==null) {//see if we can find a name from the string value
+            if (attName == null) {//see if we can find a name from the string value
                 String attVal = parentFound.getAttribute(attribute);
-                if (attVal!=null) {
+                if (attVal != null) {
                     return findByName(azquoMemoryDBConnection,attVal);
                 }
             }

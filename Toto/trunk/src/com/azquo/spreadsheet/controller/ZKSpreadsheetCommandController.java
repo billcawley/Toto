@@ -174,11 +174,12 @@ public class ZKSpreadsheetCommandController {
                         LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                         // todo - provenance?
                         final Book book = ss.getBook();
-                        OnlineReport onlineReport = onlineReportDAO.findById(loggedInUser.getReportId());
+                        int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+                        OnlineReport onlineReport = onlineReportDAO.findById(reportId);
                         for (SName name : book.getInternalBook().getNames()) {
                             if (name.getName().toLowerCase().startsWith(AzquoBook.azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
                                 String region = name.getName().substring(AzquoBook.azDataRegion.length());
-                                spreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport != null ? onlineReport.getReportName() : "");
+                                spreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
                             }
                         }
                     }

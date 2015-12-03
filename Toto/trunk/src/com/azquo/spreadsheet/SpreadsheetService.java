@@ -427,8 +427,8 @@ public class SpreadsheetService {
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
-    public List<TreeNode> getTreeNode(LoggedInUser loggedInUser, String region, int rowInt, int colInt, int maxSize) throws Exception {
-        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
+    public List<TreeNode> getTreeNode(LoggedInUser loggedInUser, int reportId, String region, int rowInt, int colInt, int maxSize) throws Exception {
+        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
         if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
                 && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).size() > colInt
@@ -443,8 +443,8 @@ public class SpreadsheetService {
     }
 
 
-    public void saveData(LoggedInUser loggedInUser, String region, String reportName) throws Exception {
-        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
+    public void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName) throws Exception {
+        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
         if (cellsAndHeadingsForDisplay != null){
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
             rmiClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext());
@@ -452,7 +452,7 @@ public class SpreadsheetService {
     }
 
     public String setChoices(LoggedInUser loggedInUser, String provline){
-         int inSpreadPos = provline.indexOf("in spreadsheet");
+        int inSpreadPos = provline.indexOf("in spreadsheet");
         if (inSpreadPos < 0) return null;
         int withPos = provline.indexOf(" with ", inSpreadPos);
         if (withPos < 0) return null;

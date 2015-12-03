@@ -379,7 +379,7 @@ public class AzquoBook {
         return toReturn.toArray(new String[toReturn.size()]);
     }
 
-    private void fillRegion(LoggedInUser loggedInUser, String region, Map<Cell, Boolean> highlighted, UserRegionOptions userRegionOptions) throws Exception {
+    private void fillRegion(LoggedInUser loggedInUser, int reportId, String region, Map<Cell, Boolean> highlighted, UserRegionOptions userRegionOptions) throws Exception {
         logger.info("loading " + region);
         Range columnHeadings = getRange("az_columnheadings" + region);
         if (columnHeadings == null) {
@@ -399,7 +399,7 @@ public class AzquoBook {
                 dataRegionCells.add(oneRow);
             }
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null);
-            loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
+            loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
             return;
 
 
@@ -410,7 +410,7 @@ public class AzquoBook {
         Range context = getRange("az_context" + region);
        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
                 rangeToStringLists(context), userRegionOptions);
-        loggedInUser.setSentCells(region, cellsAndHeadingsForDisplay);
+        loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
         // think this language detection is sound
         fillRange(dataRegionPrefix + region, cellsAndHeadingsForDisplay.getData(), true, highlighted);
         String[] givenColumnHeadings = fillRange("az_displaycolumnheadings" + region, cellsAndHeadingsForDisplay.getColumnHeadings(), false);
@@ -655,7 +655,7 @@ public class AzquoBook {
             }
         }
         model.addAttribute("menuregions", vRegions);
-        model.addAttribute("regions", getRegions(loggedInUser, dataRegionPrefix).toString());//this is for javascript routines
+        model.addAttribute("regions", getRegions(loggedInUser, reportId, dataRegionPrefix).toString());//this is for javascript routines
     }
 
     public void loadData(LoggedInUser loggedInUser, Map<Cell, Boolean> highlighted, int reportId) {
@@ -671,7 +671,7 @@ public class AzquoBook {
                     if (userRegionOptions == null) {
                         userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, regionName, getSheetDefinedOptionsStringForRegion(regionName) != null ? getSheetDefinedOptionsStringForRegion(regionName) : "");
                     }
-                    fillRegion(loggedInUser, regionName, highlighted, userRegionOptions);
+                    fillRegion(loggedInUser, reportId, regionName, highlighted, userRegionOptions);
                 } catch (RemoteException re) {
                     Throwable t = re.detail.getCause();
                     if (t != null) {
@@ -1023,7 +1023,7 @@ public class AzquoBook {
 
     // manual creating of json but this should be zappe fairly shortly
 
-    public StringBuilder getRegions(LoggedInUser loggedInUser, String regionNameStart) {
+    public StringBuilder getRegions(LoggedInUser loggedInUser, int reportId, String regionNameStart) {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
         boolean firstRegion = true;
@@ -1035,11 +1035,7 @@ public class AzquoBook {
                 } else {
                     sb.append(",");
                 }
-
-
-                loggedInUser.getSentCells(name.getText().substring(dataRegionPrefix.length()));
-
-
+                loggedInUser.getSentCells(reportId, name.getText().substring(dataRegionPrefix.length()));
                 // edd zapped the locks, I wonder if this will cause a problem?
                 Range dataRange = name.getRange();
                 sb.append("{").append(jsonValue("name", name.getText().substring(regionNameStart.length()).toLowerCase(), false))
@@ -1047,7 +1043,7 @@ public class AzquoBook {
                         .append(jsonValue("left", dataRange != null ? dataRange.getFirstColumn() : 0))
                         .append(jsonValue("bottom", dataRange != null ? dataRange.getFirstRow() + dataRange.getRowCount() - 1 : 0))
                         .append(jsonValue("right", dataRange != null ? dataRange.getFirstColumn() + dataRange.getColumnCount() - 1 : 0))
-                        .append(loggedInUser.getSentCells(name.getText().substring(dataRegionPrefix.length())) != null ? jsonLockRange("locks", loggedInUser.getSentCells(name.getText().substring(dataRegionPrefix.length())).getData()) : "")
+                        .append(loggedInUser.getSentCells(reportId, name.getText().substring(dataRegionPrefix.length())) != null ? jsonLockRange("locks", loggedInUser.getSentCells(reportId, name.getText().substring(dataRegionPrefix.length())).getData()) : "")
                         .append("}");
             }
         }
@@ -1117,20 +1113,6 @@ public class AzquoBook {
         return null;
     }
 
-    // ok json rendering is in here now and via jackson which is much much better, wondering whether it should be pushed into the controller?
-
-    public String getProvenance(LoggedInUser loggedInUser, int row, int col, String jsonFunction, int maxSize) throws Exception {
-        RegionInfo regionInfo = getRegionInfo(row, col);
-        if (regionInfo == null) return "";
-        if (regionInfo.region.startsWith(dataRegionPrefix)) {
-            String region = regionInfo.region.substring(dataRegionPrefix.length());
-            Map<String, List<TreeNode>> provenanceForJackson = new HashMap<>();
-            provenanceForJackson.put("provenance", spreadsheetService.getTreeNode(loggedInUser, region, regionInfo.row, regionInfo.col, maxSize));
-            return jsonFunction + "(" + jacksonMapper.writeValueAsString(provenanceForJackson) + ")";
-        }
-        return "";
-    }
-
     // Changing to return 2d string array, this is what we want to pass to the back end
 
     private List<List<String>> rangeToStringLists(Range range) {
@@ -1154,12 +1136,12 @@ public class AzquoBook {
     // leaving in for the mo, may be used for batch processing later . . .
     // need to workout how to detect cell changes from formulae as opposed to manual change.
 
-    public void saveData(LoggedInUser loggedInUser) throws Exception {
+    public void saveData(LoggedInUser loggedInUser, int reportId) throws Exception {
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix) && name.getRange().getWorksheet() == azquoSheet) {
                 String region = name.getText().substring(dataRegionPrefix.length());
-                spreadsheetService.saveData(loggedInUser, region.toLowerCase(), getReportName());
+                spreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, getReportName());
             }
         }
     }
@@ -1403,7 +1385,7 @@ public class AzquoBook {
 
     public Map<String,String> uploadChoices(){
         //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
-        Map<String,String> choices = new HashedMap();
+        Map<String,String> choices = new HashMap<>();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             String rangeName = name.getText().toLowerCase();
@@ -1411,21 +1393,20 @@ public class AzquoBook {
                 choices.put(rangeName.substring(rangeName.length()-6),getRangeData(rangeName));
             }
         }
-
         return choices;
     }
 
-    public String fillDataRangesFromCopy(LoggedInUser loadingUser){
+    public String fillDataRangesFromCopy(LoggedInUser loadingUser, int reportId){
         int items = 0;
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix)) {
                 String regionName = name.getText().substring(dataRegionPrefix.length()).toLowerCase();
                 Range source = getRange(name.getText());
-                CellsAndHeadingsForDisplay sentCells = loadingUser.getSentCells(regionName);
+                CellsAndHeadingsForDisplay sentCells = loadingUser.getSentCells(reportId, regionName);
                 if (sentCells != null){
                     List<List<CellForDisplay>> data = sentCells.getData();
-                    if (data.size() ==source.getRowCount() && data.get(0).size() == source.getColumnCount()){
+                    if (data.size() == source.getRowCount() && data.get(0).size() == source.getColumnCount()){
                         for (int row=0;row<source.getRowCount();row++){
                             List<CellForDisplay> dataRow = data.get(row);
                             for (int col=0;col < source.getColumnCount(); col++){

@@ -163,7 +163,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
                 // ok here's the thing, the value on the spreadsheet (heading) is no good, it could be just for display, I want what the database would call the heading
                 // so I'd better get the headings.
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region); // maybe jam this object against the book? Otherwise multiple books could cause problems
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region); // maybe jam this object against the book? Otherwise multiple books could cause problems
                 if (cellsAndHeadingsForDisplay != null) {
                     int localRow = event.getRow() - name.getRefersToCellRegion().getRow();
                     int localCol = event.getColumn() - name.getRefersToCellRegion().getColumn();
@@ -245,10 +245,12 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = event.getSheet().getBook();
         List<SName> names = getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
         if (names == null) return;
+        int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+        LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+
         for (SName name : names) { // regions may overlap - update all!
-            LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
             String region = name.getName().substring("az_DataRegion".length());
-            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
+            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
             if (sentCells != null) {
                 // the data region as defined on the cheet may be larger than the sent cells
                 if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow()
@@ -312,13 +314,13 @@ public class ZKComposer extends SelectorComposer<Component> {
                 if (ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_rowheadings" + name.getName().substring(13)) != null) {
                     String region = name.getName().substring("az_DataRegion".length());
                     Book book = myzss.getBook();
+                    int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
                     LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
                     try {
                         // ok this is a bit nasty, after Azquobook is zapped we could try something different
-                        // todo - sort after zapping azquobook! Maybe clickable again?
                         int regionRow =  cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow();
                         int regionColumn = cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn();
-                        List<TreeNode> TreeNodes = spreadsheetService.getTreeNode(loggedInUser, region, regionRow, regionColumn, 1000);
+                        List<TreeNode> TreeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
                         if (!TreeNodes.isEmpty()) {
                             StringBuilder toShow = new StringBuilder();
                             for (TreeNode TreeNode : TreeNodes) {
@@ -370,7 +372,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                             if (drillDown != null) {
                                 String drillDownString = ZKAzquoBookUtils.getRegionValue(myzss.getSelectedSheet(), drillDown);
                                 if (drillDownString.length() > 0) {
-                                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(region);
+                                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
                                     final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow());
                                     final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
                                     String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
@@ -397,7 +399,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     }
 
                     instructionsLabel.setValue("");
-                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(region);
+                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
                     if (sentCells != null && sentCells.getData().size() > 0) {
                         StringBuilder instructionsText = new StringBuilder();
                         instructionsText.append("COLUMN HEADINGS\n\n");
@@ -438,7 +440,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                         highlightPopup.removeChild(popupChild);
                         popupChild = highlightPopup.getFirstChild();
                     }
-                    int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
                     UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                     int highlightDays = 0;
                     if (userRegionOptions != null) {
@@ -463,14 +464,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
         }
-    }
-
-    private List<String> getHeadings(List<List<String>>headings, int headingPos){
-        List<String>toReturn = new ArrayList<>();
-        for (List<String>headingRow:headings){
-            toReturn.add(headingRow.get(headingPos));
-        }
-        return toReturn;
     }
 
     private void showProvenance(String provline) {

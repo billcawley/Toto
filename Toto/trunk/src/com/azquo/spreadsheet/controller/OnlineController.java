@@ -16,6 +16,7 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
@@ -124,7 +125,7 @@ public class OnlineController {
                 }
                 String result = "error: no action taken";
                 if (opcode.equals("savedata")) {
-                    loggedInUser.getAzquoBook().saveData(loggedInUser);
+                    loggedInUser.getAzquoBook().saveData(loggedInUser, ServletRequestUtils.getIntParameter(request, "reportId", 0));
                     result = "data saved successfully";
                 }
                 // highlighting etc. From the top right menu and the azquobook context menu, can be zapped later
@@ -254,7 +255,7 @@ public class OnlineController {
                                     book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                                     book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);
                                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
-                                    book.getInternalBook().setAttribute(REPORT_ID, finalLoggedInUser.getReportId());
+                                    book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
                                     ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
                                     session.setAttribute(finalReportId + SAVE_FLAG, bookUtils.populateBook(book));
                                     newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());

@@ -229,8 +229,8 @@ public final class ImportService {
              }
             AzquoBook reportBook = spreadsheetService.loadAzquoBook(loadingUser, or);
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
-            String toReturn = azquoBook.fillDataRangesFromCopy(loadingUser);
-            reportBook.saveData(loadingUser);
+            String toReturn = azquoBook.fillDataRangesFromCopy(loadingUser, or.getId());
+            reportBook.saveData(loadingUser, or.getId());
             return toReturn;
         }
         if (loggedInUser.getDatabase() == null) {

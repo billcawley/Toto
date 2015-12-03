@@ -313,10 +313,9 @@
 
 
 
-        <!--        <a class="savedata" href="#" onclick="postAjax('Save')" id="saveData" style="display:none;">Save data</a> -->
+        <!--  <a class="savedata" href="#" onclick="postAjax('Save')" id="saveData" style="display:none;">Save data</a>  -->
 
-        <!--
-                <button id="xlsButton">XLS</button>
+        <!--    <button id="xlsButton">XLS</button>
                 <button id="pdfButton">PDF</button>
                 <button id="inspectButton" onclick="inspectDatabase()">Inspect</button> -->
 

@@ -27,6 +27,8 @@ public class LoggedInUser {
 
     private final String sessionId; // it's used to match to a log server side
     private final User user;
+
+    // this report id should only be there for legacy reasons for AzquoBook, it makes no sense in the context of mulitple tabs hence ZK should not use it
     private int reportId;
 
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
@@ -116,19 +118,21 @@ public class LoggedInUser {
         this.reportId = reportId;
     }
 
-    public CellsAndHeadingsForDisplay getSentCells(final String region) {
+    // adding in report id (a little hacky, could maybe change later?) otherwise two reports on different tabs could clash on identically named regions - bug identified by drilldowns
+
+    public CellsAndHeadingsForDisplay getSentCells(final int reportId, final String region) {
         if (region == null || region.isEmpty()) {
-            return sentCellsMaps.get(defaultRegion);
+            return sentCellsMaps.get(reportId + "-" + defaultRegion);
         } else {
-            return sentCellsMaps.get(region);
+            return sentCellsMaps.get(reportId + "-" + region);
         }
     }
 
-    public void setSentCells(final String region, final CellsAndHeadingsForDisplay sentCells) {
+    public void setSentCells(final int reportId, final String region, final CellsAndHeadingsForDisplay sentCells) {
         if (region == null || region.isEmpty()) {
-            this.sentCellsMaps.put(defaultRegion, sentCells);
+            this.sentCellsMaps.put(reportId + "-" + defaultRegion, sentCells);
         } else {
-            this.sentCellsMaps.put(region, sentCells);
+            this.sentCellsMaps.put(reportId + "-" + region, sentCells);
         }
     }
 
