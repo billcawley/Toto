@@ -562,9 +562,9 @@ public final class AzquoMemoryDB {
         return nameByIdMap.size();
     }
 
-    /*public Value getValueById(final int id) {
+    public Value getValueById(final int id) {
         return valueByIdMap.get(id);
-    }*/
+    }
 
     public int getValueCount() {
         return valueByIdMap.size();

@@ -41,12 +41,12 @@ public class ZKAzquoBookUtils {
         this.rmiClient = rmiClient;
     }
 
-    public boolean populateBook(Book book) {
-        return populateBook(book, false);
+    public boolean populateBook(Book book, int valueId) {
+        return populateBook(book, valueId, false);
     }
     // kind of like azquo book prepare sheet, load data bits, will aim to replicate the basics from there
 
-    public boolean populateBook(Book book, boolean useSavedValuesOnFormulae) {
+    public boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae) {
         long track = System.currentTimeMillis();
         boolean showSave = false;
         //book.getInternalBook().getAttribute(ZKAzquoBookProvider.BOOK_PATH);
@@ -120,7 +120,7 @@ public class ZKAzquoBookUtils {
 
                     UserRegionOptions userRegionOptions2 = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                     //only these five fields to be taken from the table.   other fields - hide_rows, sortable, row_limit, column_limit should be removed from SQL table
-                    if (userRegionOptions2!=null) {
+                    if (userRegionOptions2 != null) {
                         if (userRegionOptions.getSortColumn() == null) {
                             userRegionOptions.setSortColumn(userRegionOptions2.getSortColumn());
                             userRegionOptions.setSortColumnAsc(userRegionOptions2.getSortColumnAsc());
@@ -132,7 +132,7 @@ public class ZKAzquoBookUtils {
                         userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
                     }
 
-                    fillRegion(sheet, reportId, region, userRegionOptions, loggedInUser);
+                    fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
                 }
             }
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");
@@ -172,6 +172,9 @@ public class ZKAzquoBookUtils {
                                     if (sentCells.getData() != null && sentCells.getData().size() > row - name.getRefersToCellRegion().getRow() // as ever check ranges of the data region vs actual data sent.
                                             && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
                                         CellForDisplay cellForDisplay = sentCells.getData().get(row - startRow).get(col - startCol);
+                                        if (cellForDisplay.getSelected()){
+                                            book.getInternalBook().setAttribute(OnlineController.CELL_SELECT, row + "," + col);
+                                        }
                                         if (sCell.getType() == SCell.CellType.FORMULA) {
                                             if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
                                                 if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
@@ -330,7 +333,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private void fillRegion(Sheet sheet, int reportId,  String region, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
+    private void fillRegion(Sheet sheet, int reportId,  String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
         CellRegion columnHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_ColumnHeadings" + region);
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
@@ -343,7 +346,7 @@ public class ZKAzquoBookUtils {
             for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
                 List<CellForDisplay> oneRow = new ArrayList<>();
                 for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
-                    oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true)); // make these ignored. Edd note : I'm not praticularly happy about this, sent data should be sent data, this is just made up . . .
+                    oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true, false)); // make these ignored. Edd note : I'm not praticularly happy about this, sent data should be sent data, this is just made up . . .
                 }
                 dataRegionCells.add(oneRow);
             }
@@ -354,7 +357,7 @@ public class ZKAzquoBookUtils {
 
         if (columnHeadingsDescription != null) {
             try {
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
                         regionToStringLists(contextDescription, sheet), userRegionOptions);
                 loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
@@ -446,7 +449,7 @@ public class ZKAzquoBookUtils {
                                             value + " ↕," + value + " ↑," + value + " ↓", null,
                                             true, "Select Sorting", "",
                                             true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
-                                } else if (heading != null && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) { // vanilla, overwrite if not
+                                } else if (heading != null && sheet.getInternalSheet().getCell(row, col).isNull()) { // vanilla, overwrite if not
                                     sheet.getInternalSheet().getCell(row, col).setValue(heading);
                                 }
                                 col++;

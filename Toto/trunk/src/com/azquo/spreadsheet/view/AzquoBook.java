@@ -394,21 +394,18 @@ public class AzquoBook {
 
                 List<CellForDisplay> oneRow = new ArrayList<>();
                 for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
-                    oneRow.add(new CellForDisplay(false, dataRegion.getCellOrNull(rowNo, colNo).getStringValue(), 0, false, rowNo, colNo, true));
+                    oneRow.add(new CellForDisplay(false, dataRegion.getCellOrNull(rowNo, colNo).getStringValue(), 0, false, rowNo, colNo, true, false));
                 }
                 dataRegionCells.add(oneRow);
             }
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null);
             loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
             return;
-
-
-
         }
         //don't bother to display yet - maybe need to filter out or sort
          //fillRange("az_displaycolumnheadings" + region, result, "LOCKED");
         Range context = getRange("az_context" + region);
-       CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
+       CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, 0,rangeToStringLists(rowHeadings), rangeToStringLists(columnHeadings),
                 rangeToStringLists(context), userRegionOptions);
         loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
         // think this language detection is sound

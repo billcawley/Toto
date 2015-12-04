@@ -74,6 +74,7 @@ public class OnlineController {
     public static final String SAVE_FLAG = "SAVE_FLAG";
     public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
     public static final String REPORT_ID = "REPORT_ID";
+    public static final String CELL_SELECT = "CELL_SELECT";
 
 
     @RequestMapping(headers = "content-type=multipart/*")
@@ -218,6 +219,7 @@ public class OnlineController {
                         onlineReport.setDatabase(db.getName());
                     }
                     // ok the new sheet and the loading screen have added chunks of code here, should it be in a service or can it "live" here?
+                    final int valueId = ServletRequestUtils.getIntParameter(request, "valueid", 0); // the value to be selected if it's in any of the regions . . . how to select?
                     if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK) {
                         HttpSession session = request.getSession();
                         if (session.getAttribute(reportId) != null) {
@@ -257,7 +259,7 @@ public class OnlineController {
                                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                                     book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
                                     ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
-                                    session.setAttribute(finalReportId + SAVE_FLAG, bookUtils.populateBook(book));
+                                    session.setAttribute(finalReportId + SAVE_FLAG, bookUtils.populateBook(book, valueId));
                                     newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                     System.out.println();
                                     System.out.println("Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);

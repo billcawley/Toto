@@ -191,7 +191,7 @@ public class ZKSpreadsheetCommandController {
                             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                         }
                         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService,userChoiceDAO,userRegionOptionsDAO, rmiClient);
-                        zkAzquoBookUtils.populateBook(newBook, true);
+                        zkAzquoBookUtils.populateBook(newBook, 0, true);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
                     }
@@ -230,7 +230,7 @@ public class ZKSpreadsheetCommandController {
             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
         }
         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
-        zkAzquoBookUtils.populateBook(newBook);
+        zkAzquoBookUtils.populateBook(newBook, 0);
         // here should be the list we're after
         final List<String> choiceList = getChoiceList(newBook, choices.get(selectedChoices.size()));
         if (choiceList.isEmpty()) { // ok if no options on the choice list we want then I guess render this one and return
@@ -245,7 +245,7 @@ public class ZKSpreadsheetCommandController {
                     for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                         newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                     }
-                    zkAzquoBookUtils.populateBook(newBook);
+                    zkAzquoBookUtils.populateBook(newBook, 0);
                     // and render to PDF
                     toReturn.add(renderBook(newBook));
                 }

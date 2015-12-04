@@ -30,9 +30,11 @@ public class AzquoCell {
     private double doubleValue;
     private boolean changed;
     private boolean highlighted;
+    // after drilldown or provenance an opened spreadsheet might have a cell selected
+    private boolean selected;
 
     public AzquoCell(boolean locked, ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName, List<DataRegionHeading> rowHeadings
-            , List<DataRegionHeading> columnHeadings, List<Name> contexts, int unsortedRow, int unsortedCol, String stringValue, double doubleValue, boolean highlighted) {
+            , List<DataRegionHeading> columnHeadings, List<Name> contexts, int unsortedRow, int unsortedCol, String stringValue, double doubleValue, boolean highlighted, boolean selected) {
         this.locked = locked;
         this.listOfValuesOrNamesAndAttributeName = listOfValuesOrNamesAndAttributeName;
         this.rowHeadings = rowHeadings;
@@ -43,6 +45,7 @@ public class AzquoCell {
         this.stringValue = stringValue;
         this.doubleValue = doubleValue;
         this.highlighted = highlighted;
+        this.selected = selected;
     }
 
     public boolean isLocked() {
@@ -105,5 +108,13 @@ public class AzquoCell {
 
     public int getUnsortedCol() {
         return unsortedCol;
+    }
+
+    public boolean isSelected() {
+        return selected;
+    }
+
+    public void setSelected(boolean selected) {
+        this.selected = selected;
     }
 }

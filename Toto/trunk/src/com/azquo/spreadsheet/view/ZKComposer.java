@@ -17,9 +17,7 @@ import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zss.api.CellOperationUtil;
-import org.zkoss.zss.api.Importers;
-import org.zkoss.zss.api.Ranges;
+import org.zkoss.zss.api.*;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.model.CellRegion;
@@ -115,7 +113,16 @@ public class ZKComposer extends SelectorComposer<Component> {
             g.appendChild(instructionsPopup);
             g.appendChild(highlightPopup);
         }
-
+        // mayeb improve moving this number?
+        if (myzss.getBook().getInternalBook().getAttribute(OnlineController.CELL_SELECT) != null){
+            String cellSelect  = (String)myzss.getBook().getInternalBook().getAttribute(OnlineController.CELL_SELECT);
+            myzss.getBook().getInternalBook().setAttribute(OnlineController.CELL_SELECT, null); // zap it
+            int row = Integer.parseInt(cellSelect.substring(0, cellSelect.indexOf(",")));
+            int col = Integer.parseInt(cellSelect.substring(cellSelect.indexOf(",") + 1));
+//            myzss.setSelection(new AreaRef(row, col, row, col));
+//            myzss.setCellFocus(new CellRef(row,col));
+            myzss.focusTo(row,col);
+        }
     }
 
     // Bit of an odd one this : on a cell click "wake" the log back up as there may be activity shortly
@@ -195,7 +202,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
-                if (zkAzquoBookUtils.populateBook(newBook)) { // check if formulae made saveable data
+                if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                 }
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
@@ -320,20 +327,21 @@ public class ZKComposer extends SelectorComposer<Component> {
                         // ok this is a bit nasty, after Azquobook is zapped we could try something different
                         int regionRow =  cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow();
                         int regionColumn = cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn();
-                        List<TreeNode> TreeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
-                        if (!TreeNodes.isEmpty()) {
+                        List<TreeNode> treeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
+                        if (!treeNodes.isEmpty()) {
                             StringBuilder toShow = new StringBuilder();
-                            for (TreeNode TreeNode : TreeNodes) {
+                            for (TreeNode TreeNode : treeNodes) {
                                 resolveTreeNode(0, toShow, TreeNode);
                             }
                             String stringToShow = toShow.toString();
                             final String fullProvenance = stringToShow;
                             stringToShow = stringToShow.replace("\t", "....");
-                            int spreadPos = stringToShow.indexOf("in spreadsheet");
+                            int spreadPos = stringToShow.indexOf("in spreadsheet"); // this kind of thing needs to be re coded.
                             int nextBlock;
                             while (spreadPos >= 0) {
+                                int valueId = getLastValueInt(treeNodes.get(0)); // should be a root of 1 in this case. In fact that applies above?
                                 int endLine = stringToShow.indexOf("\n");
-                                if (endLine==-1) endLine = stringToShow.length();
+                                if (endLine == -1) endLine = stringToShow.length();
                                 nextBlock = stringToShow.indexOf("in spreadsheet", endLine);
                                 if (nextBlock < 0) {
                                     nextBlock = stringToShow.length();
@@ -343,7 +351,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 final String provLine = stringToShow.substring(0, endLine);
                                 final Toolbarbutton provButton = new Toolbarbutton(provLine);
                                 provButton.addEventListener("onClick",
-                                        event -> showProvenance(provLine));
+                                        event -> showProvenance(provLine, valueId));
                                 provenancePopup.appendChild(provButton);
                                 Label provenanceLabel = new Label();
                                 provenanceLabel.setMultiline(true);
@@ -388,7 +396,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                                     Menuitem ddItem = new Menuitem("Drill Down");
                                     editPopup.appendChild(ddItem);
                                     ddItem.addEventListener("onClick",
-                                            event -> showProvenance(stringToPass));
+                                            event -> showProvenance(stringToPass, 0));
                                     // now need to find the headings - is this easy?
                                 }
                             }
@@ -466,7 +474,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-    private void showProvenance(String provline) {
+    private void showProvenance(String provline, int valueId) {
         final Book book = myzss.getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         String reportName = spreadsheetService.setChoices(loggedInUser, provline);
@@ -484,7 +492,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             reportName = "unspecified";
         }
         if (or != null) {
-            Clients.evalJavaScript("window.open(\"/api/Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + "\")");
+            Clients.evalJavaScript("window.open(\"/api/Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
         } else {
             Clients.evalJavaScript("alert(\"the report '" + reportName + "` is no longer available\")");
         }
@@ -558,6 +566,13 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
+    public static int getLastValueInt(com.azquo.memorydb.TreeNode treeNode) {
+        if (treeNode.getHeading() != null && !treeNode.getChildren().isEmpty()) { // then assume we have items too!
+            return getLastValueInt(treeNode.getChildren().get(treeNode.getChildren().size() - 1));
+        }
+        return treeNode.getValueId();
+    }
+
     private void addHighlight(Popup highlightPopup, final int days) {
         String hDays = days + " days";
         if (days == 0) hDays = "none";
@@ -598,7 +613,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
             }
             ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
-            if (zkAzquoBookUtils.populateBook(newBook)) { // check if formulae made saveable data
+            if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
             }
             myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)

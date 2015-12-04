@@ -515,10 +515,13 @@ public final class ValueService {
     // printbatch was creating a value, no good, use this instead
     private static class DummyValue {
 
+        private final int id;
+
         private final String valueText;
         private final Collection<Name> names;
 
-        public DummyValue(String valueText, Collection<Name> names) {
+        public DummyValue(int id, String valueText, Collection<Name> names) {
+            this.id = id;
             this.valueText = valueText;
             this.names = names;
         }
@@ -529,6 +532,10 @@ public final class ValueService {
 
         public Collection<Name> getNames() {
             return names;
+        }
+
+        public int getId() {
+            return id;
         }
     }
 
@@ -543,7 +550,7 @@ public final class ValueService {
         getTreeNodesFromValuesCount.incrementAndGet();
         Set<DummyValue> convertedToDummy = new HashSet<>(values.size());
         for (Value value : values) {
-            convertedToDummy.add(new DummyValue(value.getText(), value.getNames()));
+            convertedToDummy.add(new DummyValue(value.getId(), value.getText(), value.getNames()));
         }
         return getTreeNodesFromDummyValues(convertedToDummy, maxSize);
     }
@@ -564,7 +571,7 @@ public final class ValueService {
             }
             count++;
             if (count > maxSize) {
-                nodeList.add(new TreeNode((values.size() - maxSize) + " more...", "", 0));
+                nodeList.add(new TreeNode((values.size() - maxSize) + " more...", "", 0, 0));
                 break;
             }
             String nameFound = null;
@@ -580,7 +587,7 @@ public final class ValueService {
                 }
             } catch (Exception ignored) {
             }
-            nodeList.add(new TreeNode(nameFound, val, d));
+            nodeList.add(new TreeNode(nameFound, val, d, value.getId()));
         }
         if (headingNeeded) {
             Name topParent = null;
@@ -602,7 +609,7 @@ public final class ValueService {
                         try {
                             Set<Name> slimNames = new HashSet<>(value.getNames());
                             slimNames.remove(heading);
-                            DummyValue slimValue = new DummyValue(value.getValueText(), slimNames);
+                            DummyValue slimValue = new DummyValue(value.getId(), value.getValueText(), slimNames);
                             slimExtract.add(slimValue);
                         } catch (Exception e) {
                             // exception from value constructor, should not happen
@@ -643,7 +650,7 @@ public final class ValueService {
             method += " " + p.getName();
         }
         if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
-        TreeNode toReturn = new TreeNode(source, method, null, null, 0, getTreeNodesFromValues(values, maxSize)); // no link now, remove?
+        TreeNode toReturn = new TreeNode(source, method, null, null, 0, getTreeNodesFromValues(values, maxSize));
         addNodeValues(toReturn);
         return toReturn;
     }

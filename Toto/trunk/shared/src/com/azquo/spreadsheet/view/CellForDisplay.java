@@ -20,8 +20,10 @@ public class CellForDisplay implements Serializable {
     private final int unsortedCol;
     // as in a . on row or col heading. The restore saved values function would like to know to ignore these
     private boolean ignored;
+    // to auto select a cell from provenance or drilldown
+    private boolean selected;
 
-    public CellForDisplay(boolean locked, String stringValue, double doubleValue, boolean highlighted, int unsortedRow, int unsortedCol, boolean ignored) {
+    public CellForDisplay(boolean locked, String stringValue, double doubleValue, boolean highlighted, int unsortedRow, int unsortedCol, boolean ignored, boolean selected) {
         this.locked = locked;
         this.stringValue = stringValue;
         this.doubleValue = doubleValue;
@@ -30,6 +32,7 @@ public class CellForDisplay implements Serializable {
         this.unsortedRow = unsortedRow;
         this.unsortedCol = unsortedCol;
         this.ignored = ignored;
+        this.selected = selected;
     }
 
     public boolean isLocked() {
@@ -86,6 +89,14 @@ public class CellForDisplay implements Serializable {
         this.ignored = ignored;
     }
 
+    public boolean getSelected() {
+        return selected;
+    }
+
+    public void setSelected(boolean selected) {
+        this.selected = selected;
+    }
+
     @Override
     public String toString() {
         return "CellForDisplay{" +
@@ -97,6 +108,7 @@ public class CellForDisplay implements Serializable {
                 ", unsortedRow=" + unsortedRow +
                 ", unsortedCol=" + unsortedCol +
                 ", ignored=" + ignored +
+                ", selected=" + selected +
                 '}';
     }
 }
