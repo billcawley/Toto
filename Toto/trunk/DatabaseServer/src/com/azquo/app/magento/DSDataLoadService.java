@@ -817,6 +817,16 @@ public class DSDataLoadService {
         if (bundleLine.length() > 0) {
             calcBundle(azquoMemoryDBConnection, bundleTotal, bundleItems, priceName, taxName);
         }
+        // new thing here - this used to just run through sales_flat_order_address finding the delivery country. Now we need it for getting infor for non logged in customers, hence run through mapping before doing the orders
+        Map<String, Map<String, String>> salesFlatOrderShippingAddressByOrderId = HashObjObjMaps.newMutableMap();
+        if (tableMap.get("sales_flat_order_address") != null) {
+            for (Map<String, String> orderRow : tableMap.get("sales_flat_order_address")) {
+                if (orderRow.get("address_type").equals("shipping")){ // only want the shipping one - I assume there's only one sipping address per order
+                    salesFlatOrderShippingAddressByOrderId.put(orderRow.get("parent_id"), orderRow); // I believe the parent_id is the order id
+                }
+            }
+        }
+
         counter = 0;
         Name notLoggedIn = null;
         System.out.print("Orders and shipping ");
@@ -824,6 +834,11 @@ public class DSDataLoadService {
             //only importing the IDs at present
             Name orderName = azquoOrdersFound.get("Order " + orderRow.get("entity_id"));
             if (orderName != null) {
+                Map<String, String> salesFlatOrderShippingAddress = salesFlatOrderShippingAddressByOrderId.get(orderRow.get("entity_id"));
+                // what was being done below
+                if (salesFlatOrderShippingAddress != null) {
+                    orderName.setAttributeWillBePersisted("DELIVERY COUNTRY", orderRow.get("country_id"));
+                }
                 Name store = storeMap.get(orderRow.get("store_id"));
                 if (store != null) {
                     store.addChildWillBePersisted(orderName);
@@ -832,13 +847,33 @@ public class DSDataLoadService {
                 String magentoCustomer;
                 Name customerName;
                 if (customer == null || customer.length() == 0) {
-                    if (notLoggedIn == null) {
-                        magentoCustomer = "NOT LOGGED IN";
-                        //nb this next instruction seems to take a long time - hence storing 'notLoggedIn'
-                        notLoggedIn = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allGroupsName, true, languages);
-                        allCountriesName.addChildWillBePersisted(notLoggedIn);
+                    // ok new logic, we need to make a customer from the extra info in sales_flat_order_address if it wasn't there by customer account
+                    if (salesFlatOrderShippingAddress != null){ // so we can make the customer name
+                        // switch languages temporarily to email - mimic the code when there's a customer account
+                        customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, salesFlatOrderShippingAddress.get("email"), allCustomersName, true, Collections.singletonList("email"));
+                        String firstName = salesFlatOrderShippingAddress.get("firstname");
+                        String lastName = salesFlatOrderShippingAddress.get("lastname");
+                        String fullName;
+                        if (firstName != null) {
+                            if (lastName != null) {
+                                fullName = firstName + " " + lastName;
+                            } else {
+                                fullName = firstName;
+                            }
+                        } else {
+                            fullName = lastName;
+                        }
+                        customerName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, fullName);
+                        customerName.setAttributeWillBePersisted("POSTCODE", salesFlatOrderShippingAddress.get("postcode"));
+                    } else {
+                        if (notLoggedIn == null) {
+                            magentoCustomer = "NOT LOGGED IN";
+                            //nb this next instruction seems to take a long time - hence storing 'notLoggedIn'
+                            notLoggedIn = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allGroupsName, true, languages);
+                            allCountriesName.addChildWillBePersisted(notLoggedIn);
+                        }
+                        customerName = notLoggedIn;
                     }
-                    customerName = notLoggedIn;
                 } else {
                     customerName = azquoCustomersFound.get(customer);
                     if (customerName == null) {
@@ -873,19 +908,6 @@ public class DSDataLoadService {
             }
         }
         System.out.println("");
-        if (tableMap.get("sales_flat_order_address") != null) {
-            for (Map<String, String> orderRow : tableMap.get("sales_flat_order_address")) {
-                //only importing the IDs at present
-                if (orderRow.get("address_type").equals("shipping")) {
-                    Name orderName = azquoOrdersFound.get("Order " + orderRow.get("parent_id"));
-
-                    if (orderName != null) {
-                        orderName.setAttributeWillBePersisted("DELIVERY COUNTRY", orderRow.get("country_id"));
-                    }
-                }
-            }
-        }
-
         System.out.println("shipments");
 
         if (tableMap.get("sales_flat_shipment") != null) {
@@ -1034,7 +1056,7 @@ public class DSDataLoadService {
                 "'*','eav_entity_type','','entity_type_id'\n" +
                 "'item_id,order_id,parent_item_id,created_at,product_id,weight,product_type,qty_ordered,qty_canceled,base_discount_invoiced, base_tax_amount, base_row_invoiced, base_row_total','sales_flat_order_item', '$starttime','item_id'\n" +
                 "'entity_id, store_id, customer_id, base_currency_code, increment_id, shipping_amount','sales_flat_order',  '$starttime', 'entity_id'\n" +
-                "'entity_id, parent_id, address_type, country_id','sales_flat_order_address',  '', 'entity_id'\n" +
+                "'entity_id, parent_id, address_type, country_id, email, firstname, lastname, postcode','sales_flat_order_address',  '', 'entity_id'\n" + // email firstname lastname postcode extras that will be required if users are shopping in Magento without making an account
                 "'entity_id, email, group_id','customer_entity',  '$starttime', 'entity_id'\n" +
                 "'*','customer_group','', 'customer_group_id'\n" +
                 "'entity_id, parent_id','customer_address_entity', '$starttime', 'entity_id'\n" +
