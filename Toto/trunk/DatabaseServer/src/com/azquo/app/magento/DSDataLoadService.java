@@ -837,7 +837,7 @@ public class DSDataLoadService {
                 Map<String, String> salesFlatOrderShippingAddress = salesFlatOrderShippingAddressByOrderId.get(orderRow.get("entity_id"));
                 // what was being done below
                 if (salesFlatOrderShippingAddress != null) {
-                    orderName.setAttributeWillBePersisted("DELIVERY COUNTRY", orderRow.get("country_id"));
+                    orderName.setAttributeWillBePersisted("DELIVERY COUNTRY", salesFlatOrderShippingAddress.get("country_id"));
                 }
                 Name store = storeMap.get(orderRow.get("store_id"));
                 if (store != null) {
@@ -848,9 +848,14 @@ public class DSDataLoadService {
                 Name customerName;
                 if (customer == null || customer.length() == 0) {
                     // ok new logic, we need to make a customer from the extra info in sales_flat_order_address if it wasn't there by customer account
+                    // note when they don't have an email address there will be no customer, I could do this from name but this might clash
                     if (salesFlatOrderShippingAddress != null){ // so we can make the customer name
                         // switch languages temporarily to email - mimic the code when there's a customer account
-                        customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, salesFlatOrderShippingAddress.get("email"), allCustomersName, true, Collections.singletonList("email"));
+                        String email = salesFlatOrderShippingAddress.get("email");
+                        if (email == null || email.length() == 0){
+                            email = "noemail" + salesFlatOrderShippingAddress.get("firstname") + salesFlatOrderShippingAddress.get("lastname") + salesFlatOrderShippingAddress.get("postcode"); // then make one up
+                        }
+                        customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, email, allCustomersName, true, Collections.singletonList("email"));
                         String firstName = salesFlatOrderShippingAddress.get("firstname");
                         String lastName = salesFlatOrderShippingAddress.get("lastname");
                         String fullName;
