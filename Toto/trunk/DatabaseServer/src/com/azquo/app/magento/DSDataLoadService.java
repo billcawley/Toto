@@ -442,12 +442,14 @@ public class DSDataLoadService {
 
         tableMap.remove("catalog_product_bundle_selection");
         Name entities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Entities", null, false);
+        Name orderEntities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Order entities", entities,false);
+        Name productEntities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Product entities", entities,false);
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Name date = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "date", null, false);
         Name allDates = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All dates", date, false);
 
         if (tableMap.get("cataloginventory_stock_item") != null) {
-            Name inStockName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "In Stock", entities, true);
+            Name inStockName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "In Stock", productEntities, true);
             Name today = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, dateFormat.format(new Date()), date, false);
             Name stockDates = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Stock dates", date, true);
             stockDates.addChildWillBePersisted(today);
@@ -485,12 +487,13 @@ public class DSDataLoadService {
         double weight = 0.0;
         String configLine = null;
 //        String productId = null;
-        Name priceName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Price", entities, false);
-        Name shippingName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Shipping", entities, false);
-        Name qtyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Quantity", entities, false);
-        Name weightName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Weight", entities, false);
-        Name canceledName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Canceled quantity", entities, false);
-        Name taxName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Tax", entities, false);
+        Name priceName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Price", orderEntities, false);
+        Name shippingName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Shipping", orderEntities, false);
+        Name shippingTaxName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Shipping tax", orderEntities, false);
+        Name qtyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Quantity", orderEntities, false);
+        Name weightName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Weight", orderEntities, false);
+        Name canceledName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Canceled quantity", orderEntities, false);
+        Name taxName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Tax", orderEntities, false);
         Name ordersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "order", null, false);
         Name allOrdersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All orders", ordersName, false);
         Name allCurrenciesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All currencies", ordersName, false);
@@ -899,11 +902,25 @@ public class DSDataLoadService {
                         dShipping = Double.parseDouble(shipping);
                     } catch (Exception ignored) {
                     }
-                    if (dShipping > 0) {
+                    if (dShipping != 0) {
                         Set<Name> namesForValue = HashObjSets.newMutableSet();
                         namesForValue.add(orderName);
                         namesForValue.add(shippingName);
                         valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, shipping, namesForValue);
+                    }
+                }
+                String shippingTax = orderRow.get("shipping_tax|_amount");
+                if (shippingTax != null && shippingTax.length() > 0) {
+                    double dShippingTax = 0.0;
+                    try {
+                        dShippingTax = Double.parseDouble(shippingTax);
+                    } catch (Exception ignored) {
+                    }
+                    if (dShippingTax != 0) {
+                        Set<Name> namesForValue = HashObjSets.newMutableSet();
+                        namesForValue.add(orderName);
+                        namesForValue.add(shippingTaxName);
+                        valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, shippingTax, namesForValue);
                     }
                 }
                 counter++;
@@ -1060,7 +1077,7 @@ public class DSDataLoadService {
                 "'*','eav_attribute_option_value','','value_id'\n" +
                 "'*','eav_entity_type','','entity_type_id'\n" +
                 "'item_id,order_id,parent_item_id,created_at,product_id,weight,product_type,qty_ordered,qty_canceled,base_discount_invoiced, base_tax_amount, base_row_invoiced, base_row_total','sales_flat_order_item', '$starttime','item_id'\n" +
-                "'entity_id, store_id, customer_id, base_currency_code, increment_id, shipping_amount','sales_flat_order',  '$starttime', 'entity_id'\n" +
+                "'entity_id, store_id, customer_id, base_currency_code, increment_id, shipping_amount,shipping_tax_amount','sales_flat_order',  '$starttime', 'entity_id'\n" +
                 "'entity_id, parent_id, address_type, country_id, email, firstname, lastname, postcode','sales_flat_order_address',  '', 'entity_id'\n" + // email firstname lastname postcode extras that will be required if users are shopping in Magento without making an account
                 "'entity_id, email, group_id','customer_entity',  '$starttime', 'entity_id'\n" +
                 "'*','customer_group','', 'customer_group_id'\n" +
