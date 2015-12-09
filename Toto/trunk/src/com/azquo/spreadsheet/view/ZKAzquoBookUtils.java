@@ -449,7 +449,7 @@ public class ZKAzquoBookUtils {
                                             value + " ↕," + value + " ↑," + value + " ↓", null,
                                             true, "Select Sorting", "",
                                             true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
-                                } else if (heading != null && sheet.getInternalSheet().getCell(row, col).isNull()) { // vanilla, overwrite if not
+                                } else if (heading != null && (sheet.getInternalSheet().getCell(row, col).isNull()||sheet.getInternalSheet().getCell(row,col).getStringValue().length()==0)) { // vanilla, overwrite if not
                                     sheet.getInternalSheet().getCell(row, col).setValue(heading);
                                 }
                                 col++;
