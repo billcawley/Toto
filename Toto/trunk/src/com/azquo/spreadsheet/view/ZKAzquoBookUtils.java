@@ -59,7 +59,7 @@ public class ZKAzquoBookUtils {
         // a notable point here is that the user choices don't distinguish between sheets
         List<UserChoice> allChoices = userChoiceDAO.findForUserId(loggedInUser.getUser().getId());
         for (UserChoice uc : allChoices) {
-            userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
+            userChoices.put(uc.getChoiceName().toLowerCase(), uc.getChoiceValue()); // make case insensitive
         }
         String context = "";
 
@@ -98,10 +98,10 @@ public class ZKAzquoBookUtils {
                         // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
                         String query = getRegionValue(sheet, getCellRegionForSheetAndName(sheet, choiceName + "Choice"));
                         List<String> validOptions = choiceOptions.get(query);
-                        String userChoice = userChoices.get(choiceName);
+                        String userChoice = userChoices.get(choiceName.toLowerCase()); // forced case insensetive, a bit hacky but names in excel are case insensetive I think
                         if (userChoice != null && validOptions.contains(userChoice)){
                             sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
-                            context += choiceName + " = " + userChoices.get(choiceName) + ";";
+                            context += choiceName + " = " + userChoices.get(choiceName.toLowerCase()) + ";";
                         } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
                             sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
                         }

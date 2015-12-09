@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * I'm trying to write up as much of the non obvious logic as possible in comments in the code.
  * <p>
- * The value on a line can be a value or an attribute or a name.
+ * The cell on a line can be a value or an attribute or a name.
  */
 public class DSImportService {
 
@@ -52,8 +52,8 @@ public class DSImportService {
     private static final String headingDivider = "|";
 
     /*
-    These are heading clauses. I heading definitions can be in the data file but Azquo is setup to support data
-    "as it comes". Hence when dealing with a new set of data the key is to set up sets and headings so that the system can load the data.
+    These are heading clauses. Heading definitions can be in the data file but Azquo is setup to support data "as it comes".
+    Hence when dealing with a new set of data the key is to set up sets and headings so that the system can load the data.
     Setting up the sets and headings could be seen as similar to setting up the tables in an SQL database.
 
     Note : the clauses here tend to reverse the subject/object used in the code. If an object in the code has children we'll say object.children, not object.parentOf.
@@ -87,7 +87,7 @@ public class DSImportService {
     private class MutableImportHeading {
         // the name of the heading - often referenced by other headings e.g. parent of
         String heading = null;
-        // the Azquo Name that might be set on the heading, certainly used if there are peers but otherwise may not be set if the heading is referenced by other headings
+        // the Azquo Name that might be set on the heading
         Name name = null;
         // this class used to use the now removed peers against the name object, in its absence just put a set here, and this set simply refers to headings which may be names or not - hence why I renamed it from peerNames).
         Set<String> peers = new HashSet<>();
@@ -101,14 +101,14 @@ public class DSImportService {
         int indexForChild = -1;
         // derived from the "child of" clause, a comma separated list of names
         Set<Name> parentNames = new HashSet<>();
-        // same format or logic as parentNames - now I look at this I'm a bit puzzled what it's for
+        // same format or logic as parentNames - not used often
         Set<Name> removeParentNames = new HashSet<>();
         // result of the attribute clause. Notable that "." is replaced with ;attribute
         String attribute = null;
         //should we try to treat the cell as a date?
         boolean isDate = false;
         /* the results of the peers clause are jammed in peers but then we need to know which headings those peers refer to - if context assign the name otherwise it's going to be the cell index that's used */
-         Set<Integer> peerCellIndexes = new HashSet<>();
+        Set<Integer> peerCellIndexes = new HashSet<>();
         // if context provides any of the peers they're in here
         Set<Name> peersFromContext = new HashSet<>();
         // the same as the above two but for a peer set defined in the context. The normal peers can get names from context, the context can get names from itself
@@ -118,11 +118,11 @@ public class DSImportService {
         /*if there are multiple attributes then effectively there will be multiple columns with the same "heading", define which one we're using when the heading is referenced by other headings.
         Language will trigger something as being the attribute subject, after if on searching there is only one it might be set for convenience when sorting attributes */
         boolean isAttributeSubject = false;
-        /*when using the heading divider (a pipe at the moment) this indicates context headings which are now stacked against the heading (before they were put in the same array) */
+        // when using the heading divider (a pipe at the moment) this indicates context headings which are now stacked against this heading
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
         // Affects child of and parent of clauses - the other heading is local in the case of parent of and this one in the case of child of. Local as in Azquo name logic.
         boolean isLocal = false;
-        // If `only` is specified on the first heading, the import will ignore any line that does not have this name
+        // If `only` is specified on the first heading, the import will ignore any line that does not have this line value. Typically to deal with a file of mixed data where we want only some to go in the database.
         String only = null;
         /* to make the line value a composite of other values. Syntax is pretty simple replacing anything in quotes with the referenced line value
         `a column name`-`another column name` might make 1233214-1234. Such columns would probably be at the end,
@@ -130,13 +130,16 @@ public class DSImportService {
         String compositionPattern = null;
         // a default value if the line value is blank
         String defaultValue = null;
-        // don't import zero values;
+        // don't import zero values
         boolean blankZeroes = false;
-        // is this a column representing names (as opposed to values or attributes). Derived from parent of child of and being referenced by other headings
+        // is this a column representing names (as opposed to values or attributes). Derived from parent of child of and being referenced by other headings, it's saying : does name, the variable above, need to be populated?
         boolean lineNameRequired = false;
     }
 
-    // I see no reason for getters here. Class members only, saves a load of space. Note added later : getters and setters may make the code clearer though this could be done by better names also I think
+    /* I see no reason for getters here. Class members only, saves a load of space. Note added later : getters and setters may make the code clearer though this could be done by better names also I think
+    From a purely pragmatic point of view this class is not necessary but I'm very keen to make sure that heading info is fixed before data loading - possible errors resulting from modifying the mutable
+    headings could be a real pain, this ill stop that.
+     */
     private class ImmutableImportHeading {
         final String heading;
         final Name name;
