@@ -9,6 +9,7 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.zss.api.CellOperationUtil;
+import org.zkoss.zss.api.CellRef;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.*;
@@ -62,8 +63,18 @@ public class ZKAzquoBookUtils {
         }
         String context = "";
 
+
+
+
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
+
+            // these two lines moved from below the unmerge command, shouldn't be a big problem - I need the options to check that we're setting valid options directly below
+            // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
+            List<SName> namesForSheet = getNamesForSheet(sheet);
+            // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
+            Map<String, List<String>> choiceOptions = resolveChoiceOptionsAndQueries(namesForSheet, sheet, loggedInUser);
+
             /* commenting locked for the mo
             // run through every cell unlocking to I can later lock. Setting locking on a large selection seems to zap formatting
             for (int i = 0; i <= sheet.getLastRow(); i++) {
@@ -76,20 +87,27 @@ public class ZKAzquoBookUtils {
                 }
             }*/
 
-            // see if we can impose the user choices on the sheet
-            for (String choiceName : userChoices.keySet()) {
-                CellRegion choice = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
-                if (choice != null && choice.getRowCount() == 1) {
-                    String userChoice = userChoices.get(choiceName);
-                    sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoice);
-                    context += choiceName + " = " + userChoices.get(choiceName) + ";";
+            // ok new logic for choices, I used to run through userChoices key set setting choices and then there were the default choices.
+            // Now I need to run through all choices setting from the user options IF it is valid and the first on the menu if it is not
+            // later I need to see about defaults based on options which are derived e.g. day of selecvted month. Todo
+            for (SName sName : namesForSheet){
+                if (sName.getName().endsWith("Chosen")){
+                    CellRegion chosen = getCellRegionForSheetAndName(sheet, sName.getName());
+                    if (chosen != null && chosen.getRowCount() == 1) {
+                        String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length());
+                        // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
+                        String query = getRegionValue(sheet, getCellRegionForSheetAndName(sheet, choiceName + "Choice"));
+                        List<String> validOptions = choiceOptions.get(query);
+                        String userChoice = userChoices.get(choiceName);
+                        if (userChoice != null && validOptions.contains(userChoice)){
+                            sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
+                            context += choiceName + " = " + userChoices.get(choiceName) + ";";
+                        } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
+                            sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
+                        }
+                    }
                 }
             }
-            setDefaultChoices(loggedInUser, sheet, userChoices);//overrides any other choice
-            /* TODO ok, after mulling the issue of selecting the first on each list automatically I think here is the place to do it
-            If I don't do it here it will have to be after like UI clicks and cause the sheet to reload, here the strategy should be I think to see which choices are not set
-            and to try to get the first one and set it. Depending on the structure this may take a few passes but it shouldn't be that heavy. Later.
-             */
 
             // ok the plan here is remove all the merges then put them back in after the regions are expanded.
             List<CellRegion> merges = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());
@@ -97,10 +115,6 @@ public class ZKAzquoBookUtils {
                 CellOperationUtil.unmerge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()));
             }
             // and now we want to run through all regions for this sheet, will look at the old code for this, I think it's fill region that we take cues from
-            // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
-            List<SName> namesForSheet = getNamesForSheet(sheet);
-            // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
-            Map<String, List<String>> choiceOptions = resolveChoiceOptionsAndQueries(namesForSheet, sheet, loggedInUser);
             boolean fastLoad = false; // skip some checks, initially related to saving
             for (SName name : namesForSheet) {
                 // Old one was case insensitive - not so happy about this. Will allow it on the prefix

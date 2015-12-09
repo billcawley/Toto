@@ -290,11 +290,17 @@ public class AdminService {
             for (UploadRecord uploadRecord : uploadRecords) {
                 String dbName = "";
                 if (uploadRecord.getDatabaseId() > 0) {
-                    dbName = databaseDAO.findById(uploadRecord.getDatabaseId()).getName();
+                    Database database = databaseDAO.findById(uploadRecord.getDatabaseId());
+                    if (database != null){
+                        dbName = database.getName();
+                    }
                 }
                 String userName = "";
                 if (uploadRecord.getUserId() > 0) {
-                    userName = userDao.findById(uploadRecord.getUserId()).getName();
+                    User user = userDao.findById(uploadRecord.getUserId());
+                    if (user != null){
+                        userName = user.getName();
+                    }
                 }
                 uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, businessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName));
             }
