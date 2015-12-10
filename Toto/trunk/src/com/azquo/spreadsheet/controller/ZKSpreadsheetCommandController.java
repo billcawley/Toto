@@ -108,7 +108,7 @@ public class ZKSpreadsheetCommandController {
                             }
                         }
 
-                        Filedownload.save(new AMedia(book.getBookName() + ".xlsx", null, null, file, true));
+                        Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".xlsx", null, null, file, true));
                     }
 
                     boolean pdfDefault = false;
@@ -137,7 +137,7 @@ public class ZKSpreadsheetCommandController {
                             File merged = File.createTempFile(Long.toString(System.currentTimeMillis()), "merged");
                             merger.setDestinationFileName(merged.getAbsolutePath());
                             merger.mergeDocuments();
-                            Filedownload.save(new AMedia(book.getBookName() + "merged.pdf", "pdf", "application/pdf", merged, true));
+                            Filedownload.save(new AMedia(ss.getSelectedSheetName() + "merged.pdf", "pdf", "application/pdf", merged, true));
                         } else {
                             pdfDefault = true;
                         }
@@ -167,7 +167,7 @@ public class ZKSpreadsheetCommandController {
                                 fos.close();
                             }
                         }
-                        Filedownload.save(new AMedia(book.getBookName() + ".pdf", "pdf", "application/pdf", file, true));
+                        Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".pdf", "pdf", "application/pdf", file, true));
                     }
 
                     if ("Save".equals(action)) {
