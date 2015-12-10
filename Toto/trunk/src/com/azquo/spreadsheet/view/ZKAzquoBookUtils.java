@@ -9,7 +9,6 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.zss.api.CellOperationUtil;
-import org.zkoss.zss.api.CellRef;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.*;
@@ -59,22 +58,12 @@ public class ZKAzquoBookUtils {
         // a notable point here is that the user choices don't distinguish between sheets
         List<UserChoice> allChoices = userChoiceDAO.findForUserId(loggedInUser.getUser().getId());
         for (UserChoice uc : allChoices) {
-            userChoices.put(uc.getChoiceName().toLowerCase(), uc.getChoiceValue()); // make case insensitive
+            userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
         }
         String context = "";
 
-
-
-
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
-
-            // these two lines moved from below the unmerge command, shouldn't be a big problem - I need the options to check that we're setting valid options directly below
-            // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
-            List<SName> namesForSheet = getNamesForSheet(sheet);
-            // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
-            Map<String, List<String>> choiceOptions = resolveChoiceOptionsAndQueries(namesForSheet, sheet, loggedInUser);
-
             /* commenting locked for the mo
             // run through every cell unlocking to I can later lock. Setting locking on a large selection seems to zap formatting
             for (int i = 0; i <= sheet.getLastRow(); i++) {
@@ -87,27 +76,16 @@ public class ZKAzquoBookUtils {
                 }
             }*/
 
-            // ok new logic for choices, I used to run through userChoices key set setting choices and then there were the default choices.
-            // Now I need to run through all choices setting from the user options IF it is valid and the first on the menu if it is not
-            // later I need to see about defaults based on options which are derived e.g. day of selecvted month. Todo
-            for (SName sName : namesForSheet){
-                if (sName.getName().endsWith("Chosen")){
-                    CellRegion chosen = getCellRegionForSheetAndName(sheet, sName.getName());
-                    if (chosen != null && chosen.getRowCount() == 1) {
-                        String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length());
-                        // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
-                        String query = getRegionValue(sheet, getCellRegionForSheetAndName(sheet, choiceName + "Choice"));
-                        List<String> validOptions = choiceOptions.get(query);
-                        String userChoice = userChoices.get(choiceName.toLowerCase()); // forced case insensetive, a bit hacky but names in excel are case insensetive I think
-                        if (userChoice != null && validOptions.contains(userChoice)){
-                            sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
-                            context += choiceName + " = " + userChoices.get(choiceName.toLowerCase()) + ";";
-                        } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
-                            sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
-                        }
-                    }
+            // see if we can impose the user choices on the sheet
+            for (String choiceName : userChoices.keySet()) {
+                CellRegion choice = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
+                if (choice != null && choice.getRowCount() == 1) {
+                    String userChoice = userChoices.get(choiceName);
+                    sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoice);
+                    context += choiceName + " = " + userChoices.get(choiceName) + ";";
                 }
             }
+            // going to check what has been set in the validation now
 
             // ok the plan here is remove all the merges then put them back in after the regions are expanded.
             List<CellRegion> merges = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());
@@ -115,6 +93,10 @@ public class ZKAzquoBookUtils {
                 CellOperationUtil.unmerge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()));
             }
             // and now we want to run through all regions for this sheet, will look at the old code for this, I think it's fill region that we take cues from
+            // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
+            List<SName> namesForSheet = getNamesForSheet(sheet);
+            // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
+            Map<String, List<String>> choiceOptions = resolveChoiceOptionsAndQueries(namesForSheet, sheet, loggedInUser);
             boolean fastLoad = false; // skip some checks, initially related to saving
             for (SName name : namesForSheet) {
                 // Old one was case insensitive - not so happy about this. Will allow it on the prefix
@@ -304,38 +286,6 @@ public class ZKAzquoBookUtils {
             }
         }
         return toReturn;
-    }
-
-    private void setDefaultChoices(LoggedInUser loggedInUser, Sheet sheet, Map<String, String> userChoices) {
-        for (String choiceName : userChoices.keySet()) {
-            CellRegion choiceList = getCellRegionForSheetAndName(sheet, choiceName + "Choice");
-            if (choiceList != null) {
-                String choiceString = getRegionValue(sheet, choiceList);
-                int defaultPos = choiceString.indexOf("default:");
-                if (defaultPos > 0) {
-                    String defaultString = choiceString.substring(defaultPos + 8).trim();
-                    int dotPos = defaultString.indexOf(".");
-                    if (dotPos > 0) {
-                        CellRegion defaultName = getCellRegionForSheetAndName(sheet, defaultString.substring(0, dotPos) + "Chosen");
-                        if (defaultName != null) {
-                            String query = "`" + getRegionValue(sheet, defaultName) + "`" + defaultString.substring(dotPos);
-                            try {
-                                List<String> choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                        .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
-                                if (choiceOptions.size() == 1) {
-                                    CellRegion chosen = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
-                                    if (chosen != null) {
-                                        sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(choiceOptions.get(0));//at last!  set the option
-                                    }
-                                }
-                            } catch (Exception e) {
-                                //don't bother if you cant find it.
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     public static String getRegionValue(Sheet sheet, CellRegion region) {
@@ -670,6 +620,10 @@ public class ZKAzquoBookUtils {
                             for (int rowNo = chosen.getRow(); rowNo < chosen.getRow() + chosen.getRowCount(); rowNo++) {
                                 for (int colNo = chosen.getColumn(); colNo < chosen.getColumn() + chosen.getColumnCount(); colNo++) {
                                     Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
+                                    // new thing, check what value is in there and overwrite with the first item if not valid, much simpler solution than messing about above which introduced bugs
+                                    if (!choiceOptions.contains(sheet.getInternalSheet().getCell(rowNo, colNo).getStringValue())){
+                                        sheet.getInternalSheet().getCell(rowNo, colNo).setStringValue(choiceOptions.get(0));
+                                    }
                                     //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
                                     chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
                                             true, "title", "msg",
