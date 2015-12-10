@@ -152,7 +152,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 List<String> changedChoice = new ArrayList<>();
                 changedChoice.add(choice);
                 // hopefully self explanatory :)
-                zkAzquoBookUtils.blankDependantChoices(loggedInUser, changedChoice, event.getSheet());
+                //zkAzquoBookUtils.blankDependantChoices(loggedInUser, changedChoice, event.getSheet());
                 reload = true;
                 break;
             }
@@ -286,7 +286,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
         Book book = sheetSelectEvent.getSheet().getBook();
-        final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptionsAndQueries(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
+        final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptions(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
         zkAzquoBookUtils.addValidation(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),choiceOptions);
     }
 

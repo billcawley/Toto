@@ -58,12 +58,21 @@ public class ZKAzquoBookUtils {
         // a notable point here is that the user choices don't distinguish between sheets
         List<UserChoice> allChoices = userChoiceDAO.findForUserId(loggedInUser.getUser().getId());
         for (UserChoice uc : allChoices) {
-            userChoices.put(uc.getChoiceName(), uc.getChoiceValue());
+            userChoices.put(uc.getChoiceName().toLowerCase(), uc.getChoiceValue()); // make case insensitive
         }
         String context = "";
 
+
+
+
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
+
+            // these two lines moved from below the unmerge command, shouldn't be a big problem - I need the options to check that we're setting valid options directly below
+            // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
+            List<SName> namesForSheet = getNamesForSheet(sheet);
+            // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
+
             /* commenting locked for the mo
             // run through every cell unlocking to I can later lock. Setting locking on a large selection seems to zap formatting
             for (int i = 0; i <= sheet.getLastRow(); i++) {
@@ -76,16 +85,45 @@ public class ZKAzquoBookUtils {
                 }
             }*/
 
-            // see if we can impose the user choices on the sheet
-            for (String choiceName : userChoices.keySet()) {
-                CellRegion choice = getCellRegionForSheetAndName(sheet, choiceName + "Chosen");
-                if (choice != null && choice.getRowCount() == 1) {
-                    String userChoice = userChoices.get(choiceName);
-                    sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn()).setStringValue(userChoice);
-                    context += choiceName + " = " + userChoices.get(choiceName) + ";";
+            // choices can be a real pain, I effectively need to keep resolving them until they don't change due to choices being based on choices (dependencies in excel)
+            Map<String, List<String>> choiceOptions = resolveChoiceOptions(namesForSheet, sheet, loggedInUser);
+            boolean resolveChoices = true;
+            int attempts = 0;
+            while (resolveChoices){
+                context = "";
+                // Now I need to run through all choices setting from the user options IF it is valid and the first on the menu if it is not
+                for (SName sName : namesForSheet){
+                    if (sName.getName().endsWith("Chosen")){
+                        CellRegion chosen = getCellRegionForSheetAndName(sheet, sName.getName());
+                        if (chosen != null && chosen.getRowCount() == 1) {
+                            String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length());
+                            // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
+                            String query = getRegionValue(sheet, getCellRegionForSheetAndName(sheet, choiceName + "Choice"));
+                            List<String> validOptions = choiceOptions.get(query);
+                            String userChoice = userChoices.get(choiceName.toLowerCase()); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
+                            if (userChoice != null && validOptions.contains(userChoice)){
+                                sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
+                                context += choiceName + " = " + userChoices.get(choiceName.toLowerCase()) + ";";
+                            } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
+                                sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
+                            }
+                        }
+                    }
+                }
+                resolveChoices = false;
+                // ok so we've set them but now derived choices may have changed, no real option except to resolve again and see if there's a difference
+                Map<String, List<String>> newChoiceOptions = resolveChoiceOptions(namesForSheet, sheet, loggedInUser);
+                if (!newChoiceOptions.equals(choiceOptions)){ // I think the equals will do the job correctly here
+                    System.out.println("choices changed as a result of chosen, resolving again");
+                    resolveChoices = true;
+                    choiceOptions = newChoiceOptions;
+                }
+                attempts++;
+                if (attempts > 10){
+                    System.out.println("10 attempts at resolving choices, odds on there's some kind of circular reference, stopping");
                 }
             }
-            // going to check what has been set in the validation now
+            resolveQueries(namesForSheet, sheet, loggedInUser); // after all optiosn sorted should be ok
 
             // ok the plan here is remove all the merges then put them back in after the regions are expanded.
             List<CellRegion> merges = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());
@@ -93,10 +131,6 @@ public class ZKAzquoBookUtils {
                 CellOperationUtil.unmerge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()));
             }
             // and now we want to run through all regions for this sheet, will look at the old code for this, I think it's fill region that we take cues from
-            // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
-            List<SName> namesForSheet = getNamesForSheet(sheet);
-            // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
-            Map<String, List<String>> choiceOptions = resolveChoiceOptionsAndQueries(namesForSheet, sheet, loggedInUser);
             boolean fastLoad = false; // skip some checks, initially related to saving
             for (SName name : namesForSheet) {
                 // Old one was case insensitive - not so happy about this. Will allow it on the prefix
@@ -545,7 +579,7 @@ public class ZKAzquoBookUtils {
     // Had to split one function into two, need to evaluate choices server side before loading the regions due to names being populated by "As" clauses
     // some duplication between the two functions but not that bad I don't think
 
-    public Map<String, List<String>> resolveChoiceOptionsAndQueries(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
+    public Map<String, List<String>> resolveChoiceOptions(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
         Map<String, List<String>> toReturn = new HashMap<>();
         // I assume
         for (SName name : namesForSheet) {
@@ -555,7 +589,15 @@ public class ZKAzquoBookUtils {
                     if (choice != null) {
                         // ok I assume choice is a single cell
                         List<String> choiceOptions = new ArrayList<>(); // was null, see no help in that
-                        String query = getRegionValue(sheet, choice);
+                        // new lines from edd to try to resolve choice stuff
+                        SCell choiceCell = sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn());
+                        // as will happen to the whole sheet later
+                        if (choiceCell.getType() == SCell.CellType.FORMULA) {
+                            //System.out.println("doing the cell thing on " + cell);
+                            choiceCell.getFormulaResultType();
+                            choiceCell.clearFormulaResultCache();
+                        }
+                        String query = choiceCell.getStringValue();
                         final String originalQuery = query;
                         if (query.toLowerCase().contains("default")) {
                             query = query.substring(0, query.toLowerCase().indexOf("default"));
@@ -575,12 +617,27 @@ public class ZKAzquoBookUtils {
                         }
                         toReturn.put(originalQuery, choiceOptions);
                     }
-                } else if (name.getName().endsWith("Query")) {
+                }
+            }
+        }
+        return toReturn;
+    }
+
+    public void resolveQueries(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
+        for (SName name : namesForSheet) {
+            if (name.getRefersToSheetName().equals(sheet.getSheetName())) { // why am I checking this again? A little confused
+                if (name.getName().endsWith("Query")) {
                     CellRegion query = getCellRegionForSheetAndName(sheet, name.getName());
-                    String queryString = getRegionValue(sheet, query);
+                    SCell queryCell = sheet.getInternalSheet().getCell(query.getRow(), query.getColumn());
+                    // as will happen to the whole sheet later
+                    if (queryCell.getType() == SCell.CellType.FORMULA) {
+                        //System.out.println("doing the cell thing on " + cell);
+                        queryCell.getFormulaResultType();
+                        queryCell.clearFormulaResultCache();
+                    }
+                    String queryString = queryCell.getStringValue();
                     try {
                         rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-
                                 .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -588,7 +645,6 @@ public class ZKAzquoBookUtils {
                 }
             }
         }
-        return toReturn;
     }
 
     public void addValidation(List<SName> namesForSheet, Sheet sheet, Map<String, List<String>> choiceCache) {
@@ -620,10 +676,6 @@ public class ZKAzquoBookUtils {
                             for (int rowNo = chosen.getRow(); rowNo < chosen.getRow() + chosen.getRowCount(); rowNo++) {
                                 for (int colNo = chosen.getColumn(); colNo < chosen.getColumn() + chosen.getColumnCount(); colNo++) {
                                     Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
-                                    // new thing, check what value is in there and overwrite with the first item if not valid, much simpler solution than messing about above which introduced bugs
-                                    if (!choiceOptions.contains(sheet.getInternalSheet().getCell(rowNo, colNo).getStringValue())){
-                                        sheet.getInternalSheet().getCell(rowNo, colNo).setStringValue(choiceOptions.get(0));
-                                    }
                                     //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
                                     chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
                                             true, "title", "msg",
@@ -638,38 +690,6 @@ public class ZKAzquoBookUtils {
                     }
                 }
             }
-        }
-    }
-
-    /* so a user changes a drop down, we need dependant drop downs to have theiur choices blanked. Currently I assume on one sheet
-    the choices are without prefix or suffix, I expect Pallet not PalletChosen. Check the choice fields for dependencies,
-    zap the option in the db then recurse if necessary.
-     */
-    public void blankDependantChoices(LoggedInUser loggedInUser, List<String> changedChoices, Sheet sheet) {
-        List<String> affectedChoices = new ArrayList<>();
-        for (SName name : getNamesForSheet(sheet)) { // this should be fine? I mean getNamesForSheet.
-            String nameName = name.getName();
-            if (nameName.endsWith("Choice")) {
-                CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
-                if (choice != null) {
-                    final SCell cell = sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn());
-                    if (cell.getType() == SCell.CellType.FORMULA) { // it chould be for choices
-                        String query = cell.getFormulaValue(); // otherwise we'll see the result
-                        for (String changed : changedChoices) {
-                            if (query.toUpperCase().contains((changed + "Chosen").toUpperCase())) { // not sure if this chould be case insensetive, I'll make it so for the moment
-                                // so that choice is dependant on one of the things chosen, The dropdown will change so need to zap the choice
-                                String affectedChoice = nameName.substring(0, nameName.length() - "Choice".length());
-                                affectedChoices.add(affectedChoice);
-                                spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), affectedChoice, null);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        if (!affectedChoices.isEmpty()) {
-            // then recurse
-            blankDependantChoices(loggedInUser, affectedChoices, sheet);
         }
     }
 }
