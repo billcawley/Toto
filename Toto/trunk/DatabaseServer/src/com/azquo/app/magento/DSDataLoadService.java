@@ -496,6 +496,7 @@ public class DSDataLoadService {
         Name taxName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Tax", orderEntities, false);
         Name ordersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "order", null, false);
         Name allOrdersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All orders", ordersName, false);
+        Name orderStatusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Order status", ordersName, false);
         Name allCurrenciesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All currencies", ordersName, false);
         Name allHours = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "date" + StringUtils.MEMBEROF + "All hours", null, false);
         languages.clear();
@@ -923,6 +924,11 @@ public class DSDataLoadService {
                         valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, shippingTax, namesForValue);
                     }
                 }
+                String orderStatus = orderRow.get("status");
+                if (orderStatus!=null && orderStatus.length() > 0){
+                    Name statusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,orderStatus,orderStatusName,true);
+                    statusName.addChildWillBePersisted(orderName);
+                }
                 counter++;
                 if (counter % 1000 == 0) {
                     System.out.print(".");
@@ -1077,7 +1083,7 @@ public class DSDataLoadService {
                 "'*','eav_attribute_option_value','','value_id'\n" +
                 "'*','eav_entity_type','','entity_type_id'\n" +
                 "'item_id,order_id,parent_item_id,created_at,product_id,weight,product_type,qty_ordered,qty_canceled,base_discount_invoiced, base_tax_amount, base_row_invoiced, base_row_total','sales_flat_order_item', '$starttime','item_id'\n" +
-                "'entity_id, store_id, customer_id, base_currency_code, increment_id, shipping_amount,shipping_tax_amount','sales_flat_order',  '$starttime', 'entity_id'\n" +
+                "'entity_id, store_id, status, customer_id, base_currency_code, increment_id, shipping_amount,shipping_tax_amount','sales_flat_order',  '$starttime', 'entity_id'\n" +
                 "'entity_id, parent_id, address_type, country_id, email, firstname, lastname, postcode','sales_flat_order_address',  '', 'entity_id'\n" + // email firstname lastname postcode extras that will be required if users are shopping in Magento without making an account
                 "'entity_id, email, group_id','customer_entity',  '$starttime', 'entity_id'\n" +
                 "'*','customer_group','', 'customer_group_id'\n" +
