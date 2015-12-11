@@ -544,7 +544,10 @@ public class DSImportService {
         }
     }
 
-    // calls header validation and batches up the data with headers ready for batch importing
+    /* calls header validation and batches up the data with headers ready for batch importing
+    Get headings first, they can be in a name or in the file, if in a file then they will be set on a name. The key is to set up info in names so a file can be uploaded from a client "as is"
+    There was a "name per heading" option that might have facilitated columns being shifted around but thi seems to have been removed
+    */
 
     public String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
         // Preparatory stuff
@@ -575,7 +578,7 @@ public class DSImportService {
                 delimiter = '\t';
             }
         } else {
-            return "First line blank";//if he first line is blank, ignore the sheet
+            return "First line blank"; //if he first line is blank, ignore the sheet
         }
         // now we know the delimiter can CSV read, I've read jackson is pretty quick
         CsvMapper csvMapper = new CsvMapper();
@@ -629,7 +632,6 @@ public class DSImportService {
             }
             // The code below should be none the wiser that a transpose happened if it did.
             String importHeaders = importInterpreter.getAttribute(headingsString);
-
             if (importHeaders == null) {//no longer used - Nov 2015
                 // todo - get rid of this and change to an attribute like transpose to skip a number of lines
                 importHeaders = importInterpreter.getAttribute(headingsString + "1");
@@ -696,7 +698,6 @@ public class DSImportService {
         int colCount = immutableImportHeadings.size();
         while (immutableImportHeadings.get(colCount - 1).compositionPattern != null)
             colCount--;
-
         while (lineIterator.hasNext()) {
             String[] lineValues = lineIterator.next();
             while (lineValues.length < colCount && lineIterator.hasNext()) { // if there are carriage returns in columns, we'll assume on this import that every line must have the same number of columns (may need an option later to miss this)
@@ -1102,11 +1103,9 @@ public class DSImportService {
         if (cellWithHeading.lineValue.length() == 0) { // so nothing to do
             return;
         }
-
         if (cellWithHeading.lineValue.contains(",") && !cellWithHeading.lineValue.contains(Name.QUOTE + "")) {//beware of treating commas in cells as set delimiters....
             cellWithHeading.lineValue = Name.QUOTE + cellWithHeading.lineValue + Name.QUOTE;
         }
-
         if (cellWithHeading.lineName == null) { // then create it, this will take care of the parents ("child of") while creating
             cellWithHeading.lineName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cellWithHeading.lineValue
                     , cellWithHeading.immutableImportHeading.parentNames, cellWithHeading.immutableImportHeading.isLocal, setLocalLanguage(cellWithHeading.immutableImportHeading, attributeNames));
@@ -1134,6 +1133,7 @@ public class DSImportService {
     }
 
     // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
+    // the boolean is used for only, in its absence it will always be true as in the line is ok
 
     private boolean getCompositeValuesAndCheckOnly(List<ImportCellWithHeading> cells) {
         int adjusted = 2;
@@ -1223,10 +1223,8 @@ public class DSImportService {
 
     public String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames, String fileName) throws Exception {
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
-        String sheetLanguage = "";
-        Name sheetSet = null;
         if (fileName.length() > 4 && fileName.charAt(4) == '-') {
-            sheetLanguage = fileName.substring(5);
+            String sheetLanguage = fileName.substring(5);
             attributeNames = new ArrayList<>();
             attributeNames.add(sheetLanguage);
         }
@@ -1241,7 +1239,7 @@ public class DSImportService {
                 String setName = st.nextToken().replace("\"", "");//sometimes the last line of imported spreadsheets has come up as ""
                 if (setName.length() > 0) {
                     interpretHeading(azquoMemoryDBConnection, setName, mutableImportHeading, attributeNames);
-                    mutableImportHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, sheetSet, true, attributeNames);
+                    mutableImportHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, true, attributeNames);
                     if (mutableImportHeading.name != null) { // is this a concern? I'll throw an exception in case (based on IntelliJ warning)
                         Name set = mutableImportHeading.name;
                         while (st.hasMoreTokens()) {
@@ -1255,7 +1253,7 @@ public class DSImportService {
                                     }
                                     child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, set, false, attributeNames);
                                 } else {
-                                    child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, sheetSet, true, attributeNames);
+                                    child = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, element, null, true, attributeNames);
                                     //new names will have been added to sheet set unnecessarily, so:
                                 }
                                 children.add(child);
@@ -1263,7 +1261,6 @@ public class DSImportService {
                         }
                         nameService.clearChildren(set);
                         for (Name child : children) {
-                            if (sheetSet != null) sheetSet.removeFromChildrenWillBePersisted(child);
                             set.addChildWillBePersisted(child);
                         }
                     } else {
