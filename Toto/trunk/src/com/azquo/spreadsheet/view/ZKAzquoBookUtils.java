@@ -123,7 +123,7 @@ public class ZKAzquoBookUtils {
                     System.out.println("10 attempts at resolving choices, odds on there's some kind of circular reference, stopping");
                 }
             }
-            resolveQueries(namesForSheet, sheet, loggedInUser); // after all optiosn sorted should be ok
+            resolveQueries(namesForSheet, sheet, loggedInUser); // after all options sorted should be ok
 
             // ok the plan here is remove all the merges then put them back in after the regions are expanded.
             List<CellRegion> merges = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());
