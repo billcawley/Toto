@@ -37,8 +37,12 @@ public class LoginController {
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "user", required = false) String userEmail
             , @RequestParam(value = "password", required = false) String password
+            , @RequestParam(value = "logoff", required = false) String logoff
             , @RequestParam(value = "connectionid", required = false) String connectionid // only for the magento plugin
     ) throws Exception {
+        if ("true".equals(logoff)){
+            request.getSession().removeAttribute(LOGGED_IN_USER_SESSION);
+        }
         if (connectionid != null && connectionid.length() > 0) { // nasty hack to support connection id from the plugin
             if (request.getServletContext().getAttribute(connectionid) != null) { // then pick up the temp logged in conneciton
                 LoggedInUser loggedInUser = (LoggedInUser)request.getServletContext().getAttribute(connectionid);

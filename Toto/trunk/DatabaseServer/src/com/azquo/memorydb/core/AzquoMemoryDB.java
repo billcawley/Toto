@@ -6,7 +6,6 @@ import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.azquo.memorydb.dao.ValueDAO;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
@@ -51,7 +50,7 @@ public final class AzquoMemoryDB {
     // does this database need loading from mysql, a significant flag that affects rules for memory db entity instantiation for example
     private boolean needsLoading;
 
-    // reference to the mysql db, not final so it can be nullable to stop persistence
+    // reference to the mysql db, not final so it can be null to stop persistence
     private String mysqlName;
 
     // object ids. We handle this here, it's not done by MySQL
@@ -63,10 +62,9 @@ public final class AzquoMemoryDB {
     private final Map<String, Set<AzquoMemoryDBEntity>> entitiesToPersist;
     // how many threads when loading from and saving to MySQL
     private final int loadingThreads;
-    // how many threads when creating a report
+    // how many threads when creating a report - possibly could be held in spreadsheet service but can calculate this and loadingThreads at the same time
     private final int reportFillerThreads;
 
-    // available to StandardDAO
     public int getLoadingThreads() {
         return loadingThreads;
     }
@@ -75,9 +73,9 @@ public final class AzquoMemoryDB {
         return reportFillerThreads;
     }
 
-    // for convenience while loading, null it at the end of the constuctor.
+    // A convenience reference to the user log while loading, null it at the end of the constructor
     private StringBuffer sessionLog;
-
+    // using the new DAO classes or not. Really we should standardise on them
     private boolean fastLoaded = false;
 
     // Initialising as concurrent hash maps here, needs careful thought as to whether heavy concurrent access is actually a good idea, what could go wrong
@@ -87,7 +85,6 @@ public final class AzquoMemoryDB {
         newDatabaseCount.incrementAndGet();
         this.sessionLog = sessionLog;
         azquoProperties.load(getClass().getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring
-        // now where the default multi threading number is defined. Different number based on the task? Can decide later.
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         int possibleLoadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
         if (possibleLoadingThreads > 8) { // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
@@ -154,7 +151,7 @@ public final class AzquoMemoryDB {
     private static final int VALUE_MODE = 2;
 
 
-    // task for multi threaded loading of a database
+    // task for multi threaded loading of a database, JSON storing style
 
     private static AtomicInteger newSQLBatchLoaderRunCount = new AtomicInteger(0);
 
