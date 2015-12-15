@@ -731,7 +731,7 @@ public class ZKAzquoBookUtils {
                             for (String choiceOption : choiceOptions) {
                                 sheet.getInternalSheet().getCell(row, col).setStringValue(choiceOption);
                                 if (filterChoices.contains(choiceOption)) {
-                                    CellOperationUtil.applyBackColor(Ranges.range(sheet, row, col), "#080808");
+                                    CellOperationUtil.applyBackColor(Ranges.range(sheet, row, col), "#888888");
                                 }
                                 row++;
                                 if (row > chosen.getLastRow()){
