@@ -93,7 +93,7 @@ public class ZKAzquoBookUtils {
                     if (sName.getName().endsWith("Chosen")) {
                         CellRegion chosen = getCellRegionForSheetAndName(sheet, sName.getName());
                         String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length());
-                        if (chosen != null && chosen.getRowCount() == 1) {
+                        if (chosen != null && chosen.getRowCount() == 1 && chosen.getColumnCount() == 1) {
                             // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
                             List<String> validOptions = choiceOptionsMap.get(choiceName + "Choice");
                             String userChoice = userChoices.get(choiceName.toLowerCase()); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
@@ -717,9 +717,10 @@ public class ZKAzquoBookUtils {
                              is that it might be null when re adding the validation sheet when switching between sheets which can happen.
                              Under these circumstances I assume we won't need to re-do the filter adding. I guess need to test.
                              */
-                    } else if (userChoices != null && chosen.getRowCount() >= 3) {
-                        if (choiceOptions.size() <= chosen.getRowCount()) { // it will fit, good
-                            int row = choice.getRow();
+                    } else if (userChoices != null && (chosen.getRowCount() > 1 || chosen.getColumnCount() > 1)) {
+                        if (choiceOptions.size() <= (chosen.getRowCount() * chosen.getColumnCount())) { // it will fit, good
+                            int row = chosen.getRow();
+                            int col = chosen.getColumn();
                             String selected = userChoices.get(choiceName.toLowerCase()); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
                             List<String> filterChoices;
                             if (selected != null) {
@@ -728,11 +729,15 @@ public class ZKAzquoBookUtils {
                                 filterChoices = Collections.emptyList();
                             }
                             for (String choiceOption : choiceOptions) {
-                                sheet.getInternalSheet().getCell(row, chosen.getColumn()).setStringValue(choiceOption);
+                                sheet.getInternalSheet().getCell(row, col).setStringValue(choiceOption);
                                 if (filterChoices.contains(choiceOption)) {
-                                    CellOperationUtil.applyBackColor(Ranges.range(sheet, row, chosen.getColumn()), "#FF00000");
+                                    CellOperationUtil.applyBackColor(Ranges.range(sheet, row, col), "#080808");
                                 }
                                 row++;
+                                if (row > chosen.getLastRow()){
+                                    row = chosen.getRow();
+                                    col++;
+                                }
                             }
                         } // need an else here for a scrolling list. Might be a bit of a pain, will need to record list places
                     }
