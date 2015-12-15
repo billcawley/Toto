@@ -931,7 +931,6 @@ public final class NameService {
         }
         if (resetDefs){
             //currently recalculates ALL definitons regardless of whether they contain the changed set.  Could speed this by looking for expressions that contain the changed set name
-
             Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDB().namesForAttribute("DEFINITION");
             if (defNames!=null) {
                 for (Name defName : defNames) {

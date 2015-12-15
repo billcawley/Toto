@@ -202,10 +202,10 @@ public final class AzquoMemoryDB {
                         new Value(memDB, dataRecord.id, dataRecord.json);
                     }
                 }
-                if (minId%100_000 == 0){
+                if (minId % 100_000 == 0) {
                     loadTracker.addAndGet(dataToLoad.size());
                 }
-                if (minId%1_000_000 == 0){
+                if (minId % 1_000_000 == 0) {
                     logInSessionLogAndSystem("loaded " + loadTracker.get());
                 }
             } catch (Exception e) {
@@ -214,7 +214,7 @@ public final class AzquoMemoryDB {
         }
     }
 
-    // needs factoring, just testing for the moment
+    // needs factoring
 
     private static AtomicInteger newNameBatchLoaderRunCount = new AtomicInteger(0);
 
@@ -243,10 +243,9 @@ public final class AzquoMemoryDB {
                         maxIdAtLoad = name.getId();
                     }
                 }
-                if (minId%100_000 == 0){
-                    loadTracker.addAndGet(names.size());
-                }
-                if (minId%1_000_000 == 0){
+                // this was only when min id % 100_000, not sure why . . .
+                loadTracker.addAndGet(names.size());
+                if (minId % 1_000_000 == 0) {
                     logInSessionLogAndSystem("loaded " + loadTracker.get());
                 }
             } catch (Exception e) {
@@ -255,7 +254,7 @@ public final class AzquoMemoryDB {
         }
     }
 
-    // needs factoring, just testing for the moment
+    // needs factoring - if the dao were passed then one could use one Batch Loader instead of theses two. Todo.
 
     private static AtomicInteger newValueBatchLoaderRunCount = new AtomicInteger(0);
 
@@ -284,10 +283,10 @@ public final class AzquoMemoryDB {
                         maxIdAtLoad = value.getId();
                     }
                 }
-                if (minId%100_000 == 0){
+                if (minId % 100_000 == 0) {
                     loadTracker.addAndGet(values.size());
                 }
-                if (minId%1_000_000 == 0){
+                if (minId % 1_000_000 == 0) {
                     logInSessionLogAndSystem("loaded " + loadTracker.get());
                 }
             } catch (Exception e) {
@@ -361,7 +360,7 @@ public final class AzquoMemoryDB {
                 executor = Executors.newFixedThreadPool(loadingThreads);
 
                 // ok now need code to switch to the new ones
-                if (nameDAO.checkFastTableExists(this) && valueDAO.checkFastTableExists(this)){
+                if (nameDAO.checkFastTableExists(this) && valueDAO.checkFastTableExists(this)) {
                     System.out.println();
                     System.out.println("### Using new loading mechanism ###");
                     System.out.println();
@@ -424,7 +423,6 @@ public final class AzquoMemoryDB {
                     System.out.println("Used Memory after list load:"
                             + (runtime.totalMemory() - runtime.freeMemory()) / mb);
                 }
-                // note : after multi threading the loading this init names (linking) now takes longer, need to consider thread safety if planning on multi threading this.
                 linkEntities();
                 if (memoryTrack) {
                     System.out.println("Used Memory after init names :"
@@ -468,7 +466,7 @@ public final class AzquoMemoryDB {
             if (!entities.isEmpty()) {
                 // todo : write locking the db probably should start here
                 // multi thread this chunk? It can slow things down a little . . .
-                if (!fastLoaded || tableToStoreIn.equals(JsonRecordDAO.PersistedTable.provenance.name())){ // provenance is old style regardless
+                if (!fastLoaded || tableToStoreIn.equals(JsonRecordDAO.PersistedTable.provenance.name())) { // provenance is old style regardless
                     System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
                     List<JsonRecordTransport> recordsToStore = new ArrayList<>(entities.size()); // it's now bothering me a fair bit that I didn't used to initialise such lists!
                     for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it. Copy perhaps expensive but consistency is important
@@ -492,11 +490,11 @@ public final class AzquoMemoryDB {
                         e.printStackTrace();
                     }
                 } else { // new save on name and value
-                    if (tableToStoreIn.equals(JsonRecordDAO.PersistedTable.name.name())){
+                    if (tableToStoreIn.equals(JsonRecordDAO.PersistedTable.name.name())) {
                         System.out.println("new name store : " + entities.size());
                         List<Name> namesToStore = new ArrayList<>(entities.size());
-                        for (AzquoMemoryDBEntity entity : entities){
-                            namesToStore.add((Name)entity);
+                        for (AzquoMemoryDBEntity entity : entities) {
+                            namesToStore.add((Name) entity);
                             entity.setAsPersisted();// the big commented issue above is a moot point here - the actual saving of the state happens later. If modified in the mean time a name will be added back onto the set
                         }
                         try {
@@ -505,11 +503,11 @@ public final class AzquoMemoryDB {
                             e.printStackTrace();
                         }
                     }
-                    if (tableToStoreIn.equals(JsonRecordDAO.PersistedTable.value.name())){
+                    if (tableToStoreIn.equals(JsonRecordDAO.PersistedTable.value.name())) {
                         System.out.println("new value store : " + entities.size());
                         List<Value> valuesToStore = new ArrayList<>(entities.size());
-                        for (AzquoMemoryDBEntity entity : entities){
-                            valuesToStore.add((Value)entity);
+                        for (AzquoMemoryDBEntity entity : entities) {
+                            valuesToStore.add((Value) entity);
                             entity.setAsPersisted();
                         }
                         try {
@@ -660,52 +658,46 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger getNameByAttributeCount = new AtomicInteger(0);
 
-    public Name getNameByAttribute(final String attributeName, final String attributeValue, final Name parent) {
-        getNameByAttributeCount.incrementAndGet();
-        return getNameByAttribute(Collections.singletonList(attributeName), attributeValue, parent);
-    }
-
-
-    public List<Name> findDuplicateNames(String attributeName, Set<String>exceptions){
+    public List<Name> findDuplicateNames(String attributeName, Set<String> exceptions) {
         List<Name> found = new ArrayList<>();
         Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
         if (map == null) return null;
         int dupCount = 0;
         int testCount = 0;
-        for (String string : map.keySet()){
-            if (testCount++ % 50000 == 0) System.out.println("testing for duplicates - count " + testCount + " dups found " + dupCount);
-            if (map.get(string).size() > 1){
-                boolean dupFound = false;
+        for (String string : map.keySet()) {
+            if (testCount++ % 50000 == 0)
+                System.out.println("testing for duplicates - count " + testCount + " dups found " + dupCount);
+            if (map.get(string).size() > 1) {
                 List<Name> names = map.get(string);
                 boolean nameadded = false;
-                for (Name name:names){
-                    for (String attribute : name.getAttributeKeys()){
-                        if (name.getAttributes().size()==1 || (!attribute.equals(attributeName) && !exceptions.contains(attribute))){
+                for (Name name : names) {
+                    for (String attribute : name.getAttributeKeys()) {
+                        if (name.getAttributes().size() == 1 || (!attribute.equals(attributeName) && !exceptions.contains(attribute))) {
                             String attValue = name.getAttribute(attribute);
-                             for (Name name2:names){
-                                if (name2.getId()==name.getId())break;
-                                 List<String> attKeys2 = name2.getAttributeKeys();
-                                 //note checking here only on the attribute values of the name itself (not parent names)
-                                 if (attKeys2.contains(attribute) && name2.getAttribute(attribute).equals(attValue)){
-                                      if (!nameadded){
+                            for (Name name2 : names) {
+                                if (name2.getId() == name.getId()) break;
+                                List<String> attKeys2 = name2.getAttributeKeys();
+                                //note checking here only on the attribute values of the name itself (not parent names)
+                                if (attKeys2.contains(attribute) && name2.getAttribute(attribute).equals(attValue)) {
+                                    if (!nameadded) {
                                         found.add(name);
                                         nameadded = true;
-                            }
+                                    }
                                     found.add(name2);
                                     dupCount++;
 
+                                }
+                            }
                         }
-                    }
+
                     }
 
                 }
-
-                }
-                if (dupCount> 100){
-                        break;
-                    }
+                if (dupCount > 100) {
+                    break;
                 }
             }
+        }
         return found;
 
 
@@ -775,7 +767,6 @@ public final class AzquoMemoryDB {
                     names.addAll(nameByAttributeMap.get(uctAttributeName).get(attributeValue));
                 }
             }
-
         }
         return names;
     }
@@ -825,7 +816,6 @@ public final class AzquoMemoryDB {
                     }
                 }
             }
-
         }
         return toReturn;
     }
@@ -881,7 +871,7 @@ public final class AzquoMemoryDB {
 
     public void clearSetAndCountCacheForName(Name name) {
         clearSetAndCountCacheForNameCount.incrementAndGet();
-        for (Name parent : name.findAllParents()){ // I hope this isn't too expensive
+        for (Name parent : name.findAllParents()) { // I hope this isn't too expensive
             clearSetAndCountCacheForString(parent.getDefaultDisplayName()); // in another language could cause a problem. If we could get the ids this would be more reliable.
             // Of course the ids means we could get a name list from parse query. A thought.
         }
@@ -891,15 +881,15 @@ public final class AzquoMemoryDB {
 
     private void clearSetAndCountCacheForString(String s) {
         clearSetAndCountCacheForStringCount.incrementAndGet();
-        if (s != null){
+        if (s != null) {
             s = s.toUpperCase();
-            for (Iterator<Map.Entry<String, Integer>> it = countCache.entrySet().iterator(); it.hasNext();) {
+            for (Iterator<Map.Entry<String, Integer>> it = countCache.entrySet().iterator(); it.hasNext(); ) {
                 Map.Entry<String, Integer> entry = it.next();
                 if (entry.getKey().toUpperCase().contains(s)) {
                     it.remove();
                 }
             }
-            for (Iterator<Map.Entry<String, Set<Name>>> it = setCache.entrySet().iterator(); it.hasNext();) {
+            for (Iterator<Map.Entry<String, Set<Name>>> it = setCache.entrySet().iterator(); it.hasNext(); ) {
                 Map.Entry<String, Set<Name>> entry = it.next();
                 if (entry.getKey().toUpperCase().contains(s)) {
                     it.remove();
@@ -947,34 +937,32 @@ public final class AzquoMemoryDB {
         }
     }
 
-    // Sets indexes for names, this needs to be thread safe to support multi threaded name linking
-    // todo - address the uppercase situation with attributes - are they always stored like that? Am I reprocessing strings unnecessarily?
+    // only used when looking up for "DEFINITION", inline?
 
-    private static AtomicInteger setAttributeForNameInAttributeNameMapCount = new AtomicInteger(0);
-
-    public Collection<Name> namesForAttribute(String attribute){
+    public Collection<Name> namesForAttribute(String attribute) {
         Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(attribute);
         if (namesForThisAttribute == null) return null;
         Collection<Name> toReturn = new HashSet<>();
-        for (String key:namesForThisAttribute.keySet()){
+        for (String key : namesForThisAttribute.keySet()) {
             toReturn.addAll(namesForThisAttribute.get(key));
-
         }
         return toReturn;
     }
 
+    // Sets indexes for names, this needs to be thread safe to support multi threaded name linking.
+
+    private static AtomicInteger setAttributeForNameInAttributeNameMapCount = new AtomicInteger(0);
 
     public void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
         setAttributeForNameInAttributeNameMapCount.incrementAndGet();
-        // upper and lower seems a bit arbitrary. Hmmm.
-        // these interns have been tested as helping memory usage
+        // upper and lower seems a bit arbitrary, I need a way of making it case insensitive.
+        // these interns have been tested as helping memory usage.
         String lcAttributeValue = attributeValue.toLowerCase().trim().intern();
         String ucAttributeName = attributeName.toUpperCase().trim().intern();
         if (lcAttributeValue.indexOf(Name.QUOTE) >= 0 && !ucAttributeName.equals(Name.CALCULATION)) {
             lcAttributeValue = lcAttributeValue.replace(Name.QUOTE, '\'').intern();
         }
-
-        // adapted from stack overflow, cheers!
+        // The way to use putIfAbsent correctly according to a stack overflow example
         Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
         if (namesForThisAttribute == null) {
             final Map<String, List<Name>> newNamesForThisAttribute = new ConcurrentHashMap<>();
@@ -983,9 +971,7 @@ public final class AzquoMemoryDB {
                 namesForThisAttribute = newNamesForThisAttribute;
             }
         }
-
         // same pattern but for the lists. Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
-
         List<Name> names = namesForThisAttribute.get(lcAttributeValue);
         if (names == null) {
             final List<Name> newNames = new CopyOnWriteArrayList<>();// cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
@@ -995,8 +981,8 @@ public final class AzquoMemoryDB {
             }
         }
         // ok, got names
-        names.add(name); // threadsafe, internally locked but of course just for this particular attribute and value heh.
-        // Could maybe get a little speed by adding a special case for the first name . . .meh.
+        names.add(name); // thread safe, internally locked but of course just for this particular attribute and value heh.
+        // Could maybe get a little speed by adding a special case for the first name (as in singleton)
     }
 
     // I think this is just much more simple re thread safety in that if we can't find the map and list we just don't do anything and the final remove should be safe according to CopyOnWriteArray
@@ -1012,7 +998,7 @@ public final class AzquoMemoryDB {
         if (namesForThisAttribute != null) {// the map we care about
             final List<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(lcAttributeValue);
             if (namesForThatAttributeAndAttributeValue != null) {
-                namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the set . . .
+                namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the list . . .
             }
         }
     }
@@ -1044,9 +1030,9 @@ public final class AzquoMemoryDB {
         }
     }
 
-    // to be called after loading moves the json and extracts attributes to useful maps here
-    // called after loading as the names reference themselves
-    // going to try a basic multi-thread - it was 100,000 but I wonder if this is as efficient as it could be given that at the end leftover threads can hang around. Trying for 50,000
+    /* to be called after loading moves the json and extracts attributes to useful maps here called after loading as the names reference themselves
+    going to try a basic multi-thread - it was 100,000 but I wonder if this is as efficient as it could be given that at the end leftover threads
+    can hang around (particularly hefty child sets). Trying for 50,000 */
 
     int batchLinkSize = 50_000;
 
@@ -1073,9 +1059,9 @@ public final class AzquoMemoryDB {
         }
     }
 
-    // trying for new more simplified persistence - make functions not linked to classes
-    // maps will be set up in the constructor. Think about any concurrency issues here???
-    // throw exception if loading?
+    /* trying for new more simplified persistence - make functions not linked to classes.
+    maps will be set up in the constructor (of this class) with thread safe sets.
+    throw exception if called when the database is not loaded? */
 
     private static AtomicInteger setEntityNeedsPersistingCount = new AtomicInteger(0);
 
@@ -1098,7 +1084,7 @@ public final class AzquoMemoryDB {
     protected void addValueToDb(final Value newValue) throws Exception {
         newValue.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        if (valueByIdMap.putIfAbsent(newValue.getId(), newValue) != null) { // != null means there was something in there
+        if (valueByIdMap.putIfAbsent(newValue.getId(), newValue) != null) { // != null means there was something in there, this really should not happen hence the exception
             throw new Exception("tried to add a value to the database with an existing id!");
         }
     }
@@ -1232,7 +1218,7 @@ public final class AzquoMemoryDB {
         removeEntityNeedsPersistingCount.set(0);
     }
 
-    public static void printAllCountStats(){
+    public static void printAllCountStats() {
         printFunctionCountStats();
         Name.printFunctionCountStats();
         Value.printFunctionCountStats();
@@ -1240,7 +1226,7 @@ public final class AzquoMemoryDB {
         ValueService.printFunctionCountStats();
     }
 
-    public static void clearAllCountStats(){
+    public static void clearAllCountStats() {
         clearFunctionCountStats();
         Name.clearFunctionCountStats();
         Value.clearFunctionCountStats();

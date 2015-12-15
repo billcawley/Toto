@@ -406,6 +406,19 @@ seaports;children   container;children
         return true; // All null - treat as last cell populated
     }
 
+    public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, List<String> children) throws Exception {
+        final AzquoMemoryDBConnection connectionFromAccessToken = getConnectionFromAccessToken(databaseAccessToken);
+        Name set = nameService.findOrCreateNameInParent(connectionFromAccessToken , setName, null, false);
+        set.setChildrenWillBePersisted(Collections.emptyList()); // easiest way to clear them
+        for (String child : children){
+            Name childName = nameService.findByName(connectionFromAccessToken, child);
+            if (childName != null){
+                set.addChildWillBePersisted(childName); // and that should be it!
+            }
+        }
+    }
+
+
     // to help making names on a dropdown.
     static class UniqueName {
         Name topName; // often topName is name and the description will just be left as the basic name

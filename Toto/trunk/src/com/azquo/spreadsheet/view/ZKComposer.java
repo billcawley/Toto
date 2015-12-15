@@ -12,16 +12,16 @@ import com.azquo.spreadsheet.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.zk.ui.*;
-import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.*;
-import org.zkoss.zss.api.model.Book;
-import org.zkoss.zss.api.model.CellData;
+import org.zkoss.zss.api.model.*;
+import org.zkoss.zss.api.model.impl.ColorImpl;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SCell;
+import org.zkoss.zss.model.SColor;
 import org.zkoss.zss.model.SName;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zss.ui.event.*;
@@ -125,10 +125,47 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-    // Bit of an odd one this : on a cell click "wake" the log back up as there may be activity shortly
+    /* Bit of an odd one this : on a cell click "wake" the log back up as there may be activity shortly
+    In addition I now want to now deal with the new filter things
+     */
 
     @Listen("onCellClick = #myzss")
-    public void onCellClick(Event event) {
+    public void onCellClick(CellMouseEvent event) {
+        final Book book = event.getSheet().getBook();
+        final Sheet sheet = event.getSheet();
+        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
+        List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
+        boolean reload = false;
+        for (SName name : names) {
+            if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() >= 3) {// they clicked on a filter region, need to update the choice
+                LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+                String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
+                final SCell clickedCell = sheet.getInternalSheet().getCell(event.getRow(), event.getColumn());
+                if (clickedCell.getCellStyle().getBackColor().getHtmlColor().equalsIgnoreCase("#FFFFFF")){ // it was white therefore this is the cell being selected
+                    spreadsheetService.addFilterChoice(loggedInUser.getUser().getId(), choice, clickedCell.getStringValue());
+                } else {
+                    spreadsheetService.removeFilterChoice(loggedInUser.getUser().getId(), choice, clickedCell.getStringValue());
+                }
+                reload = true;
+            }
+        }
+        // factor?
+        if (reload) {
+            try {
+                // new book from same source
+                final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+                for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
+                    newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                }
+                if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
+                    Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
+                }
+                myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
         Clients.evalJavaScript("window.skipSetting = 0;window.skipMarker = 0;");
     }
 
@@ -199,7 +236,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             try {
                 // new book from same source
                 final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
-                for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
+                for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
                 if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
@@ -250,7 +287,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         //System.out.println("after cell change : " + row + " col " + col + " chosen");
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
-        List<SName> names = getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
+        List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet());
         if (names == null) return;
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
@@ -287,14 +324,14 @@ public class ZKComposer extends SelectorComposer<Component> {
         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
         Book book = sheetSelectEvent.getSheet().getBook();
         final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptions(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
-        zkAzquoBookUtils.addValidation(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),choiceOptions);
+        zkAzquoBookUtils.addValidation(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),choiceOptions,null);
     }
 
     // to deal with provenance
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
         // right now a right click gets provenance ready, dunno if I need to do this
-        List<SName> names = getNamedDataRegionForRowAndColumnSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn());
+        List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), myzss.getSelectedSheet());
         while (editPopup.getChildren().size() > 0){ // clear it out
             editPopup.removeChild(editPopup.getLastChild());
         }
@@ -503,7 +540,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = myzss.getBook();
         List<SName> found = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) { // seems best to loop through names checking which matches I think
-            if (name.getRefersToSheetName()!=null && name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
+            if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
                     && name.getRefersToCellRegion() != null
                     && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
                     && col >= name.getRefersToCellRegion().getColumn() && col <= name.getRefersToCellRegion().getLastColumn()) {
@@ -512,26 +549,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
         return found;
     }
-
-
-    private List<SName> getNamedDataRegionForRowAndColumnSelectedSheet(int row, int col) {
-        // now how to get the name?? Guess run through them. Feel there should be a better way.
-        final Book book = myzss.getBook();
-        List<SName> found = new ArrayList<>();
-        for (SName name : book.getInternalBook().getNames()) { // seems best to loop through names checking which matches I think
-            if (name.getRefersToSheetName()!=null && name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
-                    && name.getName().toLowerCase().startsWith("az_dataregion")
-                    && name.getRefersToCellRegion() != null
-                    && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
-                    && col >= name.getRefersToCellRegion().getColumn() && col <= name.getRefersToCellRegion().getLastColumn()) {
-                //check that there are some row headings
-                found.add(name);
-
-            }
-        }
-        return found;
-    }
-
 
     private String trimString(String stringToShow) {
 

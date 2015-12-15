@@ -201,6 +201,15 @@ public class RMIImplementation implements RMIInterface {
     }
 
     @Override
+    public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, List<String> children) throws RemoteException {
+        try {
+            dsSpreadsheetService.createFilterSet(databaseAccessToken, setName, children);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
     public void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
         try {
             dsSpreadsheetService.resolveQuery(databaseAccessToken,query,languages);

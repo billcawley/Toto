@@ -103,6 +103,9 @@ public class SpreadsheetService {
     public static final String ASPOSELICENSE = "aspose.license";
     public static final String DEVMACHINE = "dev.machine";
 
+    public static final String FILTERCHOICEDIVIDER = "|||"; // let's hope it's not used in the choices
+    public static final String FILTERCHOICEDIVIDERFORREGEX = "\\|\\|\\|"; // maybe reconsider this later
+
     public String getHomeDir() {
         if (homeDir == null) {
             homeDir = env.getProperty(host + "." + AZQUOHOME);
@@ -142,11 +145,11 @@ public class SpreadsheetService {
     public SpreadsheetService() {
         String current = null;
         try {
-            current = new File( "." ).getCanonicalPath();
+            current = new File(".").getCanonicalPath();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println("Current dir:"+current);
+        System.out.println("Current dir:" + current);
         String thost = "";
         try {
             thost = InetAddress.getLocalHost().getHostName();
@@ -225,8 +228,8 @@ public class SpreadsheetService {
         head.append("</style>\n");
         //velocityContext.put("script",readFile("online.js").toString());
         //velocityContext.put("topmenu",createTopMenu(loggedInConnection).toString());
-        azquoBook.fillVelocityOptionInfo(loggedInUser, model,onlineReport.getId());
-        
+        azquoBook.fillVelocityOptionInfo(loggedInUser, model, onlineReport.getId());
+
         model.addAttribute("tabs", tabs.toString());
         model.addAttribute("topmessage", message);
         if (onlineReport.getId() == 1 && spreadsheetName.equalsIgnoreCase("reports")) {
@@ -319,7 +322,7 @@ public class SpreadsheetService {
         azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
         azquoBook.loadBook(getHomeDir() + filepath, useAsposeLicense());
         azquoBook.setSheet(0);//assume currently that this is a single sheet workbook
-        azquoBook.prepareSheet(loggedInUser,onlineReport.getId(), null);
+        azquoBook.prepareSheet(loggedInUser, onlineReport.getId(), null);
         return azquoBook;
 
     }
@@ -358,6 +361,55 @@ public class SpreadsheetService {
         }
     }
 
+    // currently just using strings for this, maybe get a bit mroe clever later
+
+    public void addFilterChoice(int userId, String choiceName, String choiceValue) {
+        if (choiceName == null || choiceName.length() == 0 || choiceValue == null || choiceValue.length() == 0) { // since this is for adding there's no the option to send a blank value to remove the option
+            return;
+        }
+        UserChoice userChoice = userChoiceDAO.findForUserIdAndChoice(userId, choiceName);
+        if (userChoice == null) {// then it's the first, add as above
+            userChoice = new UserChoice(0, userId, choiceName, choiceValue, new Date());
+            userChoiceDAO.store(userChoice);
+        } else {// we need to add it
+            if (userChoice.getChoiceValue().trim().length() == 0) { // could happen I suppose
+                userChoice.setChoiceValue(choiceValue);
+                userChoice.setTime(new Date());
+                userChoiceDAO.store(userChoice);
+            } else { // ok need to check this properly
+                if (!Arrays.asList(userChoice.getChoiceValue().split(FILTERCHOICEDIVIDERFORREGEX)).contains(choiceValue)) { // it's not in the string already
+                    userChoice.setChoiceValue(userChoice.getChoiceValue() + FILTERCHOICEDIVIDER + choiceValue);
+                    userChoice.setTime(new Date());
+                    userChoiceDAO.store(userChoice);
+                }
+            }
+        }
+    }
+
+    public void removeFilterChoice(int userId, String choiceName, String choiceValue) {
+        if (choiceName == null || choiceName.length() == 0 || choiceValue == null || choiceValue.length() == 0) { // as above need all the options
+            return;
+        }
+        UserChoice userChoice = userChoiceDAO.findForUserIdAndChoice(userId, choiceName);
+        if (userChoice != null) {
+            List<String> existingList = Arrays.asList(userChoice.getChoiceValue().split(FILTERCHOICEDIVIDERFORREGEX));
+                if (existingList.contains(choiceValue)) { // it's in there need to remove
+                    StringBuilder newList = new StringBuilder();
+                    for (String filterChoice : existingList){
+                        if (!filterChoice.equals(choiceValue)){
+                            if (newList.length() != 0){ // not first one, need divider
+                                newList.append(FILTERCHOICEDIVIDER);
+                            }
+                            newList.append(filterChoice);
+                        }
+                    }
+                    userChoice.setChoiceValue(newList.toString());
+                    userChoice.setTime(new Date());
+                    userChoiceDAO.store(userChoice);
+                }
+        }
+    }
+
     public StringBuilder createDatabaseSelect(LoggedInUser loggedInUser) {
         StringBuilder sb = new StringBuilder();
         String chosen = "";
@@ -388,11 +440,11 @@ public class SpreadsheetService {
 
     public void showUserMenu(ModelMap model, LoggedInUser loggedInUser) {
         Map<String, Database> databases = loginService.foundDatabases(loggedInUser.getUser());
-         model.addAttribute("welcome", "Welcome to Azquo!");
+        model.addAttribute("welcome", "Welcome to Azquo!");
         List<Map<String, String>> reports = new ArrayList<>();
-        for (String dbName:databases.keySet()) {
+        for (String dbName : databases.keySet()) {
             Database database = databases.get(dbName);
-            List<OnlineReport> onlineReports = onlineReportDAO.findForDatabaseIdAndUserStatus(database.getId(), loggedInUser.getUser().getStatus(),database.getDatabaseType());
+            List<OnlineReport> onlineReports = onlineReportDAO.findForDatabaseIdAndUserStatus(database.getId(), loggedInUser.getUser().getStatus(), database.getDatabaseType());
             //TODO  set a database for each report - also check permissions
             model.addAttribute("database", database);
             String reportCategory = "";
@@ -421,7 +473,7 @@ public class SpreadsheetService {
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , UserRegionOptions userRegionOptions) throws Exception {
-        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getCellsAndHeadingsForDisplay(databaseAccessToken, regionName,valueId, rowHeadingsSource, colHeadingsSource, contextSource,
+        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
                 userRegionOptions.getHideRows(), userRegionOptions.getRowLimit(), userRegionOptions.getColumnLimit(), userRegionOptions.getSortRow()
                 , userRegionOptions.getSortRowAsc(), userRegionOptions.getSortColumn(), userRegionOptions.getSortColumnAsc(), userRegionOptions.getHighlightDays());
     }
@@ -445,13 +497,13 @@ public class SpreadsheetService {
 
     public void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
-        if (cellsAndHeadingsForDisplay != null){
+        if (cellsAndHeadingsForDisplay != null) {
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
             rmiClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext());
         }
     }
 
-    public String setChoices(LoggedInUser loggedInUser, String provline){
+    public String setChoices(LoggedInUser loggedInUser, String provline) {
         int inSpreadPos = provline.indexOf("in spreadsheet");
         if (inSpreadPos < 0) return null;
         int withPos = provline.indexOf(" with ", inSpreadPos);
@@ -459,7 +511,7 @@ public class SpreadsheetService {
         String reportName = provline.substring(inSpreadPos + 14, withPos).trim();
         String paramString = provline.substring(withPos + 6);
         int equalsPos = paramString.indexOf(" = ");
-        while (equalsPos > 0){
+        while (equalsPos > 0) {
             int endParam = paramString.indexOf(";");
             if (endParam < 0) endParam = paramString.length();
             String paramName = paramString.substring(0, equalsPos).trim();
@@ -476,18 +528,18 @@ public class SpreadsheetService {
     // requires a 12 digits string and returns a string to use with EAN13.TTF
     // currently will return blank if the string can't be made, maybe it should exception
 
-    public static String prepareEAN13Barcode(String source){
+    public static String prepareEAN13Barcode(String source) {
         int checksum = 0;
         int first;
-        if (source == null){
+        if (source == null) {
             return "";
         }
-        if (source.length() == 13){ // assume it's got the checksum already (how you'd read a barcode) and zap it
-            source = source.substring(0,12);
-        } else if (source.length() != 12){ // handle source where the extra digit has been calculated?
+        if (source.length() == 13) { // assume it's got the checksum already (how you'd read a barcode) and zap it
+            source = source.substring(0, 12);
+        } else if (source.length() != 12) { // handle source where the extra digit has been calculated?
             return "";
         }
-        if (!NumberUtils.isDigits(source)){ // org.apache.commons.lang.math convenience call. It should be obvious what it's doing :)
+        if (!NumberUtils.isDigits(source)) { // org.apache.commons.lang.math convenience call. It should be obvious what it's doing :)
             return "";
         }
 /*        For i% = 12 To 1 Step -2
@@ -495,65 +547,65 @@ public class SpreadsheetService {
         Next*/
 // vb starts from index 1 on a string
         // odd indexed chars, we're counting from the RIGHT (the indexes do end up as odd in java as String indexes start at 0)
-        for (int i = 11; i >= 0; i -= 2){
+        for (int i = 11; i >= 0; i -= 2) {
             checksum += Integer.parseInt(source.substring(i, i + 1));
         }
         checksum *= 3; // odd indexed chars * 3
         //checksum% = checksum% * 3
         //add on the even indexed chars
-        for (int i = 10; i >= 0; i -= 2){
-            checksum += Integer.parseInt(source.substring(i,i + 1));
+        for (int i = 10; i >= 0; i -= 2) {
+            checksum += Integer.parseInt(source.substring(i, i + 1));
         }
 //        chaine$ = chaine$ & (10 - checksum% Mod 10) Mod 10
-        source += (10 - checksum%10); // I think equivalent?
+        source += (10 - checksum % 10); // I think equivalent?
 //        'The first digit is taken just as it is, the second one come from table A
         StringBuilder toReturn = new StringBuilder();
         // first digit not coded
         toReturn.append(source.charAt(0));
         // second always table A
-        toReturn.append((char) (65 + Integer.parseInt(source.substring(1,2))));
-        first = Integer.parseInt(source.substring(0,1));
+        toReturn.append((char) (65 + Integer.parseInt(source.substring(1, 2))));
+        first = Integer.parseInt(source.substring(0, 1));
         // switch based on the first number for the next 5 digits. I don't really understand why but it's the rules
-        for (int i = 2; i <= 6; i++){
+        for (int i = 2; i <= 6; i++) {
             boolean tableA = false;
-            switch (i){
+            switch (i) {
                 case 2:
-                    if (first >= 0 && first <= 3){
+                    if (first >= 0 && first <= 3) {
                         tableA = true;
                     }
                     break;
                 case 3:
-                    if (first == 0 || first == 4 || first == 7 || first == 8){
+                    if (first == 0 || first == 4 || first == 7 || first == 8) {
                         tableA = true;
                     }
                     break;
                 case 4:
-                    if (first == 0 || first == 1 || first == 4 || first == 5 || first == 9){
+                    if (first == 0 || first == 1 || first == 4 || first == 5 || first == 9) {
                         tableA = true;
                     }
                     break;
                 case 5:
-                    if (first == 0 || first == 2 || first == 5 || first == 6 || first == 7){
+                    if (first == 0 || first == 2 || first == 5 || first == 6 || first == 7) {
                         tableA = true;
                     }
                     break;
                 case 6:
-                    if (first == 0 || first == 3 || first == 6 || first == 8 || first == 9){
+                    if (first == 0 || first == 3 || first == 6 || first == 8 || first == 9) {
                         tableA = true;
                     }
                     break;
             }
-            if (tableA){
-                toReturn.append((char) (65 + Integer.parseInt(source.substring(i,i + 1))));
+            if (tableA) {
+                toReturn.append((char) (65 + Integer.parseInt(source.substring(i, i + 1))));
             } else {
-                toReturn.append((char) (75 + Integer.parseInt(source.substring(i,i + 1))));
+                toReturn.append((char) (75 + Integer.parseInt(source.substring(i, i + 1))));
             }
         }
         // add separator
         toReturn.append("*");
         // last 6 digits including the checksum on table c
         for (int i = 7; i <= 12; i++) {// the checksum was added, source is 13 long
-            toReturn.append((char) (97 + Integer.parseInt(source.substring(i,i + 1))));
+            toReturn.append((char) (97 + Integer.parseInt(source.substring(i, i + 1))));
 
         }
         toReturn.append("+"); // end marker
@@ -563,15 +615,15 @@ public class SpreadsheetService {
     // should this be in here?
 
     public void runScheduledReports() throws Exception {
-        for (ReportSchedule reportSchedule : reportScheduleDAO.findWhereDueBefore(LocalDateTime.now())){
+        for (ReportSchedule reportSchedule : reportScheduleDAO.findWhereDueBefore(LocalDateTime.now())) {
             OnlineReport onlineReport = onlineReportDAO.findById(reportSchedule.getReportId());
             Database database = databaseDAO.findById(reportSchedule.getDatabaseId());
-            if (onlineReport != null && database != null){
+            if (onlineReport != null && database != null) {
                 onlineReport.setPathname(database.getMySQLName());
                 List<User> users = userDAO.findForBusinessId(database.getBusinessId());
                 User user = null;
-                for (User possible : users){
-                    if (user == null || possible.isAdministrator()){ // default to admin or the first we can find
+                for (User possible : users) {
+                    if (user == null || possible.isAdministrator()) { // default to admin or the first we can find
                         user = possible;
                     }
                 }
@@ -584,7 +636,7 @@ public class SpreadsheetService {
                 // ok what user? I think we'll call it an admin one.
                 DatabaseServer databaseServer = databaseServerDAO.findById(database.getDatabaseServerId());
                 // assuming no read permissions?
-                LoggedInUser loggedInUser = new LoggedInUser("", user,databaseServer,database, null, null);
+                LoggedInUser loggedInUser = new LoggedInUser("", user, databaseServer, database, null, null);
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());
@@ -592,7 +644,7 @@ public class SpreadsheetService {
                 bookUtils.populateBook(book, 0);
                 AzquoMailer azquoMailer = new AzquoMailer();
                 // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
-                if ("PDF".equals(reportSchedule.getType())){
+                if ("PDF".equals(reportSchedule.getType())) {
                     Exporter exporter = Exporters.getExporter("pdf");
                     File file = File.createTempFile(onlineReport.getReportName(), ".pdf");
                     FileOutputStream fos = null;
@@ -608,7 +660,7 @@ public class SpreadsheetService {
                     azquoMailer.sendEMail(reportSchedule.getRecipients(), null, onlineReport.getReportName(), "Attached", file);
                 }
                 // again copied and only modified slightly - todo, factor these?
-                if ("XLS".equals(reportSchedule.getType())){
+                if ("XLS".equals(reportSchedule.getType())) {
                     Exporter exporter = Exporters.getExporter();
                     File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
                     FileOutputStream fos = null;
@@ -623,17 +675,17 @@ public class SpreadsheetService {
                     azquoMailer.sendEMail(reportSchedule.getRecipients(), null, onlineReport.getReportName(), "Attached", file);
                 }
                 // adjust the schedule but wait a mo . . .
-                switch (reportSchedule.getPeriod()){
-                    case "HOURLY" :
+                switch (reportSchedule.getPeriod()) {
+                    case "HOURLY":
                         reportSchedule.setNextDue(reportSchedule.getNextDue().plusHours(1));
                         break;
-                    case "DAILY" :
+                    case "DAILY":
                         reportSchedule.setNextDue(reportSchedule.getNextDue().plusDays(1));
                         break;
-                    case "WEEKLY" :
+                    case "WEEKLY":
                         reportSchedule.setNextDue(reportSchedule.getNextDue().plusWeeks(1));
                         break;
-                    case "MONTHLY" :
+                    case "MONTHLY":
                         reportSchedule.setNextDue(reportSchedule.getNextDue().plusMonths(1));
                         break;
                 }

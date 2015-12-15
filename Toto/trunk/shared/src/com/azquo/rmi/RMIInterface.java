@@ -51,6 +51,8 @@ public interface RMIInterface extends Remote {
 
     List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
 
+    void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, List<String> children) throws RemoteException;
+
     void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
 
     List<TreeNode> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource

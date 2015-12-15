@@ -61,10 +61,6 @@ public class ZKAzquoBookUtils {
             userChoices.put(uc.getChoiceName().toLowerCase(), uc.getChoiceValue()); // make case insensitive
         }
         String context = "";
-
-
-
-
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
 
@@ -86,45 +82,48 @@ public class ZKAzquoBookUtils {
             }*/
 
             // choices can be a real pain, I effectively need to keep resolving them until they don't change due to choices being based on choices (dependencies in excel)
-            Map<String, List<String>> choiceOptions = resolveChoiceOptions(namesForSheet, sheet, loggedInUser);
+            Map<String, List<String>> choiceOptionsMap = resolveChoiceOptions(namesForSheet, sheet, loggedInUser);
             boolean resolveChoices = true;
             int attempts = 0;
-            while (resolveChoices){
+            Set<String> filterChoices = new HashSet<>(); // record the filter choices in here for resolving later
+            while (resolveChoices) {
                 context = "";
                 // Now I need to run through all choices setting from the user options IF it is valid and the first on the menu if it is not
-                for (SName sName : namesForSheet){
-                    if (sName.getName().endsWith("Chosen")){
+                for (SName sName : namesForSheet) {
+                    if (sName.getName().endsWith("Chosen")) {
                         CellRegion chosen = getCellRegionForSheetAndName(sheet, sName.getName());
+                        String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length());
                         if (chosen != null && chosen.getRowCount() == 1) {
-                            String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length());
                             // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
-                            String query = getRegionValue(sheet, getCellRegionForSheetAndName(sheet, choiceName + "Choice"));
-                            List<String> validOptions = choiceOptions.get(query);
+                            List<String> validOptions = choiceOptionsMap.get(choiceName + "Choice");
                             String userChoice = userChoices.get(choiceName.toLowerCase()); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
-                            if (userChoice != null && validOptions.contains(userChoice)){
+                            if (userChoice != null && validOptions.contains(userChoice)) {
                                 sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
                                 context += choiceName + " = " + userChoices.get(choiceName.toLowerCase()) + ";";
                             } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
                                 sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
                             }
+                        } else {
+                            filterChoices.add(choiceName);
                         }
                     }
                 }
                 resolveChoices = false;
                 // ok so we've set them but now derived choices may have changed, no real option except to resolve again and see if there's a difference
-                Map<String, List<String>> newChoiceOptions = resolveChoiceOptions(namesForSheet, sheet, loggedInUser);
-                if (!newChoiceOptions.equals(choiceOptions)){ // I think the equals will do the job correctly here
+                Map<String, List<String>> newChoiceOptionsMap = resolveChoiceOptions(namesForSheet, sheet, loggedInUser);
+                if (!newChoiceOptionsMap.equals(choiceOptionsMap)) { // I think the equals will do the job correctly here
                     System.out.println("choices changed as a result of chosen, resolving again");
                     resolveChoices = true;
-                    choiceOptions = newChoiceOptions;
+                    choiceOptionsMap = newChoiceOptionsMap;
                 }
                 attempts++;
-                if (attempts > 10){
+                if (attempts > 10) {
                     System.out.println("10 attempts at resolving choices, odds on there's some kind of circular reference, stopping");
                 }
             }
             resolveQueries(namesForSheet, sheet, loggedInUser); // after all options sorted should be ok
-
+            // now we need to sort the filter sets. TODO. Note this involves server side stuff, resolve the list in the query but with the selected criteria to make a new set
+            createFilterSets(loggedInUser, filterChoices, choiceOptionsMap, userChoices);
             // ok the plan here is remove all the merges then put them back in after the regions are expanded.
             List<CellRegion> merges = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());
             for (CellRegion merge : merges) {
@@ -202,7 +201,7 @@ public class ZKAzquoBookUtils {
                                     if (sentCells.getData() != null && sentCells.getData().size() > row - name.getRefersToCellRegion().getRow() // as ever check ranges of the data region vs actual data sent.
                                             && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
                                         CellForDisplay cellForDisplay = sentCells.getData().get(row - startRow).get(col - startCol);
-                                        if (cellForDisplay.getSelected()){
+                                        if (cellForDisplay.getSelected()) {
                                             book.getInternalBook().setAttribute(OnlineController.CELL_SELECT, row + "," + col);
                                         }
                                         if (sCell.getType() == SCell.CellType.FORMULA) {
@@ -283,13 +282,13 @@ public class ZKAzquoBookUtils {
                 // I think we do want to merge horizontally (the boolean flag)
                 CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), true);
             }
-            addValidation(namesForSheet, sheet, choiceOptions);
+            addValidation(namesForSheet, sheet, choiceOptionsMap, userChoices);
         }
         loggedInUser.setContext(context);
         // after stripping off some redundant exception throwing this was the only possiblity left, ignore it
         try {
             rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
-        } catch (Exception ignored){
+        } catch (Exception ignored) {
         }
         return showSave;
     }
@@ -323,15 +322,15 @@ public class ZKAzquoBookUtils {
     }
 
     public static String getRegionValue(Sheet sheet, CellRegion region) {
-        try{
+        try {
             return sheet.getInternalSheet().getCell(region.getRow(), region.getColumn()).getStringValue();
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return "";
         }
     }
 
-    private void fillRegion(Sheet sheet, int reportId,  String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
+    private void fillRegion(Sheet sheet, int reportId, String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
         CellRegion columnHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_ColumnHeadings" + region);
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
@@ -377,7 +376,7 @@ public class ZKAzquoBookUtils {
                     }
                     if (cellsAndHeadingsForDisplay.getRowHeadings() != null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
                         rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
-                        int insertRow = displayDataRegion.getRow() +displayDataRegion.getRowCount() -1; // last but one row
+                        int insertRow = displayDataRegion.getRow() + displayDataRegion.getRowCount() - 1; // last but one row
                         Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
                         Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
                         CellOperationUtil.insertRow(insertRange);
@@ -447,7 +446,7 @@ public class ZKAzquoBookUtils {
                                             value + " ↕," + value + " ↑," + value + " ↓", null,
                                             true, "Select Sorting", "",
                                             true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
-                                } else if (heading != null && (sheet.getInternalSheet().getCell(row, col).isNull()||sheet.getInternalSheet().getCell(row,col).getStringValue().length()==0)) { // vanilla, overwrite if not
+                                } else if (heading != null && (sheet.getInternalSheet().getCell(row, col).isNull() || sheet.getInternalSheet().getCell(row, col).getStringValue().length() == 0)) { // vanilla, overwrite if not
                                     sheet.getInternalSheet().getCell(row, col).setValue(heading);
                                 }
                                 col++;
@@ -576,8 +575,9 @@ public class ZKAzquoBookUtils {
 
     public static final String VALIDATION_SHEET = "VALIDATION_SHEET";
 
-    // Had to split one function into two, need to evaluate choices server side before loading the regions due to names being populated by "As" clauses
-    // some duplication between the two functions but not that bad I don't think
+    /* This did return a map with the query as the key but I'm going to change this to the name, it will save unnecessary query look ups later.
+     This adds one caveat : the options match the choice name at the time the function ran - if the query in the choice cell updates this needs to be run again
+       */
 
     public Map<String, List<String>> resolveChoiceOptions(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
         Map<String, List<String>> toReturn = new HashMap<>();
@@ -597,8 +597,8 @@ public class ZKAzquoBookUtils {
                             choiceCell.getFormulaResultType();
                             choiceCell.clearFormulaResultCache();
                         }
+                        System.out.println("Choice cell : " + choiceCell);
                         String query = choiceCell.getStringValue();
-                        final String originalQuery = query;
                         if (query.toLowerCase().contains("default")) {
                             query = query.substring(0, query.toLowerCase().indexOf("default"));
                         }
@@ -615,7 +615,7 @@ public class ZKAzquoBookUtils {
                         } catch (Exception e) {
                             choiceOptions.add(e.getMessage());
                         }
-                        toReturn.put(originalQuery, choiceOptions);
+                        toReturn.put(name.getName(), choiceOptions);
                     }
                 }
             }
@@ -647,7 +647,33 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public void addValidation(List<SName> namesForSheet, Sheet sheet, Map<String, List<String>> choiceCache) {
+    /* ok we need to think fairly carefully here. The filters list the set we want to create and then we have the selected values for the filter
+    but we can't just run through the selected values as stored in mysql, there could be other values "left over", hence we need to check
+    selected filters against valid options then create the set from them
+    todo : even before writing this function I'm aware of messing around with strings in a way that isn't ideal
+    */
+    public void createFilterSets(LoggedInUser loggedInUser, Set<String> filters, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
+        for (String filter : filters){
+            List<String> namesForSet = new ArrayList<>();
+            List<String> validOptions = choiceOptionsMap.get(filter + "Choice");
+            String selectedString = userChoices.get(filter.toLowerCase());
+            if (validOptions != null && !validOptions.isEmpty() && selectedString != null){
+                List<String> selectedNames = Arrays.asList(selectedString.split(SpreadsheetService.FILTERCHOICEDIVIDERFORREGEX));
+                for (String selectedName : selectedNames){
+                    if (validOptions.contains(selectedName)){
+                        namesForSet.add(selectedName);
+                    }
+                }
+            }
+            try {
+                rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), filter + "Choice", namesForSet);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void addValidation(List<SName> namesForSheet, Sheet sheet, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
         if (sheet.getBook().getSheet(VALIDATION_SHEET) == null) {
             sheet.getBook().getInternalBook().createSheet(VALIDATION_SHEET);
         }
@@ -655,14 +681,13 @@ public class ZKAzquoBookUtils {
         validationSheet.getInternalSheet().setSheetVisible(SSheet.SheetVisible.HIDDEN);
         int numberOfValidationsAdded = 0;
         for (SName name : namesForSheet) {
-            if (name.getRefersToSheetName().equals(sheet.getSheetName())) { // why am I checking this again? A little confused
-                if (name.getName().endsWith("Choice")) {
-                    CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
-                    CellRegion chosen = getCellRegionForSheetAndName(sheet, name.getName().substring(0, name.getName().length() - "Choice".length()) + "Chosen"); // as ever I do wonder about these string literals
-                    if (choice != null && chosen != null) {
-                        // ok I assume choice is a single cell
-                        String query = getRegionValue(sheet, choice);
-                        List<String> choiceOptions = choiceCache.get(query);
+            if (name.getName().endsWith("Choice")) {
+                String choiceName = name.getName().substring(0, name.getName().length() - "Choice".length());
+                CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
+                CellRegion chosen = getCellRegionForSheetAndName(sheet, choiceName + "Chosen"); // as ever I do wonder about these string literals
+                if (choice != null && chosen != null) {
+                    List<String> choiceOptions = choiceOptionsMap.get(name.getName());
+                    if (chosen.getRowCount() == 1 || !getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty()) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
                         validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(name.getName());
                         int row = 0;
                         // yes, this can null pointer but if it does something is seriously wrong
@@ -670,7 +695,7 @@ public class ZKAzquoBookUtils {
                             row++;// like starting at 1
                             validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded).setStringValue(choiceOption);
                         }
-                        if (row > 0){ // if choice options is empty this will not work
+                        if (row > 0) { // if choice options is empty this will not work
                             Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
                             //validationValues.createName("az_Validation" + numberOfValidationsAdded);
                             for (int rowNo = chosen.getRow(); rowNo < chosen.getRow() + chosen.getRowCount(); rowNo++) {
@@ -685,11 +710,51 @@ public class ZKAzquoBookUtils {
                             }
                             numberOfValidationsAdded++;
                         } else {
-                            System.out.println("no choices for : " + query);
+                            System.out.println("no choices for : " + getRegionValue(sheet, choice));
                         }
+                            /*Unlike above where the setting of the choice has already been done we need to set the
+                            existing choices here, hence why user choices is required for this. The check for userChoices not being null
+                             is that it might be null when re adding the validation sheet when switching between sheets which can happen.
+                             Under these circumstances I assume we won't need to re-do the filter adding. I guess need to test.
+                             */
+                    } else if (userChoices != null && chosen.getRowCount() >= 3) {
+                        if (choiceOptions.size() <= chosen.getRowCount()) { // it will fit, good
+                            int row = choice.getRow();
+                            String selected = userChoices.get(choiceName.toLowerCase()); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
+                            List<String> filterChoices;
+                            if (selected != null) {
+                                filterChoices = Arrays.asList(selected.split(SpreadsheetService.FILTERCHOICEDIVIDERFORREGEX));
+                            } else {
+                                filterChoices = Collections.emptyList();
+                            }
+                            for (String choiceOption : choiceOptions) {
+                                sheet.getInternalSheet().getCell(row, chosen.getColumn()).setStringValue(choiceOption);
+                                if (filterChoices.contains(choiceOption)) {
+                                    CellOperationUtil.applyBackColor(Ranges.range(sheet, row, chosen.getColumn()), "#FF00000");
+                                }
+                                row++;
+                            }
+                        } // need an else here for a scrolling list. Might be a bit of a pain, will need to record list places
                     }
                 }
             }
         }
     }
+
+    // moved/adapted from ZKComposer and made static
+
+    public static List<SName> getNamedDataRegionForRowAndColumnSelectedSheet(int row, int col, Sheet sheet) {
+        List<SName> found = new ArrayList<>();
+        for (SName name : getNamesForSheet(sheet)) { // seems best to loop through names checking which matches I think
+            if (name.getName().toLowerCase().startsWith("az_dataregion")
+                    && name.getRefersToCellRegion() != null
+                    && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
+                    && col >= name.getRefersToCellRegion().getColumn() && col <= name.getRefersToCellRegion().getLastColumn()) {
+                //check that there are some row headings
+                found.add(name);
+            }
+        }
+        return found;
+    }
+
 }
