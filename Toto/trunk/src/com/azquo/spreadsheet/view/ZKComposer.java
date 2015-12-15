@@ -141,7 +141,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
                 String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                 final SCell clickedCell = sheet.getInternalSheet().getCell(event.getRow(), event.getColumn());
-                if (clickedCell.getCellStyle().getBackColor().getHtmlColor().equalsIgnoreCase("#FFFFFF")){ // it was white therefore this is the cell being selected
+                if (!clickedCell.getCellStyle().getBackColor().getHtmlColor().equalsIgnoreCase("#888888")){ // it was white therefore this is the cell being selected
                     spreadsheetService.addFilterChoice(loggedInUser.getUser().getId(), choice, clickedCell.getStringValue());
                 } else {
                     spreadsheetService.removeFilterChoice(loggedInUser.getUser().getId(), choice, clickedCell.getStringValue());
