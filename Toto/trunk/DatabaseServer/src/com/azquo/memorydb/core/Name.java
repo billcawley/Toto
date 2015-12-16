@@ -49,12 +49,8 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public static final int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets
 
-    // name needs this as it links to itself hence have to load all names THEN parse the json, other objects do not hence it's in here not the memory db entity
-    // as mentioned just a cache while the names by id map is being populated
-
-    // if we're going to speed up loading e.g. with blobs then this json cache can change to a loading cache that will have a json cache among others
-    // this way there will be no extra overhead during normal running, sill one null reference
-    // note : for full speed we'd have values in here too, has implications for how value is initialised
+    // name needs this as it links to itself hence have to load all names THEN parse the Load cache which may be Json or blob
+    // just a cache while the names by id map is being populated. I experimnted with various idead e.g. a parent cache also, this seemed the best compromise
 
     private LoadCache loadCache;
 
@@ -79,8 +75,6 @@ public final class Name extends AzquoMemoryDBEntity {
     if an object reference is out of date it will at least be two consistent arrays
 
     I have no problem with out of date versions of nameAttributes as the JVM makes things visible to other threads as long as object contents remain consistent.
-
-    This was using arraylists, I want to switch to arrays to save memory
 
     Gets to wrap with as list, don't want them altering the length anyway, this does have a bit of an overhead vs the old model but I don't think this will be a biggy. I guess check memory saving?
     Also I know that aslist doesn't make immutable, I consider this class "trusted". If bothered can use unmodifiableList.
@@ -149,8 +143,9 @@ public final class Name extends AzquoMemoryDBEntity {
     /* memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
      these (values, parent) are for quick lookup, must be modified appropriately
      to be clear, these are not used when persisting, they are derived from the name sets in values and the two below
-     Sets are expensive in terms of memory, will use arrays instead unless they get big (above threshold 512 at the mo) make a new array and switch on changing to make atomic and always wrap them unmodifiable on get
-     I'm not going to make these volatile as the ony time it really matters is on writes which are synchronized and I understand this deals with memory barriers*/
+     Sets are expensive in terms of memory, will use arrays instead unless they get big (above threshold 512 at the mo)
+     make a new array and switch on changing to make atomic and always wrap them unmodifiable on get
+     Ok synchronized doesn't deal with ordering as I'd like! TODO : https://en.wikipedia.org/wiki/Double-checked_locking*/
     private Set<Value> valuesAsSet;
     private Value[] values;
     private Set<Name> parentsAsSet;
@@ -317,15 +312,14 @@ public final class Name extends AzquoMemoryDBEntity {
                     return;
                 }
                 // it's this contains expense that means we should stop using arraylists over a certain size.
-                // If loading skip the duplication check, we assume data integrity, put the aslist in the conditional so we won't instantiate the object unnecessarily, this function is hammered on loading
+                // If loading skip the duplication check, we assume data integrity, asList an attempt to reduce garbage
                 if (noDuplicationCheck || !Arrays.asList(values).contains(value)) {
-                    // OK, here it may get interesting, what about size???
                     if (values.length >= ARRAYTHRESHOLD) { // we need to convert. copy the array to a new concurrent hashset then set it
                         valuesAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));// the way to get a thread safe set!
                         valuesAsSet.addAll(Arrays.asList(values)); // add the existing ones
                         valuesAsSet.add(value);
                         //values = new ArrayList<Value>(); // to save memory, leaving commented as the saving probably isn't that much and I'm a little worried about concurrency.
-                        // todo - profile how many of these are left over in, for example, Damart.
+                        // todo - profile how many of these are left over in a large contemporary database
                     } else { // ok we have to switch a new one in, need to think of the best way with the new array model
                         // this is synchronized, I should be able to be simple about this and be safe still
                         // new code to deal with arrays assigned to the correct size on loading
@@ -475,8 +469,6 @@ public final class Name extends AzquoMemoryDBEntity {
                     parentsAsSet.add(name);
                     return;
                 }
-                // it's this contains expense that means we should stop using arraylists over a certain size.
-                // If loading skip the duplication check, we assume data integrity, put the aslist in the conditional so we won't instantiate the object unnecessarily, this function is hammered on loading
                 if (noDuplicationCheck || !Arrays.asList(parents).contains(name)) {
                     if (parents.length >= ARRAYTHRESHOLD) {
                         parentsAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
@@ -513,9 +505,8 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
-    // returns a collection, I think this is just iterated over to check stuff
-    // todo - check use of this and then whether we use sets internally or not
-    // these two functions moved here from the spreadsheet
+    /* returns a collection, I think this is just iterated over to check stuff but a set internally as it chould not have duplicates. These two functions moved
+    here from the spreadsheet as I want direct access to the parents array, saving a fair amount of garbage if it's hammered (array vs ArrayList.iterator())*/
 
     private static AtomicInteger findAllParentsCount = new AtomicInteger(0);
 
@@ -539,8 +530,8 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
         } else if (name.parents.length > 0){
-            for (int i = 0; i < name.parents.length; i++) { // we'll allow this kind of access in here
-                if (allParents.add(name.parents[i])) {
+            for (int i = 0; i < name.parents.length; i++) {
+                if (allParents.add(name.parents[i])) { // the function was moved in here to access this array directly. Externally it would need to be wrapped in an unmodifiable List. Means garbage!
                     findAllParents(name.parents[i], allParents);
                 }
             }
@@ -548,7 +539,7 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     private static AtomicInteger addNamesCount = new AtomicInteger(0);
-    // adding in here as a static function to access name variables directly want speed and less garbage if I can
+    // was in name service, added in here as a static function to give it direct access to the private arrays. Again an effort to reduce garbage.
     public static void addNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
         addNamesCount.incrementAndGet();
         if (!name.hasChildren()) {
@@ -560,10 +551,9 @@ public final class Name extends AzquoMemoryDBEntity {
                 if (name.childrenAsSet != null){
                     namesFound.addAll(name.childrenAsSet);
                 } else if (name.children.length > 0){
-                    for (int i = 0; i < name.children.length; i++){ // intellij wants to use the collections implementation, I'll think about it
+                    for (int i = 0; i < name.children.length; i++){ // intellij wants to use the collections implementation, I think this is slightly more efficient
                         namesFound.add(name.children[i]);
                     }
-                    //Collections.addAll(namesFound, name.children);
                 }
             } else {
                 for (Name child : name.getChildren()) {
@@ -572,8 +562,6 @@ public final class Name extends AzquoMemoryDBEntity {
             }
         }
     }
-
-
 
     // we are now allowing a name to be in more than one top parent, hence the name change
 
@@ -615,7 +603,7 @@ public final class Name extends AzquoMemoryDBEntity {
     // same logic as find all parents but returns a set, should be correct
     // also we have the option to use additive or not
 
-    // leaving as sets for the mo. Arrays would be cheaper on the memory I suppose, conversion can be expensive though
+    // Koloboke makes the sets as light as can be expected
     private Set<Name> findAllChildrenCache = null;
     private Set<Name> findAllChildrenPayAttentionToAdditiveCache = null;
 
@@ -625,7 +613,7 @@ public final class Name extends AzquoMemoryDBEntity {
         finaAllChildrenCount.incrementAndGet();
         if (payAttentionToAdditive && !name.additive) return;
         // similar to optimisation for get all parents, this potentially could cause a concurrency problem if the array were shrunk by another thread, I don't think this a concern in the context it's used
-        // and we'll know if we look at the log. If this happened a local reference to the array should sort it
+        // and we'll know if we look at the log. If this happened a local reference to the array should sort it, save the pointer garbage for the mo
         if (name.childrenAsSet != null){
             for (Name child : name.childrenAsSet) { // as mentioned above I'll allow this kind of access in here
                 if (allChildren.add(child)) {
@@ -1104,7 +1092,7 @@ public final class Name extends AzquoMemoryDBEntity {
     @Override
     public String getAsJson() {
         getAsJsonCount.incrementAndGet();
-        // Going against my previous comment we're vonverting to lists - transport should be "dumb" I think. Plus overhead.
+        // Going against my previous comment we're converting to lists - transport should be "dumb" I think. Plus overhead.
         Collection<Name> children = getChildren();
         List<Integer> childrenIds = new ArrayList<>(children.size());
         for (Name child : getChildren()) {

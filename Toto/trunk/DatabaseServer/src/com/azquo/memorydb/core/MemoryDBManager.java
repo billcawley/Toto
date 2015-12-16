@@ -3,8 +3,6 @@ package com.azquo.memorydb.core;
 import com.azquo.memorydb.dao.NameDAO;
 import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.azquo.memorydb.dao.ValueDAO;
-import com.azquo.spreadsheet.JSTreeService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 
@@ -15,7 +13,6 @@ import java.util.HashMap;
  * I would like to use concurrent hashmap but the putifabsent pattern does not lend itself as well as it might - the catch being the long instantiation time of the memory db as it loads
  * park for the mo unless it's a performance issue, since this is the only place that instantiates and hence loads the db could move the managing of that to here.
  *
- * todo - loading databases simutaneously??
  */
 public final class MemoryDBManager {
 
@@ -26,9 +23,6 @@ public final class MemoryDBManager {
     private final NameDAO nameDAO;
 
     private final ValueDAO valueDAO;
-
-    @Autowired
-    private JSTreeService jsTreeService;
 
     public MemoryDBManager(JsonRecordDAO jsonRecordDAO, NameDAO nameDAO, ValueDAO valueDAO) throws Exception {
         this.jsonRecordDAO = jsonRecordDAO;

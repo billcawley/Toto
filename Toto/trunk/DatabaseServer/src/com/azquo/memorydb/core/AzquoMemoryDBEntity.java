@@ -39,7 +39,7 @@ public abstract class AzquoMemoryDBEntity {
     //key with this is it makes the setting of an Id only in context of a memory db and hence one can only make one of these in this package (I think!)
     protected AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id) throws Exception {
         this.azquoMemoryDB = azquoMemoryDB;
-        // This getNeedsLoading is important, an instance of AzquoMemoryDB should only be in needsloading during the constructor and hence it will stop
+        // This getNeedsLoading is important, an instance of AzquoMemoryDB should only be in needsLoading during the constructor and hence it will stop
         // other bits of code overriding the entities ID
         if (azquoMemoryDB.getNeedsLoading()) { // building objects from persistence (Mysql currently) store, rules are different, we can set the id as a parameter
             this.id = id;
@@ -50,7 +50,7 @@ public abstract class AzquoMemoryDBEntity {
                 throw new Exception("id is trying to be assigned to an entity after the database is loaded!");
             }
             this.id = azquoMemoryDB.getNextId();
-            // point of this is attempt at lockdown on entity constructors. Any entity that's instantiated is part of the
+            // point of this is attempt at lock down on entity constructors. Any entity that's instantiated is part of the
             // memory database and fair game for persistence
             // if it's not been built with an assigned ID then it needs to be persisted
             setNeedsPersisting();
@@ -63,8 +63,8 @@ public abstract class AzquoMemoryDBEntity {
     // each class will say where it's persisted - this seems to be the most simple way to indicate which persistence set to put this in
     protected abstract String getPersistTable();
 
-    // all entities need this to save in the key/pair store
-    // notably new fast persistence of name and value does not
+    // entities need this to save in a Json store
+    // notably new fast persistence of name and value does not - so maybe this needs to be moved to a separate interface
     public abstract String getAsJson();
 
     protected final AzquoMemoryDB getAzquoMemoryDB() {
@@ -95,16 +95,6 @@ public abstract class AzquoMemoryDBEntity {
     public final int hashCode() {
         return getId() * -1640531527; // mix it up as per koloboke advice - we might hit ids of of a few hundred million but often they'll be at the bottom, relatively small range from -2billion to +2billion.
     }
-
-/*    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true; // this should do the job for much of the memory db matching
-
-        if (o == null || getClass() != o.getClass()) return false;
-
-        AzquoMemoryDBEntity azquoMemoryDBEntity = (AzquoMemoryDBEntity) o;
-        return getId() == azquoMemoryDBEntity.getId();
-    }*/
 
     // should be called pretty much wherever objects are going to be added to each others maps/sets/lists
 
@@ -144,6 +134,5 @@ public abstract class AzquoMemoryDBEntity {
     public final boolean getNeedsDeleting() {
         return needsDeleting;
     }
-
 
 }

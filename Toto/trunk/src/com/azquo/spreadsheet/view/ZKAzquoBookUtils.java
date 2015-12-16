@@ -597,7 +597,7 @@ public class ZKAzquoBookUtils {
                             choiceCell.getFormulaResultType();
                             choiceCell.clearFormulaResultCache();
                         }
-                        System.out.println("Choice cell : " + choiceCell);
+                        //System.out.println("Choice cell : " + choiceCell);
                         String query = choiceCell.getStringValue();
                         if (query.toLowerCase().contains("default")) {
                             query = query.substring(0, query.toLowerCase().indexOf("default"));
