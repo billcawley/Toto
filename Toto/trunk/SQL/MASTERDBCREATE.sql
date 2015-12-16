@@ -186,7 +186,7 @@ CREATE TABLE IF NOT EXISTS `user_choice` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `choice_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `choice_value` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `choice_value` text COLLATE utf8_unicode_ci NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB AUTO_INCREMENT=82 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 

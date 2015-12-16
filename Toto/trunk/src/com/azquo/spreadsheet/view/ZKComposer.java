@@ -136,9 +136,11 @@ public class ZKComposer extends SelectorComposer<Component> {
         final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
         List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
         boolean reload = false;
+        LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         for (SName name : names) {
-            if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() >= 3) {// they clicked on a filter region, need to update the choice
-                LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+            if (name.getName().endsWith("Chosen") && (name.getRefersToCellRegion().getRowCount() * name.getRefersToCellRegion().getColumnCount()) > 1
+                    && !ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn(), sheet).isEmpty()) {
+                // they clicked on a filter region, need to update the choice. Also we check it's not a data region also
                 String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                 final SCell clickedCell = sheet.getInternalSheet().getCell(event.getRow(), event.getColumn());
                 if (!clickedCell.getCellStyle().getBackColor().getHtmlColor().equalsIgnoreCase("#888888")){ // it was white therefore this is the cell being selected
@@ -147,6 +149,36 @@ public class ZKComposer extends SelectorComposer<Component> {
                     spreadsheetService.removeFilterChoice(loggedInUser.getUser().getId(), choice, clickedCell.getStringValue());
                 }
                 reload = true;
+            } else if (name.getName().endsWith("Clear")){ // more string literals . . .:P
+                final String choice = name.getName().substring(0, name.getName().length() - "Clear".length());
+                final CellRegion chosenRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(sheet, choice + "Chosen");
+                if (chosenRegion != null){
+                    boolean fillAll = false;
+                    for (int row = chosenRegion.getRow(); row <= chosenRegion.getLastRow(); row++){
+                        for (int col = chosenRegion.getColumn(); col <= chosenRegion.getLastColumn(); col++){
+                            if (!sheet.getInternalSheet().getCell(row, col).isNull() && !sheet.getInternalSheet().getCell(row, col).getCellStyle().getBackColor().getHtmlColor().equalsIgnoreCase("#888888")){ // we just found one unselected
+                                fillAll = true;
+                                break;
+                            }
+                        }
+                        if (fillAll){
+                            break;
+                        }
+                    }
+                    for (int row = chosenRegion.getRow(); row <= chosenRegion.getLastRow(); row++){
+                        for (int col = chosenRegion.getColumn(); col <= chosenRegion.getLastColumn(); col++){
+                            final SCell cell = sheet.getInternalSheet().getCell(row, col);
+                            if (!cell.isNull()){
+                                if (fillAll){
+                                    spreadsheetService.addFilterChoice(loggedInUser.getUser().getId(), choice, cell.getStringValue());
+                                } else {
+                                    spreadsheetService.removeFilterChoice(loggedInUser.getUser().getId(), choice, cell.getStringValue());
+                                }
+                            }
+                        }
+                    }
+                    reload = true;
+                }
             }
         }
         // factor?
