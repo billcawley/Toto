@@ -696,16 +696,19 @@ seaports;children   container;children
             for (String contextItem : contextItems) {
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
                 while (st.hasMoreTokens()) {
-                    final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, st.nextToken().trim(), languages);
-                    time = (System.currentTimeMillis() - track);
-                    if (time > threshold) System.out.println("Context parsed in " + time + "ms");
-                    track = System.currentTimeMillis();
-                    if (thisContextNames.size() > 1) {
-                        throw new Exception("error: context names must be individual - use 'as' to put sets in context");
-                    }
-                    if (thisContextNames.size() > 0) {
-                        //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
-                        contextNames.add(thisContextNames.iterator().next());
+                    String nextContext = st.nextToken().trim();
+                    if (nextContext.replace("`","").length()>0) {
+                        final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, nextContext, languages);
+                        time = (System.currentTimeMillis() - track);
+                        if (time > threshold) System.out.println("Context parsed in " + time + "ms");
+                        track = System.currentTimeMillis();
+                        if (thisContextNames.size() > 1) {
+                            throw new Exception("error: context names must be individual - use 'as' to put sets in context");
+                        }
+                        if (thisContextNames.size() > 0) {
+                            //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
+                            contextNames.add(thisContextNames.iterator().next());
+                        }
                     }
                 }
             }
