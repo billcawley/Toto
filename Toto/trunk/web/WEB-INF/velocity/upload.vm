@@ -15,12 +15,17 @@
 			<label for="databasechosen">Select database</label>
 			$azquodatabaselist
 		</div>
-		<div>
+
+        <div>
 			<label for="uploadfile">Choose the file</label>
 			<input type="file" id="uploadfile" name="uploadfile"/>
 		</div>
 		<div class="centeralign">
-			<input type="submit" name="submit" value="Upload" class="button" />
+			#if ($datachoice == "Y")
+                     <label for="datachoice" style="padding:0"> New report? </label><input type="checkbox" name="datachoice" value="report"/>
+    		#end
+
+            <input type="submit" name="submit" value="Upload" class="button" />
 		</div>
 	</form>
 	</main>
