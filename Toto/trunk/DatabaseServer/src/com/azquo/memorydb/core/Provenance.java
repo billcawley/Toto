@@ -24,8 +24,6 @@ public final class Provenance extends AzquoMemoryDBEntity {
     private final String method;
     private final String name;
     private final String context;
-
-
     // won't have this call the other constructor, does not factor in the same way now
     // this is the practical use constructor, calling it adds it to the memory db
     public Provenance(final AzquoMemoryDB azquoMemoryDB
@@ -40,11 +38,10 @@ public final class Provenance extends AzquoMemoryDBEntity {
         this.method = method;
         this.name = name;
         this.context = context;
-        // added 10/12/2014, wasn't there before, why??? I suppose it just worked. Inconsistent though!
         getAzquoMemoryDB().addProvenanceToDb(this);
     }
 
-    // protected as only to be called by azquo memorydb, populates from JSON. If provenance had many instances maybe I'd intern here but I don't think there's much point.
+    // protected as only to be called by AzquoMemoryDB, populates from JSON. If provenance had many instances maybe I'd intern here but I don't think there's much point.
 
     protected Provenance(final AzquoMemoryDB azquoMemoryDB, final int id, String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id);
@@ -90,7 +87,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
     }
 
     /* ok I'm well aware one could just annotate this class but there is a problem : I want it immutable.
-        This would mean json using the constructor and given things like the azquomemorydb in there this is
+        This would mean json using the constructor and given things like the AzquoMemoryDB in there this is
         just not going to be elegant, best to just hive the json off to here to be called in the constructor
          */
     private static class JsonTransport {
@@ -99,7 +96,6 @@ public final class Provenance extends AzquoMemoryDBEntity {
         public final String method;
         public final String name;
         public final String context;
-
         @JsonCreator
         private JsonTransport(@JsonProperty("user") String user
                 , @JsonProperty("timeStamp") Date timeStamp
@@ -128,6 +124,4 @@ public final class Provenance extends AzquoMemoryDBEntity {
         }
         return "";
     }
-
-
 }

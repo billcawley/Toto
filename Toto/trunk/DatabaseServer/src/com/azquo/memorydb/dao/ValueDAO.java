@@ -143,8 +143,8 @@ public class ValueDAO extends FastDAO{
         }
     }
 
-    public void createFastTableIfItDoesntExist(final AzquoMemoryDB azquoMemoryDB){
-        jdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "` (\n" +
+    public void createFastTableIfItDoesntExist(final String databaseName){
+        jdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + FASTVALUE + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +
                 "  `text` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,\n" +

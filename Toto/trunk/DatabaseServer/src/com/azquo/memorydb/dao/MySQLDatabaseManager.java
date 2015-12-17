@@ -12,6 +12,10 @@ import java.util.HashMap;
 public class MySQLDatabaseManager {
     @Autowired
     protected JdbcTemplateUtils jdbcTemplateUtils;
+    @Autowired
+    protected NameDAO nameDAO;
+    @Autowired
+    protected ValueDAO valueDAO;
 
     public void createNewDatabase(String databaseName) throws IOException {
 
@@ -35,6 +39,8 @@ public class MySQLDatabaseManager {
                 "  `json` longtext NOT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1  ;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        nameDAO.createFastTableIfItDoesntExist(databaseName);
+        valueDAO.createFastTableIfItDoesntExist(databaseName);
     }
 
     public void emptyDatabase(String databaseName) throws IOException {
@@ -42,6 +48,8 @@ public class MySQLDatabaseManager {
         jdbcTemplateUtils.update("truncate `" + databaseName + "`.name", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         jdbcTemplateUtils.update("truncate `" + databaseName + "`.value", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         jdbcTemplateUtils.update("truncate `" + databaseName + "`.provenance", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        nameDAO.clearTable(databaseName);
+        valueDAO.clearTable(databaseName);
     }
 
     public void dropDatabase(String databaseName) throws IOException {

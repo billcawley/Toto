@@ -527,10 +527,10 @@ public final class AzquoMemoryDB {
 
     public void saveToNewTables() throws Exception {
         saveToNewTablesCount.incrementAndGet();
-        nameDAO.createFastTableIfItDoesntExist(this);
-        nameDAO.clearTable(this);
-        valueDAO.createFastTableIfItDoesntExist(this);
-        valueDAO.clearTable(this);
+        nameDAO.createFastTableIfItDoesntExist(getMySQLName());
+        nameDAO.clearTable(getMySQLName());
+        valueDAO.createFastTableIfItDoesntExist(getMySQLName());
+        valueDAO.clearTable(getMySQLName());
         nameDAO.persistNames(this, nameByIdMap.values(), true);
         valueDAO.persistValues(this, valueByIdMap.values(), true);
         fastLoaded = true;

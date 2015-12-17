@@ -279,13 +279,13 @@ public class ZKAzquoBookUtils {
             }
             // now remerge? Should work
             for (CellRegion merge : merges) {
-                // I think we do want to merge horizontally (the boolean flag)
-                CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), true);
+                // the boolean meant JUST horizontally, I don't know why. Hence false.
+                CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), false);
             }
             addValidation(namesForSheet, sheet, choiceOptionsMap, userChoices);
         }
         loggedInUser.setContext(context);
-        // after stripping off some redundant exception throwing this was the only possiblity left, ignore it
+        // after stripping off some redundant exception throwing this was the only possibility left, ignore it
         try {
             rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
         } catch (Exception ignored) {
