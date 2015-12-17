@@ -1387,7 +1387,7 @@ public class AzquoBook {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             String rangeName = name.getText().toLowerCase();
                 if (rangeName.endsWith("chosen")){
-                choices.put(rangeName.substring(rangeName.length()-6),getRangeData(rangeName));
+                choices.put(rangeName.substring(0,rangeName.length()-6),getRangeData(rangeName));
             }
         }
         return choices;
@@ -1413,6 +1413,12 @@ public class AzquoBook {
                                 double doubleValue = 0.0;
                                 try {
                                     chosen = source.get(row,col).getStringValue();
+                                    try {
+                                        doubleValue = Double.parseDouble(chosen);
+                                        isDouble = true;
+                                    }catch (Exception e){
+
+                                    }
                                 } catch (Exception e) {
                                     try {
 
