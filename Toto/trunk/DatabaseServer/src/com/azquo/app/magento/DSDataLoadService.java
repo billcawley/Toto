@@ -190,17 +190,18 @@ public class DSDataLoadService {
         String firstNameId = null;
         String lastNameId = null;
 
-        List<String> languages = new ArrayList<>();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        Name storeName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "store", null, false, languages);
-        Name allStoresName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All stores", storeName, false, languages);
+        List<String> defaultLanguage = new ArrayList<>();
+        defaultLanguage.add(Constants.DEFAULT_DISPLAY_NAME);
+        List<String> dateLanguage = Collections.singletonList("date");
+        Name storeName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "store", null, false, defaultLanguage);
+        Name allStoresName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All stores", storeName, false, defaultLanguage);
         Map<String, Name> storeGroupMap = HashObjObjMaps.newMutableMap();
 
         for (Map<String, String> storeGroupRec : tableMap.get("core_store_group")) {
             String groupId = storeGroupRec.get("group_id");
             String name = storeGroupRec.get("name");
             if (!groupId.equals("0")) {
-                Name storeGroup = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, allStoresName, true, languages);
+                Name storeGroup = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, allStoresName, true, defaultLanguage);
                 storeGroupMap.put(groupId, storeGroup);
             }
         }
@@ -213,7 +214,7 @@ public class DSDataLoadService {
             String groupId = storeRec.get("group_id");
             String name = storeRec.get("name");
             if (!storeId.equals("0")) {
-                Name store = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, storeGroupMap.get(groupId), true, languages);
+                Name store = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, storeGroupMap.get(groupId), true, defaultLanguage);
                 storeMap.put(storeId, store);
             }
         }
@@ -267,10 +268,8 @@ public class DSDataLoadService {
         Map<String, Name> azquoCategoriesFound = HashObjObjMaps.newMutableMap();
         Map<String, Name> azquoProductsFound = HashObjObjMaps.newMutableMap();
         Map<String, Name> azquoCustomersFound = HashObjObjMaps.newMutableMap();
-        List<String> defaultLanguage = new ArrayList<>();
-        languages = new ArrayList<>();
-        languages.add("MAGENTOCATEGORYID");
-        defaultLanguage.add(Constants.DEFAULT_DISPLAY_NAME);
+        List<String> categoryLanguage = new ArrayList<>();
+        categoryLanguage.add("MAGENTOCATEGORYID");
         Map<String, String> categoryNames = HashObjObjMaps.newMutableMap();
         //name the categories
         for (Map<String, String> attributeRow : tableMap.get("catalog_category_entity_varchar")) { // should (!) have us looking in teh right place
@@ -297,17 +296,16 @@ public class DSDataLoadService {
                 }
             }
             //TODO consider what might happen if importing categories from two different databases - don't do it!
-            Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, languages);
+            Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, categoryLanguage);
                 categoryName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, categoryNames.get(thisCatNo));
             azquoCategoriesFound.put(thisCatNo, categoryName);
             allCategories.addChildWillBePersisted(categoryName);
         }
         tableMap.remove("catalog_category_entity");
-        languages = new ArrayList<>();
-        languages.add("SKU");
-        List<String> productLanguages = new ArrayList<>(languages);
+        List<String>skuLanguage = new ArrayList<>();
+        skuLanguage.add("SKU");
         for (Map<String, String> entityRow : tableMap.get("catalog_product_entity")) {
-            Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("sku"), allSKUs, true, languages);
+            Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("sku"), allSKUs, true, skuLanguage);
             if (magentoName != null) {
                 allProducts.addChildWillBePersisted(magentoName);
                 if (!magentoName.findAllParents().contains(productCategories) && !magentoName.findAllParents().contains(uncategorisedProducts)) {
@@ -386,7 +384,7 @@ public class DSDataLoadService {
                 if (magentoName == null) {
                     System.out.println("entity_id linked in catalog_product_entity_int that doesn't exist in catalog_product_entity : " + attVals.get("entity_id"));
                 } else {
-                    Name magentoProductCategory = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeNames.get(attVal), productAttributesName, true, languages);
+                    Name magentoProductCategory = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeNames.get(attVal), productAttributesName, true, skuLanguage);
                     String val = attVals.get("value");
                     if (optionValues.get(val) != null) {
                         //note - this is NOT a product id, so don't use the product id to find it!
@@ -418,7 +416,7 @@ public class DSDataLoadService {
                 bundleName = azquoProductsFound.get(parentId);
                 if (bundleName == null) {
                     //this should not happen!
-                    bundleName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + parentId, allSKUs, true, languages);
+                    bundleName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + parentId, allSKUs, true, skuLanguage);
                     azquoProductsFound.put(parentId, bundleName);
                     allProducts.addChildWillBePersisted(bundleName);
                 }
@@ -427,7 +425,7 @@ public class DSDataLoadService {
             Name childName = azquoProductsFound.get(childId);
             if (childName == null) {
                 //this should not happen!
-                childName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + childId, allSKUs, true, languages);
+                childName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + childId, allSKUs, true, skuLanguage);
                 azquoProductsFound.put(childId, childName);
                 allProducts.addChildWillBePersisted(childName);
             }
@@ -496,18 +494,16 @@ public class DSDataLoadService {
         Name taxName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Tax", orderEntities, false);
         Name ordersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "order", null, false);
         Name allOrdersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All orders", ordersName, false);
-        Name orderStatusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Order status", ordersName, false);
+        Name orderStatusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"All Order statuses", ordersName, false);
         Name allCurrenciesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All currencies", ordersName, false);
         Name allHours = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "date" + StringUtils.MEMBEROF + "All hours", null, false);
-        languages.clear();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
 
-        Name customersName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "customer", null, false, languages);
-        Name allCustomersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All customers", customersName, false, languages);
-        Name allCountriesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All countries", customersName, false, languages);
-        Name allGroupsName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All customer groups", customersName, false, languages);
-        languages.clear();
-        languages.add("email");
+        Name customersName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "customer", null, false, defaultLanguage);
+        Name allCustomersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All customers", customersName, false, defaultLanguage);
+        Name allCountriesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All countries", customersName, false, defaultLanguage);
+        Name allGroupsName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All customer groups", customersName, false, defaultLanguage);
+        List<String>emailLanguage = new ArrayList<>();
+        emailLanguage.add("email");
 
         System.out.println("customer groups");
         Map<String, Name> customerGroups = HashObjObjMaps.newMutableMap();
@@ -515,7 +511,7 @@ public class DSDataLoadService {
             for (Map<String, String> group : tableMap.get("customer_group")) {
                 String groupId = group.get("customer_group_id");
                 String groupString = group.get("customer_group_code");
-                Name groupName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, groupString, allGroupsName, true, languages);
+                Name groupName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, groupString, allGroupsName, true, emailLanguage);
                 customerGroups.put(groupId, groupName);
             }
         }
@@ -549,7 +545,7 @@ public class DSDataLoadService {
         for (Map<String, String> customerRec : tableMap.get("customer_entity")) {
             String customerId = customerRec.get("entity_id");
             String email = customerRec.get("email");
-            Name customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, email, allCustomersName, true, languages);
+            Name customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, email, allCustomersName, true, emailLanguage);
             azquoCustomersFound.put(customerId, customer);
             //customer.setAttributeWillBePersisted("email", email);
             String groupId = customerRec.get("group_id");
@@ -600,7 +596,7 @@ public class DSDataLoadService {
             for (Map<String, String> addressRec : tableMap.get("customer_address_entity")) {
                 Name customer = azquoCustomersFound.get(addressRec.get("parent_id"));
                 if (customer == null) {
-                    customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Customer " + addressRec.get("parent_id"), allCustomersName, true, languages);
+                    customer = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Customer " + addressRec.get("parent_id"), allCustomersName, true, emailLanguage);
                     azquoCustomersFound.put(addressRec.get("parent_id"), customer);
                 }
                 addressMap.put(addressRec.get("entity_id"), customer);
@@ -614,7 +610,7 @@ public class DSDataLoadService {
                     String addressId = attributeRow.get("entity_id");
                     Name customer = addressMap.get(addressId);
                     if (attId.equals(countryNameId)) {
-                        Name country = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, value, allCountriesName, true, languages);
+                        Name country = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, value, allCountriesName, true, emailLanguage);
                         country.addChildWillBePersisted(customer);
                     } else {
                         customer.setAttributeWillBePersisted("postcode", value);
@@ -650,8 +646,8 @@ public class DSDataLoadService {
             }
             return;
         }
-        languages.clear();
-        languages.add("MagentoOrderID");
+        List<String> orderLanguage = new ArrayList<>();
+        orderLanguage.add("MagentoOrderID");
         String bundleLine = "";
         for (Map<String, String> salesRow : tableMap.get("sales_flat_order_item")) {
             String parentItemId = salesRow.get("parent_item_id");
@@ -665,7 +661,7 @@ public class DSDataLoadService {
             Name productName = azquoProductsFound.get(productId);
             if (productName == null) {
                 //not on the product list!!  in the demo database there was a giftcard in the sales that was not in the product list
-                productName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + productId, allSKUs, true, productLanguages);
+                productName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product " + productId, allSKUs, true, skuLanguage);
                 allProducts.addChildWillBePersisted(productName);
                 azquoProductsFound.put(productId, productName);
                 //productName.setAttributeWillBePersisted(Name.DEFAULT_DISPLAY_NAME,salesRow.get("product_type"));
@@ -716,12 +712,12 @@ public class DSDataLoadService {
             if (configLine == null && !itemId.equals(bundleLine)) {
                 //store the values.   Qty and price have attributes order, product.  order is in all orders, and in the relevant date
                 String orderNo = "Order " + salesRow.get("order_id");
-                Name orderName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderNo, allOrdersName, true, languages);
+                Name orderName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderNo, allOrdersName, true, orderLanguage);
                 part3 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 azquoOrdersFound.put(orderNo, orderName);
                 //adding 'Item ' to the item number so as not to confuse with order number for the developer - the system should be happy without it.
-                Name orderItemName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Item " + salesRow.get("item_id"), orderName, true, languages);
+                Name orderItemName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Item " + salesRow.get("item_id"), orderName, true, orderLanguage);
                 part4 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
 
@@ -745,8 +741,8 @@ public class DSDataLoadService {
                 }
                 part51 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
-                Name dateName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderDate, allDates, false, defaultLanguage);
-                Name hourName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderTime, allHours, true, defaultLanguage);
+                Name dateName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderDate, allDates, false, dateLanguage);
+                Name hourName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderTime, allHours, true, dateLanguage);
                 part52 += (thisCycleMarker - System.currentTimeMillis());
                 thisCycleMarker = System.currentTimeMillis();
                 dateName.addChildWillBePersisted(orderName);
@@ -834,6 +830,8 @@ public class DSDataLoadService {
         counter = 0;
         Name notLoggedIn = null;
         System.out.print("Orders and shipping ");
+        List<String> currencyLanguage = new ArrayList<>();
+        currencyLanguage.add("currency");
         for (Map<String, String> orderRow : tableMap.get("sales_flat_order")) {
             //only importing the IDs at present
             Name orderName = azquoOrdersFound.get("Order " + orderRow.get("entity_id"));
@@ -878,7 +876,7 @@ public class DSDataLoadService {
                         if (notLoggedIn == null) {
                             magentoCustomer = "NOT LOGGED IN";
                             //nb this next instruction seems to take a long time - hence storing 'notLoggedIn'
-                            notLoggedIn = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allGroupsName, true, languages);
+                            notLoggedIn = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allGroupsName, true, emailLanguage);
                             allCountriesName.addChildWillBePersisted(notLoggedIn);
                         }
                         customerName = notLoggedIn;
@@ -887,12 +885,12 @@ public class DSDataLoadService {
                     customerName = azquoCustomersFound.get(customer);
                     if (customerName == null) {
                         magentoCustomer = "Customer " + customer;
-                        customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allCustomersName, true, languages);
+                        customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, magentoCustomer, allCustomersName, true, emailLanguage);
                     }
                 }
                 customerName.addChildWillBePersisted(orderName);
                 String currency = orderRow.get("base_currency_code");
-                Name currencyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, currency, allCurrenciesName, true, languages);
+                Name currencyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, currency, allCurrenciesName, true, currencyLanguage);
                 currencyName.addChildWillBePersisted(orderName);
                 String orderNo = orderRow.get("increment_id");
                 orderName.setAttributeWillBePersisted("order no", orderNo);
@@ -926,7 +924,7 @@ public class DSDataLoadService {
                 }
                 String orderStatus = orderRow.get("status");
                 if (orderStatus!=null && orderStatus.length() > 0){
-                    Name statusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,orderStatus,orderStatusName,true);
+                    Name statusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,orderStatus,orderStatusName,true, orderLanguage);//note that this is 'magento
                     statusName.addChildWillBePersisted(orderName);
                 }
                 counter++;
@@ -951,11 +949,8 @@ public class DSDataLoadService {
             }
         }
 
-        languages.clear();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        Name order = nameService.findByName(azquoMemoryDBConnection, "order", languages);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        order.setAttributeWillBePersisted(LATEST_UPDATE + " " + remoteAddress, sdf.format(new Date()));
+        ordersName.setAttributeWillBePersisted(LATEST_UPDATE + " " + remoteAddress, sdf.format(new Date()));
         if (azquoMemoryDBConnection.getAzquoMemoryDB() != null) {
             azquoMemoryDBConnection.persistInBackground();// aim to return to them quickly, this is whre we get into multi threading . . .
         }
