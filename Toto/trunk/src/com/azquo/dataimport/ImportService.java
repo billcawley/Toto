@@ -49,7 +49,7 @@ public final class ImportService {
     private UploadRecordDAO uploadRecordDAO;
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    public String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames) throws Exception {
+    public String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData) throws Exception {
         InputStream uploadFile = new FileInputStream(filePath);
         // todo : address provenance on an import
         if (loggedInUser.getDatabase() == null) {
@@ -85,14 +85,14 @@ public final class ImportService {
             while (fileIterator.hasNext()){
                 File f = fileIterator.next();
                 if (fileIterator.hasNext()){
-                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, false) + "\n");
+                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, false, isData) + "\n");
                 } else {
-                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, true)); // persist on the last one
+                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, true, isData)); // persist on the last one
                 }
             }
             toReturn = sb.toString();
         } else { // vanilla
-            toReturn = readBookOrFile(loggedInUser, fileName, tempFile, attributeNames, true);
+            toReturn = readBookOrFile(loggedInUser, fileName, tempFile, attributeNames, true, isData);
         }
         UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, "", "");//should record the error? (last parameter)
         uploadRecordDAO.store(uploadRecord);
@@ -100,9 +100,9 @@ public final class ImportService {
     }
 
     // factored off to deal with
-    String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter) throws Exception {
+    String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         if (fileName.contains(".xls")) {
-            return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter);
+            return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter, isData);
         } else {
             return readPreparedFile(loggedInUser, filePath, "", attributeNames, persistAfter, false); // no file type
         }
@@ -210,12 +210,12 @@ public final class ImportService {
         return reportName + " uploaded.";
     }
 
-    private String readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean persistAfter) throws Exception {
+    private String readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService, rmiClient);
         azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = azquoBook.getReportName();
         if (reportName != null) {
-            if (loggedInUser.getUser().getStatus().equals("ADMINISTRATOR")) {
+            if (loggedInUser.getUser().getStatus().equals("ADMINISTRATOR")&& !isData) {
 
                 return uploadReport(loggedInUser, tempName, fileName, reportName, "");
             }
