@@ -181,7 +181,7 @@ public class MagentoController {
         if (dataLoadService.magentoDBNeedsSettingUp(loggedInUser.getDataAccessToken())){
             String magentoSetupFile = spreadsheetService.getHomeDir() + "/databases/ecommerce/setup/ecommerce setup.xlsx";
             String fileName = "magentosetup.xlsx";
-            importService.importTheFile(loggedInUser, fileName, magentoSetupFile, Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME));
+            importService.importTheFile(loggedInUser, fileName, magentoSetupFile, Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), false);
         }
         return dataLoadService.findRequiredTables(loggedInUser.getDataAccessToken(), remoteAddress);
     }
