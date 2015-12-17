@@ -219,7 +219,7 @@ public class ManageDatabasesController {
                                 // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
                                 try {
                                     session.setAttribute("importResult",
-                                            importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages())
+                                            importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages(), false)
                                     );
                                 } catch (Exception e) {
                                     String exceptionError = e.getMessage();
