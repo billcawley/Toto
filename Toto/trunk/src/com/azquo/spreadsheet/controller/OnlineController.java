@@ -88,6 +88,7 @@ public class OnlineController {
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
+            , @RequestParam(value = "datachoice", required = false, defaultValue = "") String dataChoice
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
 
@@ -181,14 +182,21 @@ public class OnlineController {
                         String fileName = uploadfile.getOriginalFilename();
                         File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
                         uploadfile.transferTo(moved);
+                        boolean isData = true;
+                        if (dataChoice.equals("report")) isData = false;
                         //importing here cannot set 'useType' to a value
-                        result = importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages());
+                        result = importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages(), isData);
                          //result = "File imported successfully";
                     } else {
                         model.addAttribute("azquodatabaselist", spreadsheetService.createDatabaseSelect(loggedInUser));
+                        if (loggedInUser.getUser().isAdministrator()){
+                            model.addAttribute("datachoice","Y");
+                        }else{
+                            model.addAttribute("datachoice","N");
+                        }
                         return "upload";
                     }
-                }
+                 }
                 if (reportId != null && reportId.equals("1")) {
                     if (!loggedInUser.getUser().isAdministrator()) {
                         spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
@@ -308,8 +316,9 @@ public class OnlineController {
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
+            , @RequestParam(value = "datachoice", required = false, defaultValue = "") String dataChoice
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
     ) {
-        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, opcode, spreadsheetName, database, reportToLoad, submit, null);
+        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, opcode, spreadsheetName, database, reportToLoad, dataChoice,submit, null);
     }
 }
