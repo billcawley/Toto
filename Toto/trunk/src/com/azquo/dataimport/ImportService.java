@@ -216,12 +216,11 @@ public final class ImportService {
         String reportName = azquoBook.getReportName();
         if (reportName != null) {
             if (loggedInUser.getUser().getStatus().equals("ADMINISTRATOR")&& !isData) {
-
                 return uploadReport(loggedInUser, tempName, fileName, reportName, "");
             }
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
             OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
-            if (or==null) return "no report named " + reportName + " found";
+            if (or == null) return "no report named " + reportName + " found";
             azquoBook.calculateAll();
             Map <String,String> choices = azquoBook.uploadChoices();
             for (String choice:choices.keySet()) {

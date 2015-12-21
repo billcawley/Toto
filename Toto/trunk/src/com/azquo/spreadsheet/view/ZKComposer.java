@@ -11,6 +11,7 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+import org.zkoss.chart.ChartsEvent;
 import org.zkoss.zk.ui.*;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
@@ -18,19 +19,21 @@ import org.zkoss.zk.ui.select.annotation.Wire;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.*;
 import org.zkoss.zss.api.model.*;
-import org.zkoss.zss.api.model.impl.ColorImpl;
-import org.zkoss.zss.model.CellRegion;
-import org.zkoss.zss.model.SCell;
-import org.zkoss.zss.model.SColor;
-import org.zkoss.zss.model.SName;
+import org.zkoss.zss.model.*;
+import org.zkoss.zss.model.chart.SChartData;
+import org.zkoss.zss.model.chart.SSeries;
+import org.zkoss.zss.model.impl.chart.GeneralChartDataImpl;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zss.ui.event.*;
+import org.zkoss.zssex.ui.widget.ChartsWidget;
 import org.zkoss.zssex.ui.widget.Ghost;
+import org.zkoss.zssex.ui.widget.WidgetCtrl;
 import org.zkoss.zul.*;
 import com.azquo.memorydb.TreeNode;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -113,7 +116,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             g.appendChild(instructionsPopup);
             g.appendChild(highlightPopup);
         }
-        // mayeb improve moving this number?
+        // maybe improve moving this number?
         if (myzss.getBook().getInternalBook().getAttribute(OnlineController.CELL_SELECT) != null){
             String cellSelect  = (String)myzss.getBook().getInternalBook().getAttribute(OnlineController.CELL_SELECT);
             myzss.getBook().getInternalBook().setAttribute(OnlineController.CELL_SELECT, null); // zap it
@@ -123,7 +126,51 @@ public class ZKComposer extends SelectorComposer<Component> {
 //            myzss.setCellFocus(new CellRef(row,col));
             myzss.focusTo(row,col);
         }
+
+        Map<String, SChart> usefulChartObjects = new HashMap<>();
+        final List<SSheet> sheets = myzss.getSBook().getSheets();
+        for (SSheet sSheet : sheets){
+            final List<SChart> charts = sSheet.getCharts();
+            for (SChart chart : charts){
+                usefulChartObjects.put(chart.getId(), chart);
+            }
+        }
+        for (Component component : myzss.getChildren()){
+            for (Component component1 : component.getChildren()){
+                if (component1 instanceof WidgetCtrl ){ // hacky, I just need to get to the sodding event listener
+                    WidgetCtrl widgetCtrl = (WidgetCtrl)component1; // should work??
+                    if (widgetCtrl.getWidget().getWidgetType().equalsIgnoreCase("chart")){
+                        ChartsWidget chartsWidget = (ChartsWidget) widgetCtrl.getWidget();
+                        final SChart usefulChart = usefulChartObjects.get(chartsWidget.getId());
+                        chartsWidget.addEventListener("onPlotClick", event -> {
+                            ChartsEvent chartsEvent = (ChartsEvent)event;
+                            if (usefulChart != null){
+                                final SChartData data = usefulChart.getData();
+                                if (data instanceof GeneralChartDataImpl){
+                                    GeneralChartDataImpl generalChartData = (GeneralChartDataImpl)data;
+                                    final SSeries series = generalChartData.getSeries(0);
+                                    try{
+                                        final Range range = Ranges.range(myzss.getSelectedSheet(), series.getValuesFormula());
+                                        int pointIndex = chartsEvent.getPointIndex();
+                                        if (range.getRowCount() == 0){
+                                            provenanceForRowAndColumn(range.getRow() + pointIndex, range.getColumn(), chartsEvent.getPoint().getX().intValue(), chartsEvent.getPoint().getY().intValue());
+                                            //myzss.focusTo(range.getRow() + pointIndex, range.getColumn());
+                                        } else {
+                                            //myzss.focusTo(range.getRow(), range.getColumn() + pointIndex);
+                                            provenanceForRowAndColumn(range.getRow(), range.getColumn() + pointIndex, chartsEvent.getPoint().getX().intValue(), chartsEvent.getPoint().getY().intValue());
+                                        }
+                                    } catch (Exception e){
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
     }
+
 
     /* Bit of an odd one this : on a cell click "wake" the log back up as there may be activity shortly
     In addition I now want to now deal with the new filter things
@@ -362,8 +409,12 @@ public class ZKComposer extends SelectorComposer<Component> {
     // to deal with provenance
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
+        provenanceForRowAndColumn(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty());
+    }
+
+    private void provenanceForRowAndColumn(int cellRow, int cellCol, int mouseX, int mouseY) {
         // right now a right click gets provenance ready, dunno if I need to do this
-        List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), myzss.getSelectedSheet());
+        List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet());
         while (editPopup.getChildren().size() > 0){ // clear it out
             editPopup.removeChild(editPopup.getLastChild());
         }
@@ -373,9 +424,9 @@ public class ZKComposer extends SelectorComposer<Component> {
             provenancePopup.removeChild(popupChild);
             popupChild = provenancePopup.getFirstChild();
         }
-        SCell sCell = cellMouseEvent.getSheet().getInternalSheet().getCell(cellMouseEvent.getRow(),cellMouseEvent.getColumn());
-        if (sCell.getType()== SCell.CellType.FORMULA){
-            String formula =sCell.getFormulaValue();
+        SCell sCell = myzss.getSelectedSheet().getInternalSheet().getCell(cellRow,cellCol);
+        if (sCell.getType() == SCell.CellType.FORMULA){
+            String formula = sCell.getFormulaValue();
             Label provenanceLabel = new Label();
             provenanceLabel.setMultiline(true);
             provenanceLabel.setValue(trimString("Spreadsheet formula: =" + formula));
@@ -383,9 +434,8 @@ public class ZKComposer extends SelectorComposer<Component> {
             Menuitem auditItem = new Menuitem("Audit");
             editPopup.appendChild(auditItem);
             auditItem.setPopup(provenancePopup);
-            editPopup.open(cellMouseEvent.getClientx() - 130, cellMouseEvent.getClienty());
-
-        }else {
+            editPopup.open(mouseX - 130, mouseY);
+        } else {
             for (SName name : names) {
                 if (ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_rowheadings" + name.getName().substring(13)) != null) {
                     String region = name.getName().substring("az_DataRegion".length());
@@ -394,8 +444,8 @@ public class ZKComposer extends SelectorComposer<Component> {
                     LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
                     try {
                         // ok this is a bit nasty, after Azquobook is zapped we could try something different
-                        int regionRow =  cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow();
-                        int regionColumn = cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn();
+                        int regionRow =  cellRow - name.getRefersToCellRegion().getRow();
+                        int regionColumn = cellCol - name.getRefersToCellRegion().getColumn();
                         List<TreeNode> treeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
                         if (!treeNodes.isEmpty()) {
                             StringBuilder toShow = new StringBuilder();
@@ -450,10 +500,10 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 String drillDownString = ZKAzquoBookUtils.getRegionValue(myzss.getSelectedSheet(), drillDown);
                                 if (drillDownString.length() > 0) {
                                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
-                                    final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(cellMouseEvent.getRow() - name.getRefersToCellRegion().getRow());
+                                    final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(cellRow - name.getRefersToCellRegion().getRow());
                                     final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
                                     String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
-                                    String colHeading = colHeadings.get(cellMouseEvent.getColumn() - name.getRefersToCellRegion().getColumn());
+                                    String colHeading = colHeadings.get(cellCol - name.getRefersToCellRegion().getColumn());
                                     // rather unelegant way to be case insensetive
                                     drillDownString = drillDownString.replace("[rowHeading]", rowHeading);
                                     drillDownString = drillDownString.replace("[rowheading]", rowHeading);
@@ -537,10 +587,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                     Menuitem highlightItem = new Menuitem("Highlight");
                     editPopup.appendChild(highlightItem);
                     highlightItem.setPopup(highlightPopup);
-                    editPopup.open(cellMouseEvent.getClientx() - 130, cellMouseEvent.getClienty());
+                    editPopup.open(mouseX - 130, mouseY);
                 }
             }
         }
+
     }
 
     private void showProvenance(String provline, int valueId) {

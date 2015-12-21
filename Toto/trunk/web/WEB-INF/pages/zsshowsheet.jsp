@@ -63,12 +63,19 @@
 			el.dialog({
 				modal	: 'true',
 				width	: 'auto',
-				title	: 'Upload File'
+				title	: 'Upload File',
+                close: refreshReport
 			});
 			
 			el.show();
          //window.open("/api/Online?opcode=upload", "_blank", "toolbar=no, status=no,scrollbars=no, resizable=no, top=150, left=200, width=300, height=300")
     }
+
+    // could inline?
+    function refreshReport(){
+        location.reload();
+    }
+
 
     function mouseIn(elementChosen, e){
         if (e==null) return false;

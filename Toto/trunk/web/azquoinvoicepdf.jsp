@@ -42,6 +42,9 @@
 
     double currencyValue = dayrate * quantity;
     double vat = currencyValue * 0.2;
+    if (request.getParameter("novat") != null){
+        vat = 0;
+    }
     double total = currencyValue + vat;
 
 
