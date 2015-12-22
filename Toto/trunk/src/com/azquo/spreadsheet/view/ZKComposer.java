@@ -187,7 +187,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         for (SName name : names) {
             if (name.getName().endsWith("Chosen") && (name.getRefersToCellRegion().getRowCount() * name.getRefersToCellRegion().getColumnCount()) > 1
-                    && !ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn(), sheet).isEmpty()) {
+                    && ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn(), sheet).isEmpty()) {
                 // they clicked on a filter region, need to update the choice. Also we check it's not a data region also
                 String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                 final SCell clickedCell = sheet.getInternalSheet().getCell(event.getRow(), event.getColumn());
