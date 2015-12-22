@@ -29,7 +29,7 @@ public interface RMIInterface extends Remote {
 
     boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
-    void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws RemoteException;
+    void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress, String user) throws RemoteException;
 
     String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws RemoteException;
 
