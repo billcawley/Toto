@@ -215,7 +215,7 @@ public final class ImportService {
         azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = azquoBook.getReportName();
         if (reportName != null) {
-            if (loggedInUser.getUser().getStatus().equals("ADMINISTRATOR")&& !isData) {
+            if (loggedInUser.getUser().isAdministrator()&& !isData) {
                 return uploadReport(loggedInUser, tempName, fileName, reportName, "");
             }
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
