@@ -26,7 +26,7 @@ public final class DataLoadService {
         return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).findRequiredTables(databaseAccessToken, remoteAddress);
     }
 
-    public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws Exception {
-        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).loadData(databaseAccessToken, filePath, remoteAddress);
+    public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress, String user) throws Exception {
+        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).loadData(databaseAccessToken, filePath, remoteAddress, user);
     }
 }
