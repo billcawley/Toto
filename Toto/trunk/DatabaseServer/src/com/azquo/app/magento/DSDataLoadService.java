@@ -123,9 +123,10 @@ public class DSDataLoadService {
     in terms of logic it's essentially translating Magento into Azquo.
     I don't think it could be don't by a sheet, too much logic e.g. calculating bundles.
       */
-    public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws Exception {
+    public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress, String user) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
+        azquoMemoryDBConnection.setProvenance(user, "imported from Magento", "", "");
         Map<String, List<Map<String, String>>> tableMap = HashObjObjMaps.newMutableMap();
         BufferedReader br = new BufferedReader(new FileReader(filePath));
         long marker = System.currentTimeMillis();
@@ -652,7 +653,9 @@ public class DSDataLoadService {
         for (Map<String, String> salesRow : tableMap.get("sales_flat_order_item")) {
             String parentItemId = salesRow.get("parent_item_id");
             String itemId = salesRow.get("item_id");
-            if (bundleLine.length() > 0 && (!parentItemId.equals(configLine)) && !parentItemId.equals(bundleLine)) {
+            price = Double.parseDouble(salesRow.get("base_row_invoiced"));//not sure which figure to take - base_row_invoiced or base_row_total
+
+            if (bundleLine.length() > 0 && (!parentItemId.equals(configLine)) && !parentItemId.equals(bundleLine) ) {
                 calcBundle(azquoMemoryDBConnection, bundleTotal, bundleItems, priceName, taxName);
                 bundleItems = new ArrayList<>();
                 bundleLine = "";
@@ -823,6 +826,16 @@ public class DSDataLoadService {
             for (Map<String, String> orderRow : tableMap.get("sales_flat_order_address")) {
                 if (orderRow.get("address_type").equals("shipping")){ // only want the shipping one - I assume there's only one sipping address per order
                     salesFlatOrderShippingAddressByOrderId.put(orderRow.get("parent_id"), orderRow); // I believe the parent_id is the order id
+                    String fullName = getFullName(orderRow);
+                    Name orderName = azquoOrdersFound.get("Order " + orderRow.get("parent_id"));
+                    if (orderName!=null){
+                        orderName.setAttributeWillBePersisted("delivery name", fullName);
+                        orderName.setAttributeWillBePersisted("postcode", get(orderRow,"postcode"));
+                        orderName.setAttributeWillBePersisted("street", get(orderRow,"street"));
+                        orderName.setAttributeWillBePersisted("city", get(orderRow,"city"));
+                    }
+
+
                 }
             }
         }
@@ -858,18 +871,7 @@ public class DSDataLoadService {
                             email = "noemail" + salesFlatOrderShippingAddress.get("firstname") + salesFlatOrderShippingAddress.get("lastname") + salesFlatOrderShippingAddress.get("postcode"); // then make one up
                         }
                         customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, email, allCustomersName, true, Collections.singletonList("email"));
-                        String firstName = salesFlatOrderShippingAddress.get("firstname");
-                        String lastName = salesFlatOrderShippingAddress.get("lastname");
-                        String fullName;
-                        if (firstName != null) {
-                            if (lastName != null) {
-                                fullName = firstName + " " + lastName;
-                            } else {
-                                fullName = firstName;
-                            }
-                        } else {
-                            fullName = lastName;
-                        }
+                        String fullName = getFullName(salesFlatOrderShippingAddress);
                         customerName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, fullName);
                         customerName.setAttributeWillBePersisted("POSTCODE", salesFlatOrderShippingAddress.get("postcode"));
                     } else {
@@ -908,7 +910,7 @@ public class DSDataLoadService {
                         valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, shipping, namesForValue);
                     }
                 }
-                String shippingTax = orderRow.get("shipping_tax|_amount");
+                String shippingTax = orderRow.get("shipping_tax_amount");
                 if (shippingTax != null && shippingTax.length() > 0) {
                     double dShippingTax = 0.0;
                     try {
@@ -933,6 +935,23 @@ public class DSDataLoadService {
                 }
             }
         }
+
+        if (tableMap.get("sales_flat_invoice_grid") != null) {
+            List<String>orderIdLanguage = Collections.singletonList("order no");
+            for (Map<String, String> invoiceRow : tableMap.get("sales_flat_invoice_grid")) {
+                String orderIncrementId = invoiceRow.get("order_increment_id");
+                String incrementId = invoiceRow.get("increment_id");
+                if (orderIncrementId!=null && incrementId!=null && orderIncrementId.length() > 0 && incrementId.length() > 0) {
+                    Name order = nameService.findByName(azquoMemoryDBConnection, orderIncrementId, orderIdLanguage);
+                    if (order !=null){
+                        order.setAttributeWillBePersisted("invoice no", incrementId);
+                    }
+                 }
+            }
+        }
+
+
+
         System.out.println("");
         System.out.println("shipments");
 
@@ -954,6 +973,31 @@ public class DSDataLoadService {
         if (azquoMemoryDBConnection.getAzquoMemoryDB() != null) {
             azquoMemoryDBConnection.persistInBackground();// aim to return to them quickly, this is whre we get into multi threading . . .
         }
+    }
+
+    private String get(Map<String,String> map, String key){
+        String toReturn = map.get(key);
+        if (toReturn==null) return "none";
+        return toReturn;
+    }
+
+    private String getFullName(Map<String,String>salesFlatOrderShippingAddress){
+
+        String firstName = salesFlatOrderShippingAddress.get("firstname");
+        String lastName = salesFlatOrderShippingAddress.get("lastname");
+        String fullName="";
+        if (firstName != null) {
+            if (lastName != null) {
+                fullName = firstName + " " + lastName;
+            } else {
+                fullName = firstName;
+            }
+        } else {
+            fullName = lastName;
+        }
+        return fullName;
+
+
     }
 
     private void readProductAttributes(String tableName, Map<String, List<Map<String, String>>> tableMap, Map<String, Name> azquoProductsFound, Map<String, String> attIds, String productNameId) throws Exception {
@@ -1050,6 +1094,13 @@ public class DSDataLoadService {
                 taxRemaining -= saleItem.tax;
             }
         }
+        if (priceRemaining != 0){
+            double ratio = bundleTotal.price / (bundleTotal.price - priceRemaining);
+            for(SaleItem saleItem:bundleItems){
+                saleItem.price = saleItem.price * ratio;
+                saleItem.tax = saleItem.tax * ratio;
+            }
+        }
         for (SaleItem saleItem : bundleItems) {
             Set<Name> namesForValue = HashObjSets.newMutableSet();
             namesForValue.add(saleItem.itemName);
@@ -1079,7 +1130,8 @@ public class DSDataLoadService {
                 "'*','eav_entity_type','','entity_type_id'\n" +
                 "'item_id,order_id,parent_item_id,created_at,product_id,weight,product_type,qty_ordered,qty_canceled,base_discount_invoiced, base_tax_amount, base_row_invoiced, base_row_total','sales_flat_order_item', '$starttime','item_id'\n" +
                 "'entity_id, store_id, status, customer_id, base_currency_code, increment_id, shipping_amount,shipping_tax_amount','sales_flat_order',  '$starttime', 'entity_id'\n" +
-                "'entity_id, parent_id, address_type, country_id, email, firstname, lastname, postcode','sales_flat_order_address',  '', 'entity_id'\n" + // email firstname lastname postcode extras that will be required if users are shopping in Magento without making an account
+                "'entity_id, parent_id, address_type, country_id, email, firstname, lastname, street, city, postcode','sales_flat_order_address',  '', 'entity_id'\n" + // email firstname lastname postcode extras that will be required if users are shopping in Magento without making an account
+                "'entity_id, increment_id, order_increment_id','sales_flat_invoice_grid',  '$starttime', 'entity_id'\n" +
                 "'entity_id, email, group_id','customer_entity',  '$starttime', 'entity_id'\n" +
                 "'*','customer_group','', 'customer_group_id'\n" +
                 "'entity_id, parent_id','customer_address_entity', '$starttime', 'entity_id'\n" +
