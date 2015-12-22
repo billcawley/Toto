@@ -99,9 +99,9 @@ public class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress) throws RemoteException {
+    public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress, String user) throws RemoteException {
         try {
-            dsDataLoadService.loadData(databaseAccessToken, filePath, remoteAddress);
+            dsDataLoadService.loadData(databaseAccessToken, filePath, remoteAddress, user);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
