@@ -160,7 +160,11 @@ public class AdminService {
     }
 
     public void emptyDatabase(DatabaseServer databaseServer, Database database) throws Exception {
-        rmiClient.getServerInterface(databaseServer.getIp()).emptyDatabase(database.getMySQLName());
+        try {
+            rmiClient.getServerInterface(databaseServer.getIp()).emptyDatabase(database.getMySQLName());
+        }catch(Exception e){
+            //ignore error when 'fast_name' and 'fast_value' do not exist.......
+        }
     }
 
     public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
