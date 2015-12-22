@@ -132,7 +132,7 @@ public class MagentoController {
                     // now copying all files, will make it easier for the client/server split. No passing of input streams just the file name
                     File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + db + new Date());
                     data.transferTo(moved);
-                    dataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr());
+                    dataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr(), loggedInUser.getUser().getName());
                     long elapsed = System.currentTimeMillis() - start;
                     if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1")) { // if it's from us don't email us :)
                         Business business = businessDAO.findById(loggedInUser.getUser().getBusinessId());
