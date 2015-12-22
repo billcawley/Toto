@@ -12,6 +12,7 @@ import com.azquo.spreadsheet.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.chart.ChartsEvent;
+import org.zkoss.chart.Point;
 import org.zkoss.zk.ui.*;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
@@ -153,11 +154,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                                         final Range range = Ranges.range(myzss.getSelectedSheet(), series.getValuesFormula());
                                         int pointIndex = chartsEvent.getPointIndex();
                                         if (range.getRowCount() == 0){
-                                            provenanceForRowAndColumn(range.getRow() + pointIndex, range.getColumn(), chartsEvent.getPoint().getX().intValue(), chartsEvent.getPoint().getY().intValue());
+                                            provenanceForRowAndColumn(range.getRow() + pointIndex, range.getColumn(), chartsEvent.getTarget());
                                             //myzss.focusTo(range.getRow() + pointIndex, range.getColumn());
                                         } else {
                                             //myzss.focusTo(range.getRow(), range.getColumn() + pointIndex);
-                                            provenanceForRowAndColumn(range.getRow(), range.getColumn() + pointIndex, chartsEvent.getPoint().getX().intValue(), chartsEvent.getPoint().getY().intValue());
+                                            provenanceForRowAndColumn(range.getRow(), range.getColumn() + pointIndex, chartsEvent.getTarget());
                                         }
                                     } catch (Exception e){
                                         e.printStackTrace();
@@ -411,8 +412,15 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
         provenanceForRowAndColumn(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty());
     }
-
     private void provenanceForRowAndColumn(int cellRow, int cellCol, int mouseX, int mouseY) {
+        provenanceForRowAndColumn(cellRow,cellCol,mouseX,mouseY, null);
+    }
+
+    private void provenanceForRowAndColumn(int cellRow, int cellCol, Component ref) {
+        provenanceForRowAndColumn(cellRow,cellCol,0,0, ref);
+    }
+
+    private void provenanceForRowAndColumn(int cellRow, int cellCol, int mouseX, int mouseY, Component ref) {
         // right now a right click gets provenance ready, dunno if I need to do this
         List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet());
         while (editPopup.getChildren().size() > 0){ // clear it out
@@ -434,7 +442,11 @@ public class ZKComposer extends SelectorComposer<Component> {
             Menuitem auditItem = new Menuitem("Audit");
             editPopup.appendChild(auditItem);
             auditItem.setPopup(provenancePopup);
-            editPopup.open(mouseX - 130, mouseY);
+            if (ref != null){
+                editPopup.open(ref,"at_pointer");
+            } else {
+                editPopup.open(mouseX - 130, mouseY);
+            }
         } else {
             for (SName name : names) {
                 if (ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_rowheadings" + name.getName().substring(13)) != null) {
@@ -587,7 +599,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                     Menuitem highlightItem = new Menuitem("Highlight");
                     editPopup.appendChild(highlightItem);
                     highlightItem.setPopup(highlightPopup);
-                    editPopup.open(mouseX - 130, mouseY);
+                    if (ref != null){
+                        editPopup.open(ref,"at_pointer");
+                    } else {
+                        editPopup.open(mouseX - 130, mouseY);
+                    }
                 }
             }
         }
