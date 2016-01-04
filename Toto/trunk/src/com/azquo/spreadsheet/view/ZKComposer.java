@@ -12,7 +12,6 @@ import com.azquo.spreadsheet.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.chart.ChartsEvent;
-import org.zkoss.chart.Point;
 import org.zkoss.zk.ui.*;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
@@ -70,7 +69,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         adminService = (AdminService) applicationContext.getBean("adminService");
         rmiClient = (RMIClient) applicationContext.getBean("rmiClient");
         editPopup.setId("editPopup");
-        editPopup.setStyle("background-color:#ffffcc");
+        editPopup.setStyle("background-color:#ffffff");
+        editPopup.setStyle("border: 5px solid #F58030");
         /*
         Menuitem item1 = new Menuitem("Audit");
         item1.setId("provenance");
@@ -88,15 +88,20 @@ public class ZKComposer extends SelectorComposer<Component> {
         provenancePopup.setId("provenancePopup");
         provenancePopup.setDraggable("true");
         provenancePopup.setDroppable("true");
-        provenancePopup.setStyle("background:#ffffcc");
+        provenancePopup.setStyle("background-color:#ffffff");
+        provenancePopup.setStyle("border: 5px solid #F58030");
         //item1.setPopup(provenancePopup); // I think that will automatically work??
 
 
         instructionsPopup = new Popup();
         instructionsPopup.setId("instructionsPopup");
+        instructionsPopup.setStyle("background-color:#ffffff");
+        instructionsPopup.setStyle("border: 5px solid #F58030");
         instructionsLabel.setMultiline(true);
         instructionsPopup.appendChild(instructionsLabel);
         highlightPopup = new Popup();
+        highlightPopup.setStyle("background-color:#ffffff");
+        highlightPopup.setStyle("border: 5px solid #F58030");
         highlightPopup.setId("highlightPopup");
         //item2.setPopup(instructionsPopup);
         //item3.setPopup(highlightPopup);
@@ -426,7 +431,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         while (editPopup.getChildren().size() > 0){ // clear it out
             editPopup.removeChild(editPopup.getLastChild());
         }
-
         Component popupChild = provenancePopup.getFirstChild();
         while (popupChild != null) {
             provenancePopup.removeChild(popupChild);
@@ -442,10 +446,12 @@ public class ZKComposer extends SelectorComposer<Component> {
             Menuitem auditItem = new Menuitem("Audit");
             editPopup.appendChild(auditItem);
             auditItem.setPopup(provenancePopup);
+//            auditItem.addEventListener("onClick",
+//                    event -> System.out.println("audit menu item clicked, formula bit . . ."));
             if (ref != null){
                 editPopup.open(ref,"at_pointer");
             } else {
-                editPopup.open(mouseX - 130, mouseY);
+                editPopup.open(mouseX - 140, mouseY);
             }
         } else {
             for (SName name : names) {
@@ -504,7 +510,8 @@ public class ZKComposer extends SelectorComposer<Component> {
                             Menuitem auditItem = new Menuitem("Audit");
                             editPopup.appendChild(auditItem);
                             auditItem.setPopup(provenancePopup);
-
+//                            auditItem.addEventListener("onClick",
+//                                    event -> System.out.println("audit menu item clicked"));
                             // only check for drilldown on proper data, that which could have provenance
 
                             CellRegion drillDown = ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_DrillDown" + region);
@@ -602,7 +609,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     if (ref != null){
                         editPopup.open(ref,"at_pointer");
                     } else {
-                        editPopup.open(mouseX - 130, mouseY);
+                        editPopup.open(mouseX - 140, mouseY);
                     }
                 }
             }
