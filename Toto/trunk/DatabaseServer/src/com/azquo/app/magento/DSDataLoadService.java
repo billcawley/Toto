@@ -13,7 +13,9 @@ import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -128,7 +130,7 @@ public class DSDataLoadService {
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         azquoMemoryDBConnection.setProvenance(user, "imported from Magento", "", "");
         Map<String, List<Map<String, String>>> tableMap = HashObjObjMaps.newMutableMap();
-        BufferedReader br = new BufferedReader(new FileReader(filePath));
+        BufferedReader br =  new BufferedReader(new InputStreamReader(new FileInputStream(filePath), "UTF8"));//changed for Windows.....
         long marker = System.currentTimeMillis();
         String line;
         List<Map<String, String>> currentTableDataMap = null;
@@ -653,7 +655,6 @@ public class DSDataLoadService {
         for (Map<String, String> salesRow : tableMap.get("sales_flat_order_item")) {
             String parentItemId = salesRow.get("parent_item_id");
             String itemId = salesRow.get("item_id");
-            price = Double.parseDouble(salesRow.get("base_row_invoiced"));//not sure which figure to take - base_row_invoiced or base_row_total
 
             if (bundleLine.length() > 0 && (!parentItemId.equals(configLine)) && !parentItemId.equals(bundleLine) ) {
                 calcBundle(azquoMemoryDBConnection, bundleTotal, bundleItems, priceName, taxName);
@@ -926,8 +927,7 @@ public class DSDataLoadService {
                 }
                 String orderStatus = orderRow.get("status");
                 if (orderStatus!=null && orderStatus.length() > 0){
-                    Name statusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,orderStatus,orderStatusName,true, orderLanguage);//note that this is 'magento
-                    statusName.addChildWillBePersisted(orderName);
+                    Name statusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,orderStatus,orderStatusName,true, defaultLanguage);
                 }
                 counter++;
                 if (counter % 1000 == 0) {
