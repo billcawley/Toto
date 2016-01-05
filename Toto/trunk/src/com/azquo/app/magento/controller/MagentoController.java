@@ -130,7 +130,8 @@ public class MagentoController {
                 if (data != null) {
                     long start = System.currentTimeMillis();
                     // now copying all files, will make it easier for the client/server split. No passing of input streams just the file name
-                    File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + db + new Date());
+                    String tempDir = ("/temp/" + new Date()).replace(":","");//colons removed for Windows
+                    File moved = new File(spreadsheetService.getHomeDir() + tempDir);
                     data.transferTo(moved);
                     dataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr(), loggedInUser.getUser().getName());
                     long elapsed = System.currentTimeMillis() - start;
