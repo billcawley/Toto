@@ -782,7 +782,6 @@ seaports;children   container;children
         }
         try {
             return Integer.parseInt(toFind);
-
         }catch(Exception e){
             //so it isn't a number!
         }
@@ -797,12 +796,12 @@ seaports;children   container;children
                     for (String language : languages){
                         String languageValue = dataRegionHeading.getName().getAttribute(language);
                         // just run through the relevant languages looking for this column
-                        if (languageValue != null &&  languageValue.replace(" ","").toLowerCase().equals(toFind)) {
+                        if (languageValue != null &&  languageValue.replace(" ","").replace("`","").toLowerCase().equals(toFind)) {
                             return count;
                         }
                     }
                 } else {
-                    if (dataRegionHeading.getAttribute().replace(" ","").toLowerCase().equals(toFind)) {
+                    if (dataRegionHeading.getAttribute().replace(" ","").replace("`","").toLowerCase().equals(toFind)) {
                         return count;
                     }
                 }
