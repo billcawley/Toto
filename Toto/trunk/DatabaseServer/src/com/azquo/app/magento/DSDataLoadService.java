@@ -928,7 +928,9 @@ public class DSDataLoadService {
                 String orderStatus = orderRow.get("status");
                 if (orderStatus!=null && orderStatus.length() > 0){
                     Name statusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,orderStatus,orderStatusName,true, defaultLanguage);
+                    statusName.addChildWillBePersisted(orderName);
                 }
+
                 counter++;
                 if (counter % 1000 == 0) {
                     System.out.print(".");
