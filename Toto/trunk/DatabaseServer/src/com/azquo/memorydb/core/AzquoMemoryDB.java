@@ -360,7 +360,7 @@ public final class AzquoMemoryDB {
                 executor = Executors.newFixedThreadPool(loadingThreads);
 
                 // ok now need code to switch to the new ones
-                if (nameDAO.checkFastTableExists(this) && valueDAO.checkFastTableExists(this)) {
+                if (nameDAO.checkFastTableExists(getMySQLName()) && valueDAO.checkFastTableExists(getMySQLName())) {
                     System.out.println();
                     System.out.println("### Using new loading mechanism ###");
                     System.out.println();

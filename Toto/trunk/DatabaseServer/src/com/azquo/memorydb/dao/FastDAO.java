@@ -55,12 +55,13 @@ public abstract class FastDAO {
     }
 
     public void clearTable(final String databaseName){
-        jdbcTemplateUtils.update("delete from `" + databaseName + "`.`" + getTableName() + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
-
+        if (checkFastTableExists(databaseName)){
+            jdbcTemplateUtils.update("delete from `" + databaseName + "`.`" + getTableName() + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        }
     }
 
-    public boolean checkFastTableExists(final AzquoMemoryDB azquoMemoryDB){
-        final List<Map<String, Object>> maps = jdbcTemplateUtils.queryForList("show tables from  `" + azquoMemoryDB.getMySQLName() + "` like 'fast_value' ", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+    public boolean checkFastTableExists(final String databaseName){
+        final List<Map<String, Object>> maps = jdbcTemplateUtils.queryForList("show tables from  `" + databaseName + "` like 'fast_value' ", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         return !maps.isEmpty();
     }
 

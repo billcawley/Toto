@@ -513,7 +513,6 @@ public class ZKComposer extends SelectorComposer<Component> {
 //                            auditItem.addEventListener("onClick",
 //                                    event -> System.out.println("audit menu item clicked"));
                             // only check for drilldown on proper data, that which could have provenance
-
                             CellRegion drillDown = ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_DrillDown" + region);
                             if (drillDown != null) {
                                 String drillDownString = ZKAzquoBookUtils.getRegionValue(myzss.getSelectedSheet(), drillDown);
@@ -538,7 +537,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                                     // now need to find the headings - is this easy?
                                 }
                             }
-
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
