@@ -790,7 +790,6 @@ seaports;children   container;children
         for (List<DataRegionHeading> heading : headings) {
             DataRegionHeading dataRegionHeading = heading.get(heading.size() - 1);
             if (dataRegionHeading != null) {
-                String toCompare;
                 if (dataRegionHeading.getName() != null) {
                     // ok now we need to deal with the languages! This function didn't before
                     for (String language : languages){

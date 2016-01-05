@@ -106,11 +106,16 @@ public class MagentoController {
                     findRequiredTables(loggedInUser, request.getRemoteAddr());
                 }
             }
-
             if (op.equals("restart")) {
                 Database existingDb = loggedInUser.getDatabase();
                 if (existingDb != null){
                     adminService.emptyDatabase(databaseServerDAO.findById(existingDb.getDatabaseServerId()), loggedInUser.getDatabase());
+                    Business business = businessDAO.findById(loggedInUser.getUser().getBusinessId());
+                    String title = "Magento db clear " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
+                    azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
+                    azquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
+                    azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
+                    azquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                 }
                 //loginService.switchDatabase(loggedInUser, null); // something to do with booting it from memory, not sure if we care?
                 loginService.switchDatabase(loggedInUser, existingDb);
@@ -130,7 +135,7 @@ public class MagentoController {
                 if (data != null) {
                     long start = System.currentTimeMillis();
                     // now copying all files, will make it easier for the client/server split. No passing of input streams just the file name
-                    String tempDir = ("/temp/" + new Date()).replace(":","");//colons removed for Windows
+                    String tempDir = ("/temp/" + new Date()).replace(":","") + logon;//colons removed for Windows
                     File moved = new File(spreadsheetService.getHomeDir() + tempDir);
                     data.transferTo(moved);
                     dataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr(), loggedInUser.getUser().getName());

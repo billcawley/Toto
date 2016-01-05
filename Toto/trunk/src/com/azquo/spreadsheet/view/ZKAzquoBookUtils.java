@@ -426,7 +426,7 @@ public class ZKAzquoBookUtils {
                             }
                             int col = displayColumnHeadings.getColumn();
                             for (String heading : colHeading) {
-                                if (columnSort) {
+                                if (columnSort && !heading.equals(".")) { // don't sort "." headings they are probably derived in the spreadsheet
                                     String sortArrow = " ↕";
                                     if (heading.equals(userRegionOptions.getSortColumn())) {
                                         sortArrow = userRegionOptions.getSortColumnAsc() ? " ↑" : " ↓";
