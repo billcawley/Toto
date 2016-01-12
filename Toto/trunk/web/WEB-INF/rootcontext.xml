@@ -62,6 +62,8 @@
     <bean name="databaseServerDao" class="com.azquo.admin.database.DatabaseServerDAO"/>
     <bean name="loginRecordDao" class="com.azquo.admin.user.LoginRecordDAO"/>
     <bean name="accessDao" class="com.azquo.admin.user.PermissionDAO"/>
+    <bean name="invoiceDetailsDao" class="com.azquo.admin.business.InvoiceDetailsDAO"/>
+    <bean name="invoiceSentDao" class="com.azquo.admin.business.InvoiceSentDAO"/>
     <bean name="loginService" class="com.azquo.spreadsheet.LoginService"/>
     <bean name="importService" class="com.azquo.dataimport.ImportService"/>
     <bean name="adminService" class="com.azquo.admin.AdminService"/>
@@ -71,6 +73,7 @@
     <bean name="reportScheduleDao" class="com.azquo.admin.onlinereport.ReportScheduleDAO"/>
 
     <bean name="magentoService" class="com.azquo.app.magento.service.DataLoadService"/>
+    <bean name="invoiceService" class="com.azquo.admin.InvoiceService"/>
 
     <bean id="dbCron" class="com.azquo.dataimport.DBCron"></bean>
 

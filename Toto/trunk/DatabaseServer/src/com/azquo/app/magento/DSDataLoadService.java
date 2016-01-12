@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -987,7 +986,7 @@ public class DSDataLoadService {
 
         String firstName = salesFlatOrderShippingAddress.get("firstname");
         String lastName = salesFlatOrderShippingAddress.get("lastname");
-        String fullName="";
+        String fullName;
         if (firstName != null) {
             if (lastName != null) {
                 fullName = firstName + " " + lastName;
@@ -998,8 +997,6 @@ public class DSDataLoadService {
             fullName = lastName;
         }
         return fullName;
-
-
     }
 
     private void readProductAttributes(String tableName, Map<String, List<Map<String, String>>> tableMap, Map<String, Name> azquoProductsFound, Map<String, String> attIds, String productNameId) throws Exception {

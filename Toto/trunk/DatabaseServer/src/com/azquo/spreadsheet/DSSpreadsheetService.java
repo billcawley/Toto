@@ -611,6 +611,7 @@ seaports;children   container;children
     }
 
     // to try to force an exception to stop execution
+    // todo - check interruption is not the thing here, probably not but check
 
     public void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
@@ -1387,6 +1388,7 @@ seaports;children   container;children
         }
         int threads = connection.getAzquoMemoryDB().getReportFillerThreads();
         connection.addToUserLog("Populating using " + threads + " thread(s)");
+        // TODO - perhaps move this to be a class field? This may make a lot of sense! Can we work out when it is done based on the counter? Note we can submit to the pool for a future (meh I think) or maybe use callable? It can throw exceptions . . .
         ExecutorService executor = Executors.newFixedThreadPool(threads); // picking 10 based on an example I saw . . .
         StringBuffer errorTrack = new StringBuffer();// deliberately thread safe, need to keep an eye on the report building . . .
         // tried multi-threaded, abandoning big chunks

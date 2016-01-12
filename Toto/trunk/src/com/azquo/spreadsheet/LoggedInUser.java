@@ -93,7 +93,6 @@ public class LoggedInUser {
         languages.add(originalUser.user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and otehr names that might be assigned for a user. Needs testing.
         this.database = originalUser.database;
         this.databaseServer = originalUser.databaseServer;
-
         this.readPermissions = originalUser.readPermissions;
         this.writePermissions = originalUser.writePermissions;
         this.context = null;

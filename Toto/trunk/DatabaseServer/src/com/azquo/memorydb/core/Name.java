@@ -22,7 +22,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * defined currently in a static below. Names can have parent and child relationships with multiple other names. Sets of names.
  * <p>
  * OK we want this object to only be modified if explicit functions are called, hence getters must not return mutable objects
- * and setters must make it clear what is going on
+ * and setters must make it clear what is going on. The class should be thread safe allowing concurrent reads but not concurrent writes.
+ * Changes to state need not be immediately visible though in some cases code needs to be structured for suitable atomicity (e.g. attributes).
  * <p>
  *     Thread safety is important, essentially modifying data will be synchronized, reads won't be and won't be completely up to date but should return consistent data.
  * <p>
@@ -36,6 +37,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Was comparable but this resulted in a code warning I've moved the comparator to NameService
  * <p>
  * Note : as well as heap overhead there's garbage collection overhead, watch for avoidable throw away objects.
+ *
+ * Are we acquiring multiple locks in any places? Is it worth testing the cost of synchronizing access to bits of name? Depending on cost it could mean the code is simplified . . .
  */
 public final class Name extends AzquoMemoryDBEntity {
 
@@ -66,7 +69,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
 //    private static final Logger logger = Logger.getLogger(Name.class);
 
-    private Provenance provenance;
+    private Provenance provenance; // should be volatile? Don't care about being completely up to date but could a prtially constructed object get in here?
     private boolean additive;
 
     /* Going to try for attributes as two arrays as this should save a lot of space vs a LinkedHashMap.
@@ -138,11 +141,11 @@ public final class Name extends AzquoMemoryDBEntity {
 
     }
 
-    private NameAttributes nameAttributes;
+    private NameAttributes nameAttributes; // since NameAttributes is immutable there's no need for this to be volatile I don't think. Could test performance, I suppose volatile is slightly preferable?
 
     /* memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
-     these (values, parent) are for quick lookup, must be modified appropriately
-     to be clear, these are not used when persisting, they are derived from the name sets in values and the two below
+     Values, parent are for quick lookup, must be modified appropriately
+     to be clear, these are not used when persisting, they are derived from the name sets in values and the children below
      Sets are expensive in terms of memory, will use arrays instead unless they get big (above threshold 512 at the mo)
      make a new array and switch on changing to make atomic and always wrap them unmodifiable on get
      Based on recommendations here https://en.wikipedia.org/wiki/Double-checked_locking I switched the sets to volatile
@@ -641,7 +644,7 @@ public final class Name extends AzquoMemoryDBEntity {
     public Collection<Name> findAllChildren(boolean payAttentionToAdditive) {
         finaAllChildren2Count.incrementAndGet();
         if (payAttentionToAdditive) {
-            /* local reference useful for my logic anyway but also fulfild double-checked locking.
+            /* local reference useful for my logic anyway but also fulfil double-checked locking.
             having findAllChildrenPayAttentionToAdditiveCache volatile in addition to this variable should mean things are predictable.
              */
             Set<Name> localReference = findAllChildrenPayAttentionToAdditiveCache;

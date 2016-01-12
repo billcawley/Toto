@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -151,4 +152,12 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         Instant instant = Instant.ofEpochMilli(date.getTime());
         return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
     }
+
+    public final int findMaxId() throws DataAccessException {
+        final String SQL_SELECT_ALL = "Select max(id) from `" + MASTER_DB + "`.`" + getTableName() + "`";
+        Integer toReturn = jdbcTemplate.queryForObject(SQL_SELECT_ALL, new HashMap<>(), Integer.class);
+        return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
+    }
+
+
 }

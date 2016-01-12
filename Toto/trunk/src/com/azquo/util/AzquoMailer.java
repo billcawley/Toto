@@ -2,8 +2,10 @@ package com.azquo.util;
 
 import com.sun.mail.imap.IMAPFolder;
 import org.apache.commons.mail.DefaultAuthenticator;
+import org.apache.commons.mail.EmailAttachment;
 import org.apache.commons.mail.HtmlEmail;
 
+import javax.activation.DataSource;
 import javax.mail.*;
 import javax.mail.internet.MimeBodyPart;
 import java.io.File;
@@ -19,10 +21,18 @@ import java.util.Properties;
 public class AzquoMailer {
 
     public boolean sendEMail(String toEmail, String toName, String subject, String body) {
-        return sendEMail(toEmail, toName, subject, body, null);
+        return sendEMail(toEmail, toName, subject, body, null, null);
     }
 
     public boolean sendEMail(String toEmail, String toName, String subject, String body, File attachment) {
+        return  sendEMail(toEmail, toName, subject, body, attachment, null);
+    }
+
+    public boolean sendEMail(String toEmail, String toName, String subject, String body, EmailAttachment emailAttachment) {
+        return  sendEMail(toEmail, toName, subject, body, null, emailAttachment);
+    }
+
+    public boolean sendEMail(String toEmail, String toName, String subject, String body, File attachment, EmailAttachment emailAttachment) {
         try {
             HtmlEmail email = new HtmlEmail();
             //email.setDebug(true); // useful stuff if things go wrong
@@ -51,6 +61,10 @@ public class AzquoMailer {
             email.setTextMsg("Your email client does not support HTML messages");
             if (attachment != null) {
                 email.attach(attachment);
+            }
+            //
+            if (emailAttachment != null) {
+                email.attach(emailAttachment);
             }
             email.send();
             return true;
