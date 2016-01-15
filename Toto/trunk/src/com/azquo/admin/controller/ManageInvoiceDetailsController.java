@@ -18,12 +18,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
  * Created by edward on 07/01/16.
+ *
  */
 
 @Controller
@@ -44,7 +44,7 @@ public class ManageInvoiceDetailsController {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
 
         if (loggedInUser == null
-                //|| !loggedInUser.getUser().getEmail().startsWith("ed.lennox")
+                || !loggedInUser.getUser().getEmail().contains("@azquo.com")
                 ) {
             return "redirect:/api/Login";
         } else {

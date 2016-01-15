@@ -27,11 +27,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.stream.Collectors;
 
 // it seems that trying to configure the properties in spring is a problem - todo : see if upgrading spring to 4.2 makes this easier?
@@ -1008,110 +1006,70 @@ seaports;children   container;children
 
     */
 
-    public class RowFiller implements Runnable {
-        private final int startRow;
-        private final int endRow;
-        private final List<List<AzquoCell>> targetArray;
+    public class RowFiller implements Callable<List<AzquoCell>> {
+        private final int row;
         private final List<List<DataRegionHeading>> headingsForEachColumn;
         private final List<List<DataRegionHeading>> headingsForEachRow;
         private final List<Name> contextNames;
         private final List<String> languages;
         private final int valueId;
         private final AzquoMemoryDBConnection connection;
-        private final StringBuffer errorTrack;
-        private final AtomicInteger counter;
-        private final int progressBarStep;
 
-        public RowFiller(int startRow, int endRow, List<List<AzquoCell>> targetArray, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow
-                , List<Name> contextNames, List<String> languages, int valueId, AzquoMemoryDBConnection connection, StringBuffer errorTrack, AtomicInteger counter, int progressBarStep) {
-            this.startRow = startRow;
-            this.endRow = endRow;
-            this.targetArray = targetArray;
+        public RowFiller(int row, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow
+                , List<Name> contextNames, List<String> languages, int valueId, AzquoMemoryDBConnection connection) {
+            this.row = row;
             this.headingsForEachColumn = headingsForEachColumn;
             this.headingsForEachRow = headingsForEachRow;
             this.contextNames = contextNames;
             this.languages = languages;
             this.valueId = valueId;
             this.connection = connection;
-            this.errorTrack = errorTrack;
-            this.counter = counter;
-            this.progressBarStep = progressBarStep;
         }
 
         @Override
-        public void run() {
-            try {
+        public List<AzquoCell> call() throws Exception {
                 //System.out.println("Filling " + startRow + " to " + endRow);
-                for (int rowNo = startRow; rowNo <= endRow; rowNo++) {
-                    List<DataRegionHeading> rowHeadings = headingsForEachRow.get(rowNo);
+                    List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
                     List<AzquoCell> returnRow = new ArrayList<>(headingsForEachColumn.size());
                     int colNo = 0;
                     for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                         // values I need to build the CellUI
-                        returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextNames, rowNo, colNo, languages, valueId));
+                        returnRow.set(colNo, getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextNames, row, colNo, languages, valueId));
                         // for some reason this was before, it buggered up the ability to find the right column!
                         colNo++;
-                        if (counter.incrementAndGet() % progressBarStep == 0) {
-                            connection.addToUserLog("=", false);
-                        }
                     }
-                    targetArray.set(rowNo, returnRow);
-                }
-            } catch (Exception e) {
-                errorTrack.append("RowFiller : ").append(e.getMessage()).append("\n");
-                for (StackTraceElement ste : e.getStackTrace()) {
-                    errorTrack.append("RowFiller : ").append(ste).append("\n");
-                }
-            }
+                    return returnRow;
         }
     }
 
     // for less than 1000 rows, probably typical use. On damart for example we had 26*9 taking a while and it was reasonable to assume that rows were not even in terms of processing required
-    public class CellFiller implements Runnable {
+    public class CellFiller implements Callable<AzquoCell> {
         private final int row;
         private final int col;
-        private final List<AzquoCell> targetRow;
         private final List<DataRegionHeading> headingsForColumn;
         private final List<DataRegionHeading> headingsForRow;
         private final List<Name> contextNames;
         private final List<String> languages;
         private final int valueId;
         private final AzquoMemoryDBConnection connection;
-        private final StringBuffer errorTrack;
-        private final AtomicInteger counter;
-        private final int progressBarStep;
 
-        public CellFiller(int row, int col, List<AzquoCell> targetRow, List<DataRegionHeading> headingsForColumn, List<DataRegionHeading> headingsForRow,
-                          List<Name> contextNames, List<String> languages, int valueId, AzquoMemoryDBConnection connection, StringBuffer errorTrack, AtomicInteger counter, int progressBarStep) {
+        public CellFiller(int row, int col, List<DataRegionHeading> headingsForColumn, List<DataRegionHeading> headingsForRow,
+                          List<Name> contextNames, List<String> languages, int valueId, AzquoMemoryDBConnection connection) {
             this.row = row;
             this.col = col;
-            this.targetRow = targetRow;
             this.headingsForColumn = headingsForColumn;
             this.headingsForRow = headingsForRow;
             this.contextNames = contextNames;
             this.languages = languages;
             this.valueId = valueId;
             this.connection = connection;
-            this.errorTrack = errorTrack;
-            this.counter = counter;
-            this.progressBarStep = progressBarStep;
         }
 
+        // this should sort my memory concerns (I mean the AzquoCell being appropriately visible). Not 100% sure this error tracking is correct, leave it for the mo
         @Override
-        public void run() {
-            try {
+        public AzquoCell call() throws Exception {
                 // connection.addToUserLog(".", false);
-                // for some reason this was before, it buggered up the ability to find the right column!
-                targetRow.set(col, getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextNames, row, col, languages,valueId));
-                if (counter.incrementAndGet() % progressBarStep == 0) {
-                    connection.addToUserLog("=", false);
-                }
-            } catch (Exception e) {
-                errorTrack.append("CellFiller : ").append(e.getMessage()).append("\n");
-                for (StackTraceElement ste : e.getStackTrace()) {
-                    errorTrack.append("CellFiller : ").append(ste).append("\n");
-                }
-            }
+                return getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextNames, row, col, languages,valueId);
         }
     }
 
@@ -1377,10 +1335,10 @@ seaports;children   container;children
         long track = System.currentTimeMillis();
         int totalRows = headingsForEachRow.size();
         int totalCols = headingsForEachColumn.size();
-        List<List<AzquoCell>> toReturn = new ArrayList<>(totalRows); // make it the right size so multithreading changes the values but not the structure
-        for (int i = 0; i < totalRows; i++) {
+/*        for (int i = 0; i < totalRows; i++) {
             toReturn.add(null);// null the rows, basically adding spaces to the return list
-        }
+        }*/
+        List<List<AzquoCell>> toReturn = new ArrayList<>(totalRows); // make it the right size so multithreading changes the values but not the structure
         connection.addToUserLog("Size = " + totalRows + " * " + totalCols);
         int maxRegionSize = 2000000;//random!  set by WFC 29/6/15
         if (totalRows * totalCols > maxRegionSize) {
@@ -1388,39 +1346,68 @@ seaports;children   container;children
         }
         int threads = connection.getAzquoMemoryDB().getReportFillerThreads();
         connection.addToUserLog("Populating using " + threads + " thread(s)");
-        // TODO - perhaps move this to be a class field? This may make a lot of sense! Can we work out when it is done based on the counter? Note we can submit to the pool for a future (meh I think) or maybe use callable? It can throw exceptions . . .
         ExecutorService executor = Executors.newFixedThreadPool(threads); // picking 10 based on an example I saw . . .
-        StringBuffer errorTrack = new StringBuffer();// deliberately thread safe, need to keep an eye on the report building . . .
         // tried multi-threaded, abandoning big chunks
         // different style, just chuck every row in the queue
-        int progressBarStep = (totalCols * totalRows) / 50 + 1;
-        AtomicInteger counter = new AtomicInteger();
+        int counter = 0;
+        // I was passing an ArrayList through to the tasks. This did seem to work but as I understand a Callable is what's required here, takes care of memory sync and exceptions
         if (totalRows < 1000) { // arbitrary cut off for the moment
+            int progressBarStep = (totalCols * totalRows) / 50 + 1;
+            List<List<Future<AzquoCell>>> futureCellArray = new ArrayList<>();
             for (int row = 0; row < totalRows; row++) {
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
-                List<AzquoCell> returnRow = new ArrayList<>(headingsForEachColumn.size());
-                for (int i = 0; i < headingsForEachColumn.size(); i++) {
+                List<Future<AzquoCell>> futureRow = new ArrayList<>(headingsForEachColumn.size());
+                /*for (int i = 0; i < headingsForEachColumn.size(); i++) {
                     returnRow.add(null);// yes a bit hacky, want to make the space that will be used by cellfiller
-                }
+                }*/
                 int colNo = 0;
                 for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
-                    // inconsistent parameter ordering
-                    executor.execute(new CellFiller(row, colNo, returnRow, columnHeadings, rowHeadings, contextNames, languages, valueId, connection, errorTrack, counter, progressBarStep));
+                    // inconsistent parameter ordering?
+                    futureRow.add(executor.submit(new CellFiller(row, colNo, columnHeadings, rowHeadings, contextNames, languages, valueId, connection)));
                     colNo++;
                 }
-                toReturn.set(row, returnRow);
+                futureCellArray.add(futureRow);
+                //toReturn.set(row, returnRow);
+            }
+            // so the future cells have been racked up, let's try and get them
+            for (List<Future<AzquoCell>> futureRow : futureCellArray){
+                List<AzquoCell> row = new ArrayList<>();
+                for (Future<AzquoCell> futureCell : futureRow){
+                    row.add(futureCell.get());
+                    if (++counter % progressBarStep == 0) {
+                        connection.addToUserLog("=", false);
+                    }
+                }
+                toReturn.add(row);
             }
         } else {
+            int progressBarStep = totalRows / 50 + 1;
+            List<Future<List<AzquoCell>>> futureRowArray = new ArrayList<>();
             for (int row = 0; row < totalRows; row++) {
                 // row passed twice as
-                executor.execute(new RowFiller(row, row, toReturn, headingsForEachColumn, headingsForEachRow, contextNames, languages, valueId, connection, errorTrack, counter, progressBarStep));
+                futureRowArray.add(executor.submit(new RowFiller(row,headingsForEachColumn, headingsForEachRow, contextNames, languages, valueId, connection)));
+            }
+            for (Future<List<AzquoCell>> futureRow : futureRowArray){
+                toReturn.add(futureRow.get());
+                if (++counter % progressBarStep == 0) {
+                    connection.addToUserLog("=", false);
+                }
             }
         }
+/*I think callable has sorted our error tracking problem
+
+ } catch (Exception e) {
+                    errorTrack.append("CellFiller : ").append(e.getMessage()).append("\n");
+                    for (StackTraceElement ste : e.getStackTrace()) {
+                        errorTrack.append("CellFiller : ").append(ste).append("\n");
+                    }
+                    }
+
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());
-        }
+        }*/
         executor.shutdown();
-        if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+        if (!executor.awaitTermination(1, TimeUnit.HOURS)) { // given noew logic this should no longer be an issue - I'm thinking of moving to a shared pool
             throw new Exception("Data region took longer than an hour to load");
         }
         newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
@@ -1428,9 +1415,6 @@ seaports;children   container;children
         System.out.println("Heap cost to make on multi thread : " + (newHeapMarker - oldHeapMarker) / mb);
         System.out.println();
         //oldHeapMarker = newHeapMarker;
-        if (errorTrack.length() > 0) {
-            throw new Exception(errorTrack.toString());
-        }
         connection.addToUserLog(" time : " + (System.currentTimeMillis() - track) + "ms");
         return toReturn;
     }

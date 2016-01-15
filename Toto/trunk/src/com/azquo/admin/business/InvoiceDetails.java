@@ -12,8 +12,8 @@ import java.time.format.DateTimeFormatter;
  * As in details from whichy an invoice can be generated.
  */
 public class InvoiceDetails extends StandardEntity {
-
-    public static DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    
+    public static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     /*
   `id` int(11) NOT NULL,
