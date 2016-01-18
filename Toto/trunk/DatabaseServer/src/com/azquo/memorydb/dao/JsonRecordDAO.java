@@ -10,9 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -54,7 +52,7 @@ public class JsonRecordDAO {
     }
 
 
-    private class BulkInserter implements Runnable {
+    private class BulkInserter implements Callable<Void> {
         private final AzquoMemoryDB azquoMemoryDB;
         private final String tableName;
         private final List<JsonRecordTransport> records;
@@ -68,7 +66,7 @@ public class JsonRecordDAO {
         }
 
         @Override
-        public void run() {
+        public Void call() {
                 if (!records.isEmpty()) {
                     long track = System.currentTimeMillis();
                     final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -86,6 +84,7 @@ public class JsonRecordDAO {
                     jdbcTemplateUtils.update(insertSql.toString(), namedParams);
                     System.out.println("bulk inserted " + DecimalFormat.getInstance().format(records.size()) + " into " + tableName + " in " + (System.currentTimeMillis() - track) + " remaining " + totalCount);
                 }
+            return null;
         }
     }
 
@@ -156,23 +155,23 @@ WHERE id IN (1,2,3)
 
     public void persistJsonRecords(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult - todo, perhaps for update and possible list optimisation there?
-        ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDB.getLoadingThreads());
+        ExecutorService executor = AzquoMemoryDB.sqlThreadPool;
         List<JsonRecordTransport> toInsert = new ArrayList<>(UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
         int totalCount = records.size();
+        List<Future> futureBatches = new ArrayList<>();
         for (JsonRecordTransport record : records) {
             if (record.state == JsonRecordTransport.State.INSERT) {
                 toInsert.add(record);
                 if (toInsert.size() == UPDATELIMIT) {
                     totalCount -= toInsert.size();
-                    executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert, totalCount));
+                    futureBatches.add(executor.submit(new BulkInserter(azquoMemoryDB, tableName, toInsert, totalCount)));
                     toInsert = new ArrayList<>(UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
                 }
             }
         }
-        executor.execute(new BulkInserter(azquoMemoryDB, tableName, toInsert, 0));
-        executor.shutdown();
-        if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
-            throw new Exception("Database " + azquoMemoryDB.getMySQLName() + " took longer than an hour to persist");
+        futureBatches.add(executor.submit(new BulkInserter(azquoMemoryDB, tableName, toInsert, 0)));
+        for (Future<?> futureBatch : futureBatches){
+            futureBatch.get(1, TimeUnit.HOURS);
         }
 
         // don't want the update at the same time as insert, I think it can cause problems. Insert first then update/delete

@@ -13,9 +13,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * Created by edward on 01/10/15.
@@ -62,7 +60,7 @@ public class ValueDAO extends FastDAO{
     }
 
 
-    private class BulkValuesInserter implements Runnable {
+    private class BulkValuesInserter implements Callable<Void> {
         private final AzquoMemoryDB azquoMemoryDB;
         private final List<Value> valuesToInsert;
         private final int totalCount;
@@ -74,7 +72,7 @@ public class ValueDAO extends FastDAO{
         }
 
         @Override
-        public void run() {
+        public Void call() {
             if (!valuesToInsert.isEmpty()) {
                 long track = System.currentTimeMillis();
                 final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -99,13 +97,14 @@ public class ValueDAO extends FastDAO{
                 jdbcTemplateUtils.update(insertSql.toString(), namedParams);
                 System.out.println("bulk inserted " + DecimalFormat.getInstance().format(valuesToInsert.size()) + " into " + FASTVALUE + " in " + (System.currentTimeMillis() - track) + " remaining " + totalCount);
             }
+            return null;
         }
     }
 
     public void persistValues(final AzquoMemoryDB azquoMemoryDB, final Collection<Value> values, boolean initialInsert) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult
         // old pattern had update, I think this is a pain and unnecessary, just delete than add to the insert
-        ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDB.getLoadingThreads());
+        ExecutorService executor = AzquoMemoryDB.sqlThreadPool;
         List<Value> toDelete = new ArrayList<>(UPDATELIMIT);
         List<Value> toInsert = new ArrayList<>(UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
         // ok since we're not doing updates but rather delete before reinsert the delete will have to go first. I don't think this will be a big problem
@@ -125,22 +124,22 @@ public class ValueDAO extends FastDAO{
         for (Value value: values){
             if (!value.getNeedsDeleting()) insertCount++;
         }
-
+        List<Future> futureBatches = new ArrayList<>();
         for (Value value : values) {
             if (!value.getNeedsDeleting()) { // then we insert, either it's new or was updated hence deleted ready for reinsertion
                 toInsert.add(value);
                 if (toInsert.size() == UPDATELIMIT) {
                     insertCount -= UPDATELIMIT;
-                    executor.execute(new BulkValuesInserter(azquoMemoryDB, toInsert, insertCount));
+                    futureBatches.add(executor.submit(new BulkValuesInserter(azquoMemoryDB, toInsert, insertCount)));
                     toInsert = new ArrayList<>(UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
                 }
             }
         }
-        executor.execute(new BulkValuesInserter(azquoMemoryDB, toInsert, 0));
-        executor.shutdown();
-        if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
-            throw new Exception("Database " + azquoMemoryDB.getMySQLName() + " took longer than an hour to persist");
+        futureBatches.add(executor.submit(new BulkValuesInserter(azquoMemoryDB, toInsert, 0)));
+        for (Future<?> futureBatch : futureBatches){
+            futureBatch.get(1, TimeUnit.HOURS);
         }
+
     }
 
     public void createFastTableIfItDoesntExist(final String databaseName){

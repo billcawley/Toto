@@ -13,9 +13,7 @@ import java.sql.Blob;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * Created by edward on 01/10/15.
@@ -66,8 +64,8 @@ public class NameDAO extends FastDAO{
         }
     }
 
-
-    private class BulkNameInserter implements Runnable {
+    // I think sticking to callable even if the return type is null is more consistent
+    private class BulkNameInserter implements Callable<Void> {
         private final AzquoMemoryDB azquoMemoryDB;
         private final List<Name> namesToInsert;
         private final String message;
@@ -79,7 +77,7 @@ public class NameDAO extends FastDAO{
         }
 
         @Override
-        public void run() {
+        public Void call() {
             if (!namesToInsert.isEmpty()) {
                 final MapSqlParameterSource namedParams = new MapSqlParameterSource();
                 final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTNAME + "` (`" + ID + "`,`" + PROVENANCEID + "`,`"
@@ -111,13 +109,14 @@ public class NameDAO extends FastDAO{
                     System.out.println(message);
                 }
             }
+            return null;
         }
     }
 
     public void persistNames(final AzquoMemoryDB azquoMemoryDB, final Collection<Name> names, boolean initialInsert) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult
         // old pattern had update, I think this is a pain and unnecessary, just delete than add to the insert
-        ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDB.getLoadingThreads());
+        ExecutorService executor = AzquoMemoryDB.sqlThreadPool;
         List<Name> toDelete = new ArrayList<>(UPDATELIMIT);
         List<Name> toInsert = new ArrayList<>(UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
         int counter = 0;
@@ -144,21 +143,21 @@ public class NameDAO extends FastDAO{
             if (!name.getNeedsDeleting()) insertCount++;
         }
         counter = 0;
+        List<Future> futureBatches = new ArrayList<>();
         for (Name name : names) {
             if (!name.getNeedsDeleting()) { // then we insert, either it's new or was updated hence deleted ready for reinsertion
                 counter++;
                 insertCount--;
                 toInsert.add(name);
                 if (toInsert.size() == UPDATELIMIT) {
-                    executor.execute(new BulkNameInserter(azquoMemoryDB, toInsert, counter%1_000_000 == 0 ? "bulk inserted " + counter + " remaining to add "  + insertCount: null));
+                    futureBatches.add(executor.submit(new BulkNameInserter(azquoMemoryDB, toInsert, counter%1_000_000 == 0 ? "bulk inserted " + counter + " remaining to add "  + insertCount: null)));
                     toInsert = new ArrayList<>(UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
                 }
             }
         }
-        executor.execute(new BulkNameInserter(azquoMemoryDB, toInsert,"bulk inserted " + counter));
-        executor.shutdown();
-        if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
-            throw new Exception("Database " + azquoMemoryDB.getMySQLName() + " took longer than an hour to persist");
+        futureBatches.add(executor.submit(new BulkNameInserter(azquoMemoryDB, toInsert,"bulk inserted " + counter)));
+        for (Future<?> futureBatch : futureBatches){
+            futureBatch.get(1, TimeUnit.HOURS);
         }
         System.out.print("Name save complete.");
     }

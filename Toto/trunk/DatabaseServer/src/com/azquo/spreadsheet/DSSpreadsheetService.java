@@ -29,7 +29,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.stream.Collectors;
 
 // it seems that trying to configure the properties in spring is a problem - todo : see if upgrading spring to 4.2 makes this easier?
@@ -1014,9 +1013,12 @@ seaports;children   container;children
         private final List<String> languages;
         private final int valueId;
         private final AzquoMemoryDBConnection connection;
+        private final AtomicInteger counter;
+        private final int progressBarStep;
+
 
         public RowFiller(int row, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow
-                , List<Name> contextNames, List<String> languages, int valueId, AzquoMemoryDBConnection connection) {
+                , List<Name> contextNames, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep) {
             this.row = row;
             this.headingsForEachColumn = headingsForEachColumn;
             this.headingsForEachRow = headingsForEachRow;
@@ -1024,6 +1026,8 @@ seaports;children   container;children
             this.languages = languages;
             this.valueId = valueId;
             this.connection = connection;
+            this.counter = counter;
+            this.progressBarStep = progressBarStep;
         }
 
         @Override
@@ -1037,6 +1041,9 @@ seaports;children   container;children
                         returnRow.set(colNo, getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextNames, row, colNo, languages, valueId));
                         // for some reason this was before, it buggered up the ability to find the right column!
                         colNo++;
+                        if (counter.incrementAndGet() % progressBarStep == 0) {
+                            connection.addToUserLog("=", false);
+                        }
                     }
                     return returnRow;
         }
@@ -1052,9 +1059,12 @@ seaports;children   container;children
         private final List<String> languages;
         private final int valueId;
         private final AzquoMemoryDBConnection connection;
+        private final AtomicInteger counter;
+        private final int progressBarStep;
+
 
         public CellFiller(int row, int col, List<DataRegionHeading> headingsForColumn, List<DataRegionHeading> headingsForRow,
-                          List<Name> contextNames, List<String> languages, int valueId, AzquoMemoryDBConnection connection) {
+                          List<Name> contextNames, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep) {
             this.row = row;
             this.col = col;
             this.headingsForColumn = headingsForColumn;
@@ -1063,13 +1073,19 @@ seaports;children   container;children
             this.languages = languages;
             this.valueId = valueId;
             this.connection = connection;
+            this.counter = counter;
+            this.progressBarStep = progressBarStep;
         }
 
         // this should sort my memory concerns (I mean the AzquoCell being appropriately visible). Not 100% sure this error tracking is correct, leave it for the mo
         @Override
         public AzquoCell call() throws Exception {
                 // connection.addToUserLog(".", false);
-                return getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextNames, row, col, languages,valueId);
+            final AzquoCell azquoCell = getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextNames, row, col, languages, valueId);
+            if (counter.incrementAndGet() % progressBarStep == 0) {
+                connection.addToUserLog("=", false);
+            }
+            return azquoCell;
         }
     }
 
@@ -1344,15 +1360,14 @@ seaports;children   container;children
         if (totalRows * totalCols > maxRegionSize) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }
-        int threads = connection.getAzquoMemoryDB().getReportFillerThreads();
-        connection.addToUserLog("Populating using " + threads + " thread(s)");
-        ExecutorService executor = Executors.newFixedThreadPool(threads); // picking 10 based on an example I saw . . .
+        ExecutorService executor = AzquoMemoryDB.mainThreadPool;
+        //connection.addToUserLog("Populating using " + threads + " thread(s)");
         // tried multi-threaded, abandoning big chunks
         // different style, just chuck every row in the queue
-        int counter = 0;
+        int progressBarStep = (totalCols * totalRows) / 50 + 1;
+        AtomicInteger counter = new AtomicInteger();
         // I was passing an ArrayList through to the tasks. This did seem to work but as I understand a Callable is what's required here, takes care of memory sync and exceptions
         if (totalRows < 1000) { // arbitrary cut off for the moment
-            int progressBarStep = (totalCols * totalRows) / 50 + 1;
             List<List<Future<AzquoCell>>> futureCellArray = new ArrayList<>();
             for (int row = 0; row < totalRows; row++) {
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
@@ -1363,7 +1378,7 @@ seaports;children   container;children
                 int colNo = 0;
                 for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                     // inconsistent parameter ordering?
-                    futureRow.add(executor.submit(new CellFiller(row, colNo, columnHeadings, rowHeadings, contextNames, languages, valueId, connection)));
+                    futureRow.add(executor.submit(new CellFiller(row, colNo, columnHeadings, rowHeadings, contextNames, languages, valueId, connection, counter, progressBarStep)));
                     colNo++;
                 }
                 futureCellArray.add(futureRow);
@@ -1374,24 +1389,17 @@ seaports;children   container;children
                 List<AzquoCell> row = new ArrayList<>();
                 for (Future<AzquoCell> futureCell : futureRow){
                     row.add(futureCell.get());
-                    if (++counter % progressBarStep == 0) {
-                        connection.addToUserLog("=", false);
-                    }
                 }
                 toReturn.add(row);
             }
         } else {
-            int progressBarStep = totalRows / 50 + 1;
             List<Future<List<AzquoCell>>> futureRowArray = new ArrayList<>();
             for (int row = 0; row < totalRows; row++) {
                 // row passed twice as
-                futureRowArray.add(executor.submit(new RowFiller(row,headingsForEachColumn, headingsForEachRow, contextNames, languages, valueId, connection)));
+                futureRowArray.add(executor.submit(new RowFiller(row,headingsForEachColumn, headingsForEachRow, contextNames, languages, valueId, connection, counter, progressBarStep)));
             }
             for (Future<List<AzquoCell>> futureRow : futureRowArray){
-                toReturn.add(futureRow.get());
-                if (++counter % progressBarStep == 0) {
-                    connection.addToUserLog("=", false);
-                }
+                toReturn.add(futureRow.get(1, TimeUnit.HOURS));
             }
         }
 /*I think callable has sorted our error tracking problem
@@ -1405,11 +1413,11 @@ seaports;children   container;children
 
         if (errorTrack.length() > 0) {
             throw new Exception(errorTrack.toString());
-        }*/
+        }
         executor.shutdown();
         if (!executor.awaitTermination(1, TimeUnit.HOURS)) { // given noew logic this should no longer be an issue - I'm thinking of moving to a shared pool
             throw new Exception("Data region took longer than an hour to load");
-        }
+        }*/
         newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
         System.out.println();
         System.out.println("Heap cost to make on multi thread : " + (newHeapMarker - oldHeapMarker) / mb);

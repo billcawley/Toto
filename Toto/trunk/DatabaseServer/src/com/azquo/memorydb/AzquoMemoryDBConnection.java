@@ -134,6 +134,7 @@ public class AzquoMemoryDBConnection {
         userLog.append(STOP);
     }
 
+    // change to callable for consistency?
     public class PersistenceRunner implements Runnable {
         @Override
         public void run() {

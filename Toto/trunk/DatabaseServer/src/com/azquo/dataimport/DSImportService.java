@@ -3,9 +3,11 @@ package com.azquo.dataimport;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
+import com.azquo.spreadsheet.AzquoCell;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -20,10 +22,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -491,9 +490,11 @@ public class DSImportService {
 
     /* Created by EFC to try to improve speed through multi threading.
      The basic file parsing is single threaded but since this can start while later lines are being read I don't think this is a problem.
-     That is to say on a large file the threads will start to stack up fairly quickly */
+     That is to say on a large file the threads will start to stack up fairly quickly
+     Adapted to Callable from Runnable
+     */
 
-    private class BatchImporter implements Runnable {
+    private class BatchImporter implements Callable<Void> {
 
         private final AzquoMemoryDBConnection azquoMemoryDBConnection;
         private final AtomicInteger valueTracker;
@@ -512,7 +513,7 @@ public class DSImportService {
         }
 
         @Override
-        public void run() {
+        public Void call() throws Exception {
             long trigger = 10;
             Long time = System.currentTimeMillis();
             for (List<ImportCellWithHeading> lineToLoad : dataToLoad) {
@@ -527,8 +528,7 @@ public class DSImportService {
                             valueTracker.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo));
                         } catch (Exception e) {
                             azquoMemoryDBConnection.addToUserLogNoException("error: line " + lineNo, true);
-                            e.printStackTrace();
-                            break;
+                            throw e;
                         }
                         Long now = System.currentTimeMillis();
                         if (now - time > trigger) {
@@ -541,6 +541,7 @@ public class DSImportService {
             }
             azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(lineNo) + " imported.", true);
             azquoMemoryDBConnection.addToUserLogNoException("Values Imported : " + DecimalFormat.getInstance().format(valueTracker), true);
+            return null;
         }
     }
 
@@ -691,13 +692,13 @@ public class DSImportService {
         // now, since this will be multi threaded need to make line objects, Cannot be completely immutable due to the current logic e.g. composite values
         int lineNo = 1; // start at 1, we think of the first line being 1 not 0.
         // pretty vanilla multi threading bits
-        ExecutorService executor = Executors.newFixedThreadPool(azquoMemoryDBConnection.getAzquoMemoryDB().getReportFillerThreads());
         AtomicInteger valueTracker = new AtomicInteger(0);
         int batchSize = 100000; // a bit arbitrary, I wonder should I go smaller?
         ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(batchSize);
         int colCount = immutableImportHeadings.size();
         while (immutableImportHeadings.get(colCount - 1).compositionPattern != null)
             colCount--;
+        List<Future> futureBatches = new ArrayList<>();
         while (lineIterator.hasNext()) {
             String[] lineValues = lineIterator.next();
             while (lineValues.length < colCount && lineIterator.hasNext()) { // if there are carriage returns in columns, we'll assume on this import that every line must have the same number of columns (may need an option later to miss this)
@@ -721,17 +722,22 @@ public class DSImportService {
             }
             //batch it up!
             linesBatched.add(importCellsWithHeading);
+            // rack up the futures to check in a mo to see that things are complete
             if (linesBatched.size() == batchSize) {
-                executor.execute(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - batchSize)); // line no should be the start
+                futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - batchSize)));// line no should be the start
                 linesBatched = new ArrayList<>(batchSize);
             }
         }
         // load leftovers
-        executor.execute(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - linesBatched.size()));
-        executor.shutdown();
+        futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - batchSize)));// line no should be the start
+        // check all work is done and memory is in sync
+        for (Future<?> futureBatch : futureBatches){
+            futureBatch.get(1, TimeUnit.HOURS);
+        }
+/*        executor.shutdown();
         if (!executor.awaitTermination(8, TimeUnit.HOURS)) {
             throw new Exception("File " + filePath + " took longer than 8 hours to load for : " + azquoMemoryDBConnection.getAzquoMemoryDB().getMySQLName());
-        }
+        }*/
         // wasn't closing before, maybe why the files stayed there
         originalLineIterator.close();
         // edd adding a delete check for tomcat temp files, if read from the other temp directly then leave it alone
