@@ -1038,7 +1038,7 @@ seaports;children   container;children
                     int colNo = 0;
                     for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                         // values I need to build the CellUI
-                        returnRow.set(colNo, getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextNames, row, colNo, languages, valueId));
+                        returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextNames, row, colNo, languages, valueId));
                         // for some reason this was before, it buggered up the ability to find the right column!
                         colNo++;
                         if (counter.incrementAndGet() % progressBarStep == 0) {
