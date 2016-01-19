@@ -27,6 +27,7 @@ public class ZKAzquoBookUtils {
 
     public static final String azDataRegion = "az_DataRegion";
     public static final String azOptions = "az_Options";
+    private static final String CONTENTS = "contents(";
 
     final SpreadsheetService spreadsheetService;
     final UserChoiceDAO userChoiceDAO;
@@ -282,7 +283,10 @@ public class ZKAzquoBookUtils {
                 // the boolean meant JUST horizontally, I don't know why. Hence false.
                 CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), false);
             }
-            addValidation(namesForSheet, sheet, choiceOptionsMap, userChoices);
+            List<SName> dependentRanges =  addValidation(namesForSheet, sheet, choiceOptionsMap, userChoices);
+            if (dependentRanges.size() > 0){
+                resolveDependentChoiceOptions(dependentRanges, sheet, loggedInUser);
+            }
         }
         loggedInUser.setContext(context);
         // after stripping off some redundant exception throwing this was the only possibility left, ignore it
@@ -599,29 +603,125 @@ public class ZKAzquoBookUtils {
                         }
                         //System.out.println("Choice cell : " + choiceCell);
                         String query = choiceCell.getStringValue();
-                        if (query.toLowerCase().contains("default")) {
-                            query = query.substring(0, query.toLowerCase().indexOf("default"));
-                        }
-                        try {
-                            if (query.startsWith("\"") || query.startsWith("“")) {
-                                //crude - if there is a comma in any option this will fail
-                                query = query.replace("\"", "").replace("“", "").replace("”", "");
-                                String[] choices = query.split(",");
-                                Collections.addAll(choiceOptions, choices);
-                            } else {
-                                choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                        .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
+                        if (!query.toLowerCase().contains("contents(")) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
+                            if (query.toLowerCase().contains("default")) {
+                                query = query.substring(0, query.toLowerCase().indexOf("default"));
                             }
-                        } catch (Exception e) {
-                            choiceOptions.add(e.getMessage());
+                            try {
+                                if (query.startsWith("\"") || query.startsWith("“")) {
+                                    //crude - if there is a comma in any option this will fail
+                                    query = query.replace("\"", "").replace("“", "").replace("”", "");
+                                    String[] choices = query.split(",");
+                                    Collections.addAll(choiceOptions, choices);
+                                } else {
+                                    choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                            .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
+                                }
+                            } catch (Exception e) {
+                                choiceOptions.add(e.getMessage());
+                            }
+                            toReturn.put(name.getName(), choiceOptions);
                         }
-                        toReturn.put(name.getName(), choiceOptions);
                     }
                 }
             }
         }
         return toReturn;
     }
+
+    private String rangeToText(int row, int col){
+        if (col > 26){
+            int hbit = (col-1) / 26;
+            return "$" + (char)(hbit + 64) + (char)(col - hbit * 26 + 64) + "$" + (row + 1);
+        }
+        return "$" + (char)(col + 65)+ "$" + (row+1);
+    }
+
+
+    public void resolveDependentChoiceOptions(List<SName> dependentRanges, Sheet sheet,  LoggedInUser loggedInUser) {
+
+        Sheet validationSheet =   sheet.getBook().getSheet(VALIDATION_SHEET);
+        SSheet vSheet = validationSheet.getInternalSheet();
+        for (SName name : dependentRanges) {
+            String dependentName = name.getName().substring(0,name.getName().length() - 6);//remove 'choice'
+            CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
+            Map<String,List<String>> choiceOptions = new HashMap<>(); // was null, see no help in that
+            SCell choiceCell = sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn());
+            String query = choiceCell.getStringValue();
+            int contentPos = query.toLowerCase().indexOf(CONTENTS);
+            int catEnd = query.substring(contentPos + CONTENTS.length()).indexOf(")");
+            if (catEnd > 0) {
+                String choiceSource = query.substring(contentPos + CONTENTS.length()).substring(0, catEnd- 6).toLowerCase();//assuming that the expression concludes ...Chosen)
+                CellRegion choiceSourceRange =  getCellRegionForSheetAndName(sheet, choiceSource + "Chosen");
+                CellRegion choiceListRange = getCellRegionForSheetAndName(sheet, dependentName + "List");//TODO - NEEDS AN ERROR IF THESE RANGES ARE NOT FOUND
+                int validationSourceColumn = 0;
+                String listName = vSheet.getCell(0, validationSourceColumn).getStringValue();
+
+                CellRegion chosenRange =     getCellRegionForSheetAndName(sheet, dependentName + "Chosen");
+                while (!listName.toLowerCase().equals(choiceSource+"choice")&& listName!=null && listName.length() > 0 && validationSourceColumn < 1000 ){
+                    listName = vSheet.getCell(0, ++validationSourceColumn).getStringValue();
+
+                }
+                if (chosenRange != null && choiceSourceRange != null && choiceListRange != null && listName != null && listName.length() > 0 && validationSourceColumn < 1000) {
+                    int targetCol = validationSourceColumn;
+                    while(vSheet.getCell(0,targetCol).getStringValue().length() > 0 && targetCol < 1000) targetCol++;
+                    if (targetCol==1000){
+                        //throw exception "too many set lists"
+                    }
+                    int maxSize = 0;
+                    int optionNo = 0;
+                    //create an array of the options....
+                    while (vSheet.getCell(optionNo +1,validationSourceColumn).getStringValue().length() > 0){
+                        String optionVal = vSheet.getCell(optionNo + 1, validationSourceColumn).getStringValue();
+                        vSheet.getCell(0,targetCol+ optionNo).setStringValue(optionVal);
+                        String newQuery = query.substring(0, contentPos) + optionVal + query.substring(contentPos + catEnd + CONTENTS.length() + 1);
+                        try {
+                            List<String> optionList = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), newQuery, loggedInUser.getLanguages());
+                            if (optionList.size() > maxSize) maxSize = optionList.size();
+                            int rowOffset = 1;
+                            for (String option : optionList) {
+                                vSheet.getCell(rowOffset++,targetCol+optionNo).setStringValue(option);
+                            }
+                        }catch(Exception e){
+                            vSheet.getCell(1,validationSourceColumn).setStringValue(e.getMessage());
+                            return;
+                        }
+                        optionNo++;
+                    }
+                    String lookupRange = "VALIDATION_SHEET!" + rangeToText(0, targetCol) + ":" + rangeToText(maxSize, targetCol + optionNo-1);
+                    //fill in blanks - they may come through as '0'
+                    int chosenCol = chosenRange.getColumn();
+                    for (int col = 0; col < optionNo;col++){
+                        for (int row = 1; row < maxSize + 1;row++){
+                            if (vSheet.getCell(row,targetCol + col).getStringValue().length()==0){
+                                vSheet.getCell(row, targetCol + col).setStringValue(" ");
+                            }
+                        }
+                    }
+                    int listStart = choiceListRange.getColumn();
+                    for (int row = chosenRange.getRow(); row < chosenRange.getRow() + chosenRange.getRowCount();row++){
+                        String source = rangeToText(row,choiceSourceRange.column);
+                        for(int option = 0; option < maxSize; option ++){
+                            sheet.getInternalSheet().getCell(row, listStart + option).setFormulaValue("HLOOKUP(" + source + "," + lookupRange + "," + (option + 2) + ",false)");
+                        }
+                        Range chosenCell = Ranges.range(sheet, row, chosenCol, row, chosenCol);
+                        Range validationValues = Ranges.range(sheet, row, listStart, row, listStart + maxSize - 1);
+                        //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
+                        chosenCell.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
+                                true, "title", "msg",
+                                false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+
+                    }
+
+                    //TODO NOW SET FORMULAE IN ORGINAL SHEET AND NAME RANGE SELECTION
+
+                }
+
+            }
+        }
+    }
+
 
     public void resolveQueries(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
         for (SName name : namesForSheet) {
@@ -673,13 +773,14 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public void addValidation(List<SName> namesForSheet, Sheet sheet, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
+    public List<SName> addValidation(List<SName> namesForSheet, Sheet sheet, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
         if (sheet.getBook().getSheet(VALIDATION_SHEET) == null) {
             sheet.getBook().getInternalBook().createSheet(VALIDATION_SHEET);
         }
         Sheet validationSheet = sheet.getBook().getSheet(VALIDATION_SHEET);
         validationSheet.getInternalSheet().setSheetVisible(SSheet.SheetVisible.HIDDEN);
         int numberOfValidationsAdded = 0;
+        List<SName> dependentRanges = new ArrayList<>();
         for (SName name : namesForSheet) {
             if (name.getName().endsWith("Choice")) {
                 String choiceName = name.getName().substring(0, name.getName().length() - "Choice".length());
@@ -687,30 +788,41 @@ public class ZKAzquoBookUtils {
                 CellRegion chosen = getCellRegionForSheetAndName(sheet, choiceName + "Chosen"); // as ever I do wonder about these string literals
                 if (choice != null && chosen != null) {
                     List<String> choiceOptions = choiceOptionsMap.get(name.getName());
-                    if (chosen.getRowCount() == 1 || !getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty()) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
-                        validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(name.getName());
-                        int row = 0;
-                        // yes, this can null pointer but if it does something is seriously wrong
-                        for (String choiceOption : choiceOptions) {
-                            row++;// like starting at 1
-                            validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded).setStringValue(choiceOption);
-                        }
-                        if (row > 0) { // if choice options is empty this will not work
-                            Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
-                            //validationValues.createName("az_Validation" + numberOfValidationsAdded);
-                            for (int rowNo = chosen.getRow(); rowNo < chosen.getRow() + chosen.getRowCount(); rowNo++) {
-                                for (int colNo = chosen.getColumn(); colNo < chosen.getColumn() + chosen.getColumnCount(); colNo++) {
-                                    Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
-                                    //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
-                                    chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
-                                            true, "title", "msg",
-                                            false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+                    boolean dataRegionDropdown = !getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty();
+                    if (chosen.getRowCount() == 1 || dataRegionDropdown) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
+                        SCell choiceCell = sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn());
+                        String query = choiceCell.getStringValue();
+                        int contentPos = query.toLowerCase().indexOf(CONTENTS);
+                        if (contentPos <0) {//not a dependent range
 
-                                }
+
+                            validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(name.getName());
+                            int row = 0;
+                            // yes, this can null pointer but if it does something is seriously wrong
+                            for (String choiceOption : choiceOptions) {
+                                row++;// like starting at 1
+                                validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded).setStringValue(choiceOption);
                             }
-                            numberOfValidationsAdded++;
-                        } else {
-                            System.out.println("no choices for : " + getRegionValue(sheet, choice));
+                            if (row > 0) { // if choice options is empty this will not work
+                                Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
+                                //validationValues.createName("az_Validation" + numberOfValidationsAdded);
+                                for (int rowNo = chosen.getRow(); rowNo < chosen.getRow() + chosen.getRowCount(); rowNo++) {
+                                    for (int colNo = chosen.getColumn(); colNo < chosen.getColumn() + chosen.getColumnCount(); colNo++) {
+                                        Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
+                                        //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
+                                        chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
+                                                true, "title", "msg",
+                                                false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+
+                                    }
+                                }
+                                numberOfValidationsAdded++;
+                            } else {
+                                System.out.println("no choices for : " + getRegionValue(sheet, choice));
+                            }
+                        }else{
+                            dependentRanges.add(name);
+
                         }
                             /*Unlike above where the setting of the choice has already been done we need to set the
                             existing choices here, hence why user choices is required for this. The check for userChoices not being null
@@ -744,6 +856,8 @@ public class ZKAzquoBookUtils {
                 }
             }
         }
+        return dependentRanges;
+
     }
 
     // moved/adapted from ZKComposer and made static
