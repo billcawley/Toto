@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
 
@@ -80,6 +81,7 @@ public class MagentoController {
             , @RequestParam(value = "password", required = false, defaultValue = "") String password
             , @RequestParam(value = "data", required = false) MultipartFile data
     ) throws Exception {
+        SimpleDateFormat df = new SimpleDateFormat("yyMMdd-hhmmss");
         try {
 
             if (op == null) op = "";// can this happen with the annotation above?
@@ -106,6 +108,7 @@ public class MagentoController {
                     findRequiredTables(loggedInUser, request.getRemoteAddr());
                 }
             }
+
             if (op.equals("restart")) {
                 Database existingDb = loggedInUser.getDatabase();
                 if (existingDb != null){
@@ -135,12 +138,12 @@ public class MagentoController {
                 if (data != null) {
                     long start = System.currentTimeMillis();
                     // now copying all files, will make it easier for the client/server split. No passing of input streams just the file name
-                    String tempDir = ("/temp/" + new Date()).replace(":","") + logon;//colons removed for Windows
+                    String tempDir = "/temp/" +loggedInUser.getDatabase().getMySQLName()+ "-" + df.format(new Date());
                     File moved = new File(spreadsheetService.getHomeDir() + tempDir);
                     data.transferTo(moved);
                     dataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr(), loggedInUser.getUser().getName());
                     long elapsed = System.currentTimeMillis() - start;
-                    if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1")) { // if it's from us don't email us :)
+                    if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                         Business business = businessDAO.findById(loggedInUser.getUser().getBusinessId());
                         String title = "Magento file upload " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr() + " elapsed time " + elapsed + " millisec";
                         azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
