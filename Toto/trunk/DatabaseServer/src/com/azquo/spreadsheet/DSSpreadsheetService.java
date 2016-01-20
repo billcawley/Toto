@@ -1731,7 +1731,9 @@ seaports;children   container;children
                             }
                             // warning on multiple values?
                         } else {
-                            if (valuesForCell.getNames().size() == 1 && valuesForCell.getAttributeNames().size() == 1) { // allows a simple attribute store
+                            // added not null checks - can names or attributes be null here? Best check - todo
+                            if (valuesForCell.getNames() != null && valuesForCell.getNames().size() == 1
+                                    && valuesForCell.getAttributeNames() != null && valuesForCell.getAttributeNames().size() == 1) { // allows a simple attribute store
                                 Name toChange = valuesForCell.getNames().get(0);
                                 String attribute = valuesForCell.getAttributeNames().get(0).substring(1);//remove the initial '.'
                                 Name attSet = nameService.findByName(azquoMemoryDBConnection, attribute);

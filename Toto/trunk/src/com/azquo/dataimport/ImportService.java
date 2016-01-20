@@ -1,25 +1,27 @@
 package com.azquo.dataimport;
 
-import com.azquo.admin.database.DatabaseServer;
-import com.azquo.admin.database.UploadRecord;
-import com.azquo.admin.database.UploadRecordDAO;
+import com.azquo.admin.AdminService;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
+import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.user.UserChoiceDAO;
-import com.azquo.admin.user.UserRegionOptionsDAO;
+import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.view.AzquoBook;
-import org.apache.commons.collections.iterators.ArrayListIterator;
-import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.Selectors;
 import org.apache.commons.vfs2.impl.StandardFileSystemManager;
 import org.apache.commons.vfs2.provider.sftp.SftpFileSystemConfigBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.zkoss.zss.api.Importers;
+import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.api.model.Sheet;
 
 import java.io.*;
 import java.time.LocalDateTime;
@@ -40,6 +42,8 @@ public final class ImportService {
     @Autowired
     private SpreadsheetService spreadsheetService;
     @Autowired
+    private AdminService adminService;
+    @Autowired
     private UserChoiceDAO userChoiceDAO;
     @Autowired
     private UserRegionOptionsDAO userRegionOptionsDAO;
@@ -47,6 +51,14 @@ public final class ImportService {
     private RMIClient rmiClient;
     @Autowired
     private UploadRecordDAO uploadRecordDAO;
+    @Autowired
+    private BusinessDAO businessDAO;
+    @Autowired
+    private PermissionDAO permissionDAO;
+    @Autowired
+    private UserDAO userDAO;
+    @Autowired
+    private DatabaseDAO databaseDAO;
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData) throws Exception {
@@ -85,7 +97,7 @@ public final class ImportService {
             while (fileIterator.hasNext()){
                 File f = fileIterator.next();
                 if (fileIterator.hasNext()){
-                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, false, isData) + "\n");
+                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, false, isData)).append("\n");
                 } else {
                     sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, true, isData)); // persist on the last one
                 }
@@ -101,6 +113,98 @@ public final class ImportService {
 
     // factored off to deal with
     String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
+        if (fileName.equals(CreateExcelForDownloadController.USERSPERMISSIONSFILENAME)){ // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
+            Book book = Importers.getImporter().imports(new File(fileName), "Report name");
+            Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
+            Sheet permissionsSheet = book.getSheet("Permissions"); // literals not best practice, could it be factored between this and the xlsx file?
+            if (userSheet != null && permissionsSheet != null){
+                int row = 1;
+                // keep them to use if not set. Should I be updating records instead? I'm not sure.
+                Map<String, String> oldPasswordMap = new HashMap<>();
+                Map<String, String> oldSaltMap = new HashMap<>();
+                List<User> userList = adminService.getUserListForBusiness(loggedInUser);
+                for (User user : userList){
+                    if (user.getId() != loggedInUser.getUser().getId()){ // leave the logged in user alone!
+                        oldPasswordMap.put(user.getEmail(), user.getPassword());
+                        oldSaltMap.put(user.getEmail(), user.getSalt());
+                        userDAO.removeById(user);
+                    }
+                }
+                for (User user : userList){
+                    userDAO.removeById(user);
+                }
+
+                while (userSheet.getInternalSheet().getCell(row,0).getStringValue() != null && userSheet.getInternalSheet().getCell(row,0).getStringValue().length() > 0){
+                    String user = userSheet.getInternalSheet().getCell(row,0).getStringValue();
+                    String email = userSheet.getInternalSheet().getCell(row,1).getStringValue();
+                    if (!loggedInUser.getUser().getEmail().equals(email)){ // leave the logged in user alone!
+                        LocalDateTime start = LocalDateTime.now();
+                        try {
+                            start = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row,2).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
+                        } catch (Exception ignored){
+                        }
+                        LocalDateTime end = LocalDateTime.now();
+                        try {
+                            end = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row,3).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
+                        } catch (Exception ignored){
+                        }
+                        // should we allow them to change businesses?
+                        Business b = businessDAO.findByName(userSheet.getInternalSheet().getCell(row,4).getStringValue());
+                        String status = userSheet.getInternalSheet().getCell(row,5).getStringValue();
+                        String salt = "";
+                        String password = userSheet.getInternalSheet().getCell(row,5).getStringValue();
+                        if (password == null){
+                            password = "";
+                        }
+                        if (password.length() > 0){
+                            salt = adminService.shaHash(System.currentTimeMillis() + "salt");
+                            password = adminService.encrypt(password, salt);
+                        } else if (oldPasswordMap.get(email) != null){
+                            password = oldPasswordMap.get(email);
+                            salt = oldSaltMap.get(email);
+                        }
+                        User user1 = new User(0, start, end, b != null ? b.getId() : loggedInUser.getUser().getBusinessId(), email, user, status, password, salt);
+                        userDAO.store(user1);
+                    }
+                    row++;
+                }
+                List<Permission> permissionList = permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId());
+                for (Permission permission : permissionList){
+                    if (permission.getUserId() != loggedInUser.getUser().getId()){ // leave the logged in user alone!
+                        permissionDAO.removeById(permission);
+                    }
+                }
+                row = 1;
+                while (permissionsSheet.getInternalSheet().getCell(row,0).getStringValue() != null && permissionsSheet.getInternalSheet().getCell(row,0).getStringValue().length() > 0){
+                    String database = userSheet.getInternalSheet().getCell(row,0).getStringValue();
+                    String email = userSheet.getInternalSheet().getCell(row,1).getStringValue();
+                    if (!loggedInUser.getUser().getEmail().equals(email)) { // leave the logged in user alone!
+                        User user = userDAO.findByEmail(email);
+                        if (user != null){
+                            Database database1 = databaseDAO.findForName(user.getBusinessId(), database);
+                            if (database1 != null){
+                                LocalDateTime start = LocalDateTime.now();
+                                try {
+                                    start = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 2).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
+                                } catch (Exception ignored) {
+                                }
+                                LocalDateTime end = LocalDateTime.now();
+                                try {
+                                    end = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 3).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
+                                } catch (Exception ignored) {
+                                }
+                                String readList = userSheet.getInternalSheet().getCell(row,4).getStringValue();
+                                String writeList = userSheet.getInternalSheet().getCell(row,5).getStringValue();
+                                Permission newPermission = new Permission(0,start,end, user.getId(), database1.getId(), readList, writeList);
+                                permissionDAO.store(newPermission);
+                            }
+                        }
+                    }
+                    row++;
+                }
+            }
+
+        }
         if (fileName.contains(".xls")) {
             return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter, isData);
         } else {

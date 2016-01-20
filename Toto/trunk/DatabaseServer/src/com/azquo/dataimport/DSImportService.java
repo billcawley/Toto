@@ -7,7 +7,6 @@ import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import com.azquo.spreadsheet.AzquoCell;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -16,6 +15,7 @@ import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import org.apache.commons.lang.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.annotation.concurrent.Immutable;
 import java.io.*;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
@@ -24,6 +24,7 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Created by cawley on 20/05/15.
@@ -78,9 +79,9 @@ public class DSImportService {
     public static final String ONLY = "only";
 
     /*
-    To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't
-    do this initially. No problem, initially make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.
-    could of course copy all fields into line but this makes the constructor needlessly complex.
+    To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't do this initially.
+    No problem, initially make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.
+    Could of course copy all fields into line but this makes the constructor needlessly complex.
     */
 
     private class MutableImportHeading {
@@ -88,7 +89,7 @@ public class DSImportService {
         String heading = null;
         // the Azquo Name that might be set on the heading
         Name name = null;
-        // this class used to use the now removed peers against the name object, in its absence just put a set here, and this set simply refers to headings which may be names or not - hence why I renamed it from peerNames).
+        // this class used to use the now removed peers against the name object, in its absence just put a set here, and this set simply refers to headings which may be names or not - hence why I renamed it from peerNames.
         Set<String> peers = new HashSet<>();
         /* the index of the heading that an attribute refers to so if the heading is Customer.Address1 then this is the index of customer.
         Has been kept as an index as it will be used to access the data itself (the array of Strings from each line) */
@@ -100,7 +101,7 @@ public class DSImportService {
         int indexForChild = -1;
         // derived from the "child of" clause, a comma separated list of names
         Set<Name> parentNames = new HashSet<>();
-        // same format or logic as parentNames - not used often
+        // same format or logic as parentNames - not used often, if at all now?
         Set<Name> removeParentNames = new HashSet<>();
         // result of the attribute clause. Notable that "." is replaced with ;attribute
         String attribute = null;
@@ -685,9 +686,7 @@ public class DSImportService {
         fillInHeaderInformation(azquoMemoryDBConnection, mutableImportHeadings);
         // convert to immutable. Not strictly necessary, as much for my sanity as anything (EFC) - we do NOT want this info changed by actual data loading
         final List<ImmutableImportHeading> immutableImportHeadings = new ArrayList<>(mutableImportHeadings.size());
-        for (MutableImportHeading mutableImportHeading : mutableImportHeadings) {
-            immutableImportHeadings.add(new ImmutableImportHeading(mutableImportHeading));
-        }
+        immutableImportHeadings.addAll(mutableImportHeadings.stream().map(ImmutableImportHeading::new).collect(Collectors.toList())); // not sure if stream is that clear here but it gives me a green light from IntelliJ
         // having read the headers go through each record
         // now, since this will be multi threaded need to make line objects, Cannot be completely immutable due to the current logic e.g. composite values
         int lineNo = 1; // start at 1, we think of the first line being 1 not 0.

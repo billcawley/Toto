@@ -120,7 +120,7 @@ public class DSDataLoadService {
     }
 
     /* might be a case for koloboke if speed becomes a concern
-    this function is too big for intellij to analyse properly, I'm not sure how much of a concern this is.
+    this function is too big for intellij to analyse properly, if we want to make this class more correct it should be broken up.
     in terms of logic it's essentially translating Magento into Azquo.
     I don't think it could be don't by a sheet, too much logic e.g. calculating bundles.
       */
