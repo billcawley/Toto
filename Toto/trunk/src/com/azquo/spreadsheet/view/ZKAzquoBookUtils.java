@@ -93,10 +93,10 @@ public class ZKAzquoBookUtils {
                 for (SName sName : namesForSheet) {
                     if (sName.getName().endsWith("Chosen")) {
                         CellRegion chosen = getCellRegionForSheetAndName(sheet, sName.getName());
-                        String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length());
+                        String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length()).toLowerCase();
                         if (chosen != null && chosen.getRowCount() == 1 && chosen.getColumnCount() == 1) {
                             // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
-                            List<String> validOptions = choiceOptionsMap.get(choiceName + "Choice");
+                            List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
                             String userChoice = userChoices.get(choiceName.toLowerCase()); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
                             if (userChoice != null && validOptions.contains(userChoice)) {
                                 sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
@@ -620,7 +620,7 @@ public class ZKAzquoBookUtils {
                             } catch (Exception e) {
                                 choiceOptions.add(e.getMessage());
                             }
-                            toReturn.put(name.getName(), choiceOptions);
+                            toReturn.put(name.getName().toLowerCase(), choiceOptions);
                         }
                     }
                 }
@@ -709,7 +709,8 @@ public class ZKAzquoBookUtils {
                         Range validationValues = Ranges.range(sheet, row, listStart, row, listStart + maxSize - 1);
                         //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
                         chosenCell.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
-                                true, "title", "msg",
+                                //true, "title", "msg",
+                                true, "","",
                                 false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
 
                     }
@@ -782,12 +783,12 @@ public class ZKAzquoBookUtils {
         int numberOfValidationsAdded = 0;
         List<SName> dependentRanges = new ArrayList<>();
         for (SName name : namesForSheet) {
-            if (name.getName().endsWith("Choice")) {
-                String choiceName = name.getName().substring(0, name.getName().length() - "Choice".length());
+            if (name.getName().toLowerCase().endsWith("choice")) {
+                String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
                 CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
-                CellRegion chosen = getCellRegionForSheetAndName(sheet, choiceName + "Chosen"); // as ever I do wonder about these string literals
+                CellRegion chosen = getCellRegionForSheetAndName(sheet, choiceName + "chosen"); // as ever I do wonder about these string literals
                 if (choice != null && chosen != null) {
-                    List<String> choiceOptions = choiceOptionsMap.get(name.getName());
+                    List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
                     boolean dataRegionDropdown = !getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty();
                     if (chosen.getRowCount() == 1 || dataRegionDropdown) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
                         SCell choiceCell = sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn());
@@ -811,7 +812,8 @@ public class ZKAzquoBookUtils {
                                         Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
                                         //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
                                         chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
-                                                true, "title", "msg",
+                                                //true, "title", "msg",
+                                                true, "","",
                                                 false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
 
                                     }
