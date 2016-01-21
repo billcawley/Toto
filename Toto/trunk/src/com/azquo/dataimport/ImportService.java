@@ -270,7 +270,7 @@ public final class ImportService {
 
     private String tempFileWithoutDecoding(final InputStream data, final String fileName) {
         try {
-            File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4), fileName.substring(fileName.length() - 4));
+            File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
             String tempFile = temp.getPath();
             temp.deleteOnExit();
             FileOutputStream fos = new FileOutputStream(tempFile);
