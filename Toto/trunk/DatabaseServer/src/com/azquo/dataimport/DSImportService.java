@@ -292,7 +292,7 @@ public class DSImportService {
     Edd : it feels like an enum or array could help here but I'm not sure, about 5 are what you might call vanilla, the rest have other conditions*/
 
     private void interpretClause(AzquoMemoryDBConnection azquoMemoryDBConnection, MutableImportHeading heading, String clause) throws Exception {
-        final String notUnderstood = " not understood";
+        final String notUnderstood = " not understood in " + heading.heading ;
         int wordEnd = clause.indexOf(" ");
         if (wordEnd < 0) {
             wordEnd = clause.length();
@@ -557,6 +557,7 @@ public class DSImportService {
             //need a file type to know which header to use
             int dotPos = filePath.lastIndexOf(".");
             int strokePos = filePath.lastIndexOf("/");
+            if (strokePos < 0) strokePos = filePath.lastIndexOf("\\");// for testing on a Windows machine
             if (strokePos > 0 && dotPos > strokePos) {
                 fileType = filePath.substring(strokePos + 1, dotPos);
                 if (fileType.contains(" ")) {
