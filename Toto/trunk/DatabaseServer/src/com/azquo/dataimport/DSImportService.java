@@ -1147,8 +1147,8 @@ public class DSImportService {
                     // need to check multiple levels due to compositing option name1->name2->name3->etc
                     // essentially if we're saying that this heading is a category e.g. swim wear and we're about to add another name (a swimsuit one assumes) then go through other categories removing the swimsuit from them if it is in there
                     Set<Name> toRemoveList =  new HashSet<>(childCell.lineName.getParents());
-                    toRemoveList.retainAll(cellWithHeading.immutableImportHeading.parentNames.iterator().next().findAllChildren(false));
                     toRemoveList.remove(cellWithHeading.lineName); // don't remove from the one we're going to add to anyway
+                    toRemoveList.retainAll(cellWithHeading.immutableImportHeading.parentNames.iterator().next().findAllChildren(false));
                     for (Name nameToRemoveFrom : toRemoveList){
                         nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
                     }
@@ -1157,8 +1157,8 @@ public class DSImportService {
                     if (specifiedExclusiveSet != null){
                         specifiedExclusiveSet.removeFromChildrenWillBePersisted(childCell.lineName); // it may be a direct child, now check all children of the specified set
                         Set<Name> toRemoveList =  new HashSet<>(childCell.lineName.getParents());
-                        toRemoveList.retainAll(specifiedExclusiveSet.findAllChildren(false));
                         toRemoveList.remove(cellWithHeading.lineName); // don't remove from the one we're going to add to anyway
+                        toRemoveList.retainAll(specifiedExclusiveSet.findAllChildren(false));
                         for (Name nameToRemoveFrom : toRemoveList){
                             nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
                         }
