@@ -7,10 +7,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.ZoneId;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by bill on 15/04/14.
@@ -117,7 +114,19 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         namedParams.addValue(DATABASETYPE, databaseType);
         namedParams.addValue(USERSTATUS, "%" + userStatus + "%");
         namedParams.addValue(ACTIVE, true);
-        return findListWithWhereSQLAndParameters(" WHERE (`" + DATABASETYPE + "` = :" + DATABASETYPE + " OR `" + DATABASEID + "` = :" + DATABASEID + ") and " + ACTIVE + " = :" + ACTIVE + " and " + statusSelect + " order by " + REPORTCATEGORY + ", " + REPORTNAME, namedParams, false);
+        List<OnlineReport> possibles =  findListWithWhereSQLAndParameters(" WHERE (`" + DATABASETYPE + "` = :" + DATABASETYPE + " OR `" + DATABASEID + "` = :" + DATABASEID + ") and " + ACTIVE + " = :" + ACTIVE + " and " + statusSelect + " order by " + REPORTCATEGORY + ", " + REPORTNAME, namedParams, false);
+        List<OnlineReport> toReturn = new ArrayList<>();
+        for (OnlineReport possible:possibles){
+            String[] foundStatuses = possible.getUserStatus().split(",");
+            for (String foundStatus:foundStatuses){
+                if (foundStatus.trim().equalsIgnoreCase(userStatus)){
+                    toReturn.add(possible);
+                    break;
+                }
+            }
+
+        }
+        return toReturn;
     }
 
 
