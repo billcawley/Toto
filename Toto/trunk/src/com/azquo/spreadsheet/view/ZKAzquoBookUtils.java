@@ -94,7 +94,7 @@ public class ZKAzquoBookUtils {
                     if (sName.getName().endsWith("Chosen")) {
                         CellRegion chosen = getCellRegionForSheetAndName(sheet, sName.getName());
                         String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length()).toLowerCase();
-                        if (chosen != null && chosen.getRowCount() == 1 && chosen.getColumnCount() == 1) {
+                        if (chosen!=null && (!getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty() || (chosen.getRowCount() == 1 && chosen.getColumnCount() == 1))) {
                             // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
                             List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
                             String userChoice = userChoices.get(choiceName.toLowerCase()); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
@@ -832,7 +832,8 @@ public class ZKAzquoBookUtils {
                              Under these circumstances I assume we won't need to re-do the filter adding. I guess need to test.
                              */
                     } else if (userChoices != null && (chosen.getRowCount() > 1 || chosen.getColumnCount() > 1)) {
-                        if (choiceOptions.size() <= (chosen.getRowCount() * chosen.getColumnCount())) { // it will fit, good
+                        //check also if in a data region - if so, not a filter
+                         if (getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty() && choiceOptions.size() <= (chosen.getRowCount() * chosen.getColumnCount())) { // it will fit, good
                             int row = chosen.getRow();
                             int col = chosen.getColumn();
                             String selected = userChoices.get(choiceName.toLowerCase()); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
