@@ -405,7 +405,8 @@ seaports;children   container;children
 
     public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, List<String> children) throws Exception {
         final AzquoMemoryDBConnection connectionFromAccessToken = getConnectionFromAccessToken(databaseAccessToken);
-        Name set = nameService.findOrCreateNameInParent(connectionFromAccessToken , setName, null, false);
+        Name filterSets = nameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false);
+        Name set = nameService.findOrCreateNameInParent(connectionFromAccessToken , setName, filterSets, true);//must be a local name in 'Filter sets'
         set.setChildrenWillBePersisted(Collections.emptyList()); // easiest way to clear them
         for (String child : children){
             Name childName = nameService.findByName(connectionFromAccessToken, child);
