@@ -1143,12 +1143,14 @@ public class DSImportService {
                         , cellWithHeading.immutableImportHeading.isLocal, setLocalLanguage(childCell.immutableImportHeading, attributeNames));
             } else { // check exclusive logic, only if the child cell line name exists then remove the child from parents if necessary
                 if ("".equals(cellWithHeading.immutableImportHeading.exclusive) && cellWithHeading.immutableImportHeading.parentNames.size() == 1){ // blank exclusive, use child of if there's one
-                    // so get the siblings of the name this heading is child of (including this one by this point) and remove the name it is parent of from it if it is in there
+                    // so get the siblings of the name this heading is child of (including this one by this point) and remove the name it is parent of from it and any children if it is in there,
+                    // need to check multiple levels due to compositing option name1->name2->name3->etc
                     // essentially if we're saying that this heading is a category e.g. swim wear and we're about to add another name (a swimsuit one assumes) then go through other categories removing the swimsuit from them if it is in there
-                    for (Name nameToRemoveFrom : cellWithHeading.immutableImportHeading.parentNames.iterator().next().getChildren()){
-                        if (nameToRemoveFrom != cellWithHeading.lineName){ // skip this one, it's where we want it to be
-                            nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
-                        }
+                    Set<Name> toRemoveList =  new HashSet<>(childCell.lineName.getParents());
+                    toRemoveList.retainAll(cellWithHeading.immutableImportHeading.parentNames.iterator().next().findAllChildren(false));
+                    toRemoveList.remove(cellWithHeading.lineName); // don't remove from the one we're going to add to anyway
+                    for (Name nameToRemoveFrom : toRemoveList){
+                        nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
                     }
                 } else if (cellWithHeading.immutableImportHeading.exclusive != null){ // exclusive is referring to a higher name
                     Name specifiedExclusiveSet = nameService.findByName(azquoMemoryDBConnection, cellWithHeading.immutableImportHeading.exclusive);
@@ -1156,10 +1158,9 @@ public class DSImportService {
                         specifiedExclusiveSet.removeFromChildrenWillBePersisted(childCell.lineName); // it may be a direct child, now check all children of the specified set
                         Set<Name> toRemoveList =  new HashSet<>(childCell.lineName.getParents());
                         toRemoveList.retainAll(specifiedExclusiveSet.findAllChildren(false));
+                        toRemoveList.remove(cellWithHeading.lineName); // don't remove from the one we're going to add to anyway
                         for (Name nameToRemoveFrom : toRemoveList){
-                            if (nameToRemoveFrom != cellWithHeading.lineName) { // skip this one, it's where we want it to be
-                                nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
-                            }
+                            nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
                         }
                     }
                 }
