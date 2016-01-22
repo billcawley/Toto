@@ -1146,7 +1146,9 @@ public class DSImportService {
                     // so get the siblings of the name this heading is child of (including this one by this point) and remove the name it is parent of from it if it is in there
                     // essentially if we're saying that this heading is a category e.g. swim wear and we're about to add another name (a swimsuit one assumes) then go through other categories removing the swimsuit from them if it is in there
                     for (Name nameToRemoveFrom : cellWithHeading.immutableImportHeading.parentNames.iterator().next().getChildren()){
-                        nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
+                        if (nameToRemoveFrom != cellWithHeading.lineName){ // skip this one, it's where we want it to be
+                            nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
+                        }
                     }
                 } else if (cellWithHeading.immutableImportHeading.exclusive != null){ // exclusive is referring to a higher name
                     Name specifiedExclusiveSet = nameService.findByName(azquoMemoryDBConnection, cellWithHeading.immutableImportHeading.exclusive);
@@ -1155,7 +1157,9 @@ public class DSImportService {
                         Set<Name> toRemoveList =  new HashSet<>(childCell.lineName.getParents());
                         toRemoveList.retainAll(specifiedExclusiveSet.findAllChildren(false));
                         for (Name nameToRemoveFrom : toRemoveList){
-                            nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
+                            if (nameToRemoveFrom != cellWithHeading.lineName) { // skip this one, it's where we want it to be
+                                nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
+                            }
                         }
                     }
                 }
