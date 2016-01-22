@@ -15,7 +15,6 @@ import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import org.apache.commons.lang.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.annotation.concurrent.Immutable;
 import java.io.*;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
@@ -73,10 +72,11 @@ public class DSImportService {
     public static final String COMPOSITION = "composition";
     public static final String DEFAULT = "default";
     public static final String NONZERO = "nonzero";
-    public static final String headingsString = "HEADINGS";
-    public static final String skipLinesString = "SKIPLINES";
-    public static final String dateLang = "date";
+    public static final String HEADINGSSTRING = "HEADINGS";
+    public static final String SKIPLINESSTRING = "SKIPLINES";
+    public static final String DATELANG = "date";
     public static final String ONLY = "only";
+    public static final String EXCLUSIVE = "exclusive";
 
     /*
     To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't do this initially.
@@ -134,6 +134,10 @@ public class DSImportService {
         boolean blankZeroes = false;
         // is this a column representing names (as opposed to values or attributes). Derived from parent of child of and being referenced by other headings, it's saying : does name, the variable above, need to be populated?
         boolean lineNameRequired = false;
+        /* used in context of "parent of". Can be blank in which case it means that the child can't have two siblings as parents, this heading will override existing parents
+        , if it has a value it references a set higher up e.g. if a product is being moved in a structure (this heading is parent of the product) with many levels then the
+        set referenced in the exclusive clause might be "Categories", the top set, so that the product would be removed from any names in Categories before being added to this heading*/
+        String exclusive = null;
     }
 
     /* I see no reason for getters here. Class members only, saves a load of space. Note added later : getters and setters may make the code clearer though this could be done by better names also I think
@@ -161,6 +165,7 @@ public class DSImportService {
         final String defaultValue;
         final boolean blankZeroes;
         final boolean lineNameRequired;
+        final String exclusive;
 
         public ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
             this.heading = mutableImportHeading.heading;
@@ -182,6 +187,7 @@ public class DSImportService {
             this.defaultValue = mutableImportHeading.defaultValue;
             this.blankZeroes = mutableImportHeading.blankZeroes;
             this.lineNameRequired = mutableImportHeading.lineNameRequired;
+            this.exclusive = mutableImportHeading.exclusive;
         }
     }
 
@@ -330,7 +336,7 @@ public class DSImportService {
             // language being attribute
         } else if (firstWord.equals(LANGUAGE)) {
             String language = readClause(LANGUAGE, clause);
-            if (language.equalsIgnoreCase(dateLang)) {
+            if (language.equalsIgnoreCase(DATELANG)) {
                 heading.isDate = true;
             } else {
                 heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
@@ -383,6 +389,8 @@ public class DSImportService {
                     throw new Exception("Unclosed }");
                 }
             }
+        } else if (firstWord.equals(EXCLUSIVE)) {
+            heading.exclusive = readClause(EXCLUSIVE, clause);// having this set as blank is fine
         } else {
             throw new Exception(firstWord + notUnderstood);
         }
@@ -634,16 +642,16 @@ public class DSImportService {
                 }
             }
             // The code below should be none the wiser that a transpose happened if it did.
-            String importHeaders = importInterpreter.getAttribute(headingsString);
+            String importHeaders = importInterpreter.getAttribute(HEADINGSSTRING);
             if (importHeaders == null) {//no longer used - Nov 2015
                 // todo - get rid of this and change to an attribute like transpose to skip a number of lines
-                importHeaders = importInterpreter.getAttribute(headingsString + "1");
+                importHeaders = importInterpreter.getAttribute(HEADINGSSTRING + "1");
                 if (importHeaders != null) {
                     skipLines = 1;
                 }
             }
             if (importHeaders != null) {
-                String skipLinesSt = importInterpreter.getAttribute(skipLinesString);
+                String skipLinesSt = importInterpreter.getAttribute(SKIPLINESSTRING);
                 if (skipLinesSt != null) {
                     try {
                         skipLines = Integer.parseInt(skipLinesSt);
@@ -664,8 +672,8 @@ public class DSImportService {
                 for (String header : headers) {
                     sb.append(header).append("¬");
                 }
-                dataImportThis.setAttributeWillBePersisted(headingsString, sb.toString());
-                dataImportThis.setAttributeWillBePersisted(skipLinesString, "1");//  currently assuming one line - may need to adjust
+                dataImportThis.setAttributeWillBePersisted(HEADINGSSTRING, sb.toString());
+                dataImportThis.setAttributeWillBePersisted(SKIPLINESSTRING, "1");//  currently assuming one line - may need to adjust
             }
         } else {
             while (skipLines-- > 0) {
@@ -676,7 +684,7 @@ public class DSImportService {
         End preparatory stuff
         readHeaders is about creating a set of ImportHeadings
         notable that internally it might use attributes from the relevant data import name to supplement the header information
-        to be more specific : that name called by "dataimport " + fileType has been hit for its "headingsString" attribute already to produce headers
+        to be more specific : that name called by "dataimport " + fileType has been hit for its "HEADINGSSTRING" attribute already to produce headers
         but it could be asked for something more specific according to the header name.
         This method where columns can be called by name will look nicer in the heading set up but it requires data files to have headings.
         */
@@ -1133,6 +1141,24 @@ public class DSImportService {
             if (childCell.lineName == null) {
                 childCell.lineName = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childCell.lineValue, cellWithHeading.lineName
                         , cellWithHeading.immutableImportHeading.isLocal, setLocalLanguage(childCell.immutableImportHeading, attributeNames));
+            } else { // check exclusive logic, only if the child cell line name exists then remove the child from parents if necessary
+                if ("".equals(cellWithHeading.immutableImportHeading.exclusive) && cellWithHeading.immutableImportHeading.parentNames.size() == 1){ // blank exclusive, use child of if there's one
+                    // so get the siblings of the name this heading is child of (including this one by this point) and remove the name it is parent of from it if it is in there
+                    // essentially if we're saying that this heading is a category e.g. swim wear and we're about to add another name (a swimsuit one assumes) then go through other categories removing the swimsuit from them if it is in there
+                    for (Name nameToRemoveFrom : cellWithHeading.immutableImportHeading.parentNames.iterator().next().getChildren()){
+                        nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
+                    }
+                } else if (cellWithHeading.immutableImportHeading.exclusive != null){ // exclusive is referring to a higher name
+                    Name specifiedExclusiveSet = nameService.findByName(azquoMemoryDBConnection, cellWithHeading.immutableImportHeading.exclusive);
+                    if (specifiedExclusiveSet != null){
+                        specifiedExclusiveSet.removeFromChildrenWillBePersisted(childCell.lineName); // it may be a direct child, now check all children of the specified set
+                        Set<Name> toRemoveList =  new HashSet<>(childCell.lineName.getParents());
+                        toRemoveList.retainAll(specifiedExclusiveSet.findAllChildren(false));
+                        for (Name nameToRemoveFrom : toRemoveList){
+                            nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
+                        }
+                    }
+                }
             }
             cellWithHeading.lineName.addChildWillBePersisted(childCell.lineName);
         }

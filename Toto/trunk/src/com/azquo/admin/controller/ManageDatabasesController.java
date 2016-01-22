@@ -3,6 +3,7 @@ package com.azquo.admin.controller;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.dataimport.ImportService;
@@ -129,7 +130,12 @@ public class ManageDatabasesController {
             }
             try {
                 if (createDatabase != null && !createDatabase.isEmpty() && databaseServerId != null && !databaseServerId.isEmpty()) {
-                    adminService.createDatabase(createDatabase, databaseType, loggedInUser, databaseServerDAO.findById(Integer.parseInt(databaseServerId)));
+                    final List<DatabaseServer> allServers = databaseServerDAO.findAll();
+                    if (allServers.size() == 1){
+                        adminService.createDatabase(createDatabase, databaseType, loggedInUser, allServers.get(0));
+                    } else {
+                        adminService.createDatabase(createDatabase, databaseType, loggedInUser, databaseServerDAO.findById(Integer.parseInt(databaseServerId)));
+                    }
                 }
                 if (emptyId != null && NumberUtils.isNumber(emptyId)) {
                     adminService.emptyDatabaseById(loggedInUser, Integer.parseInt(emptyId));
@@ -181,7 +187,12 @@ public class ManageDatabasesController {
                 model.put("error", exceptionError);
             }
             model.put("databases", displayDataBases);
-            model.put("databaseServers", databaseServerDAO.findAll());
+            final List<DatabaseServer> allServers = databaseServerDAO.findAll();
+            if (allServers.size() > 1){
+                model.put("databaseServers", allServers);
+            } else {
+                model.put("serverList", false);
+            }
             model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             return "managedatabases";
@@ -260,6 +271,12 @@ public class ManageDatabasesController {
                 e.printStackTrace();
             }
             model.put("databases", displayDataBases);
+            final List<DatabaseServer> allServers = databaseServerDAO.findAll();
+            if (allServers.size() > 1){
+                model.put("databaseServers", allServers);
+            } else {
+                model.put("serverList", false);
+            }
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             return "managedatabases";

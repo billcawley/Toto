@@ -38,7 +38,7 @@
 					</c:forEach>
 				</select>
 			</td>
-			<td><label for=""><label for="useType">Use database type?</label> <input id="useType" type="checkbox" name="useType"/></td>
+			<td><!-- <label for="useType">Use database type?</label> <input id="useType" type="checkbox" name="useType"/>--></td>
 			<td><input type="submit" name="Upload" value="Upload" class="button "/></td>
 			</tr>
 		</tbody>
@@ -86,14 +86,16 @@
 			<table>
 				<tr>
 					<td><label for="createDatabase">Database Name:</label> <input name="createDatabase" id="createDatabase"/></td>
-					<td><label for="databaseType">Database Type:</label> <input name="databaseType" id="databaseType"/></td>
+					<td><!-- <label for="databaseType">Database Type:</label> <input name="databaseType" id="databaseType"/>--></td>
 					<td>
+	<c:if test="${serverList == true}">
 						<label for="databaseServerId">Select Server:</label>
 						<select name="databaseServerId" id="databaseServerId">
 							<c:forEach items="${databaseServers}" var="databaseServer">
 								<option value="${databaseServer.id}">${databaseServer.name} - ${databaseServer.ip}</option>
 							</c:forEach>
 						</select>
+	</c:if>
 					</td>
 					<td>
 						<input type="submit" name="Create Database" value="Create Database" class="button"/>

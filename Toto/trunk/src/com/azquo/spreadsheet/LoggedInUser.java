@@ -144,6 +144,7 @@ public class LoggedInUser {
     }
 
 
+    // todo a version that includes the email and one that doesn't
     public List<String> getLanguages() {
         return languages;
     }
