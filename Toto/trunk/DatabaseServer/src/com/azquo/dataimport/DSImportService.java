@@ -1142,24 +1142,22 @@ public class DSImportService {
                 childCell.lineName = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childCell.lineValue, cellWithHeading.lineName
                         , cellWithHeading.immutableImportHeading.isLocal, setLocalLanguage(childCell.immutableImportHeading, attributeNames));
             } else { // check exclusive logic, only if the child cell line name exists then remove the child from parents if necessary
-                if ("".equals(cellWithHeading.immutableImportHeading.exclusive) && cellWithHeading.immutableImportHeading.parentNames.size() == 1){ // blank exclusive, use child of if there's one
-                    // so get the siblings of the name this heading is child of (including this one by this point) and remove the name it is parent of from it and any children if it is in there,
-                    // need to check multiple levels due to compositing option name1->name2->name3->etc
-                    // essentially if we're saying that this heading is a category e.g. swim wear and we're about to add another name (a swimsuit one assumes) then go through other categories removing the swimsuit from them if it is in there
-                    Set<Name> toRemoveList =  new HashSet<>(childCell.lineName.getParents());
-                    toRemoveList.remove(cellWithHeading.lineName); // don't remove from the one we're going to add to anyway
-                    toRemoveList.retainAll(cellWithHeading.immutableImportHeading.parentNames.iterator().next().findAllChildren(false));
-                    for (Name nameToRemoveFrom : toRemoveList){
-                        nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
-                    }
+                // the exclusiveSetToCheckAgainst means that if the child we're about to sort has a parent in this set we need to get rid of it before re adding the child to the new location
+                Collection<Name> exclusiveSetToCheckAgainst = null;
+                if ("".equals(cellWithHeading.immutableImportHeading.exclusive) && cellWithHeading.immutableImportHeading.parentNames.size() == 1){
+                    // blank exclusive clause, use child of if there's one (check all the way down. all children, necessary due due to composite option name1->name2->name3->etc
+                    exclusiveSetToCheckAgainst = cellWithHeading.immutableImportHeading.parentNames.iterator().next().findAllChildren(false);
                 } else if (cellWithHeading.immutableImportHeading.exclusive != null){ // exclusive is referring to a higher name
                     Name specifiedExclusiveSet = nameService.findByName(azquoMemoryDBConnection, cellWithHeading.immutableImportHeading.exclusive);
                     if (specifiedExclusiveSet != null){
-                        specifiedExclusiveSet.removeFromChildrenWillBePersisted(childCell.lineName); // it may be a direct child, now check all children of the specified set
-                        Set<Name> toRemoveList =  new HashSet<>(childCell.lineName.getParents());
-                        toRemoveList.remove(cellWithHeading.lineName); // don't remove from the one we're going to add to anyway
-                        toRemoveList.retainAll(specifiedExclusiveSet.findAllChildren(false));
-                        for (Name nameToRemoveFrom : toRemoveList){
+                        specifiedExclusiveSet.removeFromChildrenWillBePersisted(childCell.lineName); // if it's directly against the top it won't be caught by the set below, don't want to add to the set I'd have to make a new, potentially large, set
+                        exclusiveSetToCheckAgainst = specifiedExclusiveSet.findAllChildren(false);
+                    }
+                }
+                if (exclusiveSetToCheckAgainst != null){
+                    // essentially if we're saying that this heading is a category e.g. swimwear and we're about to add another name (a swimsuit one assumes) then go through other categories removing the swimsuit from them if it is in there
+                    for (Name nameToRemoveFrom : childCell.lineName.getParents()){
+                        if (exclusiveSetToCheckAgainst.contains(nameToRemoveFrom) && nameToRemoveFrom != cellWithHeading.lineName){ // the existing parent is one to be zapped by exclusive criteria and it's not the one we're about to add
                             nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
                         }
                     }

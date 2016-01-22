@@ -38,7 +38,7 @@ public class CreateExcelForDownloadController {
 
     public static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    public static final String USERSPERMISSIONSFILENAME = "UsersPermissions.xlsx";
+    public static final String USERSPERMISSIONSFILENAME = "AzquoUsersPermissions.xlsx";
 
     @RequestMapping
     public void handleRequest(final HttpServletRequest request, HttpServletResponse response) throws Exception {
