@@ -18,7 +18,6 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.servlet.ServletContext;
 import java.io.*;
 import java.net.InetAddress;
 import java.text.DateFormat;
@@ -51,9 +50,6 @@ public class DSSpreadsheetService {
     ValueService valueService;
     @Autowired
     MemoryDBManager memoryDBManager;
-
-    @Autowired
-    ServletContext servletContext;
 
     @Autowired
     DSImportService importService;
@@ -1672,6 +1668,7 @@ seaports;children   container;children
         azquoMemoryDBConnection.setProvenance(user, "in spreadsheet", reportName, context);
         if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
             importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
+            azquoMemoryDBConnection.persist();
             return;
         }
         int numberOfValuesModified = 0;
