@@ -394,7 +394,12 @@ public class AzquoBook {
 
                 List<CellForDisplay> oneRow = new ArrayList<>();
                 for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
-                    oneRow.add(new CellForDisplay(false, dataRegion.getCellOrNull(rowNo, colNo).getStringValue(), 0, false, rowNo, colNo, true, false));
+                    Cell cell = dataRegion.getCellOrNull(rowNo, colNo);
+                    String cellVal = "";
+                    if (cell!=null){
+                        cellVal = cell.getStringValue();
+                    }
+                    oneRow.add(new CellForDisplay(false, cellVal, 0, false, rowNo, colNo, true, false));
                 }
                 dataRegionCells.add(oneRow);
             }
@@ -1395,6 +1400,7 @@ public class AzquoBook {
 
     public String fillDataRangesFromCopy(LoggedInUser loadingUser, int reportId){
         int items = 0;
+        int nonBlankItems = 0;
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             if (name.getText().toLowerCase().startsWith(dataRegionPrefix)) {
@@ -1431,6 +1437,7 @@ public class AzquoBook {
                                     }
                                 }
                                 dataCell.setStringValue(chosen);
+                                if (chosen.length() > 0) nonBlankItems++;
                                 if (isDouble) {
                                     dataCell.setDoubleValue(doubleValue);
                                 }
@@ -1443,7 +1450,7 @@ public class AzquoBook {
                 }
               }
         }
-        return items + " data items transferred successfully";
+        return nonBlankItems + " data items transferred successfully";
 
     }
 
