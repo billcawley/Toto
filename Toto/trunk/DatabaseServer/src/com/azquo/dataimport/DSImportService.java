@@ -1185,15 +1185,27 @@ public class DSImportService {
                             String expression = result.substring(headingMarker + 1, headingEnd);
                             String function = null;
                             int funcInt = 0;
+                            int funcInt2 = 0;
                             if (expression.contains("(")) {
                                 int bracketpos = expression.indexOf("(");
                                 function = expression.substring(0, bracketpos);
                                 int commaPos = expression.indexOf(",", bracketpos + 1);
+                                int secondComma = -1;
                                 if (commaPos > 0) {
-                                    String countString = expression.substring(commaPos + 1, expression.length() - 1);
+                                    secondComma = expression.indexOf(",", commaPos +1);
+                                    String countString = "";
                                     try {
-                                        funcInt = Integer.parseInt(countString.trim());
-                                    } catch (Exception ignore) {
+                                        if (secondComma < 0) {
+                                            countString = expression.substring(commaPos + 1, expression.length() - 1);
+                                            funcInt = Integer.parseInt(countString.trim());
+                                        }else{
+                                            countString = expression.substring(commaPos + 1, secondComma);
+                                            funcInt = Integer.parseInt(countString.trim());
+                                            countString = expression.substring(secondComma + 1, expression.length() -1);
+                                            funcInt2 = Integer.parseInt(countString);
+
+                                        }
+                                     } catch (Exception ignore) {
                                     }
                                     expression = expression.substring(bracketpos + 1, commaPos);
                                 }
@@ -1201,12 +1213,16 @@ public class DSImportService {
                             ImportCellWithHeading compCell = findCellWithHeading(expression, cells);
                             if (compCell != null) {
                                 String sourceVal = compCell.lineValue;
-                                if (function != null && funcInt > 0 && sourceVal.length() > funcInt) {
+                                if (function != null && (funcInt > 0 || funcInt2 > 0) && sourceVal.length() > funcInt) {
                                     if (function.equalsIgnoreCase("left")) {
                                         sourceVal = sourceVal.substring(0, funcInt);
                                     }
                                     if (function.equalsIgnoreCase("right")) {
                                         sourceVal = sourceVal.substring(sourceVal.length() - funcInt);
+                                    }
+                                    if (function.equalsIgnoreCase("mid") && funcInt2 > funcInt){
+                                        //the second parameter of mid is the number of characters, not the end character
+                                        sourceVal = sourceVal.substring(funcInt, funcInt2 - funcInt);
                                     }
                                 }
                                 result = result.replace(result.substring(headingMarker, headingEnd + 1), sourceVal);
