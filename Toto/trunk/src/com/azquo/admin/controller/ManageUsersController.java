@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 
 /**
  * Created by cawley on 24/04/15.
@@ -119,8 +120,12 @@ public class ManageUsersController {
                 }
                 return "edituser";
             }
+            final List<User> userListForBusiness = adminService.getUserListForBusiness(loggedInUser);
+            model.put("users", userListForBusiness);
+            if (userListForBusiness.size() > 1){
+                model.put("showDownload", true);
+            }
 
-            model.put("users", adminService.getUserListForBusiness(loggedInUser));
             return "manageusers";
         }
     }
