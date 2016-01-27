@@ -39,6 +39,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Note : as well as heap overhead there's garbage collection overhead, watch for avoidable throw away objects.
  *
  * Are we acquiring multiple locks in any places? Is it worth testing the cost of synchronizing access to bits of name? Depending on cost it could mean the code is simplified . . .
+ *
+ * Also I'm using Double Checked Locking. With volatile DCL is correct according to the JMM,
+ * given that synchronization is no longer expensive it might be worth considering how much places where I'm using DCL are actually contended.
  */
 public final class Name extends AzquoMemoryDBEntity {
 

@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import groovy.lang.GroovyShell;
+import groovy.lang.Script;
 import org.apache.commons.lang.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -62,7 +64,6 @@ public class DSImportService {
      */
 
     public static final String CHILDOF = "child of ";
-    public static final String REMOVEFROM = "remove from ";
     // parent of another heading (as opposed to name), would like the clause to be more explicit,
     public static final String PARENTOF = "parent of ";
     public static final String ATTRIBUTE = "attribute";
@@ -72,12 +73,13 @@ public class DSImportService {
     public static final String COMPOSITION = "composition";
     public static final String DEFAULT = "default";
     public static final String NONZERO = "nonzero";
-    public static final String HEADINGSSTRING = "HEADINGS";
-    public static final String SKIPLINESSTRING = "SKIPLINES";
     public static final String DATELANG = "date";
     public static final String ONLY = "only";
     public static final String EXCLUSIVE = "exclusive";
 
+    // these two are not for clauses, it's to do with reading the file in the first place, do we read the headers or not, how many lines to skip before data
+    public static final String HEADINGSSTRING = "HEADINGS";
+    public static final String SKIPLINESSTRING = "SKIPLINES";
     /*
     To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't do this initially.
     No problem, initially make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.
@@ -101,8 +103,6 @@ public class DSImportService {
         int indexForChild = -1;
         // derived from the "child of" clause, a comma separated list of names
         Set<Name> parentNames = new HashSet<>();
-        // same format or logic as parentNames - not used often, if at all now?
-        Set<Name> removeParentNames = new HashSet<>();
         // result of the attribute clause. Notable that "." is replaced with ;attribute
         String attribute = null;
         //should we try to treat the cell as a date?
@@ -126,7 +126,8 @@ public class DSImportService {
         String only = null;
         /* to make the line value a composite of other values. Syntax is pretty simple replacing anything in quotes with the referenced line value
         `a column name`-`another column name` might make 1233214-1234. Such columns would probably be at the end,
-        they are virtual in the sens that these values are made on uploading they are not there in the source file though the components are.*/
+        they are virtual in the sense that these values are made on uploading they are not there in the source file though the components are.
+        A newer use of this is to create name->name2->name3, a name structure in a virtual column at the end */
         String compositionPattern = null;
         // a default value if the line value is blank
         String defaultValue = null;
@@ -151,7 +152,6 @@ public class DSImportService {
         final int indexForChild;
         // ok the set will be fixed, I suppose names can be modified but they should be thread safe. Well that's the plan.
         final Set<Name> parentNames;
-        final Set<Name> removeParentNames;
         final String attribute;
         final boolean isDate;
         final Set<Integer> peerCellIndexes;
@@ -173,7 +173,6 @@ public class DSImportService {
             this.indexForAttribute = mutableImportHeading.indexForAttribute;
             this.indexForChild = mutableImportHeading.indexForChild;
             this.parentNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.parentNames));
-            this.removeParentNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.removeParentNames));
             this.attribute = mutableImportHeading.attribute;
             this.isDate = mutableImportHeading.isDate;
             this.peerCellIndexes = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.peerCellIndexes));
@@ -320,17 +319,6 @@ public class DSImportService {
                 String[] parents = childOfString.split(",");//TODO this does not take into account names with commas inside
                 for (String parent : parents) {
                     heading.parentNames.add(nameService.findOrCreateNameInParent(azquoMemoryDBConnection, parent, null, false));
-                }
-            }
-            // opposite of above
-        } else if (REMOVEFROM.startsWith(firstWord)) {
-            String removeFromString = readClause(REMOVEFROM, clause).replace(Name.QUOTE + "", "");// child of relates to a name in the database - the hook to existing data
-            if (removeFromString.length() == 0) {
-                throw new Exception(clause + notUnderstood);
-            } else {
-                String[] removes = removeFromString.split(",");//TODO this does not take into account names with commas inside
-                for (String remove : removes) {// also not language specific. THis is a simple lookup, don't want a find or create
-                    heading.removeParentNames.add(nameService.findByName(azquoMemoryDBConnection, remove));
                 }
             }
             // language being attribute
@@ -661,6 +649,14 @@ public class DSImportService {
                 System.out.println("has headers " + importHeaders);
                 headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
             }
+
+            if (importInterpreter.getAttribute("groovyProcessor") != null){
+                GroovyShell shell = new GroovyShell();
+                final Script script = shell.parse(importInterpreter.getAttribute("groovyProcessor"));
+                //shell.parse("def fileProcess(def filePath){println 'a file was processed here' + filePath}");
+                filePath = (String) script.invokeMethod("fileProcess", filePath);
+            }
+
         }
         // finally we might use the headers on the data file, this is notably used when setting up the headers themselves :)
         if (headers == null) {
@@ -823,7 +819,7 @@ public class DSImportService {
         }
     }
 
-    // sort peer headings, attribute headings, child of remove from, parent of, context peer headings
+    // sort peer headings, attribute headings, child of, parent of, context peer headings
     // called right after readHeaders, try to do as much checking as possible here. Some of this logic was unnecessarily being done each line
 
     private void fillInHeaderInformation(AzquoMemoryDBConnection azquoMemoryDBConnection, List<MutableImportHeading> headings) throws Exception {
@@ -947,7 +943,6 @@ public class DSImportService {
         }
         for (int i = 0; i < headings.size(); i++) {
             MutableImportHeading mutableImportHeading = headings.get(i);
-            // note remove from doesn't mean a line name is required
             mutableImportHeading.lineNameRequired = mutableImportHeading.indexForChild != -1 || !mutableImportHeading.parentNames.isEmpty() || indexesNeedingNames.contains(i) || mutableImportHeading.isAttributeSubject;
         }
     }
@@ -972,7 +967,7 @@ public class DSImportService {
                 }
             }
             /* 3 headings. Town, street, whether it's pedestrianized. Pedestrianized parent of street. Town parent of street local.
-             the key here is that the resolveLineNamesParentsRemovesChildren has to resolve line Name for both of them - if it's called on "Pedestrianized parent of street" first
+             the key here is that the resolveLineNameParentsAndChildForCell has to resolve line Name for both of them - if it's called on "Pedestrianized parent of street" first
              both pedestrianized (ok) and street (NOT ok!) will have their line names resolved
              whereas resolving "Town parent of street local" first means that the street should be correct by the time we resolve "Pedestrianized parent of street".
              essentially sort all local names */
@@ -1049,14 +1044,6 @@ public class DSImportService {
                 }
                 // else an error? If the line name couldn't be made in resolveLineNamesParentsChildren above there's nothing to be done about it
             }
-            // remove from, there was no point in making the line name just for remove so act on it only if it was made
-            if (!cell.immutableImportHeading.removeParentNames.isEmpty()) {
-                if (cell.lineName != null) {
-                    for (Name remove : cell.immutableImportHeading.removeParentNames) {
-                        remove.removeFromChildrenWillBePersisted(cell.lineName);
-                    }
-                }
-            }
             long now = System.nanoTime();
             if (now - time > tooLong) {
                 System.out.println(cell.immutableImportHeading.heading + " took " + (now - time));
@@ -1110,7 +1097,7 @@ public class DSImportService {
     }
 
     // namesFound is a cache. Then the heading we care about then the list of all headings.
-    // This used to be called handle parent and deal only with parents and children but it also resolved line names and I'm now adding remove as well. Should be called for local first then non local
+    // This used to be called handle parent and deal only with parents and children but it also resolved line names. Should be called for local first then non local
     // it tests to see if the current line name is null or not as it may have been set by a call to resolveLineNamesParentsChildrenRemove on a different cell setting the child name
     private void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
                                                        ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
@@ -1141,7 +1128,7 @@ public class DSImportService {
             if (childCell.lineName == null) {
                 childCell.lineName = findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childCell.lineValue, cellWithHeading.lineName
                         , cellWithHeading.immutableImportHeading.isLocal, setLocalLanguage(childCell.immutableImportHeading, attributeNames));
-            } else { // check exclusive logic, only if the child cell line name exists then remove the child from parents if necessary
+            } else { // check exclusive logic, only if the child cell line name exists then remove the child from parents if necessary - this replaces the old "remove from" funcitonality
                 // the exclusiveSetToCheckAgainst means that if the child we're about to sort has a parent in this set we need to get rid of it before re adding the child to the new location
                 Collection<Name> exclusiveSetToCheckAgainst = null;
                 if ("".equals(cellWithHeading.immutableImportHeading.exclusive) && cellWithHeading.immutableImportHeading.parentNames.size() == 1){

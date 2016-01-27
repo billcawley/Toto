@@ -243,7 +243,7 @@ public class ManageDatabasesController {
                                 }
                             }).start();
                         return "importrunning";
-                    } catch (Exception e){ // now the import has it's onw exception catching
+                    } catch (Exception e){ // now the import has it's on exception catching
                         String exceptionError = e.getMessage();
                         e.printStackTrace();
                         //trim off the javaspeak
