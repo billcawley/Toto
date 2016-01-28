@@ -94,18 +94,20 @@ public class ZKAzquoBookUtils {
                     if (sName.getName().endsWith("Chosen")) {
                         CellRegion chosen = getCellRegionForSheetAndName(sheet, sName.getName());
                         String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length()).toLowerCase();
-                        if (chosen!=null && (!getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty() || (chosen.getRowCount() == 1 && chosen.getColumnCount() == 1))) {
-                            // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
-                            List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
-                            String userChoice = userChoices.get(choiceName.toLowerCase()); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
-                            if (userChoice != null && validOptions.contains(userChoice)) {
-                                sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
-                                context += choiceName + " = " + userChoices.get(choiceName.toLowerCase()) + ";";
-                            } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
-                                sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
+                        if (chosen!=null) {
+                            if (chosen.getRowCount() == 1 && chosen.getColumnCount() == 1){
+                                // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
+                                List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
+                                String userChoice = userChoices.get(choiceName);
+                                if (userChoice != null && validOptions.contains(userChoice)) {
+                                    sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
+                                    context += choiceName + " = " + userChoices.get(choiceName.toLowerCase()) + ";";
+                                } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
+                                    sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
+                                }
+                            } else if (getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty()) {
+                                filterChoices.add(choiceName);
                             }
-                        } else {
-                            filterChoices.add(choiceName);
                         }
                     }
                 }
