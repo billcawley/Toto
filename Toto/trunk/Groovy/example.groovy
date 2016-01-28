@@ -7,13 +7,14 @@ def fileProcess(def filePath) {
     writeFile.delete() // if you don't zap the append will do as it says and append to an existing file
     def lineNo = 1
     def line
+    fileWriter = writeFile.newWriter();
     file.withReader { reader ->
         while ((line = reader.readLine()) != null) {
             def split = line.split(",")
             def col = 1;
             for (String cellvalue : split) {
                 if (col > 1){
-                    writeFile.append("\t")
+                    fileWriter.write("\t")
                 }
                 if (col == 2){ // then process the url
                     cellvalue = cellvalue.replace("\"", "").trim();
@@ -23,27 +24,27 @@ def fileProcess(def filePath) {
                         for (NameValuePair nvp : result) {
                             if (nvp.getName().equals("color")){
                                 found = true;
-                                writeFile.append(nvp.getValue());
+                                fileWriter.write(nvp.getValue());
                                 break
                             }
                         }
                     } catch (java.net.URISyntaxException e){
                         println(e.message);
                     }
-                    if (!found) writeFile.append("-")
+                    if (!found) fileWriter.write("-")
                 } else {
-                    writeFile.append(cellvalue);
+                    fileWriter.write(cellvalue);
                 }
                 col++
             }
             if (lineNo%1000 == 0){
                 println(lineNo)
             }
-            writeFile.append("\n")
+            fileWriter.write("\r\n")
             lineNo++
         }
     }
     return outFile
 }
 
-println fileProcess("/home/edward/Downloads/log_url_info.csv")
+println fileProcess("C:\\Users\\Bill\\Downloads\\log_url_info.csv")
