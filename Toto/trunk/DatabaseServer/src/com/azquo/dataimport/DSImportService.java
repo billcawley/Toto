@@ -12,9 +12,11 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import groovy.lang.GroovyRuntimeException;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import org.apache.commons.lang.ArrayUtils;
+import org.codehaus.groovy.control.CompilationFailedException;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
@@ -80,6 +82,7 @@ public class DSImportService {
     // these two are not for clauses, it's to do with reading the file in the first place, do we read the headers or not, how many lines to skip before data
     public static final String HEADINGSSTRING = "HEADINGS";
     public static final String SKIPLINESSTRING = "SKIPLINES";
+    public static final String GROOVYPROCESSOR = "GROOVYPROCESSOR";
     /*
     To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't do this initially.
     No problem, initially make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.
@@ -650,13 +653,22 @@ public class DSImportService {
                 headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
             }
 
-            if (importInterpreter.getAttribute("groovyProcessor") != null){
+            if (importInterpreter.getAttribute(GROOVYPROCESSOR) != null){
+                System.out.println("Groovy found! Running  . . . ");
+                Object[] groovyParams = new Object[3];
+                groovyParams[0] = filePath;
+                groovyParams[1] = azquoMemoryDBConnection;
+                groovyParams[2] = nameService;
                 GroovyShell shell = new GroovyShell();
-                final Script script = shell.parse(importInterpreter.getAttribute("groovyProcessor"));
-                //shell.parse("def fileProcess(def filePath){println 'a file was processed here' + filePath}");
-                filePath = (String) script.invokeMethod("fileProcess", filePath);
+                try{
+                    final Script script = shell.parse(importInterpreter.getAttribute(GROOVYPROCESSOR));
+                    filePath = (String) script.invokeMethod("fileProcess", groovyParams);
+                } catch (GroovyRuntimeException e) {
+                    e.printStackTrace();
+                    throw new Exception("groovy error " + e.getMessage());
+                }
+                System.out.println("Groovy done.");
             }
-
         }
         // finally we might use the headers on the data file, this is notably used when setting up the headers themselves :)
         if (headers == null) {
