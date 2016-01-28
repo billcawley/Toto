@@ -129,8 +129,8 @@ public class ManageDatabasesController {
                 request.getSession().removeAttribute("importResult");
             }
             try {
-                if (createDatabase != null && !createDatabase.isEmpty() && databaseServerId != null && !databaseServerId.isEmpty()) {
-                    final List<DatabaseServer> allServers = databaseServerDAO.findAll();
+                final List<DatabaseServer> allServers = databaseServerDAO.findAll();
+                if (createDatabase != null && !createDatabase.isEmpty() && (allServers.size() == 1 || (databaseServerId != null && !databaseServerId.isEmpty()))) {
                     if (allServers.size() == 1){
                         adminService.createDatabase(createDatabase, databaseType, loggedInUser, allServers.get(0));
                     } else {

@@ -203,7 +203,7 @@
 			var htmlAtts = document.getElementById("htmlatts");
 			htmlAtts.innerHTML += "<div class=\"namedetailsline\">" +
 					"<div class = \"name\"><input id=\"attname" + i + "\" class=\"attname\" type=\"text\" value=\"" + attname + "\" placeholder=\"Attribute Name\"/></div>" +
-					"<div class=\"value\"><input class=\"attvalue\" id=\"attvalue" + i + "\" type=\"text\" value=\"" + attvalue + "\" placeholder=\"Attribute Value\"/></div>" +
+					"<div class=\"value\"><textarea class=\"attvalue\" id=\"attvalue" + i + "\" cols=\"40\">" + attvalue + "</textarea></div>" +
 					"</div>"
 
 		}
@@ -243,7 +243,7 @@
 				var attname = document.getElementById("attname" + i);
 				if (attname != null) {
 					if (attname.value > ""){
-						json += ",\"" + attname.value + "\":\"" + encodeURIComponent(document.getElementById("attvalue" + i).value) + "\"";
+						json += ",\"" + attname.value + "\":" + encodeURIComponent(JSON.stringify(document.getElementById("attvalue" + i).value)) + "";
 					}
 				}
 			}

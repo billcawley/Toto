@@ -93,6 +93,7 @@ public class JstreeController {
             // todo - clean up the logic here
             String result = null;
             if (json != null && json.length() > 0) {
+                //json = json.replace("\n","\\n");
                 NameJsonRequest nameJsonRequest = jacksonMapper.readValue(json, NameJsonRequest.class);
                 JsonChildren.Node currentNode = loggedInUser.getFromJsTreeLookupMap(nameJsonRequest.id); // we assume it is there, the code did before
                 if (currentNode.nameId != -1) {
