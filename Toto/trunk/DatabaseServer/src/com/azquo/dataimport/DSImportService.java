@@ -16,7 +16,6 @@ import groovy.lang.GroovyRuntimeException;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import org.apache.commons.lang.ArrayUtils;
-import org.codehaus.groovy.control.CompilationFailedException;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
@@ -65,7 +64,7 @@ public class DSImportService {
     How these are used is described in more detail in the heading fields and the clause interpreter.
      */
 
-    public static final String CHILDOF = "child of ";
+    public static final String CHILDOF = "child of "; // trailing space I suppose one could otherwise get a false child ofweryhwrs match which can't happen with the others
     // parent of another heading (as opposed to name), would like the clause to be more explicit,
     public static final String PARENTOF = "parent of ";
     public static final String ATTRIBUTE = "attribute";
@@ -82,19 +81,19 @@ public class DSImportService {
     // these two are not for clauses, it's to do with reading the file in the first place, do we read the headers or not, how many lines to skip before data
     public static final String HEADINGSSTRING = "HEADINGS";
     public static final String SKIPLINESSTRING = "SKIPLINES";
+    // new functionality for pre processing of the file to be handed to a groovy script
     public static final String GROOVYPROCESSOR = "GROOVYPROCESSOR";
     /*
     To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't do this initially.
-    No problem, initially make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.
-    Could of course copy all fields into line but this makes the constructor needlessly complex.
+    No problem, make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.
     */
 
     private class MutableImportHeading {
-        // the name of the heading - often referenced by other headings e.g. parent of
+        // the name of the heading - often referenced by other headings in clauses e.g. parent of
         String heading = null;
         // the Azquo Name that might be set on the heading
         Name name = null;
-        // this class used to use the now removed peers against the name object, in its absence just put a set here, and this set simply refers to headings which may be names or not - hence why I renamed it from peerNames.
+        // this class used to use the now removed peers against the name object, in its absence just put a set here, and this set simply refers to headings which may be names or not
         Set<String> peers = new HashSet<>();
         /* the index of the heading that an attribute refers to so if the heading is Customer.Address1 then this is the index of customer.
         Has been kept as an index as it will be used to access the data itself (the array of Strings from each line) */
@@ -130,7 +129,8 @@ public class DSImportService {
         /* to make the line value a composite of other values. Syntax is pretty simple replacing anything in quotes with the referenced line value
         `a column name`-`another column name` might make 1233214-1234. Such columns would probably be at the end,
         they are virtual in the sense that these values are made on uploading they are not there in the source file though the components are.
-        A newer use of this is to create name->name2->name3, a name structure in a virtual column at the end */
+        A newer use of this is to create name->name2->name3, a name structure in a virtual column at the end
+        also supports left, right, mid Excel string functions*/
         String compositionPattern = null;
         // a default value if the line value is blank
         String defaultValue = null;
@@ -153,7 +153,7 @@ public class DSImportService {
         final Name name;
         final int indexForAttribute;
         final int indexForChild;
-        // ok the set will be fixed, I suppose names can be modified but they should be thread safe. Well that's the plan.
+        // ok the set will be fixed, I suppose names can be modified but they should be thread safe
         final Set<Name> parentNames;
         final String attribute;
         final boolean isDate;
@@ -193,7 +193,7 @@ public class DSImportService {
         }
     }
 
-    // going to follow the pattern above, no getters, the final will take care of setting
+    // going to follow the pattern above, no getters
     // I'd have liked to make this immutable but existing logic for things like composite mean this may be changed before loading
 
     public class ImportCellWithHeading {
@@ -208,14 +208,12 @@ public class DSImportService {
         }
     }
 
-    // Switched to Java 8 API calls.
+    // Switched to Java 8 API calls. I zapped ukdf5, it was a duplicate of 3.
 
     static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd/MM/yy");
     static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd MMM yyyy");
     static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    // duplicate of 3? Check with WFC
-    static final DateTimeFormatter ukdf5 = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
     private LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
         try {
@@ -232,9 +230,7 @@ public class DSImportService {
         if (date != null) return date;
         date = tryDate(maybeDate.length() > 11 ? maybeDate.substring(0, 11) : maybeDate, ukdf3);
         if (date != null) return date;
-        date = tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 8) : maybeDate, ukdf2);
-        if (date != null) return date;
-        return tryDate(maybeDate.length() > 11 ? maybeDate.substring(0, 11) : maybeDate, ukdf5);
+        return tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 8) : maybeDate, ukdf2);
     }
 
     // get a file name for provenance. Used only once could inline
@@ -287,103 +283,87 @@ public class DSImportService {
         return toReturn;
     }
 
-    // the readClause function would say that "parent of thing123" would return "thing123" if it was a readClause on "parent of"
-    private String readClause(String keyName, String phrase) {
-        if (phrase.length() >= keyName.length() && phrase.toLowerCase().startsWith(keyName)) {
-            return phrase.substring(keyName.length()).trim();
-        }
-        return "";
-    }
-
     /* This is called for all the ; separated clauses in a header e.g. Gender; parent of Customer; child of Genders
-    Called multiple times per header and currently there may be multiple headers per actual header - something I'd like to change
-    Edd : it feels like an enum or array could help here but I'm not sure, about 5 are what you might call vanilla, the rest have other conditions*/
+    Called multiple times per header. I assume clause is trimmed! */
 
-    private void interpretClause(AzquoMemoryDBConnection azquoMemoryDBConnection, MutableImportHeading heading, String clause) throws Exception {
-        final String notUnderstood = " not understood in " + heading.heading ;
-        int wordEnd = clause.indexOf(" ");
-        if (wordEnd < 0) {
-            wordEnd = clause.length();
-        }
-        String firstWord = clause.substring(0, wordEnd).toLowerCase();
-        // not NOT parent of an existing name in the DB, parent of other data in the line
-        if (PARENTOF.startsWith(firstWord)) {
-            heading.parentOfClause = readClause(PARENTOF, clause).replace(Name.QUOTE + "", "");// parent of names in the specified column
-            if (heading.parentOfClause.length() == 0) {
-                throw new Exception(clause + notUnderstood);
+    private void interpretClause(final AzquoMemoryDBConnection azquoMemoryDBConnection, final MutableImportHeading heading, final String clause) throws Exception {
+        String firstWord = clause.toLowerCase(); // default, what it could legitimately be in the case of blank clauses (local, exclusive, non zero)
+        // I have to add special cases for parent of and child of as they have spaces in them. A bit boring
+        if (firstWord.startsWith(PARENTOF)) { // a blank won't match here as its trailing space would be trimmed but no matter, blank not allowed anyway
+            firstWord = PARENTOF;
+        } else if (firstWord.startsWith(CHILDOF)) {
+            firstWord = CHILDOF;
+        } else {
+            if (firstWord.contains(" ")) {
+                firstWord = firstWord.substring(0, firstWord.indexOf(" "));
             }
-            // e.g. child of all orders, unlike above this references data in the DB
-        } else if (CHILDOF.startsWith(firstWord)) {        // e.g. child of all orders
-            String childOfString = readClause(CHILDOF, clause).replace(Name.QUOTE + "", "");
-            if (childOfString.length() == 0) {
-                throw new Exception(clause + notUnderstood);
-            } else {
-                // used to store the shild of string here and interpret it later, I see no reason not to do it here.
+        }
+        if (clause.length() == firstWord.length() && !firstWord.equals(LOCAL) && !firstWord.equals(NONZERO) && !firstWord.equals(EXCLUSIVE)) { // empty clause, exception unless one which allows blank
+            throw new Exception(clause + " empty in " + heading.heading); // other clauses cannot be blank!
+        }
+        String result = clause.substring(firstWord.length()).trim();
+        switch (firstWord) {
+            case PARENTOF: // not NOT parent of an existing name in the DB, parent of other data in the line
+                heading.parentOfClause = result.replace(Name.QUOTE + "", "");// parent of names in the specified column
+                break;
+            case CHILDOF: // e.g. child of all orders, unlike above this references data in the DB
+                String childOfString = result.replace(Name.QUOTE + "", "");
+                // used to store the child of string here and interpret it later, I see no reason not to do it here.
                 String[] parents = childOfString.split(",");//TODO this does not take into account names with commas inside
                 for (String parent : parents) {
                     heading.parentNames.add(nameService.findOrCreateNameInParent(azquoMemoryDBConnection, parent, null, false));
                 }
-            }
-            // language being attribute
-        } else if (firstWord.equals(LANGUAGE)) {
-            String language = readClause(LANGUAGE, clause);
-            if (language.equalsIgnoreCase(DATELANG)) {
-                heading.isDate = true;
-            } else {
-                heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
-            }
-            if (heading.attribute == null || !heading.isDate) {//any other named attribute overrides 'language date'
-                heading.attribute = readClause(LANGUAGE, clause);
-            }
-            if (heading.attribute.length() == 0) {
-                throw new Exception(clause + notUnderstood);
-            }
-            // same as language really but .Name is special - it means default display name. Watch out for this.
-        } else if (firstWord.equals(ATTRIBUTE)) {
-            heading.attribute = readClause(ATTRIBUTE, clause).replace("`", "");
-            if (heading.attribute.length() == 0) {
-                throw new Exception(clause + notUnderstood);
-            }
-            if (heading.attribute.equalsIgnoreCase("name")) {
-                heading.attribute = Constants.DEFAULT_DISPLAY_NAME;
-            }
-        } else if (firstWord.equals(LOCAL)) { // local names in child of, can work with parent of but then it's the subject that it affects
-            heading.isLocal = true;
-        } else if (firstWord.equals(ONLY)) {
-            heading.only = readClause(ONLY, clause);
-            if (heading.only.length() == 0) {
-                throw new Exception(clause + notUnderstood);
-            }
-        } else if (firstWord.equals(COMPOSITION)) {
-            // combine more than one column
-            heading.compositionPattern = readClause(COMPOSITION, clause);
-            if (heading.compositionPattern.length() == 0) {
-                throw new Exception(clause + notUnderstood);
-            }
-            // if there's no value on the line a default
-        } else if (firstWord.equals(DEFAULT)) {
-            String subClause = readClause(DEFAULT, clause);
-            if (subClause.length() > 0) {
-                heading.defaultValue = subClause;
-            }
-        } else if (firstWord.equals(NONZERO)) {
-            heading.blankZeroes = true;
-        } else if (firstWord.equals(PEERS)) {
-            // in new logic this is the only place that peers are used in Azquo
-            heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
-            String peersString = readClause(PEERS, clause);
-            if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
-                if (peersString.contains("}")) {
-                    peersString = peersString.substring(1, peersString.indexOf("}"));
-                    Collections.addAll(heading.peers, peersString.split(","));
+                break;
+            case LANGUAGE: // language being attribute
+                if (result.equalsIgnoreCase(DATELANG)) {
+                    heading.isDate = true;
                 } else {
-                    throw new Exception("Unclosed }");
+                    heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
                 }
-            }
-        } else if (firstWord.equals(EXCLUSIVE)) {
-            heading.exclusive = readClause(EXCLUSIVE, clause);// having this set as blank is fine
-        } else {
-            throw new Exception(firstWord + notUnderstood);
+                if (heading.attribute == null || !heading.isDate) {//any other named attribute overrides 'language date'
+                    heading.attribute = result;
+                }
+                break;
+            case ATTRIBUTE: // same as language really but .Name is special - it means default display name. Watch out for this.
+                heading.attribute = result.replace(Name.QUOTE + "", "");
+                if (heading.attribute.equalsIgnoreCase("name")) {
+                    heading.attribute = Constants.DEFAULT_DISPLAY_NAME;
+                }
+                break;
+            case ONLY:
+                heading.only = result;
+                break;
+            case COMPOSITION:// combine more than one column
+                heading.compositionPattern = result;
+                break;
+            case DEFAULT: // if there's no value on the line a default
+                if (result.length() > 0) {
+                    heading.defaultValue = result;
+                }
+                break;
+            case PEERS: // in new logic this is the only place that peers are used in Azquo
+                heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
+                String peersString = result;
+                if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
+                    if (peersString.contains("}")) {
+                        peersString = peersString.substring(1, peersString.indexOf("}"));
+                        Collections.addAll(heading.peers, peersString.split(","));
+                    } else {
+                        throw new Exception("Unclosed }");
+                    }
+                }
+                break;
+            case LOCAL:  // local names in child of, can work with parent of but then it's the subject that it affects
+                heading.isLocal = true;
+                break;
+            case NONZERO: // Ignore zero values. This and local will just ignore values after e.g. "nonzero something" I see no harm in this
+                heading.blankZeroes = true;
+                break;
+            case EXCLUSIVE:// it can be blank OR have a value
+                heading.exclusive = "";
+                break;
+            default:
+                throw new Exception(firstWord + " not understood");
         }
     }
 
@@ -459,7 +439,7 @@ public class DSImportService {
     // I think the cache is purely a performance thing though it's used for a little logging later (total number of names inserted)
 
     private Name findOrCreateNameStructureWithCache(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
-        //namesFound is a quick lookup to avoid going to findOrCreateNameInParent
+        //namesFound is a quick lookup to avoid going to findOrCreateNameInParent - note it will fail if the name was changed e.g. parents removed by exclusive but that's not a problem
         String np = name + ",";
         if (parent != null) {
             np += parent.getId();
@@ -652,15 +632,14 @@ public class DSImportService {
                 System.out.println("has headers " + importHeaders);
                 headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
             }
-
-            if (importInterpreter.getAttribute(GROOVYPROCESSOR) != null){
+            if (importInterpreter.getAttribute(GROOVYPROCESSOR) != null) {
                 System.out.println("Groovy found! Running  . . . ");
                 Object[] groovyParams = new Object[3];
                 groovyParams[0] = filePath;
                 groovyParams[1] = azquoMemoryDBConnection;
                 groovyParams[2] = nameService;
                 GroovyShell shell = new GroovyShell();
-                try{
+                try {
                     final Script script = shell.parse(importInterpreter.getAttribute(GROOVYPROCESSOR));
                     filePath = (String) script.invokeMethod("fileProcess", groovyParams);
                 } catch (GroovyRuntimeException e) {
@@ -747,7 +726,7 @@ public class DSImportService {
         // load leftovers
         futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - batchSize)));// line no should be the start
         // check all work is done and memory is in sync
-        for (Future<?> futureBatch : futureBatches){
+        for (Future<?> futureBatch : futureBatches) {
             futureBatch.get(1, TimeUnit.HOURS);
         }
 /*        executor.shutdown();
@@ -1143,20 +1122,20 @@ public class DSImportService {
             } else { // check exclusive logic, only if the child cell line name exists then remove the child from parents if necessary - this replaces the old "remove from" funcitonality
                 // the exclusiveSetToCheckAgainst means that if the child we're about to sort has a parent in this set we need to get rid of it before re adding the child to the new location
                 Collection<Name> exclusiveSetToCheckAgainst = null;
-                if ("".equals(cellWithHeading.immutableImportHeading.exclusive) && cellWithHeading.immutableImportHeading.parentNames.size() == 1){
+                if ("".equals(cellWithHeading.immutableImportHeading.exclusive) && cellWithHeading.immutableImportHeading.parentNames.size() == 1) {
                     // blank exclusive clause, use child of if there's one (check all the way down. all children, necessary due due to composite option name1->name2->name3->etc
                     exclusiveSetToCheckAgainst = cellWithHeading.immutableImportHeading.parentNames.iterator().next().findAllChildren(false);
-                } else if (cellWithHeading.immutableImportHeading.exclusive != null){ // exclusive is referring to a higher name
+                } else if (cellWithHeading.immutableImportHeading.exclusive != null) { // exclusive is referring to a higher name
                     Name specifiedExclusiveSet = nameService.findByName(azquoMemoryDBConnection, cellWithHeading.immutableImportHeading.exclusive);
-                    if (specifiedExclusiveSet != null){
+                    if (specifiedExclusiveSet != null) {
                         specifiedExclusiveSet.removeFromChildrenWillBePersisted(childCell.lineName); // if it's directly against the top it won't be caught by the set below, don't want to add to the set I'd have to make a new, potentially large, set
                         exclusiveSetToCheckAgainst = specifiedExclusiveSet.findAllChildren(false);
                     }
                 }
-                if (exclusiveSetToCheckAgainst != null){
+                if (exclusiveSetToCheckAgainst != null) {
                     // essentially if we're saying that this heading is a category e.g. swimwear and we're about to add another name (a swimsuit one assumes) then go through other categories removing the swimsuit from them if it is in there
-                    for (Name nameToRemoveFrom : childCell.lineName.getParents()){
-                        if (exclusiveSetToCheckAgainst.contains(nameToRemoveFrom) && nameToRemoveFrom != cellWithHeading.lineName){ // the existing parent is one to be zapped by exclusive criteria and it's not the one we're about to add
+                    for (Name nameToRemoveFrom : childCell.lineName.getParents()) {
+                        if (exclusiveSetToCheckAgainst.contains(nameToRemoveFrom) && nameToRemoveFrom != cellWithHeading.lineName) { // the existing parent is one to be zapped by exclusive criteria and it's not the one we're about to add
                             nameToRemoveFrom.removeFromChildrenWillBePersisted(childCell.lineName);
                         }
                     }
@@ -1167,7 +1146,7 @@ public class DSImportService {
     }
 
     // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
-    // the boolean is used for only, in its absence it will always be true as in the line is ok
+    // now seems to support basic excel like string operations, left right and mid
 
     private boolean getCompositeValuesAndCheckOnly(List<ImportCellWithHeading> cells) {
         int adjusted = 2;
@@ -1189,22 +1168,21 @@ public class DSImportService {
                                 int bracketpos = expression.indexOf("(");
                                 function = expression.substring(0, bracketpos);
                                 int commaPos = expression.indexOf(",", bracketpos + 1);
-                                int secondComma = -1;
+                                int secondComma;
                                 if (commaPos > 0) {
-                                    secondComma = expression.indexOf(",", commaPos +1);
-                                    String countString = "";
+                                    secondComma = expression.indexOf(",", commaPos + 1);
+                                    String countString;
                                     try {
                                         if (secondComma < 0) {
                                             countString = expression.substring(commaPos + 1, expression.length() - 1);
                                             funcInt = Integer.parseInt(countString.trim());
-                                        }else{
+                                        } else {
                                             countString = expression.substring(commaPos + 1, secondComma);
                                             funcInt = Integer.parseInt(countString.trim());
-                                            countString = expression.substring(secondComma + 1, expression.length() -1);
+                                            countString = expression.substring(secondComma + 1, expression.length() - 1);
                                             funcInt2 = Integer.parseInt(countString);
-
                                         }
-                                     } catch (Exception ignore) {
+                                    } catch (Exception ignore) {
                                     }
                                     expression = expression.substring(bracketpos + 1, commaPos);
                                 }
@@ -1212,6 +1190,7 @@ public class DSImportService {
                             ImportCellWithHeading compCell = findCellWithHeading(expression, cells);
                             if (compCell != null) {
                                 String sourceVal = compCell.lineValue;
+                                // the two ints need to be as they are used in excel
                                 if (function != null && (funcInt > 0 || funcInt2 > 0) && sourceVal.length() > funcInt) {
                                     if (function.equalsIgnoreCase("left")) {
                                         sourceVal = sourceVal.substring(0, funcInt);
@@ -1219,9 +1198,9 @@ public class DSImportService {
                                     if (function.equalsIgnoreCase("right")) {
                                         sourceVal = sourceVal.substring(sourceVal.length() - funcInt);
                                     }
-                                    if (function.equalsIgnoreCase("mid") && funcInt2 > funcInt){
+                                    if (function.equalsIgnoreCase("mid")) {
                                         //the second parameter of mid is the number of characters, not the end character
-                                        sourceVal = sourceVal.substring(funcInt, funcInt2 - funcInt);
+                                        sourceVal = sourceVal.substring(funcInt - 1, (funcInt - 1) + funcInt2);
                                     }
                                 }
                                 result = result.replace(result.substring(headingMarker, headingEnd + 1), sourceVal);
@@ -1256,7 +1235,6 @@ public class DSImportService {
                         }
                     }
                 }
-
             }
         }
         return true;
