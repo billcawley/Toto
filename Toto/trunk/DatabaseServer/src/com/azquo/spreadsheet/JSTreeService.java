@@ -245,4 +245,24 @@ public class JSTreeService {
         }
         return new JsonChildren(jsTreeId, state, text, childNodes, type);
     }
+
+   public String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute)throws Exception{
+        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        Name name = nameService.findByName(azquoMemoryDBConnection, nameString);
+        if (name != null){
+            return name.getAttribute(attribute);
+        }
+        return null;
+
+    }
+
+    public void setNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute, String attVal)throws Exception{
+        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        Name name = nameService.findByName(azquoMemoryDBConnection, nameString);
+        if (name != null){
+            name.setAttributeWillBePersisted(attribute, attVal);
+        }
+    }
+
+
 }
