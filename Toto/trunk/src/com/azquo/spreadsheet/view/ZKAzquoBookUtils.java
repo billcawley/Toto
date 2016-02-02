@@ -49,6 +49,7 @@ public class ZKAzquoBookUtils {
 
     public boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae) {
         long track = System.currentTimeMillis();
+        String imageStoreName = "";
         boolean showSave = false;
         //book.getInternalBook().getAttribute(ZKAzquoBookProvider.BOOK_PATH);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
@@ -138,6 +139,10 @@ public class ZKAzquoBookUtils {
                 // Old one was case insensitive - not so happy about this. Will allow it on the prefix
                 if (name.getName().equalsIgnoreCase("az_FastLoad")) {
                     fastLoad = true;
+                }
+                if (name.getName().equals("ImageStoreName")){
+                    imageStoreName = getRegionValue(sheet,name.getRefersToCellRegion());
+
                 }
                 if (name.getName().startsWith(azDataRegion)) { // then we have a data region to deal with here
                     String region = name.getName().substring(azDataRegion.length()); // might well be an empty string
@@ -290,6 +295,7 @@ public class ZKAzquoBookUtils {
                 resolveDependentChoiceOptions(dependentRanges, sheet, loggedInUser);
             }
         }
+        loggedInUser.setImageStoreName(imageStoreName);
         loggedInUser.setContext(context);
         // after stripping off some redundant exception throwing this was the only possibility left, ignore it
         try {
