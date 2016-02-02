@@ -5,6 +5,7 @@ import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.spreadsheet.StringUtils;
+import net.openhft.koloboke.collect.impl.InternalByteByteMapOps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -699,20 +700,10 @@ public final class NameService {
             return toReturn;
         }
         //todo - find a better way of using 'parseQuery` for other operations
-        if (setFormula.startsWith("deduplicate")) {
-            return deduplicate(azquoMemoryDBConnection, setFormula.substring(12));
+        if (setFormula.toLowerCase().startsWith("edit:")){
+            return handleEdit(azquoMemoryDBConnection, setFormula.substring(5).trim(),languages);
         }
-        if (setFormula.startsWith("findduplicates")){
-            return findDuplicateNames(azquoMemoryDBConnection, setFormula);
-        }
-        if (setFormula.startsWith("zap ")) {
-            Collection<Name> names = parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages); // defaulting to list here
-            if (names != null) {
-                for (Name name : names) name.delete();
-                return toReturn;
-            }
-        }
-        setFormula = stringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
+         setFormula = stringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames;
         try {
             referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, languages);
@@ -961,6 +952,24 @@ public final class NameService {
         }
         return toReturn;
     }
+
+    private List<Name> handleEdit(AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String>languages)throws Exception{
+        List<Name> toReturn = new ArrayList<>();
+            if (setFormula.startsWith("deduplicate")) {
+            return deduplicate(azquoMemoryDBConnection, setFormula.substring(12));
+        }
+        if (setFormula.startsWith("findduplicates")){
+            return findDuplicateNames(azquoMemoryDBConnection, setFormula);
+        }
+        if (setFormula.startsWith("zap ")) {
+            Collection<Name> names = parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages); // defaulting to list here
+            if (names != null) {
+                for (Name name : names) name.delete();
+                return toReturn;
+            }
+        }
+        throw new Exception(setFormula + " not understood");
+   }
 
     private static AtomicInteger attributeListCount = new AtomicInteger(0);
 
