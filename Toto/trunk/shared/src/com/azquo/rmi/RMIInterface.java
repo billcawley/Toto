@@ -10,6 +10,7 @@ import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -89,4 +90,8 @@ public interface RMIInterface extends Remote {
     boolean renameNode(DatabaseAccessToken dataAccessToken, int nameId, String position) throws RemoteException;
 
     void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws RemoteException;
+
+    String getNameAttribute(DatabaseAccessToken dataAccessToken, String nameString, String attribute) throws RemoteException;
+
+    void setNameAttribute(DatabaseAccessToken dataAccessToken, String nameString, String attribute, String attVal) throws RemoteException;
 }

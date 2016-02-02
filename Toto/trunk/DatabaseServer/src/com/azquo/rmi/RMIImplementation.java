@@ -363,5 +363,25 @@ public class RMIImplementation implements RMIInterface {
         }
     }
 
+    @Override
+    public String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute)throws RemoteException {
+        try {
+            return jsTreeService.getNameAttribute(databaseAccessToken, nameString, attribute);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public void setNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute, String attVal)throws RemoteException {
+        try {
+            jsTreeService.setNameAttribute(databaseAccessToken, nameString, attribute, attVal);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+
+
     //memoryDBManager.getAzquoMemoryDB(databaseAccessT)
 }
