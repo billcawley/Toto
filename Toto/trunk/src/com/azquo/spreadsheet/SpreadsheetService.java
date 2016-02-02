@@ -636,7 +636,7 @@ public class SpreadsheetService {
                 // ok what user? I think we'll call it an admin one.
                 DatabaseServer databaseServer = databaseServerDAO.findById(database.getDatabaseServerId());
                 // assuming no read permissions?
-                LoggedInUser loggedInUser = new LoggedInUser("", user, databaseServer, database, null, null);
+                LoggedInUser loggedInUser = new LoggedInUser("", user, databaseServer, database, null, null, null);
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());
@@ -692,5 +692,20 @@ public class SpreadsheetService {
                 reportScheduleDAO.store(reportSchedule);
             }
         }
+    }
+
+    public Map<String, String>getImageList(LoggedInUser loggedInUser) throws Exception{
+        Map<String, String> images = new HashMap<>();
+        DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+        String imageList =  rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(),"uploaded images");
+        if (imageList != null) {
+            String[] imageArray = imageList.split(",");
+            for (String image : imageArray) {
+                if (image.length() > 0 && image.indexOf(".") > 0) {
+                    images.put(image.substring(0, image.indexOf(".")), image);
+                }
+            }
+        }
+        return images;
     }
 }
