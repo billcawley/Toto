@@ -43,6 +43,7 @@ public class LoggedInUser {
 
     private String readPermissions;
     private String writePermissions;
+    private String imageStoreName;
     private String context;
 
     private static final String defaultRegion = "default-region";
@@ -53,7 +54,7 @@ public class LoggedInUser {
 
     private final Map<Integer, JsonChildren.Node> jsTreeLookupMap;
 
-    protected LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions) {
+    protected LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions, String imageStoreName) {
         this.sessionId = sessionId;
         this.user = user;
         reportId = 0;
@@ -67,6 +68,7 @@ public class LoggedInUser {
 
         this.readPermissions = readPermissions;
         this.writePermissions = writePermissions;
+        this.imageStoreName = imageStoreName;
         this.context = null;
         lastJSTreeNodeId = new AtomicInteger();
         jsTreeLookupMap = new ConcurrentHashMap<>();
@@ -188,6 +190,10 @@ public class LoggedInUser {
     public void setWritePermissions(String writePermissions) {
         this.writePermissions = writePermissions;
     }
+
+    public String getImageStoreName() { return imageStoreName; };
+
+    public void setImageStoreName(String imageStoreName) {this.imageStoreName = imageStoreName; }
 
     public String getContext() {
         return context;
